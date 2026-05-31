@@ -1,50 +1,39 @@
 #!/bin/bash
 
 # ==========================================================
-# ProxMenux - Customizable script settings for Proxmox post-installation
+# ProxMenux - Customizable Post-Install Script
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.3
-# Last Updated: 30/06/2025
 # ==========================================================
 # Description:
-# This script automates post-installation configurations and optimizations
-# for Proxmox Virtual Environment (VE). It allows for a variety of system
-# customizations, including kernel optimizations, memory management, network 
-# tweaks, and virtualization environment adjustments. The script facilitates
-# easy installation of useful tools and security enhancements, including 
-# fail2ban, ZFS auto-snapshot, and more.
+# Interactive post-installation configurator for Proxmox VE.
+# Groups ~30 optimizations into 10 categories (Basic Settings,
+# System, Virtualization, Network, Storage, Security,
+# Customization, Monitoring, Performance, Optional) and presents
+# a checklist per category so the user picks exactly what to
+# apply. Every change is registered in installed_tools.json for
+# later reversal from Uninstall Optimizations.
 #
-# This script is based on the work of Adrian Jon Kriel from eXtremeSHOK.com,
-# and it was originally published as a post-installation script for Proxmox under the 
-# BSD License.
+# Features:
+# - Checklist UI per category (10 categories, ~30 tools total).
+# - Superset of the Automated script: includes the 13 baseline
+#   optimizations plus opt-in items (IOMMU/VFIO, Fastfetch,
+#   Figurine, Ceph repo, HA, AMD fixes, pigz, ZFS ARC, …).
+# - Idempotent: safe to run repeatedly.
+# - Registration + rollback: every tool has a reverse function
+#   in uninstall-tools.sh.
 #
-# Copyright (c) Adrian Jon Kriel :: admin@extremeshok.com
-# Script updates can be found at: https://github.com/extremeshok/xshok-proxmox
-#
-# License: BSD (Berkeley Software Distribution)
-#
-# Additionally, this script incorporates elements from the 
-# Proxmox VE Post Install script from Proxmox VE Helper-Scripts.
-#
-# Copyright (c) Proxmox VE Helper-Scripts Community
-# Script updates can be found at: https://github.com/community-scripts/ProxmoxVE
-#
-# License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
-#
-# Key features:
-# - Configures system memory and kernel settings for better performance.
-# - Enables IOMMU and VFIO for PCI passthrough and virtualization optimizations.
-# - Installs essential tools such as kernel headers, system utilities, and networking tools.
-# - Optimizes journald, achievement, and other system services for better efficiency.
-# - Enables guest agents for virtualization platforms such as KVM, VMware, and VirtualBox.
-# - Updates the system, adds correct repositories, and optimizes system features such as memory, network settings, and more.
-# - Provides a wide range of additional options for customization and optimization.
-# - Offers interactive selection of features using an easy-to-use menu-driven interface.
-# - And many more...
-#
+# Credits:
+# Incorporates ideas and snippets originally published under BSD
+# by Adrian Jon Kriel (eXtremeSHOK) in xshok-proxmox, and elements
+# of the Proxmox VE Post Install script from the Proxmox VE
+# Helper-Scripts Community (MIT).
+#   https://github.com/extremeshok/xshok-proxmox
+#   https://github.com/community-scripts/ProxmoxVE
 # ==========================================================
 
 
@@ -78,15 +67,36 @@ SCRIPT_TITLE="Customizable post-installation optimization script"
 
 TOOLS_JSON="/usr/local/share/proxmenux/installed_tools.json"
 
+# Sprint 12A: customizable_post_install.sh always emits source=custom so
+# the update detector knows to re-run the customizable flow (which asks
+# the user for parameters again) instead of the silent auto flow.
+SCRIPT_SOURCE="custom"
+
 ensure_tools_json() {
   [ -f "$TOOLS_JSON" ] || echo "{}" > "$TOOLS_JSON"
 }
 
+# Sprint 12A: register_tool accepts (key, state, version, source).
+# Each function declares `local FUNC_VERSION="X.Y"` on its first line and
+# passes "$FUNC_VERSION" here. We use `local` rather than a `# version:`
+# comment because bash's `declare -f` strips comments — comments would be
+# silently lost when the update wrapper sourced the script and re-ran a
+# function, leaving the registered version stuck at the default. See
+# auto_post_install.sh for the full contract.
 register_tool() {
   local tool="$1"
-  local state="$2"  
+  local state="$2"
+  local version="${3:-1.0}"
+  local source="${4:-${SCRIPT_SOURCE:-unknown}}"
   ensure_tools_json
-  jq --arg t "$tool" --argjson v "$state" '.[$t]=$v' "$TOOLS_JSON" > "$TOOLS_JSON.tmp" && mv "$TOOLS_JSON.tmp" "$TOOLS_JSON"
+  if [[ "$state" == "true" ]]; then
+    jq --arg t "$tool" --arg ver "$version" --arg src "$source" \
+       '.[$t]={"installed": true, "version": $ver, "source": $src}' \
+       "$TOOLS_JSON" > "$TOOLS_JSON.tmp" && mv "$TOOLS_JSON.tmp" "$TOOLS_JSON"
+  else
+    jq --arg t "$tool" '.[$t]=false' \
+       "$TOOLS_JSON" > "$TOOLS_JSON.tmp" && mv "$TOOLS_JSON.tmp" "$TOOLS_JSON"
+  fi
 }
 
 
@@ -119,6 +129,8 @@ $(translate "Do you want to continue anyway?")" 13 70
 
 
 enable_kexec() {
+    local FUNC_VERSION="1.0"
+    # description: Install kexec-tools and add a Ctrl+Alt+K hotkey + systemd unit for fast reboots that skip BIOS/POST.
     msg_info2 "$(translate "Configuring kexec for quick reboots...")"
     NECESSARY_REBOOT=1
 
@@ -179,7 +191,7 @@ EOF
     fi
 
     msg_success "$(translate "kexec configured successfully. Use the command: reboot-quick")"
-    register_tool "kexec" true
+    register_tool "kexec" true "$FUNC_VERSION"
 }
 
 
@@ -221,8 +233,10 @@ apt_upgrade() {
 
 
 optimize_journald() {
+    local FUNC_VERSION="1.0"
+    # description: Cap journald size, raise rate limit and force info-level logging so the log viewer and Fail2Ban work.
     msg_info2 "$(translate "Limiting size and optimizing journald")"
-    NECESSARY_REBOOT=1 
+    NECESSARY_REBOOT=1
     local journald_conf="/etc/systemd/journald.conf"
     local config_changed=false
 
@@ -280,7 +294,7 @@ EOF
     journalctl --rotate > /dev/null 2>&1
 
     msg_success "$(translate "Journald optimization completed")"
-    register_tool "journald" true
+    register_tool "journald" true "$FUNC_VERSION"
 }
 
 
@@ -299,6 +313,8 @@ EOF
 
 
 configure_kernel_panic() {
+    local FUNC_VERSION="1.0"
+    # description: Auto-reboot on kernel panic / oops / hardlockup; write crash dumps to /var/crash.
     msg_info2 "$(translate "Configuring kernel panic behavior")"
     NECESSARY_REBOOT=1
 
@@ -320,7 +336,7 @@ EOF
 
 
     msg_ok "$(translate "Kernel panic configuration updated and applied")"
-    register_tool "kernel_panic" true
+    register_tool "kernel_panic" true "$FUNC_VERSION"
     msg_success "$(translate "Kernel panic behavior configuration completed")"
 }
 
@@ -333,6 +349,8 @@ EOF
 
 
 increase_system_limits() {
+    local FUNC_VERSION="1.1"
+    # description: Raise inotify watches, file descriptors, process keys and PID limits to enterprise levels.
     msg_info2 "$(translate "Increasing various system limits...")"
     NECESSARY_REBOOT=1
     
@@ -418,7 +436,7 @@ fs.file-max = 2097152
 fs.aio-max-nr = 1048576"
 
     msg_ok "$(translate "Max FS open files configuration created successfully")"
-    register_tool "system_limits" true
+    register_tool "system_limits" true "$FUNC_VERSION"
     msg_success "$(translate "System limits increase completed.")"
 }
 
@@ -431,6 +449,8 @@ fs.aio-max-nr = 1048576"
 
 
 skip_apt_languages() {
+    local FUNC_VERSION="1.0"
+    # description: Stop APT from downloading translation files to speed up updates.
     msg_info2 "$(translate "Configuring APT to skip downloading additional languages")"
 
     # 1. Detect locale
@@ -471,7 +491,7 @@ skip_apt_languages() {
         msg_ok "$(translate "APT language configuration updated")"
     fi
 
-    register_tool "apt_languages" true
+    register_tool "apt_languages" true "$FUNC_VERSION"
     msg_success "$(translate "APT configured to skip downloading additional languages")"
 }
 
@@ -489,6 +509,8 @@ skip_apt_languages() {
 
 
 configure_time_sync() {
+    local FUNC_VERSION="1.0"
+    # description: Detect timezone from public IP and enable systemd time sync (NTP).
     msg_info2 "$(translate "Configuring system time settings...")"
 
     this_ip=$(dig +short myip.opendns.com @resolver1.opendns.com 2>/dev/null)
@@ -497,20 +519,30 @@ configure_time_sync() {
         return 0
     fi
 
-    timezone=$(curl -s --connect-timeout 10 "https://ipapi.co/${this_ip}/timezone" 2>/dev/null)
+    timezone=$(curl -s --connect-timeout 10 "https://ipapi.co/${this_ip}/timezone" 2>/dev/null | tr -d '[:space:]')
     if [ -z "$timezone" ] || [ "$timezone" = "undefined" ]; then
         msg_warn "$(translate "Failed to determine timezone from IP address - keeping current timezone settings")"
         return 0
     fi
 
+    # Validate against the system's IANA timezone database before applying.
+    # ipapi.co can return rate-limit JSON, an error string, or stale data; the
+    # previous code accepted anything that wasn't literally "undefined" and
+    # passed it straight to `timedatectl set-timezone`, which silently kept
+    # the old TZ on a bad value.
+    if ! timedatectl list-timezones 2>/dev/null | grep -Fxq "$timezone"; then
+        msg_warn "$(translate "API returned an invalid timezone") ($timezone) - $(translate "keeping current settings")"
+        return 0
+    fi
+
     msg_ok "$(translate "Found timezone $timezone for IP $this_ip")"
-    
+
     if timedatectl set-timezone "$timezone"; then
         msg_ok "$(translate "Timezone set to $timezone")"
         
         if timedatectl set-ntp true; then
             msg_ok "$(translate "Time settings configured - Timezone:") $timezone"
-            register_tool "time_sync" true
+            register_tool "time_sync" true "$FUNC_VERSION"
             
             systemctl restart postfix 2>/dev/null || true
         else
@@ -583,6 +615,8 @@ configure_time_sync() {
 
 
 apply_amd_fixes() {
+    local FUNC_VERSION="1.0"
+    # description: Detect AMD EPYC/Ryzen CPUs and apply microcode + IOMMU + KVM-specific kernel boot params.
     msg_info2 "$(translate "Detecting AMD CPU and applying fixes if necessary...")"
     NECESSARY_REBOOT=1
 
@@ -672,7 +706,7 @@ apply_amd_fixes() {
     fi
 
     msg_success "$(translate "AMD CPU fixes applied successfully")"
-    register_tool "amd_fixes" true
+    register_tool "amd_fixes" true "$FUNC_VERSION"
 }
 
 
@@ -687,6 +721,8 @@ apply_amd_fixes() {
 
 
 force_apt_ipv4() {
+    local FUNC_VERSION="1.0"
+    # description: Force APT to use IPv4 to avoid stalls on hosts with broken IPv6 connectivity.
     msg_info2 "$(translate "Configuring APT to use IPv4...")"
 
     local config_file="/etc/apt/apt.conf.d/99-force-ipv4"
@@ -701,7 +737,7 @@ force_apt_ipv4() {
         fi
     fi
 
-    register_tool "apt_ipv4" true
+    register_tool "apt_ipv4" true "$FUNC_VERSION"
     msg_success "$(translate "APT IPv4 configuration completed")"
 }
 
@@ -716,6 +752,8 @@ force_apt_ipv4() {
 
 
 apply_network_optimizations() {
+    local FUNC_VERSION="1.0"
+    # description: Tune TCP buffers, somaxconn, IPv4 hardening and disable rp_filter on fw bridges (PVE 9 compatible).
     msg_info "$(translate "Optimizing network settings...")"
     NECESSARY_REBOOT=1
 
@@ -742,6 +780,12 @@ net.ipv4.conf.default.secure_redirects = 0
 net.ipv4.conf.default.send_redirects = 0
 net.ipv4.conf.default.log_martians = 0
 
+# rp_filter=2 (loose) instead of the kernel default 1 (strict). Loose
+# allows asymmetric routing typical of a Proxmox host with VMs on
+# multiple bridges — strict mode would drop legitimate VM traffic when
+# the reverse path differs. Trade-off: slightly weaker spoofing
+# protection from local LAN. Document this choice rather than the
+# default.
 net.ipv4.conf.all.rp_filter = 2
 net.ipv4.conf.default.rp_filter = 2
 
@@ -750,6 +794,11 @@ net.ipv4.icmp_echo_ignore_broadcasts = 1
 net.ipv4.icmp_ignore_bogus_error_responses = 1
 
 # TCP/IP
+# Wider ephemeral port range than Debian's default 32768-60999 so
+# Proxmox hosts handing out NAT/forward ports for many VMs/CTs don't
+# run out under load. Privileged-port range (1-1023) is still protected
+# by capabilities — the kernel won't actually pick one for an
+# unprivileged ephemeral allocation.
 net.ipv4.ip_local_port_range = 1024 65535
 net.ipv4.tcp_mtu_probing = 1
 net.ipv4.tcp_rfc1337 = 1
@@ -771,7 +820,7 @@ EOF
     fi
 
     msg_ok "$(translate "Network optimization completed")"
-    register_tool "network_optimization" true
+    register_tool "network_optimization" true "$FUNC_VERSION"
 }
 
 
@@ -786,6 +835,8 @@ EOF
 
 
 install_openvswitch() {
+    local FUNC_VERSION="1.0"
+    # description: Install OpenVSwitch for software-defined networking inside VMs and containers.
     msg_info2 "$(translate "Installing OpenVSwitch for virtual internal network...")"
     
 
@@ -813,6 +864,7 @@ install_openvswitch() {
     # Verify installation
     if command -v ovs-vsctl >/dev/null 2>&1; then
         msg_success "$(translate "OpenVSwitch is ready to use")"
+        register_tool "openvswitch" true "$FUNC_VERSION"
     else
         msg_warn "$(translate "OpenVSwitch installation could not be verified")"
     fi
@@ -829,6 +881,8 @@ install_openvswitch() {
 
 
 enable_tcp_fast_open() {
+    local FUNC_VERSION="1.0"
+    # description: Enable TCP Fast Open (clients + server) and BBR congestion control for better latency under load.
     msg_info2 "$(translate "Configuring TCP optimizations...")"
 
     local bbr_conf="/etc/sysctl.d/99-kernel-bbr.conf"
@@ -869,6 +923,7 @@ EOF
     fi
 
     msg_success "$(translate "TCP optimizations configuration completed")"
+    register_tool "tcp_optimizations" true "$FUNC_VERSION"
 }
 
 
@@ -883,6 +938,8 @@ EOF
 
 
 install_ceph() {
+    local FUNC_VERSION="1.0"
+    # description: Install Ceph (client + server packages) for distributed RBD/CephFS storage; PVE 8/9 aware repo selection.
     msg_info2 "$(translate "Installing Ceph support...")"
     
 
@@ -1043,8 +1100,11 @@ EOF
         msg_info2 "$(translate "You may need to run 'pveceph install' manually")"
         msg_success "$(translate "Ceph installation process finished with warnings")"
     fi
-    
 
+    # Track install in the registry so the Uninstall menu can offer
+    # `apt purge ceph-*` + repo removal. Audit Tier 6 — `install_ceph` /
+    # `enable_ha` sin `register_tool` ni uninstall.
+    register_tool "ceph" true "$FUNC_VERSION"
 }
 
 
@@ -1060,6 +1120,8 @@ EOF
 
 
 optimize_zfs_arc() {
+    local FUNC_VERSION="1.0"
+    # description: Cap ZFS ARC to a sensible fraction of host RAM so VMs don't fight the kernel for memory.
     msg_info2 "$(translate "Optimizing ZFS ARC size according to available memory...")"
 
     # Check if ZFS is installed
@@ -1139,6 +1201,7 @@ EOF
     fi
 
     msg_success "$(translate "ZFS ARC optimization completed")"
+    register_tool "zfs_arc" true "$FUNC_VERSION"
 }
 
 
@@ -1150,7 +1213,113 @@ EOF
 
 
 
+enable_zfs_autotrim() {
+    local FUNC_VERSION="1.0"
+    # description: Enable ZFS autotrim on detected pools and record only pools changed by ProxMenux.
+    local state_file="$BASE_DIR/zfs_autotrim_pools"
+    local tmp_file="${state_file}.tmp"
+    local pools=()
+    local pool current
+    local changed=false
+
+    pool_supports_autotrim() {
+        local pool_name="$1"
+        local vdev dev_path block_device rotational discard_granularity
+        local found_device=false
+
+        while read -r vdev; do
+            [[ -z "$vdev" ]] && continue
+            found_device=true
+
+            dev_path=$(readlink -f "$vdev" 2>/dev/null || true)
+            if [[ -z "$dev_path" || ! -b "$dev_path" ]]; then
+                return 1
+            fi
+
+            block_device=$(lsblk -no PKNAME "$dev_path" 2>/dev/null | head -n1)
+            [[ -z "$block_device" ]] && block_device=$(basename "$dev_path")
+
+            rotational=$(cat "/sys/block/$block_device/queue/rotational" 2>/dev/null || true)
+            discard_granularity=$(cat "/sys/block/$block_device/queue/discard_granularity" 2>/dev/null || true)
+
+            if [[ "$rotational" != "0" || -z "$discard_granularity" || "$discard_granularity" == "0" ]]; then
+                return 1
+            fi
+        done < <(
+            zpool status -P "$pool_name" 2>/dev/null |
+                awk '
+                    $1 == "NAME" { in_config=1; next }
+                    in_config && $1 == "errors:" { exit }
+                    in_config && $1 ~ /^\// && $2 ~ /^(ONLINE|DEGRADED|FAULTED|OFFLINE|UNAVAIL|REMOVED)$/ { print $1 }
+                '
+        )
+
+        [[ "$found_device" == true ]]
+    }
+
+    if ! command -v zpool >/dev/null 2>&1; then
+        msg_info2 "$(translate "ZFS not detected. Skipping ZFS autotrim.")"
+        return 0
+    fi
+
+    mapfile -t pools < <(zpool list -H -o name 2>/dev/null)
+    if [[ ${#pools[@]} -eq 0 ]]; then
+        msg_info2 "$(translate "No ZFS pools detected. Skipping ZFS autotrim.")"
+        return 0
+    fi
+
+    msg_info "$(translate "Checking ZFS autotrim configuration...")"
+    mkdir -p "$BASE_DIR"
+    : > "$tmp_file"
+
+    for pool in "${pools[@]}"; do
+        current=$(zpool get -H -o value autotrim "$pool" 2>/dev/null || true)
+
+        if [[ "$current" == "on" ]]; then
+            msg_ok "$(translate "ZFS autotrim already enabled for pool:") $pool"
+            continue
+        fi
+
+        if [[ "$current" != "off" ]]; then
+            msg_warn "$(translate "ZFS autotrim is not supported for pool:") $pool"
+            continue
+        fi
+
+        if ! pool_supports_autotrim "$pool"; then
+            stop_spinner
+            msg_info2 "$(translate "Pool does not appear to use SSD/NVMe devices with discard support. Skipping ZFS autotrim for pool:") $pool"
+            continue
+        fi
+
+        if zpool set autotrim=on "$pool" >/dev/null 2>&1; then
+            printf '%s\n' "$pool" >> "$tmp_file"
+            changed=true
+            msg_ok "$(translate "ZFS autotrim enabled for pool:") $pool"
+        else
+            msg_warn "$(translate "Failed to enable ZFS autotrim for pool:") $pool"
+        fi
+    done
+
+    if [[ "$changed" == true ]]; then
+        if [[ -s "$state_file" ]]; then
+            sort -u "$state_file" "$tmp_file" > "${tmp_file}.merged"
+            mv "${tmp_file}.merged" "$state_file"
+            rm -f "$tmp_file"
+        else
+            mv "$tmp_file" "$state_file"
+        fi
+        register_tool "zfs_autotrim" true "$FUNC_VERSION"
+    else
+        rm -f "$tmp_file"
+    fi
+
+    msg_success "$(translate "ZFS autotrim setup completed")"
+}
+
+
 install_zfs_auto_snapshot() {
+    local FUNC_VERSION="1.0"
+    # description: Install zfs-auto-snapshot with cron schedules for hourly/daily/weekly/monthly snapshots.
     msg_info2 "$(translate "Installing and configuring ZFS auto-snapshot...")"
 
     # Check if zfs-auto-snapshot is already installed
@@ -1171,6 +1340,7 @@ install_zfs_auto_snapshot() {
     config_zfs_auto_snapshot
 
     msg_success "$(translate "ZFS auto-snapshot installation and configuration completed")"
+    register_tool "zfs_auto_snapshot" true "$FUNC_VERSION"
 }
 
 config_zfs_auto_snapshot() {
@@ -1238,6 +1408,8 @@ disable_rpc() {
 
 
 configure_pigz() {
+    local FUNC_VERSION="1.0"
+    # description: Replace gzip with pigz (parallel implementation) for faster vzdump backup compression.
     msg_info2 "$(translate "Configuring pigz as a faster replacement for gzip...")"
 
     # Enable pigz in vzdump configuration
@@ -1295,6 +1467,7 @@ EOF
     fi
 
     msg_success "$(translate "pigz configuration completed")"
+    register_tool "pigz" true "$FUNC_VERSION"
 }
 
 
@@ -1339,6 +1512,8 @@ EOF
 
 
 install_guest_agent() {
+    local FUNC_VERSION="1.0"
+    # description: Detect the host's hypervisor (qemu/vmware/hyperv/virtualbox) and install the matching guest agent.
     msg_info2 "$(translate "Detecting virtualization and installing  guest agent...")"
     NECESSARY_REBOOT=1
 
@@ -1366,6 +1541,11 @@ install_guest_agent() {
         msg_info "$(translate "Installing $guest_agent for $virt_env...")"
         if /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install $guest_agent > /dev/null 2>&1; then
             msg_ok "$(translate "$guest_agent installed successfully")"
+            # Persist which package was installed so the uninstaller knows
+            # what to apt purge later (different per hypervisor).
+            mkdir -p /usr/local/share/proxmenux 2>/dev/null
+            echo "$guest_agent" > /usr/local/share/proxmenux/guest_agent.pkg
+            register_tool "guest_agent" true "$FUNC_VERSION"
         else
             msg_error "$(translate "Failed to install $guest_agent")"
         fi
@@ -1398,6 +1578,8 @@ install_guest_agent() {
 
 
 enable_vfio_iommu() {
+    local FUNC_VERSION="1.0"
+    # description: Enable IOMMU and load VFIO modules to allow GPU/PCI passthrough into VMs.
     msg_info2 "$(translate "Enabling IOMMU and configuring VFIO for PCI passthrough...")"
     NECESSARY_REBOOT=1
     
@@ -1553,7 +1735,7 @@ enable_vfio_iommu() {
     fi
     
     msg_success "$(translate "IOMMU and VFIO setup completed")"
-    register_tool "vfio_iommu" true
+    register_tool "vfio_iommu" true "$FUNC_VERSION"
 }
 
 
@@ -1570,6 +1752,8 @@ enable_vfio_iommu() {
 
 
 customize_bashrc() {
+    local FUNC_VERSION="1.0"
+    # description: Inject the ProxMenux core bashrc block (aliases, prompt, history) into root's .bashrc, idempotent via begin/end markers.
     msg_info2 "$(translate "Customizing bashrc for root user...")"
     
     msg_info "$(translate "Customizing bashrc for root user...")"
@@ -1609,7 +1793,7 @@ EOF
     fi
     
     msg_ok "$(translate "Bashrc customization completed")"
-    register_tool "bashrc_custom" true
+    register_tool "bashrc_custom" true "$FUNC_VERSION"
 }
 
 
@@ -1667,36 +1851,34 @@ setup_motd() {
 
 
 optimize_logrotate() {
-msg_info2 "$(translate "Optimizing logrotate configuration...")"
+    local FUNC_VERSION="1.1"
+    # description: Replace logrotate.conf with a Log2RAM-friendly profile (daily rotation, copytruncate).
+    msg_info2 "$(translate "Optimizing logrotate configuration...")"
 
     local logrotate_conf="/etc/logrotate.conf"
     local backup_conf="${logrotate_conf}.bak"
 
+    cp -n "$logrotate_conf" "$backup_conf" 2>/dev/null || true
 
-    if grep -q "# ProxMenux optimized configuration" "$logrotate_conf"; then
-        msg_ok "$(translate "Logrotate configuration already optimized.")"
-    else
-        cp "$logrotate_conf" "$backup_conf"
-        
-        msg_info "$(translate "Applying optimized logrotate configuration...")"
-        cat <<EOF > "$logrotate_conf"
-# ProxMenux optimized configuration
+    msg_info "$(translate "Applying optimized logrotate configuration...")"
+    cat <<EOF > "$logrotate_conf"
+# ProxMenux optimized configuration (Log2RAM-friendly)
 daily
 su root adm
 rotate 7
-create
-compress
 size 10M
+compress
 delaycompress
+missingok
+notifempty
+create 0640 root adm
 copytruncate
-
 include /etc/logrotate.d
 EOF
 
     systemctl restart logrotate > /dev/null 2>&1
     msg_ok "$(translate "Logrotate service restarted successfully")"
-   fi
-    register_tool "logrotate" true
+    register_tool "logrotate" true "$FUNC_VERSION"
     msg_success "$(translate "Logrotate optimization completed")"
 }
 
@@ -1711,6 +1893,8 @@ EOF
 
 
 remove_subscription_banner() {
+    local FUNC_VERSION="1.0"
+    # description: Patch the Proxmox web UI to suppress the "no valid subscription" dialog (PVE 8 + 9 variants supported).
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
 
@@ -1726,7 +1910,7 @@ remove_subscription_banner() {
 
         bash "$LOCAL_SCRIPTS/global/remove-banner-pve8.sh"
     fi
-    register_tool "subscription_banner" true
+    register_tool "subscription_banner" true "$FUNC_VERSION"
 }
 
 
@@ -1740,6 +1924,8 @@ remove_subscription_banner() {
 
 
 optimize_memory_settings() {
+    local FUNC_VERSION="1.1"
+    # description: Tune swappiness, dirty page ratios, overcommit and compaction proactiveness for VM hosts.
     msg_info2 "$(translate "Optimizing memory settings...")"
     NECESSARY_REBOOT=1
 
@@ -1777,7 +1963,7 @@ EOF
 
     msg_ok "$(translate "Memory settings optimized successfully")"
     msg_success "$(translate "Memory optimization completed.")"
-    register_tool "memory_settings" true
+    register_tool "memory_settings" true "$FUNC_VERSION"
 }
 
 
@@ -1791,9 +1977,18 @@ EOF
 
 
 optimize_vzdump() {
+    local FUNC_VERSION="1.0"
+    # description: Lift vzdump bandwidth/IO limits so backups run at the storage's real throughput.
     msg_info2 "$(translate "Optimizing vzdump backup speed...")"
 
     local vzdump_conf="/etc/vzdump.conf"
+
+    # Backup the current config so the uninstall path can restore the
+    # user's original values. The previous code edited in-place with no
+    # backup; users with custom bwlimit/ionice lost them silently.
+    if [[ -f "$vzdump_conf" && ! -f "${vzdump_conf}.bak" ]]; then
+        cp -p "$vzdump_conf" "${vzdump_conf}.bak"
+    fi
 
     # Configure bandwidth limit
     msg_info "$(translate "Configuring bandwidth limit for vzdump...")"
@@ -1812,6 +2007,7 @@ optimize_vzdump() {
     msg_ok "$(translate "I/O priority configured")"
 
     msg_success "$(translate "vzdump backup speed optimization completed")"
+    register_tool "vzdump_speed" true "$FUNC_VERSION"
 }
 
 
@@ -1825,12 +2021,17 @@ optimize_vzdump() {
 
 
 install_ovh_rtm() {
+    local FUNC_VERSION="1.0"
+    # description: Detect OVH-rented hardware via whois lookup and install OVH Real-Time Monitoring (no-op on non-OVH).
     msg_info2 "$(translate "Detecting if this is an OVH server and installing OVH RTM if necessary...")"
 
     # Get the public IP and check if it belongs to OVH
     msg_info "$(translate "Checking if the server belongs to OVH...")"
     public_ip=$(curl -s ipinfo.io/ip)
-    is_ovh=$(whois -h v4.whois.cymru.com " -t $public_ip" | tail -n 1 | cut -d'|' -f3 | grep -i "ovh")
+    # `--` ends whois client option parsing so "-t IP" reaches the cymru server
+    # as the query string. Previous form had a leading space inside the quotes
+    # ("\" -t IP\"") that mangled the query and caused detection to never match.
+    is_ovh=$(whois -h v4.whois.cymru.com -- "-t $public_ip" | tail -n 1 | cut -d'|' -f3 | grep -i "ovh")
 
     if [ -n "$is_ovh" ]; then
         msg_ok "$(translate "OVH server detected")"
@@ -1838,11 +2039,13 @@ install_ovh_rtm() {
         msg_info "$(translate "Installing OVH RTM (Real Time Monitoring)...")"
         if wget -qO - https://last-public-ovh-infra-yak.snap.mirrors.ovh.net/yak/archives/apply.sh | OVH_PUPPET_MANIFEST=distribyak/catalog/master/puppet/manifests/common/rtmv2.pp bash > /dev/null 2>&1; then
             msg_ok "$(translate "OVH RTM installed successfully")"
+            register_tool "ovh_rtm" true "$FUNC_VERSION"
         else
             msg_error "$(translate "Failed to install OVH RTM")"
         fi
+    else
+        msg_ok "$(translate "Not an OVH server, skipping RTM installation")"
     fi
-    msg_ok "$(translate "Server belongs to OVH")"
     msg_success "$(translate "OVH server detection and RTM installation process completed")"
 }
 
@@ -1854,6 +2057,8 @@ install_ovh_rtm() {
 
 
 enable_ha() {
+    local FUNC_VERSION="1.0"
+    # description: Enable the Proxmox HA stack (pve-ha-lrm, pve-ha-crm, corosync) for cluster failover.
     msg_info2 "$(translate "Enabling High Availability (HA) services...")"
     NECESSARY_REBOOT=1
 
@@ -1865,7 +2070,7 @@ enable_ha() {
     msg_ok "$(translate "High Availability services have been enabled successfully")"
     msg_success "$(translate "High Availability setup completed")"
 
-
+    register_tool "ha" true "$FUNC_VERSION"
 }
 
 
@@ -1879,6 +2084,8 @@ enable_ha() {
 
 
 configure_fastfetch() {
+    local FUNC_VERSION="1.1"
+    # description: Install Fastfetch system summary tool with the ProxMenux logo + status block as the SSH login banner.
     msg_info2 "$(translate "Installing and configuring Fastfetch...")"
 
 
@@ -1900,8 +2107,17 @@ configure_fastfetch() {
 
     
     msg_info "$(translate "Downloading the latest Fastfetch release...")"
-    local fastfetch_deb_url=$(curl -s https://api.github.com/repos/fastfetch-cli/fastfetch/releases/latest |
-        jq -r '.assets[] | select(.name | test("fastfetch-linux-amd64.deb")) | .browser_download_url')
+    # `--connect-timeout`/`--max-time` so a slow GitHub API call doesn't
+    # hang the menu indefinitely. `FASTFETCH_PIN_TAG` env var lets the
+    # caller pin to a known release if upstream introduces a breaking
+    # change. Audit Tier 6 — recursos remotos sin pinning de versión.
+    local fastfetch_deb_url=""
+    if [[ -n "${FASTFETCH_PIN_TAG:-}" ]]; then
+        fastfetch_deb_url="https://github.com/fastfetch-cli/fastfetch/releases/download/${FASTFETCH_PIN_TAG}/fastfetch-linux-amd64.deb"
+    else
+        fastfetch_deb_url=$(curl -s --connect-timeout 5 --max-time 15 https://api.github.com/repos/fastfetch-cli/fastfetch/releases/latest |
+            jq -r '.assets[] | select(.name | test("fastfetch-linux-amd64.deb")) | .browser_download_url')
+    fi
 
     if [[ -z "$fastfetch_deb_url" ]]; then
         msg_error "$(translate "Failed to retrieve Fastfetch download URL.")"
@@ -1937,16 +2153,17 @@ configure_fastfetch() {
 
     while true; do
         # Define logo options
-        local logo_options=("ProxMenux" "Proxmox (default)" "Comunidad Helper-Scripts" "Home-Labs-Club" "Proxmology" "Custom")
+        local logo_options=("ProxMenux" "Proxmox (default)" "JC Channel" "Comunidad Helper-Scripts" "Home-Labs-Club" "Proxmology" "Custom")
         local choice
 
-        choice=$(whiptail --title "$(translate "Fastfetch Logo Selection")" --menu "$(translate "Choose a logo for Fastfetch:")" 20 78 6 \
+        choice=$(whiptail --title "$(translate "Fastfetch Logo Selection")" --menu "$(translate "Choose a logo for Fastfetch:")" 20 78 7 \
             "1" "${logo_options[0]}" \
             "2" "${logo_options[1]}" \
             "3" "${logo_options[2]}" \
             "4" "${logo_options[3]}" \
             "5" "${logo_options[4]}" \
             "6" "${logo_options[5]}" \
+            "7" "${logo_options[6]}" \
             3>&1 1>&2 2>&3)
 
         case $choice in
@@ -1968,6 +2185,17 @@ configure_fastfetch() {
                 break
                 ;;
             3)
+                msg_info "$(translate "Downloading JC Channel logo...")"
+                local jc_channel_logo_path="$logos_dir/jc_channel.txt"
+                if wget -qO "$jc_channel_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/jc_channel.txt"; then
+                    jq --arg path "$jc_channel_logo_path" '. + {logo: $path}' "$fastfetch_config" > "${fastfetch_config}.tmp" && mv "${fastfetch_config}.tmp" "$fastfetch_config"
+                    msg_ok "$(translate "JC Channel logo applied")"
+                else
+                    msg_error "$(translate "Failed to download JC Channel logo")"
+                fi
+                break
+                ;;
+            4)
                 msg_info "$(translate "Downloading Helper-Scripts logo...")"
                 local helper_scripts_logo_path="$logos_dir/Helper_Scripts.txt"
                 if wget -qO "$helper_scripts_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/Helper_Scripts.txt"; then
@@ -1978,7 +2206,7 @@ configure_fastfetch() {
                 fi
                 break
                 ;;
-            4)
+            5)
                 msg_info "$(translate "Downloading Home-Labs-Club logo...")"
                 local home_lab_club_logo_path="$logos_dir/home_labsclub.txt"
                 if wget -qO "$home_lab_club_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/home_labsclub.txt"; then
@@ -1989,7 +2217,7 @@ configure_fastfetch() {
                 fi
                 break
                 ;;
-            5)
+            6)
                 msg_info "$(translate "Downloading Proxmology logo...")"
                 local proxmology_logo_path="$logos_dir/proxmology.txt"
                 if wget -qO "$proxmology_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/proxmology.txt"; then
@@ -2000,7 +2228,7 @@ configure_fastfetch() {
                 fi
                 break
                 ;;
-            6)
+            7)
                 whiptail --title "$(translate "Custom Logo Instructions")" --msgbox "$(translate "To use a custom Fastfetch logo, place your ASCII logo file in:\n\n/usr/local/share/fastfetch/logos/\n\nThe file should not exceed 35 lines to fit properly in the terminal.\n\nPress OK to continue and select your logo.")" 15 70
 
                 local logo_files=($(ls "$logos_dir"/*.txt 2>/dev/null))
@@ -2070,7 +2298,7 @@ fi
 
 msg_ok "$(translate "Fastfetch will start automatically in the console")"
 msg_success "$(translate "Fastfetch installation and configuration completed")"
-register_tool "fastfetch" true
+register_tool "fastfetch" true "$FUNC_VERSION"
 
 }
 
@@ -2102,8 +2330,13 @@ register_tool "fastfetch" true
 
 
 configure_figurine() {
+    local FUNC_VERSION="1.1"
+    # description: Install Figurine (ASCII-art hostname banner) and wire it into the SSH login flow.
     msg_info2 "$(translate "Installing and configuring Figurine...")"
-    local version="1.3.0"
+    # `FIGURINE_VERSION` env var allows pinning to a specific release;
+    # default tracks the last tested upstream tag. Audit Tier 6 —
+    # recursos remotos sin pinning de versión.
+    local version="${FIGURINE_VERSION:-2.0.0}"
     local file="figurine_linux_amd64_v${version}.tar.gz"
     local url="https://github.com/arsham/figurine/releases/download/v${version}/${file}"
     local temp_dir; temp_dir=$(mktemp -d)
@@ -2190,7 +2423,7 @@ EOF
     msg_ok "$(translate "Aliases added to .bashrc")"
 
     msg_success "$(translate "Figurine installation and configuration completed successfully.")"
-    register_tool "figurine" true
+    register_tool "figurine" true "$FUNC_VERSION"
 }
 
 
@@ -2233,6 +2466,8 @@ update_pve_appliance_manager() {
 
 
 configure_log2ram() {
+    local FUNC_VERSION="1.2"
+    # description: Install Log2RAM with user-chosen RAM size; prompts for size and SSD/M.2 awareness before applying.
     msg_info2 "$(translate "Preparing Log2RAM configuration")"
     sleep 1
 
@@ -2311,7 +2546,14 @@ configure_log2ram() {
     fi
 
     rm -rf /tmp/log2ram 2>/dev/null || true
-    if ! git clone https://github.com/azlux/log2ram.git /tmp/log2ram >/dev/null 2>>/tmp/log2ram_install.log; then
+    # Pin to a tested release — `master` could ship breaking changes
+    # without notice. `LOG2RAM_TAG` env var lets the caller upgrade.
+    local LOG2RAM_TAG="${LOG2RAM_TAG:-1.7.0}"
+    if ! git clone --depth 1 --branch "$LOG2RAM_TAG" \
+            https://github.com/azlux/log2ram.git /tmp/log2ram \
+            >/dev/null 2>>/tmp/log2ram_install.log \
+       && ! git clone --depth 1 https://github.com/azlux/log2ram.git /tmp/log2ram \
+            >/dev/null 2>>/tmp/log2ram_install.log; then
         msg_error "$(translate "Failed to clone log2ram repository. Check /tmp/log2ram_install.log")"
         return 1
     fi
@@ -2351,6 +2593,13 @@ EOF
     if [[ "$ENABLE_AUTOSYNC" == true ]]; then
         cat > /usr/local/bin/log2ram-check.sh <<'EOF'
 #!/usr/bin/env bash
+# v1.2 — `log2ram write` only copies tmpfs→disk; it does NOT shrink
+# the tmpfs. When journald or pveproxy/access.log grow past their
+# limits the tmpfs hit 100% and PVE crashed with "No space left on
+# device" on Shell open (community-reported: JC Miñarro, Nicolás P.
+# de A., 17-18/05). We now vacuum the journal and truncate the
+# non-rotating logs that actually consume the tmpfs before calling
+# `log2ram write`.
 PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 CONF_FILE="/etc/log2ram.conf"
 L2R_BIN="$(command -v log2ram || true)"
@@ -2360,7 +2609,8 @@ L2R_BIN="$(command -v log2ram || true)"
 SIZE_MiB="$(grep -E '^SIZE=' "$CONF_FILE" 2>/dev/null | cut -d'=' -f2 | tr -dc '0-9')"
 [[ -z "$SIZE_MiB" ]] && SIZE_MiB=128
 LIMIT_BYTES=$(( SIZE_MiB * 1024 * 1024 ))
-THRESHOLD_BYTES=$(( LIMIT_BYTES * 90 / 100 ))
+WARN_BYTES=$(( LIMIT_BYTES * 80 / 100 ))
+EMERGENCY_BYTES=$(( LIMIT_BYTES * 92 / 100 ))
 
 USED_BYTES="$(df -B1 --output=used /var/log 2>/dev/null | tail -1 | tr -dc '0-9')"
 [[ -z "$USED_BYTES" ]] && exit 0
@@ -2369,8 +2619,24 @@ LOCK="/run/log2ram-check.lock"
 exec 9>"$LOCK" 2>/dev/null || exit 0
 flock -n 9 || exit 0
 
-if (( USED_BYTES > THRESHOLD_BYTES )); then
-  "$L2R_BIN" write 2>/dev/null || true
+# `log2ram write` alone leaves the tmpfs full. Real recovery requires:
+# (a) journal vacuum — journald respects --vacuum-size unconditionally,
+#     unlike SystemMaxUse which only enforces on rotation boundaries;
+# (b) truncating logs that aren't rotated by logrotate (pveproxy, pveam);
+# (c) THEN syncing to disk so the persistent copy reflects reality.
+if (( USED_BYTES > EMERGENCY_BYTES )); then
+    SAFE_JOURNAL_MB=$(( SIZE_MiB * 5 / 100 ))
+    [[ "$SAFE_JOURNAL_MB" -lt 16 ]] && SAFE_JOURNAL_MB=16
+    journalctl --vacuum-size="${SAFE_JOURNAL_MB}M" >/dev/null 2>&1 || true
+    : > /var/log/pveproxy/access.log 2>/dev/null || true
+    : > /var/log/pveproxy/error.log 2>/dev/null || true
+    : > /var/log/pveam.log 2>/dev/null || true
+    "$L2R_BIN" write 2>/dev/null || true
+elif (( USED_BYTES > WARN_BYTES )); then
+    SOFT_JOURNAL_MB=$(( SIZE_MiB * 30 / 100 ))
+    [[ "$SOFT_JOURNAL_MB" -lt 32 ]] && SOFT_JOURNAL_MB=32
+    journalctl --vacuum-size="${SOFT_JOURNAL_MB}M" >/dev/null 2>&1 || true
+    "$L2R_BIN" write 2>/dev/null || true
 fi
 EOF
         chmod +x /usr/local/bin/log2ram-check.sh
@@ -2384,7 +2650,7 @@ MAILTO=""
 EOF
         chmod 0644 /etc/cron.d/log2ram-auto-sync
         chown root:root /etc/cron.d/log2ram-auto-sync
-        msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 90% of") $LOG2RAM_SIZE"
+        msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 80% of") $LOG2RAM_SIZE"
     else
         rm -f /usr/local/bin/log2ram-check.sh /etc/cron.d/log2ram-auto-sync 2>/dev/null || true
         msg_info2 "$(translate "Auto-sync was not enabled")"
@@ -2452,7 +2718,7 @@ EOF
     systemctl restart rsyslog >/dev/null 2>&1 || true
 
     msg_success "$(translate "Log2RAM installation and configuration completed successfully.")"
-    register_tool "log2ram" true
+    register_tool "log2ram" true "$FUNC_VERSION"
 }
 
 
@@ -2470,6 +2736,8 @@ EOF
 
 
 setup_persistent_network() {
+    local FUNC_VERSION="1.0"
+    # description: Pin NIC names to MAC addresses via systemd .link files so kernel updates don't shuffle interface names.
     local LINK_DIR="/etc/systemd/network"
     local BACKUP_DIR="/etc/systemd/network/backup-$(date +%Y%m%d-%H%M%S)"
     local pve_version
@@ -2478,8 +2746,20 @@ setup_persistent_network() {
     msg_info "$(translate "Setting up persistent network interfaces")"
     sleep 2
 
+    # Detect legacy `/etc/network/interfaces` setups that depend on the
+    # default udev naming. If the file references `allow-hotplug` rules
+    # or uses physical interface names directly, the .link rules below
+    # could rename interfaces and break network on reboot. Warn loudly so
+    # the user can review before continuing. Audit Tier 6 —
+    # `setup_persistent_network` no detecta conflicto con legacy.
+    if [[ -f /etc/network/interfaces ]]; then
+        if grep -qE '^[[:space:]]*allow-hotplug[[:space:]]' /etc/network/interfaces 2>/dev/null; then
+            msg_warn "$(translate '/etc/network/interfaces uses allow-hotplug. Renaming interfaces via systemd .link can break that flow — review the file after reboot.')"
+        fi
+    fi
+
     mkdir -p "$LINK_DIR"
-    
+
 
     if ls "$LINK_DIR"/*.link >/dev/null 2>&1; then
         mkdir -p "$BACKUP_DIR"
@@ -2523,7 +2803,7 @@ EOF
         msg_warn "$(translate "No physical interfaces found")"
     fi
     msg_success "$(translate "Setting up persistent network interfaces successfully.")"
-    register_tool "persistent_network" true
+    register_tool "persistent_network" true "$FUNC_VERSION"
     NECESSARY_REBOOT=1
 }
 
@@ -2667,6 +2947,7 @@ main_menu() {
     "Network|Interface Names (persistent)|PERSISNET"
     "Storage|Optimize ZFS ARC size|ZFSARC"
     "Storage|Install ZFS auto-snapshot|ZFSAUTOSNAPSHOT"
+    "Storage|Enable ZFS autotrim (SSD/NVMe pools)|ZFSAUTOTRIM"
     "Storage|Increase vzdump backup speed|VZDUMP"
     "Security|Disable portmapper/rpcbind|DISABLERPC"
     "Customization|Customize bashrc|BASHRC"
@@ -2815,6 +3096,7 @@ done
         TCPFASTOPEN) enable_tcp_fast_open ;;
         ZFSARC) optimize_zfs_arc ;;
         ZFSAUTOSNAPSHOT) install_zfs_auto_snapshot ;;
+        ZFSAUTOTRIM) enable_zfs_autotrim ;;
         VZDUMP) optimize_vzdump ;;
         DISABLERPC) disable_rpc ;;
         BASHRC) customize_bashrc ;;
@@ -2866,5 +3148,11 @@ done
 
 
 
-check_extremeshok_warning
-main_menu
+# Sprint 12B: only run the interactive menu when this script is invoked
+# directly. When sourced from another script (e.g. the post-install
+# update wrapper that re-runs a single function), don't trigger the
+# extremeshok warning or the main menu.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    check_extremeshok_warning
+    main_menu
+fi

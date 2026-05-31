@@ -223,14 +223,28 @@ def _parse_vzdump_message(message: str) -> Optional[Dict[str, Any]]:
             else:
                 total_time = f"{secs}s"
     
+    # ── Extract the storage target name (PBS, PBS-Cloud, local, …) ──
+    # PVE logs the full command on the first line:
+    #   "INFO: starting new backup job: vzdump 104 105 --storage PBS-Cloud --mode stop"
+    # We surface it so the notification body can say "PBS-Cloud: vm/104/…"
+    # instead of the generic "PBS:" prefix when multiple PBS endpoints
+    # are configured. Reported by JC Miñarro 18/05.
+    storage_name = ''
+    for line in lines:
+        m_storage = re.search(r'--storage\s+(\S+)', line)
+        if m_storage:
+            storage_name = m_storage.group(1).strip()
+            break
+
     if not vms and not total_size:
         return None
-    
+
     return {
         'vms': vms,
         'total_time': total_time,
         'total_size': total_size,
         'vm_count': len(vms),
+        'storage_name': storage_name,
     }
 
 
@@ -277,13 +291,19 @@ def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool) -> str:
         if detail_line:
             parts.append(' | '.join(detail_line))
         
-        # PBS/File on separate line with icon
+        # PBS/File on separate line with icon. When we know the
+        # storage name (e.g. "PBS-Cloud", "PBS-Office") prefix it so
+        # the user can tell which destination this archive lives in \u2014
+        # critical when there are multiple PBS endpoints configured.
         if vm.get('filename'):
             fname = vm['filename']
+            storage_name = parsed.get('storage_name', '') or ''
             if re.match(r'^(?:ct|vm)/\d+/', fname):
-                parts.append(f"\U0001F5C4\uFE0F PBS: {fname}")
+                label = storage_name if storage_name else 'PBS'
+                parts.append(f"\U0001F5C4\uFE0F {label}: {fname}")
             else:
-                parts.append(f"\U0001F4C1 File: {fname}")
+                label = storage_name if storage_name else 'File'
+                parts.append(f"\U0001F4C1 {label}: {fname}")
         
         # Error reason if failed
         if status != 'ok' and vm.get('error'):
@@ -464,6 +484,23 @@ TEMPLATES = {
     },
     
     # ── VM / CT events ──
+    # Phase 1: apt-based update detection inside running Debian/Ubuntu
+    # LXCs. Grouped — one notification per cycle covers every CT with
+    # pending updates. Opt-in (default_enabled=False) because the check
+    # uses `pct exec` to inspect package state inside the user's CTs.
+    # Phase 2 (community-scripts metadata) will extend this without
+    # changing the event type.
+    'lxc_updates_available': {
+        'title': '{hostname}: {count} LXC(s) with package updates available',
+        'body': (
+            '📊 {count} LXC(s) with pending package updates '
+            '(📦 {total_packages} total, 🔒 {security_count} security):\n\n'
+            '{ct_list}'
+        ),
+        'label': 'LXC updates available (experimental)',
+        'group': 'vm_ct',
+        'default_enabled': False,
+    },
     'vm_start': {
         'title': '{hostname}: VM {vmname} ({vmid}) started',
         'body': 'Virtual machine {vmname} (ID: {vmid}) is now running.',
@@ -862,13 +899,46 @@ TEMPLATES = {
         'default_enabled': True,
         'hidden': True,
     },
+    'cron_output': {
+        'title': '{hostname}: {pve_title}',
+        'body': '{reason}',
+        # Output of operator-defined cron jobs forwarded via PVE's
+        # system-mail bucket. Default OFF because the typical pattern is
+        # a periodic job that prints a status line every N minutes (one
+        # user reported 288 messages/day from a `*/5 * * * *` agent). The
+        # smartd / mail-bounce signal that lives in the same PVE bucket
+        # is kept on a separate `system_mail` event so smartd warnings
+        # stay default-on while cron noise is opt-in.
+        'label': 'Cron job output (per-cron stdout via mail)',
+        'group': 'services',
+        'default_enabled': False,
+    },
     'system_mail': {
         'title': '{hostname}: {pve_title}',
         'body': '{reason}',
-        'label': 'PVE system mail',
-        'group': 'other',
+        # Label phrased starting with the word the user actually sees on
+        # smartd-driven notifications. Cron output has been split into a
+        # separate `cron_output` event; this one now covers only smartd
+        # warnings, mail bouncebacks, and other non-cron PVE system mail.
+        'label': 'Smartd / mail bounces (PVE system mail)',
+        # Placed in 'services' (not 'other') because the 'other' category
+        # is intentionally hidden from the channel UI: it historically
+        # only contained internal events (webhook_test, burst_generic)
+        # that the operator shouldn't toggle. system_mail is a real
+        # operator-facing toggle, and smartd / mail bounces are
+        # conceptually system services, so 'services' is the right
+        # bucket for surfacing this in Settings → Notifications.
+        'group': 'services',
         'default_enabled': True,
-        'hidden': True,
+        # NOT hidden — operators need to be able to mute this when PVE is
+        # configured to forward root@<host> mail via the notification webhook.
+        # The classic case is a cron job that prints to stdout every N
+        # minutes: cron mails the output to root, PVE re-emits it as a
+        # `system-mail` event, and the Monitor forwards it to every enabled
+        # channel. Most operators want smartd alerts but NOT noisy cron
+        # output — without a visible toggle the only fix is editing
+        # /etc/aliases or removing MAILTO from the cron job. Audit Tier 6
+        # — `system_mail` toggle no visible en UI / reportado por usuario.
     },
     'webhook_test': {
         'title': '{hostname}: Webhook test received',
@@ -976,60 +1046,254 @@ TEMPLATES = {
         'group': 'updates',
         'default_enabled': True,
     },
+
+    # ── Remote mount health (Sprint 13) ──
+    # `mount_stale` is the high-severity case — the mount looks
+    # present in /proc/mounts but every access blocks/ESTALEs, and
+    # writes silently land on the underlying directory of the host
+    # (or the container's rootfs in the LXC variant), eventually
+    # filling the disk. The body includes the source so the operator
+    # can match against /etc/fstab without ssh, and the LXC fields
+    # surface inside-container scope when present (Sprint 13.27).
+    # Variables ``lxc_id`` / ``lxc_name`` resolve to empty strings on
+    # host mounts thanks to the SafeDict in render_template — the
+    # surrounding text is phrased so an empty value reads naturally.
+    'mount_stale': {
+        'title': '{hostname}: stale remote mount {mount_target}',
+        'body': (
+            'Remote mount {mount_target} ({fstype}) from {mount_source} is stale{lxc_scope}.\n'
+            'Stat timed out or returned an error: {error}\n\n'
+            'Apps writing to this path will silently land on the underlying filesystem '
+            'and may fill the disk. Remount or fix connectivity ASAP.'
+        ),
+        'label': 'Remote mount stale',
+        'group': 'storage',
+        'default_enabled': True,
+    },
+    'mount_readonly': {
+        'title': '{hostname}: remote mount {mount_target} is read-only',
+        'body': (
+            'Remote mount {mount_target} ({fstype}) from {mount_source} is mounted '
+            'read-only{lxc_scope}. Writes will fail. If this was unintentional, remount with rw.'
+        ),
+        'label': 'Remote mount read-only',
+        'group': 'storage',
+        'default_enabled': True,
+    },
+
+    # Sprint 13.30: per-LXC rootfs filling up.
+    # Catches the classic "CT runs out of disk and stops booting"
+    # before it actually happens — fires at 85% (WARNING) and 95%
+    # (CRITICAL), same thresholds as the host disk check. Body
+    # includes both percentage and the absolute MB so the operator
+    # can decide between "expand the rootfs" and "free up logs".
+    'lxc_disk_low': {
+        'title': '{hostname}: CT {vmid} rootfs at {usage_percent}%',
+        'body': (
+            'CT {vmid} ({name}) rootfs is at {usage_percent}% '
+            '({disk_bytes} / {maxdisk_bytes}).\n\n'
+            'A full LXC rootfs prevents the container from booting cleanly. '
+            'Either expand the rootfs (pct resize {vmid} rootfs +1G) or free '
+            'space inside the container.'
+        ),
+        'label': 'LXC rootfs near full',
+        'group': 'storage',
+        'default_enabled': True,
+    },
+
+    # ── Phase 3 capacity events (Sprint 14.5) ─────────────────────────
+    # Three new events that complete the storage-monitoring picture.
+    # Each fires at the user-configured warning/critical thresholds
+    # (defaults 85/95). Wording mentions both the percentage and a
+    # path/identifier so the operator can act without opening the
+    # dashboard first.
+
+    'lxc_mount_low': {
+        'title': '{hostname}: CT {vmid} mount {mount} at {usage_percent}%',
+        'body': (
+            'Mount {mount} inside CT {vmid} ({name}) is at {usage_percent}% used.\n'
+            'Filesystem type: {fstype}\n\n'
+            'A full mount inside a container often blocks the application '
+            'silently — writes either fail or, worse, land on the rootfs '
+            'and trigger the rootfs alert next. Free up space on the mount '
+            'or expand it.'
+        ),
+        'label': 'LXC mount near full',
+        'group': 'storage',
+        'default_enabled': True,
+    },
+
+    'pve_storage_full': {
+        'title': '{hostname}: PVE storage {storage_name} at {usage_percent}%',
+        'body': (
+            'Proxmox storage "{storage_name}" (type: {storage_type}) is at '
+            '{usage_percent}% used.\n\n'
+            'Once full, no new VM/CT can be provisioned and existing guests '
+            'may fail to write. Move/delete unused volumes or expand the '
+            'underlying pool/LV/RBD image.'
+        ),
+        'label': 'PVE storage near full',
+        'group': 'storage',
+        'default_enabled': True,
+    },
+
+    'zfs_pool_full': {
+        'title': '{hostname}: ZFS pool {pool_name} at {usage_percent}%',
+        'body': (
+            'ZFS pool "{pool_name}" is at {usage_percent}% capacity.\n\n'
+            'ZFS performance and write reliability degrade sharply above '
+            '~80% capacity (CoW needs free space for new blocks). Free up '
+            'snapshots, prune old datasets, or add more vdevs to the pool.'
+        ),
+        'label': 'ZFS pool near full',
+        'group': 'storage',
+        'default_enabled': True,
+    },
+
+    # ── Post-install function updates (Sprint 12D) ──
+    # Fired once per *changed* set of available post-install function
+    # updates. The body lists each tool with its before/after version so
+    # the operator sees exactly what's about to change without opening
+    # the Monitor.
+    'post_install_update': {
+        'title': '{hostname}: {count} ProxMenux optimization update(s) available',
+        'body': (
+            '{count} optimization update(s) detected on this host.\n\n'
+            '🛠️ Tools:\n{tool_list}\n\n'
+            '💡 How to apply:\n'
+            '  • ProxMenux Monitor → Settings → ProxMenux Optimizations\n'
+            '  • Or run the post-install menu (option 2) → "Apply available updates"'
+        ),
+        'label': 'ProxMenux optimization updates available',
+        'group': 'updates',
+        'default_enabled': True,
+    },
+
+    # Sprint 14.6: Secure Gateway / OCI app updates. Fired when a
+    # ProxMenux-managed LXC (currently the Tailscale gateway, but
+    # designed to extend to future OCI apps) has package upgrades
+    # pending. The user applies the update with one click in the
+    # Monitor — no shell access required. {package_count} + the
+    # bullet list make sure the operator sees exactly what's moving
+    # without opening the dashboard first.
+    'secure_gateway_update_available': {
+        'title': '{hostname}: {app_name} update available — v{latest_version}',
+        'body': (
+            '{app_name} (managed by ProxMenux) has 📦 {package_count} package update(s) '
+            'pending in its container.\n'
+            '🔹 Current Tailscale: v{current_version}  →  🟢 Latest: v{latest_version}\n\n'
+            '💡 Open ProxMenux Monitor > Settings > Secure Gateway and click '
+            '"Update" to apply.\n\n'
+            '🗂️ Packages:\n{package_list}'
+        ),
+        'label': 'Secure Gateway update available',
+        'group': 'updates',
+        'default_enabled': True,
+    },
+
+    # Sprint 14.7: host-side NVIDIA driver. Unlike the Tailscale flow,
+    # there's no in-dashboard "Apply update" button — installing an
+    'nvidia_driver_update_available': {
+        'title': '{hostname}: NVIDIA driver update available — v{latest_version}',
+        'body': (
+            'A newer NVIDIA driver compatible with kernel {kernel} is available.\n'
+            '🔹 Currently installed: v{current_version}\n'
+            '🟢 Latest available:    v{latest_version}\n\n'
+            '{upgrade_reason}\n\n'
+            '💡 To reinstall:\n'
+            '  • From the ProxMenux post-install menu: {menu_label}\n\n'
+            'Reinstalling rebuilds the DKMS module against the running kernel and '
+            'requires a reboot to load the new driver.'
+        ),
+        'label': 'NVIDIA driver update available',
+        'group': 'updates',
+        'default_enabled': True,
+    },
+
+    # Sprint 14.7 follow-up: host-side Coral TPU driver. Mirrors the
+    # NVIDIA flow — there's no in-dashboard "Apply update" button; the
+    # operator reruns the installer from the post-install menu. The
+    # PCIe (gasket-dkms) and USB (libedgetpu1-*) variants share one
+    # template and use {variant_label} to surface which is moving so
+    # the body stays readable in either case.
+    'coral_driver_update_available': {
+        'title': '{hostname}: Coral TPU driver update available — {latest_version}',
+        'body': (
+            'A newer {variant_label} is available.\n'
+            '🔹 Currently installed: {current_version}\n'
+            '🟢 Latest available:    {latest_version}\n\n'
+            '{upgrade_reason}\n\n'
+            '💡 To reinstall:\n'
+            '  • From the ProxMenux post-install menu: {menu_label}\n\n'
+            '{reboot_note}'
+        ),
+        'label': 'Coral TPU driver update available',
+        'group': 'updates',
+        'default_enabled': True,
+    },
     
     # ── Burst aggregation summaries (hidden -- auto-generated by BurstAggregator) ──
     # These inherit enabled state from their parent event type at dispatch time.
+    #
+    # IMPORTANT — `{count}` here is the count of *additional* events that
+    # arrived AFTER the first one was already sent individually on the
+    # fast-alert path (see notification_manager.py:_create_summary). It is
+    # NOT the total event count in the window; that lives in `{total_count}`.
+    # The wording must reflect "more / additional" so the user does not
+    # mistake a 2-event burst for a duplicate of the initial individual
+    # notification. The first event has already been delivered when this
+    # summary fires.
     'burst_auth_fail': {
-        'title': '{hostname}: {count} auth failures in {window}',
-        'body': '{count} authentication failures detected in {window}.\nSources: {entity_list}',
+        'title': '{hostname}: +{count} more auth failures in {window}',
+        'body': '+{count} additional authentication failures detected in {window} ({total_count} total).\nSources: {entity_list}',
         'label': 'Auth failures burst',
         'group': 'security',
         'default_enabled': True,
         'hidden': True,
     },
     'burst_ip_block': {
-        'title': '{hostname}: Fail2Ban banned {count} IPs in {window}',
-        'body': '{count} IPs banned by Fail2Ban in {window}.\nIPs: {entity_list}',
+        'title': '{hostname}: Fail2Ban banned +{count} more IPs in {window}',
+        'body': '+{count} additional IPs banned by Fail2Ban in {window} ({total_count} total).\nIPs: {entity_list}',
         'label': 'IP block burst',
         'group': 'security',
         'default_enabled': True,
         'hidden': True,
     },
     'burst_disk_io': {
-        'title': '{hostname}: {count} disk I/O errors on {entity_list}',
-        'body': '{count} I/O errors detected in {window}.\nDevices: {entity_list}',
+        'title': '{hostname}: +{count} more disk I/O errors on {entity_list}',
+        'body': '+{count} additional I/O errors detected in {window} ({total_count} total).\nDevices: {entity_list}',
         'label': 'Disk I/O burst',
         'group': 'storage',
         'default_enabled': True,
         'hidden': True,
     },
     'burst_cluster': {
-        'title': '{hostname}: Cluster flapping detected ({count} changes)',
-        'body': 'Cluster state changed {count} times in {window}.\nNodes: {entity_list}',
+        'title': '{hostname}: Cluster flapping detected (+{count} more changes)',
+        'body': 'Cluster state changed +{count} more times in {window} ({total_count} total).\nNodes: {entity_list}',
         'label': 'Cluster flapping burst',
         'group': 'cluster',
         'default_enabled': True,
         'hidden': True,
     },
     'burst_service_fail': {
-        'title': '{hostname}: {count} services failed in {window}',
-        'body': '{count} service failures detected in {window}.\nThis typically indicates a node reboot or PVE service restart.\n\nAdditional failures:\n{details}',
+        'title': '{hostname}: +{count} more services failed in {window}',
+        'body': '+{count} additional service failures detected in {window} ({total_count} total).\nThis typically indicates a node reboot or PVE service restart.\n\nAdditional failures:\n{details}',
         'label': 'Service fail burst',
         'group': 'services',
         'default_enabled': True,
         'hidden': True,
     },
     'burst_system': {
-        'title': '{hostname}: {count} system problems in {window}',
-        'body': '{count} system problems detected in {window}.\n\nAdditional issues:\n{details}',
+        'title': '{hostname}: +{count} more system problems in {window}',
+        'body': '+{count} additional system problems detected in {window} ({total_count} total).\n\nAdditional issues:\n{details}',
         'label': 'System problems burst',
         'group': 'services',
         'default_enabled': True,
         'hidden': True,
     },
     'burst_generic': {
-        'title': '{hostname}: {count} {event_type} events in {window}',
-        'body': '{count} events of type {event_type} in {window}.\n\nAdditional events:\n{details}',
+        'title': '{hostname}: +{count} more {event_type} events in {window}',
+        'body': '+{count} additional events of type {event_type} in {window} ({total_count} total).\n\nAdditional events:\n{details}',
         'label': 'Generic burst',
         'group': 'other',
         'default_enabled': True,
@@ -1057,11 +1321,21 @@ EVENT_GROUPS = {
 # ─── Template Renderer ───────────────────────────────────────────
 
 def _get_hostname() -> str:
-    """Get short hostname for message titles."""
+    """Get hostname for message titles.
+
+    Honors the user-configured Display Name (notification settings `hostname` key) and
+    falls back to the system FQDN. The hostname is NOT truncated at the first dot —
+    multi-node deployments need the full FQDN to disambiguate which host emitted the
+    notification. Resolution is delegated to `notification_manager._resolve_display_hostname`.
+    """
     try:
-        return socket.gethostname().split('.')[0]
+        from notification_manager import _resolve_display_hostname
+        return _resolve_display_hostname()
     except Exception:
-        return 'proxmox'
+        try:
+            return socket.gethostname()
+        except Exception:
+            return 'proxmox'
 
 
 def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -1114,9 +1388,18 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
     if not variables.get('important_list', '').strip():
         variables['important_list'] = 'none'
     
+    # `format_map` with a SafeDict avoids the KeyError → "show raw template
+    # with `{placeholder}` literal" failure mode. If a template gets a new
+    # field that nobody populated in `data`/`variables`, the user sees the
+    # field elided rather than the raw `{new_field}` string. Audit Tier 6.
+    class _SafeDict(dict):
+        def __missing__(self, key):
+            return ''
+
+    safe_vars = _SafeDict(variables)
     try:
-        title = template['title'].format(**variables)
-    except (KeyError, ValueError):
+        title = template['title'].format_map(safe_vars)
+    except (ValueError, IndexError):
         title = template['title']
     
     # ── PVE vzdump special formatting ──
@@ -1134,8 +1417,8 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:
             # Fallback to standard formatting if formatter fails
             try:
-                body_text = template['body'].format(**variables)
-            except (KeyError, ValueError):
+                body_text = template['body'].format_map(safe_vars)
+            except (ValueError, IndexError):
                 body_text = template['body']
     elif event_type in ('backup_complete', 'backup_fail') and pve_message:
         parsed = _parse_vzdump_message(pve_message)
@@ -1153,8 +1436,8 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
         body_text = pve_message.strip()[:1000]
     else:
         try:
-            body_text = template['body'].format(**variables)
-        except (KeyError, ValueError):
+            body_text = template['body'].format_map(safe_vars)
+        except (ValueError, IndexError):
             body_text = template['body']
     
     # Clean up: collapse runs of 3+ blank lines into 1, remove trailing whitespace
@@ -1263,6 +1546,7 @@ CATEGORY_EMOJI = {
 # Event-specific title icons  (override category default when present)
 EVENT_EMOJI = {
     # VM / CT
+    'lxc_updates_available': '\U0001F4E6',     # \uD83D\uDCE6 package \u2014 pending CT updates
     'vm_start':             '\u25B6\uFE0F',    # play button
     'vm_start_warning':     '\u26A0\uFE0F',     # warning sign - started with warnings
     'vm_stop':              '\u23F9\uFE0F',     # stop button
@@ -1297,6 +1581,13 @@ EVENT_EMOJI = {
     'disk_space_low':       '\U0001F4C9',         # chart decreasing
     'disk_io_error':        '\U0001F4A5',
     'storage_unavailable':  '\U0001F6AB',         # prohibited
+    # Sprint 13 — remote mount events
+    'mount_stale':          '\U0001F517',         # link (broken connection feel)
+    'mount_readonly':       '\U0001F512',         # lock
+    'lxc_disk_low':         '\U0001F4BE',         # floppy disk (near-full)
+    'lxc_mount_low':        '\U0001F4C2',         # 📂 folder near-full
+    'pve_storage_full':     '\U0001F4E6',         # 📦 package (running out)
+    'zfs_pool_full':        '\U0001F30A',         # 🌊 wave (pool is full)
     # Network
     'network_down':         '\U0001F50C',         # electric plug
     'network_latency':      '\U0001F422',         # turtle (slow)
@@ -1327,6 +1618,12 @@ EVENT_EMOJI = {
     'pve_update':           '\U0001F195',         # NEW
     'update_complete':      '\u2705',
     'proxmenux_update':     '\U0001F195',         # NEW
+    # Sprint 12D: post-install function updates use the sparkle icon to
+    # differentiate them visually from a full ProxMenux release update.
+    'post_install_update':  '✨',              # sparkles
+    'secure_gateway_update_available': '\U0001F510',  # 🔐 closed lock with key
+    'nvidia_driver_update_available':  '\U0001F3AE',  # 🎮 video game (GPU)
+    'coral_driver_update_available':   '\U0001F9E0',  # 🧠 brain (TPU/inference)
     # AI
     'ai_model_migrated':    '\U0001F504',         # arrows counterclockwise (refresh/update)
     # GPU / PCIe
@@ -1363,6 +1660,10 @@ FIELD_EMOJI = {
     'pve_count':    '\U0001F4E6',
     'kernel_count': '\u2699\uFE0F',
     'important_list': '\U0001F4CB',  # clipboard
+    'current_version': '\U0001F4E6',  # package \u2014 installed version
+    'latest_version': '\U0001F195',   # NEW button \u2014 upstream version
+    'kernel':       '\u2699\uFE0F',    # gear \u2014 running kernel
+    'menu_label':   '\U0001F4D6',      # open book \u2014 menu navigation hint
 }
 
 
@@ -1441,6 +1742,10 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
         'pending': '\u26A0\uFE0F',     # Warning
         'FAILED': '\u274C',            # Red X
         'PASSED': '\u2705',            # Green check
+        # Update / install bodies
+        'Tools:': '\U0001F6E0\uFE0F',  # hammer and wrench
+        'Packages:': '\U0001F4E6',     # package
+        'How to apply:': '\U0001F4A1', # Light bulb (tip)
     }
     
     # Build enriched body: prepend field emojis to recognizable lines
@@ -1485,6 +1790,9 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
                 'kernel_count': 'Kernel updates', 'important_list': 'Important packages',
                 'duration': 'Duration', 'severity': 'Previous severity',
                 'original_severity': 'Previous severity',
+                'current_version': 'Currently installed',
+                'latest_version': 'Latest available',
+                'menu_label': 'From the ProxMenux post-install menu',
             }
             if field_key in _LABEL_MAP:
                 label_variants.append(_LABEL_MAP[field_key])
@@ -1543,6 +1851,14 @@ Your job: translate alerts into {language} and enrich them with context when pro
 ═══ ABSOLUTE CONSTRAINTS (NO EXCEPTIONS) ═══
 - NO HALLUCINATIONS: Do not invent causes, solutions, or facts not present in the provided data
 - NO SPECULATION: If something is unclear, state what IS known, not what MIGHT be
+- NO FILLER LINES: Every output line must derive from the input message, the journal context,
+  or the known-error database. NEVER add generic statements like "Event detected during normal
+  operation", "No further issues", or padding lines just to fill space. If a field has no evidence,
+  OMIT it — a shorter output is always better than invented content.
+- 📝 Log lines: ONLY include when the journal context contains an actual relevant log line.
+  Convey its meaning faithfully, do not invent one. If no relevant log exists, OMIT the 📝 line.
+- ⏱️ Duration/timing lines: ONLY for backup/migration durations explicitly present in the input.
+  NEVER use ⏱️ for vague "event detected at X" filler.
 - NO CONVERSATIONAL TEXT: Never write "Here is...", "I've translated...", "Let me explain..."
 - ONLY use information from: the message, journal context, and known error database (if provided)
 
@@ -1659,7 +1975,12 @@ Your goal is to maintain the original structure of the message while using emoji
 ESPECIALLY when adding new context, formatting technical data, or writing tips.
 
 RULES:
-1. PRESERVE BASE STRUCTURE: Respect the original fields and layout provided in the input message.
+1. PRESERVE BASE STRUCTURE AND INPUT EMOJIS: Respect the original fields and layout provided in
+   the input message. **CRITICAL: every emoji already present in the input (📊, 🏷️, 📦, 🔒, 🛠️,
+   💡, ⚠️, ✨, 🌐, 🔥, 💧, 📝, ⏱️, etc.) MUST appear in the output, in the same position relative
+   to its label.** Translating the surrounding words is fine; deleting or relocating the emoji is
+   not. You may add additional context-appropriate emojis from BODY EMOJIS below, but never strip
+   the ones the template already provides.
 2. ENHANCE WITH ICONS: Place emojis at the START of a line to identify the data type.
 3. NEW CONTEXT: When adding journal info, SMART data, or known errors, use appropriate icons to make it readable.
 4. NO SPAM: Do not put emojis in the middle or end of sentences. Use 1-3 emojis at START of lines where they add clarity. Combine when meaningful (💾✅ backup ok).
@@ -1677,14 +1998,6 @@ BODY EMOJIS:
 🌐 IP  👤 user  🌡️ temp  🔥 CPU  💧 RAM  🎯 target  🔹 current  🟢 new  📌 item
 
 BLANK LINES: Insert between logical sections (VM entries, before summary, before packages block).
-
-═══ HOSTNAME RULE (CRITICAL) ═══
-The Title field contains the real hostname before the colon e.g.: 
-("constructor: VM started" → hostname is "constructor").
-("amd: VM started" → hostname is "amd").
-("pve01: VM started" → hostname is "pve01").
-("pve05: VM started" → hostname is "pve05").
-You MUST use this EXACT hostname in your output. NEVER use generic names like "server", "host", or "node".
 
 ═══ EXAMPLES (follow these formats) ═══
 
@@ -1910,18 +2223,21 @@ class AIEnhancer:
             title_content = title_match.group(1).strip()
             body_content = body_match.group(1).strip()
             
-            # Remove any "Original message/text" sections the AI might have added
-            # This cleanup is important because some models (especially Ollama) tend to
-            # include the original text alongside the translation
+            # Remove any "Original message/text" sections the AI might have added.
+            # Anchored at start-of-line (`(?:^|\n)\s*`) so legitimate prose
+            # like "we received the original message earlier" mid-paragraph
+            # is NOT truncated. Without the anchor, `.*` under DOTALL would
+            # eat everything from the first matching word to end-of-string.
+            # `\Z` matches end-of-string. Audit Tier 6 — `_parse_ai_response`.
             original_patterns = [
-                r'\n*-{3,}\n*Original message:.*',
-                r'\n*-{3,}\n*Original:.*',
-                r'\n*-{3,}\n*Source:.*',
-                r'\n*-{3,}\n*Mensaje original:.*',
-                r'\n*Original message:.*',
-                r'\n*Original text:.*',
-                r'\n*Mensaje original:.*',
-                r'\n*Texto original:.*',
+                r'(?:^|\n)\s*-{3,}\s*\n+\s*Original message:.*\Z',
+                r'(?:^|\n)\s*-{3,}\s*\n+\s*Original:.*\Z',
+                r'(?:^|\n)\s*-{3,}\s*\n+\s*Source:.*\Z',
+                r'(?:^|\n)\s*-{3,}\s*\n+\s*Mensaje original:.*\Z',
+                r'(?:^|\n)\s*Original message:.*\Z',
+                r'(?:^|\n)\s*Original text:.*\Z',
+                r'(?:^|\n)\s*Mensaje original:.*\Z',
+                r'(?:^|\n)\s*Texto original:.*\Z',
             ]
             for pattern in original_patterns:
                 body_content = re.sub(pattern, '', body_content, flags=re.DOTALL | re.IGNORECASE).strip()
@@ -1931,10 +2247,16 @@ class AIEnhancer:
                 'body': body_content if body_content else original_body
             }
         
-        # Fallback: if markers not found, use whole response as body
+        # No `[TITLE]`/`[BODY]` markers — DO NOT silently substitute the
+        # raw response for the body. Some providers return refusal
+        # boilerplate ("I can't help with that") or completely off-topic
+        # text when the prompt confuses them; using that as the
+        # notification body misleads the user. Treat it as a parse failure
+        # and fall back to the original template. Audit Tier 7 — `_parse_ai_response`
+        # swallowea respuestas sin marcadores.
         return {
             'title': original_title,
-            'body': response.strip()
+            'body': original_body,
         }
     
     def test_connection(self) -> Dict[str, Any]:
@@ -1978,13 +2300,39 @@ def format_with_ai(title: str, body: str, severity: str,
     return result.get('body', body)
 
 
+# LRU-style response cache for `format_with_ai_full`. A burst summary
+# (e.g. "5 segfaults in 90s") with the same title/body fires once per
+# channel + once per detail-level — without a cache that's N identical
+# AI calls back-to-back. 60s TTL covers the burst window without
+# letting a stale rewrite outlive the original event. Audit Tier 7 —
+# Sin response cache.
+import time as _time_ai_cache
+import hashlib as _hash_ai_cache
+import threading as _threading_ai_cache
+_AI_CACHE_LOCK = _threading_ai_cache.Lock()
+_AI_CACHE: Dict[str, tuple] = {}  # key → (ts, result_dict)
+_AI_CACHE_TTL = 60.0
+_AI_CACHE_MAX = 256
+
+
+def _ai_cache_key(title, body, ai_config, detail_level, use_emojis):
+    parts = [
+        title or '', '\x1f', body or '', '\x1f',
+        str(ai_config.get('ai_provider', '')), '\x1f',
+        str(ai_config.get('ai_model', '')), '\x1f',
+        str(ai_config.get('ai_language', '')), '\x1f',
+        detail_level, '\x1f', '1' if use_emojis else '0',
+    ]
+    return _hash_ai_cache.sha256(''.join(parts).encode('utf-8', 'replace')).hexdigest()
+
+
 def format_with_ai_full(title: str, body: str, severity: str,
                         ai_config: Dict[str, Any],
                         detail_level: str = 'standard',
                         journal_context: str = '',
                         use_emojis: bool = False) -> Dict[str, str]:
     """Format a message with AI enhancement/translation, returning both title and body.
-    
+
     Args:
         title: Notification title
         body: Notification body
@@ -1993,29 +2341,59 @@ def format_with_ai_full(title: str, body: str, severity: str,
         detail_level: Level of detail (brief, standard, detailed)
         journal_context: Optional journal log context
         use_emojis: Whether to include emojis (for push channels like Telegram/Discord)
-    
+
     Returns:
         Dict with 'title' and 'body' keys (translated/enhanced)
     """
     default_result = {'title': title, 'body': body}
-    
+
     # Check if AI is enabled
     ai_enabled = ai_config.get('ai_enabled')
     if isinstance(ai_enabled, str):
         ai_enabled = ai_enabled.lower() == 'true'
-    
+
     if not ai_enabled:
         return default_result
-    
+
+    # Per-severity gating: skip the AI rewrite when the event severity is
+    # below `ai_min_severity` (config). Useful to limit cost/latency to
+    # only the events that benefit from a rewrite. Default `info` keeps
+    # the previous behaviour of rewriting everything. Audit Tier 7 — sin
+    # per-event/per-severity AI gating.
+    _SEVERITY_RANK = {
+        'info': 0, 'INFO': 0, 'OK': 0,
+        'warning': 1, 'WARNING': 1, 'WARN': 1,
+        'error': 2, 'ERROR': 2,
+        'critical': 3, 'CRITICAL': 3,
+    }
+    min_sev = (ai_config.get('ai_min_severity') or 'info').lower()
+    if min_sev not in _SEVERITY_RANK:
+        min_sev = 'info'
+    event_rank = _SEVERITY_RANK.get(severity, _SEVERITY_RANK.get((severity or '').lower(), 0))
+    min_rank = _SEVERITY_RANK[min_sev]
+    if event_rank < min_rank:
+        return default_result
+
     # Check for API key (not required for Ollama)
     provider = ai_config.get('ai_provider', 'groq')
     if provider != 'ollama' and not ai_config.get('ai_api_key'):
         return default_result
-    
+
     # For Ollama, check URL is configured
     if provider == 'ollama' and not ai_config.get('ai_ollama_url'):
         return default_result
-    
+
+    # Cache lookup — same title/body/provider/model/lang/detail_level
+    # within 60s reuses the previous rewrite. journal_context is
+    # intentionally NOT part of the key (it changes per dispatch but
+    # the AI rewrite is dominated by title/body anyway).
+    cache_key = _ai_cache_key(title, body, ai_config, detail_level, use_emojis)
+    now = _time_ai_cache.monotonic()
+    with _AI_CACHE_LOCK:
+        cached = _AI_CACHE.get(cache_key)
+        if cached and now - cached[0] < _AI_CACHE_TTL:
+            return dict(cached[1])
+
     # Create enhancer and process
     enhancer = AIEnhancer(ai_config)
     enhanced = enhancer.enhance(
@@ -2041,7 +2419,15 @@ def format_with_ai_full(title: str, body: str, severity: str,
             result_body += "\n\n" + "-" * 40 + "\n"
             result_body += "Original message:\n"
             result_body += body
-        
-        return {'title': result_title, 'body': result_body}
-    
+
+        result = {'title': result_title, 'body': result_body}
+        with _AI_CACHE_LOCK:
+            # Bound the cache size — drop the oldest entry if we exceed
+            # the cap (we accept slight staleness over unbounded growth).
+            if len(_AI_CACHE) >= _AI_CACHE_MAX:
+                oldest = min(_AI_CACHE.items(), key=lambda kv: kv[1][0])[0]
+                _AI_CACHE.pop(oldest, None)
+            _AI_CACHE[cache_key] = (now, result)
+        return result
+
     return default_result

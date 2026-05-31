@@ -16,7 +16,8 @@ import {
   AlertTriangle, Info, Settings2, Zap, Eye, EyeOff,
   Trash2, ChevronDown, ChevronUp, ChevronRight, TestTube2, Mail, Webhook,
   Copy, Server, Shield, ExternalLink, RefreshCw, Download, Upload,
-  Cloud, Brain, Globe, MessageSquareText, Sparkles, Pencil, Save, RotateCcw, Lightbulb
+  Cloud, Brain, Globe, MessageSquareText, Sparkles, Pencil, Save, RotateCcw, Lightbulb,
+  Moon, Newspaper
 } from "lucide-react"
 
 interface ChannelConfig {
@@ -37,6 +38,13 @@ interface ChannelConfig {
   from_address?: string
   to_addresses?: string
   subject_prefix?: string
+  // Quiet hours: skip below-CRITICAL events between [start, end) local time
+  quiet_enabled?: boolean
+  quiet_start?: string  // "HH:MM"
+  quiet_end?: string    // "HH:MM"
+  // Daily digest: buffer INFO events and ship one summary at digest_time
+  digest_enabled?: boolean
+  digest_time?: string  // "HH:MM"
 }
 
 interface EventTypeInfo {
@@ -97,6 +105,44 @@ interface HistoryEntry {
   error_message: string | null
 }
 
+// Validation helpers for webhook/URL fields. The server still does the
+// authoritative validation (see notification_manager.validate_config). These
+// are defense-in-depth + immediate UX feedback so users notice typos / pasted
+// internal endpoints before they hit Save.
+const DISCORD_WEBHOOK_RE = /^https:\/\/(discord(app)?\.com|ptb\.discord\.com|canary\.discord\.com)\/api\/webhooks\/\d+\/[\w-]+$/
+
+function validateDiscordWebhook(url: string): { error?: string } {
+  if (!url) return {}
+  if (!DISCORD_WEBHOOK_RE.test(url.trim())) {
+    return { error: "Must be a Discord webhook URL (https://discord.com/api/webhooks/<id>/<token>)" }
+  }
+  return {}
+}
+
+function validateGotifyUrl(url: string): { error?: string; warning?: string } {
+  if (!url) return {}
+  let parsed: URL
+  try {
+    parsed = new URL(url.trim())
+  } catch {
+    return { error: "Not a valid URL" }
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return { error: `Unsupported scheme "${parsed.protocol}" — only http(s) is allowed` }
+  }
+  // Block the obvious SSRF target: the local PVE API. RFC1918 ranges remain
+  // allowed since self-hosted Gotify on a LAN is a normal deployment.
+  const host = parsed.hostname.toLowerCase()
+  const port = parsed.port
+  if ((host === "localhost" || host === "127.0.0.1" || host === "::1") && (port === "8006" || port === "8007")) {
+    return { error: "Cannot point at the local PVE API (localhost:8006/8007)" }
+  }
+  if (host === "169.254.169.254") {
+    return { error: "Link-local metadata IP is not a valid Gotify endpoint" }
+  }
+  return {}
+}
+
 const EVENT_CATEGORIES = [
   { key: "vm_ct", label: "VM / CT", desc: "Start, stop, crash, migration" },
   { key: "backup", label: "Backups", desc: "Backup start, complete, fail" },
@@ -111,7 +157,7 @@ const EVENT_CATEGORIES = [
   { key: "other", label: "Other", desc: "Uncategorized notifications" },
 ]
 
-const CHANNEL_TYPES = ["telegram", "gotify", "discord", "email"] as const
+const CHANNEL_TYPES = ["telegram", "gotify", "discord", "email", "apprise"] as const
 
 const AI_PROVIDERS = [
   { 
@@ -216,6 +262,7 @@ const DEFAULT_CONFIG: NotificationConfig = {
     gotify: { enabled: false },
     discord: { enabled: false },
     email: { enabled: false },
+    apprise: { enabled: false },
   },
   event_categories: {
     vm_ct: true, backup: true, resources: true, storage: true,
@@ -229,6 +276,7 @@ const DEFAULT_CONFIG: NotificationConfig = {
     gotify: { categories: {}, events: {} },
     discord: { categories: {}, events: {} },
     email: { categories: {}, events: {} },
+    apprise: { categories: {}, events: {} },
   },
   ai_enabled: false,
   ai_provider: "groq",
@@ -259,6 +307,7 @@ const DEFAULT_CONFIG: NotificationConfig = {
     gotify: "brief",
     discord: "brief",
     email: "detailed",
+    apprise: "brief",
   },
   hostname: "",
   webhook_secret: "",
@@ -276,6 +325,11 @@ export function NotificationSettings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  // Save errors used to be silently swallowed — the user thought their
+  // tokens / API keys were persisted when in fact the POST had failed.
+  // Surface the failure as a banner so the user can retry. Audit residual
+  // #notification-settings-handleSave-silent-fail.
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [testing, setTesting] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<{ channel: string; success: boolean; message: string } | null>(null)
   const [showHistory, setShowHistory] = useState(false)
@@ -300,6 +354,12 @@ export function NotificationSettings() {
     error: string
   }>({ status: "idle", fallback_commands: [], error: "" })
   const [systemHostname, setSystemHostname] = useState<string>("")
+  // Mirrors the dedicated toggle from Settings → LXC Update Detection.
+  // When false, the per-event toggle for `lxc_updates_available` is hidden
+  // from every channel's category list (its DB preference is preserved).
+  // Updated on mount via fetch and on the fly via a CustomEvent dispatched
+  // by <LxcUpdateDetection /> when the user flips the switch.
+  const [lxcDetectionEnabled, setLxcDetectionEnabled] = useState<boolean>(true)
 
   // Load system hostname for display name placeholder
   const loadSystemHostname = useCallback(async () => {
@@ -382,6 +442,43 @@ export function NotificationSettings() {
     loadSystemHostname()
   }, [loadConfig, loadStatus, loadSystemHostname])
 
+  // Track the LXC update-detection toggle so we can conditionally hide
+  // the `lxc_updates_available` per-event toggle inside every channel's
+  // category list. Fetched once on mount; live updates ride on a custom
+  // event dispatched by <LxcUpdateDetection /> whenever the user flips
+  // the switch upstream.
+  useEffect(() => {
+    let cancelled = false
+    fetchApi<{ success: boolean; enabled?: boolean }>("/api/lxc-updates/detection")
+      .then(data => {
+        if (cancelled) return
+        if (data.success && typeof data.enabled === "boolean") {
+          setLxcDetectionEnabled(data.enabled)
+        }
+      })
+      .catch(() => {
+        // Default-true on fetch failure — matches the backend default and
+        // avoids hiding a notification toggle the user might rely on if
+        // the settings endpoint is transiently unreachable.
+      })
+
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail && typeof detail.enabled === "boolean") {
+        setLxcDetectionEnabled(detail.enabled)
+      }
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("proxmenux:lxc-detection-changed", handler)
+    }
+    return () => {
+      cancelled = true
+      if (typeof window !== "undefined") {
+        window.removeEventListener("proxmenux:lxc-detection-changed", handler)
+      }
+    }
+  }, [])
+
   useEffect(() => {
     if (showHistory) loadHistory()
   }, [showHistory, loadHistory])
@@ -411,6 +508,163 @@ export function NotificationSettings() {
     }))
   }
 
+  const formatHHMM = (raw: string | undefined, fallback: string): string => {
+    const v = (raw || fallback).match(/^(\d{1,2}):(\d{2})$/)
+    if (!v) return fallback
+    const hh = String(Math.min(23, Math.max(0, parseInt(v[1], 10)))).padStart(2, "0")
+    const mm = String(Math.min(59, Math.max(0, parseInt(v[2], 10)))).padStart(2, "0")
+    return `${hh}:${mm}`
+  }
+
+  const inQuietWindow = (start: string, end: string): boolean => {
+    if (start === end) return false
+    const now = new Date()
+    const cur = now.getHours() * 60 + now.getMinutes()
+    const [sh, sm] = start.split(":").map((x) => parseInt(x, 10))
+    const [eh, em] = end.split(":").map((x) => parseInt(x, 10))
+    const s = sh * 60 + sm
+    const e = eh * 60 + em
+    return s < e ? cur >= s && cur < e : cur >= s || cur < e
+  }
+
+  const renderQuietHours = (chName: string) => {
+    const ch = config.channels[chName as keyof typeof config.channels] as ChannelConfig | undefined
+    const enabled = !!ch?.quiet_enabled
+    const start = formatHHMM(ch?.quiet_start, "22:00")
+    const end = formatHHMM(ch?.quiet_end, "06:00")
+    const sameTime = start === end
+    const live = enabled && !sameTime && inQuietWindow(start, end)
+    return (
+      <div className="space-y-2 pt-2 border-t border-border/50">
+        <div className="flex items-center justify-between py-1">
+          <div>
+            <Label className="text-xs sm:text-sm text-foreground/80 flex items-center gap-2">
+              <Moon className="h-4 w-4 text-blue-400" />
+              Quiet hours
+            </Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              During this window only CRITICAL events reach this channel.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            disabled={!editMode}
+            className={`relative w-9 h-[18px] shrink-0 rounded-full transition-colors ${
+              !editMode ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+            } ${enabled ? "bg-blue-600" : "bg-muted-foreground/20 border border-muted-foreground/40"}`}
+            onClick={() => { if (editMode) updateChannel(chName, "quiet_enabled", !enabled) }}
+          >
+            <span className={`absolute top-[1px] left-[1px] h-4 w-4 rounded-full bg-white shadow transition-transform ${
+              enabled ? "translate-x-[18px]" : "translate-x-0"
+            }`} />
+          </button>
+        </div>
+        {enabled && (
+          <>
+            {/* Inline label + intrinsic-width inputs. The previous
+                `grid-cols-2 + full-width inputs` rendered weirdly on
+                iOS Safari (the native time picker centered "22:00"
+                inside a 200-px box with huge empty margins). flex +
+                w-24/w-28 keeps the input tight to the HH:MM text on
+                every viewport and the touch target stays comfortable. */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground">From</Label>
+                <Input
+                  type="time"
+                  value={start}
+                  onChange={(e) => updateChannel(chName, "quiet_start", e.target.value)}
+                  disabled={!editMode}
+                  className="h-9 w-28 text-sm font-mono"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground">Until</Label>
+                <Input
+                  type="time"
+                  value={end}
+                  onChange={(e) => updateChannel(chName, "quiet_end", e.target.value)}
+                  disabled={!editMode}
+                  className="h-9 w-28 text-sm font-mono"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {sameTime
+                ? "Set a different start and end time to activate."
+                : live
+                  ? `Active right now — only CRITICAL events pass until ${end}.`
+                  : `Inactive right now — will start at ${start}.`}
+            </p>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  const renderDailyDigest = (chName: string) => {
+    const ch = config.channels[chName as keyof typeof config.channels] as ChannelConfig | undefined
+    const enabled = !!ch?.digest_enabled
+    const time = formatHHMM(ch?.digest_time, "09:00")
+    let nextLabel = ""
+    if (enabled) {
+      const now = new Date()
+      const cur = now.getHours() * 60 + now.getMinutes()
+      const [hh, mm] = time.split(":").map((x) => parseInt(x, 10))
+      const target = hh * 60 + mm
+      const minsAway = target > cur ? target - cur : 24 * 60 - cur + target
+      const h = Math.floor(minsAway / 60)
+      const m = minsAway % 60
+      nextLabel = `Next digest in ${h}h ${m}m (at ${time}).`
+    }
+    return (
+      <div className="space-y-2 pt-2 border-t border-border/50">
+        <div className="flex items-center justify-between py-1">
+          <div>
+            <Label className="text-xs sm:text-sm text-foreground/80 flex items-center gap-2">
+              <Newspaper className="h-4 w-4 text-violet-400" />
+              Daily digest of INFO events
+            </Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              All INFO events (backups OK, updates available, etc.) accumulate during the day and arrive once at this time as a single summary. CRITICAL and WARNING are never delayed.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            disabled={!editMode}
+            className={`relative w-9 h-[18px] shrink-0 rounded-full transition-colors ${
+              !editMode ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+            } ${enabled ? "bg-blue-600" : "bg-muted-foreground/20 border border-muted-foreground/40"}`}
+            onClick={() => { if (editMode) updateChannel(chName, "digest_enabled", !enabled) }}
+          >
+            <span className={`absolute top-[1px] left-[1px] h-4 w-4 rounded-full bg-white shadow transition-transform ${
+              enabled ? "translate-x-[18px]" : "translate-x-0"
+            }`} />
+          </button>
+        </div>
+        {enabled && (
+          <>
+            <div className="flex items-center gap-2 pt-1">
+              <Label className="text-xs text-muted-foreground">Send at</Label>
+              <Input
+                type="time"
+                value={time}
+                onChange={(e) => updateChannel(chName, "digest_time", e.target.value)}
+                disabled={!editMode}
+                className="h-9 w-28 text-sm font-mono"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">{nextLabel}</p>
+          </>
+        )}
+      </div>
+    )
+  }
+
   /** Reusable 10+1 category block rendered inside each channel tab. */
   const renderChannelCategories = (chName: string) => {
     const overrides = config.channel_overrides?.[chName] || { categories: {}, events: {} }
@@ -426,7 +680,16 @@ export function NotificationSettings() {
           {EVENT_CATEGORIES.filter(cat => cat.key !== "other").map(cat => {
             const isEnabled = overrides.categories[cat.key] ?? true
             const isExpanded = expandedCategories.has(`${chName}.${cat.key}`)
-            const eventsForGroup = evtByGroup[cat.key] || []
+            // Hide the LXC update toggle when the user has disabled the
+            // dedicated detection setting upstream. The backend still
+            // returns the event type in the catalog (so its stored
+            // preference survives), but we filter it out of every
+            // channel's UI list so the operator never sees a notification
+            // toggle whose underlying scan is paused.
+            const rawEventsForGroup = evtByGroup[cat.key] || []
+            const eventsForGroup = lxcDetectionEnabled
+              ? rawEventsForGroup
+              : rawEventsForGroup.filter(e => e.type !== "lxc_updates_available")
             const enabledCount = eventsForGroup.filter(
               e => (overrides.events?.[e.type] ?? e.default_enabled)
             ).length
@@ -621,11 +884,12 @@ export function NotificationSettings() {
 
   const handleSave = async () => {
     setSaving(true)
+    setSaveError(null)
     try {
       // If notifications are being disabled, clean up PVE webhook first
       const wasEnabled = originalConfig.enabled
       const isNowDisabled = !config.enabled
-      
+
       if (wasEnabled && isNowDisabled) {
         try {
           await fetchApi("/api/notifications/proxmox/cleanup-webhook", { method: "POST" })
@@ -633,7 +897,7 @@ export function NotificationSettings() {
           // Non-fatal: webhook cleanup failed but we still save settings
         }
       }
-      
+
       const payload = flattenConfig(config)
       await fetchApi("/api/notifications/settings", {
         method: "POST",
@@ -647,6 +911,8 @@ export function NotificationSettings() {
       loadStatus()
     } catch (err) {
       console.error("Failed to save notification settings:", err)
+      const msg = err instanceof Error ? err.message : "Failed to save notification settings"
+      setSaveError(msg)
     } finally {
       setSaving(false)
     }
@@ -977,6 +1243,14 @@ export function NotificationSettings() {
                 Saved
               </span>
             )}
+            {saveError && (
+              <span
+                className="flex items-center gap-1 text-xs text-red-500 max-w-[40ch] truncate"
+                title={saveError}
+              >
+                Save failed: {saveError}
+              </span>
+            )}
             {editMode ? (
               <>
                 <button
@@ -1075,7 +1349,7 @@ export function NotificationSettings() {
 
               <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
               <Tabs defaultValue="telegram" className="w-full">
-                <TabsList className="w-full grid grid-cols-4 h-8">
+                <TabsList className="w-full grid grid-cols-5 h-8">
                   <TabsTrigger value="telegram" className="text-xs data-[state=active]:text-blue-500">
                     Telegram
                   </TabsTrigger>
@@ -1087,6 +1361,9 @@ export function NotificationSettings() {
                   </TabsTrigger>
                   <TabsTrigger value="email" className="text-xs data-[state=active]:text-amber-500">
                     Email
+                  </TabsTrigger>
+                  <TabsTrigger value="apprise" className="text-xs data-[state=active]:text-cyan-500">
+                    Apprise
                   </TabsTrigger>
                 </TabsList>
 
@@ -1180,6 +1457,8 @@ export function NotificationSettings() {
                         </button>
                       </div>
                       {renderChannelCategories("telegram")}
+                      {renderQuietHours("telegram")}
+                      {renderDailyDigest("telegram")}
                       {/* Send Test */}
                       <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                         <button
@@ -1224,6 +1503,12 @@ export function NotificationSettings() {
                           onChange={e => updateChannel("gotify", "url", e.target.value)}
                           disabled={!editMode}
                         />
+                        {(() => {
+                          const v = validateGotifyUrl(config.channels.gotify?.url || "")
+                          if (v.error) return <p className="text-[10px] text-red-500">{v.error}</p>
+                          if (v.warning) return <p className="text-[10px] text-yellow-500">{v.warning}</p>
+                          return null
+                        })()}
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[11px] text-muted-foreground">App Token</Label>
@@ -1266,6 +1551,8 @@ export function NotificationSettings() {
                         </button>
                       </div>
                       {renderChannelCategories("gotify")}
+                      {renderQuietHours("gotify")}
+                      {renderDailyDigest("gotify")}
                       {/* Send Test */}
                       <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                         <button
@@ -1319,6 +1606,10 @@ export function NotificationSettings() {
                             {showSecrets["dc_hook"] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                           </button>
                         </div>
+                        {(() => {
+                          const v = validateDiscordWebhook(config.channels.discord?.webhook_url || "")
+                          return v.error ? <p className="text-[10px] text-red-500">{v.error}</p> : null
+                        })()}
                       </div>
                       {/* Message format */}
                       <div className="flex items-center justify-between py-1">
@@ -1342,6 +1633,8 @@ export function NotificationSettings() {
                         </button>
                       </div>
                       {renderChannelCategories("discord")}
+                      {renderQuietHours("discord")}
+                      {renderDailyDigest("discord")}
                       {/* Send Test */}
                       <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                         <button
@@ -1485,6 +1778,8 @@ export function NotificationSettings() {
                         </p>
                       </div>
                       {renderChannelCategories("email")}
+                      {renderQuietHours("email")}
+                      {renderDailyDigest("email")}
                       {/* Send Test */}
                       <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                         <button
@@ -1493,6 +1788,106 @@ export function NotificationSettings() {
                           disabled={testing === "email" || !config.channels.email?.to_addresses}
                         >
                           {testing === "email" ? <Loader2 className="h-3 w-3 animate-spin" /> : <TestTube2 className="h-3 w-3" />}
+                          Send Test
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </TabsContent>
+
+                {/* Apprise — issue #207. Single URL talks to ~80
+                    notification services. The operator pastes one
+                    `tgram://`, `discord://`, `ntfy://`, `matrix://`,
+                    `pushover://` etc. URL and the AppriseChannel
+                    backend handles the transport. Mirrors the same
+                    Enable toggle + Test button pattern as the other
+                    channels. */}
+                <TabsContent value="apprise" className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs font-medium">Enable Apprise</Label>
+                      <a
+                        href="https://github.com/caronc/apprise/wiki"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-cyan-500 hover:text-cyan-400 hover:underline"
+                      >
+                        +URL formats
+                      </a>
+                    </div>
+                    <button
+                      className={`relative w-9 h-[18px] rounded-full transition-colors ${
+                        config.channels.apprise?.enabled ? "bg-blue-600" : "bg-muted-foreground/20 border border-muted-foreground/40"
+                      } ${!editMode ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                      onClick={() => { if (editMode) updateChannel("apprise", "enabled", !config.channels.apprise?.enabled) }}
+                      disabled={!editMode}
+                      role="switch"
+                      aria-checked={config.channels.apprise?.enabled || false}
+                    >
+                      <span className={`absolute top-[1px] left-[1px] h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                        config.channels.apprise?.enabled ? "translate-x-[18px]" : "translate-x-0"
+                      }`} />
+                    </button>
+                  </div>
+                  {config.channels.apprise?.enabled && (
+                    <>
+                      <div className="space-y-1.5 min-w-0">
+                        <Label className="text-[11px] text-muted-foreground">Apprise URL</Label>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Input
+                            type={showSecrets["apprise_url"] ? "text" : "password"}
+                            className={`h-7 text-xs font-mono min-w-0 flex-1 ${!editMode ? "opacity-50" : ""}`}
+                            placeholder="tgram://bottoken/ChatID"
+                            value={config.channels.apprise?.url || ""}
+                            onChange={e => updateChannel("apprise", "url", e.target.value)}
+                            disabled={!editMode}
+                          />
+                          <button
+                            type="button"
+                            className="h-7 w-7 shrink-0 flex items-center justify-center rounded-md border border-border hover:bg-muted text-muted-foreground"
+                            onClick={() => setShowSecrets(s => ({ ...s, apprise_url: !s.apprise_url }))}
+                            title={showSecrets["apprise_url"] ? "Hide URL" : "Show URL"}
+                          >
+                            {showSecrets["apprise_url"] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                          </button>
+                        </div>
+                        {/* The examples row was overflowing on mobile because
+                            every `<code>` token is atomic — the whole line
+                            would scroll horizontally on narrow viewports.
+                            `break-all` on the wrapper lets the layout break
+                            mid-token if the viewport is really tight; on
+                            wider screens the natural commas/spaces still
+                            control wrapping. */}
+                        <p className="text-[10px] text-muted-foreground leading-relaxed break-all min-w-0">
+                          A single URL that Apprise routes to the right service. Examples:
+                          <code className="text-foreground/80 mx-0.5">tgram://</code>,
+                          <code className="text-foreground/80 mx-0.5">discord://</code>,
+                          <code className="text-foreground/80 mx-0.5">slack://</code>,
+                          <code className="text-foreground/80 mx-0.5">ntfy://</code>,
+                          <code className="text-foreground/80 mx-0.5">matrix://</code>,
+                          <code className="text-foreground/80 mx-0.5">pushover://</code>,
+                          <code className="text-foreground/80 mx-0.5">mailto://</code>… See the
+                          {" "}
+                          <a
+                            href="https://github.com/caronc/apprise/wiki"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-cyan-500 hover:underline"
+                          >
+                            full list
+                          </a>.
+                        </p>
+                      </div>
+                      {renderChannelCategories("apprise")}
+                      {renderQuietHours("apprise")}
+                      {renderDailyDigest("apprise")}
+                      <div className="flex justify-end pt-2 border-t border-border/50">
+                        <button
+                          className="h-7 px-3 text-xs rounded-md bg-cyan-600 hover:bg-cyan-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                          onClick={() => handleTest("apprise")}
+                          disabled={testing === "apprise" || !config.channels.apprise?.url}
+                        >
+                          {testing === "apprise" ? <Loader2 className="h-3 w-3 animate-spin" /> : <TestTube2 className="h-3 w-3" />}
                           Send Test
                         </button>
                       </div>
@@ -1542,14 +1937,23 @@ export function NotificationSettings() {
             <div>
               <div className="flex items-center justify-between py-1">
                 <button
-                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  className="flex items-center gap-2 text-sm text-foreground hover:bg-muted/60 rounded-md px-2 py-1.5 -mx-2 transition-colors"
                   onClick={() => setShowAdvanced(!showAdvanced)}
                 >
-                  {showAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                  <span className="font-medium uppercase tracking-wider">Advanced: AI Enhancement</span>
-                  {config.ai_enabled && (
-                    <Badge variant="outline" className="text-[9px] border-purple-500/30 text-purple-400 ml-1">
-                      ON
+                  {showAdvanced ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <Sparkles className="h-4 w-4 text-purple-400" />
+                  <span className="font-medium">AI Enhancement</span>
+                  {config.ai_enabled ? (
+                    <Badge variant="outline" className="text-[10px] border-purple-500/40 text-purple-400 ml-1">
+                      Active
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] border-border text-muted-foreground ml-1">
+                      Optional
                     </Badge>
                   )}
                 </button>

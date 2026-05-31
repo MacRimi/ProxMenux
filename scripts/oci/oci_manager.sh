@@ -2,7 +2,7 @@
 # ProxMenux - OCI Application Manager
 # ============================================
 # Author      : MacRimi
-# License     : MIT
+# License     : GPL-3.0
 # Version     : 1.0
 # ============================================
 # Manages OCI container applications through dialog menus or direct CLI.

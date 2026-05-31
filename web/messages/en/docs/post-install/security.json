@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "title": "Post-Install: Security | ProxMenux Documentation",
+    "description": "Security options available in the ProxMenux Customizable post-install script. Currently a single option: disable the portmapper/rpcbind service to reduce the host's attack surface."
+  },
+  "header": {
+    "title": "Post-Install: Security",
+    "section": "Settings post-install Proxmox"
+  },
+  "intro": {
+    "title": "What this category covers",
+    "body": "Post-install security is limited to <strong>host hardening that is safe to apply unattended</strong> — things that disable services almost nobody needs and that can be undone from the Uninstall menu. Active security tooling (Fail2Ban for intrusion prevention, Lynis for auditing) lives under the dedicated <em>Security</em> entry on ProxMenux's main menu, not here in post-install."
+  },
+  "rpcbind": {
+    "heading": "Disable portmapper / rpcbind",
+    "intro": "<code>rpcbind</code> (formerly <code>portmap</code>) is a service that maps RPC program numbers to network ports. It is a dependency for NFS and some legacy RPC-based tools. On a typical Proxmox host that is not acting as an NFS server, <strong>nothing uses it</strong> — and leaving it enabled keeps port <code>111/tcp</code> listening on every interface.",
+    "whyTitle": "Why it's worth disabling",
+    "whyItems": [
+      "Reduces the host attack surface — one less listening service to worry about.",
+      "Historically abused as a reflection/amplification vector in DDoS attacks. Disabling <code>rpcbind</code> removes that amplification factor for your host.",
+      "Removes the noise it generates in logs and <code>netstat</code> / <code>ss</code> output, making real activity easier to spot."
+    ],
+    "nfsTitle": "Don't disable this if you use NFS",
+    "nfsBody": "NFS server <strong>and</strong> NFS client rely on <code>rpcbind</code> to negotiate the ports used by <code>mountd</code>, <code>statd</code>, <code>lockd</code>, etc. If your Proxmox host either <em>exports</em> NFS shares to other machines or <em>mounts</em> NFS shares from a NAS, do not apply this option. Mounts will fail with <code>mount.nfs: rpc.statd is not running</code> or similar.",
+    "runsTitle": "What ProxMenux runs",
+    "runsOutro": "The package stays installed (so you or another tool can re-enable it later). The service unit is disabled so the service does not come back on reboot.",
+    "verifyTitle": "Verification",
+    "verifyBody": "After applying, confirm <code>rpcbind</code> is off and nothing is listening on port 111:",
+    "reversibleTitle": "Reversible from the Uninstall menu",
+    "reversibleBody": "This change is tracked. Open <link>Uninstall Optimizations</link> and pick <em>RPC Disable</em> to restore it. Nothing is purged from the system — just re-enable the service and it starts again."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "label": "Security menu",
+        "href": "/docs/security",
+        "tail": " — heavier hitters: Fail2Ban (intrusion prevention) and Lynis (audit)."
+      },
+      {
+        "label": "Lynis",
+        "href": "/docs/security/lynis",
+        "tail": " — audit the host to find more hardening opportunities."
+      },
+      {
+        "label": "Useful System Commands",
+        "href": "/docs/help-info/system-commands",
+        "tail": " — service status, journalctl, lynis audit reference."
+      },
+      {
+        "label": "Customizable Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — back to the parent menu."
+      }
+    ]
+  }
+}

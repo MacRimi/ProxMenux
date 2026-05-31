@@ -1,8 +1,8 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { ArrowRight } from "lucide-react"
-import Link from "next/link"
+import { ArrowRight, BookOpen } from "lucide-react"
+import { Link } from "@/i18n/navigation"
 import Image from "next/image"
 
 export default function Hero() {
@@ -13,18 +13,30 @@ export default function Hero() {
         <h1 className="text-4xl sm:text-5xl font-extrabold mb-6">
           ProxMenux{" "}
           <span className="block mt-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 font-bold">
-            An Interactive Menu for Proxmox VE Management
+            An Interactive Menu and Web Dashboard for Proxmox VE
           </span>
         </h1>
         <p className="text-base sm:text-lg mb-8 max-w-4xl mx-auto text-gray-300">
-          ProxMenux is a management tool for Proxmox VE that simplifies system administration through an interactive
-          menu, allowing you to execute commands and scripts with ease.
+          ProxMenux is an interactive menu and a web dashboard for Proxmox VE — run commands,
+          scripts and guided wizards from a terminal menu, or watch host health, metrics and notifications
+          from a browser.
         </p>
-        <div className="flex justify-center">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
           <Button size="lg" className="bg-blue-500 hover:bg-blue-600" asChild>
             <Link href="/docs/installation">
               Install Now
               <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            className="border-gray-400 text-gray-100 hover:bg-gray-700 hover:text-white bg-transparent"
+            asChild
+          >
+            <Link href="/docs/introduction">
+              <BookOpen className="mr-2 h-4 w-4" />
+              What is ProxMenux?
             </Link>
           </Button>
         </div>
@@ -47,20 +59,32 @@ export default function Hero() {
             <div className="text-left max-w-md lg:max-w-lg xl:max-w-xl">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight">ProxMenux</h1>
               <p className="text-xl md:text-2xl lg:text-3xl xl:text-4xl mt-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 font-bold leading-tight">
-                An Interactive Menu for Proxmox VE Management
+                An Interactive Menu and Web Dashboard for Proxmox VE
               </p>
             </div>
           </div>
         </div>
         <p className="text-base md:text-lg lg:text-xl mb-8 max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto text-gray-300 text-center leading-relaxed">
-          ProxMenux is a management tool for Proxmox VE that simplifies system administration through an interactive
-          menu, allowing you to execute commands and scripts with ease.
+          ProxMenux is an interactive menu and a web dashboard for Proxmox VE — run commands,
+          scripts and guided wizards from a terminal menu, or watch host health, metrics and notifications
+          from a browser.
         </p>
-        <div className="flex justify-center">
+        <div className="flex gap-3 justify-center items-center">
           <Button size="lg" className="bg-blue-500 hover:bg-blue-600" asChild>
             <Link href="/docs/installation">
               Install Now
               <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            className="border-gray-400 text-gray-100 hover:bg-gray-700 hover:text-white bg-transparent"
+            asChild
+          >
+            <Link href="/docs/introduction">
+              <BookOpen className="mr-2 h-4 w-4" />
+              What is ProxMenux?
             </Link>
           </Button>
         </div>

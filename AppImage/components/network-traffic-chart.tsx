@@ -110,7 +110,6 @@ export function NetworkTrafficChart({
         ? `/api/network/${interfaceName}/metrics?timeframe=${timeframe}`
         : `/api/node/metrics?timeframe=${timeframe}`
 
-      console.log("[v0] Fetching network metrics from:", apiPath)
 
       const result = await fetchApi<any>(apiPath)
 
@@ -207,7 +206,7 @@ export function NetworkTrafficChart({
         setIsInitialLoad(false)
       }
     } catch (err: any) {
-      console.error("[v0] Error fetching network metrics:", err)
+      console.error("Error fetching network metrics:", err)
       setError(err.message || "Error loading metrics")
     } finally {
       setLoading(false)

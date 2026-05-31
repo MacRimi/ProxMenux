@@ -1,0 +1,227 @@
+{
+  "meta": {
+    "title": "ZFS Commands on Proxmox — zpool, zfs snapshot, send/receive, scrub | ProxMenux",
+    "description": "Reference of ZFS management commands on Proxmox VE: zpool create / status / history, zfs list / get / set, snapshots, clone, zfs send and receive, scrub, clear, replace, zpool iostat, ARC summary.",
+    "ogTitle": "ZFS Commands on Proxmox — zpool, zfs snapshot, send/receive, scrub",
+    "ogDescription": "Reference of zpool and zfs commands on Proxmox VE — pools, datasets, snapshots, replication, maintenance.",
+    "twitterTitle": "ZFS Commands on Proxmox | ProxMenux",
+    "twitterDescription": "zpool and zfs commands for Proxmox VE: pools, datasets, snapshots, replication, maintenance."
+  },
+  "header": {
+    "title": "ZFS Management",
+    "description": "Curated reference for zpool and zfs commands: pool inspection, dataset CRUD, snapshots, clone and send/receive (incremental and recursive), scrub / clear / replace for maintenance, plus I/O statistics and ARC summary.",
+    "section": "Help and Info"
+  },
+  "intro": {
+    "title": "Two command families",
+    "body": "<code>zpool *</code> manages the storage pools (physical layer — disks, vdevs, redundancy). <code>zfs *</code> manages the datasets and snapshots that live inside those pools (logical layer — filesystems, volumes, snapshots, properties)."
+  },
+  "commandGroups": [
+    {
+      "title": "Pool Information",
+      "commands": [
+        {
+          "command": "zpool list",
+          "description": "List all ZFS pools"
+        },
+        {
+          "command": "zpool status",
+          "description": "Show detailed pool status and health"
+        },
+        {
+          "command": "zpool status -v",
+          "description": "Show verbose pool status with errors"
+        },
+        {
+          "command": "zpool history",
+          "description": "Show command history for all pools"
+        },
+        {
+          "command": "zpool history <pool>",
+          "description": "Show command history for specific pool"
+        },
+        {
+          "command": "zpool get all <pool>",
+          "description": "Show all properties of a pool"
+        }
+      ]
+    },
+    {
+      "title": "Dataset Management",
+      "commands": [
+        {
+          "command": "zfs list",
+          "description": "List all ZFS datasets"
+        },
+        {
+          "command": "zfs list -r <pool>",
+          "description": "List all datasets in a pool recursively"
+        },
+        {
+          "command": "zfs create <pool>/<dataset>",
+          "description": "Create a new dataset"
+        },
+        {
+          "command": "zfs destroy <pool>/<dataset>",
+          "description": "Destroy a dataset"
+        },
+        {
+          "command": "zfs rename <pool>/<dataset> <pool>/<new-name>",
+          "description": "Rename a dataset"
+        },
+        {
+          "command": "zfs get all <pool>/<dataset>",
+          "description": "Show all properties of a dataset"
+        },
+        {
+          "command": "zfs set compression=on <pool>/<dataset>",
+          "description": "Enable compression on a dataset"
+        }
+      ]
+    },
+    {
+      "title": "Snapshot Management",
+      "commands": [
+        {
+          "command": "zfs list -t snapshot",
+          "description": "List all snapshots"
+        },
+        {
+          "command": "zfs list -t snapshot -r <pool>",
+          "description": "List all snapshots in a pool"
+        },
+        {
+          "command": "zfs snapshot <pool>/<dataset>@<snapshot-name>",
+          "description": "Create a snapshot"
+        },
+        {
+          "command": "zfs destroy <pool>/<dataset>@<snapshot-name>",
+          "description": "Delete a snapshot"
+        },
+        {
+          "command": "zfs rollback <pool>/<dataset>@<snapshot-name>",
+          "description": "Rollback to a snapshot"
+        },
+        {
+          "command": "zfs hold <tag> <pool>/<dataset>@<snapshot-name>",
+          "description": "Place a hold on a snapshot"
+        },
+        {
+          "command": "zfs release <tag> <pool>/<dataset>@<snapshot-name>",
+          "description": "Release a hold on a snapshot"
+        }
+      ]
+    },
+    {
+      "title": "Clone and Send/Receive",
+      "commands": [
+        {
+          "command": "zfs clone <pool>/<dataset>@<snapshot> <pool>/<clone-name>",
+          "description": "Create a clone from a snapshot"
+        },
+        {
+          "command": "zfs send <pool>/<dataset>@<snapshot> > backup.zfs",
+          "description": "Send a snapshot to a file"
+        },
+        {
+          "command": "zfs receive <pool>/<dataset> < backup.zfs",
+          "description": "Receive a snapshot from a file"
+        },
+        {
+          "command": "zfs send -i <pool>/<dataset>@<snap1> <pool>/<dataset>@<snap2> > incr.zfs",
+          "description": "Send incremental snapshot"
+        },
+        {
+          "command": "zfs send -R <pool>/<dataset>@<snapshot> > full-recursive.zfs",
+          "description": "Send recursive snapshot"
+        }
+      ]
+    },
+    {
+      "title": "Maintenance and Repair",
+      "commands": [
+        {
+          "command": "zpool scrub <pool>",
+          "description": "Start a scrub operation on a pool"
+        },
+        {
+          "command": "zpool scrub -s <pool>",
+          "description": "Stop a running scrub"
+        },
+        {
+          "command": "zpool clear <pool>",
+          "description": "Clear error counts in a pool"
+        },
+        {
+          "command": "zpool clear <pool> <device>",
+          "description": "Clear errors on a specific device"
+        },
+        {
+          "command": "zpool replace <pool> <old-device> <new-device>",
+          "description": "Replace a failed device"
+        },
+        {
+          "command": "zpool offline <pool> <device>",
+          "description": "Take a device offline"
+        },
+        {
+          "command": "zpool online <pool> <device>",
+          "description": "Bring a device online"
+        }
+      ]
+    },
+    {
+      "title": "Performance and Monitoring",
+      "commands": [
+        {
+          "command": "zpool iostat",
+          "description": "Show I/O statistics for pools"
+        },
+        {
+          "command": "zpool iostat -v",
+          "description": "Show detailed I/O statistics"
+        },
+        {
+          "command": "zpool iostat 5",
+          "description": "Show I/O statistics every 5 seconds"
+        },
+        {
+          "command": "arc_summary",
+          "description": "Show ARC statistics (if installed)"
+        },
+        {
+          "command": "zfs get compressratio <pool>/<dataset>",
+          "description": "Show compression ratio"
+        },
+        {
+          "command": "zfs get used,available,referenced <pool>/<dataset>",
+          "description": "Show space usage"
+        }
+      ]
+    }
+  ],
+  "bestPractices": {
+    "title": "Operational best practices",
+    "bodyRich": "Run <code>zpool scrub</code> weekly or monthly to detect silent corruption. Keep at least 10-15% of pool space free — ZFS performance degrades sharply over 80% full. Always replace failed devices with <code>zpool replace</code> (in-place) rather than detach + add (which loses redundancy temporarily)."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Storage and Disks",
+        "tail": " — generic block-device and LVM commands."
+      },
+      {
+        "href": "/docs/help-info/backup-commands",
+        "label": "Backup and Restore",
+        "tail": " — vzdump, qmrestore."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Help and Info overview",
+        "tail": "."
+      }
+    ]
+  }
+}

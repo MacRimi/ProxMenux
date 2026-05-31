@@ -1,16 +1,24 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenux CT - Samba Client Manager for Proxmox LXC
+# ProxMenux - Samba / CIFS Client Manager for LXC
 # ==========================================================
-# Based on ProxMenux by MacRimi
+# Author      : MacRimi
+# Copyright   : (c) 2024 MacRimi
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
+# Version     : 1.0
 # ==========================================================
 # Description:
-# This script allows you to manage Samba/CIFS client mounts inside Proxmox CTs:
-# - Mount Samba/CIFS shares (temporary and permanent)
-# - View current mounts
-# - Unmount and remove Samba shares
-# - Auto-discover Samba servers
-# - Manage credentials securely
+# Manages Samba / CIFS client mounts from inside a Proxmox LXC
+# container. Requires a privileged container (mount.cifs needs
+# capabilities that unprivileged CTs do not expose).
+#
+# Features:
+# - Mount CIFS shares (temporary and permanent via /etc/fstab).
+# - List current CIFS mounts inside the CT.
+# - Unmount and remove shares cleanly.
+# - Auto-discover Samba servers on the local network.
+# - Credentials stored in /etc/samba/credentials (root:0600).
 # ==========================================================
 
 
@@ -51,6 +59,12 @@ install_samba_client() {
     show_proxmenux_logo
     msg_title "$(translate "Installing Samba Client")"
     msg_info "$(translate "Installing Samba/CIFS client packages...")"
+
+    # Mirror of nfs_client.sh: refuse non-Debian-family CTs early.
+    if ! pct exec "$CTID" -- bash -c 'command -v apt-get' &>/dev/null; then
+        msg_error "$(translate "This container does not have apt-get. Samba client installation only supports Debian/Ubuntu containers.")"
+        return 1
+    fi
 
     if ! pct exec "$CTID" -- apt-get update &>/dev/null; then
         msg_error "$(translate "Failed to update package list.")"

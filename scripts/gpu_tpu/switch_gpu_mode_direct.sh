@@ -37,12 +37,6 @@ if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh" ]]; then
 elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh" ]]; then
   source "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh"
 fi
-if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh" ]]; then
-  source "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh"
-elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh" ]]; then
-  source "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh"
-fi
-
 load_language
 initialize_cache
 
@@ -144,7 +138,7 @@ _get_iommu_group_ids() {
     local dev dev_class vid did
     dev=$(basename "$dev_path")
     dev_class=$(cat "/sys/bus/pci/devices/${dev}/class" 2>/dev/null)
-    [[ "$dev_class" == "0x0604" || "$dev_class" == "0x0600" ]] && continue
+    [[ "$dev_class" == 0x0604* || "$dev_class" == 0x0600* ]] && continue
     vid=$(cat "/sys/bus/pci/devices/${dev}/vendor" 2>/dev/null | sed 's/0x//')
     did=$(cat "/sys/bus/pci/devices/${dev}/device" 2>/dev/null | sed 's/0x//')
     [[ -n "$vid" && -n "$did" ]] && echo "${vid}:${did}"
@@ -329,6 +323,12 @@ _restore_nvidia_host_stack_for_lxc() {
   local state_file="/var/lib/proxmenux/nvidia-host-services.state"
   local disabled_file="/etc/modules-load.d/nvidia-vfio.conf.proxmenux-disabled-vfio"
   local active_file="/etc/modules-load.d/nvidia-vfio.conf"
+
+  # New per-BDF model: drop every NVIDIA BDF from the initramfs binder so
+  # the nvidia module reclaims the GPU after the next reboot. Idempotent.
+  if declare -F _proxmenux_vfio_bind_purge_vendor >/dev/null 2>&1; then
+    _proxmenux_vfio_bind_purge_vendor "10de" && changed=true
+  fi
 
   # Remove hard blacklist that was preventing nvidia module loading
   local nvidia_blacklist="/etc/modprobe.d/nvidia-blacklist.conf"
@@ -1042,10 +1042,6 @@ switch_to_vm_mode() {
     update-initramfs -u -k all >>"$LOG_FILE" 2>&1
     msg_ok "$(translate 'initramfs updated')" | tee -a "$screen_capture"
   fi
-
-  if declare -F sync_proxmenux_gpu_guard_hooks >/dev/null 2>&1; then
-    sync_proxmenux_gpu_guard_hooks
-  fi
 }
 
 _type_has_remaining_vfio_ids() {
@@ -1116,10 +1112,6 @@ switch_to_lxc_mode() {
     msg_info "$(translate 'Updating initramfs (this may take a minute)...')"
     update-initramfs -u -k all >>"$LOG_FILE" 2>&1
     msg_ok "$(translate 'initramfs updated')" | tee -a "$screen_capture"
-  fi
-
-  if declare -F sync_proxmenux_gpu_guard_hooks >/dev/null 2>&1; then
-    sync_proxmenux_gpu_guard_hooks
   fi
 }
 

@@ -1,0 +1,60 @@
+{
+  "meta": {
+    "title": "Post-instalación: Rendimiento | ProxMenux Documentation",
+    "description": "Opciones de rendimiento en el script post-instalación Customizable de ProxMenux. Sustituye gzip de un solo hilo por pigz (gzip paralelo) para backups y compresión más rápidos en hosts multinúcleo."
+  },
+  "header": {
+    "title": "Post-instalación: Rendimiento",
+    "description": "Opciones de rendimiento dentro del script post-instalación Customizable. Por ahora esta categoría contiene una sola optimización: sustituir gzip por pigz para que los backups y la compresión usen todos los núcleos de la CPU en lugar de uno.",
+    "section": "Settings post-install Proxmox"
+  },
+  "intro": {
+    "title": "Qué cubre esta categoría",
+    "body": "La única opción de rendimiento aquí redirige el gzip del sistema a una implementación paralela. Otros ajustes relacionados con el rendimiento (tuning de memoria, scheduling de I/O, dimensionado del ARC de ZFS, límites del kernel) viven en sus propias categorías (<em>Sistema</em>, <em>Almacenamiento</em>) porque afectan a subsistemas distintos."
+  },
+  "pigz": {
+    "heading": "Usar pigz para compresión gzip más rápida",
+    "intro": "El <code>gzip</code> estándar comprime datos usando <strong>un solo núcleo de CPU</strong>. En hosts Proxmox modernos con 8, 16 o 32 núcleos, eso es un cuello de botella enorme durante backups <code>vzdump</code> de VM/CT, rotación de logs y cualquier otra cosa que pase por <code>gzip</code>. <a>pigz</a> es un reemplazo paralelo drop-in: misma salida compatible con gzip, pero reparte el trabajo entre todos los núcleos.",
+    "doesTitle": "Qué hace ProxMenux",
+    "doesIntro": "Cuatro pasos, todos idempotentes:",
+    "doesItems": [
+      "Establece <code>pigz: 1</code> en <code>/etc/vzdump.conf</code> para que la herramienta de backup de Proxmox use pigz de forma nativa.",
+      "Instala el paquete apt <code>pigz</code> si no está presente.",
+      "Escribe un script wrapper en <code>/bin/pigzwrapper</code> que reenvía todos los argumentos a <code>/usr/bin/pigz</code>.",
+      "Aparta el binario original <code>/bin/gzip</code> a <code>/bin/gzip.original</code> y sustituye <code>/bin/gzip</code> por el wrapper. A partir de ahí, <em>cualquier cosa</em> que llame a <code>gzip</code> — logrotate, <code>tar czf</code>, scripts, vzdump — usa pigz de forma transparente."
+    ],
+    "replacesTitle": "Esto sustituye un binario del sistema",
+    "replacesBody": "Sustituir <code>/bin/gzip</code> por un wrapper es inusual. Es seguro (el wrapper produce salida compatible con gzip), pero conviene saberlo: scripts que tengan paths hardcodeados, que se ejecuten dentro de chroots restrictivos o que verifiquen hashes de binarios pueden comportarse de forma distinta. El binario original se conserva como <code>/bin/gzip.original</code> para que siempre puedas dar marcha atrás.",
+    "revertTitle": "No reversible desde el menú Uninstall",
+    "revertBody": "Esta optimización se aplica desde Customizable, pero <strong>actualmente no tiene una entrada equivalente en el menú Uninstall Optimizations</strong>. Para revertirla a mano, restaura el gzip original y borra el wrapper:",
+    "verifyTitle": "Verificación",
+    "verifyBody": "Tras aplicar, <code>gzip --version</code> debería mencionar pigz. Un benchmark rápido también muestra la diferencia de velocidad en un host multinúcleo:",
+    "whenTitle": "Cuándo importa más",
+    "whenBody": "El impacto escala con <strong>cuántos núcleos tiene el host</strong> y <strong>con qué frecuencia ejecutas backups</strong>. En una caja de home-lab de 2 núcleos con un vzdump diario, el beneficio es marginal. En un host de producción de 16 núcleos haciendo backup de una docena de VMs cada noche, pigz puede recortar la ventana de backup a una fracción de lo que tarda el gzip de un solo hilo."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "Comandos de backup y restauración",
+        "href": "/docs/help-info/backup-commands",
+        "tailRich": " — referencia de la CLI de vzdump, incluida la opción <code>--pigz</code> threads."
+      },
+      {
+        "label": "Almacenamiento",
+        "href": "/docs/post-install/storage",
+        "tail": " — límites de velocidad de vzdump y tuning del ARC de ZFS."
+      },
+      {
+        "label": "Sistema",
+        "href": "/docs/post-install/system",
+        "tail": " — tuning de descriptores de fichero y de memoria."
+      },
+      {
+        "label": "Customizable Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — volver al menú padre."
+      }
+    ]
+  }
+}

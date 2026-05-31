@@ -3,6 +3,7 @@
 import type React from "react"
 import { useEffect, useRef, useState } from "react"
 import { API_PORT, fetchApi } from "@/lib/api-config" // Unificando importaciones de api-config en una sola línea con alias @/
+import { getTicketedWsUrl } from "@/lib/terminal-ws"
 import {
   Activity,
   Trash2,
@@ -16,7 +17,10 @@ import {
   Grid2X2,
   GripHorizontal,
   ChevronDown,
+  Copy,
+  Clipboard,
 } from "lucide-react"
+import { copyTerminalSelection, pasteFromClipboard } from "@/lib/terminal-clipboard"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -156,6 +160,9 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const [useOnline, setUseOnline] = useState(true)
 
   const containerRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+  // Per-terminal reconnect attempt count + last-fired timestamp for the
+  // exponential backoff in the visibilitychange handler.
+  const reconnectAttemptsRef = useRef<{ [key: string]: { attempts: number; lastAt: number } }>({})
 
   useEffect(() => {
     const updateDeviceType = () => {
@@ -184,21 +191,35 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   // Handle page visibility change for automatic reconnection when user returns
   // This is especially important for mobile/tablet devices (iPad) where switching apps
   // puts the browser tab in background and may close WebSocket connections
+  //
+  // Per-terminal exponential backoff (2s, 4s, 8s, ..., capped at 60s) so a
+  // server-side outage doesn't get hammered every time the user switches
+  // tabs. `reconnectAttemptsRef` survives re-renders and tracks attempts +
+  // last-fired timestamps. The success path in `reconnectTerminal.onopen`
+  // resets the counter back to 0.
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        // When page becomes visible again, check all terminal connections
-        terminals.forEach((terminal) => {
-          if (terminal.ws && terminal.ws.readyState !== WebSocket.OPEN && terminal.term) {
-            // Terminal is disconnected, attempt to reconnect
-            reconnectTerminal(terminal.id)
-          }
-        })
-      }
+      if (document.visibilityState !== 'visible') return
+      const now = Date.now()
+      terminals.forEach((terminal) => {
+        if (!(terminal.ws && terminal.ws.readyState !== WebSocket.OPEN && terminal.term)) {
+          return
+        }
+        const state = reconnectAttemptsRef.current[terminal.id] || { attempts: 0, lastAt: 0 }
+        const backoffMs = Math.min(60000, 2000 * Math.pow(2, state.attempts))
+        if (now - state.lastAt < backoffMs) {
+          return
+        }
+        reconnectAttemptsRef.current[terminal.id] = {
+          attempts: state.attempts + 1,
+          lastAt: now,
+        }
+        reconnectTerminal(terminal.id)
+      })
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
@@ -269,7 +290,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
           throw new Error("No examples found")
         }
 
-        console.log("[v0] Received parsed examples from server:", data.examples.length)
 
         const formattedResults: CheatSheetResult[] = data.examples.map((example: any) => ({
           command: example.command,
@@ -280,7 +300,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         setUseOnline(true)
         setSearchResults(formattedResults)
       } catch (error) {
-        console.log("[v0] Error fetching from cheat.sh proxy, using offline commands:", error)
         const filtered = proxmoxCommands.filter(
           (item) =>
             item.cmd.toLowerCase().includes(query.toLowerCase()) ||
@@ -314,11 +333,14 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     
     // Show reconnecting message
     terminal.term.writeln('\r\n\x1b[33m[INFO] Reconnecting...\x1b[0m')
-    
+
     const wsUrl = websocketUrl || getWebSocketUrl()
-    const ws = new WebSocket(wsUrl)
+    // Append the single-use auth ticket so the backend handshake can validate.
+    const ws = new WebSocket(await getTicketedWsUrl(wsUrl))
     
     ws.onopen = () => {
+      // Successful connect — reset backoff state for this terminal.
+      reconnectAttemptsRef.current[terminalId] = { attempts: 0, lastAt: 0 }
       // Clear any existing ping interval
       if (terminal.pingInterval) {
         clearInterval(terminal.pingInterval)
@@ -479,11 +501,22 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       import("xterm/css/xterm.css"),
     ]).then(([Terminal, FitAddon]) => [Terminal, FitAddon])
 
+    // After the (potentially slow) dynamic import, verify the container
+    // is still the one we were given. If the user removed the terminal
+    // tab while xterm was loading, the original `container` element is
+    // detached and `containerRefs.current[terminal.id]` is gone — bail
+    // out to avoid attaching to a stale DOM node + opening an orphan
+    // WebSocket. Audit Tier 6 — `import("xterm")` sin cancelación.
+    if (containerRefs.current[terminal.id] !== container) return
+
     const fontSize = window.innerWidth < 768 ? 12 : 16
 
     const term = new TerminalClass({
       rendererType: "dom",
-      fontFamily: '"Courier", "Courier New", "Liberation Mono", "DejaVu Sans Mono", monospace',
+      // Issue #182: prepend common Nerd Font families so users who already
+      // have one installed see Starship/atuin/ble.sh icons render. Falls
+      // back to Courier if no NF is present.
+      fontFamily: '"MesloLGS NF", "FiraCode Nerd Font", "JetBrainsMono Nerd Font", "Hack Nerd Font", "Symbols Nerd Font", "Courier", "Courier New", "Liberation Mono", "DejaVu Sans Mono", monospace',
       fontSize: fontSize,
       lineHeight: 1,
       cursorBlink: true,
@@ -524,12 +557,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     fitAddon.fit()
 
     const wsUrl = websocketUrl || getWebSocketUrl()
-    
+
     // Connection with timeout for VPN/mobile (15 seconds)
     const connectionTimeout = 15000
     let connectionTimedOut = false
-    
-    const ws = new WebSocket(wsUrl)
+
+    // Single-use auth ticket appended as ?ticket=... — see lib/terminal-ws.ts.
+    const ws = new WebSocket(await getTicketedWsUrl(wsUrl))
     
     // Set connection timeout
     const timeoutId = setTimeout(() => {
@@ -590,7 +624,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
     ws.onerror = (error) => {
       clearTimeout(timeoutId)
-      console.error("[v0] TerminalPanel: WebSocket error:", error)
+      console.error("TerminalPanel: WebSocket error:", error)
       setTerminals((prev) => prev.map((t) => {
         if (t.id === terminal.id) {
           if (t.pingInterval) {
@@ -724,11 +758,34 @@ const handleClose = () => {
       e.preventDefault()
       e.stopPropagation()
     }
-    
+
     const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
     if (activeTerminal?.ws && activeTerminal.ws.readyState === WebSocket.OPEN) {
       activeTerminal.ws.send(seq)
     }
+  }
+
+  // Mobile clipboard helpers — desktop users have ctrl/cmd shortcuts via xterm,
+  // but on touch devices xterm's selection / clipboard isn't reachable from the
+  // OS clipboard manager so we expose explicit Copy / Paste buttons.
+  const handleCopy = async (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
+    await copyTerminalSelection(activeTerminal?.term)
+  }
+
+  const handlePaste = async (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
+    if (!activeTerminal?.ws || activeTerminal.ws.readyState !== WebSocket.OPEN) return
+    const ws = activeTerminal.ws
+    await pasteFromClipboard((text) => ws.send(text))
   }
   
   const getLayoutClass = () => {
@@ -867,6 +924,7 @@ const handleClose = () => {
                 <div
                   ref={(el) => (containerRefs.current[terminal.id] = el)}
                   className="w-full h-full flex-1 bg-black overflow-hidden"
+                  translate="no"
                 />
               </TabsContent>
             ))}
@@ -899,6 +957,7 @@ const handleClose = () => {
                   ref={(el) => (containerRefs.current[terminal.id] = el)}
                   onClick={() => setActiveTerminalId(terminal.id)}
                   className="flex-1 w-full max-w-full bg-black overflow-hidden cursor-pointer"
+                  translate="no"
                   data-terminal-container
                 />
               </div>
@@ -1015,7 +1074,7 @@ const handleClose = () => {
                 <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel className="text-xs text-muted-foreground">Control Sequences</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => sendSequence("\x03")}>
@@ -1029,6 +1088,16 @@ const handleClose = () => {
               <DropdownMenuItem onSelect={() => sendSequence("\x12")}>
                 <span className="font-mono text-xs mr-2">Ctrl+R</span>
                 <span className="text-muted-foreground text-xs">Search history</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Clipboard</DropdownMenuLabel>
+              <DropdownMenuItem onSelect={() => { void handleCopy() }}>
+                <Copy className="h-3.5 w-3.5 mr-2" />
+                <span className="text-xs">Copy selection</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => { void handlePaste() }}>
+                <Clipboard className="h-3.5 w-3.5 mr-2" />
+                <span className="text-xs">Paste</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

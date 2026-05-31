@@ -1,23 +1,26 @@
 #!/usr/bin/env bash
 
 # ==========================================================
-# ProxMenuX - ZimaOS VM Creator Script
+# ProxMenux - ZimaOS VM Creator
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 21/08/2025
 # ==========================================================
 # Description:
-# This script automates the creation and configuration of a ZimaOS 
-# Virtual machine (VM) in Proxmox VE. It simplifies the
-# setup process by allowing both default and advanced configuration options.
+# Creates and configures a ZimaOS virtual machine on Proxmox VE.
+# Downloads the ZimaOS pre-built image, wires it into a new VM
+# using either the ProxMenux default profile or the advanced
+# wizard, and hands storage and optional GPU passthrough to the
+# shared helpers.
 #
-# The script automates the complete VM creation process, including loader 
-# download, disk configuration, and VM boot setup.
-#
-#
+# Features:
+# - Default and Advanced configuration modes.
+# - Unified storage plan (virtual / import / PCI passthrough).
+# - Optional GPU passthrough via the shared VM wizard.
+# - Auto-generates a styled HTML description attached to the VM.
 # ==========================================================
 
 
@@ -53,11 +56,6 @@ if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh" ]]; then
     source "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh"
 elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh" ]]; then
     source "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh"
-fi
-if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh" ]]; then
-    source "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh"
-elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh" ]]; then
-    source "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh"
 fi
 load_language
 initialize_cache
@@ -1331,7 +1329,6 @@ function create_vm() {
             msg_error "$(translate "Controller + NVMe passthrough requires machine type q35. Skipping controller assignment.")"
             ERROR_FLAG=true
         else
-            NEED_HOOK_SYNC=false
             HOSTPCI_INDEX=0
             if declare -F _pci_next_hostpci_index >/dev/null 2>&1; then
                 HOSTPCI_INDEX=$(_pci_next_hostpci_index "$VMID" 2>/dev/null || echo 0)
@@ -1381,7 +1378,6 @@ function create_vm() {
                                     fi
                                 fi
                             done
-                            NEED_HOOK_SYNC=true
                             ;;
                         move_remove_source)
                             SLOT_BASE=$(_pci_slot_base "$PCI_DEV")
@@ -1410,11 +1406,6 @@ function create_vm() {
                 fi
             done
 
-            if [[ "$NEED_HOOK_SYNC" == "true" ]] && declare -F sync_proxmenux_gpu_guard_hooks >/dev/null 2>&1; then
-                ensure_proxmenux_gpu_guard_hookscript
-                sync_proxmenux_gpu_guard_hooks
-                msg_ok "$(translate "VM hook guard synced for shared controller/NVMe protection")"
-            fi
         fi
     fi
 

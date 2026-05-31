@@ -1,12 +1,29 @@
 #!/bin/bash
-# ProxMenux - NVIDIA Driver Installer (PVE 9.x)
-# ============================================
+# ==========================================================
+# ProxMenux - NVIDIA GPU Driver Installer
+# ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
-# Version     : 1.2 (PVE9, fixed download issues)
+# License     : GPL-3.0
+# Version     : 1.2
 # Last Updated: 26/03/2026
-# ============================================
+# ==========================================================
+# Description:
+# Installs and manages the NVIDIA proprietary driver on a
+# Proxmox VE host. Detects hardware, picks a kernel-compatible
+# driver version and handles the full lifecycle
+# (install / update / remove).
+#
+# Features:
+#  - GPU detection + VFIO passthrough safety check
+#  - Kernel-aware driver version filter (5.15 → 6.17+)
+#  - Nouveau blacklist + module unload
+#  - DKMS-backed install (survives kernel upgrades)
+#  - udev rules + nvidia-persistenced service
+#  - Optional keylase/nvidia-patch (NVENC session limit)
+#  - LXC container driver propagation (Alpine/Arch/Debian)
+#  - Complete uninstall path
+# ==========================================================
 
 SCRIPT_TITLE="NVIDIA GPU Driver Installer for Proxmox VE"
 
@@ -246,13 +263,6 @@ update_lxc_nvidia() {
   local install_rc=0
 
   case "$distro" in
-    alpine)
-      msg_info2 "$(translate 'Upgrading NVIDIA utils (Alpine)...')"
-      pct exec "$ctid" -- sh -c \
-        "apk update && apk add --no-cache --upgrade nvidia-utils" \
-        2>&1 | tee -a "$LOG_FILE"
-      install_rc=${PIPESTATUS[0]}
-      ;;
     arch|manjaro|endeavouros)
       msg_info2 "$(translate 'Upgrading NVIDIA utils (Arch)...')"
       pct exec "$ctid" -- bash -c \
@@ -270,7 +280,8 @@ update_lxc_nvidia() {
         install_rc=1
       else
         local free_mb
-        free_mb=$(pct exec "$ctid" -- df -m / 2>/dev/null | awk 'NR==2{print $4}' || echo 0)
+        free_mb=$(pct exec "$ctid" -- df -P -m / 2>/dev/null | awk 'END{print $4}')
+        free_mb=${free_mb:-0}
         if [[ "$free_mb" -lt 1500 ]]; then
           _restore_container_memory "$ctid"
           whiptail --backtitle "ProxMenux" \
@@ -314,21 +325,51 @@ update_lxc_nvidia() {
 
               msg_info2 "$(translate 'Running NVIDIA installer in container. This may take several minutes...')"
               echo "" >>"$LOG_FILE"
-              pct exec "$ctid" -- bash -c "
-                mkdir -p /tmp/nvidia_lxc_install
-                tar -xzf /tmp/nvidia_lxc.tar.gz -C /tmp/nvidia_lxc_install 2>&1
-                /tmp/nvidia_lxc_install/nvidia-installer \
-                  --no-kernel-modules \
-                  --no-questions \
-                  --ui=none \
-                  --no-nouveau-check \
-                  --no-dkms \
-                  --no-install-compat32-libs
-                EXIT=\$?
-                rm -rf /tmp/nvidia_lxc_install /tmp/nvidia_lxc.tar.gz
-                exit \$EXIT
-              " 2>&1 | tee -a "$LOG_FILE"
-              install_rc=${PIPESTATUS[0]}
+              if [[ "$distro" == "alpine" ]]; then
+                # Alpine uses musl libc and does not ship a glibc dynamic
+                # loader, so the nvidia-installer binary (glibc) cannot
+                # execute. We pull `gcompat` to provide the glibc loader
+                # and a libc shim, then copy the userspace libs and the
+                # standard NVIDIA binaries by hand. SONAME symlinks are
+                # built from `readelf` (binutils) instead of trusting a
+                # hard-coded list — the .run ships ~50 .so files and the
+                # set varies between branches.
+                pct exec "$ctid" -- sh -c '
+                  set -e
+                  mkdir -p /tmp/nvidia_lxc_install
+                  tar -xzf /tmp/nvidia_lxc.tar.gz -C /tmp/nvidia_lxc_install
+                  apk add --no-cache gcompat binutils >/dev/null
+                  cd /tmp/nvidia_lxc_install
+                  mkdir -p /usr/lib /usr/bin
+                  cp -P *.so* /usr/lib/ 2>/dev/null || true
+                  for lib in /usr/lib/lib*.so.*; do
+                    [ -f "$lib" ] || continue
+                    soname=$(readelf -d "$lib" 2>/dev/null | grep SONAME | head -n1 | sed -e "s/.*\[//" -e "s/\].*//")
+                    [ -n "$soname" ] && [ "$(basename "$lib")" != "$soname" ] && ln -sf "$(basename "$lib")" "/usr/lib/$soname"
+                  done
+                  for bin in nvidia-smi nvidia-debugdump nvidia-cuda-mps-control nvidia-cuda-mps-server nvidia-persistenced nvidia-modprobe; do
+                    [ -f "$bin" ] && cp -P "$bin" /usr/bin/ && chmod 755 "/usr/bin/$bin"
+                  done
+                  rm -rf /tmp/nvidia_lxc_install /tmp/nvidia_lxc.tar.gz
+                ' 2>&1 | tee -a "$LOG_FILE"
+                install_rc=${PIPESTATUS[0]}
+              else
+                pct exec "$ctid" -- bash -c "
+                  mkdir -p /tmp/nvidia_lxc_install
+                  tar -xzf /tmp/nvidia_lxc.tar.gz -C /tmp/nvidia_lxc_install 2>&1
+                  /tmp/nvidia_lxc_install/nvidia-installer \
+                    --no-kernel-modules \
+                    --no-questions \
+                    --ui=none \
+                    --no-nouveau-check \
+                    --no-dkms \
+                    --no-install-compat32-libs
+                  EXIT=\$?
+                  rm -rf /tmp/nvidia_lxc_install /tmp/nvidia_lxc.tar.gz
+                  exit \$EXIT
+                " 2>&1 | tee -a "$LOG_FILE"
+                install_rc=${PIPESTATUS[0]}
+              fi
 
               rm -rf "$extract_dir"
               _restore_container_memory "$ctid"
@@ -596,13 +637,20 @@ get_kernel_compatibility_info() {
   KERNEL_MAJOR=$(echo "$kernel_version" | cut -d. -f1)
   KERNEL_MINOR=$(echo "$kernel_version" | cut -d. -f2)
   
-  # Define minimum compatible versions based on kernel
-  # Based on https://docs.nvidia.com/datacenter/tesla/drivers/index.html
-  if [[ "$KERNEL_MAJOR" -ge 6 ]] && [[ "$KERNEL_MINOR" -ge 17 ]]; then
-    # Kernel 6.17+ (Proxmox 9.x) - Requires 580.82.07 or higher
-    MIN_DRIVER_VERSION="580.82.07"
+  # Define minimum compatible versions based on kernel.
+  # Floor bumped from 580.82.07 → 580.105.08 for kernel 6.17+ after a
+  # user report (issue tracked as Sprint 11.4) that 580.82-580.95 builds
+  # fail on kernel 6.17.13 (DKMS module compile errors with the newer
+  # toolchain shipped with PVE 9.1). 580.105.08 is verified working on
+  # the test host. Future kernel 7.x falls into the same bucket — the
+  # `KERNEL_MAJOR -ge 7` branch was previously missing and routed 7.x
+  # kernels to MIN=535 incorrectly.
+  if { [[ "$KERNEL_MAJOR" -ge 7 ]]; } || \
+     { [[ "$KERNEL_MAJOR" -eq 6 ]] && [[ "$KERNEL_MINOR" -ge 17 ]]; }; then
+    # Kernel 6.17+ / 7.x (Proxmox 9.x +) - Requires 580.105.08 or higher
+    MIN_DRIVER_VERSION="580.105.08"
     RECOMMENDED_BRANCH="580"
-    COMPATIBILITY_NOTE="Kernel $kernel_version requires NVIDIA driver 580.82.07 or newer"
+    COMPATIBILITY_NOTE="Kernel $kernel_version requires NVIDIA driver 580.105.08 or newer (older 580.x builds fail to compile)"
   elif [[ "$KERNEL_MAJOR" -ge 6 ]] && [[ "$KERNEL_MINOR" -ge 8 ]]; then
     # Kernel 6.8-6.16 (Proxmox 8.2+) - Works with 550.x or higher
     MIN_DRIVER_VERSION="550"
@@ -635,30 +683,130 @@ is_version_compatible() {
   ver_minor=$(echo "$version" | cut -d. -f2)
   ver_patch=$(echo "$version" | cut -d. -f3)
   
-  if [[ "$MIN_DRIVER_VERSION" == "580.82.07" ]]; then
-    # Compare full version: must be >= 580.82.07
-    if [[ ${ver_major} -gt 580 ]]; then
-      return 0
-    elif [[ ${ver_major} -eq 580 ]]; then
-      if [[ $((10#${ver_minor})) -gt 82 ]]; then
+  # Full-version comparison when MIN is dotted (e.g. "580.105.08").
+  # Strips the dotted threshold from MIN_DRIVER_VERSION and reuses the
+  # existing `version_le` helper. The previous code had a hardcoded
+  # branch only for "580.82.07" — bumping the floor required editing two
+  # places. Sprint 11.4.
+  case "$MIN_DRIVER_VERSION" in
+    *.*.*)
+      # Dotted threshold: compare full triple.
+      local _min_major _min_minor _min_patch
+      IFS='.' read -r _min_major _min_minor _min_patch <<<"$MIN_DRIVER_VERSION"
+      _min_major=${_min_major:-0}
+      _min_minor=${_min_minor:-0}
+      _min_patch=${_min_patch:-0}
+      ver_minor=${ver_minor:-0}
+      ver_patch=${ver_patch:-0}
+      if (( 10#$ver_major > 10#$_min_major )); then
         return 0
-      elif [[ $((10#${ver_minor})) -eq 82 ]]; then
-        if [[ $((10#${ver_patch:-0})) -ge 7 ]]; then
+      elif (( 10#$ver_major == 10#$_min_major )); then
+        if (( 10#$ver_minor > 10#$_min_minor )); then
           return 0
+        elif (( 10#$ver_minor == 10#$_min_minor )); then
+          if (( 10#${ver_patch:-0} >= 10#$_min_patch )); then
+            return 0
+          fi
         fi
       fi
-    fi
-    return 1
-  fi
-  
-
-  if [[ ${ver_major} -ge ${MIN_DRIVER_VERSION} ]]; then
-    return 0
-  else
-    return 1
-  fi
+      return 1
+      ;;
+    *)
+      # Single-major threshold (e.g. "550", "535"): compare major only.
+      if [[ ${ver_major} -ge ${MIN_DRIVER_VERSION} ]]; then
+        return 0
+      else
+        return 1
+      fi
+      ;;
+  esac
 }
 
+
+is_current_nvidia_patched() {
+  local status_file="/usr/local/share/proxmenux/components_status.json"
+  [[ -f "$status_file" ]] || return 1
+  command -v jq >/dev/null 2>&1 || return 1
+  local patched
+  patched=$(jq -r '.nvidia_driver.patched // false' "$status_file" 2>/dev/null)
+  [[ "$patched" == "true" ]]
+}
+
+KEYLASE_PATCH_CACHE="/var/cache/proxmenux/keylase_patch_versions.txt"
+KEYLASE_PATCH_TTL_SECONDS=$((7 * 86400))
+KEYLASE_PATCH_URL="https://raw.githubusercontent.com/keylase/nvidia-patch/master/patch.sh"
+
+refresh_keylase_patch_cache() {
+  local now ts age
+  now=$(date +%s)
+  if [[ -f "$KEYLASE_PATCH_CACHE" ]]; then
+    ts=$(stat -c '%Y' "$KEYLASE_PATCH_CACHE" 2>/dev/null || echo 0)
+    age=$(( now - ts ))
+    if (( age < KEYLASE_PATCH_TTL_SECONDS )) && [[ -s "$KEYLASE_PATCH_CACHE" ]]; then
+      return 0
+    fi
+  fi
+  mkdir -p "$(dirname "$KEYLASE_PATCH_CACHE")" 2>/dev/null || return 1
+  local tmp
+  tmp=$(mktemp)
+  if curl -fsSL --max-time 15 "$KEYLASE_PATCH_URL" 2>/dev/null \
+       | grep -oE '\["[0-9]+\.[0-9]+(\.[0-9]+)?"\]' \
+       | sed -E 's/\["([0-9.]+)"\]/\1/' \
+       | sort -u > "$tmp" && [[ -s "$tmp" ]]; then
+    mv "$tmp" "$KEYLASE_PATCH_CACHE"
+    return 0
+  fi
+  rm -f "$tmp"
+  return 1
+}
+
+is_keylase_patch_supported() {
+  local ver="$1"
+  [[ -z "$ver" ]] && return 1
+  [[ -f "$KEYLASE_PATCH_CACHE" && -s "$KEYLASE_PATCH_CACHE" ]] || return 1
+  grep -qFx "$ver" "$KEYLASE_PATCH_CACHE"
+}
+
+filter_keylase_supported() {
+  local versions_in="$1"
+  while IFS= read -r ver; do
+    [[ -z "$ver" ]] && continue
+    if is_keylase_patch_supported "$ver"; then
+      printf '%s\n' "$ver"
+    fi
+  done <<< "$versions_in"
+}
+
+filter_option_c_branch() {
+  local versions_in="$1"
+  local current="$2"
+  local recommended_branch="$3"
+  local target_branch=""
+
+  if [[ -n "$current" && "$current" =~ ^([0-9]+)\. ]]; then
+    local current_branch="${BASH_REMATCH[1]}"
+    if is_version_compatible "$current"; then
+      target_branch="$current_branch"
+    fi
+  fi
+
+  if [[ -z "$target_branch" ]]; then
+    target_branch="$recommended_branch"
+  fi
+
+  if [[ -z "$target_branch" ]]; then
+    printf '%s\n' "$versions_in"
+    return 0
+  fi
+
+  while IFS= read -r ver; do
+    [[ -z "$ver" ]] && continue
+    local ver_major="${ver%%.*}"
+    if [[ "$ver_major" == "$target_branch" ]]; then
+      printf '%s\n' "$ver"
+    fi
+  done <<< "$versions_in"
+}
 
 version_le() {
   local v1="$1"
@@ -981,8 +1129,16 @@ EOF
 
   ensure_workdir
   cd "$NVIDIA_WORKDIR" || return 1
+  # Pin to the last release tag so a hostile push to upstream `master`
+  # can't slip arbitrary code into the install. Bump as needed; the
+  # `--depth 1` keeps the clone fast. Audit Tier 6 — `nvidia-persistenced`
+  # git clone sin pinning de versión.
+  local NVIDIA_PERSISTENCED_TAG="${NVIDIA_PERSISTENCED_TAG:-575.64.05}"
   if [[ ! -d nvidia-persistenced ]]; then
-    git clone https://github.com/NVIDIA/nvidia-persistenced.git >>"$LOG_FILE" 2>&1 || true
+    git clone --depth 1 --branch "$NVIDIA_PERSISTENCED_TAG" \
+      https://github.com/NVIDIA/nvidia-persistenced.git >>"$LOG_FILE" 2>&1 \
+      || git clone --depth 1 https://github.com/NVIDIA/nvidia-persistenced.git >>"$LOG_FILE" 2>&1 \
+      || true
   fi
 
   if [[ -d nvidia-persistenced/init ]]; then
@@ -1004,8 +1160,25 @@ apply_nvidia_patch_if_needed() {
   msg_info "$(translate 'Cloning and applying NVIDIA patch (keylase/nvidia-patch)...')"
   ensure_workdir
   cd "$NVIDIA_WORKDIR" || return 1
+  # Pin keylase/nvidia-patch to a known-good commit. Override via env var
+  # for forward-compat as new driver versions land. patch.sh ships a list
+  # of supported drivers in the repo; if our running driver isn't covered
+  # the patch silently no-ops, so we surface a warning before running.
+  # Audit Tier 6 — `keylase/nvidia-patch` sin pinning + sin compat check.
+  local NVIDIA_PATCH_REF="${NVIDIA_PATCH_REF:-master}"
   if [[ ! -d nvidia-patch ]]; then
-    git clone https://github.com/keylase/nvidia-patch.git >>"$LOG_FILE" 2>&1 || true
+    git clone --depth 1 --branch "$NVIDIA_PATCH_REF" \
+      https://github.com/keylase/nvidia-patch.git >>"$LOG_FILE" 2>&1 \
+      || git clone --depth 1 https://github.com/keylase/nvidia-patch.git >>"$LOG_FILE" 2>&1 \
+      || true
+  fi
+
+  # Best-effort compatibility check: peek the supported-driver list in
+  # patch.sh and warn if our driver isn't on it.
+  if [[ -n "$CURRENT_DRIVER_VERSION" && -f nvidia-patch/patch.sh ]]; then
+    if ! grep -qF "$CURRENT_DRIVER_VERSION" nvidia-patch/patch.sh 2>/dev/null; then
+      msg_warn "$(translate 'NVIDIA driver') $CURRENT_DRIVER_VERSION $(translate 'is not in the patch.sh supported list. The patch may no-op or fail; review keylase/nvidia-patch README before continuing.')"
+    fi
   fi
 
   if [[ -x nvidia-patch/patch.sh ]]; then
@@ -1132,6 +1305,15 @@ show_version_menu() {
     current_list="$filtered_list"
   fi
 
+  # Option C: kernel-compat alone is too permissive (e.g. kernel 6.14
+  # accepts ≥ 550 so 595.x shows up — but 595.x has historically broken
+  # builds on this kernel). Restrict the offered list to the user's
+  # current branch when their installed driver still works, otherwise
+  # fall back to the recommended branch for the kernel.
+  if [[ -n "$current_list" ]]; then
+    current_list=$(filter_option_c_branch "$current_list" "$CURRENT_DRIVER_VERSION" "$RECOMMENDED_BRANCH")
+  fi
+
   if [[ -n "$latest" ]]; then
     local filtered_max_list=""
     while IFS= read -r ver; do
@@ -1143,8 +1325,42 @@ show_version_menu() {
     current_list="$filtered_max_list"
   fi
 
+  # If the user has the keylase NVENC patch applied, only offer versions
+  # that the patch supports — picking an unsupported version reinstalls
+  # the driver fine but the patch silently no-ops afterwards, so the
+  # user loses NVENC limit removal without warning.
+  local patch_filtered=false
+  local patch_filter_note=""
+  if is_current_nvidia_patched && [[ -n "$current_list" ]]; then
+    if refresh_keylase_patch_cache; then
+      local trimmed
+      trimmed=$(filter_keylase_supported "$current_list")
+      if [[ -n "$trimmed" ]]; then
+        current_list="$trimmed"
+        patch_filtered=true
+      else
+        patch_filter_note="$(translate 'No version in this branch is currently supported by keylase/nvidia-patch — the NVENC patch will not reapply after reinstall.')"
+      fi
+    else
+      patch_filter_note="$(translate 'Could not fetch keylase/nvidia-patch supported list — patch reapply compatibility is not verified.')"
+    fi
+  fi
+
+  # Recompute "latest" as the highest version still in the filtered list
+  # so the menu's "Latest available" label matches what we actually offer
+  # rather than the global upstream latest (which may have been filtered
+  # out by Option C / kernel-compat / patch awareness).
+  if [[ -n "$current_list" ]]; then
+    latest=$(printf '%s\n' "$current_list" | head -n1 | tr -d '[:space:]')
+  fi
+
   local menu_text="$(translate 'Select the NVIDIA driver version to install:')\n\n"
   menu_text+="$(translate 'Versions shown are compatible with your kernel. Latest available is recommended in most cases.')"
+  if $patch_filtered; then
+    menu_text+="\n\n$(translate 'NVENC patch detected — list narrowed to versions supported by keylase/nvidia-patch.')"
+  elif [[ -n "$patch_filter_note" ]]; then
+    menu_text+="\n\n${patch_filter_note}"
+  fi
 
   local choices=()
   choices+=("latest" "$(translate 'Latest available') (${latest:-unknown})")
@@ -1186,6 +1402,12 @@ show_version_menu() {
 # Main flow
 # ==========================================================
 main() {
+  # Rotate the previous run's log instead of truncating — when the
+  # current install fails, the user can compare against the previous
+  # attempt to see what changed. Audit Tier 7 — log truncation.
+  if [[ -f "$LOG_FILE" && -s "$LOG_FILE" ]]; then
+    cp -p "$LOG_FILE" "${LOG_FILE}.prev" 2>/dev/null || true
+  fi
   : >"$LOG_FILE"
   : >"$screen_capture"
 

@@ -1,0 +1,169 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Dashboard: Terminal tab | ProxMenux Documentation",
+    "description": "Browser-based shell to the Proxmox host: up to 4 terminals at once with grid view, mobile-friendly keyboard helpers (ESC, TAB, arrows, Ctrl combos), an integrated commands cheatsheet powered by cheat.sh, JWT-protected."
+  },
+  "header": {
+    "title": "Dashboard: Terminal tab",
+    "description": "A real shell session in the browser, on the Proxmox host. Up to four terminals at once, mobile-friendly keyboard helpers, an integrated commands cheatsheet — all in the same theme as the rest of the dashboard.",
+    "section": "ProxMenux Monitor · Dashboard"
+  },
+  "intro": {
+    "title": "A real PTY in the browser",
+    "body": "The terminal allocates a server-side PTY through <code>flask_terminal_routes</code>, pipes it over a WebSocket to <code>xterm.js</code> in the browser, and runs as <code>root</code> (the systemd unit's user). Anything you can do in <code>ssh root@&lt;host&gt;</code> works here — including <code>vim</code>, <code>tmux</code>, ncurses tools and Proxmox CLIs (<code>qm</code>, <code>pct</code>, <code>pvesh</code>, <code>pvecm</code>)."
+  },
+  "singleAlt": "ProxMenux Monitor Terminal tab — single terminal session showing Fastfetch system summary on login",
+  "singleCaption": "One host terminal open — the toolbar above shows the count (<em>1 / 4 terminals</em>), <em>+ New</em>, <em>Search</em>, <em>Clear</em> and <em>Close</em>. The mobile keyboard helpers appear under the terminal on touch devices.",
+  "target": {
+    "heading": "Connection target",
+    "body1": "The Terminal tab opens a shell on the <strong>Proxmox host itself</strong> — the same login you would get over SSH. Each tab opens a brand-new host terminal.",
+    "body2": "To reach an <strong>LXC container</strong> from the browser, use the dedicated <em>Console</em> button on every running CT card in the <link>VMs & LXCs tab</link>. It opens a modal that runs <code>pct enter &lt;vmid&gt;</code> and reuses the same mobile-friendly toolbar described below."
+  },
+  "fourTerminals": {
+    "heading": "Up to four terminals at once",
+    "intro": "The tab lets you open up to four host terminals simultaneously. Each one gets its own PTY and its own WebSocket — they are fully independent sessions. Two layouts switch with the icons next to the \"New\" button:",
+    "items": [
+      "<strong>Tabs view</strong> — one terminal visible at a time, the others as named tabs at the top (<em>Terminal 1</em>, <em>Terminal 2</em>…). Best for working on one task with the rest as background.",
+      "<strong>Grid view</strong> — all open terminals visible at once in a 2×2 grid. Useful for watching <code>htop</code> on one panel, <code>iftop</code> on another, and editing on a third without switching back and forth."
+    ],
+    "outro": "The toolbar shows the current count (<em>1/4 terminals</em>, <em>4/4 terminals</em>). New tabs open with <strong>+ New</strong> and individual ones close from the small <code>×</code> on the tab header. The big red <strong>Close</strong> button at the top tears down all terminals at once."
+  },
+  "gridAlt": "ProxMenux Monitor Terminal tab — grid view with four host terminals running ls, network config, iftop and the ProxMenux main menu side by side",
+  "gridCaption": "Grid view (4 / 4 terminals) — four independent host PTYs running in parallel: directory listing, <code>/etc/network/interfaces</code> on one side, <code>iftop</code> on another, and the ProxMenux main menu on the fourth. Switch between grid and tabs with the layout toggle in the toolbar.",
+  "keyboard": {
+    "heading": "Mobile-friendly keyboard helpers",
+    "intro": "Phone and tablet keyboards usually don't expose ESC, TAB, the arrow keys or modifier combinations. Without them, navigating <code>vim</code>, <code>nano</code>, <code>htop</code> or any TUI menu is impossible. The Terminal tab solves that by rendering a row of touch-friendly buttons under the terminal whenever the device is small enough or touch-capable:",
+    "headerButton": "Button",
+    "headerSends": "Sends",
+    "headerUse": "Typical use",
+    "rows": [
+      {
+        "button": "ESC",
+        "sends": "\\x1b",
+        "use": "Exit insert mode in <code>vim</code>, cancel a TUI dialog, leave a search."
+      },
+      {
+        "button": "TAB",
+        "sends": "\\t",
+        "use": "Path autocompletion, field navigation in dialog/whiptail."
+      },
+      {
+        "button": "↑ ↓ ← →",
+        "sends": "\\x1bO[ABCD]",
+        "use": "Shell history, cursor movement, menu navigation."
+      },
+      {
+        "button": "↵ Enter",
+        "sends": "\\r",
+        "use": "Confirm. Some on-screen keyboards swap Enter for Go/Done — this button is unambiguous."
+      },
+      {
+        "button": "Ctrl ▾",
+        "sends": "Dropdown",
+        "useRich": true
+      }
+    ],
+    "ctrlIntro": "Three control sequences:",
+    "ctrlItems": [
+      "<code>Ctrl+C</code> — cancel / interrupt the running command (<code>\\x03</code>).",
+      "<code>Ctrl+X</code> — exit <code>nano</code> (<code>\\x18</code>).",
+      "<code>Ctrl+R</code> — reverse history search in bash (<code>\\x12</code>)."
+    ],
+    "modalTitle": "Same toolbar in the LXC console modal",
+    "modalBody": "The container console you launch from <link>VMs & LXCs → Console</link> renders the same keyboard helpers under the modal. The modal also auto-types <code>pct enter &lt;vmid&gt;</code> on connect, so you land directly inside the container."
+  },
+  "lxcAlt": "ProxMenux Monitor LXC console modal — Terminal: ubuntu (ID: 103) with the same mobile-friendly toolbar (ESC, TAB, arrows, Enter, Ctrl) under the terminal",
+  "lxcCaption": "The LXC console modal — opened from <em>VMs & LXCs → Console</em>. The header shows the target container (<em>Terminal: ubuntu (ID: 103)</em>) and the same touch-friendly toolbar appears under the terminal.",
+  "search": {
+    "heading": "Search Commands — integrated cheatsheet",
+    "intro": "The blue <strong>Search</strong> button in the toolbar opens a modal with a fuzzy command lookup. Type a few letters of any Linux or Proxmox command (<code>ls</code>, <code>tar</code>, <code>qm</code>, <code>pct</code>, <code>zpool</code>, <code>systemctl</code>…) and the modal lists usage examples with one-tap <em>Send to active terminal</em>. It removes the \"wait, what flag was that\" round-trip to a separate browser tab.",
+    "modalAlt": "ProxMenux Monitor Search Commands modal — fuzzy lookup for Linux and Proxmox commands powered by cheat.sh, showing several ls usage examples",
+    "modalCaption": "The Search Commands modal querying <code>ls</code> — each result shows the command, its description and a small \"send\" arrow that pipes it to the active terminal. Bottom-right corner indicates the data source (<em>Powered by cheat.sh</em>).",
+    "aboutLabel": "About cheat.sh:",
+    "aboutBody": "is a community-curated, open-source unified cheatsheet that aggregates short, practical usage examples for hundreds of Linux commands, sysadmin tools and programming languages. Originally designed to be queried from a terminal with <code>curl cheat.sh/&lt;command&gt;</code>, it's also reachable from any browser. ProxMenux Monitor proxies the queries server-side so the modal keeps working under the same origin as the dashboard.",
+    "headerSource": "Source",
+    "headerWhen": "When it's used",
+    "headerWhat": "What you see",
+    "onlineLabel": "(online)",
+    "onlineWhen": "When the host has internet access and the cheat.sh proxy responds.",
+    "onlineWhat": "Several real-world examples per command, typed with their description on top. The status dot in the modal header is <green>green</green>.",
+    "fallbackLabel": "Local fallback",
+    "fallbackWhen": "When cheat.sh is unreachable (offline host, restrictive firewall, cheat.sh outage).",
+    "fallbackWhat": "A bundled list of common Linux + Proxmox commands. Smaller catalogue but always available. The status dot is <red>red</red>.",
+    "sendingNote": "<strong>How sending works</strong>: clicking the small \"send\" arrow next to a result forwards the command text to whichever terminal is currently active (the focused tab, or the one you last clicked in grid view). The modal closes automatically so you can hit Enter immediately."
+  },
+  "auth": {
+    "heading": "Authentication",
+    "items": [
+      "The WebSocket upgrade carries the JWT in the <code>Authorization</code> header. If auth is enabled and the token is missing or expired, the connection is rejected with HTTP 401 before a PTY is allocated.",
+      "If the Monitor sits behind a reverse proxy, the proxy must forward WebSocket upgrades. See the <link>Access & Authentication</link> page for Nginx / Caddy / Traefik snippets."
+    ]
+  },
+  "clipboard": {
+    "heading": "Clipboard, scrollback and resize",
+    "items": [
+      "<strong>Copy / paste</strong> — uses the browser's native clipboard. Select text with mouse / trackpad and use the OS shortcut (<code>Cmd+C</code> on macOS, <code>Ctrl+Shift+C</code> on Linux/Windows). Linux desktops also support middle-click paste.",
+      "<strong>Scrollback</strong> — wheel / two-finger scroll. xterm.js keeps the last several thousand lines in memory.",
+      "<strong>Resize</strong> — the terminal re-negotiates the PTY window size when you resize the dashboard pane, so <code>htop</code> and <code>vim</code> render properly.",
+      "<strong>Reconnect on tab focus</strong> — if you switch apps on a phone or tablet (a common iPad behaviour), the WebSocket would normally drop. The Terminal tab detects the visibility change and reconnects automatically when you come back, with a 15-second timeout for slow VPN paths."
+    ]
+  },
+  "disconnect": {
+    "heading": "Disconnect causes",
+    "intro": "The most common reasons a session ends and what to do about each:",
+    "headerCause": "Cause",
+    "headerFix": "Fix",
+    "rows": [
+      {
+        "cause": "Session JWT expired (24 h window).",
+        "fix": "Refresh the page and log in again. The terminal isn't designed for unattended sessions, so the JWT lifetime matches the regular dashboard login."
+      },
+      {
+        "cause": "Reverse proxy idle timeout.",
+        "fix": "Bump <code>proxy_read_timeout</code> on Nginx or the equivalent on Caddy / Traefik (snippets in Access & Authentication)."
+      },
+      {
+        "cause": "Phone or tablet sleep.",
+        "fix": "When the device wakes back up the tab auto-reconnects (15 s timeout for VPN paths). If it doesn't, reload the tab."
+      },
+      {
+        "cause": "Service restart on the host.",
+        "fix": "Any restart of <code>proxmenux-monitor.service</code> drops every PTY. Open new terminals after the dashboard finishes reloading."
+      }
+    ]
+  },
+  "warning": {
+    "title": "The terminal is a root shell on the host",
+    "body": "The terminal inherits the systemd unit's identity (<code>root</code>) and therefore has full privileges over the Proxmox host. Configure a username, password and 2FA in <authLink>Access & Authentication</authLink> before exposing the dashboard beyond your local network: anyone who reaches port 8008 without authentication would land directly in a root shell — no extra prompts, no SSH credentials. For access from outside the LAN, route the dashboard through <gatewayLink>Secure Gateway</gatewayLink> (Tailscale) or a reverse proxy with HTTPS, instead of opening the port to the public internet."
+  },
+  "whereNext": {
+    "heading": "Where to next",
+    "items": [
+      {
+        "label": "Access & Authentication",
+        "href": "/docs/monitor/access-auth",
+        "tail": " — reverse-proxy snippets including the WebSocket upgrade lines required for the terminal."
+      },
+      {
+        "label": "Architecture",
+        "href": "/docs/monitor/architecture",
+        "tail": " — the WebSocket transport (HTTP via flask-sock vs HTTPS / WSS via gevent)."
+      },
+      {
+        "label": "API Reference",
+        "href": "/docs/monitor/api",
+        "tail": " — the /ws/terminal and /ws/script/<sid> WebSocket endpoints alongside the rest of the API."
+      },
+      {
+        "label": "Integrations → Secure Gateway",
+        "href": "/docs/monitor/integrations",
+        "tail": " — when you want terminal access from outside the LAN without exposing port 8008."
+      },
+      {
+        "label": "Dashboard index",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — the other tabs."
+      }
+    ]
+  }
+}

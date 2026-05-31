@@ -1,0 +1,257 @@
+{
+  "meta": {
+    "title": "System Utilities Installer | ProxMenux Documentation",
+    "description": "Curated installer for 26 CLI utilities (htop, btop, iperf3, jq, tmux, ncdu, ...) on Proxmox VE. Custom selection or predefined groups (basic, dev, compression, multiplexers, analysis, network). Uses the canonical ensure_repositories + install_single_package flow.",
+    "ogTitle": "System Utilities Installer | ProxMenux Documentation",
+    "ogDescription": "Install curated CLI tools on Proxmox VE with one click or custom selection."
+  },
+  "header": {
+    "title": "System Utilities Installer",
+    "description": "Curated picker for 26 CLI utilities defined in the canonical PROXMENUX_UTILS list. Offers custom selection, install-all, six predefined groups and a verify-installations check. Uses the shared ensure_repositories() + install_single_package() pair so repo configuration and per-package feedback stay consistent across the project.",
+    "section": "Utilities"
+  },
+  "info": {
+    "title": "What this does",
+    "body": "Installs CLI tools from a curated list of 26 packages. Every installation goes through the same canonical flow: <code>ensure_repositories</code> sets up Proxmox + Debian repos for the running PVE major version, then <code>install_single_package</code> runs the install and verifies the resulting command is in PATH."
+  },
+  "opening": {
+    "heading": "Opening the installer",
+    "intro": "From the Utilities menu, choose <strong>System Utilities Installer</strong>. The main menu offers nine options:",
+    "imageAlt": "System Utilities Installer menu with custom selection, ALL, predefined groups and verify"
+  },
+  "actions": {
+    "heading": "The 9 menu actions",
+    "headerOption": "Option",
+    "headerBehaviour": "Behaviour",
+    "rows": [
+      {
+        "option": "1. Custom selection",
+        "behaviourRich": "Dialog checklist of all 26 packages. Use SPACE to toggle, ENTER to confirm; only the selected ones are installed."
+      },
+      {
+        "option": "2. Install ALL utilities",
+        "behaviourRich": "One-shot install of every package in <code>PROXMENUX_UTILS</code>. Use after a fresh Proxmox install."
+      },
+      {
+        "option": "3. Basic",
+        "behaviourRich": "<code>grc</code>, <code>htop</code>, <code>tree</code>, <code>curl</code>, <code>wget</code>"
+      },
+      {
+        "option": "4. Development",
+        "behaviourRich": "<code>git</code>, <code>vim</code>, <code>nano</code>"
+      },
+      {
+        "option": "5. Compression",
+        "behaviourRich": "<code>zip</code>, <code>unzip</code>, <code>rsync</code>"
+      },
+      {
+        "option": "6. Terminal multiplexers",
+        "behaviourRich": "<code>screen</code>, <code>tmux</code>"
+      },
+      {
+        "option": "7. Analysis",
+        "behaviourRich": "<code>jq</code>, <code>ncdu</code>, <code>iotop</code>"
+      },
+      {
+        "option": "8. Network",
+        "behaviourRich": "<code>iperf3</code>, <code>nethogs</code>, <code>nmap</code>, <code>tcpdump</code>, <code>lsof</code>"
+      },
+      {
+        "option": "9. Verify installations",
+        "behaviourRich": "Walks every entry in <code>PROXMENUX_UTILS</code>, checks if the verify command is in PATH, prints an Available / Missing summary."
+      }
+    ]
+  },
+  "packages": {
+    "heading": "The 26 packages",
+    "intro": "Defined in the shared <code>scripts/global/utils-install-functions.sh</code> as <code>PROXMENUX_UTILS</code> (format: <code>package:verify_command:description</code>). Other ProxMenux scripts (e.g. the network monitoring launchers for iftop / iptraf-ng / iperf3) reuse entries from this list so package + verify command stay in sync.",
+    "headerPackage": "Package",
+    "headerVerify": "Verify command",
+    "headerDescription": "Description",
+    "rows": [
+      {
+        "package": "axel",
+        "verify": "axel",
+        "description": "Download accelerator"
+      },
+      {
+        "package": "aria2",
+        "verify": "aria2c",
+        "description": "Multi-source downloader"
+      },
+      {
+        "package": "btop",
+        "verify": "btop",
+        "description": "Modern resource monitor"
+      },
+      {
+        "package": "cabextract",
+        "verify": "cabextract",
+        "description": "Extract CAB files"
+      },
+      {
+        "package": "chntpw",
+        "verify": "chntpw",
+        "description": "Edit Windows registry / passwords"
+      },
+      {
+        "package": "dos2unix",
+        "verify": "dos2unix",
+        "description": "Convert DOS / Unix text files"
+      },
+      {
+        "package": "genisoimage",
+        "verify": "genisoimage",
+        "description": "Create ISO images"
+      },
+      {
+        "package": "grc",
+        "verify": "grc",
+        "description": "Generic log colorizer"
+      },
+      {
+        "package": "htop",
+        "verify": "htop",
+        "description": "Interactive process viewer"
+      },
+      {
+        "package": "iftop",
+        "verify": "iftop",
+        "description": "Real-time network usage"
+      },
+      {
+        "package": "intel-gpu-tools",
+        "verify": "intel_gpu_top",
+        "description": "Intel GPU tools"
+      },
+      {
+        "package": "iotop",
+        "verify": "iotop",
+        "description": "Monitor disk I/O usage"
+      },
+      {
+        "package": "iperf3",
+        "verify": "iperf3",
+        "description": "Network bandwidth testing"
+      },
+      {
+        "package": "ipset",
+        "verify": "ipset",
+        "description": "Manage IP sets"
+      },
+      {
+        "package": "iptraf-ng",
+        "verify": "iptraf-ng",
+        "description": "Network monitoring tool"
+      },
+      {
+        "package": "libguestfs-tools",
+        "verify": "virt-filesystems",
+        "description": "VM disk utilities"
+      },
+      {
+        "package": "msr-tools",
+        "verify": "rdmsr",
+        "description": "Access CPU MSRs"
+      },
+      {
+        "package": "net-tools",
+        "verify": "netstat",
+        "description": "Legacy networking tools"
+      },
+      {
+        "package": "plocate",
+        "verify": "locate",
+        "description": "Locate files quickly"
+      },
+      {
+        "package": "s-tui",
+        "verify": "s-tui",
+        "description": "Stress-Terminal UI"
+      },
+      {
+        "package": "sshpass",
+        "verify": "sshpass",
+        "description": "Non-interactive SSH login"
+      },
+      {
+        "package": "tmux",
+        "verify": "tmux",
+        "description": "Terminal multiplexer"
+      },
+      {
+        "package": "unzip",
+        "verify": "unzip",
+        "description": "Extract ZIP files"
+      },
+      {
+        "package": "wimtools",
+        "verify": "wimlib-imagex",
+        "description": "Manage WIM images"
+      },
+      {
+        "package": "zip",
+        "verify": "zip",
+        "description": "Create ZIP files"
+      },
+      {
+        "package": "libguestfs-tools",
+        "verify": "virt-filesystems",
+        "description": "VM disk utilities"
+      }
+    ]
+  },
+  "howItWorks": {
+    "heading": "How a single package install works",
+    "items": [
+      "<code>ensure_repositories</code> detects PVE 8 or 9, writes Proxmox no-subscription + Debian sources files if missing, runs <code>apt-get update</code>.",
+      "<code>install_single_package \"pkg\" \"verify_cmd\" \"description\"</code> runs <code>apt-get install -y \"$pkg\"</code> with feedback (<code>msg_info</code> / <code>msg_ok</code> / <code>msg_error</code>)."
+    ],
+    "verifyIntro": "After install, the verify command is checked with <code>command -v \"$verify_cmd\"</code>. Three outcomes:",
+    "verifyOutcomes": [
+      "<strong>0 (success):</strong> command available, package counted as <em>Successful</em>.",
+      "<strong>1 (failed):</strong> apt failed, counted as <em>Failed</em>.",
+      "<strong>2 (warning):</strong> apt succeeded but command not yet in PATH (hash refresh pending) — counted as <em>With warnings</em>."
+    ],
+    "summary": "At the end of a group / custom install, a summary dialog shows <em>Successful / With warnings / Failed</em> counts."
+  },
+  "verify": {
+    "heading": "Verify installations",
+    "intro": "Option 9 is read-only: it walks <code>PROXMENUX_UTILS</code> and runs <code>command -v</code> for each verify command. Output looks like this:",
+    "code": "Total: 26\nAvailable: 18\nMissing: 8\n\n✓ axel - Download accelerator\n✓ aria2c - Multi-source downloader\n✓ btop - Modern resource monitor\n✗ cabextract - Extract CAB files\n✓ dos2unix - Convert DOS / Unix text files\n✗ genisoimage - Create ISO images\n✓ grc - Generic log colorizer\n...",
+    "outro": "Useful before running scripts that depend on these tools (e.g. <code>uup_dump_iso_creator.sh</code> needs <code>aria2c</code> + <code>cabextract</code> + <code>wimlib-imagex</code>). If anything is missing, run the matching group install or pick the missing packages via custom selection."
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "reposTitle": "\"Failed to configure repositories. Installation aborted.\"",
+    "reposBody": "The host can't reach the Proxmox or Debian repos, or doesn't have the expected base config. From a console: <code>cat /etc/apt/sources.list /etc/apt/sources.list.d/*.sources</code> and <code>apt-get update</code> manually to see the actual error.",
+    "warningsTitle": "A package is reported \"With warnings\" but the command works after I close the menu",
+    "warningsBody": "Expected. After <code>apt-get install</code>, the new binary is on disk but the current shell's PATH cache (<code>hash -t</code>) doesn't know yet. ProxMenux runs <code>hash -r</code> after each install, but in some shells the refresh only takes effect on the next prompt. Open a new shell and the command will work.",
+    "hangsTitle": "An apt install hangs",
+    "hangsBody": "Most likely a debconf prompt is blocked behind the silenced output. The script wraps all apt calls with <code>DEBIAN_FRONTEND=noninteractive</code>, which usually suppresses prompts, but a few packages still require user input. Cancel with <kbd>Ctrl</kbd>+<kbd>C</kbd>, run <code>apt-get install -y &lt;pkg&gt;</code> manually from a shell to see the prompt and decide."
+  },
+  "files": {
+    "heading": "Files involved",
+    "code": "scripts/utilities/system_utils.sh                    # this script\nscripts/global/utils-install-functions.sh            # PROXMENUX_UTILS, ensure_repositories,\n                                                     # install_single_package\n/etc/apt/sources.list                                # may be touched by ensure_repositories\n/etc/apt/sources.list.d/proxmox.sources              # created if missing (PVE 9)\n/etc/apt/sources.list.d/debian.sources               # created if missing (PVE 9)\n/etc/apt/sources.list.d/pve-no-subscription.list     # created if missing (PVE 8)"
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/utils/system-update",
+        "label": "Proxmox System Update",
+        "tailRich": " — for the actual <code>apt dist-upgrade</code> on the host."
+      },
+      {
+        "href": "/docs/network/monitoring",
+        "label": "Live monitoring tools (Network)",
+        "tailRich": " — uses iftop / iptraf-ng / iperf3 from this same list."
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Utilities overview",
+        "tailRich": " — back to the section overview."
+      }
+    ]
+  }
+}

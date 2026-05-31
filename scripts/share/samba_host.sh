@@ -4,11 +4,36 @@
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : MIT
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
+# Version     : 1.0
 # ==========================================================
 # Description:
-# Adds external Samba/CIFS shares as Proxmox storage (pvesm).
-# Proxmox manages the mount natively — no fstab entries needed.
+# Mounts an external Samba (SMB / CIFS) share on the Proxmox
+# host. User picks one or both methods:
+#   1. As Proxmox storage (pvesm add cifs)  → /mnt/pve/<id>
+#   2. As host fstab mount                  → user-chosen path
+#
+# Method 2 is for users who want the host to mount the share
+# for LXC bind-mounts WITHOUT exposing it as a Proxmox storage
+# in the Datacenter UI. CIFS fstab mounts use
+# uid=0,gid=0,file_mode=0777,dir_mode=0777 so an unprivileged
+# LXC bind-mounting the path can read/write — no changes are
+# made INSIDE the container.
+#
+# Credentials for fstab mounts are stored in a root-only
+# credentials file (/etc/samba/credentials/<server>_<share>.cred)
+# and referenced via the credentials= mount option. Plain text
+# never lands in /etc/fstab.
+#
+# Features:
+# - Auto-discover Samba servers on the local subnet
+#   (nmap on ports 139/445 + nmblookup for NetBIOS names).
+# - Guest or username/password authentication.
+# - Share listing via smbclient -L (filtered to Disk shares).
+# - Content-type checklist (no rootdir — Proxmox does not
+#   support LXC rootfs on CIFS).
+# - View, remove and connectivity-test for existing storages.
 # ==========================================================
 
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
@@ -314,7 +339,202 @@ add_proxmox_cifs_storage() {
 # MAIN OPERATIONS
 # ==========================================================
 
-add_cifs_to_proxmox() {
+# ==========================================================
+# FSTAB MOUNT (host-only, NOT as Proxmox storage)
+# ==========================================================
+
+# Pick a mount path on the host. Default is /mnt/<share-name>.
+# Validates the path is absolute and not already in use.
+select_host_cifs_mount_path() {
+    local default_name="$SAMBA_SHARE"
+    [[ -z "$default_name" ]] && default_name="cifs_share"
+
+    while true; do
+        HOST_MOUNT_PATH=$(whiptail --inputbox \
+            "$(translate "Enter the host mount path:")\n\n$(translate "Default location is /mnt/<name>. The share will be mounted here on the host with open permissions so an unprivileged LXC can bind-mount and write to it. For LXC access, bind-mount this path with the LXC Mount Manager.")" \
+            15 70 "/mnt/$default_name" \
+            --title "$(translate "Host Mount Path")" 3>&1 1>&2 2>&3)
+        [[ $? -ne 0 ]] && return 1
+        [[ -z "$HOST_MOUNT_PATH" ]] && HOST_MOUNT_PATH="/mnt/$default_name"
+
+        if [[ ! "$HOST_MOUNT_PATH" =~ ^/.+ ]]; then
+            whiptail --msgbox "$(translate "Mount path must be an absolute path starting with /")" 8 60
+            continue
+        fi
+
+        if mount | grep -q " on $HOST_MOUNT_PATH "; then
+            whiptail --msgbox "$(translate "Something is already mounted at:") $HOST_MOUNT_PATH\n\n$(translate "Choose a different path or unmount it first.")" 10 70
+            continue
+        fi
+
+        if grep -qE "[[:space:]]${HOST_MOUNT_PATH}[[:space:]]" /etc/fstab 2>/dev/null; then
+            if ! whiptail --yesno "$(translate "An fstab entry already exists for:") $HOST_MOUNT_PATH\n\n$(translate "Replace it?")" 10 70 \
+                --title "$(translate "fstab entry exists")"; then
+                continue
+            fi
+            FSTAB_REPLACE=1
+        else
+            FSTAB_REPLACE=0
+        fi
+        break
+    done
+    return 0
+}
+
+# Pick CIFS mount options for the fstab entry.
+# Open uid/gid/file_mode are always included so unprivileged LXC
+# bind-mounts can read/write without touching the container.
+select_cifs_mount_options() {
+    local base="uid=0,gid=0,file_mode=0777,dir_mode=0777,iocharset=utf8,nofail,_netdev"
+    local choice
+    choice=$(dialog --backtitle "ProxMenux" \
+        --title "$(translate "Mount Options")" \
+        --menu "$(translate "Select mount options. Open uid/gid/file_mode are always applied so unprivileged LXC bind-mounts can write:")" 15 78 4 \
+        "1" "$(translate "Read/Write (default)")" \
+        "2" "$(translate "Read-only")" \
+        "3" "$(translate "Custom")" \
+        3>&1 1>&2 2>&3)
+    [[ $? -ne 0 ]] && return 1
+
+    case "$choice" in
+        1) CIFS_MOUNT_OPTS="rw,${base}" ;;
+        2) CIFS_MOUNT_OPTS="ro,${base/file_mode=0777,dir_mode=0777/file_mode=0555,dir_mode=0555}" ;;
+        3)
+            CIFS_MOUNT_OPTS=$(whiptail --inputbox \
+                "$(translate "Enter custom CIFS mount options (open uid/gid/file_mode strongly recommended for LXC bind-mounts):")" \
+                12 78 "rw,${base}" \
+                --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
+            [[ $? -ne 0 ]] && return 1
+            [[ -z "$CIFS_MOUNT_OPTS" ]] && CIFS_MOUNT_OPTS="rw,${base}"
+            ;;
+    esac
+    return 0
+}
+
+# Write a root-only credentials file for the fstab mount.
+# Sets HOST_CRED_FILE on success, or empty string for guest mode.
+write_host_credentials_file() {
+    if [[ "$USE_GUEST" == "true" ]]; then
+        HOST_CRED_FILE=""
+        return 0
+    fi
+    local creds_dir="/etc/samba/credentials"
+    mkdir -p "$creds_dir"
+    chmod 0700 "$creds_dir"
+    HOST_CRED_FILE="${creds_dir}/$(echo "${SAMBA_SERVER}_${SAMBA_SHARE}" | tr -c 'A-Za-z0-9._-' '_').cred"
+    cat > "$HOST_CRED_FILE" <<EOF
+username=${USERNAME}
+password=${PASSWORD}
+EOF
+    chmod 0600 "$HOST_CRED_FILE"
+    return 0
+}
+
+# Mount the CIFS share on the host and persist to /etc/fstab.
+# Permission tweaks happen on the host side ONLY — never inside any LXC.
+mount_cifs_via_fstab() {
+    local server="$1"
+    local share="$2"
+    local mount_path="$3"
+    local base_opts="$4"
+    local replace="$5"
+    local cred_file="$6"
+    local use_guest="$7"
+
+    msg_info "$(translate "Preparing host mount...")"
+
+    if [[ ! -d "$mount_path" ]]; then
+        if ! mkdir -p "$mount_path" 2>/dev/null; then
+            msg_error "$(translate "Failed to create mount point:") $mount_path"
+            return 1
+        fi
+    fi
+    msg_ok "$(translate "Mount point ready:") $mount_path"
+
+    local mount_opts="$base_opts"
+    if [[ "$use_guest" == "true" ]]; then
+        mount_opts="${mount_opts},guest"
+    else
+        mount_opts="${mount_opts},credentials=${cred_file}"
+    fi
+
+    msg_info "$(translate "Mounting CIFS share...")"
+    if ! mount -t cifs -o "$mount_opts" "//${server}/${share}" "$mount_path" >/dev/null 2>&1; then
+        msg_error "$(translate "Failed to mount CIFS share on host.")"
+        return 1
+    fi
+    msg_ok "$(translate "CIFS share mounted at:") $mount_path"
+
+    if touch "$mount_path/.proxmenux_write_test" 2>/dev/null; then
+        rm -f "$mount_path/.proxmenux_write_test" 2>/dev/null
+        msg_ok "$(translate "Host write access confirmed.")"
+    else
+        msg_warn "$(translate "No host write access — server-side ACL. Continuing anyway.")"
+    fi
+
+    # Persist in /etc/fstab.
+    if [[ "$replace" == "1" ]]; then
+        sed -i "\|[[:space:]]${mount_path}[[:space:]]|d" /etc/fstab
+    fi
+    echo "//${server}/${share} $mount_path cifs $mount_opts 0 0" >> /etc/fstab
+    msg_ok "$(translate "Added to /etc/fstab.")"
+
+    systemctl daemon-reload 2>/dev/null || true
+
+    echo -e ""
+    echo -e "${TAB}${BOLD}$(translate "Host fstab Mount:")${CL}"
+    echo -e "${TAB}${BGN}$(translate "Server:")${CL} ${BL}$server${CL}"
+    echo -e "${TAB}${BGN}$(translate "Share:")${CL} ${BL}$share${CL}"
+    echo -e "${TAB}${BGN}$(translate "Mount path:")${CL} ${BL}$mount_path${CL}"
+    echo -e "${TAB}${BGN}$(translate "Auth:")${CL} ${BL}$([ "$use_guest" == "true" ] && echo Guest || echo "User ($cred_file)")${CL}"
+    echo -e "${TAB}${BGN}$(translate "Persistent:")${CL} ${BL}$(translate "yes (survives reboot)")${CL}"
+    echo -e ""
+    msg_info2 "$(translate "To use this share from an LXC, bind-mount it via:")"
+    echo -e "${TAB}  pct set <ctid> -mpN $mount_path,mp=<container-path>,shared=1,backup=0"
+    echo -e "${TAB}  $(translate "or use the ProxMenux LXC Mount Manager.")"
+
+    return 0
+}
+
+# ==========================================================
+# MOUNT METHOD SELECTION
+# ==========================================================
+
+# Show a checklist with the two mount methods (pvesm / fstab).
+# User must mark at least one and press OK; if none is marked,
+# loop and show the dialog again. Cancel exits the flow.
+# Sets MODE_PVESM and MODE_FSTAB to 0 or 1 on success.
+select_cifs_mount_methods() {
+    MODE_PVESM=0
+    MODE_FSTAB=0
+
+    while true; do
+        local result
+        result=$(dialog --backtitle "ProxMenux" \
+            --title "$(translate "Mount Method")" \
+            --checklist "\n$(translate "Choose how to mount the Samba share on this host. Mark one or both options:")\n\n$(translate "• Proxmox storage (pvesm): visible in Datacenter > Storage, mount at /mnt/pve/<id>")\n$(translate "• Host fstab: mounted with open uid/gid/file_mode at a path you choose, ideal for LXC bind-mounts")\n$(translate "• Both: two independent CIFS mounts (one for Proxmox UI, one for LXC bind-mounts with open perms)")" 20 80 2 \
+            "pvesm" "$(translate "As Proxmox storage")"      off \
+            "fstab" "$(translate "As host fstab mount only")" off \
+            3>&1 1>&2 2>&3)
+        local rc=$?
+        [[ $rc -ne 0 ]] && return 1   # Cancel → abort the whole flow
+
+        if echo "$result" | grep -qw "pvesm"; then MODE_PVESM=1; fi
+        if echo "$result" | grep -qw "fstab"; then MODE_FSTAB=1; fi
+
+        if [[ "$MODE_PVESM" == "1" || "$MODE_FSTAB" == "1" ]]; then
+            return 0
+        fi
+
+        whiptail --msgbox "$(translate "Please mark at least one option, or press Cancel to exit.")" 8 70
+    done
+}
+
+# ==========================================================
+# MAIN OPERATIONS
+# ==========================================================
+
+mount_cifs_share() {
     if ! which smbclient >/dev/null 2>&1; then
         msg_info "$(translate "Installing Samba client tools...")"
         apt-get update &>/dev/null
@@ -331,53 +551,104 @@ add_cifs_to_proxmox() {
     # Step 3: Select share
     select_samba_share || return
 
+    # Step 4: Pick mount method(s) — pvesm, fstab, or both
+    select_cifs_mount_methods || return
+
+    # Step 5a: If pvesm selected, gather storage params
+    if [[ "$MODE_PVESM" == "1" ]]; then
+        configure_cifs_storage || return
+    fi
+
+    # Step 5b: If fstab selected, gather host mount params + write credentials file
+    if [[ "$MODE_FSTAB" == "1" ]]; then
+        select_host_cifs_mount_path || return
+        select_cifs_mount_options || return
+        write_host_credentials_file || return
+    fi
+
+    # Step 6: Apply
     show_proxmenux_logo
-    msg_title "$(translate "Add Samba Share as Proxmox Storage")"
+    msg_title "$(translate "Mount Samba Share on Host")"
     msg_ok "$(translate "Server:") $SAMBA_SERVER"
     msg_ok "$(translate "Share:") $SAMBA_SHARE"
     msg_ok "$(translate "Auth:") $([ "$USE_GUEST" == "true" ] && echo "Guest" || echo "User: $USERNAME")"
-
-    # Step 4: Configure storage
-    configure_cifs_storage || return
-
-    # Step 5: Add to Proxmox
-    show_proxmenux_logo
-    msg_title "$(translate "Add Samba Share as Proxmox Storage")"
-    msg_ok "$(translate "Server:") $SAMBA_SERVER"
-    msg_ok "$(translate "Share:") $SAMBA_SHARE"
-    msg_ok "$(translate "Storage ID:") $STORAGE_ID"
-    msg_ok "$(translate "Content:") $MOUNT_CONTENT"
+    if [[ "$MODE_PVESM" == "1" ]]; then
+        msg_ok "$(translate "Method:") pvesm  ($(translate "Storage ID:") $STORAGE_ID, $(translate "content:") $MOUNT_CONTENT)"
+    fi
+    if [[ "$MODE_FSTAB" == "1" ]]; then
+        msg_ok "$(translate "Method:") fstab  ($(translate "Mount path:") $HOST_MOUNT_PATH)"
+    fi
     echo -e ""
 
-    add_proxmox_cifs_storage "$STORAGE_ID" "$SAMBA_SERVER" "$SAMBA_SHARE" "$MOUNT_CONTENT"
+    local overall_rc=0
+    if [[ "$MODE_PVESM" == "1" ]]; then
+        if ! add_proxmox_cifs_storage "$STORAGE_ID" "$SAMBA_SERVER" "$SAMBA_SHARE" "$MOUNT_CONTENT"; then
+            overall_rc=1
+        fi
+        echo -e ""
+    fi
+    if [[ "$MODE_FSTAB" == "1" ]]; then
+        if ! mount_cifs_via_fstab "$SAMBA_SERVER" "$SAMBA_SHARE" "$HOST_MOUNT_PATH" \
+                "$CIFS_MOUNT_OPTS" "$FSTAB_REPLACE" "$HOST_CRED_FILE" "$USE_GUEST"; then
+            overall_rc=1
+        fi
+    fi
 
     echo -e ""
-    msg_success "$(translate "Press Enter to continue...")"
+    if [[ "$overall_rc" == "0" ]]; then
+        msg_success "$(translate "Press Enter to continue...")"
+    else
+        msg_warn "$(translate "Some operations failed — review messages above. Press Enter to continue...")"
+    fi
     read -r
+}
+
+# ==========================================================
+# FSTAB ENTRY DISCOVERY (host mounts NOT registered with pvesm)
+# ==========================================================
+
+# Print every CIFS entry in /etc/fstab as: server|share|mount_path|opts
+# Skips comments and blank lines.
+list_cifs_fstab_entries() {
+    awk '
+        /^[[:space:]]*#/  { next }
+        /^[[:space:]]*$/  { next }
+        $3 == "cifs" {
+            # $1 = //server/share, $2 = mount path, $4 = opts
+            sub(/^\/\//, "", $1)
+            split($1, srv_sh, "/")
+            print srv_sh[1] "|" srv_sh[2] "|" $2 "|" $4
+        }
+    ' /etc/fstab 2>/dev/null
+}
+
+# Echo "active" if the given path is currently mounted, "inactive" otherwise.
+check_mount_state() {
+    local path="$1"
+    if mount | grep -q " on ${path} type "; then
+        echo "active"
+    else
+        echo "inactive"
+    fi
 }
 
 view_cifs_storages() {
     show_proxmenux_logo
-    msg_title "$(translate "CIFS Storages in Proxmox")"
+    msg_title "$(translate "CIFS Mounts on Host")"
 
     echo "=================================================="
     echo ""
 
-    if ! command -v pvesm >/dev/null 2>&1; then
-        msg_error "$(translate "pvesm not found.")"
-        echo ""
-        msg_success "$(translate "Press Enter to continue...")"
-        read -r
-        return
+    # ---- Proxmox storages (pvesm) ----
+    local CIFS_STORAGES=""
+    if command -v pvesm >/dev/null 2>&1; then
+        CIFS_STORAGES=$(pvesm status 2>/dev/null | awk '$2 == "cifs" {print $1, $3}')
     fi
 
-    CIFS_STORAGES=$(pvesm status 2>/dev/null | awk '$2 == "cifs" {print $1, $3}')
     if [[ -z "$CIFS_STORAGES" ]]; then
-        msg_warn "$(translate "No CIFS storage configured in Proxmox.")"
-        echo ""
-        msg_info2 "$(translate "Use option 1 to add a Samba share as Proxmox storage.")"
+        msg_warn "$(translate "No CIFS Proxmox storages configured.")"
     else
-        echo -e "${BOLD}$(translate "CIFS Storages:")${CL}"
+        echo -e "${BOLD}$(translate "CIFS Proxmox storages (pvesm):")${CL}"
         echo ""
         while IFS=" " read -r storage_id storage_status; do
             [[ -z "$storage_id" ]] && continue
@@ -388,7 +659,7 @@ view_cifs_storages() {
             content=$(echo "$storage_info" | awk '$1 == "content" {print $2}')
             username=$(echo "$storage_info" | awk '$1 == "username" {print $2}')
 
-            echo -e "${TAB}${BOLD}$storage_id${CL}"
+            echo -e "${TAB}${BOLD}$storage_id${CL}  ${TAB}[pvesm]"
             echo -e "${TAB}  ${BGN}$(translate "Server:")${CL} ${BL}$server${CL}"
             echo -e "${TAB}  ${BGN}$(translate "Share:")${CL} ${BL}$share${CL}"
             echo -e "${TAB}  ${BGN}$(translate "Content:")${CL} ${BL}$content${CL}"
@@ -407,63 +678,183 @@ view_cifs_storages() {
         done <<< "$CIFS_STORAGES"
     fi
 
+    # ---- Host fstab mounts ----
+    local FSTAB_ENTRIES
+    FSTAB_ENTRIES=$(list_cifs_fstab_entries)
+
+    if [[ -z "$FSTAB_ENTRIES" ]]; then
+        echo -e "${BOLD}$(translate "Host fstab CIFS mounts:")${CL} $(translate "(none)")"
+    else
+        echo -e "${BOLD}$(translate "Host fstab CIFS mounts (not registered with pvesm):")${CL}"
+        echo ""
+        while IFS="|" read -r server share mount_path opts; do
+            [[ -z "$mount_path" ]] && continue
+            local mstate
+            mstate=$(check_mount_state "$mount_path")
+
+            # Detect credentials/guest from opts
+            local auth_str="Guest"
+            if echo "$opts" | grep -q "credentials="; then
+                local cred_file
+                cred_file=$(echo "$opts" | grep -oE "credentials=[^,]+" | cut -d= -f2)
+                auth_str="User ($cred_file)"
+            fi
+
+            echo -e "${TAB}${BOLD}$(basename "$mount_path")${CL}  ${TAB}[fstab]"
+            echo -e "${TAB}  ${BGN}$(translate "Server:")${CL} ${BL}$server${CL}"
+            echo -e "${TAB}  ${BGN}$(translate "Share:")${CL} ${BL}$share${CL}"
+            echo -e "${TAB}  ${BGN}$(translate "Mount Path:")${CL} ${BL}$mount_path${CL}"
+            echo -e "${TAB}  ${BGN}$(translate "Auth:")${CL} ${BL}$auth_str${CL}"
+            echo -e "${TAB}  ${BGN}$(translate "Options:")${CL} ${BL}$opts${CL}"
+            if [[ "$mstate" == "active" ]]; then
+                echo -e "${TAB}  ${BGN}$(translate "Status:")${CL} ${GN}$(translate "Active")${CL}"
+            else
+                echo -e "${TAB}  ${BGN}$(translate "Status:")${CL} ${RD}$(translate "Inactive (entry in fstab, not currently mounted)")${CL}"
+            fi
+            echo ""
+        done <<< "$FSTAB_ENTRIES"
+    fi
+
     echo ""
     msg_success "$(translate "Press Enter to continue...")"
     read -r
 }
 
 remove_cifs_storage() {
-    if ! command -v pvesm >/dev/null 2>&1; then
-        dialog --backtitle "ProxMenux" --title "$(translate "Error")" \
-            --msgbox "\n$(translate "pvesm not found.")" 8 60
+    local OPTIONS=()
+    local has_pvesm=0
+    local has_fstab=0
+
+    # pvesm-registered CIFS storages
+    if command -v pvesm >/dev/null 2>&1; then
+        local CIFS_STORAGES
+        CIFS_STORAGES=$(pvesm status 2>/dev/null | awk '$2 == "cifs" {print $1}')
+        if [[ -n "$CIFS_STORAGES" ]]; then
+            has_pvesm=1
+            while IFS= read -r storage_id; do
+                [[ -z "$storage_id" ]] && continue
+                local storage_info server share
+                storage_info=$(get_storage_config "$storage_id")
+                server=$(echo "$storage_info" | awk '$1 == "server" {print $2}')
+                share=$(echo "$storage_info" | awk '$1 == "share" {print $2}')
+                OPTIONS+=("pvesm:$storage_id" "[pvesm] $storage_id  ($server/$share)")
+            done <<< "$CIFS_STORAGES"
+        fi
+    fi
+
+    # fstab-only CIFS mounts
+    local FSTAB_ENTRIES
+    FSTAB_ENTRIES=$(list_cifs_fstab_entries)
+    if [[ -n "$FSTAB_ENTRIES" ]]; then
+        has_fstab=1
+        while IFS="|" read -r server share mount_path opts; do
+            [[ -z "$mount_path" ]] && continue
+            OPTIONS+=("fstab:$mount_path" "[fstab] $mount_path  ($server/$share)")
+        done <<< "$FSTAB_ENTRIES"
+    fi
+
+    if [[ "$has_pvesm" == "0" && "$has_fstab" == "0" ]]; then
+        dialog --backtitle "ProxMenux" --title "$(translate "Nothing to remove")" \
+            --msgbox "\n$(translate "No CIFS Proxmox storage and no CIFS fstab mount found on this host.")" 9 70
         return
     fi
 
-    CIFS_STORAGES=$(pvesm status 2>/dev/null | awk '$2 == "cifs" {print $1}')
-    if [[ -z "$CIFS_STORAGES" ]]; then
-        dialog --backtitle "ProxMenux" --title "$(translate "No CIFS Storage")" \
-            --msgbox "\n$(translate "No CIFS storage found in Proxmox.")" 8 60
-        return
-    fi
-
-    OPTIONS=()
-    while IFS= read -r storage_id; do
-        [[ -z "$storage_id" ]] && continue
-        local storage_info server share
-        storage_info=$(get_storage_config "$storage_id")
-        server=$(echo "$storage_info" | awk '$1 == "server" {print $2}')
-        share=$(echo "$storage_info" | awk '$1 == "share" {print $2}')
-        OPTIONS+=("$storage_id" "$server/$share")
-    done <<< "$CIFS_STORAGES"
-
-    SELECTED=$(dialog --backtitle "ProxMenux" --title "$(translate "Remove CIFS Storage")" \
-        --menu "$(translate "Select storage to remove:")" 20 80 10 \
+    local SELECTED
+    SELECTED=$(dialog --backtitle "ProxMenux" --title "$(translate "Remove CIFS Mount")" \
+        --menu "$(translate "Select the entry to remove. [pvesm] entries are removed from Proxmox storage; [fstab] entries are unmounted, removed from /etc/fstab and have their credentials file deleted.")" \
+        20 90 12 \
         "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
     [[ -z "$SELECTED" ]] && return
 
-    local storage_info server share content username
-    storage_info=$(get_storage_config "$SELECTED")
-    server=$(echo "$storage_info" | awk '$1 == "server" {print $2}')
-    share=$(echo "$storage_info" | awk '$1 == "share" {print $2}')
-    content=$(echo "$storage_info" | awk '$1 == "content" {print $2}')
-    username=$(echo "$storage_info" | awk '$1 == "username" {print $2}')
+    local kind="${SELECTED%%:*}"
+    local target="${SELECTED#*:}"
 
-    if whiptail --yesno "$(translate "Remove Proxmox CIFS storage:")\n\n$SELECTED\n\n$(translate "Server:"): $server\n$(translate "Share:"): $share\n$(translate "Content:"): $content\n\n$(translate "WARNING: This removes the storage from Proxmox. The Samba server is not affected.")" \
-        16 80 --title "$(translate "Confirm Remove")"; then
+    case "$kind" in
+        pvesm)
+            local storage_info server share content username
+            storage_info=$(get_storage_config "$target")
+            server=$(echo "$storage_info" | awk '$1 == "server" {print $2}')
+            share=$(echo "$storage_info" | awk '$1 == "share" {print $2}')
+            content=$(echo "$storage_info" | awk '$1 == "content" {print $2}')
+            username=$(echo "$storage_info" | awk '$1 == "username" {print $2}')
 
-        show_proxmenux_logo
-        msg_title "$(translate "Remove CIFS Storage")"
+            if whiptail --yesno "$(translate "Remove Proxmox CIFS storage:")\n\n$target\n\n$(translate "Server:"): $server\n$(translate "Share:"): $share\n$(translate "Content:"): $content\n\n$(translate "WARNING: This removes the storage from Proxmox. The Samba server is not affected.")" \
+                16 80 --title "$(translate "Confirm Remove")"; then
 
-        if pvesm remove "$SELECTED" 2>/dev/null; then
-            msg_ok "$(translate "Storage") $SELECTED $(translate "removed successfully from Proxmox.")"
-        else
-            msg_error "$(translate "Failed to remove storage.")"
-        fi
+                show_proxmenux_logo
+                msg_title "$(translate "Remove CIFS Storage")"
 
-        echo -e ""
-        msg_success "$(translate "Press Enter to continue...")"
-        read -r
-    fi
+                if pvesm remove "$target" 2>/dev/null; then
+                    msg_ok "$(translate "Storage") $target $(translate "removed successfully from Proxmox.")"
+                else
+                    msg_error "$(translate "Failed to remove storage.")"
+                fi
+
+                echo -e ""
+                msg_success "$(translate "Press Enter to continue...")"
+                read -r
+            fi
+            ;;
+        fstab)
+            local mount_path="$target"
+            local fstab_line
+            fstab_line=$(awk -v mp="$mount_path" '$2 == mp && $3 == "cifs" {print; exit}' /etc/fstab)
+
+            # Detect credentials= file for cleanup
+            local cred_file=""
+            if [[ "$fstab_line" =~ credentials=([^,[:space:]]+) ]]; then
+                cred_file="${BASH_REMATCH[1]}"
+            fi
+
+            local cred_msg
+            cred_msg="$(translate "(no credentials file — guest mode)")"
+            [[ -n "$cred_file" ]] && cred_msg="$(translate "Credentials file:") $cred_file"
+
+            if whiptail --yesno "$(translate "Remove CIFS fstab mount:")\n\n$mount_path\n\n$(translate "fstab line:")\n$fstab_line\n\n$cred_msg\n\n$(translate "Steps that will run:")\n  1. $(translate "umount the path if currently mounted")\n  2. $(translate "delete the matching line from /etc/fstab")\n  3. $(translate "delete the credentials file (if any)")\n  4. $(translate "remove the (now-empty) directory if possible")\n\n$(translate "WARNING: The Samba server is not affected. The mount directory contents are NOT deleted.")" \
+                22 90 --title "$(translate "Confirm Remove")"; then
+
+                show_proxmenux_logo
+                msg_title "$(translate "Remove CIFS fstab Mount")"
+
+                if mount | grep -q " on ${mount_path} type "; then
+                    if umount "$mount_path" 2>/dev/null; then
+                        msg_ok "$(translate "Unmounted:") $mount_path"
+                    else
+                        msg_warn "$(translate "Could not unmount") $mount_path. $(translate "The fstab entry will still be removed; reboot or manual umount needed.")"
+                    fi
+                else
+                    msg_info2 "$(translate "Not currently mounted — skipping umount.")"
+                fi
+
+                # Delete the matching line(s) from /etc/fstab using awk (exact $2 + $3 match).
+                cp /etc/fstab /etc/fstab.proxmenux.bak 2>/dev/null
+                if awk -v mp="$mount_path" '
+                    $2 == mp && $3 == "cifs" { next }
+                    { print }
+                ' /etc/fstab > /etc/fstab.tmp && mv /etc/fstab.tmp /etc/fstab; then
+                    msg_ok "$(translate "Removed entry from /etc/fstab")  ($(translate "backup at /etc/fstab.proxmenux.bak"))"
+                else
+                    msg_error "$(translate "Failed to edit /etc/fstab — remove the line manually.")"
+                fi
+
+                systemctl daemon-reload 2>/dev/null || true
+
+                # Remove credentials file if it's under the standard ProxMenux dir
+                if [[ -n "$cred_file" && -f "$cred_file" && "$cred_file" == /etc/samba/credentials/* ]]; then
+                    rm -f "$cred_file"
+                    msg_ok "$(translate "Removed credentials file:") $cred_file"
+                fi
+
+                if [[ -d "$mount_path" ]] && rmdir "$mount_path" 2>/dev/null; then
+                    msg_ok "$(translate "Removed empty mount directory:") $mount_path"
+                fi
+
+                echo -e ""
+                msg_success "$(translate "Press Enter to continue...")"
+                read -r
+            fi
+            ;;
+    esac
 }
 
 test_samba_connectivity() {
@@ -494,7 +885,7 @@ test_samba_connectivity() {
                 local server
                 server=$(get_storage_config "$storage_id" | awk '$1 == "server" {print $2}')
 
-                echo -n "  $storage_id ($server): "
+                echo -n "  [pvesm] $storage_id ($server): "
 
                 if ping -c 1 -W 2 "$server" >/dev/null 2>&1; then
                     echo -ne "${GN}$(translate "Reachable")${CL}"
@@ -525,10 +916,46 @@ test_samba_connectivity() {
                 echo ""
             done <<< "$CIFS_STORAGES"
         else
-            echo "  $(translate "No CIFS storage configured.")"
+            echo "  $(translate "No CIFS Proxmox storage configured.")"
         fi
     else
         msg_warn "$(translate "pvesm not available.")"
+    fi
+
+    # ---- fstab-only CIFS mounts ----
+    local FSTAB_ENTRIES
+    FSTAB_ENTRIES=$(list_cifs_fstab_entries)
+    echo ""
+    echo -e "${BOLD}$(translate "Host fstab CIFS Mounts:")${CL}"
+    if [[ -z "$FSTAB_ENTRIES" ]]; then
+        echo "  $(translate "(none)")"
+    else
+        while IFS="|" read -r server share mount_path opts; do
+            [[ -z "$mount_path" ]] && continue
+            echo -n "  [fstab] $mount_path ($server/$share): "
+
+            if ping -c 1 -W 2 "$server" >/dev/null 2>&1; then
+                echo -ne "${GN}$(translate "Reachable")${CL}"
+                if nc -z -w 2 "$server" 445 2>/dev/null; then
+                    echo -e " | SMB 445: ${GN}$(translate "Open")${CL}"
+                elif nc -z -w 2 "$server" 139 2>/dev/null; then
+                    echo -e " | NetBIOS 139: ${GN}$(translate "Open")${CL}"
+                else
+                    echo -e " | SMB ports: ${RD}$(translate "Closed")${CL}"
+                fi
+            else
+                echo -e "${RD}$(translate "Unreachable")${CL}"
+            fi
+
+            local mstate
+            mstate=$(check_mount_state "$mount_path")
+            if [[ "$mstate" == "active" ]]; then
+                echo -e "    $(translate "Mount status:") ${GN}$(translate "Active")${CL}"
+            else
+                echo -e "    $(translate "Mount status:") ${RD}$(translate "Not currently mounted")${CL}"
+            fi
+            echo ""
+        done <<< "$FSTAB_ENTRIES"
     fi
 
     echo ""
@@ -544,9 +971,9 @@ while true; do
     CHOICE=$(dialog --backtitle "ProxMenux" \
         --title "$(translate "Samba Host Manager - Proxmox Host")" \
         --menu "$(translate "Choose an option:")" 18 70 6 \
-        "1" "$(translate "Add Samba Share as Proxmox Storage")" \
-        "2" "$(translate "View CIFS Storages")" \
-        "3" "$(translate "Remove CIFS Storage")" \
+        "1" "$(translate "Mount Samba Share on Host")" \
+        "2" "$(translate "View CIFS Mounts (pvesm + fstab)")" \
+        "3" "$(translate "Remove CIFS Mount (pvesm or fstab)")" \
         "4" "$(translate "Test Samba Connectivity")" \
         "5" "$(translate "Exit")" \
         3>&1 1>&2 2>&3)
@@ -557,7 +984,7 @@ while true; do
     fi
 
     case $CHOICE in
-        1) add_cifs_to_proxmox ;;
+        1) mount_cifs_share ;;
         2) view_cifs_storages ;;
         3) remove_cifs_storage ;;
         4) test_samba_connectivity ;;

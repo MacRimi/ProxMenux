@@ -26,6 +26,21 @@ export function Login({ onLogin }: LoginProps) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    // The Login screen is, by construction, the recovery path from any
+    // 401 cascade (the api-config wrapper redirects here when an
+    // expired/invalid JWT is detected). Clear the cascade-prevention
+    // flag on mount so a successful login can subsequently fire a fresh
+    // reload if a NEW 401 ever occurs. Without this clear, any 401 set
+    // earlier in the session sticks around forever and the next 401
+    // (e.g. mid-2FA, or right after a successful login if the token was
+    // briefly stale) is silently swallowed by the de-dup — the user
+    // sees a blank/stuck dashboard.
+    try {
+      sessionStorage.removeItem("proxmenux-auth-401-handled")
+    } catch {
+      // private browsing — best-effort
+    }
+
     const savedUsername = localStorage.getItem("proxmenux-saved-username")
     const savedPassword = localStorage.getItem("proxmenux-saved-password")
 
@@ -76,6 +91,11 @@ export function Login({ onLogin }: LoginProps) {
       }
 
       localStorage.setItem("proxmenux-auth-token", data.token)
+      try {
+        sessionStorage.removeItem("proxmenux-auth-401-handled")
+      } catch {
+        // ignore
+      }
 
       if (rememberMe) {
         localStorage.setItem("proxmenux-saved-username", username)
@@ -251,7 +271,7 @@ export function Login({ onLogin }: LoginProps) {
           </form>
         </div>
 
-        <p className="text-center text-sm text-muted-foreground">ProxMenux Monitor v1.2.0</p>
+        <p className="text-center text-sm text-muted-foreground">ProxMenux Monitor v1.2.2</p>
       </div>
     </div>
   )

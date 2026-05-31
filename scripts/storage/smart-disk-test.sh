@@ -416,8 +416,10 @@ while true; do
 
   # ── Auto-export JSON (except long — handled by background monitor)
   if [[ "$ACTION" != "long" && "$ACTION" != "report" ]]; then
-    # Determine test type from ACTION (short test or status check)
-    local json_test_type="short"
+    # Determine test type from ACTION (short test or status check).
+    # NOTE: no 'local' here — this block runs inside the top-level while loop,
+    # not inside a function, so 'local' would print a bash warning at runtime.
+    json_test_type="short"
     [[ "$ACTION" == "status" ]] && json_test_type="status"
     
     JSON_PATH=$(_smart_json_path "$SELECTED_DISK" "$json_test_type")

@@ -1,0 +1,122 @@
+{
+  "meta": {
+    "title": "Config Analysis & Guided Cleanup | ProxMenux Documentation",
+    "description": "Detects iface blocks in /etc/network/interfaces that reference physical NICs no longer present on the host. Reports them and offers a 5-step guided removal with mandatory backup and per-block preview.",
+    "ogTitle": "Config Analysis & Guided Cleanup | ProxMenux Documentation",
+    "ogDescription": "Find and remove orphan interface blocks left behind by hardware changes, with full preview and rollback."
+  },
+  "header": {
+    "title": "Config analysis & guided cleanup",
+    "description": "Walks every iface block in /etc/network/interfaces and verifies that the underlying physical NIC still exists. Reports orphan blocks left behind by hardware changes and offers a guided removal with backup, preview and per-block confirmation.",
+    "section": "Network"
+  },
+  "intro": {
+    "title": "What this does",
+    "body": "Identifies <code>iface</code> declarations whose backing NIC is no longer present on the host (typical after replacing or removing a network card). Then offers a guided cleanup that removes <em>only</em> the orphan blocks, with a backup, a per-section preview and an explicit final confirmation."
+  },
+  "differs": {
+    "heading": "How it differs from bridge analysis",
+    "headerAspect": "Aspect",
+    "headerBridge": "Bridge analysis",
+    "headerConfig": "Config analysis",
+    "rows": [
+      {
+        "aspect": "Looks at",
+        "bridge": "Bridges (<code>vmbrX</code>) and their <code>bridge-ports</code> line",
+        "config": "Every <code>iface</code> block (excluding loopback, bridges, bonds)"
+      },
+      {
+        "aspect": "Detects",
+        "bridge": "Bridges referencing a non-existent port",
+        "config": "Standalone interface blocks for NICs that don't exist"
+      },
+      {
+        "aspect": "Repair action",
+        "bridge": "Replaces the port name in <code>bridge-ports</code>",
+        "config": "Removes the entire <code>iface</code> block"
+      },
+      {
+        "aspect": "Excludes",
+        "bridge": "Nothing — every bridge is analyzed",
+        "config": "Bridges (<code>vmbrX</code>) and bonds (<code>bondX</code>) are always kept, since they are virtual and \"not existing\" would be normal during boot"
+      }
+    ],
+    "outro": "In practice you often run both, in this order: <strong>config analysis</strong> first to remove orphans, then <link>bridge analysis</link> to re-point any bridge that was relying on the now-removed interface."
+  },
+  "step1": {
+    "heading": "Step 1: analysis (read-only)",
+    "intro": "Aborts immediately if the host is not on the classic stack. Otherwise lists every configured non-loopback interface and reports its status:",
+    "virtTitle": "Virtual interfaces are protected",
+    "virtBody": "Bridges (<code>vmbrX</code>) and bonds (<code>bondX</code>) are virtual constructs. They may legitimately not exist at the moment of inspection (e.g. a bridge with no ports yet), so the analysis never proposes removing them — only physical NICs."
+  },
+  "step2": {
+    "heading": "Step 2: guided cleanup (5 steps)",
+    "intro": "Only entered if you accept the prompt at the end of the analysis. Each step requires confirmation; cancelling at any point exits without writing.",
+    "steps": [
+      {
+        "title": "1. Safety backup",
+        "body": "Copies <code>/etc/network/interfaces</code> to <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Path shown before and after.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Confirm the removal list",
+        "body": "Lists exactly which physical interface blocks will be removed. If, between analysis and cleanup, the NICs reappeared (e.g. you re-seated a card), the flow exits with <em>\"No cleanup needed.\"</em>",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Preview the exact block(s)",
+        "body": "Opens a scrollable view of every <code>iface</code> block that would be deleted, verbatim from the file. This is the moment to spot e.g. an interesting <code>up</code> hook you want to preserve.",
+        "tone": "blue"
+      },
+      {
+        "title": "4. Apply removal",
+        "body": "For each orphan interface, runs <code>sed -i \"/^iface $iface/,/^$/d\" /etc/network/interfaces</code>. That deletes from the matching <code>iface</code> line up to the next blank line.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Verification",
+        "body": "Re-reads the file, lists what was removed, and re-checks the remaining interfaces. Prints the rollback command. Does <strong>not</strong> automatically restart networking — removing an unused block is safe to apply on the next reboot, and avoids touching the live state.",
+        "tone": "emerald"
+      }
+    ],
+    "noRestartTitle": "Does not auto-restart networking",
+    "noRestartBody": "Unlike bridge repair, the cleanup flow does not offer to restart the service. Removing an unused interface block has no immediate effect on the running config, so a restart is unnecessary and would be a needless connectivity risk. The change takes effect on the next manual <code>systemctl restart networking</code> or at the next reboot."
+  },
+  "caveats": {
+    "heading": "Important caveats",
+    "boundaryTitle": "The block boundary is the first blank line",
+    "boundaryBody": "The <code>sed</code> pattern deletes from <code>iface &lt;name&gt;</code> down to the next empty line. If your <code>/etc/network/interfaces</code> has no blank line separating blocks (rare, but possible if hand-edited), the deletion may consume the next block too. This is why <strong>step 3 is mandatory</strong>: review the preview before confirming.",
+    "tandemTitle": "An orphan iface used by a bridge is detected here, not in bridge analysis",
+    "tandemBody": "If <code>vmbr0</code> declares <code>bridge-ports enp3s0</code> and <code>enp3s0</code> also has its own <code>iface enp3s0 inet manual</code> block, removing <code>enp3s0</code> here will leave <code>vmbr0</code> with a dangling reference. After the cleanup, run <link>bridge analysis</link> to repoint or remove the bridge port. The two flows are designed to be used in tandem."
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "notFoundTitle": "The analysis shows my new NIC as \"NOT FOUND\"",
+    "notFoundBody": "The kernel sees the device under a different name than what is in the file. Run <code>ip link show</code> to get the actual name. This is exactly the case where <link>Persistent interface names</link> would prevent the issue going forward.",
+    "tooMuchTitle": "The cleanup removed too much (a block I wanted to keep)",
+    "tooMuchBody": "Restore from the backup printed in step 5:",
+    "tooMuchOutro": "Edit the file by hand to add a clear blank line between blocks before re-running the cleanup, or remove the problematic block manually.",
+    "bridgeBreakTitle": "A bridge stops working after the cleanup",
+    "bridgeBreakBody": "The bridge was relying on a port whose <code>iface</code> block was just removed. Run <link>bridge analysis</link> and the suggestion will point the bridge at an existing physical interface."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "label": "Bridge analysis & guided repair",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — the natural follow-up after a cleanup."
+      },
+      {
+        "label": "Persistent interface names",
+        "href": "/docs/network/persistent-names",
+        "tail": " — stops orphan blocks from accumulating after each hardware change."
+      },
+      {
+        "label": "Interfaces backup & restart",
+        "href": "/docs/network/backup-restore",
+        "tail": " — manual snapshots and the restore browser."
+      }
+    ]
+  }
+}

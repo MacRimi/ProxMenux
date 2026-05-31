@@ -1,0 +1,136 @@
+{
+  "meta": {
+    "title": "Live Monitoring Tools | ProxMenux Documentation",
+    "description": "Three interactive network monitoring launchers: iftop (real-time bandwidth per host pair), iptraf-ng (multi-mode traffic monitor) and iperf3 (bandwidth test, server / client mode). Each is installed on first use.",
+    "ogTitle": "Live Monitoring Tools | ProxMenux Documentation",
+    "ogDescription": "Interactive network monitoring and bandwidth testing for the Proxmox host: iftop, iptraf-ng, iperf3."
+  },
+  "header": {
+    "title": "Live monitoring tools",
+    "description": "Three interactive launchers for real-time network observation and bandwidth measurement: iftop, iptraf-ng and iperf3. Each tool is auto-installed from apt on first use, runs in the foreground, and is exited with the documented keystroke. Read-only against the host configuration — they only observe traffic.",
+    "section": "Network"
+  },
+  "intro": {
+    "title": "What this does",
+    "body": "Three interactive monitoring tools, each behind its own menu entry. The first time you launch one, the package is installed silently via <code>apt-get</code>. Subsequent launches start instantly. None of these tools modify the host network configuration."
+  },
+  "when": {
+    "heading": "When to use which",
+    "headerQuestion": "Question",
+    "headerUse": "Use",
+    "rows": [
+      {
+        "question": "Who is saturating the link <em>right now</em>?",
+        "use": "iftop"
+      },
+      {
+        "question": "What protocol breakdown / packet sizes / TCP flows are flowing?",
+        "use": "iptraf-ng"
+      },
+      {
+        "question": "How much bandwidth is actually available between two hosts?",
+        "use": "iperf3"
+      }
+    ]
+  },
+  "iftop": {
+    "heading": "Real-time network usage (iftop)",
+    "body": "Live bandwidth per host pair (source ↔ destination) — like <code>top</code> for traffic. Shows the heaviest flows at the top, with rolling 2/10/40-second averages. Best tool for the question <em>\"why is my uplink saturated?\"</em>.",
+    "exit": "<strong>Exit:</strong> press <kbd>q</kbd>. ProxMenux shows a reminder dialog before launching.",
+    "keysTitle": "Useful keys inside iftop",
+    "keysBody": "<kbd>n</kbd> toggle DNS lookup, <kbd>p</kbd> show port numbers, <kbd>P</kbd> pause display, <kbd>t</kbd> toggle line direction (sent / received / both), <kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> sort by 2s / 10s / 40s average. <code>man iftop</code> for the full set."
+  },
+  "iptraf": {
+    "heading": "Network monitoring tool (iptraf-ng)",
+    "intro": "A menu-driven multi-mode traffic monitor. Where iftop answers <em>\"who\"</em>, iptraf-ng answers <em>\"what\"</em>: per-protocol byte/packet counts, TCP connection state tracking, packet size histograms and per-station LAN activity.",
+    "menuIntro": "On launch you get a five-option menu:",
+    "headerMode": "Mode",
+    "headerUseFor": "Use it for",
+    "rows": [
+      {
+        "mode": "IP traffic monitor",
+        "useFor": "Live TCP / UDP / ICMP / other-IP flow list with byte counters and connection state"
+      },
+      {
+        "mode": "General interface stats",
+        "useFor": "Aggregate IPv4 / IPv6 / TCP / UDP / ICMP / non-IP packet counts per NIC"
+      },
+      {
+        "mode": "Detailed interface stats",
+        "useFor": "Same as above but for one interface, with packet size and rate detail"
+      },
+      {
+        "mode": "Statistical breakdowns",
+        "useFor": "Packet size distribution histogram, by TCP / UDP port"
+      },
+      {
+        "mode": "LAN station monitor",
+        "useFor": "Per-MAC traffic stats for the local broadcast domain"
+      }
+    ],
+    "exit": "<strong>Exit:</strong> press <kbd>x</kbd> from any view (or <kbd>Q</kbd> from the main menu). ProxMenux shows a reminder dialog before launching.",
+    "logTitle": "Logging captures to file",
+    "logBody": "Each mode offers to log captured stats to <code>/var/log/iptraf-ng/</code>. Useful if you need a record of a traffic spike — leave it running, log to file, review the file afterwards instead of trying to read the live screen."
+  },
+  "iperf3": {
+    "heading": "Bandwidth test (iperf3)",
+    "intro1": "Measures actual TCP throughput between two hosts. Unlike iftop / iptraf-ng (which observe existing traffic), iperf3 generates synthetic traffic to stress-test the link. Indispensable for answering questions like <em>\"is my 10 GbE actually doing 10 GbE?\"</em> or <em>\"is the bottleneck the NIC, the switch, or the storage?\"</em>.",
+    "intro2": "iperf3 is a <strong>two-host tool</strong>: one side runs as server (listens on TCP port 5201), the other runs as client (connects, sends data, prints the rate). The ProxMenux launcher asks which mode you want:",
+    "headerMode": "Mode",
+    "headerBehaviour": "Behaviour",
+    "headerCli": "Equivalent CLI",
+    "rows": [
+      {
+        "mode": "Server",
+        "behaviour": "Listens on TCP 5201 and prints results for each incoming test. Stops on Ctrl+C.",
+        "cli": "iperf3 -s"
+      },
+      {
+        "mode": "Client",
+        "behaviour": "Asks for the server IP / hostname, connects, runs a default 10-second test and prints the report.",
+        "cli": "iperf3 -c <target>"
+      }
+    ],
+    "workflowIntro": "Typical workflow to test a 10 GbE link between two Proxmox hosts:",
+    "workflow": [
+      "On host A, open the Network menu → <em>Bandwidth test (iperf3)</em> → choose <strong>Server</strong>.",
+      "On host B, open the same menu entry → choose <strong>Client</strong> → enter host A's IP.",
+      "Wait 10 seconds. Compare the reported rate to the link's theoretical maximum."
+    ],
+    "sample": "Sample client output:",
+    "flagsTitle": "Useful manual flags (run from a shell)",
+    "flagsBody": "<code>-t 60</code> longer test (60s instead of default 10s), <code>-P 4</code> 4 parallel streams (saturates faster), <code>-R</code> reverse direction (server → client), <code>-u -b 100M</code> UDP test at 100 Mbit/s (for jitter / packet loss measurements), <code>-p 5202</code> use a different port (multiple tests in parallel). <code>man iperf3</code> for the full set.",
+    "firewallTitle": "Open the firewall port on the server",
+    "firewallBody": "The server listens on TCP <strong>5201</strong> by default. If you run the server inside a Proxmox host with a strict firewall (datacenter or host level), allow inbound TCP 5201 from the client's IP for the duration of the test, then close it again. Same applies to <code>nftables</code> / <code>iptables</code> on bare hosts."
+  },
+  "install": {
+    "heading": "First launch installs the package",
+    "body": "All three launchers check for the binary and run <code>apt-get update -qq &amp;&amp; apt-get install -y &lt;pkg&gt;</code> if missing. The install is silent: the menu may appear frozen for 10–30 seconds the first time. Subsequent launches start instantly."
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "hangTitle": "Install hangs forever on first launch",
+    "hangBody": "The host has no internet or the apt repos are unreachable. Cancel with <kbd>Ctrl</kbd>+<kbd>C</kbd>, run <code>apt-get update</code> manually to see the actual error (DNS, repo signature, proxy …), then come back to the menu.",
+    "refusedTitle": "iperf3 client: \"unable to connect to server: Connection refused\"",
+    "refusedBody": "Either the server is not running, or its firewall blocks TCP 5201. Confirm on the server: <code>ss -tlnp | grep 5201</code> — should show iperf3 listening. If listening but client still fails, check the firewall path between the two hosts.",
+    "slowTitle": "iperf3 reports way less than the expected link speed",
+    "slowBody": "Common causes, in order of likelihood: (1) one of the hosts is bottlenecked on CPU — try <code>iperf3 -c &lt;target&gt; -P 4</code> to use multiple cores; (2) the path goes through a slower link (gigabit switch in the middle of two 10 GbE NICs); (3) MTU mismatch — check <code>ip link show</code> on both ends; (4) NIC offloading disabled — see the <em>Disable NIC Offloading</em> community script if you have an Intel e1000e card.",
+    "noTrafficTitle": "iftop / iptraf-ng show no traffic for a busy host",
+    "noTrafficBody": "Default capture is on the first detected interface. Specify the right one explicitly from the shell: <code>iftop -i vmbr0</code> or <code>iptraf-ng -i vmbr0</code>. The menu launcher uses the default; for non-default interfaces, run from a console."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "label": "Diagnostics",
+        "href": "/docs/network/diagnostics",
+        "tail": " — the read-only one-shot checks (routing, connectivity, advanced stats)."
+      },
+      {
+        "label": "Bridge analysis & guided repair",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — when monitoring reveals an interface or bridge isn't doing what it should."
+      }
+    ]
+  }
+}

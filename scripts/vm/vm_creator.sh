@@ -47,15 +47,15 @@ if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/vm_storage_helpers.sh" ]]; then
 elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/vm_storage_helpers.sh" ]]; then
   source "$LOCAL_SCRIPTS_DEFAULT/global/vm_storage_helpers.sh"
 fi
+if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/iso_storage_helpers.sh" ]]; then
+  source "$LOCAL_SCRIPTS_LOCAL/global/iso_storage_helpers.sh"
+elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/iso_storage_helpers.sh" ]]; then
+  source "$LOCAL_SCRIPTS_DEFAULT/global/iso_storage_helpers.sh"
+fi
 if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh" ]]; then
   source "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh"
 elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh" ]]; then
   source "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh"
-fi
-if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh" ]]; then
-  source "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh"
-elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh" ]]; then
-  source "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh"
 fi
 
 load_language
@@ -69,14 +69,28 @@ function mount_iso_to_vm() {
   local vmid="$1"
   local iso_path="$2"
   local device="$3"
+  local iso_volid="${4:-}"
+  local iso_label
 
-  if [[ -f "$iso_path" ]]; then
-    local iso_basename
-    iso_basename=$(basename "$iso_path")
-    qm set "$vmid" -$device "local:iso/$iso_basename,media=cdrom" >/dev/null 2>&1
-    msg_ok "$(translate "Mounted ISO on device") $device → $iso_basename"
-  else
+  if [[ -z "$iso_volid" && -n "$iso_path" ]]; then
+    if [[ "$iso_path" == *":iso/"* ]]; then
+      iso_volid="$iso_path"
+    elif [[ -f "$iso_path" ]] && declare -F iso_path_to_volid >/dev/null 2>&1; then
+      iso_volid=$(iso_path_to_volid "$iso_path" 2>/dev/null || true)
+    fi
+  fi
+
+  if [[ -z "$iso_volid" ]]; then
     msg_warn "$(translate "ISO not found to mount on device") $device"
+    return 1
+  fi
+
+  iso_label="$(basename "${iso_volid#*:}")"
+  if qm set "$vmid" -$device "${iso_volid},media=cdrom" >/dev/null 2>&1; then
+    msg_ok "$(translate "Mounted ISO on device") $device → $iso_label"
+  else
+    msg_warn "$(translate "Could not mount ISO on device") $device → $iso_volid"
+    return 1
   fi
 }
 
@@ -256,6 +270,7 @@ function create_vm() {
 
   
     if [[ -f "$ISO_PATH" ]]; then
+      ISO_VOLID="${ISO_VOLID:-local:iso/$(basename "$ISO_PATH")}"
       msg_ok "$(translate "ISO image downloaded")"
     else
       msg_error "$(translate "Failed to download ISO image")"
@@ -535,7 +550,6 @@ fi
       msg_error "$(translate "Controller + NVMe passthrough requires machine type q35. Skipping controller assignment.")"
     else
       local hostpci_idx=0
-      local need_hook_sync=false
       if declare -F _pci_next_hostpci_index >/dev/null 2>&1; then
         hostpci_idx=$(_pci_next_hostpci_index "$VMID" 2>/dev/null || echo 0)
       else
@@ -583,7 +597,6 @@ fi
                   fi
                 fi
               done
-              need_hook_sync=true
               ;;
             move_remove_source)
               slot_base=$(_pci_slot_base "$pci")
@@ -610,11 +623,6 @@ fi
         fi
       done
 
-      if $need_hook_sync && declare -F sync_proxmenux_gpu_guard_hooks >/dev/null 2>&1; then
-        ensure_proxmenux_gpu_guard_hookscript
-        sync_proxmenux_gpu_guard_hooks
-        msg_ok "$(translate "VM hook guard synced for shared controller/NVMe protection")"
-      fi
     fi
   fi
 
@@ -622,14 +630,15 @@ fi
 
 
 
-  if [[ -f "$ISO_PATH" ]]; then
-    mount_iso_to_vm "$VMID" "$ISO_PATH" "ide2"
+  if [[ -n "${ISO_VOLID:-}" || -f "${ISO_PATH:-}" ]]; then
+    mount_iso_to_vm "$VMID" "$ISO_PATH" "ide2" "${ISO_VOLID:-}"
   fi
 
   
   if [[ "$OS_TYPE" == "2" ]]; then
     local VIRTIO_DIR="/var/lib/vz/template/iso"
     local VIRTIO_SELECTED=""
+    local VIRTIO_VOLID=""
     local VIRTIO_DOWNLOAD_URL="https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
 
     while true; do
@@ -661,25 +670,26 @@ fi
           fi
 
           VIRTIO_SELECTED="$VIRTIO_DIR/virtio-win.iso"
+          VIRTIO_VOLID="local:iso/virtio-win.iso"
           ;;
         2)
 
+          local virtio_volid
           VIRTIO_LIST=()
-          while read -r line; do
-            FILENAME=$(basename "$line")
-            SIZE=$(du -h "$line" | cut -f1)
-            VIRTIO_LIST+=("$FILENAME" "$SIZE")
-          done < <(find "$VIRTIO_DIR" -type f -iname "virtio*.iso" | sort)
+          while read -r virtio_volid; do
+            [[ -z "$virtio_volid" ]] && continue
+            VIRTIO_LIST+=("$virtio_volid" "$(iso_dialog_description "$virtio_volid")")
+          done < <(iso_list_volids "virtio")
 
           if [[ ${#VIRTIO_LIST[@]} -eq 0 ]]; then
             msg_warn "$(translate "No VirtIO ISO found. Please download one.")"
             continue  
           fi
 
-          VIRTIO_FILE=$(whiptail --title "ProxMenux - VirtIO ISOs" --menu "$(translate "Select a VirtIO ISO to use:")" 20 70 10 "${VIRTIO_LIST[@]}" 3>&1 1>&2 2>&3)
+          VIRTIO_VOLID=$(whiptail --title "ProxMenux - VirtIO ISOs" --menu "$(translate "Select a VirtIO ISO to use:")\n\n$(printf '%-42s │ %-14s │ %s' "$(translate "ISO")" "$(translate "Storage")" "$(translate "Size")")" 22 86 12 "${VIRTIO_LIST[@]}" 3>&1 1>&2 2>&3)
 
-          if [[ -n "$VIRTIO_FILE" ]]; then
-            VIRTIO_SELECTED="$VIRTIO_DIR/$VIRTIO_FILE"
+          if [[ -n "$VIRTIO_VOLID" ]]; then
+            VIRTIO_SELECTED=$(iso_volid_to_path "$VIRTIO_VOLID")
           else
             msg_warn "$(translate "No VirtIO ISO selected. Please choose again.")"
             continue
@@ -687,8 +697,8 @@ fi
           ;;
       esac
 
-      if [[ -n "$VIRTIO_SELECTED" && -f "$VIRTIO_SELECTED" ]]; then
-        mount_iso_to_vm "$VMID" "$VIRTIO_SELECTED" "ide3"
+      if [[ -n "$VIRTIO_VOLID" || -f "$VIRTIO_SELECTED" ]]; then
+        mount_iso_to_vm "$VMID" "$VIRTIO_SELECTED" "ide3" "$VIRTIO_VOLID"
       else
         msg_warn "$(translate "VirtIO ISO not found after selection.")"
       fi
@@ -702,7 +712,7 @@ fi
   if [[ -n "$BOOT_ORDER" ]]; then
     BOOT_FINAL="$BOOT_ORDER"
   fi
-  if [[ -f "$ISO_PATH" ]]; then
+  if [[ -n "${ISO_VOLID:-}" || -f "${ISO_PATH:-}" ]]; then
     BOOT_FINAL="${BOOT_FINAL:+$BOOT_FINAL;}ide2"
   fi
   if [[ -n "$BOOT_FINAL" ]]; then

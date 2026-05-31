@@ -28,7 +28,6 @@ interface DiskInfo {
 
 const fetchStorageData = async (): Promise<StorageData | null> => {
   try {
-    console.log("[v0] Fetching storage data from Flask server...")
     const response = await fetch("/api/storage", {
       method: "GET",
       headers: {
@@ -42,10 +41,9 @@ const fetchStorageData = async (): Promise<StorageData | null> => {
     }
 
     const data = await response.json()
-    console.log("[v0] Successfully fetched storage data from Flask:", data)
     return data
   } catch (error) {
-    console.error("[v0] Failed to fetch storage data from Flask server:", error)
+    console.error("Failed to fetch storage data from Flask server:", error)
     return null
   }
 }

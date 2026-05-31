@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Proxmox Network Commands — ip, ping, ss, pve-firewall, iptables | ProxMenux",
+    "description": "Reference of Proxmox VE host networking commands: ip / ip link / ip addr, ping, traceroute, mtr, ss, ethtool, dig, nslookup, plus pve-firewall, iptables and nftables for filtering. Bridge, bond and VLAN inspection.",
+    "ogTitle": "Proxmox Network Commands — ip, ping, ss, pve-firewall, iptables",
+    "ogDescription": "Reference of network commands for Proxmox VE — interface inspection, connectivity tests, monitoring, firewall (pve-firewall, iptables, nftables) and DNS lookups.",
+    "twitterTitle": "Proxmox Network Commands | ProxMenux",
+    "twitterDescription": "Network inspection, testing, configuration and firewall commands for Proxmox VE."
+  },
+  "header": {
+    "title": "Network Commands",
+    "description": "Curated reference for Proxmox host networking: interface info, connectivity tests, configuration, traffic monitoring and firewall management. Combines ip / ss / nmcli / ethtool / tcpdump / pve-firewall.",
+    "section": "Help and Info"
+  },
+  "intro": {
+    "title": "Quick interface inventory",
+    "body": "<code>ip a</code> shows every interface with its IPs and MAC. <code>ip r</code> shows the routing table. Together they answer most \"is this interface configured correctly?\" questions in seconds."
+  },
+  "commandGroups": [
+    {
+      "title": "Network Information",
+      "commands": [
+        {
+          "command": "ip a",
+          "description": "Show network interfaces and IPs"
+        },
+        {
+          "command": "ip r",
+          "description": "Show routing table"
+        },
+        {
+          "command": "ip -s link",
+          "description": "Show traffic statistics per interface"
+        },
+        {
+          "command": "brctl show",
+          "description": "Show configured network bridges"
+        },
+        {
+          "command": "cat /etc/network/interfaces",
+          "description": "Show raw network configuration"
+        }
+      ]
+    },
+    {
+      "title": "Network Testing",
+      "commands": [
+        {
+          "command": "ping <host>",
+          "description": "Check connectivity with another host"
+        },
+        {
+          "command": "traceroute <host>",
+          "description": "Trace route to a host"
+        },
+        {
+          "command": "mtr <host>",
+          "description": "Combine ping and traceroute in real-time"
+        },
+        {
+          "command": "dig <domain>",
+          "description": "DNS lookup for a domain"
+        },
+        {
+          "command": "nslookup <domain>",
+          "description": "Alternative DNS lookup"
+        }
+      ]
+    },
+    {
+      "title": "Network Configuration",
+      "commands": [
+        {
+          "command": "ifreload -a",
+          "description": "Reload network configuration (ifupdown2)"
+        },
+        {
+          "command": "ethtool <iface>",
+          "description": "Show Ethernet device info"
+        },
+        {
+          "command": "resolvectl status",
+          "description": "Show DNS resolution status"
+        },
+        {
+          "command": "nmcli device show",
+          "description": "Show network device details (if NetworkManager is used)"
+        },
+        {
+          "command": "ip link set <iface> up",
+          "description": "Bring network interface up"
+        },
+        {
+          "command": "ip link set <iface> down",
+          "description": "Bring network interface down"
+        }
+      ]
+    },
+    {
+      "title": "Network Monitoring",
+      "commands": [
+        {
+          "command": "ss -tuln",
+          "description": "Show listening ports (TCP/UDP)"
+        },
+        {
+          "command": "netstat -tuln",
+          "description": "Alternative to show listening ports"
+        },
+        {
+          "command": "lsof -i",
+          "description": "List open network files and connections"
+        },
+        {
+          "command": "tcpdump -i <iface>",
+          "description": "Capture packets on interface"
+        },
+        {
+          "command": "iftop -i <iface>",
+          "description": "Monitor bandwidth usage on interface"
+        }
+      ]
+    },
+    {
+      "title": "Firewall Management",
+      "commands": [
+        {
+          "command": "iptables -L -n -v",
+          "description": "Show active firewall rules (iptables)"
+        },
+        {
+          "command": "nft list ruleset",
+          "description": "Show nftables rules"
+        },
+        {
+          "command": "pve-firewall status",
+          "description": "Check Proxmox firewall status"
+        },
+        {
+          "command": "pve-firewall compile",
+          "description": "Compile firewall rules for all nodes"
+        },
+        {
+          "command": "pve-firewall reload",
+          "description": "Reload Proxmox firewall rules"
+        }
+      ]
+    }
+  ],
+  "iptablesTip": {
+    "title": "iptables vs nftables",
+    "bodyRich": "Modern Debian / Proxmox uses <strong>nftables</strong> as the underlying firewall engine. The classic <code>iptables -L -n -v</code> command still works as a translation layer, but the source of truth is <code>nft list ruleset</code>. <code>pve-firewall</code> commands are Proxmox's wrapper that emits nftables rules from the cluster firewall config."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/network",
+        "label": "Network Management",
+        "tail": " — ProxMenux interactive network tools (bridge analysis, persistent names, monitoring)."
+      },
+      {
+        "href": "/docs/help-info/tools-commands",
+        "label": "System CLI Tools",
+        "tail": " — more network monitoring tools."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Help and Info overview",
+        "tail": "."
+      }
+    ]
+  }
+}

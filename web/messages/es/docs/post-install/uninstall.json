@@ -1,0 +1,210 @@
+{
+  "meta": {
+    "title": "Uninstall Optimizations | ProxMenux Documentation",
+    "description": "Revierte cualquier optimización post-instalación aplicada por ProxMenux. Cada cambio queda registrado en un JSON, y cada herramienta tiene un uninstaller dedicado que restaura la configuración original."
+  },
+  "header": {
+    "title": "Uninstall Optimizations",
+    "description": "Revierte cualquier cambio hecho por los scripts post-instalación Automatizado o Personalizable. ProxMenux mantiene un registro de cada optimización que aplicó y tiene una función de reversión dedicada para cada una — elige cuáles revertir, y el host vuelve atrás.",
+    "section": "Settings post-install Proxmox"
+  },
+  "intro": {
+    "title": "Por qué existe",
+    "body": "Cada tweak que aplican los scripts post-instalación queda <strong>registrado</strong> en un JSON en <code>/usr/local/share/proxmenux/installed_tools.json</code>. Ese registro es lo que alimenta el flujo de uninstall — te muestra la lista de optimizaciones actualmente aplicadas, y una función de reversión que restaura el estado original para cada una (desde archivos de backup cuando es posible, o reinstalando los paquetes afectados)."
+  },
+  "openMenu": {
+    "heading": "Cómo abrirlo",
+    "body": "Desde el menú principal de ProxMenux, <strong>Settings post-install Proxmox → Uninstall optimizations</strong>. Verás un checklist de optimizaciones <em>actualmente aplicadas</em> — los items que no has aplicado no aparecen.",
+    "imageAlt": "Checklist de Uninstall Optimizations mostrando los items actualmente aplicados en el host, con checkboxes para seleccionar cuáles revertir"
+  },
+  "howWorks": {
+    "heading": "Cómo funciona la reversión",
+    "steps": [
+      {
+        "title": "Registro y autodetección",
+        "body1": "En la primera ejecución, ProxMenux recorre el host buscando archivos huella (p. ej. <code>/etc/sysctl.d/99-memory.conf</code>, <code>/etc/apt/apt.conf.d/99-force-ipv4</code>, paquete <code>haveged</code> instalado, servicio Log2RAM activo…). Cualquier cosa encontrada se añade al registro como reversible, incluso si fue aplicada por una versión antigua de ProxMenux anterior al registro.",
+        "body2": "Esta migración solo se ejecuta una vez. A partir de ahí, cada apply/revert actualiza el registro directamente."
+      },
+      {
+        "title": "Elige qué revertir",
+        "body1": "El checklist muestra una etiqueta legible por humanos por item (p. ej. <em>Memory Settings Optimization</em>, <em>IOMMU/VFIO PCI Passthrough</em>, <em>Log2RAM (SSD Protection)</em>). Marca las que quieras revertir. Nada que no marques será tocado."
+      },
+      {
+        "title": "Se ejecuta la reversión",
+        "body1": "Para cada item seleccionado, ProxMenux llama a su función de uninstall correspondiente. La mayoría de las reversiones siguen uno de tres patrones:",
+        "items": [
+          "<strong>Basado en backup</strong> — restaura un <code>.bak</code> capturado en el momento de aplicar (bashrc, logrotate.conf, journald.conf, GRUB/kernel cmdline).",
+          "<strong>Borrar la config</strong> — elimina los <code>/etc/sysctl.d/99-*.conf</code>, <code>/etc/apt/apt.conf.d/99-*</code>, o unit systemd de ProxMenux, y recarga.",
+          "<strong>Reinstalación de paquete</strong> — para cambios de UI como el banner de suscripción, reinstala los paquetes upstream con <code>--force-confnew</code> para restaurar la configuración distribuida."
+        ],
+        "body2": "Cada reversión registra su progreso. Los items que requieren un reinicio (VFIO, nombres de interfaz persistentes) activan un flag que dispara el prompt de reinicio al final."
+      },
+      {
+        "title": "Reinicio si hace falta",
+        "body1": "Si algún item revertido modificó parámetros del kernel, módulos del kernel, o naming de red, se te ofrecerá un reinicio. Si no, los cambios están en vivo inmediatamente."
+      }
+    ]
+  },
+  "reversible": {
+    "heading": "Qué es reversible",
+    "intro": "Cada optimización que aplican los scripts post-instalación tiene un uninstaller correspondiente. Agrupados aquí por área:",
+    "groups": [
+      {
+        "title": "Repositorios y APT",
+        "items": [
+          {
+            "tool": "Subscription Banner Removal",
+            "restores": "Reinstala pve-manager, proxmox-widget-toolkit, libjs-extjs y libpve-http-server-perl con force-confnew para restaurar los archivos originales de la UI. También limpia las copias .js / .gz cacheadas."
+          },
+          {
+            "tool": "APT Language Skip",
+            "restores": "Elimina /etc/apt/apt.conf.d/99-disable-translations. APT volverá a descargar paquetes de idioma."
+          },
+          {
+            "tool": "APT IPv4 Force",
+            "restores": "Elimina /etc/apt/apt.conf.d/99-force-ipv4."
+          }
+        ]
+      },
+      {
+        "title": "Kernel, memoria y límites del sistema",
+        "items": [
+          {
+            "tool": "Memory Settings",
+            "restores": "Elimina /etc/sysctl.d/99-memory.conf y recarga sysctl."
+          },
+          {
+            "tool": "Kernel Panic Configuration",
+            "restores": "Elimina /etc/sysctl.d/99-kernelpanic.conf."
+          },
+          {
+            "tool": "System Limits Increase",
+            "restores": "Elimina /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf y /etc/security/limits.d/99-limits.conf. Revierte los límites PAM y DefaultLimitNOFILE de systemd."
+          }
+        ]
+      },
+      {
+        "title": "Red",
+        "items": [
+          {
+            "tool": "Network Optimizations",
+            "restores": "Elimina /etc/sysctl.d/99-network.conf y la unit proxmenux-fwbr-tune.service. Recarga sysctl y systemd."
+          },
+          {
+            "tool": "Persistent Interface Names",
+            "restores": "Elimina cada archivo .link de /etc/systemd/network/. Los nombres de interfaz vuelven al comportamiento por defecto de systemd en el siguiente reinicio."
+          }
+        ]
+      },
+      {
+        "title": "Logging",
+        "items": [
+          {
+            "tool": "Journald Optimization",
+            "restores": "Reescribe /etc/systemd/journald.conf con los valores por defecto vanilla y reinicia systemd-journald."
+          },
+          {
+            "tool": "Logrotate Optimization",
+            "restores": "Restaura /etc/logrotate.conf desde el archivo .bak capturado antes del cambio."
+          },
+          {
+            "tool": "Log2RAM",
+            "restores": "Para y desactiva el servicio y el timer. Purga cron jobs, units systemd, binarios, archivos de configuración y el directorio /var/log.hdd. También desinstala el paquete apt si se instaló por esa vía."
+          },
+          {
+            "tool": "ZFS autotrim",
+            "restores": "Lee /usr/local/share/proxmenux/zfs_autotrim_pools (la lista de pools que ProxMenux realmente cambió) y ejecuta zpool set autotrim=off en cada uno. Los pools en los que tú activaste autotrim manualmente antes de ejecutar ProxMenux no se tocan."
+          }
+        ]
+      },
+      {
+        "title": "Shell y apariencia",
+        "items": [
+          {
+            "tool": "Bashrc Customization",
+            "restores": "Restaura /root/.bashrc desde el backup .bak. Si no existe backup, elimina el bloque PMX_CORE_BASHRC por marcadores."
+          },
+          {
+            "tool": "Fastfetch",
+            "restores": "Elimina el binario, el directorio de configuración, el hook update-motd y el bloque de bashrc. Purga el paquete apt si está instalado."
+          },
+          {
+            "tool": "Figurine",
+            "restores": "Elimina el binario, la entrada en profile.d y el bloque de alias en bashrc/profile."
+          }
+        ]
+      },
+      {
+        "title": "Hardware y virtualización",
+        "items": [
+          {
+            "tool": "IOMMU / VFIO",
+            "restores": "Elimina los módulos vfio de /etc/modules, las entradas de blacklist nouveau / radeon / nvidia, y los parámetros intel_iommu=on / amd_iommu=on / iommu=pt / pcie_acs_override de /etc/kernel/cmdline (ZFS) o GRUB. Reconstruye initramfs."
+          },
+          {
+            "tool": "AMD CPU fixes (Ryzen/EPYC)",
+            "restores": "Elimina idle=nomwait de la cmdline del kernel (ZFS) o GRUB, y las opciones ignore_msrs / report_ignored_msrs de /etc/modprobe.d/kvm.conf."
+          }
+        ]
+      },
+      {
+        "title": "Servicios y extras",
+        "items": [
+          {
+            "tool": "Time Synchronization",
+            "restores": "Devuelve la zona horaria a UTC (valor por defecto seguro) vía timedatectl."
+          },
+          {
+            "tool": "Entropy Generation (haveged)",
+            "restores": "Para, desactiva y purga el paquete haveged."
+          },
+          {
+            "tool": "kexec (fast reboots)",
+            "restores": "Desactiva kexec-pve.service, elimina el archivo de unit y el alias reboot-quick, purga kexec-tools."
+          }
+        ]
+      }
+    ]
+  },
+  "edge": {
+    "heading": "Casos límite y matices",
+    "packageTitle": "La reinstalación de paquetes toca paquetes vivos de Proxmox",
+    "packageBody": "Revertir <strong>Subscription Banner Removal</strong> reinstala <code>pve-manager</code>, <code>proxmox-widget-toolkit</code>, <code>libjs-extjs</code> y <code>libpve-http-server-perl</code> con <code>--force-confnew</code>. Es generalmente seguro pero sí toca la UI web en ejecución — refresca tu navegador después, y espera unos segundos de reconexión. No lo ejecutes a mitad de una migración o una operación de clonado.",
+    "rebootTitle": "Los nombres persistentes y VFIO necesitan reinicio",
+    "rebootBody": "Eliminar los archivos <code>.link</code> (<em>Persistent Interface Names</em>) y revertir <em>IOMMU/VFIO</em> no afectan al sistema en ejecución — solo importan tras un reinicio. ProxMenux activa el flag de reinicio automáticamente para estos.",
+    "perItemTitle": "Puedes revertir una cosa y mantener el resto",
+    "perItemBody": "El uninstaller opera por item. Si solo quieres eliminar Log2RAM pero mantener el tuning de red y los cambios de bashrc, marca solo <em>Log2RAM</em>. Nada más se toca, y el registro se actualiza en consecuencia."
+  },
+  "inspect": {
+    "heading": "Inspeccionar el registro manualmente",
+    "intro": "Si quieres ver qué está registrado sin abrir el menú:",
+    "outro": "Cada entrada <code>\"tool\": true</code> se corresponde con algo que ProxMenux aplicó y puede revertir. Eliminar una entrada manualmente no se recomienda — usa siempre el menú, que también ejecuta la función de reversión en lugar de simplemente olvidarse del cambio.",
+    "reinstallTitle": "Reinstalación tras uninstall",
+    "reinstallBody": "Revertir una optimización no te impide volver a aplicarla más tarde. Abre <link>el menú Post-Install</link> de nuevo y ejecuta Automatizado o Personalizable — el registro recogerá el nuevo estado."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "Automated Post-Install",
+        "href": "/docs/post-install/automated",
+        "tail": " — vuelve a aplicar el baseline de valores por defecto sensatos."
+      },
+      {
+        "label": "Customizable Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — elige un subconjunto distinto."
+      },
+      {
+        "label": "Desinstalar ProxMenux",
+        "href": "/docs/settings/uninstall-proxmenux",
+        "tail": " — operación distinta: elimina el propio ProxMenux, no sus optimizaciones aplicadas."
+      },
+      {
+        "label": "Resumen de Post-Install",
+        "href": "/docs/post-install",
+        "tail": "."
+      }
+    ]
+  }
+}

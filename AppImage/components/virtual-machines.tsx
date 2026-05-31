@@ -8,7 +8,7 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, Terminal, Archive, Plus, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
 import { Textarea } from "./ui/textarea"
@@ -19,6 +19,28 @@ import { LxcTerminalModal } from "./lxc-terminal-modal"
 import { formatStorage } from "../lib/utils"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
+import DOMPurify from "dompurify"
+import { marked } from "marked"
+
+// Sent by /api/vms only for LXC rows, only when the user has enabled
+// `lxc_updates_available` notifications. The Monitor populates this
+// from managed_installs registry → frontend uses it to render the
+// inline update badge + the modal's "Pending updates" section.
+interface LxcPackageUpdate {
+  name: string
+  current: string
+  latest: string
+  security: boolean
+}
+interface LxcUpdateCheck {
+  available: boolean
+  count: number
+  security_count: number
+  last_check: string | null
+  latest: string | null
+  error: string | null
+  packages: LxcPackageUpdate[]
+}
 
 interface VMData {
   vmid: number
@@ -36,6 +58,7 @@ interface VMData {
   diskread?: number
   diskwrite?: number
   ip?: string
+  update_check?: LxcUpdateCheck
 }
 
 interface VMConfig {
@@ -146,6 +169,36 @@ interface VMBackup {
   timestamp: number
   date: string
   notes?: string
+}
+
+// Sprint 13.29: shape returned by /api/lxc/<vmid>/mount-points. Lives
+// next to VMBackup since both are LXC-modal data structures.
+interface LxcMountPoint {
+  mp_index: string  // "mp0", "mp1", "" for ad-hoc
+  source: string
+  target: string
+  type: "pve_volume" | "pve_storage_bind" | "host_bind" | "ad_hoc"
+  origin_storage: string
+  origin_storage_type: string
+  origin_label: string
+  config_options: Record<string, string>
+  config_flags: string[]
+  total_bytes: number | null
+  used_bytes: number | null
+  available_bytes: number | null
+  runtime_mounted?: boolean | null
+  runtime_source?: string
+  runtime_fstype?: string
+  runtime_options?: string
+  runtime_readonly?: boolean
+  runtime_reachable?: boolean
+  runtime_error?: string | null
+  // Sprint 14.x: host-side bind source state. Detects the case where the
+  // CT still reports a bind as mounted even though the host already
+  // umounted the source (Ignacio Seijo 11/05). Null = N/A (PVE volume,
+  // not a host path).
+  host_source_exists?: boolean | null
+  host_source_is_mountpoint?: boolean | null
 }
 
 const fetcher = async (url: string) => {
@@ -288,6 +341,252 @@ const getOSIcon = (osInfo: VMDetails["os_info"] | undefined, vmType: string): Re
   }
 }
 
+// Sprint 13.29: render a single LXC mount point row.
+// Lifted out of the main component so the Mount Points tab renders
+// uniformly for both configured mpX entries and ad-hoc inside-CT
+// remote mounts. Capacity displays whatever the backend resolved —
+// PVE storage stats, `df` of host path, or n/a for ad-hoc.
+function MountPointCard({ mp }: { mp: LxcMountPoint }) {
+  const isStale = mp.runtime_reachable === false
+  const isReadonly = !isStale && mp.runtime_readonly === true
+  const isDivergent = mp.runtime_mounted === false  // configured but not actually mounted
+  // "Zombie bind": the host removed the source (e.g. USB pulled, manual
+  // umount) but the CT mount namespace still shows the bind as mounted.
+  // Reported by Ignacio Seijo (11/05). Only flag host_bind /
+  // pve_storage_bind sources — PVE volume sources have no host path
+  // and `host_source_exists` comes back null for them.
+  const isHostDetached =
+    mp.runtime_mounted === true &&
+    (mp.type === "host_bind" || mp.type === "pve_storage_bind") &&
+    mp.host_source_exists === false
+  const cardClasses = isStale
+    ? "border-red-500/50 bg-red-500/5"
+    : isDivergent || isHostDetached
+      ? "border-amber-500/40 bg-amber-500/5"
+      : isReadonly
+        ? "border-amber-500/30 bg-amber-500/5"
+        : "border border-white/10 sm:border-border bg-white/5 sm:bg-card"
+
+  const typeBadgeClass: Record<LxcMountPoint["type"], string> = {
+    pve_volume: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+    pve_storage_bind: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    host_bind: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+    ad_hoc: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  }
+  const typeLabel: Record<LxcMountPoint["type"], string> = {
+    pve_volume: "PVE volume",
+    pve_storage_bind: "bind from PVE storage",
+    host_bind: "bind from host",
+    ad_hoc: "ad-hoc inside CT",
+  }
+
+  const fmtBytes = (b: number | null | undefined) => {
+    if (b == null) return "—"
+    const gb = b / 1024 ** 3
+    if (gb < 1) return `${(gb * 1024).toFixed(1)} MB`
+    if (gb >= 1000) return `${(gb / 1024).toFixed(2)} TB`
+    return `${gb.toFixed(2)} GB`
+  }
+  const usedPct =
+    mp.total_bytes && mp.used_bytes != null && mp.total_bytes > 0
+      ? Math.round((mp.used_bytes / mp.total_bytes) * 100)
+      : null
+
+  // Parse mount options (runtime if available, else config flags) into
+  // flag chips + key=value pairs. Same UX as the Remote Mounts modal.
+  const optsString = mp.runtime_options || (mp.config_flags || []).join(",")
+  const optsEntries = (optsString || "")
+    .split(",")
+    .filter(Boolean)
+    .map((o) => {
+      const eq = o.indexOf("=")
+      return eq === -1
+        ? { key: o, value: null as string | null }
+        : { key: o.slice(0, eq), value: o.slice(eq + 1) }
+    })
+  const flags = optsEntries.filter((o) => o.value === null).map((o) => o.key)
+  const keyValues = optsEntries.filter((o) => o.value !== null) as Array<{ key: string; value: string }>
+
+  return (
+    <div className={`rounded-lg p-4 ${cardClasses}`}>
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div
+            className={`w-2 h-2 rounded-full flex-shrink-0 ${
+              isStale ? "bg-red-500" : isDivergent ? "bg-amber-500" : "bg-green-500"
+            }`}
+          />
+          <h3 className="font-mono font-semibold truncate">{mp.target}</h3>
+          {mp.mp_index && (
+            <Badge variant="outline" className="font-mono text-xs">
+              {mp.mp_index}
+            </Badge>
+          )}
+          <Badge className={typeBadgeClass[mp.type]}>{typeLabel[mp.type]}</Badge>
+          {mp.runtime_fstype && (
+            <Badge variant="outline" className="font-mono text-xs">
+              {mp.runtime_fstype}
+            </Badge>
+          )}
+        </div>
+        <Badge
+          className={
+            isStale
+              ? "bg-red-500/10 text-red-500 border-red-500/20"
+              : isDivergent || isHostDetached
+                ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                : isReadonly
+                  ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                  : mp.runtime_mounted === null
+                    ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
+                    : "bg-green-500/10 text-green-500 border-green-500/20"
+          }
+        >
+          {isStale
+            ? "stale"
+            : isDivergent
+              ? "not mounted"
+              : isHostDetached
+                ? "host detached"
+                : isReadonly
+                  ? "read-only"
+                  : mp.runtime_mounted === null
+                    ? "stopped"
+                    : "mounted"}
+        </Badge>
+      </div>
+
+      {/* Source / Mounted-at info — what host resource backs the
+          mount, and where it shows up inside the CT. The header
+          already shows the target but it's worth surfacing the
+          source/target relationship explicitly here so the user
+          gets the full host→container path at a glance. */}
+      <div className="text-sm space-y-1">
+        <div>
+          <span className="text-muted-foreground">Source (host):</span>{" "}
+          <span className="font-mono">{mp.origin_label || mp.source}</span>
+          {mp.origin_storage && mp.origin_storage_type && (
+            <span className="text-muted-foreground ml-2">
+              ({mp.origin_storage_type} storage)
+            </span>
+          )}
+        </div>
+        <div>
+          <span className="text-muted-foreground">Mounted at (CT):</span>{" "}
+          <span className="font-mono">{mp.target}</span>
+        </div>
+      </div>
+
+      {/* Capacity — total/used/available with progress bar. Available
+          even when CT is stopped because numbers come from the host. */}
+      {mp.total_bytes != null && (
+        <div className="mt-3 space-y-2">
+          <Progress
+            value={usedPct ?? 0}
+            className={`h-2 ${
+              (usedPct ?? 0) > 90
+                ? "[&>div]:bg-red-500"
+                : (usedPct ?? 0) > 75
+                  ? "[&>div]:bg-yellow-500"
+                  : "[&>div]:bg-blue-500"
+            }`}
+          />
+          <div className="grid grid-cols-3 gap-3 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground">Total</p>
+              <p className="font-medium">{fmtBytes(mp.total_bytes)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Used</p>
+              <p className="font-medium">
+                {fmtBytes(mp.used_bytes)} {usedPct != null && `(${usedPct}%)`}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Available</p>
+              <p className="font-medium">{fmtBytes(mp.available_bytes)}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mount attributes — config_options/flags from the mpX line in
+          the LXC config (backup=0, shared=1, ro, replicate, etc.).
+          Hidden when there's nothing to show. */}
+      {(() => {
+        const configEntries: Array<{ key: string; value: string | null }> = []
+        for (const k of Object.keys(mp.config_options || {})) {
+          configEntries.push({ key: k, value: mp.config_options[k] })
+        }
+        for (const f of mp.config_flags || []) {
+          configEntries.push({ key: f, value: null })
+        }
+        if (configEntries.length === 0) return null
+        return (
+          <div className="mt-3">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">
+              Mount attributes (LXC config)
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {configEntries.map((e) => (
+                <Badge key={e.key} variant="outline" className="font-mono text-xs">
+                  {e.key}{e.value !== null ? `=${e.value}` : ""}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Runtime mount options — what the kernel actually uses
+          (vers, rsize, hard, sec, ...). Only meaningful when the CT
+          is running; for stopped CTs we hide this section because
+          the values would just repeat the config flags above.
+
+          Sprint 13.29 detail: we already render the runtime fstype
+          as a badge in the header, so it's fine to leave this
+          unlabelled-for-state — only show "(declared)" suffix in
+          the rare case where there's no runtime data but flags do
+          exist. */}
+      {(mp.runtime_mounted === true) && (keyValues.length > 0 || flags.length > 0) && (
+        <div className="mt-3">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">
+            Runtime mount options
+          </p>
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {flags.map((f) => (
+              <Badge key={f} variant="outline" className="font-mono text-xs">
+                {f}
+              </Badge>
+            ))}
+          </div>
+          {keyValues.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm">
+              {keyValues.map((kv) => (
+                <div key={kv.key} className="min-w-0">
+                  <span className="font-mono text-muted-foreground">{kv.key}</span>
+                  <span className="font-mono text-foreground"> = {kv.value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Error / divergence note. */}
+      {mp.runtime_error && (
+        <p
+          className={`mt-3 text-sm ${
+            isStale ? "text-red-400" : "text-amber-400"
+          }`}
+        >
+          {mp.runtime_error}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function VirtualMachines() {
   const {
     data: vmData,
@@ -305,6 +604,15 @@ export function VirtualMachines() {
   const [selectedVM, setSelectedVM] = useState<VMData | null>(null)
   const [vmDetails, setVMDetails] = useState<VMDetails | null>(null)
   const [controlLoading, setControlLoading] = useState(false)
+  // Destructive control confirmation. `Force Stop` and `Reboot` skip the OS
+  // shutdown sequence and can corrupt running guests; gate them behind a
+  // typed-VMID match prompt to prevent misclicks. See audit Tier 2 #17.
+  const [confirmDestructive, setConfirmDestructive] = useState<{
+    action: "stop" | "reboot"
+    vmid: number
+    vmName: string
+  } | null>(null)
+  const [confirmDestructiveTyped, setConfirmDestructiveTyped] = useState("")
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [terminalVmid, setTerminalVmid] = useState<number | null>(null)
@@ -337,7 +645,23 @@ export function VirtualMachines() {
   const [backupPbsChangeMode, setBackupPbsChangeMode] = useState<string>("default")
   
   // Tab state for modal
-  const [activeModalTab, setActiveModalTab] = useState<"status" | "backups">("status")
+  const [activeModalTab, setActiveModalTab] = useState<"status" | "mounts" | "backups" | "updates" | "firewall">("status")
+
+  // Firewall log state — fetched only when the operator opens that tab
+  // so a CT/VM without firewall use doesn't pay the pvesh cost on every
+  // modal open. Issue #14554 from the helper-scripts discussions.
+  interface FirewallLogEntry { n: number; t: string }
+  const [firewallLogs, setFirewallLogs] = useState<FirewallLogEntry[]>([])
+  const [loadingFirewallLog, setLoadingFirewallLog] = useState(false)
+  const [firewallEnabled, setFirewallEnabled] = useState<boolean>(true)
+  const [firewallLogError, setFirewallLogError] = useState<string | null>(null)
+  // Sprint 13.29: per-LXC mount points lazy-loaded when the user opens
+  // the LXC modal. We fetch alongside backups (one-shot) so switching
+  // tabs is instantaneous; the cost is small (parses one config file
+  // + pvesm status which the kernel already caches).
+  const [mountPoints, setMountPoints] = useState<LxcMountPoint[]>([])
+  const [adHocMounts, setAdHocMounts] = useState<LxcMountPoint[]>([])
+  const [loadingMounts, setLoadingMounts] = useState(false)
   
   // Detect standalone mode (webapp vs browser)
   const [isStandalone, setIsStandalone] = useState(false)
@@ -356,14 +680,19 @@ export function VirtualMachines() {
   }, [])
 
   useEffect(() => {
+    // `cancelled` short-circuits setState calls if the component unmounts
+    // mid-fetch (user navigates away while we're still iterating LXCs in
+    // batches). Without it, React logs "state update on unmounted
+    // component" and we leak the closure that holds the configs map.
+    let cancelled = false
+
     const fetchLXCIPs = async () => {
-      // Only fetch if data exists, not already loaded, and not currently loading
       if (!vmData || ipsLoaded || loadingIPs) return
 
       const lxcs = vmData.filter((vm) => vm.type === "lxc")
 
       if (lxcs.length === 0) {
-        setIpsLoaded(true)
+        if (!cancelled) setIpsLoaded(true)
         return
       }
 
@@ -372,6 +701,7 @@ export function VirtualMachines() {
 
       const batchSize = 5
       for (let i = 0; i < lxcs.length; i += batchSize) {
+        if (cancelled) return
         const batch = lxcs.slice(i, i + batchSize)
 
         await Promise.all(
@@ -390,20 +720,25 @@ export function VirtualMachines() {
                 configs[lxc.vmid] = extractIPFromConfig(details.config, details.lxc_ip_info)
               }
             } catch (error) {
-              console.log(`[v0] Could not fetch IP for LXC ${lxc.vmid}`)
+              console.log(`Could not fetch IP for LXC ${lxc.vmid}`)
               configs[lxc.vmid] = "N/A"
             }
           }),
         )
 
+        if (cancelled) return
         setVmConfigs((prev) => ({ ...prev, ...configs }))
       }
 
+      if (cancelled) return
       setLoadingIPs(false)
       setIpsLoaded(true)
     }
 
     fetchLXCIPs()
+    return () => {
+      cancelled = true
+    }
   }, [vmData, ipsLoaded, loadingIPs])
 
   // Load initial network unit and listen for changes
@@ -441,11 +776,29 @@ export function VirtualMachines() {
     setIsEditingNotes(false)
     setEditedNotes("")
     setDetailsLoading(true)
-    
+    setActiveModalTab("status")
+    // Reset Sprint 13.29 mount-points state from any previous selection
+    // so the new modal doesn't briefly flash data from another LXC.
+    setMountPoints([])
+    setAdHocMounts([])
+    // Reset firewall log state — fetched lazily when the user opens
+    // that tab, since most operators won't visit it on every modal open.
+    setFirewallLogs([])
+    setFirewallLogError(null)
+    setFirewallEnabled(true)
+
     // Load backups immediately (independent of config)
     fetchBackupStorages()
     fetchVmBackups(vm.vmid)
-    
+
+    // Sprint 13.29: load LXC mount points alongside backups so
+    // switching to that tab is instant. Only LXCs have mpX entries —
+    // qemu VMs use disks, not mount points, so we skip the request
+    // and simply hide the tab below.
+    if (vm.type === "lxc") {
+      fetchMountPoints(vm.vmid)
+    }
+
     try {
       const details = await fetchApi(`/api/vms/${vm.vmid}`)
       setVMDetails(details)
@@ -453,6 +806,31 @@ export function VirtualMachines() {
       console.error("Error fetching VM details:", error)
     } finally {
       setDetailsLoading(false)
+    }
+  }
+
+  const fetchMountPoints = async (vmid: number) => {
+    setLoadingMounts(true)
+    try {
+      const response = await fetchApi<{
+        ok: boolean
+        running: boolean
+        mount_points: LxcMountPoint[]
+        ad_hoc: LxcMountPoint[]
+      }>(`/api/lxc/${vmid}/mount-points`)
+      if (response?.ok) {
+        setMountPoints(response.mount_points || [])
+        setAdHocMounts(response.ad_hoc || [])
+      } else {
+        setMountPoints([])
+        setAdHocMounts([])
+      }
+    } catch (error) {
+      console.error("Error fetching LXC mount points:", error)
+      setMountPoints([])
+      setAdHocMounts([])
+    } finally {
+      setLoadingMounts(false)
     }
   }
 
@@ -494,6 +872,33 @@ export function VirtualMachines() {
     }
   }
 
+  // Firewall log fetcher — proxies the PVE per-VM/CT firewall log
+  // endpoint. The backend returns `firewall_enabled: false` when PVE
+  // says the firewall is OFF for that guest; in that case we render
+  // a callout instead of an empty viewer.
+  const fetchFirewallLog = async (vmid: number) => {
+    setLoadingFirewallLog(true)
+    setFirewallLogError(null)
+    try {
+      const response = await fetchApi<{
+        logs?: FirewallLogEntry[]
+        firewall_enabled?: boolean
+        error?: string
+      }>(`/api/vms/${vmid}/firewall/log?limit=500`)
+      setFirewallEnabled(response.firewall_enabled !== false)
+      setFirewallLogs(Array.isArray(response.logs) ? response.logs : [])
+      if (response.error && response.firewall_enabled !== false) {
+        setFirewallLogError(response.error)
+      }
+    } catch (error) {
+      setFirewallEnabled(true)
+      setFirewallLogs([])
+      setFirewallLogError(error instanceof Error ? error.message : String(error))
+    } finally {
+      setLoadingFirewallLog(false)
+    }
+  }
+
   const openBackupModal = () => {
     // Reset modal to defaults
     setBackupMode("snapshot")
@@ -517,7 +922,7 @@ export function VirtualMachines() {
     try {
       await fetchApi(`/api/vms/${selectedVM.vmid}/backup`, {
         method: "POST",
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           storage: selectedBackupStorage,
           mode: backupMode,
           compress: "zstd",
@@ -530,6 +935,11 @@ export function VirtualMachines() {
       setTimeout(() => fetchVmBackups(selectedVM.vmid), 2000)
     } catch (error) {
       console.error("Error creating backup:", error)
+      // Surface the failure to the user. Previous behaviour silently swallowed
+      // backend errors so the user thought the backup started fine; in reality
+      // the request had 4xx/5xx'd and nothing was scheduled.
+      const msg = error instanceof Error ? error.message : "Unknown error"
+      alert(`Failed to start backup: ${msg}`)
     } finally {
       setCreatingBackup(false)
     }
@@ -547,7 +957,11 @@ export function VirtualMachines() {
       setSelectedVM(null)
       setVMDetails(null)
     } catch (error) {
-      console.error("Failed to control VM")
+      console.error(`Failed to ${action} VM ${vmid}:`, error)
+      // Same UX issue as handleCreateBackup: a silent console.error left the
+      // user looking at a "Stop"/"Start" button that just never reacted.
+      const msg = error instanceof Error ? error.message : "Unknown error"
+      alert(`Failed to ${action} VM ${vmid}: ${msg}`)
     } finally {
       setControlLoading(false)
     }
@@ -634,6 +1048,74 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   // Ensure vmData is always an array (backend may return object on error)
   const safeVMData = Array.isArray(vmData) ? vmData : []
 
+  // Render the "📦 N updates / 🛡 N security" badge next to an LXC in
+  // the dashboard list. Used ONLY in the card row alongside Uptime —
+  // the modal surfaces the same info via a dedicated tab instead of
+  // duplicating a badge in its header.
+  //
+  // Sizing matches the sibling "Uptime: …" text (text-sm + h-4 icon)
+  // so the row reads as a single visual unit. Colour is violet, the
+  // shared accent for "managed updates" across notifications and UI
+  // (mirrors the Secure Gateway visual treatment). Security count
+  // stays red because it's still an urgency cue independent of the
+  // update theme.
+  const renderLxcUpdateBadge = (
+    uc?: LxcUpdateCheck,
+    compact = false,
+    onClick?: () => void,
+  ) => {
+    if (!uc?.available || !uc.count || uc.count <= 0) return null
+    const last = uc.last_check
+      ? new Date(uc.last_check).toLocaleString()
+      : "—"
+    const topNames = (uc.packages || [])
+      .slice(0, 5)
+      .map((p) => p.name)
+      .join(", ")
+    const secHint =
+      uc.security_count > 0 ? ` · ${uc.security_count} security` : ""
+    // Tooltip leads with the action when the badge is clickable so the
+    // affordance is explicit on hover — the chevron at the end of the
+    // badge reinforces the same signal visually for users who don't
+    // hover (mobile).
+    const tooltipPrefix = onClick ? "Click to view pending packages · " : ""
+    const tooltip = `${tooltipPrefix}Last checked: ${last}${secHint}${topNames ? ` · ${topNames}` : ""}`
+    // Compact = mobile card; matches the surrounding 10-12px chrome
+    // (ID line, type badge) so the count doesn't visually dominate.
+    // Non-compact = desktop card row, sized to match "Uptime: ..." text.
+    const sizing = compact
+      ? "text-[11px] gap-1 px-1.5 py-0"
+      : "text-sm gap-1.5 px-2 py-0.5"
+    const iconSize = compact ? "h-3 w-3" : "h-4 w-4"
+    // Only soften the bg on hover — no border change, no focus ring.
+    // The chevron at the end of the badge carries the "open this"
+    // affordance on its own. The Badge component's CVA base adds a
+    // `focus:ring-2 focus:ring-ring focus:ring-offset-2` (the white
+    // double border we kept seeing on tap/click) — explicitly cancel
+    // every piece of it here.
+    const clickable = onClick
+      ? "cursor-pointer hover:bg-violet-500/20 transition-colors focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+      : ""
+    return (
+      <Badge
+        variant="outline"
+        className={`bg-violet-500/10 text-violet-400 border-violet-500/30 flex items-center flex-shrink-0 ${sizing} ${clickable}`}
+        title={tooltip}
+        onClick={onClick}
+        role={onClick ? "button" : undefined}
+        tabIndex={onClick ? 0 : undefined}
+      >
+        <Package className={iconSize} />
+        {uc.count} {compact ? "" : (uc.count === 1 ? "update" : "updates")}
+        {/* Chevron only when the badge is wired up as a clickable
+            shortcut — its absence on the dashboard card avoids
+            implying interactivity where there isn't any (the whole
+            row is the click target there). */}
+        {onClick && <ChevronRight className={`${iconSize} -mr-0.5 opacity-80`} />}
+      </Badge>
+    )
+  }
+
   // Total allocated RAM for ALL VMs/LXCs (running + stopped)
   const totalAllocatedMemoryGB = useMemo(() => {
     return (safeVMData.reduce((sum, vm) => sum + (vm.maxmem || 0), 0) / 1024 ** 3).toFixed(1)
@@ -700,87 +1182,19 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     )
   }
 
-  const isHTML = (str: string): boolean => {
-    const htmlRegex = /<\/?[a-z][\s\S]*>/i
-    return htmlRegex.test(str)
-  }
-
-  const decodeRecursively = (str: string, maxIterations = 5): string => {
-    let decoded = str
-    let iteration = 0
-
-    while (iteration < maxIterations) {
-      try {
-        const nextDecoded = decodeURIComponent(decoded.replace(/%0A/g, "\n"))
-
-        // If decoding didn't change anything, we're done
-        if (nextDecoded === decoded) {
-          break
-        }
-
-        decoded = nextDecoded
-
-        // If there are no more encoded characters, we're done
-        if (!/(%[0-9A-F]{2})/i.test(decoded)) {
-          break
-        }
-
-        iteration++
-      } catch (e) {
-        // If decoding fails, try manual decoding of common sequences
-        try {
-          decoded = decoded
-            .replace(/%0A/g, "\n")
-            .replace(/%20/g, " ")
-            .replace(/%3A/g, ":")
-            .replace(/%2F/g, "/")
-            .replace(/%3D/g, "=")
-            .replace(/%3C/g, "<")
-            .replace(/%3E/g, ">")
-            .replace(/%22/g, '"')
-            .replace(/%27/g, "'")
-            .replace(/%26/g, "&")
-            .replace(/%23/g, "#")
-            .replace(/%25/g, "%")
-            .replace(/%2B/g, "+")
-            .replace(/%2C/g, ",")
-            .replace(/%3B/g, ";")
-            .replace(/%3F/g, "?")
-            .replace(/%40/g, "@")
-            .replace(/%5B/g, "[")
-            .replace(/%5D/g, "]")
-            .replace(/%7B/g, "{")
-            .replace(/%7D/g, "}")
-            .replace(/%7C/g, "|")
-            .replace(/%5C/g, "\\")
-            .replace(/%5E/g, "^")
-            .replace(/%60/g, "`")
-          break
-        } catch (manualError) {
-          // If manual decoding also fails, return what we have
-          break
-        }
-      }
-    }
-
-    return decoded
-  }
-
-  const processDescription = (description: string): { html: string; isHtml: boolean; error: boolean } => {
+  // Single-pass decode. Proxmox URL-encodes notes exactly once when storing
+  // them in `config.description`, so a single `decodeURIComponent` is the
+  // correct round-trip. The previous loop decoded up to 5 times, which made
+  // it possible to ship a payload like `%253Cscript%253E` past one-pass
+  // filters (`%25` → `%` → second decode produces `<script>`). With the
+  // dangerouslySetInnerHTML render path already removed (Sprint 4.1) the
+  // immediate XSS is gone, but keeping the loop on the editor path keeps
+  // the same evasion vector available for future use sites.
+  const decodeRecursively = (str: string): string => {
     try {
-      const decoded = decodeRecursively(description)
-
-      // Check if it contains HTML
-      if (isHTML(decoded)) {
-        return { html: decoded, isHtml: true, error: false }
-      }
-
-      // If it's plain text, convert \n to <br>
-      return { html: decoded.replace(/\n/g, "<br>"), isHtml: false, error: false }
-    } catch (error) {
-      // If all decoding fails, return error
-      console.error("Error decoding description:", error)
-      return { html: "", isHtml: false, error: true }
+      return decodeURIComponent(str.replace(/%0A/g, "\n"))
+    } catch {
+      return str
     }
   }
 
@@ -799,7 +1213,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
     setSavingNotes(true)
     try {
-      await fetchApi(`/api/vms/${selectedVM.vmid}/config`, {
+      await fetchApi(`/api/vms/${selectedVM.vmid}/description`, {
         method: "PUT",
         body: JSON.stringify({
           description: editedNotes, // Send as-is, pvesh will handle encoding
@@ -829,67 +1243,57 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
   return (
     <div className="space-y-6">
+      {/*
+        styled-jsx is scoped by default — it adds a hash class to
+        selectors so they only match elements rendered by this
+        component. Content injected via `dangerouslySetInnerHTML`
+        does NOT get the hash, so descendant selectors like
+        `div[align="center"]` never matched the helper-script HTML
+        and notes rendered left-aligned. Wrapping the descendant
+        selectors in `:global(...)` keeps the parent class scoped
+        but lets the inner rules apply to the injected HTML.
+      */}
       <style jsx>{`
         .proxmenux-notes {
-          /* Reset any inherited styles */
           all: revert;
-          
-          /* Ensure links display inline */
-          a {
-            display: inline-block;
-            margin-right: 4px;
-            text-decoration: none;
-          }
-          
-          /* Ensure images display inline */
-          img {
-            display: inline-block;
-            vertical-align: middle;
-          }
-          
-          /* Ensure paragraphs with links display inline */
-          p {
-            margin: 0.5rem 0;
-          }
-          
-          /* Override inline width and center the table */
-          table {
-            width: auto !important;
-            margin: 0 auto;
-          }
-          
-          /* Ensure divs respect centering */
-          div[align="center"] {
-            text-align: center;
-          }
-          
-          /* Remove border-left since logo already has the line, keep text left-aligned */
-          table td:nth-child(2) {
-            text-align: left;
-            padding-left: 16px;
-          }
-          
-          /* Increase h1 font size for VM name */
-          table td:nth-child(2) h1 {
-            text-align: left;
-            font-size: 2rem;
-            font-weight: bold;
-            line-height: 1.2;
-          }
-          
-          /* Ensure p in the second cell is left-aligned */
-          table td:nth-child(2) p {
-            text-align: left;
-          }
-          
-          /* Add separator after tables */
-          table + p {
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-          }
         }
-        
+        .proxmenux-notes :global(a) {
+          display: inline-block;
+          margin-right: 4px;
+          text-decoration: none;
+        }
+        .proxmenux-notes :global(img) {
+          display: inline-block;
+          vertical-align: middle;
+        }
+        .proxmenux-notes :global(p) {
+          margin: 0.5rem 0;
+        }
+        .proxmenux-notes :global(table) {
+          width: auto !important;
+          margin: 0 auto;
+        }
+        .proxmenux-notes :global(div[align="center"]) {
+          text-align: center;
+        }
+        .proxmenux-notes :global(table td:nth-child(2)) {
+          text-align: left;
+          padding-left: 16px;
+        }
+        .proxmenux-notes :global(table td:nth-child(2) h1) {
+          text-align: left;
+          font-size: 2rem;
+          font-weight: bold;
+          line-height: 1.2;
+        }
+        .proxmenux-notes :global(table td:nth-child(2) p) {
+          text-align: left;
+        }
+        .proxmenux-notes :global(table + p) {
+          margin-top: 1rem;
+          padding-top: 1rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
         .proxmenux-notes-plaintext {
           white-space: pre-wrap;
           font-family: monospace;
@@ -1082,6 +1486,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           </span>
                         )}
                         <span className="text-sm text-muted-foreground ml-auto">Uptime: {formatUptime(vm.uptime)}</span>
+                        {vm.type === "lxc" && renderLxcUpdateBadge(vm.update_check)}
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -1192,7 +1597,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
                         {/* Name and ID */}
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-foreground truncate">{vm.name}</div>
+                          <div className="font-semibold text-foreground truncate flex items-center gap-1.5">
+                            <span className="truncate">{vm.name}</span>
+                            {vm.type === "lxc" && renderLxcUpdateBadge(vm.update_check, true)}
+                          </div>
                           <div className="text-[10px] text-muted-foreground">ID: {vm.vmid}</div>
                         </div>
 
@@ -1293,6 +1701,17 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               Uptime: {formatUptime(selectedVM.uptime)}
                             </span>
                           )}
+                          {/* Clickable badge — the sole entry point to
+                              the Updates panel now that the tab is no
+                              longer in the nav. Full-size so it reads
+                              at the same weight as the surrounding
+                              Uptime / Type / Status chips. */}
+                          {selectedVM.type === "lxc" &&
+                            renderLxcUpdateBadge(
+                              selectedVM.update_check,
+                              false,
+                              () => setActiveModalTab("updates"),
+                            )}
                         </div>
                       </>
                     )}
@@ -1318,39 +1737,139 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             Uptime: {formatUptime(selectedVM.uptime)}
                           </span>
                         )}
+                        {selectedVM.type === "lxc" &&
+                          renderLxcUpdateBadge(
+                            selectedVM.update_check,
+                            false,
+                            () => setActiveModalTab("updates"),
+                          )}
                       </div>
                     )}
                   </div>
                 </DialogTitle>
               </DialogHeader>
 
-              {/* Tab Navigation */}
-              <div className="flex border-b border-border px-6 shrink-0">
+              {/* Tab Navigation.
+                  Mobile UX:
+                   • Only the active tab shows its label; the rest
+                     collapse to icon-only so 4-5 tabs fit on a phone.
+                   • Per-tab padding + gap shrink on narrow viewports
+                     (`px-2.5 sm:px-4`, `gap-1.5 sm:gap-2`) so even with
+                     two badges showing counts the row doesn't overflow.
+                   • Container has `overflow-x-auto` as a safety net —
+                     a CT with all tabs active (Mounts + Backups +
+                     Updates + Firewall) on a very narrow phone can
+                     still horizontally scroll the row instead of
+                     clipping the last tab off-screen.
+                   • Badges stay visible in both states so the user
+                     still sees "9 backups" at a glance even when that
+                     tab isn't active. */}
+              <div className="flex border-b border-border px-3 sm:px-6 shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 <button
                   onClick={() => setActiveModalTab("status")}
-                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
                     activeModalTab === "status"
                       ? "border-cyan-500 text-cyan-500"
                       : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <Activity className="h-4 w-4" />
-                  Status
+                  <span className={activeModalTab === "status" ? "" : "hidden sm:inline"}>
+                    Status
+                  </span>
                 </button>
+                {/* Sprint 13.29: Mount Points tab — LXC only, and only
+                    when at least one mp / ad-hoc remote mount exists.
+                    A CT without mounts gets no empty tab. */}
+                {selectedVM?.type === "lxc" && (mountPoints.length > 0 || adHocMounts.length > 0) && (
+                  <button
+                    onClick={() => setActiveModalTab("mounts")}
+                    className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
+                      activeModalTab === "mounts"
+                        ? "border-blue-500 text-blue-500"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <HardDrive className="h-4 w-4" />
+                    <span className={activeModalTab === "mounts" ? "" : "hidden sm:inline"}>
+                      Mounts
+                    </span>
+                    <Badge variant="secondary" className="text-xs h-5 ml-0.5 sm:ml-1">
+                      {mountPoints.length + adHocMounts.length}
+                    </Badge>
+                  </button>
+                )}
                 <button
                   onClick={() => setActiveModalTab("backups")}
-                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
                     activeModalTab === "backups"
                       ? "border-amber-500 text-amber-500"
                       : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <Archive className="h-4 w-4" />
-                  Backups
+                  <span className={activeModalTab === "backups" ? "" : "hidden sm:inline"}>
+                    Backups
+                  </span>
                   {vmBackups.length > 0 && (
-                    <Badge variant="secondary" className="text-xs h-5 ml-1">{vmBackups.length}</Badge>
+                    <Badge variant="secondary" className="text-xs h-5 ml-0.5 sm:ml-1">{vmBackups.length}</Badge>
                   )}
                 </button>
+                {/* Updates tab — re-added as a first-class nav entry now
+                    that the mobile UX collapses inactive tabs to
+                    icon-only (so the row no longer overflows on narrow
+                    viewports the way it did before v1.2.1.3). LXC only,
+                    rendered only when the managed-installs registry has
+                    flagged pending updates for this CT, so a CT with
+                    nothing pending doesn't get an empty tab. The violet
+                    badge in the header stays as a complementary entry
+                    point — both routes lead to the same `updates` panel
+                    below. */}
+                {selectedVM?.type === "lxc" && selectedVM?.update_check?.available && (
+                  <button
+                    onClick={() => setActiveModalTab("updates")}
+                    className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
+                      activeModalTab === "updates"
+                        ? "border-purple-500 text-purple-500"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    <span className={activeModalTab === "updates" ? "" : "hidden sm:inline"}>
+                      Updates
+                    </span>
+                    {typeof selectedVM.update_check?.count === "number" && selectedVM.update_check.count > 0 && (
+                      <Badge variant="secondary" className="text-xs h-5 ml-0.5 sm:ml-1">
+                        {selectedVM.update_check.count}
+                      </Badge>
+                    )}
+                  </button>
+                )}
+                {/* Firewall tab — issue #14554 from the helper-scripts
+                    discussions ("view individual VM/CT firewall logs").
+                    Always rendered for VMs and CTs; if the guest doesn't
+                    have firewall enabled in PVE, the panel shows a
+                    callout explaining how to turn it on. Log fetched
+                    lazily on first click to avoid hitting pvesh on
+                    every modal open. */}
+                {selectedVM && (
+                  <button
+                    onClick={() => {
+                      setActiveModalTab("firewall")
+                      fetchFirewallLog(selectedVM.vmid)
+                    }}
+                    className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
+                      activeModalTab === "firewall"
+                        ? "border-orange-500 text-orange-500"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Shield className="h-4 w-4" />
+                    <span className={activeModalTab === "firewall" ? "" : "hidden sm:inline"}>
+                      Firewall
+                    </span>
+                  </button>
+                )}
               </div>
 
               <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
@@ -1625,18 +2144,94 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     ) : vmDetails.config.description ? (
                                       <>
                                         {(() => {
-                                          const processed = processDescription(vmDetails.config.description)
-                                          if (processed.error) {
+                                          // VM/CT notes come in two flavours and we mirror the way
+                                          // the PVE web UI handles each:
+                                          //   • HTML (ProxMenux/community-script helper output with
+                                          //     <div align='center'>, tables, logos) → render the
+                                          //     HTML verbatim. The stable `main` branch did exactly
+                                          //     this with dangerouslySetInnerHTML — we keep that
+                                          //     behaviour but pipe through DOMPurify so the audit
+                                          //     Tier 2 #13 XSS sink stays closed.
+                                          //   • Plain text / markdown (e.g. qBittorrent's
+                                          //     `## qBittorrent LXC`) → marked turns it into
+                                          //     headings + autolinks + line breaks, matching PVE.
+                                          // Mixing the two paths breaks the HTML one because marked
+                                          // collapses indentation / wraps inline runs and the
+                                          // browser then ignores `align="center"`.
+                                          let decoded: string
+                                          try {
+                                            decoded = decodeRecursively(vmDetails.config.description)
+                                          } catch {
                                             return (
                                               <div className="text-sm text-red-500">
                                                 Error decoding notes. Please edit to fix.
                                               </div>
                                             )
                                           }
+                                          const looksLikeHtml = /<\/?[a-z][\s\S]*?>/i.test(decoded)
+                                          let html: string
+                                          if (looksLikeHtml) {
+                                            html = decoded
+                                          } else {
+                                            try {
+                                              html = marked.parse(decoded, {
+                                                breaks: true,
+                                                gfm: true,
+                                                async: false,
+                                              }) as string
+                                            } catch {
+                                              html = decoded.replace(/\n/g, "<br>")
+                                            }
+                                          }
+                                          // Promote legacy `align` HTML attribute to a real inline
+                                          // `style="text-align: …"` rule. Tailwind / parent CSS,
+                                          // styled-jsx scoping quirks and Safari's UA stylesheet
+                                          // can all swallow the bare `align` attribute on `<div>`
+                                          // (it's HTML4 obsolete syntax). An inline style is
+                                          // bullet-proof: highest specificity, no scope hash needed.
+                                          DOMPurify.removeHook("afterSanitizeAttributes")
+                                          DOMPurify.addHook("afterSanitizeAttributes", (node: Element) => {
+                                            const a = node.getAttribute?.("align")
+                                            if (a && /^(center|left|right)$/i.test(a)) {
+                                              const cur = node.getAttribute("style") || ""
+                                              const sep = cur && !cur.trim().endsWith(";") ? "; " : ""
+                                              node.setAttribute(
+                                                "style",
+                                                `${cur}${sep}text-align: ${a.toLowerCase()}`,
+                                              )
+                                            }
+                                            // Force `target=_blank` links to open in a new tab
+                                            // safely (noopener prevents reverse-tabnabbing).
+                                            if (node.tagName === "A" && node.getAttribute("target") === "_blank") {
+                                              node.setAttribute("rel", "noopener noreferrer")
+                                            }
+                                          })
+                                          const cleanHtml = DOMPurify.sanitize(html, {
+                                            ALLOWED_TAGS: [
+                                              "a", "p", "br", "div", "span",
+                                              "h1", "h2", "h3", "h4", "h5", "h6",
+                                              "img",
+                                              "table", "thead", "tbody", "tr", "th", "td",
+                                              "ul", "ol", "li",
+                                              "strong", "em", "b", "i", "u", "code", "pre",
+                                              "blockquote", "hr",
+                                              "small", "sub", "sup",
+                                            ],
+                                            ALLOWED_ATTR: [
+                                              "href", "src", "alt", "title", "target",
+                                              "rel", "style", "class",
+                                              "align", "width", "height",
+                                              "colspan", "rowspan",
+                                            ],
+                                            ALLOWED_URI_REGEXP:
+                                              /^(?:(?:https?|mailto|data:image\/(?:png|jpeg|jpg|gif|svg\+xml|webp)):|\/|#)/i,
+                                            ADD_ATTR: ["target"],
+                                          })
                                           return (
                                             <div
-                                              className={`text-sm text-foreground ${processed.isHtml ? "proxmenux-notes" : "proxmenux-notes-plaintext"}`}
-                                              dangerouslySetInnerHTML={{ __html: processed.html }}
+                                              className="text-sm text-foreground proxmenux-notes break-words"
+                                              // eslint-disable-next-line react/no-danger
+                                              dangerouslySetInnerHTML={{ __html: cleanHtml }}
                                             />
                                           )
                                         })()}
@@ -2030,6 +2625,151 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 </div>
                 )}
 
+                {/* Updates Tab — LXC only, conditionally rendered.
+                    Lives in its own tab so the per-package list (up to
+                    30 rows) doesn't blow up the Status tab on mobile.
+                    Violet matches the shared "managed updates" theme. */}
+                {activeModalTab === "updates" &&
+                  selectedVM?.type === "lxc" &&
+                  selectedVM?.update_check?.available && (
+                    <div className="space-y-4" key={`updates-${selectedVM.vmid}`}>
+                      <Card className="border border-border bg-card/50">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 rounded-md bg-violet-500/10">
+                                <Package className="h-4 w-4 text-violet-400" />
+                              </div>
+                              <h3 className="text-sm font-semibold text-foreground">
+                                Pending package updates
+                              </h3>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className="text-xs bg-violet-500/10 text-violet-400 border-violet-500/30"
+                            >
+                              {selectedVM.update_check.count} total
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                            Last checked:{" "}
+                            {selectedVM.update_check.last_check
+                              ? new Date(selectedVM.update_check.last_check).toLocaleString()
+                              : "—"}
+                            {" · "}Apply with{" "}
+                            <code className="text-foreground/80">pct enter {selectedVM.vmid}</code>
+                            {" → "}
+                            <code className="text-foreground/80">apt update &amp;&amp; apt upgrade</code>
+                          </div>
+                          {/* Two render modes:
+                              • Full list when every pending package fits
+                                (registry cap is 30 packages per CT — so
+                                CTs with ≤30 updates show every row).
+                              • Summary when the CT has more pending than
+                                the registry stored. Showing 30 random
+                                rows out of 139 misleads the user — a
+                                count + security count + "inspect inside"
+                                hint is honester. */}
+                          {(() => {
+                            const stored = selectedVM.update_check.packages?.length || 0
+                            const total = selectedVM.update_check.count || 0
+                            const sec = selectedVM.update_check.security_count || 0
+                            const truncated = total > stored
+                            if (!truncated && stored > 0) {
+                              return (
+                                <div className="border-t border-border divide-y divide-border/50">
+                                  {selectedVM.update_check.packages.map((p) => (
+                                    <div
+                                      key={p.name}
+                                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2 py-2 text-sm"
+                                    >
+                                      <span className="font-mono text-foreground/90 flex items-center gap-2 min-w-0">
+                                        {p.security && (
+                                          <Shield
+                                            className="h-4 w-4 text-green-500 flex-shrink-0"
+                                            aria-label="Security update"
+                                          />
+                                        )}
+                                        <span className="truncate">{p.name}</span>
+                                      </span>
+                                      <span className="flex items-center gap-1.5 text-muted-foreground flex-shrink-0 font-mono text-xs sm:text-sm">
+                                        <span>{p.current || "—"}</span>
+                                        <span>→</span>
+                                        <span className="text-foreground">{p.latest}</span>
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )
+                            }
+                            // Truncated OR no per-package detail — render a summary.
+                            return (
+                              <div className="border-t border-border pt-3 space-y-2 text-sm">
+                                <div className="flex items-center gap-2">
+                                  <Package className="h-4 w-4 text-violet-400 flex-shrink-0" />
+                                  <span>
+                                    <span className="font-semibold">{total}</span> package
+                                    {total === 1 ? "" : "s"} pending
+                                  </span>
+                                </div>
+                                {sec > 0 && (
+                                  <div className="flex items-center gap-2">
+                                    <Shield className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                    <span>
+                                      <span className="font-semibold">{sec}</span> security update
+                                      {sec === 1 ? "" : "s"}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="text-xs text-muted-foreground pt-1 leading-relaxed">
+                                  Full list available inside the container:{" "}
+                                  <code className="text-foreground/80">
+                                    pct enter {selectedVM.vmid}
+                                  </code>{" "}
+                                  →{" "}
+                                  <code className="text-foreground/80">apt list --upgradable</code>
+                                </div>
+                              </div>
+                            )
+                          })()}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+
+                {/* Sprint 13.29: Mount Points Tab — LXC only.
+                    Renders configured mpX entries first, then any
+                    ad-hoc NFS/CIFS/SMB mounts found inside the
+                    container. Capacity comes from the host-side
+                    source (PVE storage or `df`) so it's available
+                    even when the CT is stopped. */}
+                {activeModalTab === "mounts" && selectedVM?.type === "lxc" && (
+                  <div className="space-y-4">
+                    {loadingMounts ? (
+                      <div className="flex items-center justify-center py-12 text-muted-foreground">
+                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                        Loading mount points…
+                      </div>
+                    ) : (
+                      <>
+                        {mountPoints.map((mp) => (
+                          <MountPointCard key={mp.mp_index || mp.target} mp={mp} />
+                        ))}
+                        {adHocMounts.length > 0 && (
+                          <>
+                            <div className="text-sm font-semibold text-muted-foreground pt-2 border-t border-border">
+                              Mounted from inside the container
+                            </div>
+                            {adHocMounts.map((mp) => (
+                              <MountPointCard key={`adhoc-${mp.target}`} mp={mp} />
+                            ))}
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
                 {/* Backups Tab */}
                 {activeModalTab === "backups" && (
                   <div className="space-y-4">
@@ -2106,6 +2846,112 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     </Card>
                   </div>
                 )}
+
+                {/* Firewall Logs Tab — issue #14554. Reads the per-VM/CT
+                    log filtered by PVE directly (no host-wide log
+                    grep). Loading is lazy and triggered by the tab
+                    button's onClick. */}
+                {activeModalTab === "firewall" && (
+                  <div className="space-y-4">
+                    <Card className="border border-border bg-card/50">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <div className="p-1.5 rounded-md bg-orange-500/10">
+                              <Shield className="h-4 w-4 text-orange-500" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-foreground">Firewall Logs</h3>
+                            {firewallEnabled && firewallLogs.length > 0 && (
+                              <Badge variant="secondary" className="text-xs h-5 ml-1">
+                                {firewallLogs.length}
+                              </Badge>
+                            )}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs gap-1"
+                            onClick={() => selectedVM && fetchFirewallLog(selectedVM.vmid)}
+                            disabled={loadingFirewallLog}
+                          >
+                            {loadingFirewallLog ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-3 w-3" />
+                            )}
+                            <span>Refresh</span>
+                          </Button>
+                        </div>
+
+                        <div className="border-t border-border/50 mb-4" />
+
+                        {loadingFirewallLog ? (
+                          <div className="flex items-center justify-center py-6 text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            <span className="text-sm">Loading firewall log…</span>
+                          </div>
+                        ) : !firewallEnabled ? (
+                          <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
+                            <div className="flex items-start gap-2">
+                              <Shield className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                              <div className="space-y-2">
+                                <p className="font-medium text-amber-500">
+                                  Firewall is not enabled for this {selectedVM?.type === "lxc" ? "container" : "VM"}
+                                </p>
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                  Enable it in the Proxmox UI under{" "}
+                                  <strong>
+                                    {selectedVM?.type === "lxc" ? "Container" : "VM"} → Firewall → Options
+                                  </strong>{" "}
+                                  and add at least one rule with <code>log: info</code> (or higher) so packets start
+                                  being recorded. New entries will appear here automatically on the next refresh.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : firewallLogError ? (
+                          <div className="rounded-md border border-red-500/30 bg-red-500/5 p-4 text-sm">
+                            <div className="flex items-start gap-2">
+                              <Shield className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                              <div>
+                                <p className="font-medium text-red-500 mb-1">Failed to read firewall log</p>
+                                <p className="text-xs text-muted-foreground break-all">{firewallLogError}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : firewallLogs.length === 0 ? (
+                          <div className="text-center py-6 text-sm text-muted-foreground">
+                            No firewall events recorded yet.
+                            <div className="text-xs mt-1">
+                              Rules with <code>log: info</code> (or higher) will populate this view as packets arrive.
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="rounded-md border border-border bg-background/50 max-h-[480px] overflow-y-auto">
+                            <pre className="text-[11px] font-mono leading-snug whitespace-pre-wrap break-all p-3">
+                              {firewallLogs.map((entry, idx) => {
+                                const text = entry.t || ""
+                                // Light colour-coding by the action keyword
+                                // PVE emits in the line itself — purely
+                                // visual, parsing stays line-by-line so
+                                // a malformed entry still renders fine.
+                                let actionClass = "text-foreground/90"
+                                if (/\bDROP\b/i.test(text)) actionClass = "text-red-400"
+                                else if (/\bREJECT\b/i.test(text)) actionClass = "text-orange-400"
+                                else if (/\bACCEPT\b/i.test(text)) actionClass = "text-green-400"
+                                return (
+                                  <div key={`${entry.n}-${idx}`} className={actionClass}>
+                                    {text}
+                                  </div>
+                                )
+                              })}
+                            </pre>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-border bg-background px-6 py-4 mt-auto shrink-0">
@@ -2141,7 +2987,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   <Button
                     className="w-full bg-blue-600/20 border border-blue-600/50 text-blue-400 hover:bg-blue-600/30"
                     disabled={selectedVM?.status !== "running" || controlLoading}
-                    onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "reboot")}
+                    onClick={() => selectedVM && setConfirmDestructive({
+                      action: "reboot",
+                      vmid: selectedVM.vmid,
+                      vmName: selectedVM.name,
+                    })}
                   >
                     <RotateCcw className="h-4 w-4 mr-2" />
                     Reboot
@@ -2149,7 +2999,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   <Button
                     className="w-full bg-red-600/20 border border-red-600/50 text-red-400 hover:bg-red-600/30"
                     disabled={selectedVM?.status !== "running" || controlLoading}
-                    onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "stop")}
+                    onClick={() => selectedVM && setConfirmDestructive({
+                      action: "stop",
+                      vmid: selectedVM.vmid,
+                      vmName: selectedVM.name,
+                    })}
                   >
                     <StopCircle className="h-4 w-4 mr-2" />
                     Force Stop
@@ -2167,6 +3021,83 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               />
             )
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Destructive control confirmation (Force Stop / Reboot) */}
+      <Dialog
+        open={confirmDestructive !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmDestructive(null)
+            setConfirmDestructiveTyped("")
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-500">
+              <StopCircle className="h-5 w-5" />
+              {confirmDestructive?.action === "stop" ? "Force Stop" : "Reboot"}{" "}
+              VMID {confirmDestructive?.vmid}
+            </DialogTitle>
+            <DialogDescription>
+              {confirmDestructive?.action === "stop"
+                ? "This skips the guest OS shutdown sequence and can corrupt running databases or filesystems. The guest is killed immediately."
+                : "This forces a reboot without waiting for the guest OS to flush pending writes. Use a graceful Shutdown when possible."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm">
+              Type <span className="font-mono font-bold">{confirmDestructive?.vmid}</span> to confirm:
+            </p>
+            <input
+              type="text"
+              autoFocus
+              autoComplete="off"
+              inputMode="numeric"
+              value={confirmDestructiveTyped}
+              onChange={(e) => setConfirmDestructiveTyped(e.target.value)}
+              placeholder={String(confirmDestructive?.vmid ?? "")}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
+            <p className="text-xs text-muted-foreground">
+              Guest: <span className="font-medium">{confirmDestructive?.vmName}</span>
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setConfirmDestructive(null)
+                setConfirmDestructiveTyped("")
+              }}
+              disabled={controlLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={
+                controlLoading ||
+                !confirmDestructive ||
+                confirmDestructiveTyped.trim() !== String(confirmDestructive.vmid)
+              }
+              onClick={async () => {
+                if (!confirmDestructive) return
+                const { vmid, action } = confirmDestructive
+                setConfirmDestructive(null)
+                setConfirmDestructiveTyped("")
+                await handleVMControl(vmid, action)
+              }}
+            >
+              {controlLoading
+                ? "Working..."
+                : confirmDestructive?.action === "stop"
+                ? "Force Stop"
+                : "Reboot"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

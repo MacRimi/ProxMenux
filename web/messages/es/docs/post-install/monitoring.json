@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "title": "Post-instalación: Monitorización | ProxMenux Documentation",
+    "description": "Opciones de monitorización en el script post-instalación Customizable de ProxMenux. Por ahora una sola opción: instalar OVH Real-Time Monitoring (RTM), que solo se activa si se detecta que el host es un servidor OVH."
+  },
+  "header": {
+    "title": "Post-instalación: Monitorización",
+    "description": "Opciones de monitorización dentro del script post-instalación Customizable. Esta categoría es pequeña y específica del proveedor — instala el agente OVH Real-Time Monitoring en servidores dedicados de OVH y no hace nada en cualquier otro sitio.",
+    "section": "Settings post-install Proxmox"
+  },
+  "intro": {
+    "title": "Alcance estrecho a propósito",
+    "body": "La monitorización post-instalación se limita a <strong>un agente específico de un proveedor</strong>. La monitorización de propósito general (Prometheus, Grafana, node_exporter) queda fuera del alcance aquí porque requiere decisiones arquitectónicas (host separado o no, retención de datos, destinos de alertas) que no encajan en un paso post-instalación de un solo clic. El propio ProxMenux Monitor, integrado en ProxMenux, cubre la mayor parte de ese rol sin necesidad de ningún agente externo."
+  },
+  "ovh": {
+    "heading": "Instalar OVH Real-Time Monitoring (RTM)",
+    "intro": "Si tu host Proxmox es un servidor dedicado alquilado a <a>OVHcloud</a>, puedes activar RTM para exponer telemetría de hardware (temperatura de CPU, estado de la fuente, SMART de discos, estado de la controladora RAID, etc.) al panel de control de OVH. Es el mismo agente que OVH usa para su propia funcionalidad \"Server Monitoring\".",
+    "decisionsTitle": "Cómo decide ProxMenux",
+    "decisionsItems": [
+      "Obtiene la IP pública del host vía <code>curl ipinfo.io/ip</code>.",
+      "Busca el ISP propietario con una consulta <code>whois</code> a <code>v4.whois.cymru.com</code>.",
+      "Si el resultado menciona OVH, descarga <code>last-public-ovh-infra-yak.snap.mirrors.ovh.net/yak/archives/apply.sh</code> y lo pasa por tubería a <code>bash</code> con el manifest puppet de RTM v2.",
+      "Si el resultado <em>no</em> menciona OVH, no se instala nada. La opción es un no-op."
+    ],
+    "remoteTitle": "Script remoto pasado por tubería a bash",
+    "remoteBody": "La instalación ejecuta <code>wget -qO - https://…apply.sh | bash</code>. Si el mirror de OVH se ve comprometido alguna vez, el script se ejecuta como root en tu host. Antes de activar esta opción, decide si confías más en la cadena de mirrors de OVH que en la monitorización que ganas. Para la mayoría de usuarios de home-lab o no-OVH esta opción debería quedarse simplemente apagada.",
+    "noOpTitle": "Actívalo solo si el host está realmente en OVH",
+    "noOpBody": "La opción es un no-op en servidores no-OVH, así que marcarla en un Proxmox de home-lab no rompe nada. Pero hoy hay un bug cosmético: incluso en servidores no-OVH el script imprime <em>\"Server belongs to OVH\"</em> al final, lo que puede inducir a error. Mira la nota de solución de problemas más abajo.",
+    "runsTitle": "Qué ejecuta ProxMenux",
+    "verifyTitle": "Verificación",
+    "verifyBody": "En un host OVH real, tras un reinicio deberías ver el <a>panel de RTM</a> en tu OVH Manager con datos en vivo del host. En el lado de Proxmox, el colector RTM es un servicio systemd — compruébalo directamente:",
+    "troubleTitle": "Solución de problemas",
+    "spuriousTitle": "\"Server belongs to OVH\" pero no estoy en OVH",
+    "spuriousBody": "Es una peculiaridad cosmética conocida del script actual: el mensaje de éxito se dispara fuera del condicional de detección de OVH, así que se imprime en cada ejecución. Si la instalación de RTM <em>no</em> ocurrió realmente (comprueba <code>systemctl status ovh-rtm</code> — no existirá), el mensaje es espurio y se puede ignorar. No se instaló nada en tu host.",
+    "revertTitle": "No reversible desde el menú Uninstall",
+    "revertBody": "No hay una entrada de uninstall dedicada para RTM. En un host OVH real, elimina los paquetes a mano con <code>apt purge ovh-*</code> y borra cualquier manifest puppet bajo <code>/etc/puppet/</code> que RTM haya instalado. En un host no-OVH no se instaló nada, así que no hay nada que revertir."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "ProxMenux Monitor",
+        "href": "/docs/settings/proxmenux-monitor",
+        "tail": " — panel web local para el host (funciona en cualquier proveedor, no solo OVH)."
+      },
+      {
+        "label": "Comandos de sistema útiles",
+        "href": "/docs/help-info/system-commands",
+        "tail": " — referencia de monitorización del host local."
+      },
+      {
+        "label": "Customizable Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — volver al menú padre."
+      }
+    ]
+  }
+}

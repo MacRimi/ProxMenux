@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Proxmox Utilities — UUP Dump, PVE 8 to 9 Upgrade, OVA Export/Import | ProxMenux",
+    "description": "Day-to-day Proxmox VE utilities: build Windows ISOs from UUP Dump, install curated CLI tools, run a safe Proxmox system update, perform the major-version PVE 8 to PVE 9 upgrade, export VMs to OVA / OVF and import OVA / OVF VMs from VMware or VirtualBox.",
+    "ogTitle": "Proxmox Utilities — UUP Dump, PVE 8 to 9 Upgrade, OVA Export/Import",
+    "ogDescription": "Build Windows ISOs, install CLI tools, run a safe update, upgrade PVE 8 to PVE 9, export / import OVA / OVF VMs.",
+    "twitterTitle": "Proxmox Utilities | ProxMenux",
+    "twitterDescription": "ISO creation, CLI tools, Proxmox update, PVE 8→9 upgrade, OVA / OVF VM portability."
+  },
+  "header": {
+    "title": "Utilities & Tools",
+    "description": "Six tools that round out the day-to-day Proxmox VE workflow: ISO creation, system maintenance and VM portability. Each option is independent — pick the one you need; nothing is installed until you ask for it.",
+    "section": "Utilities"
+  },
+  "intro": {
+    "title": "What this menu is for",
+    "body": "Three groups of unrelated but commonly-needed tools: <strong>build a Windows ISO</strong> from UUP Dump, <strong>maintain the Proxmox host</strong> (CLI utilities, updates, the major-version upgrade), and <strong>move VMs in and out</strong> of Proxmox using the standard OVA / OVF format."
+  },
+  "opening": {
+    "heading": "Opening the menu",
+    "body": "From ProxMenux's main menu, select <strong>Utilities</strong>. You will see this:",
+    "imageAlt": "Utilities menu with UUP Dump, system utilities, update, upgrade, export and import"
+  },
+  "groups": {
+    "heading": "Three tool groups",
+    "intro": "The six tools fall into three independent groups. Click a card below to jump to the matching section.",
+    "iso": {
+      "title": "ISO creation",
+      "body": "Build official Windows ISOs from UUP Dump on the Proxmox host itself.",
+      "bullets": [
+        "UUP Dump shared link → bootable ISO",
+        "Dependencies installed automatically",
+        "Result drops into Proxmox's ISO template path"
+      ]
+    },
+    "maintenance": {
+      "title": "System maintenance",
+      "body": "Keep the host healthy: CLI tooling, regular updates, and the major-version upgrade when it's time.",
+      "bullets": [
+        "System Utilities Installer (26 CLI tools)",
+        "Proxmox System Update (apt + dist-upgrade)",
+        "PVE 8 → PVE 9 major upgrade"
+      ]
+    },
+    "portability": {
+      "title": "VM portability",
+      "body": "Move VMs in and out of Proxmox using the standard OVA / OVF format.",
+      "bullets": [
+        "Export Proxmox VM → OVA / OVF",
+        "Import OVA / OVF → Proxmox VM",
+        "Compatible with VMware and VirtualBox"
+      ]
+    }
+  },
+  "upgradeWarn": {
+    "title": "The PVE 8 → 9 upgrade is destructive and not reversible",
+    "body": "A major-version upgrade rewrites the Debian base (Bookworm → Trixie) and the Proxmox stack in place. There is no rollback path — you need <strong>verified backups</strong> of every VM and CT and <strong>console / IPMI / iKVM access</strong> before you start. The upgrade tool refuses to run from the Proxmox web terminal for this reason."
+  },
+  "isoSection": {
+    "heading": "ISO creation",
+    "body": "Build a fresh, up-to-date Windows installation ISO directly on the Proxmox host. The script automates the whole UUP Dump flow: dependency install (aria2c, cabextract, wimlib-imagex, …), parallelised download of the update files via aria2, and conversion into a single bootable ISO that lands in <code>/var/lib/vz/template/iso</code> ready to attach to a VM.",
+    "options": [
+      {
+        "title": "UUP Dump ISO Creator",
+        "description": "Build an up-to-date Windows installation ISO from a UUP Dump shared link. Dependencies, download and conversion fully automated; the resulting ISO lands in /var/lib/vz/template/iso ready for VM creation.",
+        "href": "/docs/utils/UUp-Dump-ISO-Creator"
+      }
+    ]
+  },
+  "maintenanceSection": {
+    "heading": "System maintenance",
+    "body": "Three tools cover the day-to-day and once-in-a-while host work. <strong>System Utilities Installer</strong> sets up the CLI tools you actually use after a fresh install. <strong>Proxmox System Update</strong> is the weekly / monthly hygiene run. <strong>Upgrade PVE 8 to PVE 9</strong> is the once-per-major-cycle big move — handled with extra safety gates because it's not reversible.",
+    "options": [
+      {
+        "title": "System Utilities Installer",
+        "description": "Curated picker for 26 CLI tools (htop, btop, iperf3, jq, tmux, ncdu, ...) with custom selection or predefined groups (basic, dev, compression, multiplexers, analysis, network). Uses the canonical repo + verify-command flow.",
+        "href": "/docs/utils/system-utils"
+      },
+      {
+        "title": "Proxmox System Update",
+        "description": "Repo hygiene + apt update + apt dist-upgrade with reboot prompt. Detects PVE major version (8 or 9) and routes to the matching worker. Switches to no-subscription, removes conflicting packages, runs autoremove.",
+        "href": "/docs/utils/system-update"
+      },
+      {
+        "title": "Upgrade PVE 8 to PVE 9",
+        "description": "Major-version upgrade (Debian Bookworm → Trixie + PVE 8 → 9). Pre-flight checks, repository migration, automated or interactive mode, post-upgrade validation and reboot. Refuses to run from the web terminal.",
+        "href": "/docs/utils/upgrade-pve8-pve9"
+      }
+    ]
+  },
+  "portabilitySection": {
+    "heading": "VM portability (OVA / OVF)",
+    "body": "OVA and OVF are the cross-hypervisor packaging formats from the DMTF standard — supported by VMware, VirtualBox and Proxmox. The two tools are designed to round-trip: a VM exported from Proxmox can be imported back, and vice versa. Use them to migrate workloads off ESXi, take a portable backup of a VM, or share a prepared VM with someone running VirtualBox.",
+    "options": [
+      {
+        "title": "Export VM to OVA / OVF",
+        "description": "Convert a Proxmox VM into a portable OVA archive or OVF directory. Standard DMTF schema, SHA1 manifest, streamOptimized VMDK disks. Importable on VMware (ESXi / Workstation / Fusion), VirtualBox and back into Proxmox.",
+        "href": "/docs/utils/export-vm"
+      },
+      {
+        "title": "Import VM from OVA / OVF",
+        "description": "Bring a VMware / VirtualBox / ProxMenux export back into Proxmox. Auto-extracts OVA, parses OVF metadata, creates the VM and imports each disk as the storage-native format.",
+        "href": "/docs/utils/import-vm"
+      }
+    ]
+  },
+  "diskSpaceCallout": {
+    "title": "A note on disk space for export / import",
+    "body": "Both tools convert disk formats: export uses <code>qemu-img convert -O vmdk -o subformat=streamOptimized</code>; import uses <code>qm importdisk</code> to convert back to the storage-native format (qcow2 / raw). Plan for <strong>~120% of virtual disk size</strong> for OVF and <strong>~220%</strong> for OVA — the conversion writes the full disk before any compression. Check the destination directory has the headroom before you start."
+  },
+  "fitsTogether": {
+    "heading": "How the menu fits together",
+    "body": "Each tool has a dedicated script under <code>scripts/utilities/</code>. The Proxmox System Update is a wrapper that delegates to one of two worker scripts in <code>scripts/global/</code> depending on the detected major version (PVE 8 or PVE 9). The PVE 8 → 9 upgrade exposes two extra menu actions inside its own flow — a stand-alone <em>Pre-upgrade check</em> (runs <code>pve8to9 --full</code>) and a read-only <em>Manual upgrade guide</em> (17-step runbook) — for users who want to inspect or operate by hand instead of the automated path."
+  }
+}

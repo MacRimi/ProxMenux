@@ -1,0 +1,132 @@
+{
+  "meta": {
+    "title": "Bridge Analysis & Guided Repair | ProxMenux Documentation",
+    "description": "Detects vmbrX bridges with missing or invalid physical ports (typical after PCI re-enumeration), reports them with proposed shell commands, and offers a 5-step guided repair with mandatory backup.",
+    "ogTitle": "Bridge Analysis & Guided Repair | ProxMenux Documentation",
+    "ogDescription": "Audit and repair Proxmox bridge ports after hardware changes, with guided rollback-safe flow."
+  },
+  "header": {
+    "title": "Bridge analysis & guided repair",
+    "description": "Audits every vmbrX bridge declared in /etc/network/interfaces, verifies that its physical ports actually exist, and offers a step-by-step repair when they don't. The analysis is read-only; the repair is gated, previewed and backed up.",
+    "section": "Network"
+  },
+  "intro": {
+    "title": "What this does",
+    "body": "Reads each bridge in <code>/etc/network/interfaces</code>, looks at its <code>bridge-ports</code> line and checks whether each declared port (e.g. <code>enp3s0</code>) actually exists on the host. If a port is missing, proposes a substitute and — with explicit consent — applies the change with a <strong>backup, preview, apply, verify</strong> flow."
+  },
+  "when": {
+    "heading": "When you need this",
+    "intro": "Linux assigns predictable interface names from PCI topology and slot order. Several events shuffle them and leave <code>/etc/network/interfaces</code> referring to names that no longer exist:",
+    "items": [
+      "Adding or removing a PCIe card (a NIC, a GPU, a HBA, an NVMe carrier).",
+      "Moving an existing card to a different PCIe slot.",
+      "BIOS / UEFI updates that re-enumerate PCI devices.",
+      "Migrating the boot disk to different hardware."
+    ],
+    "outro": "After the next boot, the bridge tries to attach to a port that no longer exists, fails to come up, and the host loses its network. <link>Persistent interface names</link> prevents this from happening again — but if you are already locked out, this page is the recovery path."
+  },
+  "bigPicture": {
+    "heading": "The big picture",
+    "diagram1": {
+      "arrowLabel": "step 1",
+      "nodes": {
+        "sourceLabel": "/etc/network/interfaces",
+        "sourceDetail": "auto vmbr0\niface vmbr0 inet static\n  bridge-ports enp3s0",
+        "bridgeLabel": "Analyze (read-only)",
+        "bridgeDetail": "ip link show enp3s0\n→ does not exist",
+        "targetLabel": "Report + suggestion",
+        "targetDetail": "❌ enp3s0: NOT FOUND\nReplace with: eno1\n(no changes yet)"
+      }
+    },
+    "diagram2": {
+      "arrowLabel": "apply with backup",
+      "nodes": {
+        "sourceLabel": "Guided repair",
+        "sourceDetail": "1. Backup\n2. Show current\n3. Preview changes\n4. Apply\n5. Verify",
+        "targetLabel": "/etc/network/interfaces (new)",
+        "targetDetail": "auto vmbr0\niface vmbr0 inet static\n  bridge-ports eno1"
+      }
+    }
+  },
+  "step1": {
+    "heading": "Step 1: analysis (read-only)",
+    "intro": "Selecting <strong>Analyze Bridge Configuration</strong> aborts immediately if the host is not on the classic Debian/Proxmox stack. Otherwise it walks every bridge and reports:",
+    "items": [
+      "Bridge name, current status (UP / DOWN), assigned IP.",
+      "Each declared port and whether it currently exists (<code>ip link show &lt;port&gt;</code>).",
+      "For each invalid port: a proposed replacement (the first available physical interface) plus the exact <code>sed</code> command to apply it manually.",
+      "Bridges with no <code>bridge-ports</code> at all and orphan <code>auto</code> entries (no matching <code>iface</code> block)."
+    ],
+    "readonlyTitle": "Read-only guarantee",
+    "readonlyBody": "Up to this point the script has not run a single modifying command. You can leave the analysis open, copy the suggested <code>sed</code> commands and apply them manually if you prefer — or accept the next prompt to enter the guided repair."
+  },
+  "step2": {
+    "heading": "Step 2: guided repair (5 steps)",
+    "intro": "Only entered if you accept the prompt at the end of the analysis. Each step shows what will happen and asks for confirmation before continuing.",
+    "steps": [
+      {
+        "title": "1. Safety backup",
+        "body": "Copies <code>/etc/network/interfaces</code> to <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. The exact backup path is shown before the copy and again after, with the rollback command.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Review current configuration",
+        "body": "Opens the live <code>/etc/network/interfaces</code> in a scrollable dialog so you can see exactly what is about to be changed.",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Preview proposed changes",
+        "body": "Lists exactly which bridges will be touched and which port substitutions will happen. If the analysis decides nothing actually needs fixing (race condition: the port came back), the flow exits cleanly with <em>\"No changes needed.\"</em>",
+        "tone": "blue"
+      },
+      {
+        "title": "4. Apply changes",
+        "body": "For each affected bridge, runs <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> against <code>/etc/network/interfaces</code>. If a bridge had no valid replacement available, the substitution is skipped and reported in step 5.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Verification",
+        "body": "Re-reads the file and confirms each bridge's new port now exists. Prints the rollback command (<code>cp &lt;backup&gt; /etc/network/interfaces</code>). Finally offers a <strong>Restart networking</strong> prompt — accept only if you have console fallback.",
+        "tone": "emerald"
+      }
+    ],
+    "restartTitle": "Restarting networking ≠ a free undo",
+    "restartBody": "The repair is written to disk regardless of whether you restart the service. <code>systemctl restart networking</code> applies the change <em>now</em>, which can drop your SSH session if the new port is wrong. If you decline the restart, the change still takes effect on the next reboot — confirm the new config first or roll back from the printed command."
+  },
+  "edits": {
+    "heading": "What gets edited (exactly)",
+    "body": "Only the <code>bridge-ports</code> line of each affected bridge. Other directives (<code>address</code>, <code>netmask</code>, <code>gateway</code>, <code>bridge-stp</code>, …) are left untouched. The script never creates new <code>iface</code> blocks and never removes existing ones in this flow — that is the job of <link>Config analysis &amp; cleanup</link>."
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "unsupportedTitle": "Analysis aborts with \"Unsupported Network Stack\"",
+    "unsupportedBody": "The host runs netplan, systemd-networkd or NetworkManager. The tool only supports <code>/etc/network/interfaces</code>. Switch the host to the classic stack first, or edit the configuration with the manager's native tooling (e.g. <code>netplan apply</code>).",
+    "noSuggestTitle": "No suggestion is printed for an invalid port",
+    "noSuggestBody": "The host has zero free physical interfaces (everything is either already in another bridge or doesn't exist). The analysis falls back to suggesting <code>bridge-ports none</code> so the bridge can at least come up without a port. Add a NIC or migrate ports between bridges manually before re-running.",
+    "stillDownTitle": "The repair completes but the bridge is still DOWN",
+    "stillDownBody": "<code>sed</code> updated the file but <code>systemctl restart networking</code> was declined. Run it manually once the new config is verified, or reboot. If the restart was accepted and the bridge is still DOWN, run <code>ip link show</code> to confirm the new port exists, then check <code>journalctl -u networking</code> for the actual error (cable unplugged, link not negotiated, port already a member of another bridge).",
+    "lostSshTitle": "I lost SSH access right after restarting networking",
+    "lostSshIntro": "Use console / IPMI / iKVM to reach the host. Restore the backup:",
+    "lostSshOutro": "Then re-run the analysis from the console to figure out why the suggestion did not work (typically: the replacement port is not actually plugged in)."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "label": "Persistent interface names",
+        "href": "/docs/network/persistent-names",
+        "tail": " — pin names to MAC addresses so this scenario stops happening."
+      },
+      {
+        "label": "Config analysis & guided cleanup",
+        "href": "/docs/network/config-analysis",
+        "tailRich": " — for orphaned <code>iface</code> blocks (the other half of the same problem)."
+      },
+      {
+        "label": "Interfaces backup & restart",
+        "href": "/docs/network/backup-restore",
+        "tail": " — manual snapshots and the restore browser."
+      }
+    ]
+  }
+}

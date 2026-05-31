@@ -1,0 +1,276 @@
+{
+  "meta": {
+    "title": "Linux CLI Tools for Proxmox — htop, iftop, journalctl, rsync, tmux | ProxMenux",
+    "description": "Day-to-day Linux CLI tools for Proxmox VE administration: monitoring (htop, atop, glances, iotop), network (iftop, nmap, mtr, ss), file & text (find, grep, journalctl), performance (iostat, perf, strace), security (fail2ban, lynis, lsof) and remote admin (ssh, rsync, tmux).",
+    "ogTitle": "Linux CLI Tools for Proxmox — htop, iftop, journalctl, rsync, tmux",
+    "ogDescription": "Day-to-day CLI tools for Proxmox VE administration grouped by purpose: monitoring, network, file/text, performance, security and remote admin.",
+    "twitterTitle": "Linux CLI Tools for Proxmox | ProxMenux",
+    "twitterDescription": "Daily-driver CLI tools for Proxmox VE administration grouped by purpose."
+  },
+  "header": {
+    "title": "System CLI Tools",
+    "description": "Daily-driver CLI tools for Proxmox host administration, grouped by purpose: monitoring, network, file & text, performance analysis, security, remote admin and system configuration.",
+    "section": "Help and Info"
+  },
+  "intro": {
+    "title": "Most are installed by Post-Install",
+    "body": "If you ran the ProxMenux Post-Install script with the default selections, the majority of these tools are already installed. For anything missing, ProxMenux's <utilsLink>System Utilities Installer</utilsLink> offers them as predefined groups (basic, dev, network, analysis, …)."
+  },
+  "commandGroups": [
+    {
+      "title": "System Monitoring",
+      "commands": [
+        {
+          "command": "htop",
+          "description": "Interactive process viewer with CPU/memory usage"
+        },
+        {
+          "command": "top",
+          "description": "Display Linux processes in real-time"
+        },
+        {
+          "command": "atop",
+          "description": "Advanced system & process monitor"
+        },
+        {
+          "command": "glances",
+          "description": "System monitoring tool with web interface"
+        },
+        {
+          "command": "nmon",
+          "description": "Performance monitoring tool"
+        },
+        {
+          "command": "iotop",
+          "description": "Monitor disk I/O usage by processes"
+        },
+        {
+          "command": "vmstat 1",
+          "description": "Report virtual memory statistics every second"
+        }
+      ]
+    },
+    {
+      "title": "Network Tools",
+      "commands": [
+        {
+          "command": "iftop",
+          "description": "Display bandwidth usage on an interface"
+        },
+        {
+          "command": "nmap <host>",
+          "description": "Network exploration and security scanning"
+        },
+        {
+          "command": "tcpdump -i <interface>",
+          "description": "Dump network traffic"
+        },
+        {
+          "command": "netstat -tuln",
+          "description": "Display network connections"
+        },
+        {
+          "command": "ss -tuln",
+          "description": "Another utility to investigate sockets"
+        },
+        {
+          "command": "mtr <host>",
+          "description": "Network diagnostic tool combining ping and traceroute"
+        },
+        {
+          "command": "iperf3 -s",
+          "description": "Run iperf server for bandwidth testing"
+        }
+      ]
+    },
+    {
+      "title": "File and Text Tools",
+      "commands": [
+        {
+          "command": "find / -name <filename>",
+          "description": "Find files by name"
+        },
+        {
+          "command": "grep -r 'pattern' /path",
+          "description": "Search for pattern in files"
+        },
+        {
+          "command": "sed -i 's/old/new/g' file",
+          "description": "Replace text in files"
+        },
+        {
+          "command": "awk '{print $1}' file",
+          "description": "Text processing tool"
+        },
+        {
+          "command": "tail -f /var/log/syslog",
+          "description": "Follow log file in real-time"
+        },
+        {
+          "command": "less /var/log/messages",
+          "description": "View file with pagination"
+        },
+        {
+          "command": "journalctl -f",
+          "description": "Follow systemd journal logs"
+        }
+      ]
+    },
+    {
+      "title": "Performance Analysis",
+      "commands": [
+        {
+          "command": "iostat -x 1",
+          "description": "Report CPU and I/O statistics"
+        },
+        {
+          "command": "mpstat -P ALL 1",
+          "description": "Report CPU utilization"
+        },
+        {
+          "command": "perf top",
+          "description": "System profiling tool"
+        },
+        {
+          "command": "strace <command>",
+          "description": "Trace system calls and signals"
+        },
+        {
+          "command": "lsof",
+          "description": "List open files"
+        },
+        {
+          "command": "pstree",
+          "description": "Display process tree"
+        },
+        {
+          "command": "slabtop",
+          "description": "Display kernel slab cache information"
+        }
+      ]
+    },
+    {
+      "title": "Security Tools",
+      "commands": [
+        {
+          "command": "fail2ban-client status",
+          "description": "Show fail2ban status"
+        },
+        {
+          "command": "chage -l <username>",
+          "description": "Show password expiry information"
+        },
+        {
+          "command": "lastlog",
+          "description": "Show last login of all users"
+        },
+        {
+          "command": "last",
+          "description": "Show listing of last logged in users"
+        },
+        {
+          "command": "w",
+          "description": "Show who is logged on and what they are doing"
+        },
+        {
+          "command": "lynis audit system",
+          "description": "Security auditing tool"
+        },
+        {
+          "command": "openssl s_client -connect host:port",
+          "description": "Test SSL/TLS connections"
+        }
+      ]
+    },
+    {
+      "title": "Remote Administration",
+      "commands": [
+        {
+          "command": "ssh <user>@<host>",
+          "description": "Secure shell connection"
+        },
+        {
+          "command": "scp <file> <user>@<host>:<path>",
+          "description": "Secure copy files"
+        },
+        {
+          "command": "rsync -avz <src> <dest>",
+          "description": "Synchronize files/folders"
+        },
+        {
+          "command": "screen",
+          "description": "Terminal multiplexer"
+        },
+        {
+          "command": "tmux",
+          "description": "Terminal multiplexer alternative"
+        },
+        {
+          "command": "ssh-keygen -t rsa -b 4096",
+          "description": "Generate SSH key pair"
+        },
+        {
+          "command": "ssh-copy-id <user>@<host>",
+          "description": "Copy SSH key to server"
+        }
+      ]
+    },
+    {
+      "title": "System Configuration",
+      "commands": [
+        {
+          "command": "systemctl status <service>",
+          "description": "Check service status"
+        },
+        {
+          "command": "journalctl -u <service>",
+          "description": "View service logs"
+        },
+        {
+          "command": "timedatectl",
+          "description": "Control system time and date"
+        },
+        {
+          "command": "hostnamectl",
+          "description": "Control system hostname"
+        },
+        {
+          "command": "localectl",
+          "description": "Control system locale and keyboard"
+        },
+        {
+          "command": "update-alternatives --config <name>",
+          "description": "Configure system alternatives"
+        },
+        {
+          "command": "dpkg-reconfigure <package>",
+          "description": "Reconfigure an installed package"
+        }
+      ]
+    }
+  ],
+  "tmuxTip": {
+    "title": "Use tmux / screen for long-running commands",
+    "bodyRich": "Anything that takes longer than a coffee break — a backup, a long upgrade, a big rsync — should run inside <code>tmux</code> or <code>screen</code>. SSH disconnects don't kill the session, and you can re-attach from anywhere with <code>tmux attach</code>."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/utils/system-utils",
+        "label": "System Utilities Installer",
+        "tail": " — install any of these tools that are missing."
+      },
+      {
+        "href": "/docs/help-info/system-commands",
+        "label": "Useful System Commands",
+        "tail": " — Proxmox-specific inspection commands."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Help and Info overview",
+        "tail": "."
+      }
+    ]
+  }
+}

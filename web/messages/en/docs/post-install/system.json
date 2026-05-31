@@ -1,0 +1,133 @@
+{
+  "meta": {
+    "title": "Post-Install: System | ProxMenux Documentation",
+    "description": "System-level optimizations in the ProxMenux Customizable post-install script: journald and logrotate size limits, higher kernel and file-descriptor limits, balanced memory tuning, kexec for quick reboots, and kernel panic recovery."
+  },
+  "header": {
+    "title": "Post-Install: System",
+    "section": "Settings post-install Proxmox"
+  },
+  "intro": {
+    "title": "What this category covers",
+    "body": "Six independent, system-level optimizations. They tune <strong>journald</strong> and <strong>logrotate</strong> to stop logs from filling the disk, raise <strong>kernel and file-descriptor limits</strong> so applications with many open files don't hit ceilings, <strong>balance memory</strong> for a virtualization host, add <strong>kexec</strong> for \"reboots without the BIOS\", and configure <strong>automatic recovery</strong> on kernel panic. All six are tracked and reversible from the Uninstall menu."
+  },
+  "journald": {
+    "heading": "Optimize journald",
+    "intro": "Rewrites <code>/etc/systemd/journald.conf</code> with sane defaults so the systemd journal can't slowly eat your root partition, then restarts <code>systemd-journald</code> and vacuums existing logs.",
+    "keyTitle": "Key values",
+    "keyItems": [
+      "<code>Storage=persistent</code> — keep logs on disk across reboots.",
+      "<code>SystemMaxUse=64M</code> / <code>RuntimeMaxUse=60M</code> — hard caps on journal disk/memory usage.",
+      "<code>Compress=yes</code>, <code>Seal=no</code> — compress logs, skip forward-secure sealing (saves CPU).",
+      "<code>MaxLevelStore=info</code> — store info and above (required for ProxMenux Monitor's log viewer and for Fail2Ban to detect SSH/Proxmox auth failures from the journal).",
+      "Rate-limits: <code>1000 events / 30 s</code> to prevent log flooding.",
+      "<code>ForwardToSyslog=no</code>, <code>ForwardToWall=no</code> — don't duplicate messages to syslog or broadcast to consoles."
+    ],
+    "tipTitle": "Why MaxLevelStore=info matters",
+    "tipBody": "Using a stricter level like <code>warning</code> makes ProxMenux Monitor's log viewer show nearly identical entries across all date ranges (because most activity is info-level), and it prevents Fail2Ban from seeing failed logins. If you want less log volume, rely on the <code>SystemMaxUse</code> cap and <code>RateLimitBurst</code> instead of lowering the stored level."
+  },
+  "logrotate": {
+    "heading": "Optimize logrotate",
+    "intro": "Rewrites <code>/etc/logrotate.conf</code> with a tighter policy suitable for a host that's also part of an SSD-protecting Log2RAM setup: daily rotation, 7-day retention, 10 MB size trigger, compression, and <code>copytruncate</code> so active services keep writing without reopening their log files. Original <code>logrotate.conf</code> is backed up to <code>.bak</code> on first apply.",
+    "tipTitle": "Log2RAM-friendly",
+    "tipBody": "The <code>size 10M</code> trigger means logs rotate on size <em>or</em> daily, whichever comes first. Combined with Log2RAM's RAM-backed <code>/var/log</code>, this keeps the working set small so flushes to disk stay cheap."
+  },
+  "limits": {
+    "heading": "Increase various system limits",
+    "intro": "Raises a bunch of kernel, systemd and PAM limits that default to values too low for a host running many VMs, containers and networked services.",
+    "headerFile": "File",
+    "headerSets": "What it sets",
+    "rows": [
+      {
+        "file": "/etc/sysctl.d/99-maxwatches.conf",
+        "sets": "<code>fs.inotify.max_user_watches / max_user_instances / max_queued_events = 1048576</code>"
+      },
+      {
+        "file": "/etc/sysctl.d/99-maxkeys.conf",
+        "sets": "<code>kernel.keys.maxkeys / root_maxkeys = 1000000</code>"
+      },
+      {
+        "file": "/etc/sysctl.d/99-swap.conf",
+        "sets": "<code>vm.swappiness = 10</code>, <code>vm.vfs_cache_pressure = 100</code>"
+      },
+      {
+        "file": "/etc/sysctl.d/99-fs.conf",
+        "sets": "<code>fs.nr_open / file-max = 2097152</code>, <code>fs.aio-max-nr = 1048576</code>"
+      },
+      {
+        "file": "/etc/security/limits.d/99-limits.conf",
+        "sets": "<code>nofile</code> and <code>nproc</code> to 1,048,576 (unlimited for root)"
+      },
+      {
+        "file": "/etc/systemd/system.conf + user.conf",
+        "sets": "<code>DefaultLimitNOFILE=1048576</code> for systemd services"
+      },
+      {
+        "file": "/etc/pam.d/common-session + runuser-l",
+        "sets": "<code>session required pam_limits.so</code> so the above apply to login shells"
+      },
+      {
+        "file": "/root/.profile",
+        "sets": "<code>ulimit -n 1048576</code> for the root shell"
+      }
+    ],
+    "tipTitle": "Why inotify matters",
+    "tipBody": "Applications like Docker, Syncthing, Node.js watchers, Plex's library scanner and many more hit <code>max_user_watches</code> quickly. Default on Debian is 8192 — a single running Plex can exhaust it. 1M is generous and costs ~1 KB of RAM per watch, which is negligible."
+  },
+  "memory": {
+    "heading": "Optimize memory settings",
+    "intro": "Writes a balanced sysctl profile to <code>/etc/sysctl.d/99-memory.conf</code>. Designed for a hypervisor host — prefers keeping VM working sets in RAM and frees pages proactively so allocation bursts don't stall.",
+    "warnTitle": "swappiness=10 on memory-tight hosts",
+    "warnBody": "On a host with 16 GB RAM running many VMs, lowering swappiness can push the kernel to OOM-kill processes instead of swapping. If you're routinely seeing OOM events, raise swappiness back to 30–60 in <code>/etc/sysctl.d/99-memory.conf</code> after the script runs."
+  },
+  "kexec": {
+    "heading": "Enable fast reboots (kexec)",
+    "intro": "Installs <code>kexec-tools</code> and wires it up so you can reboot the host straight into a new kernel <em>without going through BIOS/UEFI firmware</em>. On big servers where POST takes 45 – 90 seconds, this turns a reboot from a coffee break into a few seconds of downtime.",
+    "installsTitle": "What ProxMenux installs",
+    "installsItems": [
+      "Package <code>kexec-tools</code> (with debconf pre-answered so apt doesn't prompt during install).",
+      "Systemd unit <code>/etc/systemd/system/kexec-pve.service</code> — loads the Proxmox kernel and initrd into memory at boot, reusing the current cmdline.",
+      "An alias in <code>/root/.bash_profile</code>: <code>reboot-quick</code> → <code>systemctl kexec</code>."
+    ],
+    "usageIntro": "Usage after the next reboot (or manual <code>systemctl start kexec-pve</code>):",
+    "warnTitle": "When not to use kexec",
+    "warnBody": "kexec skips firmware-level init. If you rely on BIOS/UEFI to reset hardware state — for example, a GPU doing passthrough that only resets cleanly on full POST, or a troublesome HBA firmware — kexec reboots may leave those devices in a half-initialized state. Use a normal <code>reboot</code> after kernel upgrades or when you need BIOS/UEFI changes to take effect. <code>reboot-quick</code> is for everyday restarts."
+  },
+  "panic": {
+    "heading": "Enable restart on kernel panic",
+    "intro": "Makes the kernel <strong>auto-reboot</strong> instead of sitting forever on a panic screen. Critical on headless/remote Proxmox hosts where a hung kernel means all your VMs are down until you can power-cycle the box.",
+    "tipTitle": "Pair this with remote console access",
+    "tipBody": "Auto-reboot is a recovery mechanism, not a debug tool. If you want to <em>investigate</em> a panic rather than just come back up, use <link>the kexec option</link> above with the kernel kdump support (not configured by ProxMenux) or capture a serial console to another host before enabling auto-reboot."
+  },
+  "verify": {
+    "heading": "Verification",
+    "intro": "After applying the System optimizations:",
+    "tipTitle": "Fully reversible",
+    "tipBody": "All six options are tracked in <code>installed_tools.json</code>, so they appear in <link>Uninstall Optimizations</link> if you want to back any of them out. Reverts restore the sysctl files' defaults, drop the systemd unit and alias for kexec, and reset journald/logrotate to stock Debian configs."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "label": "Useful System Commands",
+        "href": "/docs/help-info/system-commands",
+        "tail": " — verify the changes (free -h, journalctl, ulimit -a)."
+      },
+      {
+        "label": "Performance",
+        "href": "/docs/post-install/performance",
+        "tail": " — additional system-level tuning (pigz)."
+      },
+      {
+        "label": "Uninstall Optimizations",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — revert any of these changes."
+      },
+      {
+        "label": "Customizable Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — back to the parent menu."
+      }
+    ]
+  }
+}

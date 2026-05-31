@@ -4,9 +4,33 @@
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 07/04/2026
+# ==========================================================
+# Description:
+# Exports a Proxmox VM to OVA (single TAR archive) or OVF
+# (descriptor + VMDK files) using the standard DMTF OVF schema.
+# The exported package is portable and importable on VMware
+# (ESXi / Workstation / Fusion), VirtualBox and Proxmox itself
+# (via the matching import_vm_ova_ovf.sh).
+#
+# Features:
+#   - Dependency check (dialog, qm, pvesm, qemu-img, tar, sha1sum).
+#   - VM picker from 'qm list'; offers graceful shutdown (qm
+#     shutdown --timeout 120) or force-stop (qm stop) for running
+#     VMs.
+#   - Format selector: OVA (single portable file) or OVF
+#     (descriptor + external VMDK files).
+#   - Destination directory selector (presets + manual path), with
+#     write-access and free-space pre-flight (~120% of virtual disk
+#     for OVF, ~220% for OVA).
+#   - Disk inventory excludes CD-ROMs and cloud-init drives.
+#   - Conversion via 'qemu-img convert -O vmdk -o subformat=
+#     streamOptimized' (single-pass VMware-friendly format).
+#   - OVF descriptor with vCPU / memory / SCSI controller / disks /
+#     NIC count, plus SHA1 manifest (.mf) of all files.
+#   - Temporary working directory cleaned on EXIT via trap.
 # ==========================================================
 
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
@@ -533,8 +557,20 @@ run_export() {
             return 1
         fi
 
+        # Validate the produced VMDK. `qemu-img check` reports leaks /
+        # corrupted clusters that the convert exit code might not have
+        # surfaced (silent partial-write under disk pressure, qemu-img
+        # bug, etc.). Audit Tier 7 — `export_vm_ova_ovf.sh` no valida
+        # integridad del VMDK convertido.
+        if command -v qemu-img >/dev/null 2>&1; then
+            if ! qemu-img check -q "$dst" 2>/dev/null; then
+                msg_error "$(translate "Integrity check failed on") $disk_name"
+                return 1
+            fi
+        fi
+
         EXPORT_DISK_FILES+=("$disk_name")
-        msg_ok "$(translate "Converted:") $disk_name"
+        msg_ok "$(translate "Converted + verified:") $disk_name"
     done
 
     local ovf_file mf_file

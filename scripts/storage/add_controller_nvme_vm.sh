@@ -39,12 +39,6 @@ if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh" ]]; then
 elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh" ]]; then
   source "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh"
 fi
-if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh" ]]; then
-  source "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh"
-elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh" ]]; then
-  source "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh"
-fi
-
 load_language
 initialize_cache
 
@@ -53,7 +47,6 @@ SELECTED_VM_NAME=""
 declare -a SELECTED_CONTROLLER_PCIS=()
 IOMMU_PENDING_REBOOT=0
 IOMMU_ALREADY_ACTIVE=0
-NEED_HOOK_SYNC=false
 WIZARD_CONFLICT_POLICY=""
 WIZARD_CONFLICT_SCOPE=""
 
@@ -568,7 +561,6 @@ resolve_disk_conflicts() {
         for vmid in "${source_vms[@]}"; do
           _vm_onboot_is_enabled "$vmid" && qm set "$vmid" -onboot 0 >/dev/null 2>&1
         done
-        NEED_HOOK_SYNC=true
         new_pci_list+=("$pci")
         ;;
       move_remove_source)
@@ -697,12 +689,6 @@ apply_assignment() {
       msg_error "$(translate "Failed to assign Controller/NVMe") (${pci})"
     fi
   done
-
-  if $NEED_HOOK_SYNC && declare -F sync_proxmenux_gpu_guard_hooks >/dev/null 2>&1; then
-    ensure_proxmenux_gpu_guard_hookscript
-    sync_proxmenux_gpu_guard_hooks
-    msg_ok "$(translate "VM hook guard synced for shared controller/NVMe protection")"
-  fi
 
   echo ""
   echo -e "${TAB}${BL}Log: ${LOG_FILE}${CL}"

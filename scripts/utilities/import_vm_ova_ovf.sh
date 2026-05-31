@@ -4,33 +4,51 @@
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 10/04/2026
 # ==========================================================
 # Description:
-# Imports a virtual machine from an OVA or OVF package into Proxmox VE.
-# Compatible with exports from VMware ESXi, VMware Workstation/Fusion,
-# VirtualBox, and Proxmox itself (via export_vm_ova_ovf).
+# Imports a virtual machine from an OVA or OVF package into
+# Proxmox VE. Compatible with exports from VMware (ESXi /
+# Workstation / Fusion), VirtualBox and Proxmox itself (via the
+# matching export_vm_ova_ovf.sh).
 #
-# What is imported:
-#   - Disk images (VMDK converted to the target storage format)
-#   - CPU and memory settings
-#   - Number of network interfaces
-#   - VM name and OS type hint
+# Features:
+#   - File picker: scans /var/lib/vz/dump and /var/lib/vz/template/iso
+#     by default, manual path also supported. Lists every .ova / .ovf.
+#   - OVA auto-extracted to /tmp/.proxmenux-import-* with cleanup
+#     trap; OVF used in place.
+#   - OVF parsed via AWK to extract VM name, vCPU count, memory
+#     (RASD ResourceType 4), NIC count (type 10) and disk file
+#     references (.vmdk / .qcow2 / .img / .raw).
+#   - OS-type heuristic: maps Linux -> l26, Windows -> win10,
+#     anything else -> other.
+#   - Dialog flow for VMID (suggests pvesh nextid), name, target
+#     storage (pvesm status -content images), bridge (auto-picks
+#     when only one exists).
+#   - VM created with --scsihw lsi --net0 e1000,bridge=...; extra
+#     NICs added per OVF NIC count.
+#   - Disks imported with 'qm importdisk' (storage-native format),
+#     then attached as scsiN and unusedN markers cleared.
+#   - Boot config set to scsi0.
 #
 # What requires manual review after import:
-#   - Network bridge assignment (vmbr0 assigned by default)
-#   - NIC model (e1000 by default — change to VirtIO if guest supports it)
-#   - Firmware (BIOS/UEFI — must match what the original VM used)
+#   - Network bridge assignment (vmbr0 assigned by default).
+#   - NIC model (e1000 by default -- change to VirtIO if guest
+#     supports it).
+#   - Firmware (BIOS / UEFI -- must match the original VM).
 #   - VirtIO/qemu-guest-agent installation inside the guest (especially from ESXi)
 #   - PCI passthrough, TPM, cloud-init, snapshots — not portable in OVF/OVA
 # ==========================================================
 
 BASE_DIR="/usr/local/share/proxmenux"
+LOCAL_SCRIPTS="$BASE_DIR/scripts"
 UTILS_FILE="$BASE_DIR/utils.sh"
+INSTALL_HELPERS="$LOCAL_SCRIPTS/global/utils-install-functions.sh"
 
 [[ -f "$UTILS_FILE" ]] && source "$UTILS_FILE"
+[[ -f "$INSTALL_HELPERS" ]] && source "$INSTALL_HELPERS"
 load_language
 initialize_cache
 
@@ -62,6 +80,46 @@ BRIDGE="vmbr0"
 # -------------------------------------------------------
 # HELPERS
 # -------------------------------------------------------
+
+# Ensure GNU awk (gawk) is installed before parsing OVF.
+# The OVF parser uses match($0, /regex/, array) — the 3-argument form
+# is a gawk extension; mawk (the Debian/Proxmox default 'awk') errors
+# with "syntax error at or near ,". Returns 0 on success, 1 if install
+# fails (caller is expected to abort with a clear error).
+ensure_gawk() {
+    if command -v gawk >/dev/null 2>&1; then
+        return 0
+    fi
+
+    echo
+
+    if type ensure_repositories &>/dev/null && type install_single_package &>/dev/null; then
+        # Canonical path: install_single_package handles its own
+        # msg_info / msg_ok / msg_error pair, so we don't open one here
+        # (would leave an orphan spinner overlapping with theirs).
+        if ! ensure_repositories; then
+            msg_error "$(translate "Failed to configure repositories.")"
+            return 1
+        fi
+        install_single_package "gawk" "gawk" "GNU awk (required for OVF parsing)"
+        case $? in
+            0|2) return 0 ;;
+            *) return 1 ;;
+        esac
+    fi
+
+    # Fallback when utils-install-functions.sh was not sourced.
+    # Here we own the spinner: msg_info opens it, msg_ok / msg_error closes it.
+    msg_info "$(translate "Installing gawk (required for OVF parsing)...")"
+    if apt-get update -qq >/dev/null 2>&1 && apt-get install -y gawk >/dev/null 2>&1; then
+        msg_ok "$(translate "gawk installed")"
+        return 0
+    fi
+
+    msg_error "$(translate "Failed to install gawk")"
+    msg_warn "$(translate "Install manually with:") apt-get install gawk"
+    return 1
+}
 
 human_bytes() {
     local bytes="$1"
@@ -194,8 +252,13 @@ prepare_ovf() {
 parse_ovf() {
     local ovf_file="$1"
 
+    # The parser below uses gawk's 3-argument match() form, which is
+    # NOT supported by mawk (the default 'awk' on Debian/Proxmox).
+    # ensure_gawk installs gawk on first use if missing.
+    ensure_gawk || return 1
+
     local result
-    result=$(awk '
+    result=$(gawk '
         BEGIN {
             in_item=0; rt=""; qty=""
             file_count=0; cap_count=0; net_count=0
@@ -224,11 +287,29 @@ parse_ovf() {
             if (a[1]+0 > 0) caps[cap_count++] = a[1]
         }
 
-        /<Item>|<Item / { in_item=1; rt=""; qty="" }
+        /<Item>|<Item / { in_item=1; rt=""; qty=""; au="" }
         /<\/Item>/ {
             if (in_item) {
                 if (rt=="3" && qty ~ /^[0-9]+$/) vcpu=qty
-                if (rt=="4" && qty ~ /^[0-9]+$/) mem=qty
+                # ResourceType=4 is Memory. Normalise `qty` to MiB based
+                # on AllocationUnits: VMware sometimes emits `byte`,
+                # `byte * 2^10` (KiB), `byte * 2^30` (GiB) or textual
+                # `MegaBytes`/`GigaBytes`. Defaulting to MiB blindly
+                # (the previous behaviour) imported 8 GB VMs as 8 MiB
+                # or vice-versa. Audit Tier 6 — OVF memory units.
+                if (rt=="4" && qty ~ /^[0-9]+$/) {
+                    if (au ~ /byte \* 2\^30/ || au ~ /[Gg]iga[Bb]yte/) {
+                        mem = qty * 1024
+                    } else if (au ~ /byte \* 2\^10/ || au ~ /[Kk]ilo[Bb]yte/) {
+                        mem = int((qty + 1023) / 1024)
+                    } else if (au ~ /byte \* 2\^20/ || au ~ /[Mm]ega[Bb]yte/ || au == "") {
+                        mem = qty
+                    } else if (au == "byte" || au ~ /^bytes?$/) {
+                        mem = int((qty + 1048575) / 1048576)
+                    } else {
+                        mem = qty
+                    }
+                }
                 if (rt=="10") net_count++
             }
             in_item=0
@@ -238,6 +319,9 @@ parse_ovf() {
         }
         /VirtualQuantity>/ {
             match($0, /VirtualQuantity>([0-9]+)</, a); qty=a[1]
+        }
+        /AllocationUnits>/ {
+            match($0, /AllocationUnits>([^<]+)</, a); au=a[1]
         }
 
         END {
@@ -601,7 +685,23 @@ main() {
     else
         echo ""
         msg_error "$(translate "Import failed. VM $NEW_VMID may be in partial state.")"
-        msg_info2 "$(translate "To remove partial VM:") qm destroy $NEW_VMID --destroy-unreferenced-disks 1"
+        # Offer to clean up the orphan VM. Most users want this — it
+        # otherwise sits in the PVE UI as a half-broken entry that the
+        # user has to clean up manually with the command we hint at. Audit
+        # Tier 6 — `import_vm_ova_ovf.sh` VM huérfana tras fallo.
+        if dialog --backtitle "$BACKTITLE" \
+            --title "$(translate "Cleanup partial VM?")" \
+            --yesno "$(translate "Remove the partial VM ($NEW_VMID) and its imported disks?")" 8 60; then
+            clear
+            msg_info "$(translate "Removing partial VM") $NEW_VMID..."
+            if qm destroy "$NEW_VMID" --destroy-unreferenced-disks 1 &>/dev/null; then
+                msg_ok "$(translate "Partial VM removed")"
+            else
+                msg_warn "$(translate "Could not remove VM automatically. Run manually:") qm destroy $NEW_VMID --destroy-unreferenced-disks 1"
+            fi
+        else
+            msg_info2 "$(translate "To remove partial VM:") qm destroy $NEW_VMID --destroy-unreferenced-disks 1"
+        fi
         echo ""
         msg_success "$(translate "Press Enter to return...")"
         read -r

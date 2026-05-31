@@ -1,0 +1,93 @@
+{
+  "meta": {
+    "title": "Installing ProxMenux | ProxMenux Documentation",
+    "description": "One-line installer for ProxMenux on Proxmox VE 8+ hosts. Choose between the Translation flavour (multi-language) or Normal (lightweight English-only). Beta channel also available for early access to new features.",
+    "ogTitle": "Installing ProxMenux | ProxMenux Documentation",
+    "ogDescription": "Install ProxMenux on Proxmox VE 8+ in one command. Stable and beta channels available."
+  },
+  "header": {
+    "title": "Installing ProxMenux",
+    "description": "One-line installer that runs on any Proxmox VE 8+ host. Auto-installs the dependencies it needs, downloads the scripts, sets up the menu launcher and (on first run) prompts you to pick a language. Two install channels: stable (default) and beta.",
+    "section": "Installation"
+  },
+  "stable": {
+    "heading": "Install",
+    "intro": "Run this in your Proxmox host's terminal:",
+    "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)\""
+  },
+  "during": {
+    "heading": "During installation",
+    "intro": "ProxMenux automatically installs and configures the dependencies it needs:",
+    "tablePackage": "Package",
+    "tablePurpose": "Purpose",
+    "rows": [
+      {
+        "package": "dialog",
+        "purpose": "Interactive terminal menus"
+      },
+      {
+        "package": "curl",
+        "purpose": "Downloads and connectivity checks"
+      },
+      {
+        "package": "jq",
+        "purpose": "JSON processing"
+      },
+      {
+        "package": "git",
+        "purpose": "Repository cloning and updates"
+      }
+    ],
+    "outro": "The installer also pulls down the script tree into <code>/usr/local/share/proxmenux/</code> and creates the launcher at <code>/usr/local/bin/menu</code>. The <strong>ProxMenux Monitor</strong> web dashboard is registered as <code>proxmenux-monitor.service</code>.",
+    "imageAlt": "ProxMenux installation in progress"
+  },
+  "first": {
+    "heading": "First launch",
+    "intro": "Once installed, run:",
+    "code": "menu",
+    "outro": "ProxMenux launches and you land on the main menu. From here you can run any of the workflows documented in this site — <postlink>Post-Install</postlink> is a good first stop on a fresh Proxmox host."
+  },
+  "beta": {
+    "heading": "Beta channel",
+    "calloutTitle": "What is the Beta Program?",
+    "calloutBody": "Want to try the latest features before the official release and help shape the final version? The ProxMenux Beta Program gives early access to new functionality — including the newest builds of ProxMenux Monitor — directly from the <code>develop</code> branch. Beta builds may contain bugs or incomplete features. Your feedback helps fix them before the stable release.",
+    "intro": "Install the beta version instead of the stable one with:",
+    "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/develop/install_proxmenux_beta.sh)\"",
+    "outro": "Beta is opt-in — you have to explicitly run the beta installer. When a stable release is published, ProxMenux notifies you on the next <code>menu</code> launch and offers to switch automatically. To opt out earlier, use the <betalink>Deactivate Beta Program</betalink> option in Settings."
+  },
+  "updating": {
+    "heading": "Updating",
+    "body": "ProxMenux self-updates. When a new version is available, you're prompted on the next <code>menu</code> launch and accepting replaces utility files and configurations in place. No manual download needed. Stable users get stable releases; beta users get beta releases (and the auto-switch prompt above when a stable cuts over)."
+  },
+  "uninstall": {
+    "heading": "Uninstalling",
+    "body": "From inside ProxMenux: <strong>Settings → Uninstall ProxMenux</strong>. Removes the script tree, launcher and Monitor service, optionally removes selected dependencies, restores <code>/root/.bashrc</code> and <code>/etc/motd</code> backups taken at install time. Full step-by-step: <uninstalllink>Uninstall ProxMenux</uninstalllink>."
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "virustotalTitle": "VirusTotal flags the install URL",
+    "virustotalBody": "A 1/95 detection by heuristic engines (e.g. <em>Chong Lua Dao</em>) is a known false positive. The installer uses the standard <code>curl | bash</code> pattern and downloads legitimate binaries (like <code>jq</code> from its official GitHub release), which aggressive scanners flag based on <em>behaviour</em> rather than actual malicious code. The installer is 100% open source and reviewable. More context in <issuelink>Issue #162</issuelink>.",
+    "aptTitle": "Install fails with apt errors",
+    "aptBody": "Usually a missing or misconfigured Proxmox repo. The installer pulls dependencies via apt; if the repo config is broken (often the case on bare-bones Proxmox 8 installs that haven't been updated yet), apt fails. Run <code>apt-get update</code> manually first and resolve any errors, then re-run the installer.",
+    "menuTitle": "`menu: command not found` after install",
+    "menuBody": "The launcher lives at <code>/usr/local/bin/menu</code>. Check it's there: <code>ls -lh /usr/local/bin/menu</code>. If missing, the install ended early — re-run the installer. If present but not found, your PATH doesn't include <code>/usr/local/bin</code>; either fix PATH or invoke the launcher directly: <code>/usr/local/bin/menu</code>.",
+    "stuckTitle": "The install hangs or doesn't progress",
+    "stuckBody": "If an install, reinstall or update gets stuck because of a connection issue, cancel with <strong>Ctrl + C</strong> and re-run the installer manually.",
+    "otherTitle": "Other issues",
+    "otherBody": "Check the <issueslink>GitHub Issues</issueslink> for known problems or open a new one with the relevant log output. Beta users: include <code>journalctl -u proxmenux-monitor -n 50</code> if Monitor-related."
+  },
+  "next": {
+    "heading": "What's next",
+    "postInstall": "<postlink>Post-Install Script</postlink> — tweaks and hardening for a fresh Proxmox host.",
+    "introduction": "<introlink>Introduction</introlink> — the full feature tour.",
+    "monitor": "<monitorlink>ProxMenux Monitor</monitorlink> — web dashboard for the host (auto-installed alongside the menu)."
+  },
+  "requirements": {
+    "heading": "Requirements & good practices",
+    "reqTitle": "Requirements",
+    "reqBody": "Proxmox VE <strong>8.x or later</strong>. PVE 7 and earlier are not supported. Internet access from the host (the installer downloads scripts, dependencies and — on the Translation install — Python packages from PyPI). Run as <strong>root</strong> on the Proxmox host.",
+    "inspectTitle": "Always inspect scripts you run from the internet",
+    "inspectReview": "<sourcelink>Review the installer source</sourcelink> before running.",
+    "inspectCoc": "All executable links follow the <coclink>ProxMenux Code of Conduct</coclink>."
+  }
+}

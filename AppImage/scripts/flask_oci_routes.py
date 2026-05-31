@@ -543,3 +543,41 @@ def update_auth_key(app_id: str):
             "success": False,
             "message": str(e)
         }), 500
+
+
+@oci_bp.route("/installed/<app_id>/update-check", methods=["GET"])
+@require_auth
+def installed_update_check(app_id: str):
+    """Check whether the LXC behind ``app_id`` has package updates
+    pending. Cached 24h server-side; pass ``?force=1`` to bypass.
+
+    The frontend renders the result as either an inline "Last checked:
+    HH:MM · No updates available" string or, when ``available`` is
+    true, the prominent purple "Update to vX.Y.Z" button.
+    """
+    try:
+        force = request.args.get("force", "").lower() in ("1", "true", "yes")
+        result = oci_manager.check_app_update_available(app_id, force=force)
+        return jsonify({"success": True, **result})
+    except Exception as e:
+        logger.error(f"Failed to check app update for {app_id}: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@oci_bp.route("/installed/<app_id>/update", methods=["POST"])
+@require_auth
+def installed_update_apply(app_id: str):
+    """Run `apk upgrade` inside the LXC. Restarts tailscale only if
+    its package was actually upgraded — restarting on every cycle
+    would cause an unnecessary brief disconnect."""
+    try:
+        result = oci_manager.update_app(app_id)
+        status_code = 200 if result.get("success") else 500
+        return jsonify(result), status_code
+    except Exception as e:
+        logger.error(f"Failed to apply update for {app_id}: {e}")
+        return jsonify({
+            "success": False,
+            "message": str(e),
+            "app_id": app_id,
+        }), 500

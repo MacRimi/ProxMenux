@@ -1,0 +1,153 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Panel: pestaña Resumen del sistema | ProxMenux Documentation",
+    "description": "La pestaña por defecto al abrir ProxMenux Monitor: cuatro tarjetas de métricas (CPU, memoria, VMs y LXCs activos, temperatura) con actualizaciones en vivo y sparkline, la gráfica de métricas históricas y los paneles condensados de Almacenamiento y Red con acceso directo a sus pestañas dedicadas."
+  },
+  "header": {
+    "title": "Panel: pestaña Resumen del sistema",
+    "description": "La primera pestaña que abre el panel. Cuatro tarjetas de métricas en vivo arriba, la gráfica de métricas históricas en el medio y paneles condensados de almacenamiento / red abajo — todo derivado de las mismas APIs que alimentan las pestañas dedicadas.",
+    "section": "ProxMenux Monitor · Panel"
+  },
+  "readOnly": {
+    "title": "Un vistazo de solo lectura",
+    "body": "Nada en esta pestaña es una superficie de control — todos los paneles son informativos. Las acciones viven en las pestañas dedicadas a las que enlazan: entra en Almacenamiento para gestionar discos, en VMs y LXCs para arrancar / parar guests, en la pestaña Seguridad para configurar autenticación, y así sucesivamente."
+  },
+  "captureAlt": "Pestaña Resumen del sistema — cuatro tarjetas de métricas (CPU, Memoria, VMs activos, Temperatura), gráfica de métricas del nodo y tarjetas resumen de Almacenamiento / Red",
+  "captureCaption": "La pestaña Resumen del sistema — la que abre el panel. Las cuatro tarjetas están en vivo, la gráfica de debajo es histórica y las dos tarjetas de abajo resumen Almacenamiento y Red.",
+  "topRow": {
+    "heading": "Fila superior: tarjetas de métricas en vivo",
+    "intro": "Cuatro tarjetas en una rejilla 2×2 en móvil, una sola fila en escritorio. Cada una se actualiza desde <code>/api/system</code> cada pocos segundos.",
+    "headerCard": "Tarjeta",
+    "headerWhat": "Qué muestra",
+    "headerSource": "Fuente",
+    "rows": [
+      {
+        "card": "CPU Usage",
+        "what": "Porcentaje actual con barra de progreso. Se actualiza cada ~1 s vía el sampler de signos vitales.",
+        "source": "psutil.cpu_percent()"
+      },
+      {
+        "card": "Memory Usage",
+        "what": "GB usados, porcentaje, GB totales. La barra de progreso sigue al porcentaje.",
+        "source": "psutil.virtual_memory()"
+      },
+      {
+        "card": "Active VM & LXC",
+        "what": "Recuento de guests actualmente en ejecución, con una insignia de desglose Running / Stopped y una línea al pie con los totales de VMs y LXCs.",
+        "source": "/api/vms (consolidado)"
+      },
+      {
+        "card": "Temperature",
+        "what": "Temperatura de CPU en °C con insignia de estado (cool / warm / hot) y un sparkline de 5 minutos detrás. Muestra <em>N/A</em> cuando no se detecta sensor. Pulsa para abrir la modal de detalle de temperatura.",
+        "source": "sensors / coretemp"
+      }
+    ],
+    "thresholdsTitle": "Colores de estado y umbrales aplicados aquí",
+    "thresholdsIntro": "Cada anillo, barra y sparkline en las cuatro tarjetas de métricas sigue la misma clasificación — <green/> <strong>verde</strong> por debajo de Warning, <amber/> <strong>ámbar</strong> entre Warning y Critical, <red/> <strong>rojo</strong> en Critical y por encima. Valores por defecto recomendados que vienen con ProxMenux:",
+    "thresholdsItems": [
+      "<strong>Uso de CPU</strong> — Warning 85 %, Critical 95 %.",
+      "<strong>Memoria</strong> — Warning 85 %, Critical 95 % (el swap también dispara Critical al 5 % usado — un host Proxmox sano apenas debería tocar swap).",
+      "<strong>Temperatura de CPU</strong> — Warning 80 °C, Critical 90 °C."
+    ],
+    "thresholdsOutro": "Cada valor es configurable por host — <link>Settings → Health Monitor Thresholds</link> es la fuente única de verdad y explica cómo ajustarlos.",
+    "sparklineTitle": "El sparkline es significativo",
+    "sparklineBody": "La tarjeta de temperatura dibuja una traza de 5 minutos bajo el valor, con la línea y el degradado siguiendo el mismo par Warning/Critical documentado arriba. Es la forma más rápida de ver si el host está en escalada térmica sin abrir la modal de detalle."
+  },
+  "middle": {
+    "heading": "Medio: gráficas de métricas del nodo",
+    "body1": "Bajo la fila superior se encuentra el componente <code>NodeMetricsCharts</code> — gráficas históricas de CPU, memoria y E/S de disco tomadas del propio almacén RRD de Proxmox vía <code>/api/node/metrics</code>. Un selector de timeframe alterna entre <em>1 hora / 24 horas / 7 días / 30 días / 1 año</em>; la resolución de los datos baja a medida que crece la ventana para que la gráfica se mantenga fluida.",
+    "body2": "Son las mismas gráficas que la UI web de Proxmox renderiza para un nodo, simplemente consolidadas en el tema oscuro del Monitor y alineadas con el resto de paneles."
+  },
+  "bottom": {
+    "heading": "Fila inferior: resúmenes de Almacenamiento y Red",
+    "storageTitle": "Tarjeta Storage Overview",
+    "storageIntro": "Una vista condensada del estado de almacenamiento del host, dividida en tres bloques:",
+    "storageItems": [
+      "<strong>Total Node Capacity</strong> — suma de todos los almacenamientos de VM/LXC más el almacenamiento local de sistema, con una barra de progreso en degradado del reparto total usado / libre.",
+      "<strong>Total Capacity / Physical Disks</strong> — titular de capacidad bruta y el recuento de discos físicos descubiertos.",
+      "<strong>VM/LXC Storage</strong> — usado / libre / porcentaje para los almacenamientos donde viven los guests, más un contador cuando hay más de uno configurado.",
+      "<strong>Local Storage (System)</strong> — el propio mount raíz / sistema del host, separado del pool de guests."
+    ],
+    "storageDrillIn": "La vista en detalle vive en la <link>pestaña Almacenamiento</link> — SMART por disco, detalles de pool ZFS, historial de observaciones, etc.",
+    "networkTitle": "Tarjeta Network Overview",
+    "networkBody1": "La línea superior muestra el recuento de interfaces activas (físicas + bridges combinados). Debajo, dos filas de insignias coloreadas para las interfaces en <code>up</code> — NICs físicas en azul, bridges en un color secundario. Un selector de timeframe arriba a la derecha (1 hora / 24 horas / 7 días / 30 días / 1 año) controla una pequeña gráfica de tráfico RX / TX.",
+    "networkBody2": "La vista en detalle por interfaz (IP/MAC, gráfica RRD, miembros del bridge, modo del bond, etc.) vive en la <link>pestaña Red</link>."
+  },
+  "refresh": {
+    "heading": "Modelo de refresco",
+    "intro": "Cada panel gestiona su propio estado de carga (<code>loadingStates.cpu</code>, <code>loadingStates.storage</code>, …) para que una fuente lenta no bloquee al resto. Mientras un panel está obteniendo datos, muestra un skeleton con animación pulse; los fetchs fallidos degradan con elegancia — por ejemplo, un sensor de temperatura ausente renderiza la tarjeta como <em>N/A</em> en vez de un error.",
+    "items": [
+      "<strong>Tarjetas de métricas superiores</strong> — refresco cada ~5 s. Los paneles de CPU y temperatura también reciben un push de 1 s del sampler de signos vitales.",
+      "<strong>Gráfica de métricas del nodo</strong> — refresco cada 30 s, o al cambiar de timeframe.",
+      "<strong>Tarjeta de almacenamiento</strong> — refresco cada 60 s. Los datos SMART se cachean más tiempo (la pestaña Almacenamiento dispara una lectura fresca bajo demanda).",
+      "<strong>Tarjeta de red</strong> — refresco cada 5 s en el timeframe activo.",
+      "<strong>Refresco manual</strong> — el botón Refresh en la cabecera fuerza a todos los paneles a recargar inmediatamente."
+    ]
+  },
+  "dataCollected": {
+    "heading": "Cómo se recopilan los datos",
+    "headerCard": "Tarjeta",
+    "headerEndpoint": "Endpoint",
+    "headerSource": "Fuente",
+    "rows": [
+      {
+        "card": "Pastilla de estado de la cabecera",
+        "endpoint": "/api/health",
+        "source": "El estado global cacheado que produce el Monitor de salud en cada ciclo."
+      },
+      {
+        "card": "CPU / RAM / Swap / Uptime",
+        "endpoint": "/api/system",
+        "source": "<code>/proc/stat</code>, <code>/proc/meminfo</code>, <code>/proc/uptime</code> con muestreo de CPU en ventana corta."
+      },
+      {
+        "card": "Info del host (kernel, BIOS, distro)",
+        "endpoint": "/api/info",
+        "source": "<code>uname -a</code>, <code>dmidecode</code>, versión de PVE. Cacheado por proceso."
+      },
+      {
+        "card": "Tarjetas de almacenamiento / red / VMs",
+        "endpoint": "/api/storage/summary, /api/network/summary, /api/vms",
+        "source": "Mira las pestañas dedicadas para cada una. Las tarjetas de la cabecera muestran una vista compactada de los mismos endpoints."
+      },
+      {
+        "card": "Cadencia de refresco",
+        "endpoint": "—",
+        "source": "CPU / red 5 s; almacenamiento / VMs 30 s; info estática cada 5 min. El botón Refresh de la cabecera fuerza una recarga inmediata en todos los paneles."
+      }
+    ],
+    "codeComment1": "# Llamada única que alimenta la pastilla de la cabecera",
+    "codeComment2": "# pública, sin token",
+    "codeComment3": "# Snapshot autenticada que usan las tarjetas"
+  },
+  "whereNext": {
+    "heading": "Por dónde seguir",
+    "items": [
+      {
+        "label": "Monitor de salud",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — la modal detrás de la pastilla de estado de la cabecera (diez categorías, descartes, supresión)."
+      },
+      {
+        "label": "Referencia de la API",
+        "href": "/docs/monitor/api",
+        "tail": " — los endpoints system, info y health."
+      },
+      {
+        "label": "Notificaciones",
+        "href": "/docs/monitor/notifications",
+        "tail": " — cómo los mismos estados se convierten en mensajes de Telegram / Discord / Email."
+      },
+      {
+        "label": "Índice del panel",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — las otras ocho pestañas de un vistazo."
+      },
+      {
+        "label": "Arquitectura",
+        "href": "/docs/monitor/architecture",
+        "tail": " — los hilos en background y las APIs que alimentan esta vista."
+      }
+    ]
+  }
+}

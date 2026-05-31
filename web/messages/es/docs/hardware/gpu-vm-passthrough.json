@@ -1,0 +1,178 @@
+{
+  "meta": {
+    "title": "Añadir GPU a VM (Passthrough) | ProxMenux Documentation",
+    "description": "Pasa una GPU Intel, AMD o NVIDIA a una VM Proxmox con rendimiento cercano al nativo. ProxMenux gestiona la preparación del host (módulos VFIO, blacklist de drivers, cmdline del kernel), la configuración de la VM (hostpci, función de audio, hermanos del grupo IOMMU), workarounds específicos del fabricante (Code 43 de NVIDIA, reset bug de AMD, dump de ROM) y conflictos de switch-mode con LXCs."
+  },
+  "header": {
+    "title": "Añadir GPU a VM (Passthrough)",
+    "description": "Dale una de tus GPUs a una máquina virtual con rendimiento cercano al nativo. ProxMenux detecta Intel / AMD / NVIDIA, valida IOMMU, analiza el grupo IOMMU de la GPU para pasar cada dispositivo hermano junto, configura VFIO en el host, escribe las líneas hostpci correctas en la config de la VM y aplica fixes específicos del fabricante cuando hace falta.",
+    "section": "Hardware: GPUs y Coral-TPU"
+  },
+  "intro": {
+    "title": "Qué hace esto",
+    "body": "Todo lo que la <pveLink>wiki oficial de Proxmox de PCI passthrough</pveLink> te explica paso a paso manualmente — habilitar IOMMU, módulos VFIO, blacklisting de drivers, descubrimiento de vendor ID, setup de <code>hostpci</code>, dump de ROM en AMD, ocultación de KVM en NVIDIA — hecho en una sola ejecución con comprobaciones de cordura en cada paso. El script también es consciente de las <em>otras</em> cosas en tu host: si la misma GPU ya está asignada a un LXC u otra VM, te ofrece migrar limpiamente en lugar de romper silenciosamente el setup existente."
+  },
+  "who": {
+    "heading": "¿Para quién es esto?",
+    "body": "Tienes una GPU física en tu host Proxmox y quieres que una <strong>máquina virtual</strong> (Windows gaming, macOS, un nodo headless de cómputo en GPU, un media server en VM) la use directamente. Pasar una GPU a una VM no es lo mismo que pasarla a un LXC — las VMs necesitan que el kernel trate la GPU como dispositivo VFIO (en esencia \"el host no la tocará\"), lo que significa que el host no puede usar esa GPU para nada más mientras la VM esté en ejecución. Para transcoding / cómputo en <em>LXC</em>, usa <lxcLink>Añadir GPU a LXC</lxcLink> — comparte la GPU y no necesita VFIO."
+  },
+  "prereqs": {
+    "title": "Antes de empezar",
+    "gpu": "<strong>Una GPU soportada</strong> instalada físicamente. El script detecta Intel, AMD y NVIDIA vía <code>lspci</code>.",
+    "gpuCheck": "lspci | grep -iE 'VGA|3D|Display'",
+    "iommu": "<strong>Virtualización IOMMU</strong> disponible en BIOS/UEFI (Intel VT-d o AMD-Vi). Si está apagada a nivel de firmware, ninguna config de Linux lo arregla — tienes que habilitarla primero en la BIOS. El script detecta esto y se ofrece a habilitarlo en el lado del SO.",
+    "q35": "La VM destino usa machine type <strong>q35</strong>. El antiguo <code>i440fx</code> no soporta de forma fiable el passthrough PCIe y el script se negará a continuar.",
+    "q35Check": "qm config '<'vmid'>' | grep machine",
+    "moreGpus": "Preferiblemente <strong>más de una GPU</strong> en el host, o acceso por consola en otra salida (IPMI, KVM-over-IP, serie). Una vez pases la única GPU a una VM, la consola del host se queda a oscuras. Con dos GPUs NVIDIA puedes pasar una a una VM y mantener la otra en el host — el script gestiona esto por BDF (ver <em>NVIDIA</em> en las notas del fabricante más abajo).",
+    "nvidiaInstalled": "Si estás en un Proxmox que ya instaló el driver de NVIDIA vía <nvidiaLink>NVIDIA Drivers en el host</nvidiaLink>: la GPU que pases a la VM se desvincula del driver <code>nvidia</code> del host y se vincula a <code>vfio-pci</code>. El módulo <code>nvidia</code> sigue cargado, así que cualquier <strong>otra</strong> GPU NVIDIA que tengas en el host sigue funcionando con <code>nvidia-smi</code>."
+  },
+  "pickOne": {
+    "title": "Passthrough a VM vs compartición con LXC — elige uno por GPU",
+    "body": "Una GPU vinculada a <code>vfio-pci</code> para passthrough a VM no puede usarla simultáneamente el host ni un LXC. Si tienes dos GPUs, puedes dedicar una a cada ruta. Si solo tienes una, elige:",
+    "vmItem": "<strong>Ruta VM (esta página):</strong> acceso completo al hardware, pero exclusivo para la VM dueña de la GPU mientras esté en ejecución.",
+    "lxcItem": "<strong>Ruta LXC (<lxcLink>Añadir GPU a LXC</lxcLink>):</strong> compartida con el host y otros contenedores, ideal para transcoding, sin magia VFIO."
+  },
+  "running": {
+    "heading": "Ejecutar el instalador",
+    "body": "Abre ProxMenux en el host, ve a <strong>Hardware: GPUs and Coral-TPU → Add GPU to VM</strong>.",
+    "imageAlt": "Entrada del menú 'Add GPU to VM' dentro de Hardware: GPUs and Coral-TPU"
+  },
+  "howRuns": {
+    "heading": "Cómo se ejecuta el script",
+    "body": "El flujo tiene tres fases con separación clara entre \"recopilar información y decisiones\" y \"aplicar cambios realmente\". Hasta la confirmación final, no se ha tocado nada en tu host ni en la VM."
+  },
+  "walkthrough": {
+    "heading": "Recorriendo el flujo",
+    "detect": {
+      "title": "Detectar GPUs y comprobar IOMMU",
+      "body": "El script lista cada GPU que encuentra. Si IOMMU no está ya habilitado en la cmdline del kernel en ejecución, recibirás un prompt sí/no para añadir <code>intel_iommu=on</code> (o <code>amd_iommu=on</code>) + <code>iommu=pt</code> al archivo de arranque correcto — <code>/etc/kernel/cmdline</code> en ZFS (systemd-boot) o <code>/etc/default/grub</code> en LVM/ext4. Si aceptas y la cmdline del kernel cambia, el script marca que el prompt de reinicio al final será obligatorio.",
+      "tipTitle": "¿Ya ejecutaste post-instalación?",
+      "tipBody": "Si habilitaste anteriormente <postLink>soporte VFIO IOMMU</postLink> desde los scripts post-instalación, IOMMU ya está activo y este paso pasa silenciosamente. Bien.",
+      "imageAlt": "Lista de GPUs detectadas con fabricante y dirección PCI"
+    },
+    "preflight": {
+      "title": "Elegir una GPU y ejecutar las comprobaciones previas",
+      "intro": "Una vez eliges la GPU, el script ejecuta una serie de comprobaciones que pueden bloquear el progreso:",
+      "items": [
+        "<strong>No en SR-IOV.</strong> Si el dispositivo es una Virtual Function o una Physical Function con VFs activas, el passthrough chocaría con el uso de SR-IOV. Bloqueado.",
+        "<strong>Aviso de GPU única.</strong> Si esta es la única GPU del host, recibirás un diálogo de aviso recordándote que después del reinicio la consola se queda a oscuras — asegúrate de tener acceso SSH o por la UI web desde otra máquina.",
+        "<strong>Método de reset AMD.</strong> Las GPUs AMD tienen un largo historial de no resetear limpiamente entre paradas y arranques de VM. El script comprueba <code>/sys/bus/pci/devices/&lt;pci&gt;/reset_method</code>: si la tarjeta es una APU sin FLR <em>bloquea</em> (prácticamente inutilizable); una tarjeta AMD dedicada sin FLR también se bloquea; cualquier cosa con un modo de reset desconocido avisa pero te deja continuar con override explícito.",
+        "<strong>No en D3cold.</strong> Algunas tarjetas AMD reportan estado de energía <code>D3cold</code> en reposo, lo que las hace invisibles durante el arranque de la VM. Bloqueado hasta que despiertes la GPU.",
+        "<strong>Análisis del grupo IOMMU.</strong> Lee <code>/sys/kernel/iommu_groups/</code> para encontrar cada dispositivo no-bridge del grupo de la GPU. <em>Todos ellos</em> se pasarán a la VM juntos — si tu placa base agrupa la GPU con una tarjeta de red, la tarjeta de red va también."
+      ],
+      "audioIntro": "<strong>Audio compañero.</strong> Dos rutas, según dónde viva el audio:",
+      "audioDgpu": "<strong>GPU discreta (NVIDIA / AMD):</strong> el audio HDMI está en la misma tarjeta como función <code>.1</code> del slot PCI de la GPU. Incluido automáticamente. Este dispositivo de audio nunca lo usó el host, así que nadie pierde nada.",
+      "audioIgpu": "<strong>iGPU Intel (o cualquier GPU sin hermano <code>.1</code>):</strong> el audio HDMI / analógico vive en el chipset en un slot distinto (<code>00:1f.3</code> normalmente). El script escanea el host, lista cada controlador de audio PCI con su driver actual (<code>snd_hda_intel</code>, etc.) y te pregunta cuál(es) pasar. Por defecto <strong>ninguno</strong> — tienes que aceptarlo explícitamente."
+    },
+    "pickVm": {
+      "title": "Elegir la VM destino",
+      "body": "Se te muestra la lista de VMs del host y eliges una. El script comprueba que la VM es q35 — los machine types BIOS/i440fx se rechazan porque el passthrough PCIe en ellos no es fiable. Si tienes una VM q35 con la GPU ya asignada (parcial o completamente), la entrada existente se reutiliza en lugar de duplicarse.",
+      "imageAlt": "Lista de VMs con nombre, ID y estado mostrada como selector"
+    },
+    "switchMode": {
+      "title": "Switch mode — gestionar que la GPU ya esté en otro sitio",
+      "intro": "El script escanea cada config de VM y cada config de LXC en el host buscando la GPU que elegiste. Tres resultados posibles:",
+      "items": [
+        "<strong>La GPU está libre.</strong> Nada que hacer, continúa.",
+        "<strong>La GPU está en otra VM.</strong> Se te ofrece quitarla de esa otra VM antes de asignarla aquí. Si rechazas, el script aborta — dos VMs no pueden compartir una asignación VFIO exclusiva.",
+        "<strong>La GPU está en un LXC (modo compartido).</strong> Se te ofrece quitar la configuración de passthrough del LXC (líneas <code>lxc.cgroup2.devices.allow</code> + <code>lxc.mount.entry</code>). El LXC dejará de ver la GPU, pero la VM la verá — esta es la mecánica de \"switch mode\" que le da a esta entrada de menú su etiqueta secundaria."
+      ],
+      "imageAlt": "Diálogo que ofrece quitar la GPU de un LXC antes de asignarla a la VM",
+      "smartTitle": "Los hermanos de audio también se limpian con inteligencia",
+      "smartBody": "Si la VM origen tenía dispositivos de audio extra adjuntos junto a la GPU, el script quita <strong>solo los que ahora son huérfanos</strong> — es decir, entradas de audio cuyo hermano de display también se está quitando. El audio vinculado a otra GPU que se queda en la VM se deja intacto. Esto importa cuando desadjuntas una iGPU Intel (que comparte el audio del chipset) de una VM que también tiene una tarjeta dedicada NVIDIA / AMD aún pasada: el audio HDMI de la dGPU (<code>02:00.1</code>) se queda, el audio del chipset (<code>00:1f.3</code>) se va."
+    },
+    "audioPick": {
+      "title": "(Si no hay hermano .1) Elegir qué controladores de audio incluir",
+      "body": "Solo ocurre para iGPUs Intel y setups similares con audio separado. Una checklist muestra cada controlador de audio PCI del host (excluyendo cualquiera ya en el grupo IOMMU de la GPU), etiquetado con su driver actual. Selecciona los que quieras — o ninguno, si la VM no necesita audio del hardware del host.",
+      "imageAlt": "Diálogo checklist con cada controlador de audio PCI del host (BDF + driver) cuando la GPU no tiene audio hermano .1",
+      "warnTitle": "No marques audio del que depende el host",
+      "warnBody": "Si el host usa actualmente un controlador de audio para algo — por ejemplo, el beep del shell de Proxmox o una VM a la que ya lo has pasado — marcarlo aquí significa que el host (y cualquier otra VM que lo comparta) pierde acceso después del reinicio. Ante la duda, déjalo vacío y siempre puedes volver a ejecutar el script más tarde para añadir audio si hace falta."
+    },
+    "summary": {
+      "title": "Revisar el resumen de confirmación",
+      "body": "Un diálogo final muestra exactamente qué está a punto de cambiar en el host y en la VM. Esta es la última salida — si algo se ve mal (un dispositivo extra en el grupo IOMMU que no esperabas, la GPU equivocada, la VM equivocada), cancela aquí y aún no se ha tocado nada.",
+      "imageAlt": "Diálogo de resumen listando los cambios del host (archivos VFIO/blacklist) y los cambios de config de la VM (líneas hostpci) antes de aplicar"
+    },
+    "hostApply": {
+      "title": "Se aplican los cambios del host",
+      "intro": "La Fase 2 se ejecuta de forma no interactiva. En el lado del host el script puede tocar:",
+      "items": [
+        "<code>/etc/modules</code> — añade <code>vfio</code>, <code>vfio_iommu_type1</code>, <code>vfio_pci</code> (más <code>vfio_virqfd</code> en kernels &lt; 6.2).",
+        "<code>/etc/modprobe.d/vfio.conf</code> — para AMD / Intel, define <code>options vfio-pci ids=&lt;vendor:device,...&gt; disable_vga=1</code> para que VFIO reclame la GPU pronto en el arranque. Para NVIDIA el archivo solo añade <code>softdep nvidia pre: vfio-pci</code> (más <code>_drm</code>/<code>_modeset</code>/<code>_uvm</code>) — el binding real es por BDF vía la regla udev de abajo. En AMD, también añade líneas <code>softdep</code> forzando que <code>vfio-pci</code> cargue antes de <code>radeon</code> / <code>amdgpu</code>.",
+        "<code>/etc/modprobe.d/iommu_unsafe_interrupts.conf</code> y <code>kvm.conf</code> — workarounds sensatos que la mayoría de VMs Windows / macOS necesitan (<code>allow_unsafe_interrupts=1</code>, <code>ignore_msrs=1</code>).",
+        "<code>/etc/modprobe.d/blacklist.conf</code> — pone en blacklist los drivers open-source compañeros (<code>nouveau</code>, <code>amdgpu</code>, <code>radeon</code>, <code>i915</code>) que si no agarrarían la GPU antes que VFIO. El módulo propietario <code>nvidia</code> <strong>nunca se pone en blacklist</strong> — sigue disponible para cualquier OTRA GPU NVIDIA que mantengas en el host.",
+        "<code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> + <code>/etc/proxmenux/vfio-bind.bdfs</code> — <strong>solo NVIDIA</strong>. Estado de binding por BDF. La regla udev aplica <code>ATTR'{'driver_override'}'=\"vfio-pci\"</code> en el evento PCI ADD para cada Bus:Device.Function rastreado, así que solo las GPUs que has pasado explícitamente van a VFIO. Esto es lo que hace que NVIDIA multi-GPU funcione — tus otras tarjetas NVIDIA mantienen su driver <code>nvidia</code> y siguen siendo usables en el host.",
+        "<strong>Solo AMD.</strong> Vuelca la ROM de la GPU desde sysfs (<code>/sys/bus/pci/.../rom</code>) o la tabla ACPI VFCT a <code>/usr/share/kvm/vbios_&lt;card&gt;.bin</code>. La VM la referencia vía <code>romfile=</code> para que las tarjetas que mal-reportan su propia VBIOS aún inicialicen correctamente.",
+        "<strong>Solo NVIDIA.</strong> Para y deshabilita los servicios NVIDIA del host que podrían sondear / bloquear la GPU en el arranque (<code>nvidia-persistenced</code>, <code>nvidia-powerd</code>, <code>nvidia-fabricmanager</code>). El propio módulo <code>nvidia</code> se deja cargado para que otras GPUs NVIDIA del host sigan funcionando con <code>nvidia-smi</code>.",
+        "<code>update-initramfs -u -k all</code> — solo se ejecuta si algo de lo de arriba ha cambiado realmente."
+      ]
+    },
+    "vmApply": {
+      "title": "La config de la VM se aplica vía qm set",
+      "body": "La config de la VM en <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> se actualiza vía <code>qm set</code> (nunca por <code>sed</code> directo):",
+      "after1": "Se añade un flag <code>x-vga=1</code> para cada fabricante <strong>excepto</strong> iGPU Intel — las GPUs integradas Intel no tienen VRAM dedicada para una consola pre-arranque, así que ese flag causa hangs.",
+      "after2": "Se añaden líneas <code>hostpciN</code> adicionales si el grupo IOMMU de la GPU contiene otros dispositivos que necesitas pasar juntos."
+    },
+    "reboot": {
+      "title": "Reiniciar si se tocó la config del host",
+      "body": "Si la Fase 2 cambió algo a nivel de módulo de kernel / cmdline / blacklist, se te pedirá reiniciar. El reinicio es obligatorio antes de arrancar la VM — si no la GPU sigue retenida por el driver del host y VFIO no puede reclamarla.",
+      "imageAlt": "Pantalla de resumen mostrando qué se cambió, seguida de un prompt de reinicio"
+    }
+  },
+  "vendors": {
+    "heading": "Notas específicas del fabricante",
+    "nvidiaHeading": "NVIDIA",
+    "nvidiaBody": "Los drivers de consumo de NVIDIA detectan que están corriendo en una VM y se niegan a inicializar con el infame error <em>\"Code 43\"</em>. El workaround de ProxMenux: ocultar KVM al guest (<code>hidden=1</code>), poner un hypervisor vendor ID falseado <code>NV43FIX</code> en la línea <code>args</code> y pasar <code>kvm=off</code>. Esto ha funcionado de forma fiable en drivers GeForce durante años. En tarjetas datacenter / Tesla / Quadro esto no hace falta — esos drivers están licenciados para virtualización.",
+    "nvidiaMultiHeading": "Soporte NVIDIA multi-GPU",
+    "nvidiaMultiBody": "Los hosts con dos o más GPUs NVIDIA son de primera clase. Puedes pasar una tarjeta a una VM y mantener la(s) otra(s) en el host para <code>nvidia-smi</code>, compartición de GPU con LXC o cualquier carga del lado del host. ProxMenux vincula VFIO <strong>por BDF</strong> (Bus:Device.Function) vía una regla udev en lugar de poner en blacklist globalmente el módulo <code>nvidia</code> — así el destino de cada tarjeta es independiente de las otras, incluso cuando ambas GPUs son del mismo modelo y comparten el mismo ID <code>vendor:device</code>. El driver nvidia del host sigue cargado; solo los BDFs específicos que selecciones se redirigen a <code>vfio-pci</code>.",
+    "amdHeading": "AMD",
+    "amdBody": "El \"AMD reset bug\" significa que algunas tarjetas crashean cuando la VM para y no pueden re-inicializarse sin un reinicio del host. ProxMenux pre-criba para esto leyendo el método de reset PCI, pero no puede arreglarlo después. Si lo encuentras, el fix de la comunidad es el módulo de kernel <vendorResetLink>vendor-reset</vendorResetLink>. El script no lo instala automáticamente — el módulo es una build DKMS que añades tú si ves fallos de reset. También en guests Windows, el servicio <em>RadeonResetBugFix</em> es el workaround común a nivel userspace.",
+    "intelHeading": "iGPU Intel",
+    "intelBody": "El passthrough de iGPU Intel es inestable pero posible en generaciones UHD 630+ con <sriovLink>i915-sriov-dkms</sriovLink> para SR-IOV. Para un caso simple de \"darle la iGPU a una VM\", el script la vincula exactamente como una GPU dedicada, pero se salta <code>x-vga=1</code> (las iGPUs no llevan una VBIOS pre-arranque). Perderás la salida de consola del host — planifícalo en consecuencia."
+  },
+  "verification": {
+    "heading": "Verificación"
+  },
+  "troubleshoot": {
+    "heading": "Solución de problemas",
+    "code43Title": "Code 43 en Windows (NVIDIA)",
+    "code43Body": "Los args de ocultación de KVM no se aplicaron. Comprueba <code>qm config &lt;vmid&gt; | grep -E \"cpu|args\"</code> — deberías ver <code>hidden=1</code> y <code>hv_vendor_id=NV43FIX</code>. Si faltan, vuelve a ejecutar el script y reselecciona la misma VM.",
+    "amdResetTitle": "La GPU AMD funciona una vez, falla al reiniciar la VM",
+    "amdResetBody": "El AMD reset bug. Soluciones (en orden): (1) reiniciar el host — la GPU será usable de nuevo para un ciclo más de VM; (2) instalar el módulo DKMS <code>vendor-reset</code> y añadir <code>softdep amdgpu pre: vendor-reset</code>; (3) dentro de Windows, instalar el servicio <em>RadeonResetBugFix</em>.",
+    "stuckBootTitle": "VM colgada arrancando / GPU no detectada",
+    "stuckBootBody": "Confirma que VFIO realmente retiene la GPU al arrancar: <code>lspci -nnk -d vendor:device</code> debe mostrar <code>Kernel driver in use: vfio-pci</code>. Si aún muestra el driver del fabricante, el blacklist no surtió efecto — revisa <code>/etc/modprobe.d/blacklist.conf</code> y <code>dmesg | grep vfio</code>, y regenera initramfs: <code>update-initramfs -u -k all</code> y luego reinicia.",
+    "darkTitle": "La consola del host se queda a oscuras tras reiniciar y no puedo entrar por SSH",
+    "darkBody": "Pasaste la GPU primaria sin tener acceso alternativo. Arranca en un recovery shell (ISO de rescate, IPMI), quita las líneas de la config de la VM (<code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code>) y quita las opciones vfio:",
+    "logTitle": "Revisa el log de instalación",
+    "logBody": "Cada ejecución escribe en <code>/tmp/add_gpu_vm.log</code>. Adjúntalo cuando pidas ayuda en GitHub."
+  },
+  "revert": {
+    "heading": "Revertir manualmente",
+    "intro": "Hoy no hay un atajo dedicado de \"quitar GPU de la VM\" en ProxMenux. Para desadjuntar limpiamente:"
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "Instalar drivers NVIDIA (Host)",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": " — instala los drivers en el host primero si también quieres la GPU usable desde ahí."
+      },
+      {
+        "label": "Añadir GPU a LXC",
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "tail": " — modelo alternativo: comparte la GPU con varios contenedores en lugar de dedicarla a una VM."
+      },
+      {
+        "label": "Switch GPU Mode (VM ↔ LXC)",
+        "href": "/docs/hardware/switch-gpu-mode",
+        "tail": " — cambia la misma GPU entre modos sin rehacer todo el cableado."
+      },
+      {
+        "label": "Comandos de GPU Passthrough",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": " — referencia de lspci, verificación de IOMMU, qm set hostpci."
+      }
+    ]
+  }
+}

@@ -1361,6 +1361,241 @@ def detect_networks() -> List[Dict[str, str]]:
 # =================================================================
 # Update Auth Key (for Tailscale re-authentication)
 # =================================================================
+# ─── Update / upgrade subsystem ──────────────────────────────────────────────
+#
+# Sprint 14.6: the Tailscale gateway lives in a tiny Alpine LXC. Alpine
+# itself doesn't ship a lot of moving parts, but the `tailscale` package
+# does cut a release every few weeks (CVE fixes, MagicDNS tweaks, derp
+# protocol bumps). We expose two operations:
+#
+#   * `check_app_update_available(app_id)` — readonly probe. Runs
+#     `apk update` (refresh package index) followed by
+#     `apk version -l '<' tailscale` (ask: is the installed version
+#     older than the upstream one?). Returns the current/latest pair.
+#     The raw probe takes ~2 seconds inside the CT, so we cache the
+#     result for 24 h (per app_id) — the periodic notification poll
+#     and the UI re-uses the same cache.
+#
+#   * `update_app(app_id)` — applies the upgrade. Runs `apk upgrade`
+#     so Alpine + tailscale + libs all roll forward together. If the
+#     tailscale package itself moved, we restart the service so the
+#     new daemon picks up.
+
+_APP_UPDATE_CACHE_TTL = 86400  # 24h — Tailscale ships maybe twice a month
+_app_update_cache: Dict[str, Dict[str, Any]] = {}
+
+
+def _check_running(app_id: str) -> Tuple[bool, Optional[int], str]:
+    """Resolve vmid + check the CT is running. Shared prelude for the
+    update helpers below — both bail with the same message shape."""
+    vmid = _get_vmid_for_app(app_id)
+    if not vmid:
+        return False, None, f"App {app_id} not found or not installed"
+    status = get_app_status(app_id)
+    if status.get("state") != "running":
+        return False, vmid, "Container must be running"
+    return True, vmid, ""
+
+
+def check_app_update_available(app_id: str, force: bool = False) -> Dict[str, Any]:
+    """Probe whether the LXC has package updates pending.
+
+    Returns ``{available, current_version, latest_version, packages,
+    last_checked_iso, error}``. ``packages`` is the full list of
+    upgradable packages so the UI can show a tooltip; ``available`` is
+    a convenience boolean that's true whenever ``packages`` is
+    non-empty.
+
+    ``force`` bypasses the 24h cache. The notification poll calls with
+    ``force=False`` so it doesn't hammer apk; the user clicking
+    "re-check" in the UI passes ``force=True``.
+    """
+    import datetime as _dt
+
+    now = time.time()
+    cached = _app_update_cache.get(app_id)
+    if not force and cached and now - cached.get("_cached_at", 0) < _APP_UPDATE_CACHE_TTL:
+        return cached
+
+    result: Dict[str, Any] = {
+        "app_id": app_id,
+        "available": False,
+        "current_version": None,
+        "latest_version": None,
+        "packages": [],
+        "last_checked_iso": _dt.datetime.utcnow().isoformat() + "Z",
+        "error": None,
+        "_cached_at": now,
+    }
+
+    ok, vmid, msg = _check_running(app_id)
+    if not ok:
+        result["error"] = msg
+        return result
+
+    # Step 1: refresh the apk index. Without this `apk version` checks
+    # against whatever was cached at install time and reports stale data.
+    rc, _, err = _run_pve_cmd(
+        ["pct", "exec", str(vmid), "--", "apk", "update"], timeout=30,
+    )
+    if rc != 0:
+        result["error"] = f"apk update failed: {err.strip()[:200]}"
+        return result
+
+    # Step 2: list packages whose installed version is < upstream.
+    # `apk version -l '<'` outputs lines like:
+    #   tailscale-1.74.0-r1                      < 1.78.3-r0
+    rc, out, err = _run_pve_cmd(
+        ["pct", "exec", str(vmid), "--", "apk", "version", "-l", "<"],
+        timeout=30,
+    )
+    if rc != 0:
+        result["error"] = f"apk version failed: {err.strip()[:200]}"
+        return result
+
+    packages: List[Dict[str, str]] = []
+    import re as _re
+    for line in (out or "").splitlines():
+        line = line.strip()
+        if not line or line.startswith("Installed:") or "<" not in line:
+            continue
+        # Split on `<` — left side is the installed pkg, right side is
+        # the upstream version string.
+        left, _, right = line.partition("<")
+        left = left.strip()
+        right = right.strip()
+        # Left looks like `tailscale-1.74.0-r1` — the package name is
+        # everything before the first `-<digit>` chunk.
+        m = _re.match(r"^(.+?)-(\d.+)$", left)
+        if not m:
+            continue
+        name = m.group(1)
+        current = m.group(2)
+        packages.append({"name": name, "current": current, "latest": right})
+        if name == "tailscale":
+            result["current_version"] = current
+            result["latest_version"] = right
+
+    result["packages"] = packages
+    result["available"] = bool(packages)
+
+    # Always surface the *installed* tailscale version, even when there
+    # is no update pending — the UI uses it for the "Tailscale v… · No
+    # updates available" line so the operator sees what's running
+    # without scrolling through `pct exec`. Cheap (~50ms) so we run it
+    # unconditionally; fail-soft keeps the rest of the result valid if
+    # tailscale isn't installed in the CT for some reason.
+    #
+    # `apk info tailscale` (without -v) prints lines like:
+    #   tailscale-1.90.9-r5 description:
+    #   ...
+    # The version comes off the first whitespace-separated token. We
+    # avoid `apk info -v` here because on recent Alpine that flag
+    # outputs the description+URL+size, not the version+release.
+    if not result["current_version"]:
+        try:
+            rc_v, out_v, _ = _run_pve_cmd(
+                ["pct", "exec", str(vmid), "--", "apk", "info", "tailscale"],
+                timeout=10,
+            )
+            if rc_v == 0:
+                for ln in (out_v or "").splitlines():
+                    token = ln.strip().split()[0] if ln.strip() else ""
+                    m_v = _re.match(r"^tailscale-(\d.+)$", token)
+                    if m_v:
+                        result["current_version"] = m_v.group(1)
+                        break
+        except Exception:
+            pass
+
+    _app_update_cache[app_id] = result
+    return result
+
+
+def update_app(app_id: str) -> Dict[str, Any]:
+    """Run `apk upgrade` inside the LXC and restart the tailscale
+    service if its package was updated.
+
+    Returns ``{success, message, packages_updated, tailscale_restarted}``.
+    Cache for `check_app_update_available` is invalidated on success
+    so the next status read reflects reality.
+    """
+    result: Dict[str, Any] = {
+        "app_id": app_id,
+        "success": False,
+        "message": "",
+        "packages_updated": [],
+        "tailscale_restarted": False,
+    }
+
+    ok, vmid, msg = _check_running(app_id)
+    if not ok:
+        result["message"] = msg
+        return result
+
+    # Snapshot of what's about to change so we can report back.
+    pre = check_app_update_available(app_id, force=True)
+    if pre.get("error"):
+        result["message"] = pre["error"]
+        return result
+    pending = pre.get("packages", [])
+    if not pending:
+        # Even when there's nothing to apply, drop the cached result.
+        # The frontend's "is there an update?" check might still be
+        # serving an older "available: true" entry from before another
+        # process or admin upgraded the CT manually — invalidating
+        # ensures the next probe rebuilds from reality.
+        _app_update_cache.pop(app_id, None)
+        result["success"] = True
+        result["message"] = "No updates pending"
+        return result
+
+    # Refresh + upgrade in a single shell so transient apk lock issues
+    # surface only once. `--no-cache` skips persisting the index — the
+    # CT is small, we don't want to bloat it.
+    print(f"[*] Running apk upgrade in CT {vmid} for app {app_id}...")
+    rc, out, err = _run_pve_cmd(
+        ["pct", "exec", str(vmid), "--", "sh", "-c",
+         "apk update && apk upgrade --no-cache"],
+        timeout=300,  # bigger packages can take a minute or two on slow links
+    )
+    if rc != 0:
+        result["message"] = f"apk upgrade failed: {err.strip()[:300] or out.strip()[:300]}"
+        return result
+
+    result["packages_updated"] = pending
+    tailscale_changed = any(p["name"] == "tailscale" for p in pending)
+
+    # Restart only when tailscale was the one that moved. Restarting
+    # always would force a brief disconnect every cycle even when only
+    # libs changed.
+    if tailscale_changed:
+        rc2, _, err2 = _run_pve_cmd(
+            ["pct", "exec", str(vmid), "--", "rc-service", "tailscale", "restart"],
+            timeout=60,
+        )
+        if rc2 == 0:
+            result["tailscale_restarted"] = True
+        else:
+            # Upgrade itself succeeded; service restart didn't. Surface
+            # both bits so the UI can show a partial-success banner.
+            result["message"] = (
+                f"Upgrade applied but tailscale restart failed: "
+                f"{err2.strip()[:200]}"
+            )
+
+    # Drop the cached availability so the next probe picks up the new
+    # state. Don't re-probe synchronously — the user just spent up to a
+    # few minutes waiting; the UI can fetch when it's ready.
+    _app_update_cache.pop(app_id, None)
+
+    result["success"] = True
+    if not result["message"]:
+        n = len(pending)
+        result["message"] = f"{n} package{'s' if n != 1 else ''} updated"
+    return result
+
+
 def update_auth_key(app_id: str, auth_key: str) -> Dict[str, Any]:
     """Update the Tailscale auth key for a running gateway."""
     result = {"success": False, "message": "", "app_id": app_id}

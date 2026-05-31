@@ -136,12 +136,30 @@ class NotificationEvent:
         return f"NotificationEvent({self.event_type}, {self.severity}, fp={self.fingerprint[:40]})"
 
 
+_HOSTNAME_CACHE: Dict[str, Any] = {'value': None, 'ts': 0.0}
+_HOSTNAME_CACHE_TTL = 5.0  # seconds
+
+
 def _hostname() -> str:
     """Get display hostname for notifications.
-    
+
     Returns the custom display name from notification settings if configured,
-    otherwise falls back to the system hostname.
+    otherwise falls back to the system FQDN (NOT truncated at the first dot —
+    a host called ``px.seeindustry.com`` is rendered in full so multi-host
+    deployments stay distinguishable).
+
+    Reads are cached for ~5 s so a burst of events (~tens per cycle) doesn't
+    hit the SQLite settings table on every call. The TTL is short enough that
+    a freshly-saved alias takes effect within seconds without restarting the
+    service — fixes the original behaviour where `self._hostname = _hostname()`
+    was cached in `__init__` and never refreshed.
     """
+    now = time.time()
+    cached = _HOSTNAME_CACHE.get('value')
+    if cached is not None and (now - _HOSTNAME_CACHE['ts']) < _HOSTNAME_CACHE_TTL:
+        return cached
+
+    resolved = ''
     # Try to read custom display name from notification settings
     try:
         db_path = Path('/usr/local/share/proxmenux/health_monitor.db')
@@ -156,15 +174,24 @@ def _hostname() -> str:
             row = cursor.fetchone()
             conn.close()
             if row and row[0] and row[0].strip():
-                return row[0].strip()
+                resolved = row[0].strip()
     except Exception:
         pass  # Fall back to system hostname
-    
-    # Fall back to system hostname
-    try:
-        return socket.gethostname().split('.')[0]
-    except Exception:
-        return 'proxmox'
+
+    if not resolved:
+        # Use FULL FQDN — never truncate at the first dot. The previous
+        # `.split('.')[0]` produced misleading bare labels like "px" when the
+        # alias was missing or unreadable, with no way for the operator to
+        # tell which of their `px.*.example.com` nodes the notification came
+        # from. The Display Name (alias) remains the recommended override.
+        try:
+            resolved = socket.gethostname()
+        except Exception:
+            resolved = 'proxmox'
+
+    _HOSTNAME_CACHE['value'] = resolved
+    _HOSTNAME_CACHE['ts'] = now
+    return resolved
 
 
 def capture_journal_context(keywords: list, lines: int = 30,
@@ -222,6 +249,153 @@ def capture_journal_context(keywords: list, lines: int = 30,
         return ""
 
 
+# ─── smartd observation helper (shared by JournalWatcher & ProxmoxHookWatcher) ──
+#
+# Both watchers receive smartd messages — JournalWatcher via local journal,
+# ProxmoxHookWatcher via the PVE notification webhook. Previously the method
+# only existed on JournalWatcher and ProxmoxHookWatcher called `self._record_smartd_observation`,
+# raising AttributeError on every PVE webhook with a smartd payload (silently
+# turning into a 500). Audit Tier 6 (Notification stack #2).
+def _record_smartd_observation_impl(title: str, message: str):
+    """Extract device info from a smartd system-mail and record as disk observation."""
+    try:
+        import re as _re
+        from health_persistence import health_persistence
+
+        # Extract device path: "Device: /dev/sdh [SAT]" or "Device: /dev/sda"
+        dev_match = _re.search(r'Device:\s*/dev/(\S+?)[\s\[\],]', message)
+        device = dev_match.group(1) if dev_match else ''
+        if not device:
+            return
+        # Strip partition suffix and SAT prefix
+        base_dev = _re.sub(r'\d+$', '', device)
+
+        # Extract serial: "S/N:WD-WX72A30AA72R"
+        # The \S+ capture also matches a trailing comma/semicolon when the
+        # SMART message lists S/N as part of a comma-separated field
+        # (e.g. "Device: /dev/sdh (WDC WD20EFAX-68FB5N0) S/N:WD-WX72A30AA72R,").
+        # Strip trailing punctuation so the disk_registry never gets
+        # duplicate rows for the same physical drive — one with a clean
+        # serial from smartctl and another with a comma-suffixed serial
+        # parsed out of this raw_message. See bug observed on .1.10
+        # where /dev/sdh ended up with two registry IDs and the "obs."
+        # badge on the storage card disagreed with the modal count.
+        sn_match = _re.search(r'S/N:\s*(\S+)', message)
+        serial = sn_match.group(1).rstrip(',.;') if sn_match else ''
+
+        # Extract model: appears before S/N on the "Device info:" line
+        model = ''
+        model_match = _re.search(r'Device info:\s*\n?\s*(.+?)(?:,\s*S/N:)', message)
+        if model_match:
+            model = model_match.group(1).strip()
+
+        # Extract error signature from title: "SMART error (FailedReadSmartSelfTestLog)"
+        sig_match = _re.search(r'SMART error\s*\((\w+)\)', title)
+        if sig_match:
+            error_signature = sig_match.group(1)
+            error_type = 'smart_error'
+        else:
+            # Fallback: extract the "warning/error logged" line
+            warn_match = _re.search(
+                r'warning/error was logged.*?:\s*\n?\s*(.+)', message, _re.IGNORECASE)
+            if warn_match:
+                error_signature = _re.sub(r'[^a-zA-Z0-9_]', '_',
+                                          warn_match.group(1).strip())[:80]
+            else:
+                error_signature = _re.sub(r'[^a-zA-Z0-9_]', '_', title)[:80]
+            error_type = 'smart_error'
+
+        # Build a clean raw_message for display
+        raw_msg = f"Device: /dev/{base_dev}"
+        if model:
+            raw_msg += f" ({model})"
+        if serial:
+            raw_msg += f" S/N:{serial}"
+        warn_line_m = _re.search(
+            r'The following warning/error.*?:\s*\n?\s*(.+)', message, _re.IGNORECASE)
+        if warn_line_m:
+            raw_msg += f"\n{warn_line_m.group(1).strip()}"
+
+        health_persistence.record_disk_observation(
+            device_name=base_dev,
+            serial=serial,
+            error_type=error_type,
+            error_signature=error_signature,
+            raw_message=raw_msg,
+            severity='warning',
+        )
+    except Exception as e:
+        print(f"[smartd_observation] Error recording smartd observation: {e}")
+
+
+# ─── Vzdump activity detector (shared, restart-tolerant) ─────────
+#
+# A single source of truth for "is a vzdump backup job running on this
+# host RIGHT NOW", consultable from any watcher and surviving Monitor
+# restarts. Reads `/var/log/pve/tasks/active` directly — PVE writes the
+# active UPID there at backup start and removes it on completion, so
+# it persists across our process restarts.
+#
+# Without this, JournalWatcher's in-memory `_last_backup_job_ts` got
+# reset by every Monitor restart, and any `Starting Backup of VM X`
+# log lines arriving after that point were treated as standalone
+# backups — emitting one `backup_start` per guest with `storage=local`
+# (the fallback path that doesn't see the parent job's --storage flag).
+# Reported by JC Miñarro 18/05 after a Monitor redeploy mid-job.
+_VZDUMP_ACTIVE_FILE = '/var/log/pve/tasks/active'
+_vzdump_active_cache_ts: float = 0
+_vzdump_active_cache_value: bool = False
+_VZDUMP_ACTIVE_CACHE_TTL = 5  # seconds
+
+
+def is_vzdump_active_on_host() -> bool:
+    """Return True if `/var/log/pve/tasks/active` contains an active
+    vzdump UPID (i.e. backup currently running). Cached 5s to avoid
+    hammering the file on every notification.
+
+    Caller-safe: returns False on any I/O / parse error.
+    """
+    global _vzdump_active_cache_ts, _vzdump_active_cache_value
+    now = time.time()
+    if now - _vzdump_active_cache_ts < _VZDUMP_ACTIVE_CACHE_TTL:
+        return _vzdump_active_cache_value
+    found = False
+    try:
+        with open(_VZDUMP_ACTIVE_FILE, 'r') as f:
+            for line in f:
+                # tasks/active row layout (whitespace separated):
+                #   "<UPID> 1"                                ← running
+                #   "<UPID> 1 <endtime_hex> <STATUS>"         ← finished
+                # PVE leaves finished rows lingering for hours
+                # sometimes — without the field-count check below the
+                # PID-recycling case fires a false positive (an
+                # unrelated process inherited the old vzdump's PID
+                # and `os.kill(pid, 0)` succeeds).
+                if ':vzdump:' not in line:
+                    continue
+                fields = line.split()
+                if not fields:
+                    continue
+                # >2 fields means endtime + status are written → terminated.
+                if len(fields) > 2:
+                    continue
+                upid_parts = fields[0].split(':')
+                if len(upid_parts) < 3:
+                    continue
+                try:
+                    pid = int(upid_parts[2], 16)  # PID in UPID is hex
+                    os.kill(pid, 0)
+                    found = True
+                    break
+                except (ValueError, ProcessLookupError, PermissionError):
+                    continue
+    except (OSError, IOError):
+        pass
+    _vzdump_active_cache_ts = now
+    _vzdump_active_cache_value = found
+    return found
+
+
 # ─── Journal Watcher (Real-time) ─────────────────────────────────
 
 class JournalWatcher:
@@ -238,24 +412,62 @@ class JournalWatcher:
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._process: Optional[subprocess.Popen] = None
-        self._hostname = _hostname()
+        # `_hostname` is exposed as a @property below so every read returns
+        # the *current* alias from the settings DB (TTL-cached for 5 s in
+        # _hostname()). The old `__init__`-time cache made a fresh Display
+        # Name require a service restart to take effect.
         
         # Dedup: track recent events to avoid duplicates
         self._recent_events: Dict[str, float] = {}
         self._dedup_window = 30  # seconds
-        
-        # 24h anti-cascade for disk I/O + filesystem errors (keyed by device name)
+
+        # 24h anti-cascade for disk I/O + filesystem errors. The dict
+        # key includes a tier suffix (`sdh:warning`, `sdh:critical`)
+        # so a disk in WARNING cooldown can still escalate to CRITICAL
+        # within the same 24h if the rate accelerates.
         self._disk_io_notified: Dict[str, float] = {}
         self._DISK_IO_COOLDOWN = 86400  # 24 hours
+
+        # Sliding 24h window of ATA error timestamps per disk, used to
+        # decide notification severity tier. Don't blindly trust the
+        # SMART firmware self-report — the Google "Failure Trends"
+        # paper showed ~36% of failed drives gave no SMART warning.
+        # Rate-based escalation catches the dying drives that SMART
+        # would never flag until they were already bricked.
+        from collections import deque as _deque
+        self._disk_error_window: Dict[str, "_deque[float]"] = {}
+        self._DISK_ERROR_WINDOW_SECS = 86400  # 24h
+        # Tiers calibrated for homelab/SMB Proxmox usage:
+        #  * 0-10/24h  → transient noise (cable rattle, sleep/wake,
+        #    PHY retrain). Silent observation only.
+        #  * 11-100/24h → WARNING. Notify once per 24h.
+        #  * 100+/24h   → CRITICAL. Active failure.
+        # Hard errors (Buffer I/O, UNC, medium error, unrecovered read)
+        # are CRITICAL on the FIRST occurrence regardless of count —
+        # those are uncorrectable data losses, not transient noise.
+        self._DISK_TIER_WARNING = 10
+        self._DISK_TIER_CRITICAL = 100
+        # Hard-error pattern: matches any of the kernel-reported
+        # signals that mean data was lost or could not be recovered.
+        self._DISK_HARD_ERR_RE = re.compile(
+            r'(Buffer I/O error|UNC\b|Medium Error|medium error'
+            r'|Unrecovered read error|unrecovered read error'
+            r'|Sense Key.*Hardware Error)',
+            re.IGNORECASE,
+        )
         
         # Track when the last full backup job notification was sent
         # so we can suppress per-guest "Starting Backup of VM ..." noise
         self._last_backup_job_ts: float = 0
         self._BACKUP_JOB_SUPPRESS_WINDOW = 7200  # 2h: suppress per-guest during active job
-        
+
         # NOTE: Service failure batching is handled universally by
         # BurstAggregator in NotificationManager (AGGREGATION_RULES).
-    
+
+    @property
+    def _hostname(self) -> str:
+        return _hostname()
+
     def start(self):
         """Start the journal watcher thread."""
         if self._running:
@@ -275,11 +487,16 @@ class JournalWatcher:
             conn = sqlite3.connect(str(db_path), timeout=10)
             conn.execute('PRAGMA journal_mode=WAL')
             cursor = conn.cursor()
-            # Ensure table exists
+            # Ensure table exists. The schema must match the canonical version
+            # in health_persistence.py — 3 cols, INTEGER timestamp + count.
+            # Previously this CREATE used `REAL NOT NULL` and 2 cols, racing
+            # against notification_manager queries that did `count + 1`.
+            # Audit Tier 6 (Notification stack #3 — schema race).
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS notification_last_sent (
                     fingerprint TEXT PRIMARY KEY,
-                    last_sent_ts REAL NOT NULL
+                    last_sent_ts INTEGER NOT NULL,
+                    count INTEGER DEFAULT 1
                 )
             ''')
             conn.commit()
@@ -304,15 +521,18 @@ class JournalWatcher:
             conn = sqlite3.connect(str(db_path), timeout=10)
             conn.execute('PRAGMA journal_mode=WAL')
             cursor = conn.cursor()
+            # Same canonical schema as health_persistence.py / notification_manager.py.
+            # Audit Tier 6 (Notification stack #3 — schema race).
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS notification_last_sent (
                     fingerprint TEXT PRIMARY KEY,
-                    last_sent_ts REAL NOT NULL
+                    last_sent_ts INTEGER NOT NULL,
+                    count INTEGER DEFAULT 1
                 )
             ''')
             cursor.execute(
                 "INSERT OR REPLACE INTO notification_last_sent (fingerprint, last_sent_ts) VALUES (?, ?)",
-                (key, ts)
+                (key, int(ts))
             )
             conn.commit()
             conn.close()
@@ -379,9 +599,21 @@ class JournalWatcher:
     
     def _run_journalctl(self):
         """Run journalctl -f and process output line by line."""
+        # Persist the cursor across watcher restarts so we don't lose events
+        # in the 5s gap between subprocess crash and respawn. journalctl
+        # writes the file with the latest seen cursor and on next start
+        # resumes from there. Falls back to -n 0 (start from now) only on
+        # the very first run when the cursor file doesn't exist yet.
+        cursor_file = '/usr/local/share/proxmenux/journal_cursor.txt'
+        try:
+            Path(cursor_file).parent.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
         cmd = ['journalctl', '-f', '-o', 'json', '--no-pager',
-               '-n', '0']  # Start from now, don't replay history
-        
+               f'--cursor-file={cursor_file}']
+        if not Path(cursor_file).exists():
+            cmd.extend(['-n', '0'])  # First run: don't replay history
+
         self._process = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             text=True, bufsize=1
@@ -551,11 +783,23 @@ class JournalWatcher:
                     proc_pid = m.group(2) if m else ''
                     lib_match = re.search(r'\bin\s+(\S+)', msg)
                     lib_name = lib_match.group(1) if lib_match else ''
-                    
-                    # Dedup by process name so repeated segfaults don't spam
-                    if proc_name:
+
+                    # Dedup by library + offset (deterministic across processes)
+                    # rather than by process name. The same root cause crashes
+                    # different binaries that load the affected shared lib
+                    # (apt-get, pveversion, dpkg, ...) — keying on proc_name
+                    # produced 1 cooldown per process and the BurstAggregator
+                    # only suppressed within its 90s window, so each new
+                    # process fired a fresh single. Falls back to proc_name if
+                    # the library/offset can't be parsed.
+                    lib_offset_m = re.search(r'\sin\s+([^\s\[]+)\[([0-9a-f]+),', msg)
+                    if lib_offset_m:
+                        lib_basename = lib_offset_m.group(1)
+                        lib_offset = lib_offset_m.group(2)
+                        entity_id = f'segfault_{lib_basename}_{lib_offset}'
+                    elif proc_name:
                         entity_id = f'segfault_{proc_name}'
-                    
+
                     parts = [reason]
                     if proc_name:
                         parts.append(f"Process: {proc_name}" + (f" (PID {proc_pid})" if proc_pid else ''))
@@ -876,77 +1120,126 @@ class JournalWatcher:
             else:
                 resolved = re.sub(r'\d+$', '', raw_device) if raw_device.startswith('sd') else raw_device
             
-            # ── Gate 1: SMART must confirm disk failure ──
-            # If the disk is healthy (PASSED) or we can't verify
-            # (UNKNOWN / unresolvable ATA port), do NOT notify.
-            smart_health = self._quick_smart_health(resolved)
-            if smart_health != 'FAILED':
-                return
-
-            # ── Persist observation (before the cooldown gate) ──
-            # The 24h cooldown below only suppresses RE-notification; the
-            # per-disk observations history must reflect every genuine
-            # detection. The DB UPSERT dedups same-signature events via
-            # occurrence_count, so calling this on every match is safe.
-            # Aligns with the parallel path in HealthMonitor._check_disks_optimized.
+            # ── ALWAYS persist the observation, regardless of severity ──
+            # The disk_observation_contract is explicit (memory note
+            # disk-observation-contract): every kernel-surfaced disk
+            # error must be recorded in disk_observations. The modal
+            # histogram is the per-disk audit trail; it must reflect
+            # everything the kernel saw, even noise.
             self._record_disk_io_observation(resolved, msg)
 
-            # ── Gate 2: 24-hour dedup per device ──
-            # Check both in-memory cache AND the DB (user dismiss clears DB cooldowns).
-            # If user dismissed the error, _clear_disk_io_cooldown() removed the DB
-            # entry, so we should refresh from DB to get the real state.
+            # ── Update sliding 24h rate window for this disk ──
             now = time.time()
-            
-            # First check in-memory cache
-            last_notified = self._disk_io_notified.get(resolved, 0)
-            
+            from collections import deque as _deque
+            window = self._disk_error_window.setdefault(resolved, _deque())
+            window.append(now)
+            cutoff = now - self._DISK_ERROR_WINDOW_SECS
+            while window and window[0] < cutoff:
+                window.popleft()
+            rate_24h = len(window)
+
+            # ── Decide severity tier ──
+            #   * hard error (UNC, Buffer I/O, medium, unrecovered read)
+            #       → CRITICAL on first occurrence, no count threshold.
+            #       These are uncorrectable: data is gone.
+            #   * SMART self-report FAILED → CRITICAL (firmware admits it).
+            #   * rate_24h > _DISK_TIER_CRITICAL → CRITICAL (active failure
+            #       even if SMART still says PASSED).
+            #   * rate_24h > _DISK_TIER_WARNING → WARNING (suspicious,
+            #       worth a heads-up).
+            #   * Otherwise → silent observation only (transient noise).
+            is_hard_error = bool(self._DISK_HARD_ERR_RE.search(msg))
+            smart_health = self._quick_smart_health(resolved)
+            if is_hard_error or smart_health == 'FAILED' or rate_24h > self._DISK_TIER_CRITICAL:
+                tier = 'critical'
+            elif rate_24h > self._DISK_TIER_WARNING:
+                tier = 'warning'
+            else:
+                # Silent — observation already saved, that's enough.
+                return
+
+            # ── 24h anti-cascade per (device, tier) ──
+            # Independent cooldown per tier so a disk that fires WARNING
+            # at noon can still escalate to CRITICAL the same day when
+            # the rate jumps past _DISK_TIER_CRITICAL — they're
+            # different keys.
+            cooldown_key = f'{resolved}:{tier}'
+            last_notified = self._disk_io_notified.get(cooldown_key, 0)
             if now - last_notified < self._DISK_IO_COOLDOWN:
-                # In-memory says we already notified. But user might have dismissed
-                # the error, which clears the DB. Re-check DB to be sure.
-                db_ts = self._get_disk_io_cooldown_from_db(resolved)
+                # In-memory says cooldown active. Re-verify in DB in
+                # case the user dismissed (which clears the DB entry).
+                db_ts = self._get_disk_io_cooldown_from_db(cooldown_key)
                 if db_ts is not None and now - db_ts < self._DISK_IO_COOLDOWN:
-                    return  # DB confirms cooldown is still active
-                # DB says cooldown was cleared (user dismissed) - proceed to notify
-                # Update in-memory cache
-                del self._disk_io_notified[resolved]
-            
-            self._disk_io_notified[resolved] = now
-            self._save_disk_io_notified(resolved, now)
-            
+                    return
+                # Dismissed → DB cleared → proceed to notify and refresh state.
+                del self._disk_io_notified[cooldown_key]
+
+            self._disk_io_notified[cooldown_key] = now
+            self._save_disk_io_notified(cooldown_key, now)
+
             # ── Build enriched notification ──
             device_info = self._identify_block_device(resolved)
-            
+
             parts = []
-            parts.append(f'Disk /dev/{resolved}: I/O errors detected')
-            parts.append('SMART status: FAILED -- disk is failing')
-            
+            if tier == 'critical':
+                if is_hard_error:
+                    parts.append(f'Disk /dev/{resolved}: UNRECOVERABLE error detected')
+                elif smart_health == 'FAILED':
+                    parts.append(f'Disk /dev/{resolved}: SMART reports FAILED')
+                else:
+                    parts.append(
+                        f'Disk /dev/{resolved}: high I/O error rate '
+                        f'({rate_24h} errors in last 24h)'
+                    )
+            else:  # warning
+                parts.append(
+                    f'Disk /dev/{resolved}: elevated I/O error rate '
+                    f'({rate_24h} errors in last 24h)'
+                )
+
+            parts.append(f'SMART status: {smart_health}')
+
             if device_info:
                 parts.append(f'Device: {device_info}')
             else:
                 parts.append(f'Device: /dev/{resolved}')
-            
+
             # Translate the raw kernel error code
             detail = self._translate_ata_error(msg)
             if detail:
                 parts.append(f'Error detail: {detail}')
-            
-            parts.append(f'Action: Replace disk /dev/{resolved} as soon as possible.')
+
+            if tier == 'critical':
+                parts.append(f'Action: Replace disk /dev/{resolved} as soon as possible.')
+            else:
+                parts.append(
+                    f'Action: Monitor /dev/{resolved} closely. '
+                    f'Plan a backup verification and replacement if rate grows.'
+                )
             parts.append(f'  Check details: smartctl -a /dev/{resolved}')
-            
+
             enriched = '\n'.join(parts)
             dev_display = f'/dev/{resolved}'
-            
-            # Capture journal context for AI enrichment
+
+            # Capture journal context for AI enrichment.
+            # `raw_device` is the original ATA-port literal extracted by the regex
+            # (e.g. "ata8"). The previous code used a name `ata_port` that was
+            # never defined in this scope — every disk I/O event hit a NameError
+            # that the JournalWatcher silently swallowed, suppressing critical
+            # disk failure alerts. Audit Tier 6 (Notification stack #1).
             journal_ctx = capture_journal_context(
-                keywords=[resolved, ata_port, 'I/O error', 'exception', 'SMART'],
+                keywords=[resolved, raw_device, 'I/O error', 'exception', 'SMART'],
                 lines=30
             )
-            
-            self._emit('disk_io_error', 'CRITICAL', {
+
+            severity = 'CRITICAL' if tier == 'critical' else 'WARNING'
+            self._emit('disk_io_error', severity, {
                 'device': dev_display,
                 'reason': enriched,
                 'hostname': self._hostname,
-                'smart_status': 'FAILED',
+                'smart_status': smart_health,
+                'rate_24h': rate_24h,
+                'tier': tier,
                 '_journal_context': journal_ctx,
             }, entity='disk', entity_id=resolved)
             return
@@ -1044,68 +1337,14 @@ class JournalWatcher:
             print(f"[JournalWatcher] Error recording disk io observation: {e}")
 
     def _record_smartd_observation(self, title: str, message: str):
-        """Extract device info from a smartd system-mail and record as disk observation."""
-        try:
-            import re as _re
-            from health_persistence import health_persistence
-            
-            # Extract device path: "Device: /dev/sdh [SAT]" or "Device: /dev/sda"
-            dev_match = _re.search(r'Device:\s*/dev/(\S+?)[\s\[\],]', message)
-            device = dev_match.group(1) if dev_match else ''
-            if not device:
-                return
-            # Strip partition suffix and SAT prefix
-            base_dev = _re.sub(r'\d+$', '', device)
-            
-            # Extract serial: "S/N:WD-WX72A30AA72R"
-            sn_match = _re.search(r'S/N:\s*(\S+)', message)
-            serial = sn_match.group(1) if sn_match else ''
-            
-            # Extract model: appears before S/N on the "Device info:" line
-            model = ''
-            model_match = _re.search(r'Device info:\s*\n?\s*(.+?)(?:,\s*S/N:)', message)
-            if model_match:
-                model = model_match.group(1).strip()
-            
-            # Extract error signature from title: "SMART error (FailedReadSmartSelfTestLog)"
-            sig_match = _re.search(r'SMART error\s*\((\w+)\)', title)
-            if sig_match:
-                error_signature = sig_match.group(1)
-                error_type = 'smart_error'
-            else:
-                # Fallback: extract the "warning/error logged" line
-                warn_match = _re.search(
-                    r'warning/error was logged.*?:\s*\n?\s*(.+)', message, _re.IGNORECASE)
-                if warn_match:
-                    error_signature = _re.sub(r'[^a-zA-Z0-9_]', '_',
-                                              warn_match.group(1).strip())[:80]
-                else:
-                    error_signature = _re.sub(r'[^a-zA-Z0-9_]', '_', title)[:80]
-                error_type = 'smart_error'
-            
-            # Build a clean raw_message for display
-            raw_msg = f"Device: /dev/{base_dev}"
-            if model:
-                raw_msg += f" ({model})"
-            if serial:
-                raw_msg += f" S/N:{serial}"
-            warn_line_m = _re.search(
-                r'The following warning/error.*?:\s*\n?\s*(.+)', message, _re.IGNORECASE)
-            if warn_line_m:
-                raw_msg += f"\n{warn_line_m.group(1).strip()}"
-            
-            health_persistence.record_disk_observation(
-                device_name=base_dev,
-                serial=serial,
-                error_type=error_type,
-                error_signature=error_signature,
-                raw_message=raw_msg,
-                severity='warning',
-            )
-            # Observation recorded - worst_health no longer used (badge shows current SMART status)
-            
-        except Exception as e:
-            print(f"[DiskIOEventProcessor] Error recording smartd observation: {e}")
+        """Instance wrapper around the module-level helper.
+
+        See `_record_smartd_observation_impl` below — kept on the class for
+        backward compatibility with `JournalWatcher` callers; `ProxmoxHookWatcher`
+        also holds its own thin wrapper for the same reason. Audit Tier 6
+        (Notification stack #2).
+        """
+        _record_smartd_observation_impl(title, message)
 
     @staticmethod
     def _translate_ata_error(msg: str) -> str:
@@ -1185,6 +1424,14 @@ class JournalWatcher:
                 now = time.time()
                 if now - self._last_backup_job_ts < self._BACKUP_JOB_SUPPRESS_WINDOW:
                     return  # Part of an active job -- already notified
+                # Restart-tolerant fallback: if the in-memory timestamp was
+                # cleared (Monitor restarted mid-job) but PVE still has an
+                # active vzdump UPID, this per-guest line is part of that
+                # job — drop it instead of emitting a wrong "Backup started
+                # on local" with storage default. Reported by JC Miñarro 18/05
+                # after a Monitor redeploy during an active PBS backup.
+                if is_vzdump_active_on_host():
+                    return
                 fallback_guest = fb.group(1)
             else:
                 return
@@ -1433,16 +1680,16 @@ class JournalWatcher:
         last = self._recent_events.get(event.fingerprint, 0)
         if now - last < self._dedup_window:
             return  # Skip duplicate within 30s window
-        
+
         self._recent_events[event.fingerprint] = now
-        
+
         # Cleanup old dedup entries periodically
         if len(self._recent_events) > 200:
             cutoff = now - self._dedup_window * 2
             self._recent_events = {
                 k: v for k, v in self._recent_events.items() if v > cutoff
             }
-        
+
         self._queue.put(event)
 
 
@@ -1548,7 +1795,10 @@ class TaskWatcher:
         self._queue = event_queue
         self._running = False
         self._thread: Optional[threading.Thread] = None
-        self._hostname = _hostname()
+        # `_hostname` is exposed as a @property below so every read returns
+        # the *current* alias from the settings DB (TTL-cached for 5 s in
+        # _hostname()). The old `__init__`-time cache made a fresh Display
+        # Name require a service restart to take effect.
         self._last_position = 0
         # Cache for active vzdump detection
         self._vzdump_active_cache: float = 0  # timestamp of last positive check
@@ -1561,12 +1811,16 @@ class TaskWatcher:
         self._vzdump_grace_period = 120  # seconds after vzdump ends to still suppress
         # Track active-file UPIDs we've already seen, to avoid duplicate backup_start
         self._seen_active_upids: set = set()
-    
+
+    @property
+    def _hostname(self) -> str:
+        return _hostname()
+
     def start(self):
         if self._running:
             return
         self._running = True
-        
+
         # Start at end of file
         if os.path.exists(self.TASK_LOG):
             try:
@@ -1698,12 +1952,31 @@ class TaskWatcher:
                     line = line.strip()
                     if not line:
                         continue
-                    upid = line.split()[0] if line.split() else line
+                    parts = line.split()
+                    if not parts:
+                        continue
+                    upid = parts[0]
                     current_upids.add(upid)
-                    
-                    if ':vzdump:' in upid:
+
+                    if ':vzdump:' not in upid:
+                        continue
+
+                    # PVE writes each line in tasks/active as:
+                    #   "<UPID> 1"                                    ← task still running
+                    #   "<UPID> 1 <endtime_hex> <STATUS>"             ← task already finished
+                    # PVE doesn't always prune finished rows from this
+                    # file (observed on RimegraVE 19/05: 25 OK/error
+                    # entries lingering for hours after job end). Just
+                    # matching ':vzdump:' kept `_vzdump_running_since`
+                    # permanently fresh, which then made
+                    # `_is_vzdump_active()` return True forever and
+                    # silenced every vm_start / vm_stop / vm_shutdown
+                    # via the _BACKUP_NOISE filter. Only treat the row
+                    # as a live vzdump when no end-time / status has
+                    # been written yet (≤ 2 fields: UPID + version).
+                    if len(parts) <= 2:
                         found_vzdump = True
-            
+
             # Keep _vzdump_running_since fresh as long as vzdump is in active
             if found_vzdump:
                 self._vzdump_running_since = time.time()
@@ -1840,10 +2113,15 @@ class TaskWatcher:
         # Suppress VM/CT start/stop/shutdown while a vzdump is active.
         # These are backup-induced operations (mode=stop), not user actions.
         # Exception: if a VM/CT FAILS or has WARNINGS, that IS important.
+        # We check BOTH our in-memory tracking (`_is_vzdump_active`) AND
+        # `tasks/active` on disk (`is_vzdump_active_on_host`). The disk
+        # check survives Monitor restarts mid-backup, which otherwise
+        # cleared `_vzdump_running_since` and exposed the post-restart
+        # shutdown notifications to the user (JC Miñarro 18/05).
         _BACKUP_NOISE = {'vm_start', 'vm_stop', 'vm_shutdown', 'vm_restart',
                          'ct_start', 'ct_stop', 'ct_shutdown', 'ct_restart'}
         if event_type in _BACKUP_NOISE and not is_error and not is_warning:
-            if self._is_vzdump_active():
+            if self._is_vzdump_active() or is_vzdump_active_on_host():
                 return
         
         # Suppress VM/CT stop/shutdown during host shutdown/reboot.
@@ -1859,12 +2137,19 @@ class TaskWatcher:
         # Instead of N individual "VM X started" messages, collect them and
         # let PollingCollector emit one "System startup: X VMs, Y CTs started".
         # Exception: errors and warnings should NOT be aggregated - notify immediately.
+        # Manual starts (onboot=0) within the grace period also bypass the
+        # aggregator: a user manually starting a VM right after boot wants
+        # the individual confirmation, not their action silently rolled into
+        # the autostart summary. Audit Tier 6 — `system_startup` aggregation
+        # puede tragar VM starts manuales del usuario durante grace period.
         _STARTUP_EVENTS = {'vm_start', 'ct_start'}
         if event_type in _STARTUP_EVENTS and not is_error and not is_warning:
             if _shared_state.is_startup_period():
                 vm_type = 'ct' if event_type == 'ct_start' else 'vm'
-                _shared_state.add_startup_vm(vmid, vmname or f'ID {vmid}', vm_type)
-                return
+                if self._is_autostart_vm(vmid, vm_type):
+                    _shared_state.add_startup_vm(vmid, vmname or f'ID {vmid}', vm_type)
+                    return
+                # else: manual start — fall through to immediate notification
         
         self._queue.put(NotificationEvent(
             event_type, severity, data, source='tasks',
@@ -1875,20 +2160,50 @@ class TaskWatcher:
         """Try to resolve VMID to name via config files."""
         if not vmid:
             return ''
-        
+
         # Try QEMU
         conf_path = f'/etc/pve/qemu-server/{vmid}.conf'
         name = self._read_name_from_conf(conf_path)
         if name:
             return name
-        
+
         # Try LXC
         conf_path = f'/etc/pve/lxc/{vmid}.conf'
         name = self._read_name_from_conf(conf_path)
         if name:
             return name
-        
+
         return ''
+
+    @staticmethod
+    def _is_autostart_vm(vmid: str, vm_type: str) -> bool:
+        """Return True iff the VM/CT has `onboot: 1` in its PVE config.
+
+        Used to decide whether a start during the boot grace period is part
+        of the autostart sweep (aggregate into the summary) or a manual
+        action by the user (deliver individually). When in doubt — the
+        config can't be read or the line is missing — assume autostart so
+        we err on the quiet side.
+        """
+        if not vmid:
+            return True
+        conf_path = (
+            f'/etc/pve/qemu-server/{vmid}.conf'
+            if vm_type == 'vm'
+            else f'/etc/pve/lxc/{vmid}.conf'
+        )
+        try:
+            if not os.path.exists(conf_path):
+                return True
+            with open(conf_path, 'r') as f:
+                for line in f:
+                    if line.startswith('onboot:'):
+                        val = line.split(':', 1)[1].strip()
+                        return val == '1'
+            # No `onboot` key => default is 0 (not autostart).
+            return False
+        except (IOError, PermissionError):
+            return True
     
     @staticmethod
     def _read_name_from_conf(path: str) -> str:
@@ -1998,25 +2313,80 @@ class PollingCollector:
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._poll_interval = poll_interval
-        self._hostname = _hostname()
+        # `_hostname` is exposed as a @property below so every read returns
+        # the *current* alias from the settings DB (TTL-cached for 5 s in
+        # _hostname()). The old `__init__`-time cache made a fresh Display
+        # Name require a service restart to take effect.
         self._last_update_check = 0
         self._last_proxmenux_check = 0
         self._last_ai_model_check = 0
+        # Sprint 12D: post-install function updates check, on the same
+        # 24h cooldown as the Proxmox/ProxMenux update checks. Notify
+        # once per *changed set* of update keys — repeating the same
+        # notification every 24h forever would be noisy, so we de-dupe
+        # against the previously-notified set.
+        self._last_post_install_check = 0
+        self._notified_post_install_keys: set[str] = set()
+        # Sprint 14.7: fingerprint (item_id → latest_version) of the
+        # last managed-installs update notification, across all types
+        # in the registry. A new notification fires when the
+        # fingerprint changes — covers both "different latest version
+        # of same item" and "new item appeared in the registry that
+        # has an update".
+        self._last_managed_check = 0
+        self._notified_managed_updates: dict[str, str] = {}
+        # LXC notifications are grouped — one event per polling cycle
+        # covering every running Debian/Ubuntu CT with pending apt
+        # updates. The fingerprint encodes the per-CT state so a stable
+        # batch doesn't re-notify while a meaningful change does.
+        self._notified_lxc_batch: str | None = None
         # Track notified ProxMenux versions to avoid duplicates
         self._notified_proxmenux_version: str | None = None
         self._notified_proxmenux_beta_version: str | None = None
         # In-memory cache: error_key -> last notification timestamp
         self._last_notified: Dict[str, float] = {}
+        # In-memory cache: error_key -> severity actually sent in the last
+        # notification. Decoupled from `_known_errors[k].severity` (which
+        # always reflects the most-recent DB row) so a recovery message
+        # quotes the same severity the user saw. Without this, an error
+        # that fired WARNING, silently escalated to CRITICAL during its
+        # 24h same-key cooldown, then resolved, would be reported as
+        # "previous severity: CRITICAL" — confusing the operator who only
+        # ever saw the WARNING. Not persisted across restarts: the
+        # post-restart first-poll guard (`_first_poll_done`) already
+        # suppresses spurious recoveries.
+        self._notified_severity: Dict[str, str] = {}
         # Track known error keys + metadata so we can detect new ones AND emit recovery
         # Dict[error_key, dict(category, severity, reason, first_seen, error_key)]
         self._known_errors: Dict[str, dict] = {}
         self._first_poll_done = False
-    
+        # Cache of "is this device on USB?" lookups. Disks don't change bus
+        # in runtime, so we can avoid one `readlink -f /sys/block/<dev>`
+        # subprocess per disk-with-error per poll cycle. Key: bare device
+        # name (no /dev/). Value: bool (True = USB).
+        self._is_usb_cache: Dict[str, bool] = {}
+
+    @property
+    def _hostname(self) -> str:
+        return _hostname()
+
     def start(self):
         if self._running:
             return
         self._running = True
         self._load_last_notified()
+        # Load the previous-poll metadata snapshot so the FIRST poll after a
+        # service restart can both (a) treat errors that were already known
+        # as known (not new), and (b) emit recovery notifications for errors
+        # that resolved during downtime. Without this the watermark resets
+        # on every restart and a 7-min restart window is a recovery blind
+        # spot. Audit Tier 6 — `PollingCollector` watermark no persiste +
+        # primera ejecución no emite recovery.
+        self._load_known_errors_meta()
+        if self._known_errors:
+            # We have a persisted snapshot — first poll is no longer "first"
+            # for the purposes of new-error / recovery decisions.
+            self._first_poll_done = True
         self._thread = threading.Thread(target=self._poll_loop, daemon=True,
                                         name='polling-collector')
         self._thread.start()
@@ -2047,34 +2417,57 @@ class PollingCollector:
         
         # Staggered execution: spread checks across the polling interval
         # to avoid CPU spikes when multiple checks run simultaneously.
-        # Schedule: health=10s, updates=30s, proxmenux=45s, ai_model=50s
+        # Schedule: health=10s, updates=30s, proxmenux=45s, post_install=47s, ai_model=50s
         STAGGER_HEALTH = 10
         STAGGER_UPDATES = 30
         STAGGER_PROXMENUX = 45
+        STAGGER_POST_INSTALL = 47   # Sprint 12D: post-install function updates
+        STAGGER_OCI_UPDATES = 48    # Sprint 14.6: Secure Gateway / OCI app updates
         STAGGER_AI_MODEL = 50
-        
+
         while self._running:
             cycle_start = time.time()
-            
+
             try:
                 # Health check at offset 10s
                 self._sleep_until_offset(cycle_start, STAGGER_HEALTH)
                 if not self._running:
                     return
                 self._check_persistent_health()
-                
+
                 # Updates check at offset 30s
                 self._sleep_until_offset(cycle_start, STAGGER_UPDATES)
                 if not self._running:
                     return
                 self._check_updates()
-                
+
                 # ProxMenux check at offset 45s
                 self._sleep_until_offset(cycle_start, STAGGER_PROXMENUX)
                 if not self._running:
                     return
                 self._check_proxmenux_updates()
-                
+
+                # Sprint 12D: post-install function updates at offset 47s.
+                # Runs on the same 24h cooldown as the other update
+                # checks; notifies once per changed set of update keys.
+                self._sleep_until_offset(cycle_start, STAGGER_POST_INSTALL)
+                if not self._running:
+                    return
+                self._check_post_install_updates()
+
+                # Sprint 14.7: ProxMenux-managed installs (NVIDIA, OCI
+                # apps, future Coral / Frigate / etc.) all flow through
+                # one generic check. Refresh the registry from the host
+                # (auto-detect new manual installs) then run every
+                # type-specific checker. The polling loop only emits
+                # notifications when the (id, latest) pair hasn't been
+                # notified yet — same dedup pattern as the other update
+                # channels.
+                self._sleep_until_offset(cycle_start, STAGGER_OCI_UPDATES)
+                if not self._running:
+                    return
+                self._check_managed_installs_updates()
+
                 # AI model check at offset 50s
                 self._sleep_until_offset(cycle_start, STAGGER_AI_MODEL)
                 if not self._running:
@@ -2210,6 +2603,31 @@ class PollingCollector:
             # Map to our event type
             event_type = self._CATEGORY_TO_EVENT_TYPE.get(category, 'system_problem')
             entity, eid = self._ENTITY_MAP.get(category, ('node', ''))
+
+            # Refine the storage event_type from the error_key prefix.
+            # The category-only mapping was sending every storage error
+            # through the generic `storage_unavailable` template — the
+            # specialised templates (lxc_disk_low, mount_stale, etc.)
+            # were never reached. Sprint 14.5 adds three new prefixes
+            # (lxc_mount_, pve_storage_full_, zfs_pool_full_) and at the
+            # same time fixes the dispatch for the existing ones.
+            if category == 'storage':
+                if error_key.startswith('lxc_disk_'):
+                    event_type = 'lxc_disk_low'
+                elif error_key.startswith('lxc_mount_'):
+                    event_type = 'lxc_mount_low'
+                elif error_key.startswith('pve_storage_full_'):
+                    event_type = 'pve_storage_full'
+                elif error_key.startswith('zfs_pool_full_'):
+                    event_type = 'zfs_pool_full'
+                elif error_key.startswith('disk_space_'):
+                    event_type = 'disk_space_low'
+                elif error_key.startswith('storage_unavailable_'):
+                    event_type = 'storage_unavailable'
+                elif error_key.startswith('mount_stale_'):
+                    event_type = 'mount_stale'
+                elif error_key.startswith('mount_readonly_'):
+                    event_type = 'mount_readonly'
             
             # ── Disk I/O notification policy ──
             # Disk I/O errors are ALWAYS notified (even when SMART says Passed)
@@ -2234,18 +2652,19 @@ class PollingCollector:
                     # USB disks can change device names (sda->sdb) on reconnect
                     # Using serial ensures same physical disk shares cooldown
                     if serial and dev:
-                        # Check if this is a USB disk
-                        try:
-                            sysfs_result = subprocess.run(
-                                ['readlink', '-f', f'/sys/block/{dev.replace("/dev/", "")}'],
-                                capture_output=True, text=True, timeout=2
-                            )
-                            if 'usb' in sysfs_result.stdout.lower():
-                                eid = f'disk_serial_{serial}'  # USB: use serial
-                            else:
-                                eid = f'disk_{dev}'  # Non-USB: use device name
-                        except Exception:
-                            eid = f'disk_{dev}'  # Fallback to device name
+                        bare_dev = dev.replace('/dev/', '')
+                        is_usb = self._is_usb_cache.get(bare_dev)
+                        if is_usb is None:
+                            try:
+                                sysfs_result = subprocess.run(
+                                    ['readlink', '-f', f'/sys/block/{bare_dev}'],
+                                    capture_output=True, text=True, timeout=2
+                                )
+                                is_usb = 'usb' in sysfs_result.stdout.lower()
+                            except Exception:
+                                is_usb = False
+                            self._is_usb_cache[bare_dev] = is_usb
+                        eid = f'disk_serial_{serial}' if is_usb else f'disk_{dev}'
                     elif dev:
                         eid = f'disk_{dev}'  # No serial: use device name
             
@@ -2284,6 +2703,11 @@ class PollingCollector:
             # Track that we notified
             self._last_notified[error_key] = now
             self._persist_last_notified(error_key, now)
+            # Snapshot the severity we actually delivered, so a future
+            # recovery message quotes the same value the user saw — not
+            # whatever silently-escalated severity ended up in the DB
+            # during the same-key 24h cooldown window.
+            self._notified_severity[error_key] = emit_severity
         
         # ── Emit recovery notifications for errors that resolved ──
         resolved_keys = set(self._known_errors.keys()) - set(current_keys.keys())
@@ -2292,15 +2716,29 @@ class PollingCollector:
             category = old_meta.get('category', '')
             reason = old_meta.get('reason', '')
             first_seen = old_meta.get('first_seen', '')
-            
+
             # Skip recovery for INFO/OK - they never triggered an alert
             if old_meta.get('severity', '') in ('INFO', 'OK'):
                 self._last_notified.pop(key, None)
                 continue
-            
+
             # Skip recovery on first poll (we don't know what was before)
             if not self._first_poll_done:
                 self._last_notified.pop(key, None)
+                continue
+
+            # Skip recovery when the persisted snapshot lost the context
+            # for this error (reason / category both empty). Emitting a
+            # blank "Resuelto -" message with "Condition resolved" body
+            # adds no value — the user can't tell which error went away.
+            # Happens after a long Monitor downtime when the snapshot was
+            # serialized between polls without reason/category populated,
+            # or when a future code path slips a key into _known_errors
+            # without the full metadata. Drop the tracking entry silently
+            # so we never re-fire on the same incomplete record.
+            if not reason and not category:
+                self._last_notified.pop(key, None)
+                self._notified_severity.pop(key, None)
                 continue
             
             # Skip recovery if the error was manually acknowledged (dismissed)
@@ -2386,28 +2824,48 @@ class PollingCollector:
             else:
                 clean_reason = 'Condition resolved'
             
+            # `original_severity` must match what the user actually saw
+            # in the most-recent notification for this error, not the
+            # latest DB severity. See `_notified_severity` docstring at
+            # __init__ for the failure mode this avoids.
+            original_severity = self._notified_severity.get(
+                key, old_meta.get('severity', 'WARNING'),
+            )
+            # Defensive defaults — the template uses `{category}` and
+            # `{duration}` in both the title and the body; an empty
+            # `category` produced the cosmetic "Resolved - " with a
+            # trailing dash (and "The  issue has been resolved" with
+            # a double space) on 2026-05-21. The Fix A filter above
+            # already drops the worst case (reason AND category empty);
+            # this layer fills the remaining edge cases when only one
+            # of the two is missing.
+            category_label = category or 'health'
+            duration_label = duration or 'unknown'
             data = {
                 'hostname': self._hostname,
-                'category': category,
+                'category': category_label,
                 'reason': clean_reason,
                 'error_key': key,
                 'severity': 'OK',
-                'original_severity': old_meta.get('severity', 'WARNING'),
+                'original_severity': original_severity,
                 'first_seen': first_seen,
-                'duration': duration,
+                'duration': duration_label,
                 'is_recovery': True,
             }
-            
+
             self._queue.put(NotificationEvent(
                 'error_resolved', 'OK', data, source='health',
                 entity=entity, entity_id=eid or key,
             ))
-            
+
             self._last_notified.pop(key, None)
+            self._notified_severity.pop(key, None)
         
         self._known_errors = current_keys
         self._first_poll_done = True
-    
+        # Persist metadata for the next restart's first-poll comparison.
+        self._save_known_errors_meta()
+
     def _check_startup_aggregation(self):
         """Check if startup period ended and emit comprehensive startup report.
         
@@ -2771,9 +3229,338 @@ class PollingCollector:
                     self._notified_proxmenux_beta_version = None
         except Exception:
             pass
-    
+
+    # ── Post-install function updates check (Sprint 12D) ────────────
+
+    def _check_post_install_updates(self):
+        """Notify the operator when post-install functions have new versions.
+
+        Sprint 12A's detector runs at AppImage startup and writes
+        ``updates_available.json``. This check refreshes the snapshot
+        every 24h (matching the other update channels), and emits a
+        single ``post_install_update`` event the first time the *set* of
+        available updates changes. Repeating the same notification every
+        24h forever would be noisy, so we de-dupe against the previously
+        notified set of tool keys: only when a new tool joins the list
+        (or an existing one disappears) does a fresh notification fire.
+        """
+        now = time.time()
+        if now - self._last_post_install_check < self.UPDATE_CHECK_INTERVAL:
+            return
+        self._last_post_install_check = now
+
+        try:
+            import post_install_versions
+            snapshot = post_install_versions.scan(persist=True)
+            updates = snapshot.get('updates', []) or []
+        except Exception as e:
+            print(f"[PollingCollector] post-install update scan failed: {e}")
+            return
+
+        if not updates:
+            # All caught up. Reset so a future bump triggers a fresh
+            # notification instead of being suppressed by stale state.
+            self._notified_post_install_keys = set()
+            return
+
+        new_keys = {u.get('key', '') for u in updates if u.get('key')}
+        if new_keys == self._notified_post_install_keys:
+            return  # already notified about this exact set
+
+        self._notified_post_install_keys = new_keys
+
+        # Pre-format the bullet list here so the template can drop it
+        # straight in with `{tool_list}` (the renderer is plain
+        # `str.format_map`, no Jinja). Format mirrors the Proxmox
+        # update notification: just `key (vX → vY)` per bullet, no
+        # description — the description was descriptive but redundant
+        # with the tool name itself, and the user wanted parity with
+        # the Proxmox-update list which only shows the package name.
+        tool_list_lines = [
+            f"  • {u.get('key', '')} (v{u.get('current_version', '')} → v{u.get('available_version', '')})"
+            for u in updates
+        ]
+        tool_list_str = '\n'.join(tool_list_lines)
+
+        data = {
+            'hostname': self._hostname,
+            'count': len(updates),
+            'tool_list': tool_list_str,
+            'tools': [
+                {
+                    'key': u.get('key', ''),
+                    'current_version': u.get('current_version', ''),
+                    'available_version': u.get('available_version', ''),
+                    'description': u.get('description', ''),
+                    'source': u.get('source', ''),
+                    'function': u.get('function', ''),
+                }
+                for u in updates
+            ],
+        }
+        self._queue.put(NotificationEvent(
+            'post_install_update', 'INFO', data,
+            source='polling', entity='node', entity_id='',
+        ))
+
+    # ── Managed-installs update check (Sprint 14.7) ─────────────────
+
+    def _check_managed_installs_updates(self):
+        """Generic update-notification emitter on top of the
+        ``managed_installs`` registry.
+
+        Refreshes the registry (auto-detects new installs that
+        appeared since last cycle), then runs every type-specific
+        checker, then emits one event per item whose ``(id,
+        latest_version)`` pair hasn't been notified yet. The event_type
+        is mapped per item type so each integration gets its own
+        template (Tailscale → ``secure_gateway_update_available``,
+        NVIDIA driver → ``nvidia_driver_update_available``, etc.).
+        """
+        now = time.time()
+
+        if now - self._last_managed_check < self.UPDATE_CHECK_INTERVAL:
+            return
+        self._last_managed_check = now
+
+        try:
+            import managed_installs
+        except Exception:
+            return  # registry module unavailable
+
+        try:
+            managed_installs.detect_and_register()
+            updates = managed_installs.check_for_updates(force=False) or []
+        except Exception as e:
+            print(f"[PollingCollector] managed_installs update run failed: {e}")
+            return
+
+        # Split LXC updates out of the per-item event stream — they get
+        # one grouped notification per cycle instead of one per CT, to
+        # avoid spamming the user when 15 CTs have pending updates the
+        # same day. Non-LXC types keep their existing per-item flow.
+        lxc_updates = [u for u in updates if u.get('type') == 'lxc']
+        other_updates = [u for u in updates if u.get('type') != 'lxc']
+
+        seen_ids: set[str] = set()
+        for item in other_updates:
+            item_id = item.get('id', '')
+            if not item_id:
+                continue
+            seen_ids.add(item_id)
+
+            update = item.get('update_check', {}) or {}
+            latest = update.get('latest') or ''
+            previously = self._notified_managed_updates.get(item_id)
+            if previously == latest:
+                continue  # already told the user about this exact version
+
+            self._notified_managed_updates[item_id] = latest
+
+            event_type, data = self._build_managed_install_event(item)
+            if not event_type:
+                continue
+
+            self._queue.put(NotificationEvent(
+                event_type, 'INFO', data,
+                source='polling',
+                entity='node',
+                entity_id=f'managed_{item_id}',
+            ))
+
+        # LXC: emit one grouped event with all CTs that have pending
+        # updates. The batch fingerprint is recomputed every cycle and
+        # compared with the last notified one — if the set of CTs or
+        # their per-CT fingerprints changed, we notify again.
+        #
+        # Detection itself runs unconditionally so the dashboard always
+        # shows pending updates; the `lxc_updates_available` toggle only
+        # controls whether a notification is *emitted*. If it's off we
+        # skip the emit (and the dedup stamp) so re-enabling the toggle
+        # later fires the next pending batch immediately.
+        try:
+            import managed_installs as _mi
+            lxc_notif_enabled = _mi._lxc_updates_notification_enabled()
+        except Exception:
+            lxc_notif_enabled = False
+
+        if lxc_updates and lxc_notif_enabled:
+            self._emit_lxc_updates_batch(lxc_updates)
+        elif not lxc_updates:
+            # Empty batch — clear the dedup so a fresh batch later fires
+            # a new notification even with the same CTs/versions.
+            self._notified_lxc_batch = None
+
+        # Forget items that no longer have an update available. If
+        # the user installs the update and then a later release lands,
+        # the dedup state is already cleared so the next notification
+        # fires fresh.
+        try:
+            active = managed_installs.get_active_items()
+        except Exception:
+            active = []
+        active_with_update = {
+            it.get('id') for it in active
+            if it.get('update_check', {}).get('available')
+        }
+        for stale_id in list(self._notified_managed_updates.keys()):
+            if stale_id not in active_with_update:
+                self._notified_managed_updates.pop(stale_id, None)
+
+    def _emit_lxc_updates_batch(self, items: list[dict]) -> None:
+        """Build and queue a single ``lxc_updates_available`` event for
+        every running CT that currently has pending apt updates.
+
+        The batch fingerprint combines every CT's per-CT fingerprint
+        (count + security_count + top package names). A new CT entering
+        the set OR an existing CT changing its per-CT fingerprint
+        produces a new batch fingerprint, so the cooldown is broken and
+        the event fires. A truly stable batch is silenced via the
+        equality check below.
+        """
+        # Stable order so the fingerprint is deterministic
+        items_sorted = sorted(items, key=lambda x: x.get('id', ''))
+
+        ct_lines: list[str] = []
+        per_ct_fps: list[str] = []
+        total_packages = 0
+        total_security = 0
+
+        for idx, it in enumerate(items_sorted):
+            update = it.get('update_check', {}) or {}
+            count = int(update.get('_count') or 0)
+            sec_count = int(update.get('_security_count') or 0)
+            total_packages += count
+            total_security += sec_count
+
+            vmid = it.get('_vmid') or it.get('id', '').removeprefix('lxc:') or '?'
+            name = it.get('name') or f'CT {vmid}'
+            # Each CT renders across two/three lines so the count and the
+            # security count don't compete with the CT label on the same
+            # row — much easier to read in Telegram/Discord at a glance.
+            # A blank line before every CT except the first separates
+            # entries cleanly without a trailing blank at the end.
+            if idx > 0:
+                ct_lines.append("")
+            ct_lines.append(f"🏷️ CT {vmid} ({name}):")
+            ct_lines.append(f"    📦 {count} update(s)")
+            if sec_count:
+                ct_lines.append(f"    🔒 {sec_count} security")
+            per_ct_fps.append(f"{it.get('id', '')}={update.get('latest', '')}")
+
+        batch_fingerprint = '|'.join(per_ct_fps)
+        if self._notified_lxc_batch == batch_fingerprint:
+            return  # same batch as last time — silent
+        self._notified_lxc_batch = batch_fingerprint
+
+        data = {
+            'hostname': self._hostname,
+            'count': len(items_sorted),
+            'total_packages': total_packages,
+            'security_count': total_security,
+            'ct_list': '\n'.join(ct_lines),
+        }
+        self._queue.put(NotificationEvent(
+            'lxc_updates_available', 'INFO', data,
+            source='polling',
+            entity='node',
+            # Hash so different batches get distinct cooldown keys
+            entity_id=f'lxc_batch_{abs(hash(batch_fingerprint)) % 10**10}',
+        ))
+
+    def _build_managed_install_event(self, item: dict) -> tuple[str, dict]:
+        """Translate a registry item into a (event_type, template_data)
+        pair. Per-type bodies live here so the registry stays
+        type-agnostic and notification_templates only needs to know
+        about the final shape."""
+        item_type = item.get('type', '')
+        update = item.get('update_check', {}) or {}
+        common = {
+            'hostname': self._hostname,
+            'name': item.get('name') or item.get('id'),
+            'menu_label': item.get('menu_label') or '',
+            'menu_script': item.get('menu_script') or '',
+            'current_version': item.get('current_version') or '',
+            'latest_version': update.get('latest') or '',
+        }
+
+        if item_type == 'oci_app':
+            packages = update.get('_packages') or []
+            pkg_lines = [
+                f"  • {p.get('name', '')}: {p.get('current', '?')}"
+                f" → {p.get('latest', '?')}"
+                for p in packages
+            ]
+            data = {
+                **common,
+                'app_id': item.get('id', '').removeprefix('oci:'),
+                'app_name': common['name'],
+                'package_count': len(packages),
+                'package_list': '\n'.join(pkg_lines) or '  (no detail)',
+            }
+            return 'secure_gateway_update_available', data
+
+        if item_type == 'nvidia_xfree86':
+            kind = update.get('_upgrade_kind')
+            if kind == 'branch_upgrade':
+                upgrade_reason = (
+                    "Your current driver branch is no longer compatible with "
+                    f"kernel {update.get('_kernel') or 'this kernel'}. "
+                    "Switch to the recommended branch — the installer will "
+                    "rebuild against the running kernel."
+                )
+            else:
+                upgrade_reason = (
+                    "Same-branch maintenance update with bug/security fixes."
+                )
+            data = {
+                **common,
+                'kernel': update.get('_kernel') or '',
+                'upgrade_reason': upgrade_reason,
+            }
+            return 'nvidia_driver_update_available', data
+
+        if item_type == 'coral_host':
+            variant = update.get('_coral_variant') or item.get('_coral_variant') or ''
+            if variant == 'pcie':
+                variant_label = 'gasket-dkms (PCIe / M.2) driver'
+                upgrade_reason = (
+                    'feranick/gasket-driver has published a newer release. '
+                    'The installer rebuilds the gasket + apex kernel modules '
+                    'via DKMS against the running kernel.'
+                )
+                reboot_note = (
+                    'Reinstalling rebuilds the DKMS module and requires a '
+                    'reboot to load the new driver.'
+                )
+            elif variant == 'usb':
+                pkg = update.get('_coral_pkg') or item.get('_coral_pkg') or 'libedgetpu1'
+                variant_label = f'{pkg} runtime (USB Accelerator)'
+                upgrade_reason = (
+                    'A newer Edge TPU runtime is available from the Google '
+                    'Coral apt repository.'
+                )
+                reboot_note = (
+                    'The USB runtime upgrade does not require a reboot.'
+                )
+            else:
+                variant_label = 'Coral TPU driver'
+                upgrade_reason = 'A newer Coral driver is available.'
+                reboot_note = ''
+            data = {
+                **common,
+                'variant_label': variant_label,
+                'upgrade_reason': upgrade_reason,
+                'reboot_note': reboot_note,
+            }
+            return 'coral_driver_update_available', data
+
+        # Unknown type — don't notify (keeps the queue clean if a
+        # future detector lands without a corresponding event mapping).
+        return '', {}
+
     # ── AI Model availability check ────────────────────────────
-    
+
     def _check_ai_model_availability(self):
         """Check if configured AI model is still available (every 24h).
         
@@ -2816,8 +3603,75 @@ class PollingCollector:
     
     # ── Persistence helpers ────────────────────────────────────
     
+    # Hard cap so the JSON serialised in `user_settings` stays bounded
+    # even on hosts with many short-lived recurring errors.
+    _KNOWN_ERRORS_MAX = 200
+    _KNOWN_ERRORS_SETTING_KEY = 'pollingcollector_known_errors_v1'
+
+    def _load_known_errors_meta(self):
+        """Restore `_known_errors` from the persisted JSON snapshot.
+
+        Pairs with `_save_known_errors_meta` — together they keep the
+        before/after comparison accurate across service restarts so we
+        don't lose recoveries that happened during downtime.
+        """
+        try:
+            from health_persistence import health_persistence
+            raw = health_persistence.get_setting(self._KNOWN_ERRORS_SETTING_KEY)
+            if not raw:
+                return
+            data = json.loads(raw)
+            if not isinstance(data, dict):
+                return
+            for ek, meta in data.items():
+                if isinstance(meta, dict) and ek:
+                    self._known_errors[ek] = meta
+        except Exception as e:
+            print(f"[PollingCollector] Failed to load known_errors meta: {e}")
+
+    def _save_known_errors_meta(self):
+        """Persist a JSON snapshot of `_known_errors` for next-restart use."""
+        try:
+            from health_persistence import health_persistence
+            data = self._known_errors
+            if len(data) > self._KNOWN_ERRORS_MAX:
+                # Keep the most-recent entries by first_seen (best signal we
+                # have of "which errors matter most right now").
+                sorted_items = sorted(
+                    data.items(),
+                    key=lambda kv: kv[1].get('first_seen', '') or '',
+                    reverse=True,
+                )
+                data = dict(sorted_items[: self._KNOWN_ERRORS_MAX])
+            health_persistence.set_setting(
+                self._KNOWN_ERRORS_SETTING_KEY,
+                json.dumps(data, default=str),
+            )
+        except Exception as e:
+            print(f"[PollingCollector] Failed to save known_errors meta: {e}")
+
     def _load_last_notified(self):
-        """Load per-error notification timestamps from DB on startup."""
+        """Load per-error notification timestamps from DB on startup.
+
+        Reads only the per-key cooldown timestamps so the same-key
+        24h gate survives a restart. **Does NOT touch `_known_errors`**
+        — that snapshot is rebuilt exclusively by `_load_known_errors_meta`
+        (which carries the full reason / category / severity payload
+        needed to emit a meaningful recovery later).
+
+        The original implementation also injected synthetic rows into
+        `_known_errors` from this table, with `{'error_key': ek,
+        'first_seen': <epoch int>}` and nothing else. That made the
+        startup path believe the host had a populated baseline of
+        active errors, so the first post-restart poll computed
+        `resolved_keys = synthetic_dummies − current_keys` and emitted
+        recovery notifications with empty `reason` / `category` /
+        `severity` fields — the &ldquo;Resuelto -&rdquo; / &ldquo;Condición
+        resuelta&rdquo; ghosts the user saw on 2026-05-21. Stale rows
+        in this table never expire on their own (the bug was eternal:
+        every restart re-triggered the ghost), so the fix is to never
+        treat this table as a source of `_known_errors` content.
+        """
         try:
             db_path = Path('/usr/local/share/proxmenux/health_monitor.db')
             if not db_path.exists():
@@ -2832,8 +3686,6 @@ class PollingCollector:
             for fp, ts in cursor.fetchall():
                 error_key = fp.replace('health_', '', 1)
                 self._last_notified[error_key] = ts
-                # _known_errors is a dict (not a set), store minimal metadata
-                self._known_errors[error_key] = {'error_key': error_key, 'first_seen': ts}
             conn.close()
         except Exception as e:
             print(f"[PollingCollector] Failed to load last_notified: {e}")
@@ -2908,8 +3760,15 @@ class ProxmoxHookWatcher:
     
     def __init__(self, event_queue: Queue):
         self._queue = event_queue
-        self._hostname = _hostname()
-    
+        # `_hostname` is exposed as a @property below so every read returns
+        # the *current* alias from the settings DB (TTL-cached for 5 s in
+        # _hostname()). The old `__init__`-time cache made a fresh Display
+        # Name require a service restart to take effect.
+
+    @property
+    def _hostname(self) -> str:
+        return _hostname()
+
     def process_webhook(self, payload: dict) -> dict:
         """Process an incoming Proxmox webhook payload.
         
@@ -3075,16 +3934,31 @@ class ProxmoxHookWatcher:
             return 'update_available', 'node', ''
         
         if pve_type == 'system-mail':
-            # Parse smartd messages to extract useful info and filter noise.
-            # smartd sends system-mail when it detects SMART issues.
+            # PVE forwards every local mail to root over its notification
+            # framework. That bucket is genuinely heterogeneous: smartd
+            # alerts (useful, want them), mail bouncebacks (sometimes),
+            # AND routine output from operator-defined cron jobs (almost
+            # always noise — reported by user Heriberto whose periodic
+            # historical-data agent printed one line of stdout every 5 min
+            # and produced 288 Telegram messages a day).
+            #
+            # Split the firehose into two distinct event types so each can
+            # have its own default and toggle:
+            #   - cron_output : `Cron <user@host> <cmd>` subject → OFF by default.
+            #   - system_mail : everything else (smartd, mail bounces) → ON.
+            # The operator can independently enable/disable each in
+            # Settings → Notifications.
             msg_lower = (message or '').lower()
             title_lower_sm = (title or '').lower()
-            
+
             # ── Record disk observation regardless of noise filter ──
             # Even "noise" events are recorded as observations so the user
             # can see them in the Storage UI.  We just don't send notifications.
-            self._record_smartd_observation(title or '', message or '')
-            
+            # Use the module-level helper because this method only exists on
+            # JournalWatcher; calling it via `self` here raised AttributeError
+            # on every PVE webhook with a smartd payload. See audit Tier 6 #2.
+            _record_smartd_observation_impl(title or '', message or '')
+
             # ── Filter smartd noise (suppress notification, not observation) ──
             smartd_noise = [
                 'failedreadsmarterrorlog',
@@ -3094,7 +3968,16 @@ class ProxmoxHookWatcher:
             for noise in smartd_noise:
                 if noise in title_lower_sm or noise in msg_lower:
                     return '_skip', '', ''
-            
+
+            # ── Detect cron-generated mail by the canonical subject ──
+            # cron(8) prefixes every mail it sends with "Cron <user@host>
+            # <command>". This is the format every Unix cron has used for
+            # ~30 years, regardless of distro, so matching the literal
+            # prefix is robust and won't accidentally catch smartd or
+            # other system mail.
+            if title_lower_sm.startswith('cron <'):
+                return 'cron_output', 'node', ''
+
             return 'system_mail', 'node', ''
         
         # ── Fallback for unknown/empty pve_type ──

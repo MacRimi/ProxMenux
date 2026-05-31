@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "title": "Instalar Kodi en un LXC con aceleración por GPU | Guías ProxMenux",
+    "description": "Ejecuta Kodi dentro de un contenedor LXC privilegiado en Proxmox VE, expón la iGPU del host y los dispositivos USB de entrada, y convierte el servidor Proxmox en un media center todo en uno conectado directamente a una TV.",
+    "ogTitle": "Instalar Kodi en un LXC con aceleración por GPU",
+    "ogDescription": "Ejecuta Kodi dentro de un LXC privilegiado en Proxmox VE con passthrough de la iGPU del host y dispositivos USB de entrada — convierte el servidor en un media center todo en uno."
+  },
+  "header": {
+    "title": "Instalar Kodi en un LXC y conectarlo a un monitor / TV con aceleración por GPU",
+    "description": "Ejecuta Kodi dentro de un contenedor LXC privilegiado en Proxmox VE, expón la iGPU del host y los dispositivos USB de entrada, y convierte el servidor Proxmox en un media center todo en uno conectado directamente a una TV.",
+    "section": "Guías"
+  },
+  "intro": {
+    "calloutTitle": "Aviso",
+    "calloutBody": "Esta guía usa un script externo de la comunidad para arrancar el LXC de Kodi. La parte de GPU (passthrough de la iGPU del host al contenedor) también la cubre el flujo automatizado de ProxMenux: <strong>GPUs and Coral-TPU → Add GPU to LXC</strong> en el menú de ProxMenux — se encarga del cableado de <code>/dev/dri</code> y de la instalación del driver dentro del CT. El script de abajo además arranca el propio Kodi y el autoarranque en <code>tty7</code>. Úsalo si quieres un LXC media center llave en mano; usa el <gpuLink>flujo de ProxMenux</gpuLink> si solo necesitas acceso a la GPU para un CT que has montado a mano.",
+    "credit": "Script original del LXC de Kodi creado por <authorLink>mrrudy</authorLink>.",
+    "stepsTitle": "Qué vas a hacer",
+    "steps": [
+      "Crear un LXC privilegiado ejecutando Kodi (con el script).",
+      "Cablear tu teclado, ratón o mando USB dentro del CT.",
+      "(Opcional) Actualizar Kodi a la última versión desde el PPA team-xbmc."
+    ]
+  },
+  "createCt": {
+    "heading": "1. Crear el LXC de Kodi",
+    "body": "El CT tiene que ser <strong>privilegiado</strong> para que pueda acceder a los dispositivos USB de entrada (teclados, mandos a distancia, controles). El script se encarga de los flags de privilegio, el cableado de la GPU, la instalación de Kodi y el autoarranque en <code>tty7</code>:",
+    "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/mrrudy/proxmoxHelper/main/ct/kodi-v1.sh)\"",
+    "after": "Ten paciencia — la instalación tarda un rato. Cuando termine y Kodi arranque en <code>tty7</code>, puedes conectar tu monitor o TV directamente a la salida HDMI / DisplayPort del host y deberías ver la UI de Kodi."
+  },
+  "addInput": {
+    "heading": "2. Añadir teclado, ratón o mando USB",
+    "body": "Los dispositivos de entrada viven en <code>/dev/input/</code> en el host. Identifica el número major:",
+    "listCode": "ls -l /dev/input",
+    "imageAlt": "Listado de dispositivos de entrada",
+    "afterList": "Coge el número de la primera columna (en el ejemplo: <code>13</code>). Para el LXC de Kodi y luego edita su config (reemplaza <code>'<'CTID'>'</code> por el ID del contenedor — por ejemplo, <code>102</code>):",
+    "editCode": "nano /etc/pve/lxc/'<'CTID'>'.conf",
+    "addLines": "Añade (ajusta <code>13</code> a lo que viste en <strong>tu</strong> host):",
+    "configCode": "lxc.cgroup2.devices.allow = c 13:* rwm\nlxc.mount.entry: /dev/input dev/input none bind,optional,create=dir",
+    "imageConfigAlt": "Configuración del LXC",
+    "save": "Guarda (<code>Ctrl+X</code>) y reinicia <strong>solo el contenedor</strong> — no hace falta reiniciar el host Proxmox entero:",
+    "restartCode": "pct restart '<'CTID'>'",
+    "plug": "Conecta el teclado / ratón / mando y Kodi debería responder."
+  },
+  "updateKodi": {
+    "heading": "3. (Opcional) Actualizar Kodi a la última versión",
+    "calloutTitle": "Importante",
+    "calloutBody": "El PPA team-xbmc es <strong>solo para Ubuntu</strong>. Si el LXC de Kodi está basado en una plantilla Debian, <code>add-apt-repository</code> no estará disponible y el PPA no funcionará. El script de mrrudy usa por defecto una plantilla Ubuntu, así que normalmente esto se cumple. Para verificarlo: <code>cat /etc/os-release</code> dentro del contenedor — busca <code>NAME=\"Ubuntu\"</code>.",
+    "body": "Dentro del contenedor (<code>pct enter '<'CTID'>'</code>):",
+    "code": "sudo add-apt-repository ppa:team-xbmc/ppa\nsudo apt update\nsudo apt install kodi kodi-bin",
+    "after": "Reinicia el contenedor cuando termine; al arrancar tendrás el último Kodi."
+  },
+  "screenshots": {
+    "heading": "Capturas",
+    "image1Alt": "Interfaz de Kodi 1",
+    "image2Alt": "Interfaz de Kodi 2"
+  },
+  "troubleshoot": {
+    "heading": "Solución de problemas",
+    "items": [
+      "<strong>El LXC de Kodi arranca pero no se ve nada en la TV:</strong> puede que el CT no haya heredado la iGPU. Confírmalo con <code>ls /dev/dri</code> dentro del contenedor (deberías ver <code>card0</code>, <code>renderD128</code>). Si está vacío, el passthrough de GPU no se aplicó — vuelve a ejecutar el script o usa el menú <strong>Add GPU to LXC</strong> de ProxMenux.",
+      "<strong>El teclado / ratón no se detecta tras reiniciar:</strong> el número major de <code>/dev/input</code> cambió (raro, pero pasa tras actualizaciones de kernel). Vuelve a ejecutar <code>ls -l /dev/input</code> en el host y actualiza la línea <code>lxc.cgroup2.devices.allow</code>.",
+      "<strong>La reproducción acelerada por hardware usa CPU en lugar de GPU:</strong> instala o actualiza los drivers VA-API dentro del contenedor (<code>intel-media-va-driver</code> para iGPUs Intel modernas, <code>i965-va-driver</code> para las más antiguas, <code>mesa-va-drivers</code> en AMD).",
+      "<strong><code>add-apt-repository: command not found</code>:</strong> el contenedor es Debian, no Ubuntu. O bien usa los paquetes Kodi de Debian (más antiguos pero estables), o bien recrea el CT desde una plantilla Ubuntu."
+    ]
+  },
+  "further": {
+    "heading": "Más lecturas",
+    "konpatRich": "<konpatLink>El post de Konpat</konpatLink> — contexto adicional sobre passthrough de iGPU Intel a LXC."
+  }
+}

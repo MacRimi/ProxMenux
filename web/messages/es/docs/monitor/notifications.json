@@ -1,0 +1,483 @@
+{
+  "meta": {
+    "title": "Notificaciones de Proxmox — Telegram, Discord, Email, Gotify, Apprise | ProxMenux Monitor",
+    "description": "Envía notificaciones de Proxmox VE a Telegram, Discord, Email, Gotify y ~80 servicios extra vía Apprise. ProxMenux Monitor convierte eventos del Monitor de salud, el journal watcher y el webhook de Proxmox VE en mensajes ricos con deduplicación, cooldown, agregación de ráfagas, una reescritura con IA opcional y un historial completo.",
+    "ogTitle": "Notificaciones de Proxmox — Telegram, Discord, Email, Gotify, Apprise",
+    "ogDescription": "Envía alertas de Proxmox VE a Telegram, Discord, Email, Gotify y ~80 servicios extra vía Apprise — con deduplicación, cooldown, agregación de ráfagas y una reescritura con IA opcional.",
+    "twitterTitle": "Notificaciones de Proxmox | ProxMenux Monitor",
+    "twitterDescription": "Envía alertas de Proxmox VE a Telegram, Discord, Email, Gotify y ~80 servicios extra vía Apprise."
+  },
+  "header": {
+    "title": "Notifications",
+    "description": "El motor de fan-out que toma eventos de cada colector dentro del Monitor y los entrega a Telegram, Discord, Email, Gotify y ~80 servicios extra vía Apprise — con deduplicación, cooldown, agregación de ráfagas, toggles por evento y por canal, un reescritor de IA opcional y un historial consultable.",
+    "section": "ProxMenux Monitor"
+  },
+  "intro": {
+    "title": "De dónde vienen los mensajes",
+    "body": "Las notificaciones no son un escáner aparte. Son el lado de salida de cada colector que ya está corriendo dentro del Monitor — el <link>Monitor de salud</link>, el journal watcher, el task watcher de Proxmox, el hook del webhook de PVE, el polling collector y los eventos in-process emitidos por scripts de ProxMenux. Cada evento corre por la misma pipeline de despacho antes de llegar a un móvil o a un buzón de correo."
+  },
+  "howItWorks": {
+    "heading": "Cómo funciona",
+    "intro": "Cada notificación sigue el mismo camino por el proceso del Monitor. Los eventos los producen un puñado de colectores independientes, se normalizan en un payload estructurado, pasan por una pipeline de despacho que decide si enviar y en qué forma, opcionalmente se reescriben por un LLM, y finalmente se reparten a los canales que el usuario haya configurado.",
+    "arrowLabel": "evento",
+    "caption": "Flujo de alto nivel. Cada intento real de despacho — exitoso, agregado o fallido — se registra en la tabla de historial SQLite para inspección retrospectiva. Los eventos suprimidos por la etapa de cooldown no se loguean.",
+    "nodes": {
+      "sourcesLabel": "Fuentes",
+      "sourcesDetail": "Monitor de salud\nJournal watcher\nTask watcher\nPVE webhook hook\nPolling collector\nEmisores in-process",
+      "dispatchLabel": "Pipeline de despacho",
+      "dispatchDetail": "Toggle por evento\nDedup fingerprint\nCooldown\nAgregación de ráfaga",
+      "aiLabel": "Reescritura IA (opc.)",
+      "aiDetail": "OpenAI / Anthropic\nGemini / Groq\nOpenRouter / Ollama\n(off por defecto)",
+      "channelsLabel": "Canales",
+      "channelsDetail": "Telegram\nDiscord\nEmail (SMTP)\nGotify\nApprise (~80 servicios)"
+    }
+  },
+  "enabling": {
+    "heading": "Activar el panel",
+    "intro": "En una instalación recién hecha la tarjeta Notifications en la pestaña Settings muestra un badge <em>Disabled</em> y un único botón <em>Enable Notifications</em>. Nada se despacha y ninguna config de PVE se toca hasta que lo pulsas.",
+    "disabledAlt": "Tarjeta Notifications en una instalación recién hecha mostrando badge Disabled y un único botón Enable Notifications",
+    "disabledCaption": "El primer estado — un clic para activar.",
+    "stepsIntro": "Pulsar el botón hace tres cosas en secuencia:",
+    "steps": [
+      "Cambia el panel a su estado <em>Active</em> y despliega el formulario de canal debajo.",
+      "Registra un destino webhook de Proxmox VE en <code>/etc/pve/notifications.cfg</code> apuntando a <code>POST http://127.0.0.1:8008/api/notifications/webhook</code>. Desde este momento, todo lo que Proxmox VE emite por sí mismo (HA, replicación, vzdump desde la GUI) fluye a la misma pipeline que los eventos propios del Monitor. Mira <pvelink>Integración del webhook de PVE</pvelink> más abajo para la mecánica completa.",
+      "Arranca el hilo de fondo de despacho. El hilo hace polling de la cola de eventos y camina cada evento por la pipeline diagramada arriba."
+    ],
+    "activeAlt": "Tarjeta Notifications tras activar — badge Active, pestañas de canal (Telegram, Gotify, Discord, Email), campo Display Name y sección colapsable Advanced AI Enhancement",
+    "activeCaption": "Estado Active — pestañas de canal arriba (Telegram / Gotify / Discord / Email), el campo Display Name, la lista de categorías por canal y la sección colapsable <em>Advanced: AI Enhancement</em>."
+  },
+  "sources": {
+    "heading": "Fuentes de eventos",
+    "intro": "Seis colectores independientes alimentan el motor de notificaciones. Corren como hilos de fondo dentro del proceso del Monitor y emiten un <code>NotificationEvent</code> estructurado cada vez que algo pasa.",
+    "headerCollector": "Colector",
+    "headerWatches": "Vigila",
+    "headerEvents": "Eventos típicos",
+    "rows": [
+      {
+        "collector": "Monitor de salud",
+        "watches": "Diez categorías, cada 5 minutos",
+        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>."
+      },
+      {
+        "collector": "Journal watcher",
+        "watches": "<code>journalctl --follow</code> con pattern matching para fallos de autenticación SSH / web, bans de Fail2Ban (cuando el jail opcional está instalado), errores I/O del kernel, OOM, eventos de smartd.",
+        "events": "<code>auth_fail</code>, <code>ip_block</code>, <code>oom_kill</code>, <code>disk_io_error</code>, <code>service_fail</code>."
+      },
+      {
+        "collector": "Task watcher",
+        "watches": "Hace polling de <code>/var/log/pve/tasks/index</code> para nuevos UPIDs de tareas y sigue sus logs por archivo.",
+        "events": "<code>backup_start</code>, <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>migration_*</code>, <code>snapshot_complete</code>."
+      },
+      {
+        "collector": "Hook de webhook Proxmox",
+        "watches": "Escucha en <code>POST /api/notifications/webhook</code>. Proxmox VE 8.1+ empuja sus propias notificaciones aquí una vez configurada la integración (mira <pvelink>abajo</pvelink>).",
+        "events": "Cualquier cosa que PVE emita — incluyendo eventos que el Monitor de otro modo perdería (HA, replicación, vzdump desde la GUI)."
+      },
+      {
+        "collector": "Polling collector",
+        "watches": "Comparaciones periódicas (nodos del cluster online, caducidad de certificado, estado de passthrough de GPU, disponibilidad de actualización PVE / ProxMenux).",
+        "events": "<code>node_disconnect</code>, <code>node_reconnect</code>, <code>pve_update</code>, <code>proxmenux_update</code>, <code>gpu_mode_switch</code>, <code>pci_passthrough_conflict</code>."
+      },
+      {
+        "collector": "Emisores in-process",
+        "watches": "Llamadas directas desde scripts de ProxMenux y desde el propio Monitor (<code>notification_manager.emit_event(...)</code>).",
+        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>ai_model_migrated</code>, eventos de prueba personalizados."
+      }
+    ],
+    "after1": "Cada evento lleva un <code>event_type</code> estable (el catálogo está abajo), una <code>severity</code> (<code>INFO</code>, <code>WARNING</code>, <code>CRITICAL</code>), una <code>category</code> (usada para enriquecimiento de emoji y filtros por grupo) y un payload <code>data</code> con lo que la template necesite (<code>vmid</code>, <code>device</code>, <code>source_ip</code>, <code>reason</code>…).",
+    "after2": "Cada <code>event_type</code> tiene una template coincidente en <code>notification_templates.py</code> que renderiza el evento estructurado en un cuerpo de texto plano antes de que cualquier otra cosa pase. Ese cuerpo templated es lo que viaja por la pipeline de despacho, y lo que la capa opcional de IA reescribe si está activada. Mira la <ailink>página del Asistente de IA</ailink> para cómo la capa de reescritura interactúa con este cuerpo templated."
+  },
+  "channels": {
+    "heading": "Walkthroughs de canales",
+    "intro": "Cinco canales están actualmente soportados: Telegram, Discord, Gotify, Email (SMTP) y Apprise. Los primeros cuatro son nativos — cada uno tiene su propia pestaña dentro del panel Notifications con un enlace <em>+ setup guide</em> que abre un modal in-app. Apprise es un hub genérico que añade ~80 servicios adicionales (ntfy, Matrix, Pushover, Slack, Teams, Pushbullet, AWS SNS, Mattermost…) a través de un único campo de URL. Están todos documentados paso a paso abajo.",
+    "credsTitle": "Dónde viven las credenciales",
+    "credsBody": "Los tokens, URLs de webhook y contraseñas SMTP se guardan localmente en la base de datos SQLite del Monitor bajo <code>/usr/local/share/proxmenux/</code>. Nunca salen del host excepto para llegar a sus respectivos servicios. Un backup de ese directorio basta para recuperar los canales configurados."
+  },
+  "telegram": {
+    "heading": "Telegram",
+    "intro": "Se requieren dos piezas de información: un <strong>Bot Token</strong> (uno por bot, reutilizable entre chats) y un <strong>Chat ID</strong> (donde el bot debe publicar — tu chat privado, un grupo o un tema dentro de un supergrupo). La guía in-app de abajo contiene el paso a paso completo; el resto de esta sección lo repite como texto más las dos formas que puede tomar el Chat ID.",
+    "guideAlt": "Modal Telegram Bot Setup Guide con cuatro secciones numeradas: Crear un Bot con BotFather, Obtener el Bot Token, Obtener tu Chat ID y Para Grupos o Canales",
+    "guideCaption": "El enlace <em>+ setup guide</em> dentro de la pestaña Telegram abre este modal — los cuatro pasos numerados van de sin bot a un canal funcionando en unos dos minutos.",
+    "step1Title": "1 · Crea un bot con BotFather",
+    "step1Items": [
+      "Abre Telegram y empieza un chat con <a>@BotFather</a> (el que tiene el tick azul de verificación — las copias son comunes).",
+      "Envía <code>/newbot</code>.",
+      "Elige un nombre visible (p. ej. <em>ProxMenux Lab</em>). Se puede cambiar después.",
+      "Elige un username terminado en <code>bot</code> (p. ej. <em>proxmenux_lab_bot</em>). Debe ser único en Telegram.",
+      "BotFather responde con un token de la forma <code>123456789:ABCdef…</code> — ese es el Bot Token. Trátalo como una contraseña."
+    ],
+    "step2Title": "2 · Obtén el Chat ID",
+    "step2Intro": "El Chat ID identifica <em>dónde</em> publica el bot. Toma una de dos formas según el destino.",
+    "privateLabel": "Chat privado (recibes las alertas en tu propia cuenta):",
+    "privateItems": [
+      "Empieza un chat con tu nuevo bot y envía cualquier mensaje (p. ej. <code>/start</code>).",
+      "Abre un chat con <a1>@userinfobot</a1> (o <a2>@myidbot</a2>) y envía <code>/start</code>. Te responde con tu ID numérico de usuario — ese es el Chat ID. Es un número positivo."
+    ],
+    "privateAlt": "Formulario de canal Telegram rellenado con Bot Token (enmascarado), Chat ID positivo para un chat privado y un campo opcional Topic ID vacío",
+    "privateCaption": "Chat privado con el bot — el Chat ID es un número positivo (tu ID de usuario personal).",
+    "groupLabel": "Grupo o supergrupo con temas:",
+    "groupItems": [
+      "Añade el bot al grupo como miembro (y hazlo admin si el grupo lo requiere para publicar).",
+      "Envía cualquier mensaje en el grupo.",
+      "Abre <code>https://api.telegram.org/bot&lt;TU_TOKEN&gt;/getUpdates</code> en un navegador. Busca <code>chat.id</code> en la respuesta JSON — para grupos es un número negativo, para supergrupos empieza con <code>-100</code>.",
+      "Para supergrupos con <em>Topics</em> activado, anota también el <code>message_thread_id</code> del tema al que quieres apuntar — eso va en el campo opcional <em>Topic ID</em>."
+    ],
+    "groupAlt": "Formulario de canal Telegram con Bot Token (enmascarado), Chat ID negativo prefijado con -100 indicando un supergrupo, y Topic ID 3 configurado para entregar a un tema específico",
+    "groupCaption": "Supergrupo — el Chat ID empieza con <code>-100…</code> y el <em>Topic ID</em> opcional apunta a un hilo específico.",
+    "step3Title": "3 · Guarda y prueba",
+    "step3Body": "Pega el Bot Token y el Chat ID en la pestaña Telegram, guarda y pulsa <em>Send Test</em> al final del panel. Un mensaje de prueba debería llegar en un segundo; si no llega, la sección History registra el fallo con el motivo exacto (token inválido, bot no en el grupo, bloqueado por el usuario, etc.)."
+  },
+  "discord": {
+    "heading": "Discord",
+    "intro": "Los canales de Discord aceptan mensajes entrantes a través de una <em>Webhook URL</em> ligada a un único canal. El Monitor necesita esa URL y nada más.",
+    "items": [
+      "En Discord, abre el servidor donde quieres que aterricen las notificaciones y ve a <em>Server Settings → Integrations → Webhooks</em>.",
+      "Pulsa <em>New Webhook</em>. Dale un nombre (p. ej. <em>ProxMenux</em>) y elige el canal donde debe publicar. Un avatar es opcional.",
+      "Pulsa <em>Copy Webhook URL</em> — tiene aspecto de <code>https://discord.com/api/webhooks/&lt;id&gt;/&lt;token&gt;</code>.",
+      "Pégalo en el campo Webhook URL de la pestaña Discord en el panel Notifications y guarda."
+    ],
+    "imageAlt": "Formulario de canal Discord con campo Webhook URL empezando por https://discord.com/api/webhooks/",
+    "imageCaption": "Discord — pega la Webhook URL de <em>Server Settings → Integrations → Webhooks</em>."
+  },
+  "gotify": {
+    "heading": "Gotify",
+    "intro": "Gotify es un servidor push autoalojado. Necesitas su URL base y un <em>Application Token</em> generado desde la UI de admin de Gotify.",
+    "items": [
+      "Si aún no tienes una instancia de Gotify, instala una — mira la <a>guía oficial de instalación</a>.",
+      "Abre la UI web de Gotify, loguéate como admin, ve a <em>Apps</em> → <em>Create Application</em>. Dale un nombre (p. ej. <em>ProxMenux</em>). Gotify genera un token — cópialo.",
+      "En la pestaña Gotify del panel Notifications, configura <em>Server URL</em> a la URL base de tu instancia (p. ej. <code>https://gotify.example.com</code>) y pega el App Token.",
+      "Guarda y pulsa <em>Send Test</em>."
+    ],
+    "imageAlt": "Formulario de canal Gotify con campo Server URL configurado a https://gotify.example.com y un campo App Token con placeholder A_valid_gotify_token",
+    "imageCaption": "Gotify — URL del servidor de tu instancia autoalojada más el App Token de la UI de admin de Gotify."
+  },
+  "email": {
+    "heading": "Email (SMTP)",
+    "intro": "Email es el canal más flexible — y el que tiene más campos. Necesitas un servidor SMTP, un puerto, un modo TLS, opcionalmente un usuario y contraseña, una dirección de remitente y al menos un destinatario.",
+    "imageAlt": "Formulario de canal Email con SMTP Host, Port, dropdown TLS Mode, Username, Password, From Address, To Addresses separadas por coma y campos Subject Prefix",
+    "imageCaption": "Email — host / puerto / modo TLS de SMTP, usuario + contraseña opcionales, dirección de remitente, destinatarios separados por coma y un prefijo de asunto para hacer las alertas fáciles de filtrar en el lado del inbox.",
+    "appNote": "Si usas una cuenta personal de Gmail o Microsoft 365, el campo password no puede ser tu contraseña normal de cuenta — ambos proveedores requieren una <strong>app password</strong> generada específicamente para clientes de terceros. Los dos flujos están abajo.",
+    "gmailTitle": "App password de Gmail",
+    "gmailIntro": "Las app passwords de Gmail requieren que la <strong>verificación en 2 pasos</strong> esté activa en la cuenta de Google. Si no lo está, la página <em>App passwords</em> no existirá.",
+    "gmailItems": [
+      "Abre <a>myaccount.google.com/security</a> y activa <em>Verificación en 2 pasos</em> si no está activada.",
+      "Ve a <a>myaccount.google.com/apppasswords</a>.",
+      "Escribe un nombre (p. ej. <em>ProxMenux</em>) y pulsa <em>Create</em>. Google muestra una contraseña de 16 caracteres — cópiala.",
+      "Rellena la pestaña Email con: <em>Host</em> <code>smtp.gmail.com</code>, <em>Port</em> <code>587</code>, <em>TLS Mode</em> <code>STARTTLS</code>, <em>Username</em> tu dirección de Gmail, <em>Password</em> la app password de 16 caracteres."
+    ],
+    "outlookTitle": "App password de Microsoft / Outlook",
+    "outlookIntro": "Microsoft ahora requiere <strong>verificación en dos pasos</strong> en la cuenta personal antes de que se pueda crear una app password. Los tenants empresariales donde el admin ha deshabilitado SMTP basic auth necesitan un camino distinto (OAuth2) que el Monitor no soporta actualmente — apunta esos a un relay SMTP que controles en su lugar.",
+    "outlookItems": [
+      "Abre <a>account.microsoft.com/security</a> y activa la verificación en dos pasos.",
+      "Abre <em>Advanced security options</em>, baja a <em>App passwords</em> y pulsa <em>Create a new app password</em>.",
+      "Microsoft muestra una contraseña aleatoria larga — cópiala.",
+      "Rellena la pestaña Email con: <em>Host</em> <code>smtp-mail.outlook.com</code>, <em>Port</em> <code>587</code>, <em>TLS Mode</em> <code>STARTTLS</code>, <em>Username</em> tu dirección de Outlook / Microsoft 365, <em>Password</em> la app password generada."
+    ],
+    "relayTitle": "Relay SMTP autoalojado",
+    "relayBody": "Si corres tu propio relay SMTP (Postfix, msmtp, etc.) en la LAN, apunta el Monitor a él y saltea el baile de app-password por completo. El relay maneja la auth upstream y el Monitor envía en cleartext sobre una red de confianza."
+  },
+  "apprise": {
+    "heading": "Apprise (hub genérico para ~80 servicios)",
+    "intro": "Apprise es una librería de notificaciones de código abierto que habla el protocolo de unos 80 servicios distintos a través de un único formato de URL. Añadirlo como un canal más dentro del Monitor significa que puedes entregar alertas a servicios que no tienen una pestaña dedicada — ntfy, Matrix, Pushover, Slack, Microsoft Teams, Mattermost, Pushbullet, AWS SNS, Pushsafer, Rocket.Chat, Signal API y muchos otros — sin que ProxMenux tenga que implementar cada integración por separado.",
+    "listIntro": "La lista completa de servicios soportados y el formato exacto de URL para cada uno vive en la wiki oficial de Apprise:",
+    "listItems": [
+      "<a>github.com/caronc/apprise/wiki</a> — índice completo de servicios soportados.",
+      "<a>URL basics</a> — cómo se estructuran las URLs de Apprise."
+    ],
+    "stepsTitle": "Pasos",
+    "steps": [
+      "Elige el servicio destino en la <a>wiki de Apprise</a> y copia la plantilla de URL para él. Cada página de servicio muestra el esquema exacto a usar (<code>ntfy://</code>, <code>matrix://</code>, <code>pover://</code>, <code>slack://</code>…) más cualquier token, canal u hostname requerido.",
+      "Rellena los placeholders con tus propias credenciales. Por ejemplo, un topic de ntfy.sh tiene aspecto de <code>ntfy://ntfy.sh/mi-topic</code>; una URL de Pushover tiene aspecto de <code>pover://user@token</code>; una URL de Matrix tiene aspecto de <code>matrix://user:pass@host:port/#room</code>.",
+      "Pega la URL final en el campo <em>Apprise URL</em> en la pestaña Apprise del panel Notifications y guarda.",
+      "Pulsa <em>Send Test</em> para verificar que la URL es alcanzable y las credenciales se aceptan."
+    ],
+    "deliveredTitle": "Qué se entrega",
+    "deliveredBody": "Apprise recibe el mismo payload que los otros canales — título, cuerpo y una severidad (info / success / warning / failure). La severidad se mapea a lo que el servicio destino exponga (icono, prioridad, color). El formato de mensajes ricos y la capa de reescritura con IA corren todos antes de que se invoque la URL, exactamente como para Telegram o Email.",
+    "fanoutTitle": "Una URL por canal Apprise",
+    "fanoutBody": "El Monitor expone un único slot de URL por canal Apprise. Si necesitas hacer fan-out a varios servicios Apprise a la vez (p. ej. ntfy.sh más una sala de Matrix), el enfoque más limpio es alojar un pequeño <a>servidor Apprise API</a> con una config etiquetada y apuntar el Monitor a su endpoint — el servidor luego difunde a cada URL detrás de esa etiqueta."
+  },
+  "rich": {
+    "heading": "Mensajes ricos, categorías y filtrado por canal",
+    "intro": "Bajo el formulario del canal cada canal expone los mismos tres controles: un toggle <em>Rich messages</em> arriba (destacado con la flecha en la captura), once <em>Notification Categories</em> colapsables con toggles por evento y un botón <em>Send Test</em> abajo.",
+    "imageAlt": "Panel Notification Categories con toggle maestro Rich messages destacado arriba, secciones colapsables para VM/CT, Backups, Resources, Storage, Network, Security, Cluster, Services, Health Monitor, Updates cada una con toggle y contador de eventos, y un botón Send Test",
+    "imageCaption": "Flecha de arriba — el toggle <em>Rich messages</em> por canal. Abajo — las once categorías colapsables con toggles por evento. <em>Send Test</em> está al final del canal.",
+    "richTitle": "Mensajes ricos",
+    "richIntro": "Con <em>Rich messages</em> activado, la cabecera de cada evento se prefija con un emoji de categoría y el cuerpo se renderiza usando el formato nativo del canal (HTML de Telegram, embed de Discord con color de severidad). Con él desactivado, el Monitor envía una versión de texto plano con la misma información menos las pistas visuales. Mismo contenido, distinta presentación:",
+    "plainHeader": "Plano — Rich messages off",
+    "richHeader": "Rico — Rich messages on",
+    "richOutro": "El toggle es por canal: deja Email plano para legibilidad de reglas de inbox dejando que Telegram y Discord rendericen la versión rica. Los canales que no soportan formato inline (email texto plano, Gotify) ignoran el formato y caen a texto de todas formas.",
+    "togglesTitle": "Categorías por evento",
+    "togglesIntro": "Unos setenta tipos de evento están agrupados en once categorías de UI. Cada evento tiene un toggle maestro y un override por canal — dos capas que deciden si un evento dado llega a un canal dado:",
+    "togglesItems": [
+      "<strong>Toggle maestro por evento.</strong> Si <code>vm_start</code> está off en todas partes, ningún canal ve nunca un <code>vm_start</code>. Los toggles persisten como <code>event_toggles[event_type] = true | false</code>.",
+      "<strong>Overrides por canal.</strong> Un tipo de evento también se puede silenciar para un canal específico (<em>\"enviar <code>backup_complete</code> a Discord pero no a Telegram\"</em>). Estos viven en <code>channel_overrides[channel_name][event_type]</code> y solo aplican si el evento pasó el toggle maestro."
+    ],
+    "togglesOutro": "Cada cabecera de categoría en la captura también muestra el conteo de eventos <em>actualmente activados</em> / <em>total</em> para ese grupo, y un toggle a nivel de categoría que pone cada evento dentro a on o off en un clic — el atajo para silenciar un grupo entero (p. ej. todos los backups <code>info</code>, todos los eventos relacionados con actualizaciones) sin expandir la sección."
+  },
+  "quiet": {
+    "heading": "Quiet Hours",
+    "intro": "Quiet Hours es una ventana temporal por canal durante la cual el dispatcher solo deja pasar eventos <strong>CRITICAL</strong>. Todo lo demás — INFO, WARNING, eventos de acción — se retiene, se persiste a disco y se entrega como un único resumen agrupado en el momento en que la ventana cierra. El canal sigue recibiendo las cosas urgentes en tiempo real; el ruido espera hasta que probablemente lo quieras.",
+    "imageAlt": "Ajustes de canal mostrando ambos knobs lado a lado: tarjeta Quiet Hours con toggle activado, Start 22:00 y End 07:00 más una preview en vivo de la siguiente transición, y justo debajo la tarjeta Daily digest con su propio toggle, un selector de hora de entrega configurado a 09:00 y la nota de que CRITICAL y WARNING nunca se retrasan",
+    "imageCaption": "Ambos knobs viven lado a lado dentro de la tarjeta de ajustes de cada canal — Quiet Hours arriba, Daily digest debajo. Independientes por canal.",
+    "purposeTitle": "Para qué sirve",
+    "purposeItems": [
+      "<strong>No me despiertes a las 03:00 por un aviso de actualización.</strong> Backups, actualizaciones de apps, optimizaciones post-instalación y otros eventos de nivel INFO dejan de avisar a tu móvil por la noche.",
+      "<strong>Pero aun así despiértame por un fuego.</strong> Fallos de disco, OOM kills, shutdowns del host, bans de fail2ban — cualquier cosa clasificada como CRITICAL — saltea la ventana y llega inmediatamente.",
+      "<strong>Tampoco pierdas nada.</strong> Los eventos suprimidos durante la ventana no se descartan silenciosamente — se sientan en un buffer SQLite hasta que vuelves al reloj."
+    ],
+    "howTitle": "Cómo funciona",
+    "howItems": [
+      "<strong>Toggle por canal.</strong> Cada canal tiene su propia configuración de Quiet Hours — Telegram puede estar silencioso 22:00-07:00 mientras email sigue recibiendo todo 24/7.",
+      "<strong>Hora de inicio y fin</strong> en tu zona horaria local, intervalo semi-abierto (inicio inclusivo, fin exclusivo). La ventana puede cruzar medianoche (p. ej. 22:00-07:00 significa esta noche hasta mañana por la mañana).",
+      "<strong>Línea de preview en vivo</strong> justo debajo de los inputs muestra si la ventana está actualmente activa y cuándo ocurre la siguiente transición. Ahorra abrir un reloj.",
+      "<strong>Durante la ventana:</strong> los eventos CRITICAL siguen disparando por la pipeline de despacho normal. Los eventos INFO y WARNING se enrutan a un buffer persistente (tabla <code>quiet_pending</code> en la DB SQLite del Monitor).",
+      "<strong>Cuando la ventana cierra:</strong> se envía una única notificación agrupada con todo lo que se acumuló — una línea por evento bufferizado, en orden cronológico. El buffer se limpia solo después de que el canal confirme la entrega, para que un fallo transitorio de Telegram / SMTP no pierda el contexto de la noche.",
+      "<strong>A través de reinicios.</strong> Si el Monitor reinicia a mitad de ventana, el buffer está intacto en disco. Si el reinicio ocurre justo después de que la ventana cierre, el siguiente ciclo de despacho detecta las filas pendientes y las descarga con un único resumen \"recovery\" — no se pierden notificaciones por un deploy o un reboot."
+    ],
+    "criticalTitle": "Qué cuenta como CRITICAL",
+    "criticalBody": "La severidad se fija en la creación del evento, no en el momento del despacho. Los fallos de disco, OOM kills, split-brain de cluster, shutdowns del host y el nivel \"duro\" de errores I/O de disco se envían como CRITICAL por diseño. Todo lo demás (backups OK, actualizaciones disponibles, logs INFO, hits de rate-limit) cae por defecto a INFO o WARNING y por tanto es silenciable. Puedes verificar la severidad por defecto de un evento dado en el <link>Catálogo de eventos</link> más abajo en esta página."
+  },
+  "digest": {
+    "heading": "Resumen diario de eventos INFO",
+    "intro1": "El Daily Digest es el knob opuesto: un ajuste <strong>opt-in</strong> que dice \"no me envíes cada backup exitoso o aviso de actualización según ocurre — recoléctalos y envíame un resumen al día a las 09:00 (o la hora que elija)\". Mismo objetivo que Quiet Hours (menos ruido) pero un mecanismo distinto (resumen basado en tiempo en vez de una ventana diaria).",
+    "intro2": "Vive en la misma tarjeta de ajustes de canal que Quiet Hours (mira la figura bajo <link>Quiet Hours</link>), justo debajo. Cada uno se activa independientemente.",
+    "purposeTitle": "Para qué sirve",
+    "purposeItems": [
+      "<strong>El recap matutino de \"todo lo que pasó\".</strong> Si chequeas el host una vez al día con un café, un digest a las 09:00 lleva la misma información que 20 pings individuales a lo largo del día anterior, sin que leas 20 burbujas de Telegram.",
+      "<strong>Separa ruido de señal.</strong> Los eventos INFO responden a \"qué pasó\"; CRITICAL y WARNING responden a \"qué necesito hacer ahora mismo\". El digest maneja el primero; todo lo demás mantiene su entrega en vivo."
+    ],
+    "howTitle": "Cómo funciona",
+    "howItems": [
+      "<strong>Opt-in por canal.</strong> Off por defecto — Telegram no batcheaiza silenciosamente tus alertas. Lo activas en los canales donde quieres un digest, dejando otros en entrega en vivo.",
+      "<strong>Hora de entrega</strong> en tu zona horaria local. Por defecto 09:00 pero puedes elegir cualquier hora; el dispatcher dispara el digest dentro de ~60 s de ese minuto.",
+      "<strong>Qué entra en el digest:</strong> cualquier evento que el canal habría recibido en vivo cuya severidad es <strong>INFO</strong>. Ejemplos — <em>vzdump complete</em>, <em>Tailscale update available</em>, <em>ProxMenux optimisation update available</em>, <em>APT security updates pending</em>, <em>rate-limit hit</em>.",
+      "<strong>Qué nunca se retrasa:</strong>",
+      "<strong>Persistencia.</strong> Los eventos pendientes se sientan en una tabla SQLite (<code>digest_pending</code>) hasta la hora configurada. El Monitor puede reiniciar libremente sin perder lo que el digest eventualmente contendrá.",
+      "<strong>Los días vacíos son silenciosos.</strong> Si nada de nivel INFO pasó, no se envía digest — el canal se mantiene quieto en vez de recibir un mensaje \"no hay eventos para reportar\"."
+    ],
+    "neverDelayedSub": [
+      "Los eventos <strong>CRITICAL</strong> siempre pasan inmediatamente.",
+      "Los eventos <strong>WARNING</strong> siempre pasan inmediatamente.",
+      "Eventos de acción en vivo (VM/CT start / stop / shutdown / restart, vm_fail / ct_fail, backup start / fail, replication start / fail, host shutdown / reboot) saltean el digest incluso con severidad INFO — has hecho opt-in a verlos en vivo, el digest derrotaría ese opt-in."
+    ],
+    "comboTitle": "Combinar Quiet Hours y Daily Digest",
+    "comboBody": "Los dos funcionan juntos. Un canal puede tener <em>ambos</em> activos — Quiet Hours de 22:00 a 07:00 más un Daily Digest a las 09:00. Los eventos INFO durante la ventana quiet van al buffer quiet y llegan a las 07:00 como el resumen de cierre de ventana; los eventos INFO durante el día van al buffer digest y llegan a las 09:00 a la mañana siguiente. CRITICAL y WARNING siempre atraviesan ambos. Elige Quiet Hours cuando el objetivo es una <em>ventana de silencio</em>, el Daily Digest cuando el objetivo es un <em>resumen a hora fija</em>; muchos setups quieren ambos."
+  },
+  "displayName": {
+    "heading": "Display Name",
+    "intro": "Cada notificación lleva un <em>Display Name</em> — la etiqueta que identifica qué host produjo la alerta. Es el valor que ves al final del ejemplo de mensajes ricos arriba (<code>🏠 home-lab</code>) y dentro del prefijo de asunto del email.",
+    "imageAlt": "Campo Display Name con el valor amd mostrado como ejemplo, etiqueta Name shown in notifications - edit to customize or leave empty to use the system hostname",
+    "imageCaption": "El campo Display Name — déjalo vacío para usar el hostname del sistema, o sobreescríbelo con lo que quieras.",
+    "outro": "Si el campo está vacío, el Monitor cae al hostname del sistema. El override es sobre todo útil cuando corres varios hosts ProxMenux que envían al mismo chat de Telegram o buzón — una etiqueta más amigable (<em>home-lab</em>, <em>office-pve</em>) es más fácil de leer que <code>pve01.lan</code> o <code>pmx-prod-01</code>."
+  },
+  "dispatch": {
+    "heading": "Pipeline de despacho",
+    "intro": "Entre que un evento se levanta y un mensaje sale del host, corren tres etapas en este orden:",
+    "headerStage": "Etapa",
+    "headerWhat": "Qué hace",
+    "headerTunable": "¿Ajustable?",
+    "rows": [
+      {
+        "stage": "1. Deduplicación por huella",
+        "what": "Cada evento genera una huella (<code>event_type + campos clave de data</code>). Las huellas idénticas dentro de una ventana corta se consideran duplicados del primero.",
+        "tunable": "No — lógica interna del dispatcher."
+      },
+      {
+        "stage": "2. Cooldown",
+        "what": "Cuando una huella ya se ha enviado, esa misma huella se silencia durante el cooldown propio de cada severidad. El estado se guarda en la tabla SQLite <code>notification_last_sent</code> para que sobreviva a reinicios. Valores por defecto: <code>CRITICAL</code> 60 s, <code>WARNING</code> 300 s, <code>INFO</code> 900 s, con posibilidad de override por categoría (por ejemplo <code>resources</code> 900 s, <code>updates</code> 86 400 s).",
+        "tunable": "No — valores por defecto integrados en el dispatcher."
+      },
+      {
+        "stage": "3. Agregación de ráfagas",
+        "what": "Cuando llegan N eventos del mismo tipo dentro de una ventana corta (por ejemplo un aluvión de intentos de fuerza bruta SSH), se agrupan en un único mensaje <code>burst_*</code> con un contador y una muestra.",
+        "tunable": "No — ventana y umbral están fijados por tipo de evento."
+      }
+    ],
+    "calloutTitle": "El despacho ocurre en un hilo de fondo",
+    "calloutBody": "El bucle de despacho corre en su propio hilo. La petición HTTP que emite un evento devuelve en cuanto el evento se encola — no espera al RTT de Telegram, SMTP o el webhook. Cada resultado de envío se registra en la tabla de historial para revisarlo después."
+  },
+  "aiRewrite": {
+    "heading": "Reescritura con IA opcional",
+    "body1": "Cualquier evento se puede pasar por un LLM que reescribe su cuerpo en lenguaje natural y (opcionalmente) en el idioma del usuario destino antes del fan-out. El reescritor de IA está off por defecto. Cuando se activa corre en el hilo de despacho; si la llamada al proveedor falla o caduca, se usa el cuerpo templated original en su lugar.",
+    "body2": "Se soportan seis proveedores (OpenAI, Anthropic, Google Gemini, Groq, OpenRouter y Ollama local), con nivel de detalle por canal (<code>brief</code>, <code>standard</code>, <code>detailed</code>), idioma de salida, modo de prompt (<code>default</code> o <code>custom</code>) y un prompt personalizado opcional. El walkthrough de configuración completo, capturas y ejemplos de prompt viven en la página dedicada <link>Asistente de IA</link>.",
+    "privacyTitle": "Nota de privacidad",
+    "privacyBody": "La reescritura con IA envía el cuerpo del evento — que puede incluir hostnames, direcciones IP, usernames, mensajes de error y líneas de journal — al proveedor configurado. Ollama mantiene todo en el host; los otros cinco proveedores transmiten datos a sus respectivos endpoints. Desactiva el reescritor, o usa Ollama, si el host corre en un entorno donde el contenido de los eventos no puede salir de la red."
+  },
+  "pveWebhook": {
+    "heading": "Integración del webhook de PVE",
+    "intro1": "Proxmox VE 8.1+ tiene su propio sistema de notificaciones con <em>endpoints</em> integrados (sendmail, gotify, SMTP, webhook). Cuando activas Notifications en el Monitor, se registra como uno de esos endpoints — un destino <code>webhook</code> que apunta de vuelta a la propia API del Monitor. Desde ese momento, todo lo que Proxmox mismo emite (fencing HA, replicación, vzdump desde la GUI, renovación de certificado, etc.) fluye por la misma pipeline de despacho que los eventos propios del Monitor.",
+    "intro2": "El destino es visible desde la GUI de Proxmox en <em>Datacenter → Notifications → Notification Targets</em>:",
+    "imageAlt": "Diálogo Proxmox VE Edit Webhook mostrando el destino proxmenux-webhook autocreado con método POST, URL http://127.0.0.1:8008/api/notifications/webhook y una plantilla JSON usando escape title, escape message, escape severity, escape timestamp y campos json",
+    "imageCaption": "El destino webhook del lado PVE como Proxmox lo ve (la GUI está en el locale configurado del host — español en este ejemplo). Los mismos campos aplican en cualquier idioma.",
+    "registeredIntro": "Qué se registra:",
+    "registeredItems": [
+      "<strong>Método y URL.</strong> <code>POST http://127.0.0.1:8008/api/notifications/webhook</code>. Solo loopback — PVE habla con el proceso del Monitor corriendo en el mismo host.",
+      "<strong>Plantilla de body.</strong> Un body JSON usando los helpers Handlebars nativos de PVE — guardado base64-encoded en el archivo de config por PVE, pero se expande a:",
+      "<strong>Matcher.</strong> Un bloque compañero <code>matcher: proxmenux-matcher</code> con <code>mode all</code> para que cada notificación de PVE llegue al destino.",
+      "<strong>Bloque priv compañero.</strong> Una entrada vacía <code>webhook: proxmenux-webhook</code> se añade a <code>/etc/pve/priv/notifications.cfg</code>. PVE se niega a instanciar cualquier endpoint webhook sin un bloque privado coincidente, incluso cuando no se necesitan secrets — así que el Monitor escribe un stub solo de cabecera ahí. No se configuran tokens, cabeceras ni HMAC en el lado PVE."
+    ],
+    "securityTitle": "Cómo se asegura el receptor",
+    "securityIntro": "El receptor webhook en <code>POST /api/notifications/webhook</code> aplica distintas capas de seguridad según de dónde venga la petición:",
+    "securityItems": [
+      "<strong>Loopback (<code>127.0.0.1</code> / <code>::1</code>).</strong> Solo rate-limit. El endpoint confía en la interfaz loopback — solo procesos corriendo en el host pueden alcanzarlo, y PVE mismo no puede enviar cabeceras de auth personalizadas en el body que genera. Este es el camino que viaja cada notificación emitida por PVE.",
+      "<strong>Llamadores remotos.</strong> Cinco capas se apilan encima del rate-limiting: un shared secret en la cabecera <code>X-Webhook-Secret</code>, un timestamp de frescura en <code>X-ProxMenux-Timestamp</code> (rechazado si se desvía más allá de la ventana configurada), una búsqueda de caché de replay y una allowlist de IP opcional. El shared secret vive en la tabla de ajustes SQLite del Monitor — no en <code>/etc/pve/priv/notifications.cfg</code> — y se genera en el primer setup. Este camino existe para integraciones personalizadas que hacen POST desde fuera del host; el destino configurado por PVE nunca lo ejercita."
+    ],
+    "practiceTitle": "En la práctica",
+    "practiceBody": "El setup de PVE escribe el destino como <code>http://127.0.0.1:8008</code>, así que las notificaciones emitidas por PVE siempre pasan por el camino loopback con seguridad solo rate-limit. El camino de llamador remoto con shared secret es opt-in para integraciones personalizadas — apunta un servicio externo a <code>https://&lt;host-monitor&gt;:&lt;port&gt;/api/notifications/webhook</code> y suministra la cabecera <code>X-Webhook-Secret</code> para usarlo.",
+    "actionsIntro": "El Monitor gestiona este destino a través de tres acciones en la pestaña Settings:",
+    "actionsItems": [
+      "<strong>Setup</strong> — corre automáticamente cuando activas Notifications. Crea la entrada en <code>/etc/pve/notifications.cfg</code> tras hacer backup del archivo actual.",
+      "<strong>Cleanup</strong> — elimina la entrada. El backup previo del archivo se conserva.",
+      "<strong>Read config</strong> — muestra los destinos y matchers actuales como PVE los ve. Así es como confirmas que la entrada del Monitor es la que dispara cuando PVE tiene múltiples rutas de notificación configuradas."
+    ],
+    "clusterTitle": "Nodos de cluster",
+    "clusterBody": "<code>/etc/pve/</code> se replica entre miembros del cluster, así que el destino webhook es visible en cada nodo. Cada nodo, sin embargo, hace POST a su <em>propio</em> <code>127.0.0.1:8008</code> — lo que significa que el Monitor corriendo en ese nodo recibe los eventos que PVE generó localmente. Ejecuta el Monitor en cada nodo que quieras ver en el historial de Notifications."
+  },
+  "catalogue": {
+    "heading": "Catálogo de eventos",
+    "intro": "Unos setenta tipos de evento están agrupados en once categorías de UI. El panel Notifications renderiza una sección colapsable por grupo con un toggle por cada evento dentro. Cada evento está on por defecto salvo que se marque explícitamente lo contrario.",
+    "headerGroup": "Grupo",
+    "headerEvents": "Eventos",
+    "rows": [
+      {
+        "group": "VM / CT",
+        "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code>, <code>vm_shutdown</code>, <code>vm_fail</code>, <code>vm_restart</code>, más los equivalentes <code>ct_*</code>, <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code>, <code>replication_fail</code>."
+      },
+      {
+        "group": "Backups",
+        "events": "<code>backup_start</code>, <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code>, <code>snapshot_fail</code>."
+      },
+      {
+        "group": "Recursos",
+        "events": "<code>cpu_high</code>, <code>ram_high</code>, <code>temp_high</code>, <code>load_high</code>."
+      },
+      {
+        "group": "Almacenamiento",
+        "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>."
+      },
+      {
+        "group": "Red",
+        "events": "<code>network_down</code>, <code>network_latency</code>."
+      },
+      {
+        "group": "Seguridad",
+        "events": "<code>auth_fail</code>, <code>ip_block</code>, <code>firewall_issue</code>, <code>user_permission_change</code>."
+      },
+      {
+        "group": "Cluster",
+        "events": "<code>split_brain</code>, <code>node_disconnect</code>, <code>node_reconnect</code>."
+      },
+      {
+        "group": "Servicios",
+        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>system_problem</code>, <code>service_fail</code>, <code>oom_kill</code>, <code>system_mail</code>."
+      },
+      {
+        "group": "Monitor de salud",
+        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>, <code>health_issue_new</code>, <code>health_issue_resolved</code>."
+      },
+      {
+        "group": "Actualizaciones",
+        "events": "<code>update_summary</code>, <code>update_available</code>, <code>pve_update</code>, <code>update_complete</code>, <code>proxmenux_update</code>."
+      },
+      {
+        "group": "Hardware / GPU",
+        "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>, <code>ai_model_migrated</code>."
+      }
+    ],
+    "burstNote": "Un puñado de tipos de agregación <code>burst_*</code> (<code>burst_auth_fail</code>, <code>burst_ip_block</code>, <code>burst_disk_io</code>, etc.) existen solo en el dispatcher — reemplazan ráfagas de eventos individuales con un único mensaje de resumen y no se exponen como toggles en la UI. Heredan el estado on/off de su tipo de evento padre."
+  },
+  "history": {
+    "heading": "Historial",
+    "body1": "Cada <em>intento</em> de despacho que el dispatcher realmente ejecuta se registra en la tabla SQLite <code>notification_history</code>. Cada fila guarda el timestamp (<code>sent_at</code>), canal, tipo de evento, severidad, título, cuerpo de mensaje renderizado, un flag <code>success</code> y — cuando el envío falló — el error devuelto por el proveedor en <code>error_message</code>. Los eventos agregados en ráfaga aparecen como una única fila con el tipo de evento <code>burst_*</code>. Los eventos suprimidos por la etapa de cooldown no se loguean: nunca se convierten en un intento de despacho.",
+    "body2": "La pestaña History dentro de Settings → Notifications muestra las últimas 20 entradas y tiene un único botón <em>Clear</em> que borra la tabla.",
+    "body3": "Los mismos datos se exponen en <code>GET /api/notifications/history</code> con parámetros opcionales <code>limit</code>, <code>offset</code>, <code>severity</code> y <code>channel</code>, y se pueden borrar con <code>DELETE /api/notifications/history</code>."
+  },
+  "api": {
+    "heading": "Endpoints de API",
+    "headerEndpoint": "Endpoint",
+    "headerMethod": "Método",
+    "headerUse": "Uso",
+    "rows": [
+      {
+        "endpoint": "/api/notifications/settings",
+        "method": "GET / POST",
+        "use": "Lee o escribe la configuración completa (canales, toggles por evento, reescritor de IA, Display Name)."
+      },
+      {
+        "endpoint": "/api/notifications/test",
+        "method": "POST",
+        "use": "Envía una notificación de prueba a un canal: <code>'{'\"channel\":\"telegram\"'}'</code>."
+      },
+      {
+        "endpoint": "/api/notifications/test-ai",
+        "method": "POST",
+        "use": "Renderiza y reescribe un evento de muestra sin despacharlo."
+      },
+      {
+        "endpoint": "/api/notifications/provider-models",
+        "method": "POST",
+        "use": "Lista modelos disponibles para el proveedor de IA seleccionado."
+      },
+      {
+        "endpoint": "/api/notifications/send",
+        "method": "POST",
+        "use": "Emite un evento desde fuera (integraciones personalizadas)."
+      },
+      {
+        "endpoint": "/api/notifications/history",
+        "method": "GET / DELETE",
+        "use": "Lee el historial con filtros; bórralo."
+      },
+      {
+        "endpoint": "/api/notifications/webhook",
+        "method": "POST",
+        "use": "Recibe las notificaciones propias de Proxmox VE. Los llamadores loopback están solo rate-limited; los llamadores remotos deben pasar adicionalmente la cabecera <code>X-Webhook-Secret</code>, comprobación de frescura <code>X-ProxMenux-Timestamp</code>, caché de replay y allowlist de IP opcional."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/setup-webhook",
+        "method": "POST",
+        "use": "Registra el Monitor como destino en <code>/etc/pve/notifications.cfg</code>."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/cleanup-webhook",
+        "method": "POST",
+        "use": "Elimina el destino del Monitor de la config de notificaciones de PVE."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/read-cfg",
+        "method": "GET",
+        "use": "Muestra la config actual de notificaciones de PVE como PVE la ve."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Por dónde seguir",
+    "items": [
+      {
+        "label": "Asistente de IA",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": " — proveedores, modelos, modos de prompt, idiomas, niveles de detalle por canal."
+      },
+      {
+        "label": "Monitor de salud",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — el mayor productor individual de eventos, con sus propias duraciones de supresión por categoría."
+      },
+      {
+        "label": "Arquitectura",
+        "href": "/docs/monitor/architecture",
+        "tailRich": " — dónde encajan las tablas SQLite (<code>notification_last_sent</code>, <code>notification_history</code>) y el hilo de despacho en el proceso más amplio del Monitor."
+      },
+      {
+        "label": "Access & Authentication",
+        "href": "/docs/monitor/access-auth",
+        "tailRich": " — cómo se emiten API tokens para scripts que llaman a <code>/api/notifications/send</code>."
+      },
+      {
+        "label": "Dashboard → Logs del sistema",
+        "href": "/docs/monitor/dashboard/system-logs",
+        "tail": " — la vista en vivo del mismo journal que alimenta el journal watcher."
+      }
+    ]
+  }
+}

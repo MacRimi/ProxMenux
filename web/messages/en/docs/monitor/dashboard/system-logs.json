@@ -1,0 +1,120 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Dashboard: System Logs tab | ProxMenux Documentation",
+    "description": "The System Logs tab consolidates three sources into one screen: live journalctl with filters and download, Proxmox task history (UPIDs), and notification log — all searchable, filterable by severity / time range, and downloadable as text bundles."
+  },
+  "header": {
+    "title": "Dashboard: System Logs tab",
+    "description": "Three sub-tabs under one roof: the system journal (journalctl with filters), Proxmox task history, and the notification log. All three are searchable, filterable and downloadable as text bundles.",
+    "section": "ProxMenux Monitor · Dashboard"
+  },
+  "readOnly": {
+    "title": "Read-only by design",
+    "body": "Nothing on this tab modifies log files. Filters live in the URL / state, downloads are server-side bundles. The dashboard never deletes log entries — for housekeeping use the host's own <code>journalctl --vacuum-time=&lt;N&gt;</code> or <code>logrotate</code>."
+  },
+  "topRow": {
+    "heading": "Top row: four counters",
+    "items": [
+      "<strong>Total Entries</strong> — number of log records inside the active filter window.",
+      "<strong>Errors</strong> — count of severity ≤ 3 (<code>err</code> / <code>crit</code> / <code>alert</code> / <code>emerg</code>).",
+      "<strong>Warnings</strong> — count of severity 4 (<code>warning</code>).",
+      "<strong>Backups</strong> — count of vzdump / PBS task entries in the same window."
+    ]
+  },
+  "subtabs": {
+    "heading": "Three sub-tabs",
+    "logsTitle": "Logs",
+    "logsIntro": "The system journal, served by <code>journalctl</code> on the backend. Filters available in the toolbar:",
+    "logsFilters": [
+      "<strong>Severity</strong> — emerg / alert / crit / err / warning / notice / info / debug, or any combination.",
+      "<strong>Time range</strong> — last 5 min / 15 min / 1 h / 6 h / 24 h / 7 d / custom.",
+      "<strong>Free-text search</strong> — substring or regex (<code>journalctl --grep</code>).",
+      "<strong>Unit filter</strong> — restrict to a specific systemd unit (<code>pveproxy.service</code>, <code>nginx.service</code>, …)."
+    ],
+    "logsRowsAfter": "Each row shows timestamp, severity badge, source unit and the message. Long messages collapse with a \"show more\" toggle. The <strong>Download</strong> action bundles the current filter into a single <code>.txt</code> file via <code>GET /api/logs/download</code> — useful when you want to share a slice of journal with someone.",
+    "logDetailsModalTitle": "Log Details modal",
+    "logDetailsBody": "Clicking any row opens a <strong>Log Details</strong> modal with every structured field journald captured for that single entry — the same view you'd build by hand running <code>journalctl --output=verbose</code> on the host.",
+    "logDetailsImageAlt": "Log Details modal — single journal entry expanded with Level, Service, Timestamp, Source, Systemd Unit, Process ID, Hostname and the full Message",
+    "logDetailsImageCaption": "Log Details modal — every structured field journald carries for this entry, with the full untruncated message at the bottom. Useful for cron and service logs where the executed command line matters.",
+    "fieldsIntro": "Fields shown:",
+    "fields": [
+      "<strong>Level</strong> — coloured severity badge (INFO / WARNING / ERROR / CRITICAL).",
+      "<strong>Service</strong> — short name of the unit / process that emitted the entry.",
+      "<strong>Timestamp</strong> — full date and time of the log line.",
+      "<strong>Source</strong> — origin of the entry (journal, kernel, audit, …).",
+      "<strong>Systemd Unit</strong> — the actual <code>.service</code> / <code>.timer</code> / <code>.socket</code> unit if the entry was associated with one.",
+      "<strong>Process ID</strong> — PID of the emitting process.",
+      "<strong>Hostname</strong> — useful when journals are forwarded across cluster nodes.",
+      "<strong>Message</strong> — the full untruncated message in a monospace block, ready to copy."
+    ],
+    "maxLevelStoreTitle": "Journald MaxLevelStore",
+    "maxLevelStoreBody": "On a fresh Proxmox install, journald defaults to <code>MaxLevelStore=warning</code>, which silently drops info-level messages. The Monitor detects this on startup and adds a drop-in (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) raising the threshold to <code>info</code> so the Logs tab actually has something to show across all severities.",
+    "backupsTitle": "Backups",
+    "backupsBody": "Proxmox task history filtered to backup-related entries. One row per task (<code>vzdump</code>, PBS transfers, Garbage Collect, Verify) with the status (OK / WARNINGS / ERROR), guest involved, source storage, duration and the UPID. Click a row to load the full task log via <code>GET /api/task-log/&lt;upid&gt;</code> — the same data Proxmox exposes through <em>Datacenter → Tasks</em>, scoped to backups.",
+    "notificationsTitle": "Notifications",
+    "notificationsBody1": "Every notification dispatched by the Monitor — Telegram, Discord, Email, Gotify, ntfy, Slack, Teams, webhook. Each row: timestamp, channel, event type, severity, the rendered title, the rendered body, and (if AI is enabled) a toggle to view the AI rewrite next to the original.",
+    "notificationsBody2": "Use this tab to verify a channel is actually delivering and to compare what the AI rewrite produced vs the template baseline. Channel configuration lives in the <link>Notifications</link> deep page."
+  },
+  "dataCollected": {
+    "heading": "How the data is collected",
+    "headerSubtab": "Sub-tab",
+    "headerEndpoint": "Endpoint",
+    "headerSource": "Source",
+    "rows": [
+      {
+        "subtab": "Logs (live filter)",
+        "endpoint": "/api/logs",
+        "source": "<code>journalctl --output json --since &lt;range&gt;</code> with severity / unit / search filters applied server-side."
+      },
+      {
+        "subtab": "Download",
+        "endpoint": "/api/logs/download",
+        "source": "Same query, returned as plain text for grep / less."
+      },
+      {
+        "subtab": "Backups",
+        "endpoint": "/api/backups",
+        "source": "PVE task history filtered by <code>vzdump</code>, PBS transfers, Garbage Collect, Verify."
+      },
+      {
+        "subtab": "Backup task drill-in",
+        "endpoint": "/api/task-log/&lt;upid&gt;",
+        "source": "Plain-text full task log read from <code>/var/log/pve/tasks/&lt;index&gt;/&lt;upid&gt;</code>."
+      },
+      {
+        "subtab": "Notifications history",
+        "endpoint": "/api/notifications/history",
+        "source": "SQLite <code>notification_history</code> table fed by the dispatch loop."
+      }
+    ],
+    "apiIntro": "Both the live filter and the downloads are also reachable via the API:",
+    "codeComment1": "# Last hour of errors and worse, with a keyword",
+    "codeComment2": "# Download the full journal of the last 6 hours as plain text",
+    "codeComment3": "# Look up the full output of a specific task by UPID"
+  },
+  "whereNext": {
+    "heading": "Where to next",
+    "items": [
+      {
+        "label": "Health Monitor",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — the System Logs category that watches for persistent / spike / cascade patterns."
+      },
+      {
+        "label": "Notifications",
+        "href": "/docs/monitor/notifications",
+        "tail": " — the journal watcher reads the same source and turns matches into notifications."
+      },
+      {
+        "label": "API Reference",
+        "href": "/docs/monitor/api",
+        "tail": " — the logs and task-log endpoints with their query parameters."
+      },
+      {
+        "label": "Dashboard index",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — the other tabs."
+      }
+    ]
+  }
+}

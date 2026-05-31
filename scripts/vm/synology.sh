@@ -1,30 +1,33 @@
 #!/usr/bin/env bash
 
 # ==========================================================
-# ProxMenuX - Synology DSM VM Creator Script
+# ProxMenux - Synology DSM VM Creator
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 13/03/2025
 # ==========================================================
 # Description:
-# This script automates the creation and configuration of a Synology DSM 
-# (DiskStation Manager) virtual machine (VM) in Proxmox VE. It simplifies the
-# setup process by allowing both default and advanced configuration options.
+# Creates and configures a Synology DSM (DiskStation Manager)
+# virtual machine on Proxmox VE. Downloads one of the supported
+# loaders (Arc, RR, TinyCore M-shell, or a custom one), imports
+# it as the VM boot disk, and prepares CPU/RAM/network/storage
+# through the ProxMenux default or advanced wizard.
 #
-# The script automates the complete VM creation process, including loader 
-# download, disk configuration, and VM boot setup.
+# Features:
+# - Supports Arc, RR, TinyCore M-shell and Custom loaders.
+# - Default and Advanced configuration modes.
+# - Virtual disks (SATA, up to 6) or physical disk passthrough.
+# - Imports the loader as IDE for maximum compatibility.
+# - Generates a styled HTML description attached to the VM.
 #
-# **Credits**
-# This script is an original idea but incorporates ideas and elements from 
-# a similar script by user **tim104979** from the ProxmoxVE branch:
-# (https://raw.githubusercontent.com/tim104979/ProxmoxVE/refs/heads/main/vm/synology-vm.sh)
-#
-# Copyright (c) Proxmox VE Helper-Scripts Community
-# License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
-#
+# Credits:
+# Original work by MacRimi. Incorporates ideas and snippets from
+# tim104979's synology-vm.sh in the ProxmoxVE Helper-Scripts
+# Community project (MIT):
+# https://raw.githubusercontent.com/tim104979/ProxmoxVE/refs/heads/main/vm/synology-vm.sh
 # ==========================================================
 
 
@@ -60,11 +63,6 @@ if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh" ]]; then
     source "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh"
 elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh" ]]; then
     source "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh"
-fi
-if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh" ]]; then
-    source "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh"
-elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh" ]]; then
-    source "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh"
 fi
 load_language
 initialize_cache
@@ -1316,7 +1314,6 @@ if [[ ${#CONTROLLER_NVME_PCIS[@]} -gt 0 ]]; then
         msg_error "$(translate "Controller + NVMe passthrough requires machine type q35. Skipping controller assignment.")"
         ERROR_FLAG=true
     else
-        NEED_HOOK_SYNC=false
         HOSTPCI_INDEX=0
         if declare -F _pci_next_hostpci_index >/dev/null 2>&1; then
             HOSTPCI_INDEX=$(_pci_next_hostpci_index "$VMID" 2>/dev/null || echo 0)
@@ -1366,7 +1363,6 @@ if [[ ${#CONTROLLER_NVME_PCIS[@]} -gt 0 ]]; then
                                 fi
                             fi
                         done
-                        NEED_HOOK_SYNC=true
                         ;;
                     move_remove_source)
                         SLOT_BASE=$(_pci_slot_base "$PCI_DEV")
@@ -1394,11 +1390,6 @@ if [[ ${#CONTROLLER_NVME_PCIS[@]} -gt 0 ]]; then
             fi
         done
 
-        if [[ "$NEED_HOOK_SYNC" == "true" ]] && declare -F sync_proxmenux_gpu_guard_hooks >/dev/null 2>&1; then
-            ensure_proxmenux_gpu_guard_hookscript
-            sync_proxmenux_gpu_guard_hooks
-            msg_ok "$(translate "VM hook guard synced for shared controller/NVMe protection")"
-        fi
     fi
 fi
 

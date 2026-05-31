@@ -1,27 +1,27 @@
 #!/usr/bin/env bash
 
 # ==========================================================
-# ProxMenuX - Virtual Machine Creator Script
+# ProxMenux - NAS ISO Selector
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 04/04/2026
 # ==========================================================
 # Description:
-# This script is part of the central ProxMenux VM creation module. It allows users
-# to create virtual machines (VMs) in Proxmox VE using either default or advanced
-# configurations, streamlining the deployment of Linux, Windows, and other systems.
+# NAS appliance selector for the ProxMenux VM creator. Lists the
+# supported NAS operating systems, auto-detects their latest stable
+# release (where possible), and prepares the ISO / image metadata
+# for the generic VM wizard. Synology DSM and ZimaOS have their own
+# dedicated flows; Umbrel OS runs an external community script.
 #
-# Key features:
-# - Supports both virtual disk creation and physical disk passthrough.
-# - Automates CPU, RAM, BIOS, network and storage configuration.
-# - Provides a user-friendly menu to select OS type, ISO image and disk interface.
-# - Automatically generates a detailed and styled HTML description for each VM.
-#
-# All operations are designed to simplify and accelerate VM creation in a 
-# consistent and maintainable way, using ProxMenux standards.
+# Features:
+# - Auto-detects latest versions for TrueNAS SCALE/CORE, OMV,
+#   XigmaNAS and Rockstor, with safe fallbacks.
+# - Dispatches Synology DSM to the dedicated loader-based flow.
+# - Dispatches ZimaOS to its own installer script.
+# - Runs the Umbrel OS community installer (external script).
 # ==========================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -188,6 +188,8 @@ function select_nas_iso() {
     "5" "XigmaNAS       VM          (FreeBSD based)"
     "6" "Rockstor       VM          (openSUSE based)"
     "7" "ZimaOS         VM          (Proxmox-zimaos)"
+    ""  ""
+    ""  "\Z4───────────────── Community Scripts ─────────────────\Zn"
     "8" "Umbrel OS      VM          (Helper Scripts)"
     "9" "$(translate "Return to Main Menu")"
   )

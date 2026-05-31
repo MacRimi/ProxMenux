@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "title": "Contributors | ProxMenux Documentation",
+    "description": "Recognition for the people who make ProxMenux possible — testers, reviewers and developers who shape each release.",
+    "ogTitle": "Contributors | ProxMenux Documentation",
+    "ogDescription": "Meet the contributors behind ProxMenux."
+  },
+  "header": {
+    "title": "Contributors",
+    "description": "The ProxMenux project grows and thrives thanks to the contribution of its collaborators. This is the well-deserved recognition of their work — testing builds before release, catching regressions, reviewing PRs and shaping the direction of new features.",
+    "section": "About"
+  },
+  "beyond": {
+    "title": "Beyond this list",
+    "body": "Many more people contribute via bug reports, feature ideas in Discussions, beta testing and translations. The full list of code contributors lives on the <extlink>GitHub contributors graph</extlink>. The page below highlights the people who have been most actively involved in testing and reviewing ProxMenux releases."
+  },
+  "testers": {
+    "heading": "Testers & reviewers",
+    "intro": "These were among the first to contribute to the project — testing, reporting issues and suggesting improvements that helped ProxMenux grow into what it is today.",
+    "roles": {
+      "testing": "Testing",
+      "testingReviewer": "Testing & reviewer"
+    },
+    "youtube": "YouTube"
+  },
+  "contribute": {
+    "heading": "Want to contribute?",
+    "intro": "Any contribution is welcome — code, testing, design, documentation, or just sharing your ideas:",
+    "tester": "<strong>Tester</strong> — try the <beta>beta channel</beta> and report what works and what doesn't before stable releases.",
+    "developer": "<strong>Developer</strong> — Bash + Next.js (TypeScript) + a bit of Python for the translation venv. PRs welcome on <gh>GitHub</gh>.",
+    "designer": "<strong>Designer</strong> — UI improvements, icons, screenshots for documentation.",
+    "ideas": "<strong>Ideas</strong> — open a thread in <disc>GitHub Discussions</disc> before opening a feature request issue."
+  },
+  "coc": {
+    "title": "Read the Code of Conduct first",
+    "body": "Before submitting code or reporting issues, give the <coclink>Code of Conduct & Best Practices</coclink> a quick read. It covers expectations around code responsibility, security disclosure and PR scope."
+  }
+}

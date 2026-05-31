@@ -1,27 +1,26 @@
 #!/usr/bin/env bash
 
 # ==========================================================
-# ProxMenuX - Virtual Machine Creator Script
+# ProxMenux - VM Configurator (CPU / RAM / BIOS / Network)
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 07/05/2025
 # ==========================================================
 # Description:
-# This script is part of the central ProxMenux VM creation module. It allows users
-# to create virtual machines (VMs) in Proxmox VE using either default or advanced
-# configurations, streamlining the deployment of Linux, Windows, and other systems.
+# Shared VM configurator used by the ProxMenux VM creation
+# flows (NAS, Windows, Linux, Synology, ZimaOS). Exposes two
+# helpers: the default-profile applier (per OS family) and the
+# advanced wizard that walks the user through every parameter.
 #
-# Key features:
-# - Supports both virtual disk creation and physical disk passthrough.
-# - Automates CPU, RAM, BIOS, network and storage configuration.
-# - Provides a user-friendly menu to select OS type, ISO image and disk interface.
-# - Automatically generates a detailed and styled HTML description for each VM.
-#
-# All operations are designed to simplify and accelerate VM creation in a 
-# consistent and maintainable way, using ProxMenux standards.
+# Features:
+# - VMID auto-assignment and collision check.
+# - Hostname, machine type (q35 / i440fx), BIOS (OVMF / SeaBIOS).
+# - CPU type (host / kvm64), core count, RAM.
+# - Network: bridge, MAC, VLAN, MTU.
+# - Per-OS defaults (NAS, Windows, Linux) and OMV BIOS override.
 # ==========================================================
 
 

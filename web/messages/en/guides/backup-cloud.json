@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "title": "Proxmox Backup to Personal Cloud Storage | ProxMenux Guides",
+    "description": "Use rclone to mount a personal cloud (Google Drive, Mega, Dropbox, OneDrive, etc.) as a directory on the Proxmox VE host, register it as a vzdump datastore, and back up VMs / CTs straight to the cloud — no extra script.",
+    "ogTitle": "Proxmox Backup to Personal Cloud Storage",
+    "ogDescription": "Mount a personal cloud with rclone on a Proxmox VE host and back up VMs / CTs straight to it as a vzdump datastore."
+  },
+  "header": {
+    "title": "Proxmox Backup to Personal Cloud Storage",
+    "description": "Use rclone to mount a personal cloud (Google Drive, Mega, Dropbox, OneDrive, etc.) as a directory on the Proxmox VE host, register it as a vzdump datastore, and back up VMs / CTs straight to the cloud — no extra script.",
+    "section": "Guides"
+  },
+  "intro": {
+    "pbsCalloutTitle": "Consider Proxmox Backup Server first",
+    "pbsCalloutBody": "If you have a second machine (a Pi, an old PC, a NAS), running <pbsLink>Proxmox Backup Server</pbsLink> on it gives you incremental, deduplicated, encrypted backups — a much better fit for VM backup than rsync-style cloud sync. The cloud-mount approach in this guide is for users who specifically want backups to land in their personal cloud (Google Drive / Mega / OneDrive / Dropbox).",
+    "stepsTitle": "What you'll do",
+    "steps": [
+      "Create a directory on the Proxmox host and register it as a vzdump-capable datastore.",
+      "Install and configure rclone for your cloud provider.",
+      "Mount the cloud folder onto the directory.",
+      "Make the mount survive reboots (systemd unit — more robust than crontab)."
+    ],
+    "vzdumpCalloutTitle": "Heads up about Proxmox vzdump backups",
+    "vzdumpCalloutBody": "They're <strong>not incremental</strong>. Every backup contains the full VM disk image (compressed). On a quota-limited cloud, this fills up fast. Plan a retention policy from day one (see end of guide)."
+  },
+  "createDir": {
+    "heading": "1. Create the host directory and register it as a datastore",
+    "body": "SSH into the host (or use the Proxmox shell) and create a mount-point directory under <code>/mnt/</code>. The name is arbitrary — use something that identifies the provider:",
+    "mkdirCode": "mkdir -p /mnt/gdrive",
+    "afterMkdir": "In the Proxmox web UI: <strong>Datacenter → Storage → Add → Directory</strong>.",
+    "image1Alt": "Adding new storage in Proxmox",
+    "configIntro": "Configure it like this:",
+    "configItems": [
+      "<strong>ID:</strong> <code>gdrive</code> (or whatever you used for the directory name)",
+      "<strong>Directory:</strong> <code>/mnt/gdrive</code>",
+      "<strong>Content:</strong> select <strong>VZDump backup file</strong>"
+    ],
+    "image2Alt": "Configuring new storage in Proxmox",
+    "afterConfig": "Click <strong>Add</strong>:",
+    "image3Alt": "New storage added in Proxmox",
+    "afterAdd": "The directory is now registered as a Proxmox datastore — but it's still empty (no cloud is mounted on it yet)."
+  },
+  "installRclone": {
+    "heading": "2. Install and configure rclone",
+    "body": "<rcloneLink>rclone</rcloneLink> is the tool that talks to cloud storage providers. Install it from Debian repositories:",
+    "installCode": "apt-get update\napt-get install -y rclone",
+    "newerCalloutTitle": "If you need a newer rclone",
+    "newerCalloutBody": "If you need a newer rclone than what Debian ships, use the official installer:",
+    "newerCode": "curl https://rclone.org/install.sh | bash",
+    "tunnelHeading": "2.1 Browser-based authentication via SSH tunnel",
+    "tunnelBody": "rclone's auth flow opens a local web browser. Since the Proxmox host doesn't have a desktop, <remoteSetupLink>rclone's remote-setup procedure</remoteSetupLink> routes the auth callback through an SSH tunnel back to your laptop's browser.",
+    "tunnelFrom": "From your <strong>laptop</strong> (replace <code>ip_proxmox</code> with the Proxmox IP):",
+    "tunnelCode": "ssh -L localhost:53682:localhost:53682 root@ip_proxmox",
+    "tunnelAfter": "This SSH session forwards port 53682 from the Proxmox host to your laptop's localhost. Keep it open during the rclone config below.",
+    "runHeading": "2.2 Run rclone config",
+    "runBody": "In the SSH session you just opened, run:",
+    "runCode": "rclone config",
+    "runAfter": "Follow the prompts to add a new remote. The exact answers depend on your provider — see the <providerDocsLink>rclone provider docs</providerDocsLink> for Google Drive, Mega, Dropbox, OneDrive, etc. The key step is the auth question:",
+    "authPrompt": "Use web browser to automatically authenticate rclone with remote?\n * Say Y if the machine running rclone has a web browser you can use\n * Say N if running rclone on a (remote) machine without web browser access\nIf not sure try Y. If Y failed, try N.\ny) Yes\nn) No\ny/n> y",
+    "authAfter": "Answer <strong>Y</strong> — rclone prints a localhost URL. Open it in <strong>your laptop's browser</strong> (the SSH tunnel routes it correctly), authorise the rclone application in your cloud provider, and the config completes.",
+    "nameRemote": "When asked for the remote's name, use something matching the directory you created — e.g. <code>gdrive</code>."
+  },
+  "mount": {
+    "heading": "3. Mount the cloud folder",
+    "body": "Create a folder in your personal cloud to hold the backups. Call it something like <code>PBC</code> (Proxmox Backup Cloud).",
+    "mountIntro": "Mount it onto the host directory:",
+    "mountCode": "rclone mount gdrive:/PBC /mnt/gdrive --allow-other --allow-non-empty",
+    "mountItems": [
+      "<code>gdrive:/PBC</code> — the folder in your cloud.",
+      "<code>/mnt/gdrive</code> — the host directory you registered as a datastore."
+    ],
+    "mountFootnote": "<strong>This command stays in the foreground.</strong> For testing, leave it running in a terminal and try a backup. For permanent mounting on every boot, set up a systemd unit (next section)."
+  },
+  "systemd": {
+    "heading": "4. Auto-mount on every boot (systemd)",
+    "body": "A systemd unit is more robust than <code>crontab @reboot</code> — it can wait for the network to be ready, restart on failure, and gives you proper logs via <code>journalctl</code>.",
+    "createIntro": "Create the unit file:",
+    "createCode": "nano /etc/systemd/system/rclone-gdrive.service",
+    "pasteIntro": "Paste:",
+    "unitCode": "[Unit]\nDescription=rclone mount for Proxmox cloud backups\nWants=network-online.target\nAfter=network-online.target\n\n[Service]\nType=notify\nExecStart=/usr/bin/rclone mount \\\n    gdrive:/PBC /mnt/gdrive \\\n    --allow-other \\\n    --allow-non-empty \\\n    --vfs-cache-mode writes \\\n    --log-level INFO \\\n    --log-file /var/log/rclone-gdrive.log\nExecStop=/bin/fusermount -uz /mnt/gdrive\nRestart=on-failure\nRestartSec=10\n\n[Install]\nWantedBy=multi-user.target",
+    "adjust": "Adjust <code>gdrive:/PBC</code> and <code>/mnt/gdrive</code> if you used different names. Save (<code>Ctrl+X</code>), then enable and start:",
+    "enableCode": "systemctl daemon-reload\nsystemctl enable --now rclone-gdrive.service",
+    "verifyIntro": "Verify:",
+    "verifyCode": "systemctl status rclone-gdrive.service\nmount | grep /mnt/gdrive",
+    "verifyAfter": "If the service ever fails (provider rate-limits, expired auth token, network blip), it'll auto-restart after 10 seconds. Logs are at <code>/var/log/rclone-gdrive.log</code> and via <code>journalctl -u rclone-gdrive.service -f</code>.",
+    "vfsCalloutTitle": "Why --vfs-cache-mode writes?",
+    "vfsCalloutBody": "vzdump streams the backup archive to disk; without VFS write caching, every <code>fwrite</code> blocks on a HTTP round-trip to the cloud — backups get slow and providers may rate-limit. The cache buffers writes locally and flushes them in the background."
+  },
+  "configureBackup": {
+    "heading": "5. Configure the backup to land in the cloud",
+    "body": "In the Proxmox UI, when scheduling a backup or running an ad-hoc one, pick the storage you registered as the <strong>target</strong>:",
+    "image5Alt": "Selecting backup destination in Proxmox",
+    "after": "After the backup completes, the file appears in your cloud:",
+    "image6Alt": "Backup file in cloud storage"
+  },
+  "retention": {
+    "heading": "6. Retention — keep cloud quota under control",
+    "body": "Proxmox vzdump backups are <strong>full snapshots, not incremental</strong>. A 30 GB VM = 30 GB per backup. Without retention, the cloud fills up.",
+    "uiPath": "In the Proxmox UI: <strong>Datacenter → Backup → [your job] → Retention</strong>:",
+    "image7Alt": "Backup retention settings in Proxmox",
+    "starterIntro": "Reasonable starter values for a home / lab setup:",
+    "starterItems": [
+      "Keep last 5 daily backups",
+      "Keep last 4 weekly backups",
+      "Keep last 6 monthly backups"
+    ],
+    "adjust": "Adjust based on your cloud quota and how often the VMs change."
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "items": [
+      "<strong><code>Mount point /mnt/gdrive is itself on a fuse.rclone filesystem</code>:</strong> the previous mount didn't unmount cleanly. Force-unmount: <code>fusermount -uz /mnt/gdrive</code>, then restart the systemd unit.",
+      "<strong>Backup is extremely slow:</strong> confirm <code>--vfs-cache-mode writes</code> is on the <code>ExecStart</code> line. Without it, every write blocks on the cloud. Also check your upstream bandwidth — vzdump is bound by it.",
+      "<strong>Backup fails with ''No space left on device'':</strong> the cache directory (<code>~/.cache/rclone/</code>) filled up before the upload caught up. Move it to a larger filesystem with <code>--cache-dir /var/cache/rclone</code> in the systemd unit.",
+      "<strong>rclone auth token expired (typical on Google Drive after a long idle period):</strong> SSH back in with the tunnel (<code>ssh -L localhost:53682:localhost:53682 root@ip_proxmox</code>) and run <code>rclone config reconnect gdrive:</code> to refresh.",
+      "<strong>Backups land but are corrupted on restore:</strong> stop using cloud storage as the <strong>only</strong> backup destination. Combine with local PBS / vzdump on a different disk for resilience."
+    ]
+  }
+}

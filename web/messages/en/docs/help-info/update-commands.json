@@ -1,0 +1,170 @@
+{
+  "meta": {
+    "title": "Proxmox Update and Package Commands — apt, pveupgrade, dpkg | ProxMenux",
+    "description": "Reference of update and package commands for Proxmox VE: apt update, apt upgrade, apt dist-upgrade, pveupgrade, dpkg -l, package information lookups, repository configuration in /etc/apt/sources.list.d/.",
+    "ogTitle": "Proxmox Update and Package Commands — apt, pveupgrade, dpkg",
+    "ogDescription": "apt, pveupgrade and dpkg commands for keeping Proxmox VE up to date — system upgrades, package management, repository configuration.",
+    "twitterTitle": "Proxmox Update Commands | ProxMenux",
+    "twitterDescription": "apt and pveupgrade commands for managing updates and packages on Proxmox VE hosts."
+  },
+  "header": {
+    "title": "Updates and Packages",
+    "description": "Curated reference of apt and Proxmox-specific upgrade commands: system updates, package install / remove / purge, package lookups (apt-cache policy, dpkg -l), and repository configuration inspection.",
+    "section": "Help and Info"
+  },
+  "intro": {
+    "title": "Always update the index first",
+    "body": "<code>apt update</code> refreshes the local package index from the configured repositories. Without it, <code>apt install</code> may pull stale versions or fail with \"Unable to locate package\"."
+  },
+  "commandGroups": [
+    {
+      "title": "System Updates",
+      "commands": [
+        {
+          "command": "apt update && apt upgrade -y",
+          "description": "Update and upgrade all system packages"
+        },
+        {
+          "command": "apt dist-upgrade -y",
+          "description": "Full system upgrade, including dependencies"
+        },
+        {
+          "command": "apt update",
+          "description": "Update package lists only"
+        },
+        {
+          "command": "apt upgrade",
+          "description": "Upgrade packages only (interactive)"
+        },
+        {
+          "command": "apt full-upgrade",
+          "description": "Upgrade packages with dependency handling (interactive)"
+        }
+      ]
+    },
+    {
+      "title": "Proxmox Updates",
+      "commands": [
+        {
+          "command": "pveupdate",
+          "description": "Update Proxmox package lists"
+        },
+        {
+          "command": "pveupgrade",
+          "description": "Show available Proxmox upgrades"
+        },
+        {
+          "command": "pve-upgrade",
+          "description": "Perform Proxmox VE upgrade"
+        },
+        {
+          "command": "pveceph upgrade",
+          "description": "Upgrade Ceph packages (if Ceph is installed)"
+        }
+      ]
+    },
+    {
+      "title": "Package Management",
+      "commands": [
+        {
+          "command": "apt autoremove --purge",
+          "description": "Remove unused packages and their config"
+        },
+        {
+          "command": "apt clean",
+          "description": "Clear out the local repository of retrieved package files"
+        },
+        {
+          "command": "apt autoclean",
+          "description": "Clear out only outdated package files"
+        },
+        {
+          "command": "apt install <package>",
+          "description": "Install a specific package"
+        },
+        {
+          "command": "apt remove <package>",
+          "description": "Remove a package"
+        },
+        {
+          "command": "apt purge <package>",
+          "description": "Remove a package and its configuration files"
+        }
+      ]
+    },
+    {
+      "title": "Package Information",
+      "commands": [
+        {
+          "command": "apt list --installed",
+          "description": "List all installed packages"
+        },
+        {
+          "command": "apt search <keyword>",
+          "description": "Search for packages by keyword"
+        },
+        {
+          "command": "apt show <package>",
+          "description": "Show detailed information about a package"
+        },
+        {
+          "command": "dpkg -l",
+          "description": "List all installed packages (alternative)"
+        },
+        {
+          "command": "dpkg -l | grep <keyword>",
+          "description": "Search installed packages by keyword"
+        },
+        {
+          "command": "apt-cache policy <package>",
+          "description": "Show package versions and priorities"
+        }
+      ]
+    },
+    {
+      "title": "Repository Management",
+      "commands": [
+        {
+          "command": "cat /etc/apt/sources.list",
+          "description": "Show main APT repository sources"
+        },
+        {
+          "command": "ls -la /etc/apt/sources.list.d/",
+          "description": "List additional repository source files"
+        },
+        {
+          "command": "cat /etc/apt/sources.list.d/pve-enterprise.list",
+          "description": "Show Proxmox Enterprise repo config"
+        },
+        {
+          "command": "apt-key list",
+          "description": "List repository signing keys"
+        }
+      ]
+    }
+  ],
+  "backupWarn": {
+    "title": "Take a backup before major upgrades",
+    "bodyRich": "For point releases (8.4.1 → 8.4.5) the standard <code>apt update &amp;&amp; apt upgrade</code> is safe. For <strong>major version upgrades</strong> (PVE 8 → 9) use the dedicated ProxMenux flow: <upgradeLink>Upgrade PVE 8 to PVE 9</upgradeLink> — it adds pre-flight checks, repository migration and post-upgrade validation."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/utils/system-update",
+        "label": "Proxmox System Update (interactive)",
+        "tail": " — wrapper that does all of this with a confirmation dialog and reboot prompt."
+      },
+      {
+        "href": "/docs/utils/upgrade-pve8-pve9",
+        "label": "Upgrade PVE 8 to PVE 9",
+        "tail": " — for major-version upgrades."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Help and Info overview",
+        "tail": "."
+      }
+    ]
+  }
+}

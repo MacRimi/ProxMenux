@@ -1,0 +1,146 @@
+{
+  "meta": {
+    "title": "SMART Disk Health & Test | ProxMenux Documentation",
+    "description": "Run SMART health checks and disk tests on Proxmox VE with ProxMenux. Supports SATA / SAS (smartmontools) and NVMe (nvme-cli). Short and long self-tests, JSON export for ProxMenux Monitor integration.",
+    "ogTitle": "SMART Disk Health & Test | ProxMenux Documentation",
+    "ogDescription": "SMART health checks and self-tests for SATA / SAS and NVMe drives on Proxmox. JSON export for the Monitor."
+  },
+  "header": {
+    "title": "SMART Disk Health & Test",
+    "description": "Read SMART data and trigger self-tests on the physical disks attached to the Proxmox host. ProxMenux auto-installs smartmontools for SATA / SAS and nvme-cli for NVMe, runs the action inside the drive firmware (long tests survive terminal close) and exports JSON results for the ProxMenux Monitor.",
+    "section": "Disk Manager · Utilities"
+  },
+  "intro": {
+    "title": "What this is for",
+    "body": "SMART (Self-Monitoring, Analysis and Reporting Technology) lets the drive itself report its health and run self-tests. This tool exposes that data without you needing to remember the right <code>smartctl</code> / <code>nvme</code> invocation, and persists the output as JSON so the Monitor can graph trends over time."
+  },
+  "howRuns": {
+    "heading": "How the script runs",
+    "body": "All actions here are non-destructive — SMART reads the drive firmware counters, and self-tests are queued inside the drive itself. No phase separation is needed. The flow is: dependency check → disk selection → action selection → tool invocation (smartctl or nvme-cli depending on the disk bus) → printed output plus JSON export for the Monitor."
+  },
+  "deps": {
+    "heading": "Dependencies",
+    "body": "The tool auto-installs what it needs on first run. SATA / SAS drives rely on <code>smartmontools</code>; NVMe drives rely on <code>nvme-cli</code>. Both:"
+  },
+  "actions": {
+    "heading": "Available actions",
+    "headerAction": "Action",
+    "headerWhat": "What it reads / runs",
+    "headerDur": "Duration",
+    "rows": [
+      {
+        "action": "Quick health status",
+        "whatRich": "Overall PASSED/FAILED + key attributes.<br /><code>smartctl -H</code> + <code>-A</code> (SATA/SAS) or <code>nvme smart-log</code> (NVMe).",
+        "dur": "Instant"
+      },
+      {
+        "action": "Full report",
+        "whatRich": "Complete SMART data, scrollable. <code>smartctl -x</code> for SATA/SAS or <code>nvme smart-log</code> + <code>id-ctrl</code> for NVMe.",
+        "dur": "Instant"
+      },
+      {
+        "action": "Short test",
+        "what": "Basic surface and electrical check, queued inside the drive firmware.",
+        "dur": "~2 minutes"
+      },
+      {
+        "action": "Long test",
+        "what": "Full scan of the entire surface. Runs on the drive hardware — persists even if you close the terminal.",
+        "dur": "Hours (disk size dependent)"
+      },
+      {
+        "action": "Check test progress",
+        "what": "Status of the active or most recent self-test.",
+        "dur": "Instant"
+      }
+    ],
+    "tipTitle": "Long tests survive terminal close",
+    "tipBody": "A long test is queued <em>inside the drive</em> — it does not depend on the ProxMenux process staying alive. You can close the terminal, reboot the Proxmox host (the test picks up where it left off on some drives) or just come back later and use <strong>Check test progress</strong> to see the result."
+  },
+  "json": {
+    "heading": "JSON export for the Monitor",
+    "intro": "Every run writes a timestamped JSON file to <code>/usr/local/share/proxmenux/smart/&lt;disk&gt;/</code>. The structure is:",
+    "outro": "The ProxMenux Monitor picks these up to render health trends per disk; old files are rotated out automatically once the retention limit is reached."
+  },
+  "steps": {
+    "heading": "Step-by-step",
+    "stepLabel": "Step",
+    "list": [
+      {
+        "title": "Pick a disk",
+        "body": "ProxMenux lists every physical disk on the host with its model and size. Unlike the Format tool, this list is not filtered by safety — reading SMART is a non-destructive operation.",
+        "img": "/disk/smart/disk-selection.png",
+        "alt": "SMART disk selection menu",
+        "caption": "SMART disk selection menu"
+      },
+      {
+        "title": "Pick an action",
+        "body": "Choose between Quick health status, Full report, Short test, Long test or Check progress. The menu stays open after each action so you can chain several queries against the same disk.",
+        "img": "/disk/smart/action-menu.png",
+        "alt": "SMART action menu",
+        "caption": "SMART action menu (5 actions + cancel)"
+      },
+      {
+        "title": "(Long test only) Confirm background execution",
+        "body": "ProxMenux warns that the test will keep running after the terminal closes and shows where the JSON result will land. Accept to queue it.",
+        "img": "/disk/smart/long-test-warning.png",
+        "alt": "Long test confirmation dialog",
+        "caption": "Long test confirmation — runs in background, result saved to JSON"
+      },
+      {
+        "title": "Review results",
+        "bodyRich": "Status and report are printed to the terminal and written to JSON. For long tests, return later and run <strong>Check test progress</strong> on the same disk to see the outcome.",
+        "img": "/disk/smart/quick-status.png",
+        "alt": "Quick health status output",
+        "caption": "Quick health status output (SATA — smartctl -H + -A)"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manual equivalents",
+    "nvmeWarnTitle": "NVMe self-tests are drive-firmware dependent",
+    "nvmeWarnBody": "Not every NVMe drive supports the short/long self-test command. If a drive refuses the test, the SMART log and the ID controller data (<code>nvme smart-log</code> + <code>id-ctrl</code>) are still the most reliable health signal."
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "noSmartTitle": "\"Could not read SMART data from /dev/sdX\"",
+    "noSmartBody": "The disk is probably behind a RAID / SAS controller that does not pass SMART through. With megaraid-based cards, try <code>smartctl -d megaraid,N /dev/sdX</code>. For HBAs in IT mode the direct invocation works.",
+    "longTitle": "Long test never completes",
+    "longBody": "The test is queued on the drive firmware and pauses if the disk is under heavy load. Running it overnight on an idle system usually works. You can also check <code>smartctl -c</code> to see percentage remaining; if it is stuck at a fixed LBA, the disk is failing at that sector."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/disk-manager/format-disk",
+        "label": "Format / Wipe Physical Disk",
+        "tail": " — reuse a disk after confirming it's healthy."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Storage and Disks commands → SMART Disk Health",
+        "tail": " — copy-pasteable smartctl / nvme reference."
+      },
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "ZFS Management commands",
+        "tail": " — zpool scrub for the storage-layer equivalent of SMART tests."
+      },
+      {
+        "href": "/docs/monitor/dashboard/storage",
+        "label": "ProxMenux Monitor — Storage tab",
+        "tail": " — disk drill-in that consumes the JSON exported here (full SMART table, history, PDF report)."
+      },
+      {
+        "href": "/docs/monitor/dashboard/hardware",
+        "label": "ProxMenux Monitor — Hardware tab",
+        "tail": " — Storage Summary with model, capacity and negotiated link speed (current vs maximum on NVMe)."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Disk Manager overview",
+        "tail": "."
+      }
+    ]
+  }
+}

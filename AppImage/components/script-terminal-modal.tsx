@@ -16,7 +16,10 @@ import {
   CornerDownLeft,
   GripHorizontal,
   ChevronDown,
+  Copy,
+  Clipboard,
 } from "lucide-react"
+import { copyTerminalSelection, pasteFromClipboard } from "@/lib/terminal-clipboard"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import "xterm/css/xterm.css"
 import { API_PORT } from "@/lib/api-config"
+import { getTicketedWsUrl } from "@/lib/terminal-ws"
 
 interface WebInteraction {
   type: "yesno" | "menu" | "msgbox" | "input" | "inputbox"
@@ -57,6 +61,10 @@ export function ScriptTerminalModal({
 }: ScriptTerminalModalProps) {
   const termRef = useRef<any>(null)
   const wsRef = useRef<WebSocket | null>(null)
+  // Mirrors `isOpen` for use inside async closures (initializeTerminal)
+  // after dynamic imports resolve — captures the latest value without
+  // re-binding the closure.
+  const isOpenRef = useRef<boolean>(false)
   const fitAddonRef = useRef<any>(null)
   const sessionIdRef = useRef<string>(Math.random().toString(36).substring(2, 8))
 
@@ -99,14 +107,15 @@ export function ScriptTerminalModal({
       clearTimeout(reconnectTimeoutRef.current)
     }
 
-    reconnectTimeoutRef.current = setTimeout(() => {
+    reconnectTimeoutRef.current = setTimeout(async () => {
       if (wsRef.current?.readyState !== WebSocket.OPEN && termRef.current) {
         if (wsRef.current) {
           wsRef.current.close()
         }
 
         const wsUrl = getScriptWebSocketUrl(sessionIdRef.current)
-        const ws = new WebSocket(wsUrl)
+        // Single-use auth ticket appended as ?ticket=... — see lib/terminal-ws.ts.
+        const ws = new WebSocket(await getTicketedWsUrl(wsUrl))
         wsRef.current = ws
 
         ws.onopen = () => {
@@ -213,17 +222,24 @@ const initMessage = {
   }, [])
 
   const initializeTerminal = async () => {
+    // Snapshot the open-state at call time. After the dynamic xterm
+    // imports resolve, bail out if the modal has since been closed —
+    // otherwise we attach a Terminal to a stale ref and open a WS that
+    // nobody reads. Audit Tier 6 — useEffect con `import("xterm")` sin
+    // cancelación.
+    const wasOpenAtCall = isOpenRef.current
     const [TerminalClass, FitAddonClass] = await Promise.all([
       import("xterm").then((mod) => mod.Terminal),
       import("xterm-addon-fit").then((mod) => mod.FitAddon),
       import("xterm/css/xterm.css"),
     ])
+    if (!wasOpenAtCall || !isOpenRef.current) return
 
     const fontSize = window.innerWidth < 768 ? 12 : 16
 
     const term = new TerminalClass({
       rendererType: "dom",
-      fontFamily: '"Courier", "Courier New", "Liberation Mono", "DejaVu Sans Mono", monospace',
+      fontFamily: '"MesloLGS NF", "FiraCode Nerd Font", "JetBrainsMono Nerd Font", "Hack Nerd Font", "Symbols Nerd Font", "Courier", "Courier New", "Liberation Mono", "DejaVu Sans Mono", monospace',
       fontSize: fontSize,
       lineHeight: 1,
       cursorBlink: true,
@@ -272,7 +288,8 @@ const initMessage = {
     }, 100)
 
     const wsUrl = getScriptWebSocketUrl(sessionIdRef.current)
-    const ws = new WebSocket(wsUrl)
+    // Single-use auth ticket appended as ?ticket=... — see lib/terminal-ws.ts.
+    const ws = new WebSocket(await getTicketedWsUrl(wsUrl))
     wsRef.current = ws
 
     ws.onopen = () => {
@@ -368,9 +385,14 @@ const initMessage = {
       }
     }
 
+    // Read `wsRef.current` inside the handler so reconnect (which swaps
+    // `wsRef.current` to a fresh WebSocket) doesn't leave us writing to the
+    // dead closure-captured `ws`. Without this fix, after reconnect the
+    // user's stdin disappears into the void. Audit residual #8.
     term.onData((data) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(data)
+      const live = wsRef.current
+      if (live && live.readyState === WebSocket.OPEN) {
+        live.send(data)
       }
     })
 
@@ -410,6 +432,7 @@ const initMessage = {
   }
 
   useEffect(() => {
+    isOpenRef.current = isOpen
     const savedHeight = localStorage.getItem("scriptModalHeight")
     if (savedHeight) {
       const height = Number.parseInt(savedHeight, 10)
@@ -624,6 +647,14 @@ const initMessage = {
     }
   }
 
+  // Mobile clipboard helpers — see lib/terminal-clipboard.ts.
+  const handleCopy = async () => {
+    await copyTerminalSelection(termRef.current)
+  }
+  const handlePaste = async () => {
+    await pasteFromClipboard(sendCommand)
+  }
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -775,7 +806,7 @@ const initMessage = {
                     <ChevronDown className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel className="text-xs text-muted-foreground">Control Sequences</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={() => sendCommand("\x03")}>
@@ -789,6 +820,16 @@ const initMessage = {
                   <DropdownMenuItem onSelect={() => sendCommand("\x12")}>
                     <span className="font-mono text-xs mr-2">Ctrl+R</span>
                     <span className="text-muted-foreground text-xs">Search history</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">Clipboard</DropdownMenuLabel>
+                  <DropdownMenuItem onSelect={() => { void handleCopy() }}>
+                    <Copy className="h-3.5 w-3.5 mr-2" />
+                    <span className="text-xs">Copy selection</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => { void handlePaste() }}>
+                    <Clipboard className="h-3.5 w-3.5 mr-2" />
+                    <span className="text-xs">Paste</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -844,12 +885,19 @@ const initMessage = {
           >
             <DialogTitle>{currentInteraction.title}</DialogTitle>
             <div className="space-y-4">
-              <p
-                className="whitespace-pre-wrap"
-                dangerouslySetInnerHTML={{
-                  __html: currentInteraction.message.replace(/\\n/g, "<br/>").replace(/\n/g, "<br/>"),
-                }}
-              />
+              {/*
+                Render the interaction message as plain text. The message
+                comes through the WebSocket from a script running as root —
+                a script bug or compromised author could embed `<script>` or
+                `<img onerror=...>` and run JS in the admin's browser, leaking
+                the JWT and any keys held in React state. `whitespace-pre-wrap`
+                already preserves the `\n` formatting we previously emulated
+                via `<br/>`, so we don't need any HTML conversion. See audit
+                Tier 2 #17b.
+              */}
+              <p className="whitespace-pre-wrap break-words">
+                {currentInteraction.message.replace(/\\n/g, "\n")}
+              </p>
 
               {currentInteraction.type === "yesno" && (
                 <div className="flex gap-2">

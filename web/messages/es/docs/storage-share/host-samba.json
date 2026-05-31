@@ -1,0 +1,172 @@
+{
+  "meta": {
+    "title": "Host: montar share Samba en el host | ProxMenux Documentation",
+    "description": "Monta un share Samba / CIFS externo en el host Proxmox — bien como almacenamiento de Proxmox (pvesm add cifs), bien como un montaje fstab del host normal con uid/gid/file_mode abiertos (NO visible en Datacenter > Storage), o ambos. El método fstab abre los permisos para que un LXC unprivileged que haga bind mount de la ruta pueda leer/escribir sin cambios dentro del contenedor.",
+    "ogTitle": "Host: montar share Samba en el host | ProxMenux Documentation",
+    "ogDescription": "Monta un share Samba / CIFS externo en el host Proxmox vía pvesm, fstab con permisos abiertos (ideal para bind mounts LXC), o ambos."
+  },
+  "header": {
+    "title": "Host: montar share Samba en el host",
+    "description": "Monta un share Samba (SMB / CIFS) externo — de un NAS, una máquina Windows, un export SMB de TrueNAS — en el host Proxmox. Elige uno o ambos métodos: regístralo como almacenamiento de Proxmox (visible en Datacenter > Storage) y/o añade un montaje /etc/fstab normal en una ruta que tú elijas, con uid/gid/file_mode abiertos para que los LXCs unprivileged puedan hacer bind mount y escribir sin cambios dentro del contenedor.",
+    "section": "Almacenamiento y compartición · Host"
+  },
+  "intro": {
+    "title": "Qué hace",
+    "body": "ProxMenux ofrece dos métodos de montaje para cualquier share Samba: <strong>(1) Almacenamiento de Proxmox</strong> vía <code>pvesm add cifs</code> — visible en Datacenter > Storage, montado en <code>/mnt/pve/&lt;id&gt;</code>, credenciales guardadas cifradas en <code>/etc/pve/priv/storage/&lt;id&gt;.pw</code>; <strong>(2) Montaje fstab del host</strong> en una ruta que tú elijas — persistente vía <code>/etc/fstab</code>, montado con <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> para que los bind mounts LXC unprivileged puedan escribir, credenciales guardadas en un archivo solo para root en <code>/etc/samba/credentials/</code> (la contraseña nunca aparece en <code>fstab</code>). Puedes ejecutar un método, el otro o ambos."
+  },
+  "opening": {
+    "heading": "Abrir la herramienta",
+    "body": "Desde el menú principal de ProxMenux, abre <strong>Storage &amp; Share Manager → Mount Samba Share on Host</strong>. Verás este submenú con cuatro opciones:",
+    "imageAlt": "Menú Samba Host Manager — Mount / View / Remove / Test connectivity"
+  },
+  "howRuns": {
+    "heading": "Cómo se ejecuta el script",
+    "body": "El flujo tiene dos fases. Fase 1: descubre el servidor, valida credenciales, elige share y elige método o métodos de montaje vía una lista de verificación. Fase 2: solo se ejecutan los métodos que marcaste. Las credenciales se necesitan por adelantado porque <code>smbclient</code> las necesita para listar shares. Hasta la confirmación final, ni <code>/etc/pve/storage.cfg</code> ni <code>/etc/fstab</code> se tocan."
+  },
+  "modes": {
+    "heading": "Selector de método de montaje (dos opciones, marca una o ambas)",
+    "intro": "Tras seleccionar el share y validar las credenciales, ProxMenux muestra una lista de verificación con los dos métodos de montaje. Puedes marcar uno o ambos. Si pulsas OK sin marcar nada, el diálogo reaparece hasta que elijas al menos una opción o pulses Cancel para salir del flujo.",
+    "headerMethod": "Método",
+    "headerMount": "Ruta de montaje",
+    "headerUi": "Visible en Datacenter > Storage",
+    "headerUseCase": "Caso de uso típico",
+    "rows": [
+      {
+        "method": "<strong>Como almacenamiento de Proxmox (pvesm)</strong>",
+        "mountRich": "<code>/mnt/pve/&lt;storage-id&gt;</code> (gestionado por Proxmox)",
+        "ui": "Sí",
+        "useCase": "Backups, ISOs, templates LXC — cualquier cosa que necesite aparecer en la UI de Proxmox. Los discos de VM en vivo están técnicamente soportados pero desaconsejados en CIFS (semántica de locking)."
+      },
+      {
+        "method": "<strong>Solo fstab del host</strong>",
+        "mountRich": "<code>/mnt/&lt;path&gt;</code> con uid/gid/file_mode abiertos",
+        "ui": "No",
+        "useCaseRich": "Hacer bind mount del share en uno o más LXCs <em>sin</em> exponerlo como almacenamiento de Proxmox. Los permisos abiertos garantizan que los CTs unprivileged puedan escribir a través del bind mount."
+      },
+      {
+        "method": "<strong>Ambos</strong>",
+        "mount": "Ambas rutas de arriba (dos conexiones CIFS independientes al servidor)",
+        "ui": "Sí",
+        "useCase": "Quieres integración con la UI Y una ruta estable del lado del host con permisos abiertos para bind mounts LXC. El montaje pvesm usa los valores por defecto de Proxmox; el montaje fstab aplica el uid/gid/file_mode abierto por separado."
+      }
+    ],
+    "bothTitle": "\"Ambos\" crea dos conexiones CIFS independientes",
+    "bothBody": "pvesm y fstab montan el mismo share dos veces con opciones distintas. El montaje pvesm en <code>/mnt/pve/&lt;id&gt;</code> usa los valores por defecto de Proxmox (sin uid/gid abiertos) — la UI de Proxmox está contenta. El montaje fstab en <code>/mnt/&lt;path&gt;</code> usa <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> — los bind mounts LXC unprivileged a él pueden escribir. Dos conexiones TCP al servidor SMB desde el mismo host Proxmox."
+  },
+  "pvesmBranch": {
+    "heading": "Método A — Como almacenamiento de Proxmox (pvesm)",
+    "intro": "Si <em>Como almacenamiento de Proxmox</em> está marcado, ProxMenux ejecuta el flujo pvesm original:",
+    "items": [
+      "<strong>Storage ID</strong> — por defecto <code>cifs-&lt;server-ip-with-dashes&gt;</code>. Solo letras, dígitos, <code>-</code> y <code>_</code>.",
+      "<strong>Content types</strong> — CIFS expone <strong>6</strong> opciones (las mismas que NFS menos <code>rootdir</code>, que Proxmox no permite en CIFS porque la semántica de locking no puede sostener un rootfs LXC en vivo):"
+    ],
+    "headerType": "Content type",
+    "headerAllows": "Qué permite",
+    "rows": [
+      {
+        "type": "import",
+        "allows": "Importaciones de imágenes de disco (seleccionado por defecto)."
+      },
+      {
+        "type": "backup",
+        "allowsRich": "Archivos de backup de VM y CT (<code>vzdump</code>)."
+      },
+      {
+        "type": "iso",
+        "allows": "Imágenes ISO de instalación."
+      },
+      {
+        "type": "vztmpl",
+        "allows": "Templates LXC."
+      },
+      {
+        "type": "images",
+        "allowsRich": "Imágenes de disco de VM en vivo — <strong>avisado en línea</strong>, ver abajo."
+      },
+      {
+        "type": "snippets",
+        "allows": "Scripts de hook y snippets cloud-init."
+      }
+    ],
+    "warnTitle": "Discos de VM en vivo en CIFS",
+    "warnBody": "Si marcas <code>images</code>, ProxMenux saca un aviso antes de continuar. CIFS usa un modelo de locking advisory que interactúa mal con las operaciones de disco de KVM (snapshots, migración en vivo, I/O bajo contención). Un almacén de backups o ISOs en CIFS es perfectamente correcto; un almacén de discos en vivo es buscarse problemas. Usa NFS (o almacenamiento local) para <code>images</code> cuando puedas.",
+    "credsTitle": "Dónde guarda pvesm las credenciales",
+    "credsBody": "Cuando usas autenticación de usuario, la contraseña NO se escribe en <code>/etc/pve/storage.cfg</code>. Proxmox la guarda en <code>/etc/pve/priv/storage/&lt;storage-id&gt;.pw</code> — modo <code>0600</code>, propietario <code>root</code>, miembro del cluster sync. Si más adelante cambias la contraseña en el servidor Samba, usa <code>pvesm set &lt;id&gt; --password &lt;new&gt;</code> o elimina y vuelve a añadir a través de ProxMenux."
+  },
+  "fstabBranch": {
+    "heading": "Método B — Solo montaje fstab del host",
+    "intro": "Si <em>Solo como montaje fstab del host</em> está marcado, ProxMenux pide una ruta de montaje del host y opciones persistentes, escribe un archivo de credenciales solo para root (modo User), luego monta y escribe la entrada en <code>/etc/fstab</code>:",
+    "items": [
+      "<strong>Ruta de montaje del host</strong> — por defecto <code>/mnt/&lt;share-name&gt;</code>. Debe ser una ruta absoluta. Si algo ya está montado ahí, o existe una entrada fstab, ProxMenux ofrece reemplazarla.",
+      "<strong>Mount options</strong> — elige <em>Read/Write</em> (por defecto con <code>rw,uid=0,gid=0,file_mode=0777,dir_mode=0777,iocharset=utf8,nofail,_netdev</code>), <em>Read-only</em> (variante de solo lectura con <code>file_mode=0555,dir_mode=0555</code>), o <em>Custom</em> (escribe tu propia cadena de opciones). El uid/gid/file_mode abiertos siempre se recomiendan para escrituras a través de bind mount LXC."
+    ],
+    "credsTitle": "Archivo de credenciales (modo User)",
+    "credsBody": "Si te autenticaste con usuario + contraseña, ProxMenux escribe un archivo de credenciales solo para root en <code>/etc/samba/credentials/&lt;server&gt;_&lt;share&gt;.cred</code> (modo <code>0600</code>) con líneas <code>username=</code> y <code>password=</code>, y lo referencia en la entrada fstab vía la opción de montaje <code>credentials=</code>. El texto en claro nunca aterriza en <code>/etc/fstab</code>. Para el modo Guest, en su lugar se añade la opción <code>guest</code> y no se crea archivo de credenciales.",
+    "appliesIntro": "Una vez confirmes, el script:",
+    "applies": [
+      "<code>mkdir -p</code> de la ruta de montaje.",
+      "<code>mount -t cifs -o &lt;opts&gt;,credentials=&lt;file&gt;</code> (o <code>guest</code>) <code>//&lt;srv&gt;/&lt;share&gt; &lt;path&gt;</code>.",
+      "Escribe una entrada de una línea en <code>/etc/fstab</code>: <code>//&lt;srv&gt;/&lt;share&gt; &lt;path&gt; cifs &lt;opts&gt; 0 0</code>.",
+      "Ejecuta <code>systemctl daemon-reload</code> para que systemd recoja la nueva entrada fstab."
+    ],
+    "lxcTitle": "Usar el montaje fstab desde un LXC unprivileged",
+    "lxcBody": "Como el cliente CIFS aplica <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code>, cada archivo en el montaje pertenece al UID 0 del host con modo 0777. Un LXC unprivileged que haga bind mount de la ruta ve permisos \"others\" en cada entrada (root del CT = UID 100000 del host = others en el sistema de archivos del host), así que las lecturas y escrituras tienen éxito. <strong>No se hacen cambios dentro del contenedor</strong> — sin <code>chown</code> en el CT, sin configuración de grupo, nada modificado en <code>/etc/lxc</code> más allá de la única línea <code>mp</code> de bind mount. El script imprime el comando <code>pct set</code> exacto al final, o usa el <mountLink>LXC Mount Manager</mountLink> para adjuntar la ruta.",
+    "noUiTitle": "El montaje fstab NO es un almacenamiento de Proxmox",
+    "noUiBody": "El montaje fstab del host es invisible para la UI web de Proxmox — por diseño. No aparece en <em>Datacenter > Storage</em>, no puedes seleccionarlo en el creador de VM / CT y los trabajos de backup de Proxmox no pueden apuntarlo. Es puramente una ruta del sistema de archivos del host. Si quieres también integración con la UI, marca <em>ambos</em> métodos en el selector."
+  },
+  "manual": {
+    "heading": "Equivalente manual",
+    "pvesmIntro": "El Método A (pvesm) se traduce a:",
+    "fstabUserIntro": "Método B (fstab, auth de usuario) — archivo de credenciales + montaje:",
+    "fstabGuestIntro": "Método B (fstab, auth guest) — sin archivo de credenciales:"
+  },
+  "view": {
+    "heading": "Ver almacenamientos CIFS configurados",
+    "body": "Lista cada entrada CIFS en Proxmox (<code>pvesm status | awk ''$2 == \"cifs\"''</code>) con servidor, share, content types, usuario (o <em>Guest</em>), ruta de montaje y estado en vivo. La contraseña <strong>nunca se imprime</strong>. <strong>Nota:</strong> esta vista solo muestra almacenamientos registrados con pvesm — los montajes solo en fstab no se listan. Compruébalos con <code>findmnt -t cifs</code> o <code>grep cifs /etc/fstab</code>."
+  },
+  "remove": {
+    "heading": "Eliminar almacenamiento CIFS",
+    "body": "Ejecuta <code>pvesm remove &lt;storage-id&gt;</code> tras una confirmación que muestra servidor / share / contenido. Solo se elimina el registro del lado de Proxmox — <strong>el servidor Samba remoto no se toca</strong>. Proxmox también borra el archivo de credenciales emparejado. Para eliminar un montaje solo en fstab, edita <code>/etc/fstab</code> a mano, ejecuta <code>umount &lt;path&gt;</code> y elimina el archivo de <code>/etc/samba/credentials/</code>.",
+    "warnTitle": "Haz backup de las dependencias primero",
+    "warnBody": "Las VMs, CTs o trabajos de backup que referencien este almacenamiento por ID fallarán tras la eliminación. Mueve / elimina esas referencias antes de eliminar el almacenamiento."
+  },
+  "test": {
+    "heading": "Probar conectividad Samba",
+    "body": "Ejecuta una pasada de diagnóstico sobre cada almacenamiento CIFS registrado en Proxmox: comprueba que <code>smbclient</code> está disponible, hace ping a cada servidor, prueba los puertos 445 y 139, intenta un listado guest e informa de la vista del propio Proxmox (<code>pvesm status</code>). \"Requires authentication\" en el listado guest significa que tu servidor solo expone shares a usuarios autenticados — normal en la mayoría de setups NAS."
+  },
+  "troubleshoot": {
+    "heading": "Solución de problemas",
+    "noServersTitle": "\"No Samba servers found on the network\"",
+    "noServersBody": "El auto-descubrimiento usa <code>nmap -p 139,445</code>. El servidor puede estar en una subnet diferente, con firewall o solo alcanzable por hostname (mDNS / WINS). Usa la opción <em>Manual</em> con la IP o hostname en su lugar.",
+    "noSharesTitle": "\"No accessible shares found\"",
+    "noSharesBody": "<code>smbclient -L</code> no devolvió nada para estas credenciales. Causas: el usuario no tiene permiso para listar shares (prueba con credenciales de admin una vez, o escribe el nombre del share manualmente), el servidor tiene la visibilidad de shares deshabilitada o las credenciales son incorrectas. El script te permite escribir el nombre del share a mano en este caso.",
+    "denyTitle": "El montaje de Proxmox falla con NT_STATUS_ACCESS_DENIED",
+    "denyBody": "Las credenciales que pvesm guardó están desincronizadas con el servidor Samba (contraseña cambiada, cuenta deshabilitada, mismatch de domain / workgroup). Vuelve a introducir credenciales con <code>pvesm set &lt;id&gt; --username &lt;u&gt; --password &lt;p&gt;</code> o elimina y vuelve a añadir desde ProxMenux. Si el servidor está en un dominio AD, añade <code>--domain &lt;DOMAIN&gt;</code> a la llamada <code>pvesm set</code>.",
+    "sleepTitle": "\"host is down\" o el estado del almacenamiento pasa a inactive por la noche",
+    "sleepBody": "Algunos appliances NAS ponen SMB en suspensión agresivamente. <code>pvestatd</code> entonces ve el almacenamiento como inactive hasta que el primer acceso despierta al NAS. Si es cosmético, no hay nada roto. Si causa fallos de backup, deshabilita la desconexión por idle de SMB en el NAS o programa los backups fuera de la ventana de suspensión.",
+    "lxcNoWriteTitle": "El bind mount LXC unprivileged no puede escribir en la ruta fstab",
+    "lxcNoWriteBody": "Confirma que el montaje usa las opciones abiertas: <code>findmnt /mnt/&lt;path&gt;</code> debería mostrar <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code>. Si una cadena de opciones Custom omite esas, un LXC unprivileged tendrá permission denied (los UIDs del CT mapean a \"others\" del host, que sin file_mode abierto no tienen bit de escritura). Vuelve a montar con el preset RW por defecto o añade las cuatro opciones de vuelta a tu cadena custom.",
+    "fstabBootTitle": "El montaje fstab no se levanta tras el reinicio",
+    "fstabBootBody": "El script añade <code>nofail,_netdev</code> para que un share que falte al arranque no bloquee el inicio. Si el montaje nunca se levanta: confirma que la red es alcanzable (<code>ping &lt;server&gt;</code>), comprueba <code>journalctl -u remote-fs.target</code>, verifica que el archivo de credenciales sigue existiendo (<code>ls -l /etc/samba/credentials/</code>) y es legible, y prueba <code>mount -a</code> manualmente."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/storage-share/host-nfs",
+        "label": "Share NFS como almacenamiento de Proxmox",
+        "tail": " — página hermana con el mismo patrón de flujo (Método A pvesm + Método B fstab) y contrapartidas en paralelo."
+      },
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "LXC Mount Manager",
+        "tailRich": " — hacer bind mount de la ruta solo en fstab <code>/mnt/&lt;path&gt;</code> en uno o más contenedores."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-client",
+        "label": "Cliente Samba en LXC",
+        "tail": " — alternativa: monta Samba directamente desde dentro de un contenedor privileged (se salta el host)."
+      }
+    ]
+  }
+}

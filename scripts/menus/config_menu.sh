@@ -1,13 +1,39 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenux - A menu-driven script for Proxmox VE management
+# ProxMenux - Settings (Configuration Menu)
 # ==========================================================
-# Author      : MacRimi
-# Copyright   : (c) 2024 MacRimi
+# Author       : MacRimi
 # Contributors : cod378
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
-# Version     : 1.1
-# Last Updated: 04/07/2025
+# Copyright    : (c) 2024 MacRimi
+# License      : GPL-3.0
+#                https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
+# Version      : 1.2
+# ==========================================================
+# Description:
+# ProxMenux configuration / settings menu. Options are shown
+# conditionally based on the install type and current state:
+#
+#   - ProxMenux Monitor (Activate / Deactivate + Show Status)
+#       Only if proxmenux-monitor.service is registered with
+#       systemd. Toggles between active / inactive states.
+#
+#   - Change Release Channel
+#       Switches between Stable (main branch) and Beta (develop
+#       branch) by running the official installer for each channel.
+#
+#   - Change Language
+#       Only on the Translation install type (venv +
+#       config.json.language present). Languages: en / es / fr /
+#       de / it / pt.
+#
+#   - Show Version Information
+#       Always shown. Reports installed components, files,
+#       virtual environment state and current language.
+#
+#   - Uninstall ProxMenux
+#       Always shown. Interactive uninstall with optional
+#       dependency removal (jq, dialog, python3-*, ...) and
+#       restoration of /root/.bashrc + /etc/motd backups.
 # ==========================================================
 
 # Configuration ============================================
@@ -17,13 +43,22 @@ CONFIG_FILE="$BASE_DIR/config.json"
 CACHE_FILE="$BASE_DIR/cache.json"
 UTILS_FILE="$BASE_DIR/utils.sh"
 LOCAL_VERSION_FILE="$BASE_DIR/version.txt"
+BETA_VERSION_FILE="$BASE_DIR/beta_version.txt"
 INSTALL_DIR="/usr/local/bin"
 MENU_SCRIPT="menu"
 VENV_PATH="/opt/googletrans-env"
+BACKTITLE="ProxMenux Configuration"
+
+REPO_MAIN="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+REPO_DEVELOP="https://raw.githubusercontent.com/MacRimi/ProxMenux/develop"
+STABLE_INSTALLER_URL="$REPO_MAIN/install_proxmenux.sh"
+BETA_INSTALLER_URL="$REPO_DEVELOP/install_proxmenux_beta.sh"
 
 MONITOR_SERVICE="proxmenux-monitor.service"
 MONITOR_UNIT_FILE="/etc/systemd/system/${MONITOR_SERVICE}"
 MONITOR_CONFIG_DIR="/root/.config/proxmenux-monitor"
+MONITOR_RUNTIME_DIR="$BASE_DIR/monitor-app"
+MONITOR_PORT=8008
 
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
@@ -121,23 +156,218 @@ is_beta_program_active() {
     [[ "$flag" == "active" ]]
 }
 
-deactivate_beta_program() {
-    if dialog --clear --backtitle "ProxMenux Configuration" \
-              --title "$(translate "Deactivate Beta Program")" \
-              --yesno "\n$(translate "You will stop receiving beta update prompts. Stable updates continue normally.\n\nTo rejoin the beta program later, run the beta installer again.\n\nDeactivate now?")" 14 64; then
-        local tmp
-        tmp=$(mktemp)
-        if jq '.beta_program.status = "inactive"' "$CONFIG_FILE" > "$tmp" 2>/dev/null; then
-            mv "$tmp" "$CONFIG_FILE"
-            dialog --clear --backtitle "ProxMenux Configuration" \
-                   --title "$(translate "Beta Program Deactivated")" \
-                   --msgbox "\n\n$(translate "Beta program deactivated. You will now receive stable updates only.")" 10 60
-        else
-            rm -f "$tmp"
-            dialog --clear --backtitle "ProxMenux Configuration" \
-                   --title "$(translate "Error")" \
-                   --msgbox "\n\n$(translate "Could not update config file.")" 10 50
+get_release_channel() {
+    if is_beta_program_active; then
+        echo "beta"
+    else
+        echo "stable"
+    fi
+}
+
+release_channel_label() {
+    case "$1" in
+        "beta")
+            echo "$(translate "Beta (develop branch)")"
+            ;;
+        *)
+            echo "$(translate "Stable (main branch)")"
+            ;;
+    esac
+}
+
+download_release_installer() {
+    local channel="$1"
+    local output_file="$2"
+    local installer_url
+
+    case "$channel" in
+        "beta")
+            installer_url="$BETA_INSTALLER_URL"
+            ;;
+        "stable")
+            installer_url="$STABLE_INSTALLER_URL"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "$installer_url" -o "$output_file"
+    else
+        wget -qO "$output_file" "$installer_url"
+    fi
+}
+
+set_stable_release_config() {
+    local tmp
+
+    mkdir -p "$BASE_DIR"
+    if [ ! -f "$CONFIG_FILE" ] || ! jq empty "$CONFIG_FILE" >/dev/null 2>&1; then
+        echo '{}' > "$CONFIG_FILE"
+    fi
+
+    tmp=$(mktemp)
+    if jq 'del(.beta_program, .beta_version, .install_branch)
+         | del(.update_available.beta, .update_available.beta_version)
+         | if .proxmenux_monitor.status == "beta_updated" then .proxmenux_monitor.status = "updated" else . end
+         | if (.update_available // {}) == {} then del(.update_available) else . end' \
+        "$CONFIG_FILE" > "$tmp" 2>/dev/null; then
+        mv "$tmp" "$CONFIG_FILE"
+        rm -f "$BETA_VERSION_FILE" "$BASE_DIR/install_proxmenux_beta.sh"
+        return 0
+    fi
+
+    rm -f "$tmp"
+    return 1
+}
+
+normalize_stable_monitor_service() {
+    local exec_path="$MONITOR_RUNTIME_DIR/AppRun"
+    local was_active=false
+
+    [ -x "$exec_path" ] || return 0
+    [ -f "$MONITOR_UNIT_FILE" ] || return 0
+
+    systemctl is-active --quiet "$MONITOR_SERVICE" && was_active=true
+
+    msg_info "$(translate "Normalizing stable monitor service...")"
+    cat > "$MONITOR_UNIT_FILE" << EOF
+[Unit]
+Description=ProxMenux Monitor - Web Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=$MONITOR_RUNTIME_DIR
+ExecStart=$exec_path
+Restart=on-failure
+RestartSec=10
+Environment="PORT=$MONITOR_PORT"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    systemctl daemon-reload
+    systemctl enable "$MONITOR_SERVICE" >/dev/null 2>&1
+
+    if [ "$was_active" = true ]; then
+        if systemctl restart "$MONITOR_SERVICE" >/dev/null 2>&1; then
+            msg_ok "$(translate "Stable monitor service normalized.")"
+            return 0
         fi
+
+        msg_error "$(translate "Could not restart ProxMenux Monitor service.")"
+        return 1
+    fi
+
+    msg_ok "$(translate "Stable monitor service normalized.")"
+    return 0
+}
+
+apply_release_channel() {
+    local target_channel="$1"
+    local current_channel installer_file installer_status
+
+    current_channel=$(get_release_channel)
+    installer_file=$(mktemp /tmp/proxmenux-${target_channel}-installer.XXXXXX) || return 1
+
+    show_proxmenux_logo
+    msg_title "$(translate "Changing Release Channel")"
+    msg_ok "$(translate "Current channel:") $(release_channel_label "$current_channel")"
+    msg_ok "$(translate "Target channel:") $(release_channel_label "$target_channel")"
+
+    msg_info "$(translate "Downloading official installer...")"
+    if download_release_installer "$target_channel" "$installer_file" >/dev/null 2>&1; then
+        chmod +x "$installer_file"
+        msg_ok "$(translate "Installer downloaded.")"
+    else
+        msg_error "$(translate "Could not download the installer.")"
+        rm -f "$installer_file"
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
+        return 1
+    fi
+
+    msg_info "$(translate "Starting installer...")"
+    stop_spinner
+    bash "$installer_file"
+    installer_status=$?
+    rm -f "$installer_file"
+
+    if [ "$installer_status" -ne 0 ]; then
+        msg_error "$(translate "Installer finished with errors.")"
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
+        return 1
+    fi
+
+    if [ "$target_channel" = "stable" ]; then
+        msg_info "$(translate "Updating release channel configuration...")"
+        if set_stable_release_config; then
+            msg_ok "$(translate "Release channel set to Stable.")"
+            if ! normalize_stable_monitor_service; then
+                msg_success "$(translate "Press Enter to return to menu...")"
+                read -r
+                return 1
+            fi
+        else
+            msg_error "$(translate "Could not update config file.")"
+            msg_success "$(translate "Press Enter to return to menu...")"
+            read -r
+            return 1
+        fi
+    else
+        msg_ok "$(translate "Release channel set to Beta.")"
+    fi
+
+    msg_success "$(translate "Press Enter to return to menu...")"
+    read -r
+    exec bash "$LOCAL_SCRIPTS/menus/config_menu.sh"
+}
+
+change_release_channel() {
+    local current_channel current_label selected_channel selected_label confirm_message
+
+    current_channel=$(get_release_channel)
+    current_label=$(release_channel_label "$current_channel")
+
+    selected_channel=$(dialog --clear --backtitle "$BACKTITLE" \
+                              --title "$(translate "Release Channel")" \
+                              --default-item "$current_channel" \
+                              --menu "$(translate "Current channel:") $current_label\n\n$(translate "Choose the release channel to use:")" 16 74 2 \
+                              "stable" "$(translate "Stable (main branch)")" \
+                              "beta" "$(translate "Beta (develop branch)")" 3>&1 1>&2 2>&3)
+
+    [ -z "$selected_channel" ] && return
+
+    if [ "$selected_channel" = "$current_channel" ]; then
+        dialog --clear --backtitle "$BACKTITLE" \
+               --title "$(translate "Release Channel")" \
+               --msgbox "\n\n$(translate "This release channel is already active.")" 9 56
+        return
+    fi
+
+    selected_label=$(release_channel_label "$selected_channel")
+
+    case "$selected_channel" in
+        "beta")
+            confirm_message="$(translate "This will install the Beta version from the develop branch and enable beta update checks.\n\nBeta builds may contain bugs or incomplete features.\n\nContinue?")"
+            ;;
+        "stable")
+            confirm_message="$(translate "This will reinstall the Stable version from the main branch and disable beta update checks.\n\nContinue?")"
+            ;;
+        *)
+            return
+            ;;
+    esac
+
+    if dialog --clear --backtitle "$BACKTITLE" \
+              --title "$selected_label" \
+              --yesno "\n$confirm_message" 14 72; then
+        apply_release_channel "$selected_channel"
     fi
 }
 
@@ -172,6 +402,109 @@ toggle_monitor_service() {
                    --msgbox "\n\n$(translate "ProxMenux Monitor has been activated.")" 10 50
         fi
     fi
+}
+
+reset_monitor_password() {
+    # Recovery path for operators who lost the Monitor login credentials.
+    # Wipes only the identity claims from auth.json (username / password /
+    # 2FA secret / backup codes) so the next visit to the dashboard
+    # triggers the setup wizard with no password needed. Intentionally
+    # KEEPS `jwt_secret`, `api_tokens` and `revoked_tokens` — that means
+    # already-issued API tokens continue to work (Home Assistant /
+    # custom scripts don't need to be reconfigured) and only the
+    # interactive web login is reset. The operator chooses a new
+    # username + password on the next visit.
+
+    local auth_file="$MONITOR_CONFIG_DIR/auth.json"
+
+    if [ ! -f "$auth_file" ]; then
+        dialog --clear --backtitle "$BACKTITLE" \
+               --title "$(translate "Reset Monitor Password")" \
+               --msgbox "\n\n$(translate "ProxMenux Monitor authentication is not configured on this host — there is no password to reset.")" 11 70
+        return
+    fi
+
+    if ! dialog --clear --backtitle "$BACKTITLE" \
+                --title "$(translate "Reset Monitor Password")" \
+                --yesno "\n$(translate "This will RESET the ProxMenux Monitor login credentials on this host:")\n\n  • $(translate "Username and password will be cleared.")\n  • $(translate "Two-factor authentication and backup codes will be removed.")\n  • $(translate "API tokens (Home Assistant, scripts) will keep working.")\n  • $(translate "The next visit to the dashboard will show the initial setup wizard.")\n\n$(translate "Continue?")" 16 78; then
+        return
+    fi
+
+    if ! command -v jq >/dev/null 2>&1; then
+        dialog --clear --backtitle "$BACKTITLE" \
+               --title "$(translate "Reset Monitor Password")" \
+               --msgbox "\n\n$(translate "jq is required for this operation but is not installed.")" 10 60
+        return
+    fi
+
+    show_proxmenux_logo
+    msg_title "$(translate "Reset Monitor Password")"
+
+    # Timestamped backup so the operator can recover the previous state
+    # if the reset was a mistake. Includes the secret material — keep
+    # this file out of any shared location.
+    local backup_file
+    backup_file="${auth_file}.bak-$(date -u +%Y%m%d%H%M%S)"
+    if ! cp -a "$auth_file" "$backup_file" 2>/dev/null; then
+        msg_error "$(translate "Could not back up the existing auth.json")"
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
+        return
+    fi
+    chmod 0600 "$backup_file" 2>/dev/null || true
+    msg_ok "$(translate "Backup saved to:") $backup_file"
+
+    msg_info "$(translate "Stopping ProxMenux Monitor service...")"
+    systemctl stop "$MONITOR_SERVICE" >/dev/null 2>&1 || true
+    msg_ok "$(translate "Service stopped.")"
+
+    msg_info "$(translate "Clearing login credentials...")"
+    local tmp
+    tmp=$(mktemp)
+    if jq '
+            .enabled       = false
+          | .configured    = false
+          | .username      = ""
+          | .password_hash = ""
+          | .declined      = false
+          | .totp_enabled  = false
+          | .totp_secret   = null
+          | .backup_codes  = []
+        ' "$auth_file" > "$tmp" 2>/dev/null; then
+        chmod 0600 "$tmp" 2>/dev/null || true
+        mv "$tmp" "$auth_file"
+        msg_ok "$(translate "Credentials cleared. jwt_secret and API tokens preserved.")"
+    else
+        rm -f "$tmp"
+        msg_error "$(translate "Failed to update auth.json — restoring backup.")"
+        cp -a "$backup_file" "$auth_file"
+        systemctl start "$MONITOR_SERVICE" >/dev/null 2>&1 || true
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
+        return
+    fi
+
+    msg_info "$(translate "Restarting ProxMenux Monitor service...")"
+    if systemctl start "$MONITOR_SERVICE" >/dev/null 2>&1; then
+        msg_ok "$(translate "Service restarted.")"
+    else
+        msg_warn "$(translate "Could not restart the service — start it manually with systemctl start") $MONITOR_SERVICE"
+    fi
+
+    local server_ip
+    server_ip=$(hostname -I | awk '{print $1}')
+    echo ""
+    msg_success "$(translate "Password reset completed.")"
+    echo ""
+    if [ -n "$server_ip" ]; then
+        msg_info2 "$(translate "Open the dashboard to create a new admin account:")"
+        echo -e "${TAB}${BL}http://${server_ip}:8008${CL}"
+    else
+        msg_info2 "$(translate "Open the dashboard from this host on port 8008 to create a new admin account.")"
+    fi
+    echo ""
+    msg_success "$(translate "Press Enter to return to menu...")"
+    read -r
 }
 
 show_monitor_status() {
@@ -237,13 +570,15 @@ show_config_menu() {
             menu_options+=("$option_num" "$(translate "Show Monitor Service Status")")
             option_actions[$option_num]="show_monitor_status"
             ((option_num++))
-        fi
 
-        if is_beta_program_active; then
-            menu_options+=("$option_num" "$(translate "Deactivate Beta Program")")
-            option_actions[$option_num]="deactivate_beta"
+            menu_options+=("$option_num" "$(translate "Reset ProxMenux Monitor Password")")
+            option_actions[$option_num]="reset_monitor_password"
             ((option_num++))
         fi
+
+        menu_options+=("$option_num" "$(translate "Change Release Channel")")
+        option_actions[$option_num]="change_release_channel"
+        ((option_num++))
 
         # Build menu based on installation type
         if [ "$install_type" = "translation" ]; then
@@ -289,8 +624,11 @@ show_config_menu() {
             "show_monitor_status")
                 show_monitor_status
                 ;;
-            "deactivate_beta")
-                deactivate_beta_program
+            "reset_monitor_password")
+                reset_monitor_password
+                ;;
+            "change_release_channel")
+                change_release_channel
                 ;;
             "change_language")
                 change_language
@@ -346,8 +684,9 @@ change_language() {
 
 # ==========================================================
 show_version_info() {
-    local version info_message install_type
+    local version info_message install_type release_channel beta_version
     install_type=$(detect_installation_type)
+    release_channel=$(get_release_channel)
     
     if [ -f "$LOCAL_VERSION_FILE" ]; then
         version=$(<"$LOCAL_VERSION_FILE")
@@ -355,7 +694,13 @@ show_version_info() {
         version="Unknown"
     fi
     
-    info_message+="$(translate "Current ProxMenux version:") $version\n\n"
+    info_message+="$(translate "Current ProxMenux version:") $version\n"
+    info_message+="$(translate "Release channel:") $(release_channel_label "$release_channel")\n"
+    if [ "$release_channel" = "beta" ] && [ -f "$BETA_VERSION_FILE" ]; then
+        beta_version=$(head -n 1 "$BETA_VERSION_FILE" 2>/dev/null)
+        [ -n "$beta_version" ] && info_message+="$(translate "Beta version:") $beta_version\n"
+    fi
+    info_message+="\n"
     
     # Show installation type
     info_message+="$(translate "Installation type:")\n"
@@ -369,7 +714,11 @@ show_version_info() {
     info_message+="$(translate "Installed components:")\n"
     if [ -f "$CONFIG_FILE" ]; then
         while IFS=': ' read -r component value; do
-            [ "$component" = "language" ] && continue
+            case "$component" in
+                "language"|"beta_program"|"beta_version"|"install_branch"|"update_available")
+                    continue
+                    ;;
+            esac
             local status
             if echo "$value" | jq -e '.status' >/dev/null 2>&1; then
                 status=$(echo "$value" | jq -r '.status')

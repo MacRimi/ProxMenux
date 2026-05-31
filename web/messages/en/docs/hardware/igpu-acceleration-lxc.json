@@ -1,0 +1,185 @@
+{
+  "meta": {
+    "title": "Add GPU to LXC | ProxMenux Documentation",
+    "description": "Share an Intel, AMD or NVIDIA GPU with an LXC container for hardware-accelerated transcoding (Plex / Jellyfin / Frigate), OpenCL / CUDA workloads, and Mesa video acceleration. ProxMenux handles device nodes, GID alignment, and distro-specific driver install inside the container."
+  },
+  "header": {
+    "title": "Add GPU to LXC",
+    "description": "Share one or more GPUs with a Proxmox LXC container. The host keeps using the GPU normally — the container just gets access through device nodes. Works with Intel iGPUs (Quick Sync / VA-API), AMD cards (Mesa / ROCm), and NVIDIA (CUDA / NVENC).",
+    "section": "Hardware: GPUs and Coral-TPU"
+  },
+  "intro": {
+    "title": "What this does",
+    "body": "Adds <code>dev&lt;N&gt;</code> entries to the LXC config (<code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>) so the container sees <code>/dev/dri/*</code>, <code>/dev/kfd</code> or <code>/dev/nvidia*</code> — whichever applies to your GPU. Then it boots the container, detects the distro inside, and installs the matching userspace drivers (Mesa, intel-media-driver, NVIDIA runtime…) so apps like Plex, Jellyfin or Frigate actually use the GPU for transcoding. GIDs (<code>video</code>, <code>render</code>) are aligned between host and container so permissions match."
+  },
+  "compare": {
+    "heading": "LXC sharing vs VM passthrough",
+    "intro": "LXC containers share the host kernel, so they can <em>share</em> the host's GPU without taking it over. That's a big difference from VMs: with <vmLink>VM passthrough</vmLink> the GPU is exclusive to one VM and the host can't use it. With LXC, multiple containers plus the host can all hit the same GPU at once.",
+    "headerFeature": "Feature",
+    "headerLxc": "LXC (this page)",
+    "headerVm": "VM",
+    "rows": [
+      {
+        "feature": "Host keeps using the GPU?",
+        "lxc": "Yes",
+        "vm": "No — exclusive to the VM"
+      },
+      {
+        "feature": "Multiple containers sharing one GPU?",
+        "lxc": "Yes",
+        "vm": "No"
+      },
+      {
+        "feature": "Requires IOMMU / VFIO on the host?",
+        "lxc": "No",
+        "vm": "Yes"
+      },
+      {
+        "feature": "Reboot required?",
+        "lxc": "Usually no (just restart the CT)",
+        "vm": "Yes, always"
+      },
+      {
+        "feature": "Supports running any OS?",
+        "lxc": "Only Linux (LXC is Linux-only)",
+        "vm": "Windows, macOS, any Linux"
+      }
+    ]
+  },
+  "prereqs": {
+    "title": "Before you start",
+    "gpu": "<strong>A GPU on the host</strong> — Intel iGPU, AMD dGPU or APU, or an NVIDIA card. The script auto-detects all three via <code>lspci</code>.",
+    "gpuCheck": "lspci | grep -iE 'VGA|3D|Display'",
+    "vfio": "<strong>The GPU is NOT bound to vfio-pci.</strong> If the GPU is currently assigned to a VM via passthrough, it's invisible to the host kernel driver and the LXC can't use it. The script detects this and offers to run <switchLink>Switch GPU Mode</switchLink> for you.",
+    "nvidia": "<strong>For NVIDIA only:</strong> the NVIDIA host driver must already be installed — ProxMenux needs to match the container's userspace libs to the host version. If you haven't done it yet, run <nvidiaLink>Install NVIDIA Drivers on the Host</nvidiaLink> first.",
+    "nvidiaCheck": "nvidia-smi",
+    "container": "<strong>An existing LXC container.</strong> The script operates on a container you already created — it doesn't create one. The container should ideally be <strong>privileged</strong> (unprivileged works but needs UID/GID mapping which the script does not configure)."
+  },
+  "unpriv": {
+    "title": "Works on both privileged and unprivileged containers",
+    "body": "The script writes <code>dev&lt;N&gt;</code> entries to the LXC config and, on unprivileged containers, aligns the <code>video</code> and <code>render</code> GIDs between host and container so the GPU device nodes are reachable from inside without you having to hand-edit <code>lxc.idmap</code>."
+  },
+  "running": {
+    "heading": "Running the installer",
+    "body": "Open ProxMenux on the host, go to <strong>Hardware: GPUs and Coral-TPU → Add GPU to LXC</strong>.",
+    "imageAlt": "Menu entry for 'Add GPU to LXC' inside Hardware: GPUs and Coral-TPU"
+  },
+  "howRuns": {
+    "heading": "How the script runs",
+    "body": "Two phases: all the decisions upfront, then all the changes in one go. Nothing on your container is touched until you confirm."
+  },
+  "walkthrough": {
+    "heading": "Walking through the flow",
+    "detect": {
+      "title": "Detect host GPUs",
+      "body": "The script scans <code>lspci</code> for VGA / 3D / Display controllers matching Intel, AMD or NVIDIA. For NVIDIA it also verifies the <code>nvidia</code> kernel module is loaded and <code>nvidia-smi</code> works — the host driver version it reports will be used to pick the right <code>.run</code> installer for the container.",
+      "tipTitle": "NVIDIA not ready?",
+      "tipBody": "If NVIDIA is detected but the module isn't loaded, the script won't offer the NVIDIA path. Run <nvidiaLink>Install NVIDIA Drivers on the Host</nvidiaLink> first (and reboot), then come back."
+    },
+    "pickCt": {
+      "title": "Pick an LXC container",
+      "body": "You'll see a list of every LXC on the host with its ID and name. Pick the one that should get the GPU. The container can be running or stopped — the script handles both (stops it briefly during config, restarts it, and leaves it in its original state at the end).",
+      "imageAlt": "Dialog listing existing LXC containers to choose from"
+    },
+    "selectGpu": {
+      "title": "Select the GPU(s) to add",
+      "body": "If more than one GPU is present, you get a checklist. You can add multiple to the same container (e.g. an Intel iGPU for Quick Sync + an AMD dGPU for ROCm). If only one GPU is detected, it's auto-selected.",
+      "imageAlt": "Checklist showing detected GPUs (Intel / AMD / NVIDIA) with vendor and PCI address"
+    },
+    "preflight": {
+      "title": "Pre-flight checks",
+      "imageAlt": "Dialog offering to run Switch GPU Mode when the selected GPU is still bound to vfio-pci for VM passthrough",
+      "intro": "Three checks, any of which can block or redirect you:",
+      "items": [
+        "<strong>SR-IOV.</strong> If the selected GPU is a Virtual Function (VF) or a Physical Function with active VFs, LXC passthrough doesn't apply — the device is managed by the SR-IOV driver. Blocked.",
+        "<strong>Bound to vfio-pci.</strong> If the GPU is currently held by VFIO for VM passthrough, the host kernel can't create <code>/dev/dri/*</code> or <code>/dev/nvidia*</code> nodes for it. The script offers to run <switchLink>Switch GPU Mode</switchLink> which undoes the VFIO binding; you'll likely need a reboot before re-running Add GPU to LXC.",
+        "<strong>Already configured.</strong> If the container already has every dev node for the selected GPU, the script says so and exits cleanly. If it's partially configured, it continues with only the missing pieces."
+      ]
+    },
+    "applyConfig": {
+      "title": "Apply the LXC config changes",
+      "body1": "The script stops the container, edits <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>, and adds <code>dev&lt;N&gt;</code> entries with the right GIDs for the selected GPUs. Using <code>dev:</code> entries (over the older <code>lxc.mount.entry</code> lines) is the modern Proxmox way — group permissions are set at config parse time instead of at mount time.",
+      "body2": "Example after Intel + NVIDIA on the same container:"
+    },
+    "installDrivers": {
+      "title": "Start the container and install drivers inside",
+      "body": "Once the config is written, the script starts the container, waits up to ~30 seconds for <code>pct exec</code> to respond, and then detects the container's distro from <code>/etc/os-release</code>. Based on that, it installs the right userspace packages.",
+      "headerDistro": "Distro",
+      "headerInt": "Intel / AMD",
+      "headerNvidia": "NVIDIA",
+      "rows": [
+        {
+          "distro": "Alpine",
+          "intel": "apk add mesa-va-gallium intel-media-driver libva-utils",
+          "nvidia": "apk add nvidia-utils"
+        },
+        {
+          "distro": "Arch / Manjaro",
+          "intel": "pacman -Sy intel-media-driver mesa libva-utils",
+          "nvidia": "pacman -Sy nvidia-utils"
+        }
+      ],
+      "debianDistro": "Debian / Ubuntu / others",
+      "debianIntel": "apt-get install va-driver-all intel-opencl-icd vainfo",
+      "debianNvidia": "extract host <code>.run</code> → <code>pct push</code> → run with <code>--no-kernel-modules --no-dkms</code>",
+      "whyTitle": "Why the NVIDIA .run dance on Debian",
+      "whyBody": "Debian / Ubuntu don't ship NVIDIA packages with a version granular enough to match the host driver byte-for-byte. The userspace libs inside the container <strong>must match the kernel module version</strong> loaded on the host, or <code>nvidia-smi</code> fails with a version mismatch. ProxMenux solves this by using the exact same <code>.run</code> installer that was used for the host — extracted, tarred, pushed into the container with <code>pct push</code>, and run with <code>--no-kernel-modules --no-dkms</code> so only the userspace is touched."
+    },
+    "alignGids": {
+      "title": "Align GIDs and restore state",
+      "body1": "Device files on the host are owned by group <code>video</code> (GID 44) or <code>render</code> (GID 104). The container's distro may ship different GID numbers for those groups, which would make the GPU nodes unreachable from inside. The script rewrites <code>/etc/group</code> in the container so <code>video:44</code> and <code>render:104</code> match exactly.",
+      "body2": "Finally, it restores the container to its original state — if it was stopped when you started, it gets stopped again. If it was running, it stays running."
+    }
+  },
+  "vendors": {
+    "heading": "Vendor-specific notes",
+    "intelHeading": "Intel iGPU",
+    "intelBody": "Most common path — great for Plex / Jellyfin / Frigate hardware transcoding via <em>Quick Sync</em>. The container gets <code>/dev/dri/card0</code> (legacy) and <code>/dev/dri/renderD128</code> (modern render-only node — what apps actually use). No host-side changes needed; the <code>i915</code> driver on the host already created the nodes.",
+    "amdHeading": "AMD",
+    "amdBody": "Same DRI nodes as Intel for graphics / VA-API. If <code>/dev/kfd</code> exists on the host (AMD compute / ROCm kernel support), the script also adds it so containers can do OpenCL / ROCm workloads. Mesa VA drivers cover the video decode side.",
+    "nvidiaHeading": "NVIDIA",
+    "nvidiaBody": "Adds every <code>/dev/nvidia*</code> node the host exposes. The critical piece is <strong>driver-version matching</strong>: host module version and container userspace lib version must be identical, otherwise <code>nvidia-smi</code> inside the container fails. ProxMenux captures the host version at detection time and uses the same <code>.run</code> file to install the container userspace. For Debian containers the install bumps container memory to 2 GB temporarily (installer needs ~1.5 GB free to extract) and restores it afterwards.",
+    "updateTitle": "After you update the host NVIDIA driver, re-run this script",
+    "updateBody": "When you upgrade the NVIDIA driver on the host, the container's userspace libs stay on the old version and <code>nvidia-smi</code> inside the container breaks. ProxMenux's <nvidiaLink>NVIDIA host installer</nvidiaLink> detects containers with NVIDIA passthrough and offers to update them automatically — but if you skipped that prompt, just run Add GPU to LXC again on the same container and it'll refresh the userspace."
+  },
+  "verification": {
+    "heading": "Verification",
+    "body": "After the script finishes, log into the container and check the GPU is visible:"
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "mismatchTitle": "nvidia-smi: Failed to initialize NVML: Driver/library version mismatch",
+    "mismatchBody": "Container userspace version ≠ host module version. Run Add GPU to LXC again on that container — the script extracts the current host <code>.run</code> and re-installs userspace matching.",
+    "denyTitle": "Permission denied on /dev/dri/renderD128 inside the container",
+    "denyBody": "Usually one of: (1) container is unprivileged without UID/GID mapping to host <code>render</code> group; (2) the user inside the container isn't in the <code>render</code> group. Fix: add the user to <code>render</code> inside the container (<code>usermod -aG render &lt;user&gt;</code>), or switch to privileged mode if the workload is trusted.",
+    "vainfoTitle": "vainfo says: VA-API version 1.xx; failed to initialize",
+    "vainfoBody": "The VA-API runtime is there but no suitable driver was installed. On Intel, install <code>intel-media-driver</code> (newer gens) or <code>i965-va-driver</code> (older gens). On AMD, <code>mesa-va-drivers</code>. Re-run the script if in doubt.",
+    "logTitle": "Install log",
+    "logBody": "Every run writes to <code>/tmp/add_gpu_lxc.log</code> on the host. Include it when asking for help on GitHub."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "label": "Install NVIDIA Drivers (Host)",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": " — required prerequisite for NVIDIA GPUs before passing them to a container."
+      },
+      {
+        "label": "Add GPU to VM (Passthrough)",
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "tail": " — alternative model when you need the GPU dedicated to a single VM."
+      },
+      {
+        "label": "Switch GPU Mode (VM ↔ LXC)",
+        "href": "/docs/hardware/switch-gpu-mode",
+        "tail": " — toggle the same GPU between LXC sharing and VM passthrough."
+      },
+      {
+        "label": "GPU Passthrough commands",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": " — quick reference for related shell commands."
+      }
+    ]
+  }
+}

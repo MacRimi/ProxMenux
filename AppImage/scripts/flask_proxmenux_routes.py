@@ -3,6 +3,15 @@ import json
 import os
 import re
 
+from jwt_middleware import require_auth
+
+# Sprint 12A: dynamic post-install version detector. The TOOL_METADATA
+# table below still owns the user-facing display names + deprecated
+# flags + has-source-on-disk hints, but the actual versions and short
+# descriptions now come from the live `# version:` / `# description:`
+# comments parsed from the on-disk post-install scripts.
+import post_install_versions
+
 proxmenux_bp = Blueprint('proxmenux', __name__)
 
 # Tool metadata: description, function name in bash script, and version
@@ -25,6 +34,7 @@ TOOL_METADATA = {
     'figurine':             {'name': 'Figurine',                              'function': 'configure_figurine',           'version': '1.0'},
     'fastfetch':            {'name': 'Fastfetch',                             'function': 'configure_fastfetch',          'version': '1.0'},
     'log2ram':              {'name': 'Log2ram (SSD Protection)',               'function': 'configure_log2ram',            'version': '1.0'},
+    'zfs_autotrim':         {'name': 'ZFS Autotrim',                          'function': 'enable_zfs_autotrim',          'version': '1.0'},
     'amd_fixes':            {'name': 'AMD CPU (Ryzen/EPYC) fixes',            'function': 'apply_amd_fixes',              'version': '1.0'},
     'persistent_network':   {'name': 'Setting persistent network interfaces', 'function': 'setup_persistent_network',     'version': '1.0'},
     'vfio_iommu':           {'name': 'VFIO/IOMMU Passthrough',                'function': 'enable_vfio_iommu',            'version': '1.0'},
@@ -195,43 +205,99 @@ def get_update_status():
 
 @proxmenux_bp.route('/api/proxmenux/installed-tools', methods=['GET'])
 def get_installed_tools():
-    """Get list of installed ProxMenux tools/optimizations"""
+    """Get list of installed ProxMenux tools/optimizations.
+
+    Sprint 12A: each entry now carries both the version the user has
+    installed (read from installed_tools.json — accepts the legacy
+    boolean shape and the new structured object shape) and the version
+    currently declared in the on-disk post-install script. ``has_update``
+    is true when the declared version is higher than the installed one,
+    which is what the Settings → ProxMenux Optimizations card uses to
+    flag the tool as updateable.
+    """
     installed_tools_path = '/usr/local/share/proxmenux/installed_tools.json'
-    
+
     try:
         if not os.path.exists(installed_tools_path):
             return jsonify({
                 'success': True,
                 'installed_tools': [],
+                'updates_available_count': 0,
                 'message': 'No ProxMenux optimizations installed yet'
             })
-        
+
         with open(installed_tools_path, 'r') as f:
-            data = json.load(f)
-        
-        # Convert to list format with descriptions and version
+            raw = json.load(f)
+
+        # Sprint 12A: index update list by tool key for has_update lookup.
+        try:
+            piv_snapshot = post_install_versions.get_snapshot()
+        except Exception:
+            piv_snapshot = {'updates': []}
+        update_by_key = {u['key']: u for u in piv_snapshot.get('updates', [])}
+
         tools = []
-        for tool_key, enabled in data.items():
-            if enabled:  # Only include enabled tools
-                meta = TOOL_METADATA.get(tool_key, {})
-                tools.append({
-                    'key': tool_key,
-                    'name': meta.get('name', tool_key.replace('_', ' ').title()),
-                    'enabled': enabled,
-                    'version': meta.get('version', '1.0'),
-                    'has_source': bool(meta.get('function')),
-                    'deprecated': bool(meta.get('deprecated', False)),
-                })
-        
-        # Sort alphabetically by name
+        for tool_key, value in raw.items():
+            # Normalize legacy bool vs new structured entry.
+            if isinstance(value, bool):
+                if not value:
+                    continue
+                installed_version = '1.0'
+                source = ''
+            elif isinstance(value, dict):
+                if not value.get('installed', False):
+                    continue
+                installed_version = str(value.get('version', '1.0')) or '1.0'
+                source = str(value.get('source', '') or '')
+            else:
+                continue
+
+            # Hard-coded display metadata (display name, deprecated flag).
+            meta = TOOL_METADATA.get(tool_key, {})
+
+            # Live metadata from parsed scripts (version + description) —
+            # picks the entry matching the recorded source. We also pull
+            # the per-flow function names directly out of the snapshot so
+            # the frontend's picker can route to the right script when a
+            # legacy bool entry has to choose between auto and custom.
+            live = post_install_versions.get_metadata_for_tool(tool_key)
+            auto_meta = piv_snapshot.get('auto', {}).get(tool_key) or {}
+            custom_meta = piv_snapshot.get('custom', {}).get(tool_key) or {}
+
+            available_version = live['version'] if live else meta.get('version', installed_version)
+            description = live['description'] if live else ''
+
+            update_info = update_by_key.get(tool_key)
+
+            tools.append({
+                'key': tool_key,
+                'name': meta.get('name', tool_key.replace('_', ' ').title()),
+                'enabled': True,
+                'version': installed_version,
+                'available_version': available_version,
+                'description': description,
+                'source': source,
+                # Sprint 12B: function name the wrapper should run for the
+                # active source (live), plus the per-flow names so the
+                # legacy-bool picker can choose between auto and custom.
+                'function': (live.get('function') if live else '') or meta.get('function', ''),
+                'function_auto': auto_meta.get('function', ''),
+                'function_custom': custom_meta.get('function', ''),
+                'has_source': bool(meta.get('function')) or bool(live),
+                'deprecated': bool(meta.get('deprecated', False)),
+                'has_update': update_info is not None,
+                'update_source_certain': bool(update_info.get('source_certain', False)) if update_info else True,
+            })
+
         tools.sort(key=lambda x: x['name'])
-        
+
         return jsonify({
             'success': True,
             'installed_tools': tools,
-            'total_count': len(tools)
+            'total_count': len(tools),
+            'updates_available_count': sum(1 for t in tools if t['has_update']),
         })
-    
+
     except json.JSONDecodeError:
         return jsonify({
             'success': False,
@@ -242,6 +308,184 @@ def get_installed_tools():
             'success': False,
             'error': str(e)
         }), 500
+
+
+@proxmenux_bp.route('/api/updates/post-install', methods=['GET'])
+def get_post_install_updates():
+    """Sprint 12A: list of post-install function updates available.
+
+    Returns the cached scan result populated at AppImage startup. Each
+    entry carries enough info for the UI to decide which function to
+    invoke when the user clicks "Update": tool key, source (auto/custom),
+    function name, before/after versions and a human description.
+
+    ``source_certain`` is false for tools whose installed entry was a
+    legacy boolean (no source recorded) — the UI should ask the user
+    which flow to run before triggering the update.
+    """
+    try:
+        snapshot = post_install_versions.get_snapshot()
+        return jsonify({
+            'success': True,
+            'scanned_at': snapshot.get('scanned_at', 0),
+            'updates': snapshot.get('updates', []),
+            'total': len(snapshot.get('updates', [])),
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'updates': [],
+        }), 500
+
+
+@proxmenux_bp.route('/api/updates/post-install/scan', methods=['POST'])
+def rescan_post_install_updates():
+    """Sprint 12A: force a re-scan of the post-install scripts.
+
+    Used by the Monitor's "refresh" affordance and by the bash menu
+    when the user has just finished applying updates. The scan parses
+    both post-install scripts and re-reads installed_tools.json, so it
+    picks up version bumps applied by a `git pull` or by a previous
+    Update click in the same session.
+    """
+    try:
+        snapshot = post_install_versions.scan(persist=True)
+        return jsonify({
+            'success': True,
+            'scanned_at': snapshot.get('scanned_at', 0),
+            'updates': snapshot.get('updates', []),
+            'total': len(snapshot.get('updates', [])),
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+        }), 500
+
+
+@proxmenux_bp.route('/api/proxmenux/snippets-storage', methods=['GET'])
+def get_snippets_storage():
+    """Sprint 13 / issue #195: list candidate storages for snippets and
+    the currently selected preference.
+
+    Reads `pvesm status -content snippets` to enumerate the storages
+    that accept hookscripts on this host. Reads
+    `/usr/local/share/proxmenux/config.json -> snippets_storage` to
+    return whichever the user has previously chosen (the bash flow auto-
+    saves it the first time GPU passthrough is configured on a host
+    with multiple shared storages).
+    """
+    config_path = '/usr/local/share/proxmenux/config.json'
+    selected = ''
+    try:
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                cfg = json.load(f)
+            selected = str(cfg.get('snippets_storage', '') or '')
+    except Exception:
+        selected = ''
+
+    import subprocess
+
+    def _list() -> list[dict[str, str]]:
+        try:
+            proc = subprocess.run(
+                ['pvesm', 'status', '-content', 'snippets'],
+                capture_output=True, text=True, timeout=10
+            )
+            if proc.returncode != 0:
+                return []
+            out: list[dict[str, str]] = []
+            for line in proc.stdout.strip().splitlines()[1:]:
+                parts = line.split()
+                if len(parts) < 3:
+                    continue
+                name, stype, status = parts[0], parts[1], parts[2]
+                out.append({
+                    'name': name,
+                    'type': stype,
+                    'active': status == 'active',
+                })
+            return out
+        except Exception:
+            return []
+
+    candidates = _list()
+
+    # PVE 9 ships `local` without `snippets` in its content list, so a
+    # fresh install lists zero candidates here. Mirror what the bash
+    # helper does — auto-enable snippets on local — so the Monitor's
+    # selector isn't perpetually empty before the user runs GPU
+    # passthrough for the first time.
+    if not candidates:
+        try:
+            subprocess.run(
+                ['pvesm', 'set', 'local', '--content', 'vztmpl,iso,import,backup,snippets'],
+                capture_output=True, text=True, timeout=10, check=False,
+            )
+            candidates = _list()
+        except Exception:
+            pass
+
+    return jsonify({
+        'success': True,
+        'selected': selected,
+        'candidates': candidates,
+    })
+
+
+@proxmenux_bp.route('/api/proxmenux/snippets-storage', methods=['POST'])
+@require_auth
+def set_snippets_storage():
+    """Sprint 13 / issue #195: persist the user's snippets storage
+    preference in config.json. The bash helper reads this value next
+    time it needs to install a hookscript so the user only has to pick
+    once."""
+    try:
+        data = request.get_json(silent=True) or {}
+        storage = str(data.get('storage', '') or '').strip()
+        if not storage:
+            return jsonify({'success': False, 'error': 'storage is required'}), 400
+
+        # Validate the storage actually exists with content=snippets.
+        # Otherwise a typo here would silently break GPU passthrough
+        # next time a user runs it. Better to reject up front.
+        import subprocess
+        proc = subprocess.run(
+            ['pvesm', 'status', '-content', 'snippets'],
+            capture_output=True, text=True, timeout=10
+        )
+        valid_names: set[str] = set()
+        if proc.returncode == 0:
+            for line in proc.stdout.strip().splitlines()[1:]:
+                parts = line.split()
+                if parts:
+                    valid_names.add(parts[0])
+
+        if storage not in valid_names:
+            return jsonify({
+                'success': False,
+                'error': f"Storage '{storage}' is not active or doesn't support snippets content",
+                'available': sorted(valid_names),
+            }), 400
+
+        config_path = '/usr/local/share/proxmenux/config.json'
+        try:
+            os.makedirs(os.path.dirname(config_path), exist_ok=True)
+            cfg: dict = {}
+            if os.path.exists(config_path):
+                with open(config_path, 'r') as f:
+                    cfg = json.load(f) or {}
+            cfg['snippets_storage'] = storage
+            with open(config_path, 'w') as f:
+                json.dump(cfg, f, indent=2)
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Failed to persist preference: {e}'}), 500
+
+        return jsonify({'success': True, 'selected': storage})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @proxmenux_bp.route('/api/proxmenux/tool-source/<tool_key>', methods=['GET'])

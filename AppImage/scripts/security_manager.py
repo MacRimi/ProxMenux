@@ -9,6 +9,9 @@ import os
 import json
 import subprocess
 import re
+import fcntl
+import threading
+from contextlib import contextmanager
 
 # =================================================================
 # Proxmox Firewall Management
@@ -17,6 +20,107 @@ import re
 # Proxmox firewall config paths
 CLUSTER_FW = "/etc/pve/firewall/cluster.fw"
 HOST_FW_DIR = "/etc/pve/local"  # host.fw is per-node
+
+
+@contextmanager
+def _exclusive_file_lock(path):
+    """Hold an exclusive flock on `path` for the duration of the block.
+
+    The read / modify / write pattern in `add_firewall_rule`,
+    `edit_firewall_rule`, `delete_firewall_rule` and the jail.local writer
+    was unsynchronised — two concurrent Flask threads doing add+add could
+    each read the same content, modify in their own copy, and the second
+    write would clobber the first. flock serialises across threads (and
+    across processes) on the same path. Audit Tier 6 — security_manager
+    locking ausente.
+    """
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o640)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        yield
+    finally:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        except Exception:
+            pass
+        os.close(fd)
+
+
+# Threading lock for `_lynis_audit_running` flag and similar in-process
+# state. flock guards on-disk state; this guards in-memory state.
+_state_lock = threading.Lock()
+
+
+# Match a real pve-firewall rule line: `<DIR> <ACTION> ...` where DIR is
+# IN/OUT/GROUP and ACTION is ACCEPT/DROP/REJECT/<group-name>. We don't
+# enforce the full grammar — just enough that comments, blank lines, and
+# random malformed text don't get counted as rules when computing
+# rule_index. PVE itself rejects malformed rules, so they exist on disk
+# but never appear in `pve-firewall list` output → keeping our internal
+# index in sync with that list means skipping them here too.
+_PVE_RULE_LINE_RE = re.compile(
+    r'^(?:IN|OUT|GROUP)\s+\S+',
+    re.IGNORECASE,
+)
+
+
+def _is_pve_rule_line(stripped):
+    if not stripped or stripped.startswith('#') or stripped.startswith('['):
+        return False
+    return bool(_PVE_RULE_LINE_RE.match(stripped))
+
+# Allowed shape for inputs that flow into fail2ban-client argv or are written
+# as INI section headers in /etc/fail2ban/jail.local. Bounded length, conservative
+# alphabet, and forced to START with an alphanumeric so a name like `--help`
+# cannot be smuggled past argv as an option flag. Also prevents newline injection
+# (`jail_name='ssh\n[DEFAULT]\nbantime=1\n['` would corrupt the DEFAULT section)
+# and quote/escape tricks. See audit Tier 1 #12b.
+_JAIL_NAME_RE = re.compile(r'^[A-Za-z0-9_][A-Za-z0-9_-]{0,63}$')
+
+# Whitelist for the `level` argument to firewall functions. The audit flagged
+# that an unconstrained value here could one day be extended to `vm` and become
+# a path traversal sink. See audit Tier 1 #12d.
+_FIREWALL_LEVELS = ('host', 'cluster')
+
+# Whitelist of L4 protocols accepted by Proxmox `pve-firewall` rules. Anything
+# outside this set should be rejected to avoid silent acceptance of bogus rules.
+# See audit Tier 1 #12d.
+_FIREWALL_PROTOCOLS = ('tcp', 'udp', 'icmp', 'icmpv6', 'igmp', 'esp', 'ah', 'ipv6-icmp')
+
+
+def _is_valid_jail_name(name):
+    """Return True iff `name` is a safe jail name for fail2ban-client / jail.local."""
+    return isinstance(name, str) and bool(_JAIL_NAME_RE.match(name))
+
+
+# Source / dest values written into host.fw / cluster.fw rule lines. Allows
+# IPs (1.2.3.4), CIDR (1.2.3.0/24), IPv6 (::1, fe80::/64), Proxmox ipset
+# references (+ipsetname), and named aliases (alpha-numeric + dot/dash/underscore).
+# Rejects whitespace, `#`, and any control character (including the `\n` /
+# `\r` / `\t` that would otherwise let an attacker inject a fresh rule line.
+# See audit Tier 1 #12c.
+_FW_SOURCE_DEST_RE = re.compile(r'^[A-Za-z0-9.:/_+\-]{1,128}$')
+
+# Linux interface names: alphanumerics, dot, dash, underscore. Capped at 16
+# chars (Linux IFNAMSIZ). Rejects newlines and shell metacharacters.
+_FW_IFACE_RE = re.compile(r'^[A-Za-z0-9_.\-]{1,16}$')
+
+
+def _is_valid_fw_endpoint(value):
+    """True if `value` is empty (optional) or matches a safe firewall endpoint."""
+    if value == "" or value is None:
+        return True
+    return isinstance(value, str) and bool(_FW_SOURCE_DEST_RE.match(value))
+
+
+def _is_valid_fw_iface(value):
+    """True if `value` is empty (optional) or a valid network interface name."""
+    if value == "" or value is None:
+        return True
+    return isinstance(value, str) and bool(_FW_IFACE_RE.match(value))
 
 def _run_cmd(cmd, timeout=10):
     """Run a shell command and return (returncode, stdout, stderr)"""
@@ -136,7 +240,10 @@ def _parse_firewall_rules():
                     if rule:
                         rule["rule_index"] = rule_idx_by_file[source]
                         rules.append(rule)
-                    rule_idx_by_file[source] += 1
+                        rule_idx_by_file[source] += 1
+                    # else: malformed line — don't bump the index. The
+                    # delete/edit paths use the same `_is_pve_rule_line`
+                    # gate so this stays consistent across read and write.
         except Exception:
             pass
 
@@ -195,16 +302,32 @@ def add_firewall_rule(direction="IN", action="ACCEPT", protocol="tcp", dport="",
     action = action.upper()
     if action not in ("ACCEPT", "DROP", "REJECT"):
         return False, f"Invalid action: {action}. Must be ACCEPT, DROP, or REJECT"
-    
+
     direction = direction.upper()
     if direction not in ("IN", "OUT"):
         return False, f"Invalid direction: {direction}. Must be IN or OUT"
+
+    if level not in _FIREWALL_LEVELS:
+        return False, f"Invalid level: {level}. Must be one of {_FIREWALL_LEVELS}"
+
+    # Per-field input hardening — rejects newline / `#` / shell metas which would
+    # otherwise let a caller inject extra rule lines into host.fw / cluster.fw.
+    # See audit Tier 1 #12c.
+    if not _is_valid_fw_endpoint(source):
+        return False, "Invalid source (only IP/CIDR/ipset/alias chars allowed)"
+    if not _is_valid_fw_endpoint(dest):
+        return False, "Invalid destination (only IP/CIDR/ipset/alias chars allowed)"
+    if not _is_valid_fw_iface(iface):
+        return False, "Invalid interface name"
 
     # Build rule line
     parts = [direction, action]
 
     if protocol:
-        parts.extend(["-p", protocol.lower()])
+        proto = protocol.lower()
+        if proto not in _FIREWALL_PROTOCOLS:
+            return False, f"Invalid protocol: {protocol}. Must be one of {_FIREWALL_PROTOCOLS}"
+        parts.extend(["-p", proto])
     if dport:
         # Validate port
         if not re.match(r'^[\d:,]+$', dport):
@@ -224,8 +347,11 @@ def add_firewall_rule(direction="IN", action="ACCEPT", protocol="tcp", dport="",
     parts.extend(["-log", "nolog"])
 
     if comment:
-        # Sanitize comment
-        safe_comment = re.sub(r'[^\w\s\-._/():]', '', comment)
+        # Sanitize comment. The previous regex used `\s` in the negation which
+        # accepts `\n` / `\r` — letting a malicious comment terminate the rule
+        # line and inject a fresh one. We use a literal space in the negation
+        # so newlines / tabs are stripped. See audit Tier 1 #12c.
+        safe_comment = re.sub(r'[^\w \-._/():]', '', comment)
         parts.append(f"# {safe_comment}")
 
     rule_line = " ".join(parts)
@@ -237,33 +363,34 @@ def add_firewall_rule(direction="IN", action="ACCEPT", protocol="tcp", dport="",
         fw_file = os.path.join(HOST_FW_DIR, "host.fw")
 
     try:
-        content = ""
-        has_rules_section = False
+        with _exclusive_file_lock(fw_file):
+            content = ""
+            has_rules_section = False
 
-        if os.path.isfile(fw_file):
-            with open(fw_file, 'r') as f:
-                content = f.read()
-            has_rules_section = "[RULES]" in content
+            if os.path.isfile(fw_file):
+                with open(fw_file, 'r') as f:
+                    content = f.read()
+                has_rules_section = "[RULES]" in content
 
-        if has_rules_section:
-            lines = content.splitlines()
-            new_lines = []
-            inserted = False
-            for line in lines:
-                new_lines.append(line)
-                if not inserted and line.strip() == "[RULES]":
-                    new_lines.append(rule_line)
-                    inserted = True
-            content = "\n".join(new_lines) + "\n"
-        else:
-            if content and not content.endswith("\n"):
-                content += "\n"
-            content += "\n[RULES]\n"
-            content += rule_line + "\n"
+            if has_rules_section:
+                lines = content.splitlines()
+                new_lines = []
+                inserted = False
+                for line in lines:
+                    new_lines.append(line)
+                    if not inserted and line.strip() == "[RULES]":
+                        new_lines.append(rule_line)
+                        inserted = True
+                content = "\n".join(new_lines) + "\n"
+            else:
+                if content and not content.endswith("\n"):
+                    content += "\n"
+                content += "\n[RULES]\n"
+                content += rule_line + "\n"
 
-        os.makedirs(os.path.dirname(fw_file), exist_ok=True)
-        with open(fw_file, 'w') as f:
-            f.write(content)
+            os.makedirs(os.path.dirname(fw_file), exist_ok=True)
+            with open(fw_file, 'w') as f:
+                f.write(content)
 
         _run_cmd(["pve-firewall", "reload"])
 
@@ -275,7 +402,7 @@ def add_firewall_rule(direction="IN", action="ACCEPT", protocol="tcp", dport="",
 
 
 def edit_firewall_rule(rule_index, level="host", direction="IN", action="ACCEPT",
-                       protocol="tcp", dport="", sport="", source="", iface="", comment=""):
+                       protocol="tcp", dport="", sport="", source="", dest="", iface="", comment=""):
     """
     Edit an existing firewall rule by replacing it in-place.
     Deletes the old rule at rule_index and inserts the new one at the same position.
@@ -289,10 +416,26 @@ def edit_firewall_rule(rule_index, level="host", direction="IN", action="ACCEPT"
     if direction not in ("IN", "OUT"):
         return False, f"Invalid direction: {direction}. Must be IN or OUT"
 
+    if level not in _FIREWALL_LEVELS:
+        return False, f"Invalid level: {level}. Must be one of {_FIREWALL_LEVELS}"
+
+    # See add_firewall_rule for the same rationale — keep both entry points
+    # consistent so they cannot be exploited via newline / shell-metachar
+    # injection. Audit Tier 1 #12c.
+    if not _is_valid_fw_endpoint(source):
+        return False, "Invalid source (only IP/CIDR/ipset/alias chars allowed)"
+    if not _is_valid_fw_endpoint(dest):
+        return False, "Invalid destination (only IP/CIDR/ipset/alias chars allowed)"
+    if not _is_valid_fw_iface(iface):
+        return False, "Invalid interface name"
+
     # Build new rule line
     parts = [direction, action]
     if protocol:
-        parts.extend(["-p", protocol.lower()])
+        proto = protocol.lower()
+        if proto not in _FIREWALL_PROTOCOLS:
+            return False, f"Invalid protocol: {protocol}. Must be one of {_FIREWALL_PROTOCOLS}"
+        parts.extend(["-p", proto])
     if dport:
         if not re.match(r'^[\d:,]+$', dport):
             return False, f"Invalid destination port: {dport}"
@@ -303,11 +446,17 @@ def edit_firewall_rule(rule_index, level="host", direction="IN", action="ACCEPT"
         parts.extend(["-sport", sport])
     if source:
         parts.extend(["-source", source])
+    # `dest` was previously dropped silently from edit_firewall_rule — that's
+    # the registered audit issue "edit_firewall_rule IGNORA dest". Honor it.
+    if dest:
+        parts.extend(["-dest", dest])
     if iface:
         parts.extend(["-i", iface])
     parts.extend(["-log", "nolog"])
     if comment:
-        safe_comment = re.sub(r'[^\w\s\-._/():]', '', comment)
+        # Same fix as add_firewall_rule: literal space, no `\s`, so newlines
+        # cannot escape the comment and inject another rule.
+        safe_comment = re.sub(r'[^\w \-._/():]', '', comment)
         parts.append(f"# {safe_comment}")
     new_rule_line = " ".join(parts)
 
@@ -321,39 +470,44 @@ def edit_firewall_rule(rule_index, level="host", direction="IN", action="ACCEPT"
         return False, "Firewall config file not found"
 
     try:
-        with open(fw_file, 'r') as f:
-            content = f.read()
+        with _exclusive_file_lock(fw_file):
+            with open(fw_file, 'r') as f:
+                content = f.read()
 
-        lines = content.splitlines()
-        new_lines = []
-        in_rules = False
-        current_rule_idx = 0
-        replaced = False
+            lines = content.splitlines()
+            new_lines = []
+            in_rules = False
+            current_rule_idx = 0
+            replaced = False
 
-        for line in lines:
-            stripped = line.strip()
-            if stripped.startswith('['):
-                section_match = re.match(r'\[(\w+)\]', stripped)
-                if section_match:
-                    section = section_match.group(1).upper()
-                    in_rules = section in ("RULES", "IN", "OUT")
+            for line in lines:
+                stripped = line.strip()
+                if stripped.startswith('['):
+                    section_match = re.match(r'\[(\w+)\]', stripped)
+                    if section_match:
+                        section = section_match.group(1).upper()
+                        in_rules = section in ("RULES", "IN", "OUT")
 
-            if in_rules and stripped and not stripped.startswith('#') and not stripped.startswith('['):
-                if current_rule_idx == rule_index:
-                    # Replace the old rule with the new one
-                    new_lines.append(new_rule_line)
-                    replaced = True
+                # Only count lines that look like real PVE firewall rules
+                # (`<DIR> <ACTION> ...`). Random malformed lines that pve-
+                # firewall would skip used to bump our index, which made
+                # "delete rule N" hit the wrong rule. Audit Tier 6 —
+                # delete/edit_firewall_rule desync de índices.
+                if in_rules and stripped and _is_pve_rule_line(stripped):
+                    if current_rule_idx == rule_index:
+                        new_lines.append(new_rule_line)
+                        replaced = True
+                        current_rule_idx += 1
+                        continue
                     current_rule_idx += 1
-                    continue
-                current_rule_idx += 1
 
-            new_lines.append(line)
+                new_lines.append(line)
 
-        if not replaced:
-            return False, f"Rule index {rule_index} not found"
+            if not replaced:
+                return False, f"Rule index {rule_index} not found"
 
-        with open(fw_file, 'w') as f:
-            f.write("\n".join(new_lines) + "\n")
+            with open(fw_file, 'w') as f:
+                f.write("\n".join(new_lines) + "\n")
 
         _run_cmd(["pve-firewall", "reload"])
 
@@ -370,6 +524,8 @@ def delete_firewall_rule(rule_index, level="host"):
     The index corresponds to the order of rules in [RULES] section.
     Returns (success, message)
     """
+    if level not in _FIREWALL_LEVELS:
+        return False, f"Invalid level: {level}. Must be one of {_FIREWALL_LEVELS}"
     if level == "cluster":
         fw_file = CLUSTER_FW
     else:
@@ -379,38 +535,41 @@ def delete_firewall_rule(rule_index, level="host"):
         return False, "Firewall config file not found"
 
     try:
-        with open(fw_file, 'r') as f:
-            content = f.read()
+        with _exclusive_file_lock(fw_file):
+            with open(fw_file, 'r') as f:
+                content = f.read()
 
-        lines = content.splitlines()
-        new_lines = []
-        in_rules = False
-        current_rule_idx = 0
-        removed_rule = None
+            lines = content.splitlines()
+            new_lines = []
+            in_rules = False
+            current_rule_idx = 0
+            removed_rule = None
 
-        for line in lines:
-            stripped = line.strip()
-            if stripped.startswith('['):
-                section_match = re.match(r'\[(\w+)\]', stripped)
-                if section_match:
-                    section = section_match.group(1).upper()
-                    in_rules = section in ("RULES", "IN", "OUT")
+            for line in lines:
+                stripped = line.strip()
+                if stripped.startswith('['):
+                    section_match = re.match(r'\[(\w+)\]', stripped)
+                    if section_match:
+                        section = section_match.group(1).upper()
+                        in_rules = section in ("RULES", "IN", "OUT")
 
-            if in_rules and stripped and not stripped.startswith('#') and not stripped.startswith('['):
-                # This is a rule line
-                if current_rule_idx == rule_index:
-                    removed_rule = stripped
+                # Same rule-shape gate as edit_firewall_rule above — skip
+                # malformed lines so the index stays aligned with the
+                # rules pve-firewall actually reports.
+                if in_rules and stripped and _is_pve_rule_line(stripped):
+                    if current_rule_idx == rule_index:
+                        removed_rule = stripped
+                        current_rule_idx += 1
+                        continue  # Skip this line (delete it)
                     current_rule_idx += 1
-                    continue  # Skip this line (delete it)
-                current_rule_idx += 1
 
-            new_lines.append(line)
+                new_lines.append(line)
 
-        if removed_rule is None:
-            return False, f"Rule index {rule_index} not found"
+            if removed_rule is None:
+                return False, f"Rule index {rule_index} not found"
 
-        with open(fw_file, 'w') as f:
-            f.write("\n".join(new_lines) + "\n")
+            with open(fw_file, 'w') as f:
+                f.write("\n".join(new_lines) + "\n")
 
         _run_cmd(["pve-firewall", "reload"])
 
@@ -515,6 +674,8 @@ def enable_firewall(level="host"):
     Enable the Proxmox firewall at host or cluster level.
     Returns (success, message)
     """
+    if level not in _FIREWALL_LEVELS:
+        return False, f"Invalid level: {level}. Must be one of {_FIREWALL_LEVELS}"
     if level == "cluster":
         return _set_firewall_enabled(CLUSTER_FW, True)
     else:
@@ -527,6 +688,8 @@ def disable_firewall(level="host"):
     Disable the Proxmox firewall at host or cluster level.
     Returns (success, message)
     """
+    if level not in _FIREWALL_LEVELS:
+        return False, f"Invalid level: {level}. Must be one of {_FIREWALL_LEVELS}"
     if level == "cluster":
         return _set_firewall_enabled(CLUSTER_FW, False)
     else:
@@ -735,8 +898,8 @@ def update_jail_config(jail_name, maxretry=None, bantime=None, findtime=None):
     bantime = -1 means permanent ban.
     Returns (success, message)
     """
-    if not jail_name:
-        return False, "Jail name is required"
+    if not _is_valid_jail_name(jail_name):
+        return False, "Invalid jail name"
 
     changes = []
     errors = []
@@ -798,7 +961,14 @@ def update_jail_config(jail_name, maxretry=None, bantime=None, findtime=None):
 def _persist_jail_config(jail_name, maxretry=None, bantime=None, findtime=None):
     """
     Write jail config changes to /etc/fail2ban/jail.local for persistence.
+
+    `jail_name` is interpolated into an INI section header `[jail_name]`. Any
+    callers should already have validated the name with `_is_valid_jail_name`,
+    but we re-check defensively in case a future code path skips it.
     """
+    if not _is_valid_jail_name(jail_name):
+        return  # silently refuse malformed names; never write to disk
+
     jail_local = "/etc/fail2ban/jail.local"
 
     try:
@@ -913,17 +1083,25 @@ WantedBy=multi-user.target
                 _run_cmd(["systemctl", "daemon-reload"])
                 _run_cmd(["systemctl", "enable", "--now", "proxmox-auth-logger.service"])
 
-            # Create filter
-            filter_content = """[Definition]
+            # Create filter (only if user hasn't placed their own version)
+            filter_path = "/etc/fail2ban/filter.d/proxmox.conf"
+            if not os.path.isfile(filter_path):
+                filter_content = """[Definition]
 failregex = authentication (failure|error); rhost=(::ffff:)?<HOST> user=.* msg=.*
 ignoreregex =
 datepattern = ^%%Y-%%m-%%dT%%H:%%M:%%S
 """
-            with open("/etc/fail2ban/filter.d/proxmox.conf", "w") as f:
-                f.write(filter_content)
+                with open(filter_path, "w") as f:
+                    f.write(filter_content)
 
-            # Create jail (file-based backend)
-            jail_content = """[proxmox]
+            # Create jail (only if not already present on disk). The user
+            # may have deliberately disabled it (`enabled = false`) while
+            # keeping their other customisations; the previous code re-
+            # enabled and clobbered everything every run. Audit Tier 6 —
+            # `apply_missing_jails` sobrescribe configs personalizadas.
+            jail_path = "/etc/fail2ban/jail.d/proxmox.conf"
+            if not os.path.isfile(jail_path):
+                jail_content = """[proxmox]
 enabled = true
 port = 8006
 filter = proxmox
@@ -933,8 +1111,8 @@ maxretry = 3
 bantime = 3600
 findtime = 600
 """
-            with open("/etc/fail2ban/jail.d/proxmox.conf", "w") as f:
-                f.write(jail_content)
+                with open(jail_path, "w") as f:
+                    f.write(jail_content)
 
             applied.append("proxmox")
         except Exception as e:
@@ -945,17 +1123,22 @@ findtime = 600
     # auth failures directly to this file (not via syslog/journal).
     if "proxmenux" not in current_jails:
         try:
-            # Create filter with datepattern for Python logging format
-            filter_content = """[Definition]
+            # Create filter (preserve any user-customised version on disk)
+            filter_path = "/etc/fail2ban/filter.d/proxmenux.conf"
+            if not os.path.isfile(filter_path):
+                filter_content = """[Definition]
 failregex = ^.*proxmenux-auth: authentication failure; rhost=<HOST> user=.*$
 ignoreregex =
 datepattern = ^%%Y-%%m-%%d %%H:%%M:%%S
 """
-            with open("/etc/fail2ban/filter.d/proxmenux.conf", "w") as f:
-                f.write(filter_content)
+                with open(filter_path, "w") as f:
+                    f.write(filter_content)
 
-            # Create jail
-            jail_content = """[proxmenux]
+            # Create jail only if not already present (same rationale as
+            # the proxmox jail above).
+            jail_path = "/etc/fail2ban/jail.d/proxmenux.conf"
+            if not os.path.isfile(jail_path):
+                jail_content = """[proxmenux]
 enabled = true
 port = 8008,http,https
 filter = proxmenux
@@ -965,8 +1148,8 @@ maxretry = 3
 bantime = 3600
 findtime = 600
 """
-            with open("/etc/fail2ban/jail.d/proxmenux.conf", "w") as f:
-                f.write(jail_content)
+                with open(jail_path, "w") as f:
+                    f.write(jail_content)
 
             # Ensure log file exists
             if not os.path.isfile("/var/log/proxmenux-auth.log"):
@@ -998,8 +1181,10 @@ def unban_ip(jail_name, ip_address):
     Unban a specific IP from a Fail2Ban jail.
     Returns (success, message)
     """
-    if not jail_name or not ip_address:
-        return False, "Jail name and IP address are required"
+    if not _is_valid_jail_name(jail_name):
+        return False, "Invalid jail name"
+    if not ip_address:
+        return False, "IP address is required"
 
     # Validate IP format (basic check)
     if not re.match(r'^[\d.:a-fA-F]+$', ip_address):
@@ -1023,9 +1208,20 @@ def get_fail2ban_recent_activity(lines=50):
     if not os.path.isfile(log_file):
         return events
 
+    # Coerce + clamp `lines`. The caller (Flask route) passed it through
+    # without bounds checking, so a request with `?lines=999999999` made
+    # `tail` read most of `/var/log/fail2ban.log` and stuffed it into a
+    # response. Audit Tier 6 — `get_fail2ban_recent_activity` permite
+    # `lines` arbitrario.
+    try:
+        lines_int = int(lines)
+    except (TypeError, ValueError):
+        lines_int = 50
+    lines_int = max(1, min(lines_int, 1000))
+
     try:
         # Read last N lines using tail
-        rc, out, _ = _run_cmd(["tail", f"-{lines}", log_file], timeout=5)
+        rc, out, _ = _run_cmd(["tail", f"-{lines_int}", log_file], timeout=5)
         if rc != 0 or not out:
             return events
 
@@ -1208,15 +1404,20 @@ def run_lynis_audit():
     """
     global _lynis_audit_running, _lynis_audit_progress
 
-    if _lynis_audit_running:
-        return False, "An audit is already running"
+    # Guard the check-and-set under `_state_lock` — without it two Flask
+    # threads racing into `run_lynis_audit` can both see the flag as
+    # False, then both set it True, and both spawn a Lynis subprocess.
+    # Audit Tier 6 — `_lynis_audit_running` global sin lock.
+    with _state_lock:
+        if _lynis_audit_running:
+            return False, "An audit is already running"
 
-    lynis_cmd = _find_lynis_cmd()
-    if not lynis_cmd:
-        return False, "Lynis is not installed"
+        lynis_cmd = _find_lynis_cmd()
+        if not lynis_cmd:
+            return False, "Lynis is not installed"
 
-    _lynis_audit_running = True
-    _lynis_audit_progress = "starting"
+        _lynis_audit_running = True
+        _lynis_audit_progress = "starting"
 
     import threading
 
@@ -1476,16 +1677,26 @@ def parse_lynis_report():
                 "details": parts[3].strip() if len(parts) > 3 else "",
             })
 
-    # Parse lynis-output.log (stdout) for section checks, fallback to lynis.log
+    # Parse lynis-output.log (stdout) for section checks, fallback to lynis.log.
+    # The same file gets parsed twice — once for sections/checks (this block),
+    # once for warnings/suggestions/software (block below). Read once into
+    # `_log_lines` and share the list across both passes so we don't pay the
+    # disk + decode cost twice. Audit Tier 6 — `parse_lynis_report` lee
+    # archivo entero a memoria 2 veces.
     report["sections"] = []
-    # Prefer the stdout output which has clean formatted sections
     output_file = "/var/log/lynis-output.log"
     log_file = output_file if os.path.isfile(output_file) else "/var/log/lynis.log"
+    _log_lines = []
     if os.path.isfile(log_file):
         try:
-            import re
             with open(log_file, 'r') as f:
-                log_lines = f.readlines()
+                _log_lines = f.readlines()
+        except Exception:
+            _log_lines = []
+    if _log_lines:
+        try:
+            import re
+            log_lines = _log_lines
 
             current_section = None
             current_checks = []
@@ -1658,13 +1869,11 @@ def parse_lynis_report():
 
     # Always parse lynis-output.log for warnings, suggestions, software
     # components. The report.dat is often sparse/empty on many systems.
-    output_file = "/var/log/lynis-output.log"
-    _log = output_file if os.path.isfile(output_file) else "/var/log/lynis.log"
-    if os.path.isfile(_log):
+    # Reuse `_log_lines` already loaded above instead of re-opening the file.
+    if _log_lines:
         try:
             import re
-            with open(_log, 'r') as f:
-                stdout_lines = f.readlines()
+            stdout_lines = _log_lines
 
             in_warnings = False
             in_suggestions = False

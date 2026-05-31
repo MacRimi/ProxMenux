@@ -1,18 +1,35 @@
 "use client"
 
-import Link from "next/link"
+import NextLink from "next/link"
+import { Link } from "@/i18n/navigation"
 import Image from "next/image"
 import { Book, GitBranch, FileText, Github, Menu, Rss } from "lucide-react"
 import { useState } from "react"
+import { useLocale, useTranslations } from "next-intl"
+import { SearchDialog } from "./search-dialog"
+import { LanguageSwitcher } from "./language-switcher"
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const t = useTranslations("nav")
+  const locale = useLocale()
+  // English keeps the canonical root /rss.xml; other locales use the
+  // per-locale feed at /{locale}/rss.xml (mirrors components/rss-link.tsx).
+  const rssUrl =
+    locale === "en"
+      ? "https://proxmenux.com/rss.xml"
+      : `https://proxmenux.com/${locale}/rss.xml`
 
+  // Internal hrefs use the locale-aware Link from @/i18n/navigation,
+  // so the active /[locale]/ segment is added automatically. External
+  // URLs (GitHub) stay as `next/link` via NextLink to avoid the
+  // locale prefix. Labels read from messages/<locale>/common.json
+  // under the `nav.*` namespace.
   const navItems = [
-    { href: "/docs/introduction", icon: <Book className="h-4 w-4" />, label: "Documentation" },
-    { href: "/changelog", icon: <FileText className="h-4 w-4" />, label: "Changelog" },
-    { href: "/guides", icon: <GitBranch className="h-4 w-4" />, label: "Guides" },
-    { href: "https://github.com/MacRimi/ProxMenux", icon: <Github className="h-4 w-4" />, label: "GitHub" },
+    { href: "/docs/introduction", icon: <Book className="h-4 w-4" />, label: t("documentation"), external: false },
+    { href: "/changelog", icon: <FileText className="h-4 w-4" />, label: t("changelog"), external: false },
+    { href: "/guides", icon: <GitBranch className="h-4 w-4" />, label: t("guides"), external: false },
+    { href: "https://github.com/MacRimi/ProxMenux", icon: <Github className="h-4 w-4" />, label: t("github"), external: true },
   ]
 
   return (
@@ -26,71 +43,113 @@ export default function Navbar() {
               width={32}
               height={32}
               className="w-8 h-8"
+              unoptimized
             />
             <span className="text-xl font-bold">ProxMenux</span>
           </Link>
 
-          {/* Desktop menu */}
-          <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center space-x-2 transition-colors hover:text-primary"
-                {...(item.label === "GitHub" ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+          {/* Right side — search (responsive) + desktop nav + mobile menu button */}
+          <div className="flex items-center gap-3 lg:gap-6">
+            {/* Search — always visible: icon only on mobile/tablet, full button on lg+ */}
+            <SearchDialog />
+
+            {/* Desktop menu — only on lg+ to avoid overlap with the logo on tablet portrait */}
+            <nav className="hidden lg:flex items-center space-x-6 text-sm font-medium">
+              {navItems.map((item) =>
+                item.external ? (
+                  <NextLink
+                    key={item.href}
+                    href={item.href}
+                    className="flex items-center space-x-2 transition-colors hover:text-primary"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </NextLink>
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="flex items-center space-x-2 transition-colors hover:text-primary"
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </Link>
+                ),
+              )}
+
+              {/* RSS Feed Link */}
+              <NextLink
+                href={rssUrl}
+                className="flex items-center space-x-2 transition-colors hover:text-primary text-orange-600 hover:text-orange-700"
+                target="_blank"
+                rel="noopener noreferrer"
+                title={t("rssTitle")}
               >
-                {item.icon}
-                <span>{item.label}</span>
-              </Link>
-            ))}
+                <Rss className="h-4 w-4" />
+                <span>{t("rss")}</span>
+              </NextLink>
 
-            {/* RSS Feed Link */}
-            <Link
-              href="https://proxmenux.com/rss.xml"
-              className="flex items-center space-x-2 transition-colors hover:text-primary text-orange-600 hover:text-orange-700"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="RSS Feed"
+              <LanguageSwitcher />
+            </nav>
+
+            {/* Mobile + tablet menu button — visible until lg breakpoint */}
+            <button
+              className="lg:hidden p-2"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label={t("menuOpen")}
             >
-              <Rss className="h-4 w-4" />
-              <span>RSS</span>
-            </Link>
-          </nav>
-
-          {/* Mobile menu button */}
-          <button className="md:hidden p-2" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-            <Menu className="h-6 w-6" />
-          </button>
+              <Menu className="h-6 w-6" />
+            </button>
+          </div>
         </div>
 
-        {/* Mobile menu */}
+        {/* Mobile + tablet menu */}
         {isMenuOpen && (
-          <nav className="md:hidden py-4">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center space-x-2 py-2 transition-colors hover:text-primary"
-                onClick={() => setIsMenuOpen(false)}
-                {...(item.label === "GitHub" ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </Link>
-            ))}
+          <nav className="lg:hidden py-4">
+            {navItems.map((item) =>
+              item.external ? (
+                <NextLink
+                  key={item.href}
+                  href={item.href}
+                  className="flex items-center space-x-2 py-2 transition-colors hover:text-primary"
+                  onClick={() => setIsMenuOpen(false)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </NextLink>
+              ) : (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex items-center space-x-2 py-2 transition-colors hover:text-primary"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </Link>
+              ),
+            )}
 
             {/* RSS Feed Link - Mobile */}
-            <Link
-              href="https://proxmenux.com/rss.xml"
+            <NextLink
+              href={rssUrl}
               className="flex items-center space-x-2 py-2 transition-colors hover:text-primary text-orange-600 hover:text-orange-700"
               onClick={() => setIsMenuOpen(false)}
               target="_blank"
               rel="noopener noreferrer"
-              title="RSS Feed"
+              title={t("rssTitle")}
             >
               <Rss className="h-4 w-4" />
-              <span>RSS</span>
-            </Link>
+              <span>{t("rss")}</span>
+            </NextLink>
+
+            <div className="py-2">
+              <LanguageSwitcher />
+            </div>
           </nav>
         )}
       </div>

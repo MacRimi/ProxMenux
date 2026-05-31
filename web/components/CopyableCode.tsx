@@ -1,9 +1,6 @@
-"use client"
-
-import type React from "react"
-import { useState } from "react"
-import { Copy, Check } from "lucide-react"
+import { codeToHtml } from "shiki"
 import { cn } from "@/lib/utils"
+import { CopyButton } from "./CopyButton"
 
 interface CopyableCodeProps {
   code: string
@@ -11,39 +8,51 @@ interface CopyableCodeProps {
   className?: string
 }
 
-const CopyableCode: React.FC<CopyableCodeProps> = ({ code, language, className }) => {
-  const [isCopied, setIsCopied] = useState(false)
-
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(decodeURIComponent(code))
-      setIsCopied(true)
-      setTimeout(() => setIsCopied(false), 2000)
-    } catch (err) {
-      console.error("Failed to copy text: ", err)
-    }
+/**
+ * Server-rendered code block with Shiki syntax highlighting.
+ *
+ * Shiki runs at build time (Next.js static export pre-renders every
+ * page) so the resulting HTML carries pre-coloured `<span>` elements
+ * and the client doesn't have to load any highlighter JS. The copy
+ * button is the only interactive bit and lives in CopyButton, a tiny
+ * client component.
+ *
+ * Default theme is `github-dark` — matches the Hermes/Docusaurus look
+ * the user asked us to emulate. Default language is bash because most
+ * snippets in the docs are shell commands.
+ *
+ * Defensive fallback: if Shiki can't tokenize the requested language
+ * (unknown alias, unsupported grammar) we fall back to a plain
+ * dark-background <pre> so the page never crashes.
+ */
+const CopyableCode = async ({ code, language = "bash", className }: CopyableCodeProps) => {
+  let html: string
+  try {
+    html = await codeToHtml(code, {
+      lang: language,
+      theme: "github-dark",
+    })
+  } catch {
+    // Unknown lang or grammar error → render as plain text on a dark
+    // background to preserve the visual style without colour.
+    const escaped = code
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+    html = `<pre class="shiki" style="background-color:#24292e;color:#e1e4e8"><code>${escaped}</code></pre>`
   }
 
   return (
-    <div className={cn("relative w-full", className)}>
-      <pre
+    <div className={cn("relative w-full my-4", className)}>
+      <div
         className={cn(
-          "bg-gray-100 p-2 rounded-md",
-          "text-base",
-          "w-full overflow-x-auto",
-          "flex items-center",
-          language ? `language-${language}` : "",
+          "rounded-md overflow-hidden",
+          "[&_pre]:p-4 [&_pre]:overflow-x-auto [&_pre]:text-sm [&_pre]:leading-relaxed",
+          "[&_code]:font-mono",
         )}
-      >
-        <code className="whitespace-pre flex-1 min-w-0">{decodeURIComponent(code)}</code>
-      </pre>
-      <button
-        onClick={copyToClipboard}
-        className="absolute top-2 right-2 p-1 bg-white rounded-md shadow-sm hover:bg-gray-100 transition-colors"
-        aria-label="Copy code"
-      >
-        {isCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-gray-500" />}
-      </button>
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+      <CopyButton text={code} />
     </div>
   )
 }

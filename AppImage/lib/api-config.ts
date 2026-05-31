@@ -91,8 +91,68 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
 
     if (!response.ok) {
       if (response.status === 401) {
-        console.error("[v0] fetchApi: 401 UNAUTHORIZED -", endpoint, "- Token present:", !!token)
+        // Token is missing, expired, or signed under a previous JWT_SECRET
+        // (rotated per-install). Drop the stale token and force a single
+        // reload so the page-level auth gate (`app/page.tsx`) can render
+        // <Login> instead of cascading 401s from every authenticated
+        // component on mount.
+        //
+        // Only react when we actually had a token to invalidate. A 401
+        // without any token in localStorage means the caller is the
+        // Login screen itself, or a leftover fetch from a recently
+        // unmounted Dashboard — reloading there does nothing but waste
+        // the user's keystrokes and can leave the cascade flag set
+        // forever, swallowing the very 401 that we'd want to recover
+        // from after a successful re-login. The fix: bail out early
+        // if we have no token to invalidate.
+        if (typeof window !== "undefined") {
+          let hadToken = false
+          try {
+            hadToken = !!localStorage.getItem("proxmenux-auth-token")
+          } catch {
+            // private browsing — assume yes so we attempt recovery.
+            hadToken = true
+          }
+          if (!hadToken) {
+            throw new Error(`Unauthorized: ${endpoint}`)
+          }
+          try {
+            localStorage.removeItem("proxmenux-auth-token")
+          } catch {
+            // localStorage might be unavailable in private browsing — ignore.
+          }
+          try {
+            if (!sessionStorage.getItem("proxmenux-auth-401-handled")) {
+              sessionStorage.setItem("proxmenux-auth-401-handled", "1")
+              window.location.reload()
+            }
+          } catch {
+            // sessionStorage unavailable — fall back to a plain reload.
+            window.location.reload()
+          }
+        }
         throw new Error(`Unauthorized: ${endpoint}`)
+      }
+      // Try to surface the backend's JSON error payload instead of a
+      // bare `500 INTERNAL SERVER ERROR`. The Flask routes consistently
+      // return `{error: "..."}` on failure (e.g. /api/vms/<id>/control
+      // includes the pvesh stderr — telling the user "no space left on
+      // device" is infinitely more useful than the raw status text).
+      try {
+        const ct = response.headers.get("content-type") || ""
+        if (ct.includes("application/json")) {
+          const body = await response.json()
+          const detail =
+            (body && (body.error || body.message)) || ""
+          if (detail) {
+            throw new Error(detail)
+          }
+        }
+      } catch (parseErr) {
+        if (parseErr instanceof Error && parseErr.message.includes("API request failed")) {
+          throw parseErr
+        }
+        // JSON parse failed — fall through to the generic message.
       }
       throw new Error(`API request failed: ${response.status} ${response.statusText}`)
     }
@@ -101,14 +161,14 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
     const contentType = response.headers.get("content-type")
     if (!contentType || !contentType.includes("application/json")) {
       const text = await response.text()
-      console.error("[v0] fetchApi: Expected JSON but got:", contentType, "- Body preview:", text.substring(0, 200))
+      console.error("fetchApi: Expected JSON but got:", contentType, "- Body preview:", text.substring(0, 200))
       throw new Error(`Expected JSON response but got ${contentType || "unknown content type"}`)
     }
 
     try {
       return await response.json()
     } catch (jsonError) {
-      console.error("[v0] fetchApi: JSON parse error for", endpoint, "-", jsonError)
+      console.error("fetchApi: JSON parse error for", endpoint, "-", jsonError)
       throw new Error(`Invalid JSON response from ${endpoint}`)
     }
 }

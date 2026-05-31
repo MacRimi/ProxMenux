@@ -1,37 +1,31 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenux - Complete Post-Installation Script with Registration
+# ProxMenux - Automated Post-Install Script
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 06/07/2025
 # ==========================================================
 # Description:
+# Applies a curated set of 14 safe optimizations to a fresh
+# Proxmox VE host without prompts. Every change is registered
+# in installed_tools.json so it can be reversed later from the
+# Uninstall Optimizations menu.
 #
-# The script performs system optimizations including:
-# - Repository configuration and system upgrades
-# - Subscription banner removal and UI enhancements  
-# - Advanced memory management and kernel optimizations
-# - Network stack tuning and security hardening
-# - Storage optimizations including log2ram for SSD protection
-# - System limits increases and entropy generation improvements
-# - Journald and logrotate optimizations for better log management
-# - Security enhancements including RPC disabling and time synchronization
-# - Bash environment customization and system monitoring setup
+# Features:
+# - Zero-interaction baseline: repos, upgrade, banner, APT
+#   IPv4, skip translations, kernel limits, memory tuning,
+#   kernel-panic behaviour, network stack tuning, bashrc,
+#   Log2RAM (SSD-aware), ZFS autotrim, journald, logrotate,
+#   persistent NIC names.
+# - Hardware-aware: auto-detects SSD/NVMe for Log2RAM and sizes
+#   its ramdisk according to host RAM (128M/256M/512M).
+# - Registration: tracks each tool in installed_tools.json.
+# - Rollback: every tool has a reverse function in uninstall-tools.sh.
 #
-# Key Features:
-# - Zero-interaction automation: Runs completely unattended
-# - Intelligent hardware detection: Automatically detects SSD/NVMe for log2ram
-# - RAM-aware configurations: Adjusts settings based on available system memory
-# - Comprehensive error handling: Robust installation with fallback mechanisms
-# - Registration system: Tracks installed optimizations for easy management
-# - Reboot management: Intelligently handles reboot requirements
-# - Translation support: Multi-language compatible through ProxMenux framework
-# - Rollback compatibility: All optimizations can be reversed using the uninstall script
-#
-# This script is based on the post-install script cutotomizable
+# Shares the function library with customizable_post_install.sh.
 # ==========================================================
 
 
@@ -55,17 +49,49 @@ RAM_SIZE_GB=$(( $(vmstat -s | grep -i "total memory" | xargs | cut -d" " -f 1) /
 NECESSARY_REBOOT=0
 export SCRIPT_TITLE="ProxMenux Optimization Post-Installation"
 
+# Sprint 12A: identify which post-install flow is calling register_tool.
+# auto_post_install.sh always emits source=auto; customizable sets "custom".
+# The detector uses this to know which function to compare against and
+# which one to re-run when applying an update (preserves user's choice
+# between the auto and the custom flow of the same tool).
+SCRIPT_SOURCE="auto"
+
 # ==========================================================
 # Tool registration system
 ensure_tools_json() {
     [ -f "$TOOLS_JSON" ] || echo "{}" > "$TOOLS_JSON"
 }
 
+# Sprint 12A: register_tool accepts (key, state, version, source).
+#   key     — tool identifier (existing)
+#   state   — true/false (existing)
+#   version — defaults to "1.0"; each function declares its own version as
+#             `local FUNC_VERSION="X.Y"` on the first line and passes
+#             "$FUNC_VERSION" here. We use a `local` variable rather than a
+#             `# version:` comment because bash's `declare -f` strips
+#             comments — so a comment-based version was lost when the
+#             update wrapper sourced the script and re-ran the function.
+#   source  — defaults to $SCRIPT_SOURCE (auto/custom) so the detector
+#             knows which flow to compare against and which to re-run on
+#             update.
+# On install (state=true) the entry becomes a structured object
+#   {installed: true, version: "X.Y", source: "auto"|"custom"}
+# On uninstall (state=false) we keep the legacy boolean false so the rest
+# of the pipeline (uninstall-tools.sh, frontend) keeps working.
 register_tool() {
     local tool="$1"
     local state="$2"
+    local version="${3:-1.0}"
+    local source="${4:-${SCRIPT_SOURCE:-unknown}}"
     ensure_tools_json
-    jq --arg t "$tool" --argjson v "$state" '.[$t]=$v' "$TOOLS_JSON" > "$TOOLS_JSON.tmp" && mv "$TOOLS_JSON.tmp" "$TOOLS_JSON"
+    if [[ "$state" == "true" ]]; then
+        jq --arg t "$tool" --arg ver "$version" --arg src "$source" \
+           '.[$t]={"installed": true, "version": $ver, "source": $src}' \
+           "$TOOLS_JSON" > "$TOOLS_JSON.tmp" && mv "$TOOLS_JSON.tmp" "$TOOLS_JSON"
+    else
+        jq --arg t "$tool" '.[$t]=false' \
+           "$TOOLS_JSON" > "$TOOLS_JSON.tmp" && mv "$TOOLS_JSON.tmp" "$TOOLS_JSON"
+    fi
 }
 
 
@@ -166,6 +192,8 @@ remove_subscription_banner() {
 
 
 configure_time_sync() {
+    local FUNC_VERSION="1.0"
+    # description: Detect timezone from public IP and enable systemd time sync (NTP).
     msg_info2 "$(translate "Configuring system time settings...")"
 
     this_ip=$(dig +short myip.opendns.com @resolver1.opendns.com 2>/dev/null)
@@ -174,20 +202,30 @@ configure_time_sync() {
         return 0
     fi
 
-    timezone=$(curl -s --connect-timeout 10 "https://ipapi.co/${this_ip}/timezone" 2>/dev/null)
+    timezone=$(curl -s --connect-timeout 10 "https://ipapi.co/${this_ip}/timezone" 2>/dev/null | tr -d '[:space:]')
     if [ -z "$timezone" ] || [ "$timezone" = "undefined" ]; then
         msg_warn "$(translate "Failed to determine timezone from IP address - keeping current timezone settings")"
         return 0
     fi
 
+    # Validate against the system's IANA timezone database before applying.
+    # ipapi.co can return rate-limit JSON, an error string, or stale data; the
+    # previous code accepted anything that wasn't literally "undefined" and
+    # passed it straight to `timedatectl set-timezone`, which silently kept
+    # the old TZ on a bad value.
+    if ! timedatectl list-timezones 2>/dev/null | grep -Fxq "$timezone"; then
+        msg_warn "$(translate "API returned an invalid timezone") ($timezone) - $(translate "keeping current settings")"
+        return 0
+    fi
+
     msg_ok "$(translate "Found timezone $timezone for IP $this_ip")"
-    
+
     if timedatectl set-timezone "$timezone"; then
         msg_ok "$(translate "Timezone set to $timezone")"
         
         if timedatectl set-ntp true; then
             msg_ok "$(translate "Time settings configured - Timezone:") $timezone"
-            register_tool "time_sync" true
+            register_tool "time_sync" true "$FUNC_VERSION"
             
             systemctl restart postfix 2>/dev/null || true
         else
@@ -204,17 +242,20 @@ configure_time_sync() {
 # ==========================================================
 
 skip_apt_languages() {
+  local FUNC_VERSION="1.0"
+  # description: Stop APT from downloading translation files to speed up updates.
   msg_info "$(translate "Configuring APT to skip downloading additional languages...")"
   cat > /etc/apt/apt.conf.d/99-disable-translations <<'EOF'
 Acquire::Languages "none";
 EOF
   msg_ok "$(translate "APT configured to skip additional languages")"
-  register_tool "apt_languages" true
+  register_tool "apt_languages" true "$FUNC_VERSION"
 }
 
 # ==========================================================
 optimize_journald() {
-
+    local FUNC_VERSION="1.0"
+    # description: Cap journald size, raise rate limit and force info-level logging so the log viewer and Fail2Ban work.
     if [ -f /etc/log2ram.conf ] || [ -d /var/log.hdd ]; then
     return 0
     fi
@@ -254,18 +295,20 @@ EOF
     journalctl --rotate > /dev/null 2>&1
     
     msg_ok "$(translate "Journald optimized - Max size: 64M")"
-    register_tool "journald" true
+    register_tool "journald" true "$FUNC_VERSION"
 }
 
 # ==========================================================
 optimize_logrotate() {
+    local FUNC_VERSION="1.1"
+    # description: Replace logrotate.conf with a Log2RAM-friendly profile (daily rotation, copytruncate).
     msg_info "$(translate "Optimizing logrotate configuration...")"
     local logrotate_conf="/etc/logrotate.conf"
     local backup_conf="${logrotate_conf}.bak"
-    
-    if ! grep -q "# ProxMenux optimized configuration" "$logrotate_conf"; then
-        cp "$logrotate_conf" "$backup_conf"
-        cat <<EOF > "$logrotate_conf"
+
+    cp -n "$logrotate_conf" "$backup_conf" 2>/dev/null || true
+
+    cat <<EOF > "$logrotate_conf"
 # ProxMenux optimized configuration (Log2RAM-friendly)
 daily
 su root adm
@@ -279,15 +322,16 @@ create 0640 root adm
 copytruncate
 include /etc/logrotate.d
 EOF
-        systemctl restart logrotate > /dev/null 2>&1
-    fi
-    
+    systemctl restart logrotate > /dev/null 2>&1
+
     msg_ok "$(translate "Logrotate optimization completed")"
-    register_tool "logrotate" true
+    register_tool "logrotate" true "$FUNC_VERSION"
 }
 
 # ==========================================================
 increase_system_limits() {
+    local FUNC_VERSION="1.1"
+    # description: Raise inotify watches, file descriptors, process keys and PID limits to enterprise levels.
     msg_info "$(translate "Increasing various system limits...")"
     NECESSARY_REBOOT=1
     
@@ -355,11 +399,13 @@ fs.aio-max-nr = 1048576
 EOF
     
     msg_ok "$(translate "System limits increase completed.")"
-    register_tool "system_limits" true
+    register_tool "system_limits" true "$FUNC_VERSION"
 }
 
 # ==========================================================
 optimize_memory_settings() {
+    local FUNC_VERSION="1.1"
+    # description: Tune swappiness, dirty page ratios, overcommit and compaction proactiveness for VM hosts.
     msg_info "$(translate "Optimizing memory settings...")"
     NECESSARY_REBOOT=1
     
@@ -377,11 +423,13 @@ EOF
     fi
     
     msg_ok "$(translate "Memory optimization completed.")"
-    register_tool "memory_settings" true
+    register_tool "memory_settings" true "$FUNC_VERSION"
 }
 
 # ==========================================================
 configure_kernel_panic() {
+    local FUNC_VERSION="1.0"
+    # description: Auto-reboot on kernel panic / oops / hardlockup; write crash dumps to /var/crash.
     msg_info "$(translate "Configuring kernel panic behavior")"
     NECESSARY_REBOOT=1
     
@@ -394,22 +442,26 @@ kernel.hardlockup_panic = 1
 EOF
     
     msg_ok "$(translate "Kernel panic behavior configuration completed")"
-    register_tool "kernel_panic" true
+    register_tool "kernel_panic" true "$FUNC_VERSION"
 }
 
 # ==========================================================
 force_apt_ipv4() {
+    local FUNC_VERSION="1.0"
+    # description: Force APT to use IPv4 to avoid stalls on hosts with broken IPv6 connectivity.
     msg_info "$(translate "Configuring APT to use IPv4...")"
-    
+
     echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99-force-ipv4
-    
+
     msg_ok "$(translate "APT IPv4 configuration completed")"
-    register_tool "apt_ipv4" true
+    register_tool "apt_ipv4" true "$FUNC_VERSION"
 }
 
 # ==========================================================
 
 apply_network_optimizations() {
+  local FUNC_VERSION="1.0"
+  # description: Tune TCP buffers, somaxconn, IPv4 hardening and disable rp_filter on fw bridges (PVE 9 compatible).
   msg_info "$(translate "Optimizing network settings...")"
   NECESSARY_REBOOT=1
 
@@ -484,7 +536,7 @@ EOF
   fi
 
   msg_ok "$(translate "Network optimization completed")"
-  register_tool "network_optimization" true
+  register_tool "network_optimization" true "$FUNC_VERSION"
 }
 
 
@@ -495,6 +547,8 @@ EOF
 
 # ==========================================================
 customize_bashrc() {
+    local FUNC_VERSION="1.0"
+    # description: Inject the ProxMenux core bashrc block (aliases, prompt, history) into root's .bashrc, idempotent via begin/end markers.
     msg_info "$(translate "Customizing bashrc for root user...")"
     local bashrc="/root/.bashrc"
     local bash_profile="/root/.bash_profile"
@@ -532,7 +586,7 @@ EOF
     fi
     
     msg_ok "$(translate "Bashrc customization completed")"
-    register_tool "bashrc_custom" true
+    register_tool "bashrc_custom" true "$FUNC_VERSION"
 }
 
 
@@ -547,11 +601,11 @@ EOF
 
 
 install_log2ram_auto() {
+    local FUNC_VERSION="1.2"
 
-    # ── Reinstall detection ─────────────────────────────────────────────────
-    # If log2ram was previously installed by ProxMenux (register_tool "log2ram" true),
-    # skip hardware detection and reinstall directly — no prompts, transparent to user.
-    if [[ -f "$TOOLS_JSON" ]] && jq -e '.log2ram == true' "$TOOLS_JSON" >/dev/null 2>&1; then
+    # description: Install Log2RAM with size auto-tuned to host RAM (128M/256M/512M); SSD/M.2 detection skips on rotational disks.
+
+    if [[ -f "$TOOLS_JSON" ]] && jq -e '.log2ram == true or .log2ram.installed == true' "$TOOLS_JSON" >/dev/null 2>&1; then
         msg_ok "$(translate "Log2RAM already registered — updating to latest configuration")"
     else
     # ── First-time install: detect SSD/M.2 ─────────────────────────────────
@@ -675,6 +729,13 @@ EOF
 
     cat > /usr/local/bin/log2ram-check.sh <<'EOF'
 #!/usr/bin/env bash
+# v1.2 — `log2ram write` only copies tmpfs→disk; it does NOT shrink
+# the tmpfs. When journald or pveproxy/access.log grow past their
+# limits the tmpfs hit 100% and PVE crashed with "No space left on
+# device" on Shell open (community-reported: JC Miñarro, Nicolás P.
+# de A., 17-18/05). We now vacuum the journal and truncate the
+# non-rotating logs that actually consume the tmpfs before calling
+# `log2ram write`.
 PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 CONF_FILE="/etc/log2ram.conf"
@@ -685,7 +746,8 @@ L2R_BIN="$(command -v log2ram || true)"
 SIZE_MiB="$(grep -E '^SIZE=' "$CONF_FILE" 2>/dev/null | cut -d'=' -f2 | tr -dc '0-9')"
 [[ -z "$SIZE_MiB" ]] && SIZE_MiB=128
 LIMIT_BYTES=$(( SIZE_MiB * 1024 * 1024 ))
-THRESHOLD_BYTES=$(( LIMIT_BYTES * 95 / 100 ))
+WARN_BYTES=$(( LIMIT_BYTES * 80 / 100 ))
+EMERGENCY_BYTES=$(( LIMIT_BYTES * 92 / 100 ))
 
 USED_BYTES="$(df -B1 --output=used /var/log 2>/dev/null | tail -1 | tr -dc '0-9')"
 [[ -z "$USED_BYTES" ]] && exit 0
@@ -694,8 +756,24 @@ LOCK="/run/log2ram-check.lock"
 exec 9>"$LOCK" 2>/dev/null || exit 0
 flock -n 9 || exit 0
 
-if (( USED_BYTES > THRESHOLD_BYTES )); then
-  "$L2R_BIN" write 2>/dev/null || true
+# `log2ram write` alone leaves the tmpfs full. Real recovery requires:
+# (a) journal vacuum — journald respects --vacuum-size unconditionally,
+#     unlike SystemMaxUse which only enforces on rotation boundaries;
+# (b) truncating logs that aren't rotated by logrotate (pveproxy, pveam);
+# (c) THEN syncing to disk so the persistent copy reflects reality.
+if (( USED_BYTES > EMERGENCY_BYTES )); then
+    SAFE_JOURNAL_MB=$(( SIZE_MiB * 5 / 100 ))
+    [[ "$SAFE_JOURNAL_MB" -lt 16 ]] && SAFE_JOURNAL_MB=16
+    journalctl --vacuum-size="${SAFE_JOURNAL_MB}M" >/dev/null 2>&1 || true
+    : > /var/log/pveproxy/access.log 2>/dev/null || true
+    : > /var/log/pveproxy/error.log 2>/dev/null || true
+    : > /var/log/pveam.log 2>/dev/null || true
+    "$L2R_BIN" write 2>/dev/null || true
+elif (( USED_BYTES > WARN_BYTES )); then
+    SOFT_JOURNAL_MB=$(( SIZE_MiB * 30 / 100 ))
+    [[ "$SOFT_JOURNAL_MB" -lt 32 ]] && SOFT_JOURNAL_MB=32
+    journalctl --vacuum-size="${SOFT_JOURNAL_MB}M" >/dev/null 2>&1 || true
+    "$L2R_BIN" write 2>/dev/null || true
 fi
 EOF
     chmod +x /usr/local/bin/log2ram-check.sh
@@ -713,7 +791,7 @@ EOF
     chown root:root /etc/cron.d/log2ram-auto-sync
 
     systemctl restart cron >/dev/null 2>&1 || true
-    msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 95% of") $LOG2RAM_SIZE"
+    msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 80% of") $LOG2RAM_SIZE"
 
 
     msg_info "$(translate "Adjusting systemd-journald limits to match Log2RAM size...")"
@@ -744,6 +822,11 @@ Storage=persistent
 SplitMode=none
 RateLimitIntervalSec=30s
 RateLimitBurst=1000
+ForwardToSyslog=no
+ForwardToWall=no
+Seal=no
+Compress=yes
+SystemMaxUse=${USE_MB}M
 SystemKeepFree=${KEEP_MB}M
 RuntimeMaxUse=${RUNTIME_MB}M
 # MaxLevelStore=info: required for ProxMenux Monitor log display and Fail2Ban detection.
@@ -768,8 +851,116 @@ EOF
     #msg_ok "$(translate "Backup created:") /etc/systemd/journald.conf.bak.$(date +%Y%m%d-%H%M%S)"
     msg_ok "$(translate "Journald configuration adjusted to") ${USE_MB}M (Log2RAM ${LOG2RAM_SIZE})"
 
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    systemctl restart log2ram >/dev/null 2>&1 || true
+    log2ram clean >/dev/null 2>&1 || true
+    log2ram write >/dev/null 2>&1 || true
+    systemctl restart rsyslog >/dev/null 2>&1 || true
 
-    register_tool "log2ram" true
+    register_tool "log2ram" true "$FUNC_VERSION"
+}
+
+
+# ==========================================================
+enable_zfs_autotrim() {
+    local FUNC_VERSION="1.0"
+    # description: Enable ZFS autotrim on detected pools and record only pools changed by ProxMenux.
+    local state_file="$BASE_DIR/zfs_autotrim_pools"
+    local tmp_file="${state_file}.tmp"
+    local pools=()
+    local pool current
+    local changed=false
+
+    pool_supports_autotrim() {
+        local pool_name="$1"
+        local vdev dev_path block_device rotational discard_granularity
+        local found_device=false
+
+        while read -r vdev; do
+            [[ -z "$vdev" ]] && continue
+            found_device=true
+
+            dev_path=$(readlink -f "$vdev" 2>/dev/null || true)
+            if [[ -z "$dev_path" || ! -b "$dev_path" ]]; then
+                return 1
+            fi
+
+            block_device=$(lsblk -no PKNAME "$dev_path" 2>/dev/null | head -n1)
+            [[ -z "$block_device" ]] && block_device=$(basename "$dev_path")
+
+            rotational=$(cat "/sys/block/$block_device/queue/rotational" 2>/dev/null || true)
+            discard_granularity=$(cat "/sys/block/$block_device/queue/discard_granularity" 2>/dev/null || true)
+
+            if [[ "$rotational" != "0" || -z "$discard_granularity" || "$discard_granularity" == "0" ]]; then
+                return 1
+            fi
+        done < <(
+            zpool status -P "$pool_name" 2>/dev/null |
+                awk '
+                    $1 == "NAME" { in_config=1; next }
+                    in_config && $1 == "errors:" { exit }
+                    in_config && $1 ~ /^\// && $2 ~ /^(ONLINE|DEGRADED|FAULTED|OFFLINE|UNAVAIL|REMOVED)$/ { print $1 }
+                '
+        )
+
+        [[ "$found_device" == true ]]
+    }
+
+    if ! command -v zpool >/dev/null 2>&1; then
+        msg_info2 "$(translate "ZFS not detected. Skipping ZFS autotrim.")"
+        return 0
+    fi
+
+    mapfile -t pools < <(zpool list -H -o name 2>/dev/null)
+    if [[ ${#pools[@]} -eq 0 ]]; then
+        msg_info2 "$(translate "No ZFS pools detected. Skipping ZFS autotrim.")"
+        return 0
+    fi
+
+    msg_info "$(translate "Checking ZFS autotrim configuration...")"
+    mkdir -p "$BASE_DIR"
+    : > "$tmp_file"
+
+    for pool in "${pools[@]}"; do
+        current=$(zpool get -H -o value autotrim "$pool" 2>/dev/null || true)
+
+        if [[ "$current" == "on" ]]; then
+            msg_ok "$(translate "ZFS autotrim already enabled for pool:") $pool"
+            continue
+        fi
+
+        if [[ "$current" != "off" ]]; then
+            msg_warn "$(translate "ZFS autotrim is not supported for pool:") $pool"
+            continue
+        fi
+
+        if ! pool_supports_autotrim "$pool"; then
+            stop_spinner
+            msg_info2 "$(translate "Pool does not appear to use SSD/NVMe devices with discard support. Skipping ZFS autotrim for pool:") $pool"
+            continue
+        fi
+
+        if zpool set autotrim=on "$pool" >/dev/null 2>&1; then
+            printf '%s\n' "$pool" >> "$tmp_file"
+            changed=true
+            msg_ok "$(translate "ZFS autotrim enabled for pool:") $pool"
+        else
+            msg_warn "$(translate "Failed to enable ZFS autotrim for pool:") $pool"
+        fi
+    done
+
+    if [[ "$changed" == true ]]; then
+        if [[ -s "$state_file" ]]; then
+            sort -u "$state_file" "$tmp_file" > "${tmp_file}.merged"
+            mv "${tmp_file}.merged" "$state_file"
+            rm -f "$tmp_file"
+        else
+            mv "$tmp_file" "$state_file"
+        fi
+        register_tool "zfs_autotrim" true "$FUNC_VERSION"
+    else
+        rm -f "$tmp_file"
+    fi
 }
 
 
@@ -783,6 +974,8 @@ EOF
 
 
 setup_persistent_network() {
+    local FUNC_VERSION="1.0"
+    # description: Pin NIC names to MAC addresses via systemd .link files so kernel updates don't shuffle interface names.
     local LINK_DIR="/etc/systemd/network"
     local BACKUP_DIR="/etc/systemd/network/backup-$(date +%Y%m%d-%H%M%S)"
     local pve_version
@@ -790,6 +983,13 @@ setup_persistent_network() {
 
     msg_info "$(translate "Setting up persistent network interfaces")"
     sleep 2
+
+    # Same legacy-conflict warning as in customizable_post_install.sh.
+    if [[ -f /etc/network/interfaces ]]; then
+        if grep -qE '^[[:space:]]*allow-hotplug[[:space:]]' /etc/network/interfaces 2>/dev/null; then
+            msg_warn "$(translate '/etc/network/interfaces uses allow-hotplug. Renaming interfaces via systemd .link can break that flow — review the file after reboot.')"
+        fi
+    fi
 
     mkdir -p "$LINK_DIR"
 
@@ -833,7 +1033,7 @@ EOF
     else
         msg_warn "$(translate "No physical interfaces found")"
     fi
-    register_tool "persistent_network" true
+    register_tool "persistent_network" true "$FUNC_VERSION"
 }
 
 
@@ -858,6 +1058,7 @@ run_complete_optimization() {
     #disable_rpc
     customize_bashrc
     install_log2ram_auto
+    enable_zfs_autotrim
     optimize_journald
     optimize_logrotate
     setup_persistent_network

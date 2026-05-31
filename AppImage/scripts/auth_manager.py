@@ -11,7 +11,11 @@ Handles all authentication-related operations including:
 import os
 import json
 import hashlib
+import hmac
 import secrets
+import base64
+import threading
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -35,9 +39,43 @@ except ImportError:
 # Configuration
 CONFIG_DIR = Path.home() / ".config" / "proxmenux-monitor"
 AUTH_CONFIG_FILE = CONFIG_DIR / "auth.json"
-JWT_SECRET = "proxmenux-monitor-secret-key-change-in-production"
+
+# User profile — Fase 2 (v1.2.2). Avatar stored as a binary file next
+# to auth.json so the JSON stays small and the image can be served
+# unmodified. Display name is kept inside auth.json as an optional
+# string; empty/missing falls back to the username at render time.
+AVATAR_FILE = CONFIG_DIR / "avatar.bin"
+AVATAR_CONTENT_TYPE_FILE = CONFIG_DIR / "avatar.type"
+AVATAR_MAX_BYTES = 2 * 1024 * 1024  # 2 MB hard cap on uploads
+AVATAR_ALLOWED_CONTENT_TYPES = {
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/gif",
+}
+# Sentinel for legacy installs that started under the hardcoded JWT_SECRET.
+# The audit (Tier 4 #22) flagged that constant — anyone with access to the
+# public repo could forge JWTs against any deployment. We now generate a
+# random per-install secret on first use and persist it in auth.json. Tokens
+# issued under the legacy secret stop verifying once the migration runs;
+# users have to log in once. That's intentional and accepted by the audit.
+_LEGACY_JWT_SECRET = "proxmenux-monitor-secret-key-change-in-production"
 JWT_ALGORITHM = "HS256"
 TOKEN_EXPIRATION_HOURS = 24
+# Audit Tier 5: bind tokens to issuer/audience so they can't be cross-used
+# against another deployment / service that happens to share the same
+# JWT_SECRET. Verified in `verify_token` with a permissive fallback for
+# tokens issued before the rollout.
+JWT_ISSUER = "proxmenux-monitor"
+JWT_AUDIENCE = "api"
+
+# Password-hashing format: pbkdf2_sha256 with 600k iterations (OWASP 2023+
+# baseline). Uses only stdlib (`hashlib.pbkdf2_hmac`), no external deps.
+# Format on disk: "pbkdf2_sha256$<iterations>$<salt_b64>$<hash_b64>".
+# Legacy SHA-256 (single-line 64 hex chars) is still recognized for one final
+# verify and re-hashed on the next successful login (lazy migration).
+_PWD_PBKDF2_ITERS = 600000
+_PWD_PBKDF2_PREFIX = "pbkdf2_sha256$"
 
 
 def ensure_config_dir():
@@ -73,7 +111,8 @@ def load_auth_config():
             "totp_secret": None,
             "backup_codes": [],
             "api_tokens": [],
-            "revoked_tokens": []
+            "revoked_tokens": [],
+            "display_name": None,
         }
     
     try:
@@ -87,6 +126,7 @@ def load_auth_config():
             config.setdefault("backup_codes", [])
             config.setdefault("api_tokens", [])
             config.setdefault("revoked_tokens", [])
+            config.setdefault("display_name", None)
             return config
     except Exception as e:
         print(f"Error loading auth config: {e}")
@@ -100,7 +140,8 @@ def load_auth_config():
             "totp_secret": None,
             "backup_codes": [],
             "api_tokens": [],
-            "revoked_tokens": []
+            "revoked_tokens": [],
+            "display_name": None,
         }
 
 
@@ -116,33 +157,293 @@ def save_auth_config(config):
         return False
 
 
+def _get_jwt_secret():
+    """Return the per-install JWT signing secret, generating one on first use.
+
+    The secret lives in `auth.json` under the `jwt_secret` key. On a fresh
+    install or when migrating from the legacy hardcoded constant, we mint
+    a new `secrets.token_urlsafe(32)`-derived value and persist it. Once
+    persisted it never changes (rotation would log out every active session).
+    Audit Tier 4 #22.
+    """
+    config = load_auth_config()
+    sec = config.get("jwt_secret")
+    if isinstance(sec, str) and len(sec) >= 32:
+        _audit_api_tokens_against_jwt_secret(sec)
+        return sec
+    new_secret = secrets.token_urlsafe(48)
+    config["jwt_secret"] = new_secret
+    save_auth_config(config)
+    _audit_api_tokens_against_jwt_secret(new_secret)
+    return new_secret
+
+
+# One-shot startup audit: warn the operator (in journal) when stored
+# api_tokens were minted under a previous jwt_secret. Those tokens
+# remain in `api_tokens` metadata but their JWTs no longer verify, so
+# the user's HTTP client (Home Assistant, custom script, …) gets a 401
+# while the token "looks valid" in the UI. We log once per process to
+# make the failure mode searchable in journalctl without spamming.
+_TOKEN_AUDIT_DONE = False
+_TOKEN_AUDIT_LOCK = threading.Lock()
+
+
+def _audit_api_tokens_against_jwt_secret(current_secret: str) -> None:
+    """One-time warning when stored api_tokens were signed under a
+    previous jwt_secret. Cheap: returns immediately after the first
+    successful run. Logs to stdout/stderr so the message lands in the
+    Monitor's journalctl output.
+    """
+    global _TOKEN_AUDIT_DONE
+    with _TOKEN_AUDIT_LOCK:
+        if _TOKEN_AUDIT_DONE:
+            return
+        _TOKEN_AUDIT_DONE = True
+
+    try:
+        config = load_auth_config()
+        tokens = config.get("api_tokens", [])
+        if not tokens:
+            return
+        current_fp = hashlib.sha256(current_secret.encode()).hexdigest()[:16]
+        stale = [t for t in tokens
+                 if t.get("signed_with") is not None
+                 and t.get("signed_with") != current_fp]
+        legacy = [t for t in tokens if t.get("signed_with") is None]
+        if stale:
+            ids = ", ".join(t.get("id", "?") for t in stale)
+            print(f"[ProxMenux][auth] WARNING: {len(stale)} API token(s) "
+                  f"signed with a previous jwt_secret — they will return "
+                  f"401 'Invalid or expired token'. Revoke and regenerate "
+                  f"from Settings → API Tokens. Affected IDs: {ids}")
+        if legacy:
+            ids = ", ".join(t.get("id", "?") for t in legacy)
+            print(f"[ProxMenux][auth] NOTE: {len(legacy)} API token(s) "
+                  f"have no signing-secret fingerprint (created before "
+                  f"the tracking field was added). Their validity can "
+                  f"only be confirmed by an actual auth attempt. "
+                  f"Legacy IDs: {ids}")
+    except Exception as e:
+        # Audit is best-effort — failure must never break startup.
+        print(f"[ProxMenux][auth] token audit skipped: {e}")
+
+
+# Server-side mirror of the frontend's `validatePasswordStrength`. Defense
+# in depth: the UI enforces these rules but a direct API caller (curl,
+# scripted setup, custom client) bypasses the JS — so the same minimum has
+# to be enforced here. Audit Tier 6 — Política de password débil.
+_OBVIOUS_PASSWORDS = {
+    "password", "password1", "password123",
+    "12345678", "123456789", "1234567890",
+    "qwerty", "qwertyuiop", "letmein", "welcome",
+    "admin", "administrator", "root", "proxmox", "proxmenux",
+    "changeme", "abcdefgh",
+}
+
+
+def _validate_password_strength(pw):
+    """Return None if `pw` passes policy, otherwise a human-readable reason."""
+    if not isinstance(pw, str) or len(pw) < 10:
+        return "Password must be at least 10 characters"
+    categories = sum([
+        any(c.islower() for c in pw),
+        any(c.isupper() for c in pw),
+        any(c.isdigit() for c in pw),
+        any(not c.isalnum() for c in pw),
+    ])
+    if categories < 3:
+        return "Password must mix at least 3 of: lowercase, uppercase, digits, symbols"
+    if pw.lower() in _OBVIOUS_PASSWORDS:
+        return "That password is in the common-passwords list — pick something else"
+    return None
+
+
 def hash_password(password):
-    """Hash a password using SHA-256"""
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Hash a password with PBKDF2-HMAC-SHA256.
+
+    Format: `pbkdf2_sha256$<iters>$<salt_b64>$<hash_b64>`. Per-password 16-byte
+    random salt; 600k iterations (OWASP 2023+ baseline). Stdlib only — no
+    bcrypt / argon2-cffi dependency added to the AppImage build. See audit
+    Tier 4 #23.
+    """
+    salt = secrets.token_bytes(16)
+    derived = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, _PWD_PBKDF2_ITERS, dklen=32)
+    return (
+        f"{_PWD_PBKDF2_PREFIX}{_PWD_PBKDF2_ITERS}$"
+        f"{base64.b64encode(salt).decode('ascii')}$"
+        f"{base64.b64encode(derived).decode('ascii')}"
+    )
+
+
+def _verify_pbkdf2(password, stored):
+    """Verify a PBKDF2 hash. Returns True on match, False on any failure."""
+    try:
+        # `pbkdf2_sha256$<iters>$<salt_b64>$<hash_b64>`
+        body = stored[len(_PWD_PBKDF2_PREFIX):]
+        iters_str, salt_b64, hash_b64 = body.split('$', 2)
+        iters = int(iters_str)
+        salt = base64.b64decode(salt_b64)
+        expected = base64.b64decode(hash_b64)
+    except Exception:
+        return False
+    derived = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, iters, dklen=len(expected))
+    return hmac.compare_digest(derived, expected)
+
+
+def _is_legacy_sha256(stored):
+    """True if `stored` looks like the old unsalted SHA-256 hex digest."""
+    if not isinstance(stored, str):
+        return False
+    if len(stored) != 64:
+        return False
+    return all(c in '0123456789abcdef' for c in stored.lower())
 
 
 def verify_password(password, password_hash):
-    """Verify a password against its hash"""
-    return hash_password(password) == password_hash
+    """Verify a password against its hash.
+
+    Recognizes both the new PBKDF2 format and the legacy unsalted SHA-256.
+    The legacy path is kept around for one final verify so existing accounts
+    can log in once and trigger a rehash via `_maybe_rehash_password` —
+    see lazy migration in `authenticate()`.
+    """
+    if not isinstance(password_hash, str) or not password_hash:
+        return False
+    if password_hash.startswith(_PWD_PBKDF2_PREFIX):
+        return _verify_pbkdf2(password, password_hash)
+    if _is_legacy_sha256(password_hash):
+        legacy = hashlib.sha256(password.encode('utf-8')).hexdigest()
+        return hmac.compare_digest(legacy, password_hash)
+    return False
+
+
+def _maybe_rehash_password(password, current_hash):
+    """If the stored hash is legacy SHA-256, return a fresh PBKDF2 hash to persist.
+
+    Returns None when no rehash is needed (already PBKDF2 or unrecognized).
+    Caller is responsible for saving the new hash back to auth.json.
+    """
+    if _is_legacy_sha256(current_hash):
+        return hash_password(password)
+    return None
 
 
 def generate_token(username):
     """Generate a JWT token for the given username"""
     if not JWT_AVAILABLE:
         return None
-    
+
     payload = {
         'username': username,
         'exp': datetime.utcnow() + timedelta(hours=TOKEN_EXPIRATION_HOURS),
-        'iat': datetime.utcnow()
+        'iat': datetime.utcnow(),
+        'iss': JWT_ISSUER,
+        'aud': JWT_AUDIENCE,
     }
-    
+
     try:
-        token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+        token = jwt.encode(payload, _get_jwt_secret(), algorithm=JWT_ALGORITHM)
         return token
     except Exception as e:
         print(f"Error generating token: {e}")
         return None
+
+
+# In-memory cache for revoked_tokens to avoid hitting disk on every request.
+# Invalidated by both TTL and the auth.json mtime so a revocation from another
+# process/restart still propagates within seconds.
+_REVOKED_CACHE = {'set': None, 'mtime': 0.0, 'fetched_at': 0.0}
+_REVOKED_TTL = 30.0
+
+
+def _get_revoked_tokens_cached():
+    """Return a frozenset of revoked-token hashes, cached for ~30s."""
+    import time
+    now = time.monotonic()
+    try:
+        mtime = AUTH_CONFIG_FILE.stat().st_mtime
+    except OSError:
+        mtime = 0.0
+    if (
+        _REVOKED_CACHE['set'] is not None
+        and now - _REVOKED_CACHE['fetched_at'] < _REVOKED_TTL
+        and mtime == _REVOKED_CACHE['mtime']
+    ):
+        return _REVOKED_CACHE['set']
+    config = load_auth_config()
+    revoked = frozenset(config.get("revoked_tokens", []))
+    _REVOKED_CACHE['set'] = revoked
+    _REVOKED_CACHE['mtime'] = mtime
+    _REVOKED_CACHE['fetched_at'] = now
+    return revoked
+
+
+def _invalidate_revoked_cache():
+    """Force a re-read on the next verify_token call."""
+    _REVOKED_CACHE['set'] = None
+
+
+def verify_token_full(token):
+    """Like `verify_token` but also returns the `scope` claim.
+
+    Returns `(username, scope)` on success, `(None, None)` otherwise.
+    Tokens issued before scope was added (no claim) get `'full_admin'`
+    so legacy sessions keep working unchanged. Audit Tier 6 — Tokens
+    API JWT 365 días sin scope.
+    """
+    if not JWT_AVAILABLE or not token:
+        return None, None
+    try:
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        if token_hash in _get_revoked_tokens_cached():
+            return None, None
+        try:
+            payload = jwt.decode(
+                token, _get_jwt_secret(),
+                algorithms=[JWT_ALGORITHM],
+                audience=JWT_AUDIENCE, issuer=JWT_ISSUER,
+            )
+        except (jwt.MissingRequiredClaimError, jwt.InvalidAudienceError, jwt.InvalidIssuerError):
+            payload = jwt.decode(token, _get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+        return payload.get('username'), payload.get('scope', 'full_admin')
+    except jwt.ExpiredSignatureError:
+        return None, None
+    except jwt.InvalidTokenError:
+        return None, None
+
+
+_AUTH_LOG_RATE = {'last_ts': 0.0, 'suppressed': 0, 'last_msg': ''}
+_AUTH_LOG_LOCK = threading.Lock()
+
+
+def _log_auth_failure_throttled(msg):
+    """Log a JWT verification failure at most once every 30 seconds.
+
+    A browser whose token was invalidated by a jwt_secret rotation can
+    fire dozens of authenticated requests per page load (SWR fetches +
+    WebSocket reconnects); without throttling this floods the journal
+    with hundreds of identical 'Invalid token: Signature verification
+    failed' lines per second and stalls journald. We keep the first
+    occurrence verbatim and emit one summary line every 30s with the
+    suppressed count, so the operator still has visibility of the
+    issue without the cascade.
+    """
+    now = time.time()
+    with _AUTH_LOG_LOCK:
+        elapsed = now - _AUTH_LOG_RATE['last_ts']
+        if elapsed >= 30:
+            if _AUTH_LOG_RATE['suppressed']:
+                print(f"[auth] {_AUTH_LOG_RATE['last_msg']} "
+                      f"(+{_AUTH_LOG_RATE['suppressed']} more in last "
+                      f"{int(elapsed)}s)")
+            else:
+                print(f"[auth] {msg}")
+            _AUTH_LOG_RATE['last_ts'] = now
+            _AUTH_LOG_RATE['suppressed'] = 0
+            _AUTH_LOG_RATE['last_msg'] = msg
+        else:
+            _AUTH_LOG_RATE['suppressed'] += 1
+            _AUTH_LOG_RATE['last_msg'] = msg
 
 
 def verify_token(token):
@@ -153,42 +454,79 @@ def verify_token(token):
     """
     if not JWT_AVAILABLE or not token:
         return None
-    
+
     try:
-        # Check if the token has been revoked
+        # Revoked-token list is cached in memory (TTL + mtime) so high-RPS
+        # endpoints don't reread auth.json from disk on every @require_auth call.
         token_hash = hashlib.sha256(token.encode()).hexdigest()
-        config = load_auth_config()
-        if token_hash in config.get("revoked_tokens", []):
+        if token_hash in _get_revoked_tokens_cached():
             return None
-        
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+
+        # Verify against the per-install secret first. Tokens issued under the
+        # legacy hardcoded secret were forgeable by anyone with read access to
+        # the public repo — those are intentionally rejected so users get a
+        # one-time relogin to mint a fresh token.
+        # `iss`/`aud` claims are validated when present; tokens issued before
+        # the iss/aud rollout (no claims) fall back to a permissive decode so
+        # active sessions don't break on upgrade.
+        try:
+            payload = jwt.decode(
+                token,
+                _get_jwt_secret(),
+                algorithms=[JWT_ALGORITHM],
+                audience=JWT_AUDIENCE,
+                issuer=JWT_ISSUER,
+            )
+        except (jwt.MissingRequiredClaimError, jwt.InvalidAudienceError, jwt.InvalidIssuerError):
+            payload = jwt.decode(token, _get_jwt_secret(), algorithms=[JWT_ALGORITHM])
         return payload.get('username')
     except jwt.ExpiredSignatureError:
-        print("Token has expired")
+        _log_auth_failure_throttled("Token has expired")
         return None
     except jwt.InvalidTokenError as e:
-        print(f"Invalid token: {e}")
+        _log_auth_failure_throttled(f"Invalid token: {e}")
         return None
+
+
+def _jwt_secret_fingerprint(secret: str = None) -> str:
+    """Stable fingerprint of the active jwt_secret.
+
+    First 16 hex chars of SHA256(secret). Used to detect whether a stored
+    api-token was minted under the *current* jwt_secret or under a
+    previous one (in which case the JWT can no longer be verified).
+    Never returns the secret itself.
+    """
+    sec = secret if secret is not None else _get_jwt_secret()
+    if not sec:
+        return ""
+    return hashlib.sha256(sec.encode()).hexdigest()[:16]
 
 
 def store_api_token_metadata(token, token_name="API Token"):
     """
     Store API token metadata (hash, name, creation date) for listing and revocation.
     The actual token is never stored - only a hash for identification.
+
+    Also records the fingerprint of the jwt_secret that minted this token
+    (`signed_with`). At list time we compare this against the current
+    fingerprint so the UI can flag tokens whose signing secret has been
+    rotated since — those JWTs no longer verify and the operator needs
+    to regenerate them (see `list_api_tokens`).
     """
     config = load_auth_config()
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     token_id = token_hash[:16]
-    
+
     token_entry = {
         "id": token_id,
         "name": token_name,
         "token_hash": token_hash,
         "token_prefix": token[:12] + "...",
         "created_at": datetime.utcnow().isoformat() + "Z",
-        "expires_at": (datetime.utcnow() + timedelta(days=365)).isoformat() + "Z"
+        "expires_at": (datetime.utcnow() + timedelta(days=365)).isoformat() + "Z",
+        "signed_with": _jwt_secret_fingerprint(),
     }
-    
+
     config.setdefault("api_tokens", [])
     config["api_tokens"].append(token_entry)
     save_auth_config(config)
@@ -196,24 +534,56 @@ def store_api_token_metadata(token, token_name="API Token"):
 
 
 def list_api_tokens():
-    """
-    List all stored API token metadata (no actual tokens are returned).
-    Returns list of token entries with id, name, prefix, creation and expiration dates.
+    """List stored API token metadata (no actual tokens are returned).
+
+    Each entry carries:
+      * `revoked`  — token hash is in the revocation list.
+      * `valid`    — JWT can still be verified with the current secret.
+                     `True` when `signed_with` matches the current
+                     fingerprint, `False` when it doesn't (jwt_secret
+                     rotated → JWT signature broken), `None` for legacy
+                     entries created before this field existed (status
+                     can only be confirmed by attempting a verify with
+                     the real token, which we never see at list time).
+      * `invalidation_reason` — human-readable explanation when
+                                `valid is False`, otherwise absent.
+
+    The UI uses these flags to flag tokens that look stored but no
+    longer authenticate — preventing the "I have the token but it
+    returns 401" rabbit hole.
     """
     config = load_auth_config()
     tokens = config.get("api_tokens", [])
     revoked = set(config.get("revoked_tokens", []))
-    
+    current_fp = _jwt_secret_fingerprint()
+
     result = []
     for t in tokens:
+        signed_with = t.get("signed_with")
+        if signed_with is None:
+            valid = None  # legacy entry — unknown
+            reason = None
+        elif signed_with == current_fp:
+            valid = True
+            reason = None
+        else:
+            valid = False
+            reason = ("Signed with a previous jwt_secret. The signing "
+                      "secret has been rotated since this token was "
+                      "issued — its JWT can no longer be verified. "
+                      "Revoke this token and generate a new one.")
+
         entry = {
             "id": t.get("id"),
             "name": t.get("name", "API Token"),
             "token_prefix": t.get("token_prefix", "***"),
             "created_at": t.get("created_at"),
             "expires_at": t.get("expires_at"),
-            "revoked": t.get("token_hash") in revoked
+            "revoked": t.get("token_hash") in revoked,
+            "valid": valid,
         }
+        if reason:
+            entry["invalidation_reason"] = reason
         result.append(entry)
     return result
 
@@ -248,6 +618,7 @@ def revoke_api_token(token_id):
     config["api_tokens"] = [t for t in tokens if t.get("id") != token_id]
     
     if save_auth_config(config):
+        _invalidate_revoked_cache()
         return True, "Token revoked successfully"
     else:
         return False, "Failed to save configuration"
@@ -282,12 +653,21 @@ def setup_auth(username, password):
     Set up authentication with username and password
     Returns (success: bool, message: str)
     """
+    # Refuse if auth has already been configured. Without this guard an
+    # unauthenticated POST to /api/auth/setup would let an attacker overwrite
+    # the existing admin credentials and take over the account. See audit
+    # Tier 1 #4.
+    existing = load_auth_config()
+    if existing.get("configured", False):
+        return False, "Authentication is already configured"
+
     if not username or not password:
         return False, "Username and password are required"
-    
-    if len(password) < 6:
-        return False, "Password must be at least 6 characters"
-    
+
+    pw_err = _validate_password_strength(password)
+    if pw_err:
+        return False, pw_err
+
     config = {
         "enabled": True,
         "username": username,
@@ -298,7 +678,7 @@ def setup_auth(username, password):
         "totp_secret": None,
         "backup_codes": []
     }
-    
+
     if save_auth_config(config):
         return True, "Authentication configured successfully"
     else:
@@ -340,9 +720,12 @@ def disable_auth():
     config["totp_enabled"] = False
     config["totp_secret"] = None
     config["backup_codes"] = []
-    config["api_tokens"] = []
-    config["revoked_tokens"] = []
-    
+    # Intentionally preserve `api_tokens` and `revoked_tokens` across
+    # disable→re-enable cycles. Wiping them allowed a previously revoked
+    # token to verify again because nothing on the deny-list would reject
+    # it. Audit Tier 5 — disable_auth() borra revoked_tokens.
+    _invalidate_revoked_cache()
+
     if save_auth_config(config):
         return True, "Authentication disabled"
     else:
@@ -368,24 +751,47 @@ def enable_auth():
         return False, "Failed to save configuration"
 
 
-def change_password(old_password, new_password):
+def change_password(old_password, new_password, totp_code=None):
     """
-    Change the authentication password
-    Returns (success: bool, message: str)
+    Change the authentication password.
+
+    When 2FA is enabled on the account, a valid TOTP code (or backup code) is
+    REQUIRED in addition to the current password — otherwise an attacker who
+    obtained the password (e.g. via shoulder-surfing or phishing) could rotate
+    it without the second factor and lock the legitimate user out. See audit
+    Tier 1 #10.
+
+    Returns (success: bool, message: str).
     """
     config = load_auth_config()
-    
+
     if not config.get("enabled"):
         return False, "Authentication is not enabled"
-    
+
     if not verify_password(old_password, config.get("password_hash", "")):
         return False, "Current password is incorrect"
-    
-    if len(new_password) < 6:
-        return False, "New password must be at least 6 characters"
-    
+
+    pw_err = _validate_password_strength(new_password)
+    if pw_err:
+        return False, f"New {pw_err[0].lower()}{pw_err[1:]}"
+
+    # 2FA gate: if the account has TOTP enabled, the caller must prove they
+    # also hold the second factor.
+    if config.get("totp_enabled"):
+        username = config.get("username")
+        if not totp_code:
+            return False, "2FA code required to change password"
+        # Try TOTP first, then fall back to backup code (same UX as login).
+        ok, _ = verify_totp(username, totp_code, use_backup=False)
+        if not ok:
+            ok, _ = verify_totp(username, totp_code, use_backup=True)
+        if not ok:
+            return False, "Invalid 2FA code"
+        # Reload after possible backup-code consumption inside verify_totp.
+        config = load_auth_config()
+
     config["password_hash"] = hash_password(new_password)
-    
+
     if save_auth_config(config):
         return True, "Password changed successfully"
     else:
@@ -511,12 +917,53 @@ def verify_totp(username, token, use_backup=False):
                 return True, "Backup code accepted"
         return False, "Invalid or already used backup code"
     
-    # Check TOTP token
+    # Check TOTP token. `valid_window=1` accepts the previous, current and
+    # next 30s timesteps, which is friendly to clock skew but lets a leaked
+    # OTP be replayed for up to ~90s. Track the last successfully-used
+    # timestep counter per account and reject anything <= that.
+    import time as _time
     totp = pyotp.TOTP(config.get("totp_secret"))
-    if totp.verify(token, valid_window=1):  # Allow 1 time step tolerance
-        return True, "2FA verification successful"
-    else:
+    if not totp.verify(token, valid_window=1):
         return False, "Invalid 2FA code"
+
+    # Find which counter the OTP corresponds to (one of current ± 1).
+    # CRITICAL: `pyotp.TOTP.at(t)` takes a UNIX timestamp (seconds), NOT
+    # a counter — passing the counter makes `at()` interpret it as a
+    # tiny timestamp near the epoch and the same OTP comes back for
+    # every step, so this loop never matched and verify_totp always
+    # fell into the "fail closed" branch below, locking every 2FA user
+    # out. We pass timestamps spaced by `interval` seconds and derive
+    # the counter from the matched timestamp.
+    interval = getattr(totp, 'interval', 30)
+    now_ts = _time.time()
+    matched_counter = None
+    for delta_steps in (-1, 0, 1):
+        probe_ts = now_ts + delta_steps * interval
+        try:
+            if totp.at(int(probe_ts)) == token:
+                matched_counter = int(probe_ts) // interval
+                break
+        except Exception:
+            continue
+    if matched_counter is None:
+        # `verify()` succeeded but we couldn't map to a counter — fail closed.
+        return False, "Invalid 2FA code"
+
+    # `last_counter` may be stored as `null` in auth.json for accounts
+    # that haven't authenticated since the anti-replay tracking was
+    # introduced. `dict.get(k, default)` only returns the default when
+    # the key is MISSING, not when it's present-but-None — so `null`
+    # would slip through as Python None and crash the `<=` comparison
+    # below. Normalise to -1 (meaning "no previous counter").
+    last_counter = config.get("last_totp_counter")
+    if last_counter is None:
+        last_counter = -1
+    if matched_counter <= last_counter:
+        return False, "2FA code already used; wait for the next one"
+
+    config["last_totp_counter"] = matched_counter
+    save_auth_config(config)
+    return True, "2FA verification successful"
 
 
 def enable_totp(username, verification_token):
@@ -548,23 +995,42 @@ def enable_totp(username, verification_token):
         return False, "Failed to enable 2FA"
 
 
-def disable_totp(username, password):
+def disable_totp(username, password, totp_code=None):
     """
-    Disable TOTP (requires password confirmation)
-    Returns (success: bool, message: str)
+    Disable TOTP (requires password confirmation AND a valid 2FA code).
+
+    Previously this endpoint only required the password, which meant an
+    attacker who phished or replayed the password could turn off the user's
+    second factor entirely. Per audit Tier 1 #10 and the related frontend
+    finding ("Disable 2FA solo password"), we now also demand a valid TOTP
+    code (or backup code) to disable the protection it represents.
+
+    Returns (success: bool, message: str).
     """
     config = load_auth_config()
-    
+
     if config.get("username") != username:
         return False, "Invalid username"
-    
+
     if not verify_password(password, config.get("password_hash", "")):
         return False, "Invalid password"
-    
+
+    # If TOTP is currently active, require the second factor to disable it.
+    if config.get("totp_enabled"):
+        if not totp_code:
+            return False, "2FA code required to disable 2FA"
+        ok, _ = verify_totp(username, totp_code, use_backup=False)
+        if not ok:
+            ok, _ = verify_totp(username, totp_code, use_backup=True)
+        if not ok:
+            return False, "Invalid 2FA code"
+        # Reload in case a backup code was consumed.
+        config = load_auth_config()
+
     config["totp_enabled"] = False
     config["totp_secret"] = None
     config["backup_codes"] = []
-    
+
     if save_auth_config(config):
         return True, "2FA disabled successfully"
     else:
@@ -580,6 +1046,12 @@ SSL_CONFIG_FILE = Path(os.environ.get("PROXMENUX_SSL_CONFIG", "/etc/proxmenux/ss
 # Default Proxmox certificate paths
 PROXMOX_CERT_PATH = "/etc/pve/local/pve-ssl.pem"
 PROXMOX_KEY_PATH = "/etc/pve/local/pve-ssl.key"
+# When the admin uploads a custom certificate via the PVE UI, it's written
+# to `pveproxy-ssl.pem` instead and PVE itself prefers it. We do the same so
+# `detect_proxmox_certificates` reflects the cert the user actually wants
+# served. Issue #181.
+PROXMOX_CUSTOM_CERT_PATH = "/etc/pve/local/pveproxy-ssl.pem"
+PROXMOX_CUSTOM_KEY_PATH = "/etc/pve/local/pveproxy-ssl.key"
 
 
 def load_ssl_config():
@@ -625,6 +1097,11 @@ def detect_proxmox_certificates():
     """
     Detect available Proxmox certificates.
     Returns dict with detection results.
+
+    Prefers the custom-uploaded `pveproxy-ssl.pem` (what PVE itself uses
+    when the admin uploaded a Let's Encrypt / commercial cert via the UI)
+    and falls back to the default self-signed `pve-ssl.pem`. Issue #181 —
+    detector solo encontraba pve-ssl.pem.
     """
     result = {
         "proxmox_available": False,
@@ -632,15 +1109,20 @@ def detect_proxmox_certificates():
         "proxmox_key": PROXMOX_KEY_PATH,
         "cert_info": None
     }
-    
-    if os.path.isfile(PROXMOX_CERT_PATH) and os.path.isfile(PROXMOX_KEY_PATH):
+
+    if os.path.isfile(PROXMOX_CUSTOM_CERT_PATH) and os.path.isfile(PROXMOX_CUSTOM_KEY_PATH):
+        result["proxmox_cert"] = PROXMOX_CUSTOM_CERT_PATH
+        result["proxmox_key"] = PROXMOX_CUSTOM_KEY_PATH
         result["proxmox_available"] = True
-        
-        # Try to get certificate info
+    elif os.path.isfile(PROXMOX_CERT_PATH) and os.path.isfile(PROXMOX_KEY_PATH):
+        result["proxmox_available"] = True
+
+    if result["proxmox_available"]:
+        # Try to get certificate info from whichever cert we picked.
         try:
             import subprocess
             cert_output = subprocess.run(
-                ["openssl", "x509", "-in", PROXMOX_CERT_PATH, "-noout", "-subject", "-enddate", "-issuer"],
+                ["openssl", "x509", "-in", result["proxmox_cert"], "-noout", "-subject", "-enddate", "-issuer"],
                 capture_output=True, text=True, timeout=5
             )
             if cert_output.returncode == 0:
@@ -783,7 +1265,21 @@ def authenticate(username, password, totp_token=None):
     
     if not verify_password(password, config.get("password_hash", "")):
         return False, None, False, "Invalid username or password"
-    
+
+    # Lazy migration: if the stored hash is the legacy unsalted SHA-256, replace
+    # it with a fresh PBKDF2 hash now that we have the cleartext in hand. The
+    # next login uses the new hash; the legacy code path stays around only as
+    # the recognition entry in `verify_password`. Audit Tier 4 #23.
+    upgraded = _maybe_rehash_password(password, config.get("password_hash", ""))
+    if upgraded:
+        config["password_hash"] = upgraded
+        try:
+            save_auth_config(config)
+        except Exception as e:
+            # Don't block login if persistence fails — the user is still
+            # authenticated and we can rehash on a future login attempt.
+            print(f"[auth] Failed to persist rehashed password: {e}")
+
     if config.get("totp_enabled"):
         if not totp_token:
             # First step: password OK, now request TOTP code (not a failure)
@@ -801,3 +1297,168 @@ def authenticate(username, password, totp_token=None):
         return True, token, False, "Authentication successful"
     else:
         return False, None, False, "Failed to generate authentication token"
+
+
+# ---------------------------------------------------------------------------
+# User profile (Fase 2, v1.2.2)
+# ---------------------------------------------------------------------------
+#
+# Display name + avatar. Both are optional decorations on top of the
+# existing username + password. The display name lives inside auth.json
+# (one extra string field). The avatar is stored as a binary file next
+# to auth.json so the JSON stays small and the image can be served
+# without re-encoding.
+#
+# No email field — the Monitor doesn't send mail (no password reset, no
+# confirmation), and the operator-of-PVE-as-root use case never benefits
+# from one. If OIDC lands in v1.3.0 we'll surface whatever the issuer
+# claims, but we don't ask the operator for an email manually.
+
+
+def get_user_profile():
+    """Return the active user's profile decorations.
+
+    Returns a dict with:
+      {
+        "username":        str | None,
+        "display_name":    str | None,  # may equal username
+        "has_avatar":      bool,
+        "avatar_mtime":    float | None,  # for cache-busting URLs
+        "avatar_content_type": str | None,
+      }
+    Username falls back to None when auth isn't configured/enabled.
+    """
+    config = load_auth_config()
+    username = config.get("username") if config.get("enabled") else None
+    display_name = config.get("display_name") or None
+
+    has_avatar = AVATAR_FILE.exists() and AVATAR_FILE.stat().st_size > 0
+    avatar_mtime = None
+    avatar_content_type = None
+    if has_avatar:
+        try:
+            avatar_mtime = AVATAR_FILE.stat().st_mtime
+        except OSError:
+            avatar_mtime = None
+        try:
+            if AVATAR_CONTENT_TYPE_FILE.exists():
+                avatar_content_type = AVATAR_CONTENT_TYPE_FILE.read_text().strip() or None
+        except OSError:
+            avatar_content_type = None
+
+    return {
+        "username": username,
+        "display_name": display_name,
+        "has_avatar": has_avatar,
+        "avatar_mtime": avatar_mtime,
+        "avatar_content_type": avatar_content_type,
+    }
+
+
+def set_display_name(display_name):
+    """Persist (or clear) the user's display name.
+
+    Accepts any string up to 64 chars. An empty / whitespace-only value
+    clears the field — the dropdown then falls back to the raw username
+    when rendering. Returns (success: bool, message: str).
+    """
+    cleaned = (display_name or "").strip()
+    if len(cleaned) > 64:
+        return False, "Display name must be 64 characters or less"
+    # Disallow control characters — a display name with embedded \n
+    # would break the avatar dropdown layout.
+    if any(ord(ch) < 0x20 for ch in cleaned):
+        return False, "Display name contains control characters"
+
+    config = load_auth_config()
+    config["display_name"] = cleaned or None
+    if not save_auth_config(config):
+        return False, "Failed to save profile"
+    return True, "Display name updated"
+
+
+def save_avatar(content_bytes, content_type):
+    """Persist a new avatar image. Best-effort validation:
+
+      • Content-Type must be one of `AVATAR_ALLOWED_CONTENT_TYPES`.
+      • Size must be <= `AVATAR_MAX_BYTES` (2 MB).
+      • Magic-number check — first few bytes must match a supported image
+        format. This blocks a `.png`-renamed `.exe` from being served as
+        an image to other browsers.
+
+    Returns (success: bool, message: str). Does not resize — the
+    frontend always renders the avatar inside a `rounded-full` with
+    `object-cover`, so any aspect ratio displays correctly. Operators
+    who want a smaller file can compress before upload.
+    """
+    if not isinstance(content_bytes, (bytes, bytearray)) or not content_bytes:
+        return False, "No image data"
+    if len(content_bytes) > AVATAR_MAX_BYTES:
+        return False, f"Image exceeds {AVATAR_MAX_BYTES // (1024 * 1024)} MB limit"
+    if content_type not in AVATAR_ALLOWED_CONTENT_TYPES:
+        return False, f"Unsupported image type: {content_type}"
+
+    # Magic-number sniffing: trust the Content-Type but verify.
+    head = bytes(content_bytes[:12])
+    looks_valid = (
+        head.startswith(b"\x89PNG\r\n\x1a\n") or          # PNG
+        head.startswith(b"\xff\xd8\xff") or               # JPEG
+        (head[:4] == b"RIFF" and head[8:12] == b"WEBP") or  # WebP
+        head.startswith(b"GIF87a") or head.startswith(b"GIF89a")  # GIF
+    )
+    if not looks_valid:
+        return False, "Image bytes don't match a supported format"
+
+    try:
+        ensure_config_dir()
+        # Write atomically — tmp + rename so a crashed write never leaves
+        # a half-written avatar file that the GET endpoint would serve as
+        # corrupt bytes.
+        tmp_avatar = AVATAR_FILE.with_suffix(AVATAR_FILE.suffix + ".tmp")
+        with open(tmp_avatar, "wb") as f:
+            f.write(content_bytes)
+        os.replace(tmp_avatar, AVATAR_FILE)
+        AVATAR_CONTENT_TYPE_FILE.write_text(content_type)
+        try:
+            os.chmod(AVATAR_FILE, 0o600)
+        except OSError:
+            # Best-effort permission tighten; not fatal if the FS doesn't
+            # support it (e.g. some bind-mounted scenarios).
+            pass
+        return True, "Avatar saved"
+    except Exception as e:
+        return False, f"Failed to save avatar: {e}"
+
+
+def delete_avatar():
+    """Remove the stored avatar file. Returns (success, message). No-op
+    when there's nothing to delete (still returns success)."""
+    try:
+        if AVATAR_FILE.exists():
+            AVATAR_FILE.unlink()
+        if AVATAR_CONTENT_TYPE_FILE.exists():
+            AVATAR_CONTENT_TYPE_FILE.unlink()
+        return True, "Avatar removed"
+    except Exception as e:
+        return False, f"Failed to remove avatar: {e}"
+
+
+def get_avatar_bytes():
+    """Return (bytes, content_type) for the stored avatar, or (None, None)
+    if no avatar is set or the file is unreadable. The caller is
+    responsible for the HTTP response; this only handles the I/O."""
+    if not AVATAR_FILE.exists():
+        return None, None
+    try:
+        data = AVATAR_FILE.read_bytes()
+    except OSError:
+        return None, None
+    content_type = "application/octet-stream"
+    try:
+        if AVATAR_CONTENT_TYPE_FILE.exists():
+            ct = AVATAR_CONTENT_TYPE_FILE.read_text().strip()
+            if ct in AVATAR_ALLOWED_CONTENT_TYPES:
+                content_type = ct
+    except OSError:
+        pass
+    return data, content_type

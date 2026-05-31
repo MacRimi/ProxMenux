@@ -19,7 +19,10 @@ import {
   Terminal,
   Trash2,
   X,
+  Copy,
+  Clipboard,
 } from "lucide-react"
+import { copyTerminalSelection, pasteFromClipboard } from "@/lib/terminal-clipboard"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +36,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog as SearchDialog, DialogContent as SearchDialogContent, DialogTitle as SearchDialogTitle } from "@/components/ui/dialog"
 import "xterm/css/xterm.css"
 import { API_PORT, fetchApi } from "@/lib/api-config"
+import { getTicketedWsUrl } from "@/lib/terminal-ws"
 
 interface LxcTerminalModalProps {
   open: boolean
@@ -161,9 +165,16 @@ export function LxcTerminalModal({
   useEffect(() => {
     if (!isOpen) return
 
+    // `cancelled` short-circuits the async init if the modal closes
+    // before the dynamic xterm import resolves. Without this, we'd
+    // construct a Terminal instance, attach it to a now-stale ref, and
+    // open a WebSocket that nobody listens to. Audit Tier 6 — useEffect
+    // con `import("xterm")` sin cancelación.
+    let cancelled = false
+
     // Small delay to ensure Dialog content is rendered
     const initTimeout = setTimeout(() => {
-      if (!terminalContainerRef.current) return
+      if (cancelled || !terminalContainerRef.current) return
       initTerminal()
     }, 100)
 
@@ -172,12 +183,13 @@ export function LxcTerminalModal({
         import("xterm").then((mod) => mod.Terminal),
         import("xterm-addon-fit").then((mod) => mod.FitAddon),
       ])
+      if (cancelled) return
 
       const fontSize = window.innerWidth < 768 ? 12 : 16
 
       const term = new TerminalClass({
         rendererType: "dom",
-        fontFamily: '"Courier", "Courier New", "Liberation Mono", "DejaVu Sans Mono", monospace',
+        fontFamily: '"MesloLGS NF", "FiraCode Nerd Font", "JetBrainsMono Nerd Font", "Hack Nerd Font", "Symbols Nerd Font", "Courier", "Courier New", "Liberation Mono", "DejaVu Sans Mono", monospace',
         fontSize: fontSize,
         lineHeight: 1,
         cursorBlink: true,
@@ -221,9 +233,11 @@ export function LxcTerminalModal({
       termRef.current = term
       fitAddonRef.current = fitAddon
 
-      // Connect WebSocket to host terminal
+      // Connect WebSocket to host terminal. We append a single-use ticket
+      // (`?ticket=...`) which the backend consumes on handshake — see
+      // lib/terminal-ws.ts and AppImage/scripts/flask_terminal_routes.py.
       const wsUrl = getWebSocketUrl()
-      const ws = new WebSocket(wsUrl)
+      const ws = new WebSocket(await getTicketedWsUrl(wsUrl))
       wsRef.current = ws
       
 // Reset state for new connection
@@ -252,11 +266,22 @@ export function LxcTerminalModal({
           rows: term.rows,
         }))
         
-        // Auto-execute pct enter after connection is ready
+        // Auto-execute pct enter after connection is ready.
+        // The string is sent verbatim to the bash PTY, so a non-numeric
+        // `vmid` would land as shell input (e.g. `pct enter ; rm -rf /`).
+        // The prop is typed `number` but JSON / URL query injections can
+        // sneak strings in; validate as a defensive redundancy. Audit
+        // residual #lxc-terminal-vmid-injection.
         setTimeout(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(`pct enter ${vmid}\r`)
+          if (ws.readyState !== WebSocket.OPEN) return
+          // Coerce + verify: must be a positive integer that round-trips
+          // through Number without losing fidelity.
+          const id = Number(vmid)
+          if (!Number.isInteger(id) || id <= 0 || id >= 1_000_000) {
+            term.writeln('\r\n\x1b[31m[ERROR] Invalid VMID — refusing to execute pct enter\x1b[0m')
+            return
           }
+          ws.send(`pct enter ${id}\r`)
         }, 300)
       }
 
@@ -302,13 +327,17 @@ export function LxcTerminalModal({
           if (pctEnterMatch) {
             const afterPctEnter = cleanBuffer.substring(cleanBuffer.indexOf(pctEnterMatch[0]) + pctEnterMatch[0].length)
             
-            // Extract the host name from the prompt BEFORE pct enter (e.g., "root@amd")
-            const hostPromptMatch = cleanBuffer.match(/@([a-zA-Z0-9_-]+).*pct enter/)
+            // Extract the host name from the prompt BEFORE pct enter (e.g., "root@amd").
+            // Charset widened to accept dotted FQDNs (`proxmox.lan`) and unicode
+            // letters/numbers (host names like `próxmox` or non-Latin scripts).
+            // The previous `[a-zA-Z0-9_-]` truncated the hostname and the
+            // "are we inside the LXC?" comparison then misfired.
+            const hostPromptMatch = cleanBuffer.match(/@([\p{L}\p{N}._-]+).*pct enter/u)
             const hostName = hostPromptMatch ? hostPromptMatch[1] : null
-            
+
             // Look for a new prompt after pct enter that ends with # or $
             // This works for both bash (user@host:~#) and ash/Alpine ([user@host /]#)
-            const promptMatch = afterPctEnter.match(/[@\[]([a-zA-Z0-9_-]+)[^\r\n]*[#$]\s*$/)
+            const promptMatch = afterPctEnter.match(/[@\[]([\p{L}\p{N}._-]+)[^\r\n]*[#$]\s*$/u)
             
             if (promptMatch) {
               const lxcHostname = promptMatch[1]
@@ -354,6 +383,7 @@ export function LxcTerminalModal({
     }
 
     return () => {
+      cancelled = true
       clearTimeout(initTimeout)
       if (pingIntervalRef.current) {
         clearInterval(pingIntervalRef.current)
@@ -434,6 +464,14 @@ export function LxcTerminalModal({
   const sendArrowRight = useCallback(() => sendKey("\x1b[C"), [sendKey])
   const sendEnter = useCallback(() => sendKey("\r"), [sendKey])
   const sendCtrlC = useCallback(() => sendKey("\x03"), [sendKey]) // Ctrl+C
+
+  // Mobile clipboard helpers — see lib/terminal-clipboard.ts for the rationale.
+  const handleCopy = useCallback(async () => {
+    await copyTerminalSelection(termRef.current)
+  }, [])
+  const handlePaste = useCallback(async () => {
+    await pasteFromClipboard(sendKey)
+  }, [sendKey])
 
   // Search effect - debounced search with cheat.sh
   useEffect(() => {
@@ -634,7 +672,7 @@ export function LxcTerminalModal({
                     <ChevronDown className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel className="text-xs text-muted-foreground">Control Sequences</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={() => sendKey("\x03")}>
@@ -648,6 +686,16 @@ export function LxcTerminalModal({
                   <DropdownMenuItem onSelect={() => sendKey("\x12")}>
                     <span className="font-mono text-xs mr-2">Ctrl+R</span>
                     <span className="text-muted-foreground text-xs">Search history</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">Clipboard</DropdownMenuLabel>
+                  <DropdownMenuItem onSelect={() => { void handleCopy() }}>
+                    <Copy className="h-3.5 w-3.5 mr-2" />
+                    <span className="text-xs">Copy selection</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => { void handlePaste() }}>
+                    <Clipboard className="h-3.5 w-3.5 mr-2" />
+                    <span className="text-xs">Paste</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

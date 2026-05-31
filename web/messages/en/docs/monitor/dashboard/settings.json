@@ -1,0 +1,327 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Dashboard: Settings tab | ProxMenux Documentation",
+    "description": "The Settings tab groups dashboard preferences (network units, suppression durations, storage / interface exclusions), the embedded notification + AI panel, and a transparent inventory of every ProxMenux post-install optimization currently active on the host with click-through to its source code."
+  },
+  "header": {
+    "title": "Dashboard: Settings tab",
+    "description": "Dashboard preferences, monitoring exclusions, the embedded notification + AI configuration panel, and a live inventory of the ProxMenux post-install optimizations currently active on the host.",
+    "section": "ProxMenux Monitor · Dashboard"
+  },
+  "intro": {
+    "title": "Where each setting actually lives",
+    "body": "The Settings tab is a single surface for several distinct concerns: how the dashboard renders, what gets watched by the Health Monitor, how alerts go out, and what ProxMenux has already changed on the host. Cards that have their own deep documentation page link out rather than duplicating content here — Settings is the entry point, not the manual."
+  },
+  "networkUnits": {
+    "heading": "Network Units",
+    "imageAlt": "Network Units card with Network Unit Display dropdown set to Bytes",
+    "imageCaption": "Choose between bits per second and bytes per second for every network rate displayed in the dashboard.",
+    "body": "Choose how network throughput is displayed across the dashboard: <strong>bits per second</strong> (Mbps / Gbps) or <strong>bytes per second</strong> (MB/s / GB/s). Bits is the default because it's what NIC vendors and ISPs label their products with; bytes is what most file-transfer tools report. The setting affects every chart, badge and tooltip that shows network rate — applied immediately, no reload needed."
+  },
+  "health": {
+    "heading": "Health Monitor",
+    "intro": "The card surfaces the per-category <strong>Suppression Duration</strong> setting — once an alert is dismissed, how long before the scanner is allowed to re-fire it. Each of the ten Health Monitor categories (CPU, Memory, Storage, Disks, Network, VMs, PVE Services, Logs, Updates, Security) has its own dropdown with these values:",
+    "items": [
+      "<strong>24 h</strong> — default for most transient categories.",
+      "<strong>72 h</strong> — for events you want a few days of silence on.",
+      "<strong>168 h</strong> (1 week) and <strong>720 h</strong> (1 month) — periodic checks.",
+      "<strong>8760 h</strong> (1 year) — effectively \"quiet for the foreseeable future\".",
+      "<strong>-1</strong> — permanent silence until you re-enable it manually.",
+      "<strong>Custom hours</strong> — any integer if you need an in-between value."
+    ],
+    "imageAlt": "Settings → Health Monitor card with the per-category suppression dropdowns and the Active Suppressions section",
+    "imageCaption": "Health Monitor card — the per-category dropdowns set defaults for new dismisses; the Active Suppressions section below lists every alert currently silenced and lets you revert them.",
+    "editTitle": "Edit mode",
+    "editBody": "The card is read-only by default. Click <strong>Edit</strong> in the top-right of the card to enable the dropdowns and the Re-enable buttons. <strong>Save</strong> commits every pending change (suppression-duration changes and queued re-enables) in a single batch; <strong>Cancel</strong> discards them all. The Save button only activates when there is at least one pending change.",
+    "activeTitle": "Active Suppressions",
+    "activeIntro": "Below the suppression-duration dropdowns, the <strong>Active Suppressions</strong> section lists every alert that is currently silenced — both time-limited dismisses (24 h, 7 days, custom windows) and <em>Permanent</em> ones. Each row shows:",
+    "activeItems": [
+      "A coloured badge — <strong>Permanent</strong> (amber) or a countdown such as <strong>24h remaining</strong> / <strong>7d remaining</strong> (blue).",
+      "The alert identifier, normalized for readability (e.g. <code>pve_storage_full_PBS-Cloud</code> → <em>PVE Storage Full: PBS-Cloud</em>).",
+      "Category, severity and the timestamp the alert was dismissed.",
+      "A <strong>Re-enable</strong> button (active only in Edit mode) that queues the alert to be un-acknowledged on the next Save."
+    ],
+    "activeReenableTitle": "Re-enable flow",
+    "activeReenableBody": "Clicking <strong>Re-enable</strong> in Edit mode marks the row in green and strikes its identifier — it is queued but not yet applied. Click again on the same row to <strong>Undo</strong> the queue. When you press <strong>Save</strong>, every queued re-enable fires <code>POST /api/health/un-acknowledge</code> in parallel and the affected rows disappear from the list. If the underlying condition is still present and the category supports re-firing, the alert reappears in the Health Monitor's Active list on the next scan cycle.",
+    "activePermanentNote": "Permanent dismisses (alerts dismissed with <em>Permanently</em> from the Health Monitor modal, or those whose category default is set to <code>-1</code>) <strong>can only be reverted from here</strong>. The dashboard modal does not expose an un-dismiss button for them — the Active Suppressions panel is the single audit log + revert UI.",
+    "activeAutoRefreshTitle": "Auto-refresh",
+    "activeAutoRefreshBody": "The list refreshes automatically when you dismiss or un-dismiss an alert from the Health Monitor modal (via an in-browser event), when the browser tab regains focus, and on visibility change. You do not need to reload the page after dismissing an alert from the dashboard.",
+    "calloutTitle": "Full semantics live in the Health Monitor page",
+    "calloutBody": "The escalation rules (when a re-fire becomes critical), the auto-resolve behaviour for events whose underlying device disappears, and the difference between dismissed and resolved — all documented under <link>Health Monitor → Dismissing alerts and the Suppression Duration</link>. This card just exposes the per-category dropdowns and the Active Suppressions panel."
+  },
+  "thresholds": {
+    "heading": "Health Monitor Thresholds",
+    "intro": "Where the previous card decides <em>how long to stay quiet after a dismiss</em>, this one decides <strong>at what value an alert fires in the first place</strong>. Every check the Health Monitor runs is parameterised by a pair of numbers — a <strong>Warning</strong> threshold and a <strong>Critical</strong> threshold — and both are exposed here for the operator to tune.",
+    "whatForTitle": "What it is for",
+    "whatForIntro": "Defaults that ship with ProxMenux are sane for the average Proxmox host, but every environment has its own envelope:",
+    "whatForItems": [
+      "A small homelab with a single-disk SSD may want to page earlier on capacity (75 / 90 %) to leave room for snapshots.",
+      "A datacenter host with redundant Ceph nodes can be more relaxed on memory warnings (a 90 % working set is normal under ZFS ARC).",
+      "A passively-cooled mini-PC needs lower temperature thresholds than a server with forced-air cooling — same drive class, different physical envelope.",
+      "A heavily-virtualized host that pegs CPU during builds should not page on every 80 % spike, but must still alert on sustained pressure."
+    ],
+    "whatForOutro": "Editing a threshold takes effect <strong>on the next scan</strong> — the Health Monitor re-reads the values from <code>/usr/local/share/proxmenux/health_thresholds.json</code> on every cycle, no service restart needed. The same numbers also feed the colour ranges of the dashboard widgets (the temperature line in the disk-temperature modal, the bars on the storage cards) so the visual classification matches what triggers the alert.",
+    "coloursTitle": "Status colours: how Warning and Critical render in the dashboard",
+    "coloursIntro": "Every threshold below produces the same three-state classification across the dashboard — same colours for storage bars, CPU/memory rings, temperature chips, and the dot on the disk modal. Reading a colour anywhere in the Monitor maps to a definite range relative to the configured pair:",
+    "headerColour": "Colour",
+    "headerRange": "Range",
+    "headerMeaning": "Meaning",
+    "colourRows": [
+      {
+        "colour": "Green",
+        "range": "value < Warning",
+        "meaning": "Normal operating range. No alert fires."
+      },
+      {
+        "colour": "Amber",
+        "range": "Warning ≤ value < Critical",
+        "meaning": "Warning state. The Health Monitor fires a WARNING-severity event; notifications respect the channel filters and Quiet Hours."
+      },
+      {
+        "colour": "Red",
+        "range": "value ≥ Critical",
+        "meaning": "Critical state. The Health Monitor fires a CRITICAL event; CRITICAL bypasses Quiet Hours and always reaches the channel."
+      }
+    ],
+    "sectionsTitle": "Sections and recommended defaults",
+    "sectionsIntro": "These are the values ProxMenux ships with — the recommended baseline. They're what you see on a fresh host until you override anything. Sections are ordered top-to-bottom from <em>compute</em> → <em>heat</em> → <em>storage capacity</em> so reading down moves from concrete (current load) to accumulated state (free space).",
+    "headerSection": "Section",
+    "headerWarning": "Warning",
+    "headerCritical": "Critical",
+    "headerGates": "What it gates",
+    "thresholdRows": [
+      {
+        "section": "CPU usage",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Sustained-load alert when CPU averages above the threshold for the scan window."
+      },
+      {
+        "section": "Memory",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "RAM pressure on the host."
+      },
+      {
+        "section": "Swap (critical only)",
+        "warning": "—",
+        "critical": "5 %",
+        "gates": "Swap actually being used. The number is intentionally low: a healthy Proxmox host should rarely touch swap, so even 5 % is a meaningful signal of RAM pressure."
+      },
+      {
+        "section": "CPU temperature",
+        "warning": "80 °C",
+        "critical": "90 °C",
+        "gates": "CPU package / core temperature reading from <code>lm-sensors</code>."
+      },
+      {
+        "section": "Disk temp — HDD",
+        "warning": "60 °C",
+        "critical": "65 °C",
+        "gates": "Standard spinning drives. Manufacturer envelope tops out around 60–65 °C, so Critical is set right at the hard limit."
+      },
+      {
+        "section": "Disk temp — SSD",
+        "warning": "70 °C",
+        "critical": "75 °C",
+        "gates": "2.5'' / M.2 SATA SSDs — run cooler than NVMe but warmer than HDDs."
+      },
+      {
+        "section": "Disk temp — NVMe",
+        "warning": "80 °C",
+        "critical": "85 °C",
+        "gates": "NVMe drives run hotter by design; controllers self-throttle above ~85 °C, so Warning catches the climb before throttling kicks in."
+      },
+      {
+        "section": "Disk temp — SAS",
+        "warning": "55 °C",
+        "critical": "65 °C",
+        "gates": "Enterprise SAS drives share the same ~65 °C manufacturer limit as HDDs, but are normally deployed in rack chassis with active cooling. A reading at 55 °C already signals a cooling problem (failed fan, HVAC issue) <em>before</em> the drive itself is at risk — hence a lower Warning than HDD, not because SAS is less heat-tolerant."
+      },
+      {
+        "section": "Disk space — host",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Capacity of <code>/</code> and every host mountpoint (<code>/var/lib/vz</code>, <code>/mnt/*</code>…)."
+      },
+      {
+        "section": "Disk space — LXC rootfs",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Per-container root disk, evaluated against the rootfs size from PVE."
+      },
+      {
+        "section": "LXC mount points",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Capacity of mountpoints inside running CTs (mp0, mp1, NFS, bind mounts). Excludes rootfs."
+      },
+      {
+        "section": "PVE storage",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Block-style PVE storages (LVM, LVM-thin, ZFS-pool, RBD/Ceph, PBS)."
+      },
+      {
+        "section": "ZFS pool",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "ZFS pools at host level — independent of PVE registration."
+      }
+    ],
+    "defaultsTitle": "Defaults, overrides and reset",
+    "defaultsBody": "The backend exposes a merged view: every section starts from the ProxMenux defaults (the values you see when the host is fresh) and you override only the knobs you care about. The card shows the <em>effective</em> value — the override if you set one, otherwise the default. A <strong>Reset</strong> button wipes every override and goes back to defaults across all sections at once.",
+    "validationTitle": "Validation",
+    "validationBody": "Saving rejects values that don't make sense (percentages outside 0–100, critical below warning, negative temperatures). The frontend shows the inline error; the backend validates again before persisting, so the API can't be tricked into a broken threshold by a hand-crafted PUT."
+  },
+  "lxcDetection": {
+    "heading": "LXC Update Detection",
+    "imageAlt": "LXC Update Detection card with a single switch — when enabled, the Monitor periodically scans running Debian/Ubuntu/Alpine LXC containers for pending package updates.",
+    "imageCaption": "The toggle for the periodic <code>apt list --upgradable</code> / <code>apk list -u</code> scan across every running CT. Default is ON. The matching notification toggle in Notifications → Services only appears while detection is enabled.",
+    "intro": "A dedicated toggle for the LXC update scan, sitting between the Health Monitor Thresholds and the Notifications card. When ON, ProxMenux walks every running CT on the host and queries the in-container package manager for pending updates; results land in the Hardware tab badge counts and feed the <code>lxc_updates_available</code> notification. When OFF, the scan stops entirely (no <code>pct exec</code> calls) and any existing LXC entries in <code>managed_installs.json</code> are purged immediately, so the dashboard and the <code>/api/managed-installs</code> endpoint stop reporting LXC update state without waiting for the next 24h cycle.",
+    "whatRunsTitle": "What the scan actually runs",
+    "whatRunsIntro": "For each CT in <code>running</code> state with a supported package manager:",
+    "whatRunsItems": [
+      "<strong>Cache freshness gate.</strong> If the in-container apt/apk metadata cache is older than <strong>24 hours</strong>, a best-effort refresh runs first (<code>apt-get update -qq</code> on Debian/Ubuntu, <code>apk update</code> on Alpine) with a 60 s timeout. Any failure (no network, broken repo, timeout) is swallowed silently — the listing below still runs against whatever cache exists, so a transient repo issue can never make detection worse than before.",
+      "<strong>Listing.</strong> Then ProxMenux runs <code>apt list --upgradable</code> / <code>apk list -u</code> and parses the output into a structured count plus a sample of the top package names.",
+      "<strong>Per-CT dedup.</strong> A fingerprint built from count, security-count and the sorted top names is stored so a stable set of pending updates doesn't re-notify daily, while a meaningfully different set does."
+    ],
+    "selfUpdateTitle": "CTs that self-update outside apt may legitimately report 0",
+    "selfUpdateBody": "Detection only sees what the in-container package manager knows about. A CT whose key software updates itself outside apt (Plex's <code>plexupdate</code> cron, Docker containers updated via <code>docker pull</code>, Frigate's built-in updater, etc.) will keep reporting low or zero apt updates even when the appliance is actively staying current — that's correct, not a bug. The apt-level base system on the same CT may still have its own pending updates, which the scan does surface.",
+    "refreshTitle": "Why the 24 h auto-refresh",
+    "refreshBody": "Long-running appliance CTs frequently end up with apt caches months out of date because nobody routinely runs <code>apt update</code> inside them. Without the refresh, <code>apt list --upgradable</code> reports 0 updates from a frozen snapshot and the operator never sees the backlog. The threshold matches the rest of the check cycle — if the CT was refreshed within the last 24 h, ProxMenux trusts that signal and skips the refresh.",
+    "toggleTitle": "Conditional notification toggle",
+    "toggleBody": "The <code>lxc_updates_available</code> per-channel notification toggle in <strong>Notifications → Services</strong> only renders while detection is enabled. When you turn detection OFF, that row disappears from every channel's category list — but its stored preference is preserved in the DB, so re-enabling detection brings the toggle back at the value it had before.",
+    "purgeTitle": "What gets purged when you disable detection",
+    "purgeBody": "Turning the switch OFF immediately removes every <code>type=lxc</code> entry from <code>/usr/local/share/proxmenux/managed_installs.json</code>. The Hardware tab badges drop to zero on the next dashboard refresh. Turning it back ON repopulates the registry on the next detection cycle (or sooner if you trigger a manual refresh from the API)."
+  },
+  "storageExclusions": {
+    "heading": "Remote Storage Exclusions",
+    "imageAlt": "Remote Storage Exclusions card listing PBS-Cloud, PBS and PBS2 storages with Health and Alerts toggles per row",
+    "imageCaption": "Per-storage <em>Health</em> and <em>Alerts</em> toggles. Storages with both toggles off stop counting against the Health Monitor and stop generating notifications — but still render on the Storage tab marked as excluded.",
+    "intro": "Mark Proxmox-managed storages (NFS / CIFS / PBS / Ceph / iSCSI / etc.) as excluded from monitoring. Two independent toggles per storage:",
+    "items": [
+      "<strong>Health</strong> — when off, the storage stops contributing to the Storage category of the Health Monitor. Useful for archive volumes that are intentionally offline most of the time or remote backup targets only powered up on schedule.",
+      "<strong>Alerts</strong> — when off, alerts about this storage no longer go out through configured channels, even if Health checks remain enabled. Useful when you want the dashboard view but not the notifications."
+    ],
+    "outro": "Excluded storages still render on the <link>Storage tab</link> with a purple <em>excluded</em> badge so the entry doesn't silently disappear from your inventory. State is persisted in the <code>excluded_storages</code> SQLite table."
+  },
+  "interfaceExclusions": {
+    "heading": "Network Interface Exclusions",
+    "imageAlt": "Network Interface Exclusions card listing vmbr0, vmbr1, vmbr2, bond0 and eno1 with Health and Alerts toggles per interface",
+    "imageCaption": "Same shape as Storage Exclusions — per-interface <em>Health</em> and <em>Alerts</em> toggles. Each row shows the interface, type badge (bridge / bond / physical), the IP and the link speed.",
+    "intro": "Same shape as Storage Exclusions but for network interfaces. Per interface: exclude from Health checks and / or exclude from notifications. Typical use cases:",
+    "items": [
+      "An intentionally-down spare bridge.",
+      "A NIC that was physically removed but still references in <code>/etc/network/interfaces</code>.",
+      "A VLAN sub-interface used only during maintenance windows.",
+      "A management bridge that is up but doesn't carry traffic — flapping noisily on every cycle."
+    ],
+    "outro": "State is persisted in the <code>excluded_interfaces</code> SQLite table. Same purple <em>excluded</em> badge on the <link>Network tab</link> so excluded interfaces stay visible."
+  },
+  "notifications": {
+    "heading": "Notifications & AI",
+    "body1": "This section of the Settings tab is where ProxMenux Monitor notifications and the AI rewriter are turned on. Pressing <em>Enable Notifications</em> starts the dispatch background thread, registers a Proxmox VE webhook target on the host so PVE-emitted events flow into the same pipeline, and unfolds the channel form so you can connect Telegram, Discord, Email, Gotify and the rest. The AI rewriter sits inside the same panel as a collapsible advanced section.",
+    "body2": "Both surfaces have a lot of moving parts — channels, per-event toggles, Rich messages, the Display Name, the dispatch pipeline (dedup, cooldown, aggregation, quiet hours), the PVE webhook integration, AI providers, prompt modes — and live on their own dedicated pages rather than being repeated here:",
+    "items": [
+      "<notifLink>Notifications</notifLink> — channel walk-throughs (Telegram, Discord, Gotify, Email + Gmail / Microsoft app passwords, ntfy, Slack, Teams, generic webhook), per-event categories, Rich messages, Display Name, dispatch pipeline, PVE webhook integration, history and API.",
+      "<aiLink>AI Assistant</aiLink> — providers (OpenAI, Anthropic, Gemini, Groq, OpenRouter, Ollama), model selection, prompt modes (default / custom), output language, per-channel detail levels and AI suggestions."
+    ]
+  },
+  "optimizations": {
+    "heading": "ProxMenux Optimizations",
+    "intro": "A live, transparent inventory of every ProxMenux post-install optimization currently active on the host. Every time you apply a post-install option from the Scripts side — either via the <autoLink>Automated post-install</autoLink> or via the à-la-carte <customLink>Customizable post-install</customLink> — the corresponding script registers itself in <code>/usr/local/share/proxmenux/installed_tools.json</code>. The Monitor reads that file and renders this card so you can see, at a glance, what's been changed on your server.",
+    "imageAlt": "ProxMenux Optimizations card with grid of installed tools, each row showing a green dot, tool name and version. Examples include APT IPv4 Force, Bashrc Customization, Fastfetch, Log2ram SSD Protection, Memory Settings Optimization, Setting persistent network interfaces, System Limits Increase, APT Language Skip, Entropy Generation haveged with Legacy badge, Kernel Panic Configuration, Logrotate Optimization, Network Optimizations, Subscription Banner Removal, VFIO IOMMU Passthrough — 14 active total",
+    "imageCaption": "The card lists every active optimization with its name, version, a coloured dot and an orange <em>14 active</em> counter at the top right. Tools whose source is reachable are clickable.",
+    "dotsTitle": "What the dots mean",
+    "dotsItems": [
+      "<green/> <strong>Green dot</strong> — current optimization, registered by the active version of ProxMenux. Source code is reachable: click the row to open it.",
+      "<amber/> <strong>Amber dot + <em>legacy</em> badge</strong> — applied by an older ProxMenux version whose script has since been renamed or replaced. Still active on the host; the source opens in \"legacy\" mode (with an amber accent) so you can audit what was actually run."
+    ],
+    "clickTitle": "Click-through to source code",
+    "clickBody": "Clicking a tool opens a modal with the exact bash function that applied the change, plus the script file path it lives in (<code>auto_post_install.sh</code> for the Automated bundle, <code>customizable_post_install.sh</code> for the à-la-carte side). Comments and shell constructs are syntax-highlighted; a Copy button puts the source on your clipboard. This is the \"show your work\" surface — verify what ProxMenux did to your host before any manual change you make on top.",
+    "detailAlt": "Tool source code modal for APT IPv4 Force showing the bash function force_apt_ipv4 from customizable_post_install.sh version 1.0 with syntax-highlighted code that configures /etc/apt/apt.conf.d/99-force-ipv4 with Acquire ForceIPv4 true, registers the tool and emits a translate APT IPv4 configuration completed message",
+    "detailCaption": "Source modal for <em>APT IPv4 Force</em> — exact <code>force_apt_ipv4()</code> function from <code>customizable_post_install.sh v1.0</code>, with syntax highlighting and a one-click Copy.",
+    "whyTitle": "Why this matters",
+    "whyBody": "ProxMenux changes things on your host: kernel parameters, repository configuration, network bits, log rotation, GPU passthrough, etc. Knowing exactly what's active is essential before you start adding manual customisation on top — and even more so if a different admin runs the host than the one who set it up. This card is the auditable record of every optimisation currently in effect, with the exact code that produced it.",
+    "updatesTitle": "Updates available banner",
+    "updatesBody": "When a post-install optimization gets a newer version on disk than the one currently registered on the host, the card shows an \"Updates available\" banner at the top with the count and an <strong>Apply</strong> button. Clicking <strong>Apply</strong> opens a per-optimization picker (the same one available from the Post-Install menu's <em>Apply available updates</em> entry). Pick which optimizations to lift; ProxMenux re-runs the corresponding function and refreshes the version in the registry. When everything is current the banner disappears.",
+    "updatesAlt": "ProxMenux Optimizations card with an Updates available banner at the top — count of pending updates plus an Apply button that opens the per-optimization picker",
+    "updatesCaption": "The banner only renders when at least one optimization has a newer version on disk. See <link>Apply Available Updates</link> for the full update flow and the Path-A equivalent in the shell menu.",
+    "revertTitle": "Reverting an optimization",
+    "revertBody": "The card is read-only — to undo an optimization, run the corresponding <link>Uninstall Optimizations</link> option from the ProxMenux Scripts menu. The uninstall step removes the entry from <code>installed_tools.json</code>, so it disappears from this card on the next refresh."
+  },
+  "dataCollected": {
+    "heading": "How the data is collected",
+    "headerCard": "Card",
+    "headerEndpoint": "Endpoint",
+    "headerSource": "Source",
+    "rows": [
+      {
+        "card": "Network Units",
+        "endpoint": "/api/settings",
+        "source": "Persisted in the dashboard's SQLite settings table."
+      },
+      {
+        "card": "Health Monitor durations",
+        "endpoint": "/api/health/settings",
+        "source": "Per-category suppression durations in the Health DB."
+      },
+      {
+        "card": "Storage / interface exclusions",
+        "endpoint": "/api/storage/exclusions, /api/network/exclusions",
+        "source": "SQLite tables <code>excluded_storages</code> and <code>excluded_interfaces</code>."
+      },
+      {
+        "card": "Notifications & AI panel",
+        "endpoint": "/api/notifications/*",
+        "source": "See the dedicated <notifLink>Notifications</notifLink> / <aiLink>AI Assistant</aiLink> pages."
+      },
+      {
+        "card": "ProxMenux Optimizations list",
+        "endpoint": "/api/proxmenux/installed-tools",
+        "source": "Reads <code>/usr/local/share/proxmenux/installed_tools.json</code>, written by <code>register_tool</code> calls inside the post-install scripts."
+      },
+      {
+        "card": "Optimization source-code modal",
+        "endpoint": "/api/proxmenux/tool-source",
+        "source": "Extracts the matching bash function from <code>auto_post_install.sh</code> or <code>customizable_post_install.sh</code> on the host."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Where to next",
+    "items": [
+      {
+        "label": "Notifications",
+        "href": "/docs/monitor/notifications",
+        "tail": " — channels, per-event toggles, channel overrides, history, test-send."
+      },
+      {
+        "label": "AI Assistant",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": " — providers, models, prompt modes, languages, per-channel detail levels."
+      },
+      {
+        "label": "Health Monitor → Dismissing alerts and the Suppression Duration",
+        "href": "/docs/monitor/health-monitor#dismissing-alerts-and-the-suppression-duration",
+        "tail": " — the semantics behind the per-category dropdowns above."
+      },
+      {
+        "label": "ProxMenux Scripts → Automated post-install",
+        "href": "/docs/post-install/automated",
+        "tailRich": " and <customLink>Customizable post-install</customLink> — the actual scripts that register themselves in the optimization list above."
+      },
+      {
+        "label": "Uninstall Optimizations",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — how to revert an optimization registered above."
+      },
+      {
+        "label": "Dashboard index",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — back to the tab overview."
+      }
+    ]
+  }
+}

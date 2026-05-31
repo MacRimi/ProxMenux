@@ -1,0 +1,143 @@
+{
+  "meta": {
+    "title": "ProxMenux Post-instalación: Optional Settings",
+    "description": "Guía de Optional Settings en el script post-instalación de ProxMenux para funcionalidades y optimizaciones adicionales de Proxmox VE.",
+    "ogTitle": "ProxMenux Post-instalación: Optional Settings",
+    "ogDescription": "Guía de Optional Settings en el script post-instalación de ProxMenux para funcionalidades y optimizaciones adicionales de Proxmox VE.",
+    "ogImageAlt": "ProxMenux Post-instalación Optional Settings"
+  },
+  "title": "Optional Settings",
+  "intro": "La categoría <strong>Optional Settings</strong> ofrece funcionalidades y optimizaciones adicionales que puedes elegir aplicar a tu instalación de Proxmox VE. Estos ajustes no son esenciales pero pueden mejorar las capacidades de tu sistema en escenarios específicos.",
+  "available": "Funcionalidades opcionales disponibles",
+  "ceph": {
+    "title": "Añadir soporte Ceph más reciente",
+    "intro": "Esta opción instala el soporte más reciente del sistema de almacenamiento Ceph para Proxmox VE. Ceph es un sistema de almacenamiento distribuido que ofrece alto rendimiento, fiabilidad y escalabilidad.",
+    "doesIntro": "Qué hace:",
+    "doesItems": [
+      "Añade el repositorio de Ceph a tu sistema",
+      "Actualiza las listas de paquetes",
+      "Instala los paquetes Ceph usando el comando 'pveceph install'",
+      "Verifica la instalación"
+    ],
+    "howUse": "Cómo usarlo: Tras la instalación, puedes configurar y gestionar almacenamiento Ceph usando la interfaz web de Proxmox VE o herramientas de línea de comandos.",
+    "automates": "Este ajuste automatiza los siguientes comandos:"
+  },
+  "amd": {
+    "title": "Aplicar fixes para CPUs AMD",
+    "intro": "Esta opción aplica fixes específicos para CPUs AMD EPYC y Ryzen para mejorar la estabilidad y la compatibilidad.",
+    "doesIntro": "Qué hace:",
+    "doesItems": [
+      "Detecta si hay presente una CPU AMD EPYC o Ryzen",
+      "Aplica el parámetro de kernel 'idle=nomwait' para prevenir crashes aleatorios",
+      "Configura KVM para que ignore ciertos MSRs (Model Specific Registers) y mejorar la compatibilidad con guests Windows",
+      "Instala el último kernel de Proxmox VE"
+    ],
+    "howUse": "Cómo usarlo: Estos fixes se aplican automáticamente y requieren un reinicio del sistema para surtir efecto.",
+    "automates": "Este ajuste automatiza los siguientes comandos:"
+  },
+  "ha": {
+    "title": "Activar servicios High Availability",
+    "intro": "Esta opción activa los servicios High Availability (HA) en Proxmox VE, permitiendo failover automático de VMs y contenedores en caso de fallo de un nodo.",
+    "doesIntro": "Qué hace:",
+    "doesItems": [
+      "Activa y arranca el servicio pve-ha-lrm (Local Resource Manager)",
+      "Activa y arranca el servicio pve-ha-crm (Cluster Resource Manager)",
+      "Activa y arranca el servicio corosync para la comunicación del cluster"
+    ],
+    "howUse": "Cómo usarlo: Tras activar estos servicios, puedes configurar grupos y recursos HA en la interfaz web de Proxmox VE.",
+    "automates": "Este ajuste automatiza los siguientes comandos:"
+  },
+  "testing": {
+    "title": "Activar el repositorio testing de Proxmox",
+    "intro": "Esta opción activa el repositorio testing de Proxmox, dando acceso a las versiones más recientes y potencialmente inestables de los paquetes de Proxmox VE.",
+    "doesIntro": "Qué hace:",
+    "doesItems": [
+      "Añade el repositorio testing de Proxmox a las fuentes de paquetes del sistema",
+      "Crea un archivo nuevo en /etc/apt/sources.list.d/ para el repositorio testing",
+      "Actualiza las listas de paquetes para incluir paquetes del nuevo repositorio"
+    ],
+    "howUse": "Cómo usarlo: Tras activar este repositorio, puedes actualizar y hacer upgrade de tu sistema para obtener las últimas versiones testing de los paquetes de Proxmox VE. Úsalo con precaución ya que estas versiones pueden ser inestables.",
+    "manualIntro": "Para añadir el repositorio testing de Proxmox manualmente, puedes usar estos comandos:",
+    "noteLabel": "Nota:",
+    "noteBody": "$(lsb_release -cs) detecta automáticamente el codename de la versión de tu Proxmox VE (p. ej., bullseye).",
+    "warnLabel": "Advertencia:",
+    "warnBody": "Activar el repositorio testing puede provocar inestabilidad del sistema. Se recomienda solo para entornos de pruebas."
+  },
+  "fastfetch": {
+    "title": "Instalar y configurar Fastfetch",
+    "intro": "Esta opción instala y configura silenciosamente Fastfetch, una herramienta de información del sistema que muestra las specs del sistema y un logo personalizado al hacer login.",
+    "doesLabel": "Qué hace:",
+    "doesItems": [
+      "Descarga e instala silenciosamente la última versión de Fastfetch",
+      "Te permite elegir un logo personalizado (<strong>ProxMenux, Proxmox, Helper-Scripts, Home-Labs-Club, Proxmology</strong>, o uno custom)",
+      "Configura Fastfetch para mostrar <em>\"System optimised by ProxMenux\"</em>",
+      "Configura Fastfetch para que se ejecute automáticamente al hacer login en consola"
+    ],
+    "importantLabel": "Importante:",
+    "importantBody": "Si te conectas a Proxmox por SSH, deberías seleccionar el logo <strong>Proxmox</strong> o crear uno custom usando <code>jp2a</code> o <code>img2txt</code>. Los otros logos se generan usando <code>chafa</code> y pueden no mostrarse correctamente en una sesión SSH estándar.",
+    "customLabel": "Logos personalizados:",
+    "customBody1": "Para usar un logo personalizado, coloca tu archivo de texto ASCII art en: <code>/usr/local/share/fastfetch/logos/</code>",
+    "customBody2": "Puedes crear logos personalizados usando herramientas como <code>chafa</code>, <code>jp2a</code> o <code>img2txt</code>.",
+    "customBody3": "Para mejores resultados:",
+    "customItems": [
+      "Mantén la altura del logo en 35 líneas o menos para preservar las proporciones y que quepa en el terminal",
+      "Usa <code>chafa</code> para logos a color (puede no mostrarse correctamente en sesiones SSH)",
+      "Usa <code>jp2a</code> o <code>img2txt</code> para logos compatibles con SSH"
+    ],
+    "examplesLabel": "Logos de ejemplo:",
+    "logos": [
+      {
+        "name": "ProxMenux",
+        "alt": "Logo de ProxMenux",
+        "src": "https://macrimi.github.io/ProxMenux/fastfetch/proxmenux.png"
+      },
+      {
+        "name": "Proxmox",
+        "alt": "Logo de Proxmox",
+        "src": "https://macrimi.github.io/ProxMenux/fastfetch/proxmox.png"
+      },
+      {
+        "name": "JC Channel",
+        "alt": "Logo de JC Channel",
+        "src": "/fastfetch/jc-channel.png"
+      },
+      {
+        "name": "Helper-Scripts",
+        "alt": "Logo de Helper-Scripts",
+        "src": "https://macrimi.github.io/ProxMenux/fastfetch/helper-scripts.png"
+      },
+      {
+        "name": "Home-Labs-Club",
+        "alt": "Logo de Home-Labs-Club",
+        "src": "https://macrimi.github.io/ProxMenux/fastfetch/home-labs-club.png"
+      },
+      {
+        "name": "Proxmology",
+        "alt": "Logo de Proxmology",
+        "src": "https://macrimi.github.io/ProxMenux/fastfetch/proxmology.png"
+      }
+    ],
+    "automates": "Este ajuste automatiza los siguientes comandos:"
+  },
+  "figurine": {
+    "title": "Instalar y configurar Figurine",
+    "intro": "Esta opción instala y configura Figurine, una herramienta que crea banners de texto ASCII con estilo para tu terminal, mostrando tu hostname en un formato 3D atractivo visualmente.",
+    "doesLabel": "Qué hace:",
+    "doesItems": [
+      "Descarga e instala Figurine v2.0.0 desde GitHub",
+      "Crea un mensaje de bienvenida que muestra tu hostname en ASCII art 3D al hacer login",
+      "Elimina automáticamente cualquier instalación previa de Figurine si la hay",
+      "Configura el mensaje de bienvenida para que se ejecute automáticamente al hacer login"
+    ],
+    "practicalLabel": "Uso práctico:",
+    "practicalBody": "Cuando gestionas varios nodos Proxmox en un cluster, Figurine proporciona una indicación visual inmediata de en qué nodo estás logueado. Esto ayuda a prevenir comandos accidentales en el nodo equivocado y mejora tu flujo de trabajo al gestionar varios servidores.",
+    "exampleLabel": "Salida de ejemplo:",
+    "imageAlt": "Salida de ejemplo de Figurine",
+    "automates": "Este ajuste automatiza el siguiente proceso:",
+    "outro": "Tras la instalación, verás tu hostname mostrado en ASCII art 3D cada vez que hagas login, dejando claro inmediatamente con qué nodo Proxmox estás trabajando."
+  },
+  "autoApplication": {
+    "title": "Aplicación automática",
+    "body": "Estas funcionalidades opcionales solo se aplican cuando se seleccionan específicamente durante el proceso post-instalación. Cada funcionalidad puede elegirse individualmente según tus necesidades y preferencias específicas."
+  }
+}

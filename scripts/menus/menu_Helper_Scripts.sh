@@ -1,21 +1,33 @@
 #!/bin/bash
 
 # ==========================================================
-# ProxMenux - A menu-driven script for Proxmox VE management
+# ProxMenux - Proxmox VE Helper Scripts Browser
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.3
-# Last Updated: 14/03/2025
 # ==========================================================
 # Description:
-# This script provides a simple and efficient way to access and execute Proxmox VE scripts
-# from the Community Scripts project (https://community-scripts.github.io/ProxmoxVE/).
+# Front-end for the community-scripts/ProxmoxVE catalog
+# (https://community-scripts.github.io/ProxmoxVE/) —
+# the spiritual continuation of tteck's helper scripts.
 #
-# It serves as a convenient tool to run key automation scripts that simplify system management,
-# continuing the great work and legacy of tteck in making Proxmox VE more accessible.
-# A streamlined solution for executing must-have tools in Proxmox VE.
+# Loads a curated JSON cache (helpers_cache.json) maintained
+# by ProxMenux on GitHub, lists categories + scripts with
+# search and type filters, and executes the chosen script
+# via "bash <(curl -s <url>)".
+#
+# Features:
+# - Browse scripts by category (Container, OS, Network, …).
+# - Free-text search across name and description.
+# - Per-script details: description, notes, default credentials,
+#   default port, website.
+# - Choice of source (GitHub or Mirror) per script.
+# - Type labels: LXC / VM / PVE / ADDON / TK / GEN.
+#
+# Requires: curl, jq, dialog. Internet access mandatory.
 # ==========================================================
 
 
@@ -44,7 +56,11 @@ for cmd in curl jq dialog; do
   fi
 done
 
-CACHE_JSON=$(curl -s "$HELPERS_JSON_URL")
+# `--connect-timeout` caps DNS+TCP setup; `--max-time` caps total fetch.
+# Without these the menu would hang silently for minutes when the network
+# is down or the upstream is slow, with no signal to the user. Audit
+# Tier 6 — `menu_Helper_Scripts.sh` curl sin --max-time.
+CACHE_JSON=$(curl -s --connect-timeout 5 --max-time 15 "$HELPERS_JSON_URL")
 
 # Validate that the JSON loaded correctly
 if ! echo "$CACHE_JSON" | jq -e 'if type == "array" and length > 0 then true else false end' >/dev/null 2>&1; then
@@ -93,8 +109,10 @@ get_type_label() {
 download_script() {
   local url="$1"
 
-  if curl --silent --head --fail "$url" >/dev/null; then
-    bash <(curl -s "$url")
+  # Same timeouts as the cache fetch above so a stalled mirror can't hang
+  # the menu indefinitely. The HEAD probe and the GET both get bounded.
+  if curl --silent --connect-timeout 5 --max-time 10 --head --fail "$url" >/dev/null; then
+    bash <(curl -s --connect-timeout 5 --max-time 60 "$url")
   else
     dialog --title "Helper Scripts" --msgbox "$(translate "Error: Failed to download the script.")" 8 70
   fi
@@ -152,28 +170,45 @@ run_script_by_slug() {
   decode() { echo "$1" | base64 --decode | jq -r "$2"; }
 
   local first="${script_infos[0]}"
-  local name desc notes port website
+  local name desc notes warnings port website
   name=$(decode "$first" ".name")
   desc=$(decode "$first" ".desc")
-  notes=$(decode "$first" '.notes | join("\n")')
+  notes=$(decode "$first" '.notes // [] | join("\n")')
+  # Sprint 11.7: PocketBase upstream tags certain notes with type=="warning".
+  # The cache generator splits them into a separate `warnings` array so the
+  # menu can render them in red with a dedicated WARNINGS header instead of
+  # burying them inside the regular notes block.
+  warnings=$(decode "$first" '.warnings // [] | join("\n")')
   port=$(decode "$first" ".port // 0")
   website=$(decode "$first" ".website // empty")
-
-  # Build notes block
-  local notes_dialog=""
-  if [[ -n "$notes" ]]; then
-    while IFS= read -r line; do
-      [[ -z "$line" ]] && continue
-      notes_dialog+="• $line\n"
-    done <<< "$notes"
-    notes_dialog="${notes_dialog%\\n}"
-  fi
 
   local credentials
   credentials=$(format_credentials "$first")
 
-  # Build info message
-local msg="\Zb\Z4$(translate "Description"):\Zn\n$desc"
+  # Build info message — warnings first, in red, so the user sees them
+  # before deciding to launch the script. Sections are separated by a
+  # single \n (one blank line) instead of \n\n; the bullet builders below
+  # also strip their trailing \n so we don't double up. Helper Scripts
+  # like "PVE LXC Apps Update" carry a lot of text and a fixed-height
+  # dialog clips the bottom menu when each section eats two extra rows.
+  local msg="\Zb\Z4$(translate "Description"):\Zn\n$desc"
+  if [[ -n "$warnings" ]]; then
+    local warn_short=""
+    local char_count=0
+    local max_chars=400
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      char_count=$(( char_count + ${#line} ))
+      if [[ $char_count -lt $max_chars ]]; then
+        warn_short+="• $line\n"
+      else
+        warn_short+="...\n"
+        break
+      fi
+    done <<< "$warnings"
+    warn_short="${warn_short%\\n}"
+    msg+="\n\Zb\Z1⚠ $(translate "Warnings"):\Zn\n\Z1${warn_short}\Zn"
+  fi
   if [[ -n "$notes" ]]; then
     local notes_short=""
     local char_count=0
@@ -188,13 +223,14 @@ local msg="\Zb\Z4$(translate "Description"):\Zn\n$desc"
         break
       fi
     done <<< "$notes"
-    msg+="\n\n\Zb\Z4$(translate "Notes"):\Zn\n$notes_short"
+    notes_short="${notes_short%\\n}"
+    msg+="\n\Zb\Z4$(translate "Notes"):\Zn\n$notes_short"
   fi
-  [[ -n "$credentials" ]] && msg+="\n\n\Zb\Z4$(translate "Default Credentials"):\Zn\n$credentials"
-  [[ "$port" -gt 0 ]] && msg+="\n\n\Zb\Z4$(translate "Default Port"):\Zn $port"
+  [[ -n "$credentials" ]] && msg+="\n\Zb\Z4$(translate "Default Credentials"):\Zn\n$credentials"
+  [[ "$port" -gt 0 ]] && msg+="\n\Zb\Z4$(translate "Default Port"):\Zn $port"
   [[ -n "$website" ]] && msg+="\n\Zb\Z4$(translate "Website"):\Zn $website"
 
-  msg+="\n\n$(translate "Choose how to run the script:")"
+  msg+="\n$(translate "Choose how to run the script:")"
 
   # Build menu: one or two entries per script_info (GH + optional Mirror)
   declare -a MENU_OPTS=()
@@ -251,8 +287,17 @@ local msg="\Zb\Z4$(translate "Description"):\Zn\n$desc"
   echo
   echo
 
-  if [[ -n "$desc" || -n "$notes" || -n "$credentials" ]]; then
+  if [[ -n "$desc" || -n "$notes" || -n "$warnings" || -n "$credentials" ]]; then
     echo -e "$TAB\e[1;36m$(translate "Script Information"):\e[0m"
+
+    if [[ -n "$warnings" ]]; then
+      echo -e "$TAB\e[1;31m⚠ $(translate "Warnings"):\e[0m"
+      while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        echo -e "$TAB\e[31m• $line\e[0m"
+      done <<< "$warnings"
+      echo
+    fi
 
     if [[ -n "$notes" ]]; then
       echo -e "$TAB\e[1;33m$(translate "Notes"):\e[0m"

@@ -1,10 +1,37 @@
 #!/bin/bash
+# ==========================================================
 # ProxMenux - Fail2Ban Installer & Configurator
-# ============================================
+# ==========================================================
 # Author      : MacRimi
-# License     : MIT
+# Copyright   : (c) 2024 MacRimi
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# ============================================
+# ==========================================================
+# Description:
+# Installs and configures Fail2Ban to protect SSH, the Proxmox VE
+# web UI (port 8006) and the ProxMenux Monitor (port 8008 + reverse
+# proxy) against brute-force attacks. Hybrid runtime: works from
+# terminal dialogs and from the ProxMenux web panel.
+#
+# Features:
+#   - Adjusts journald MaxLevelStore if Proxmox default ('warning')
+#     would silently drop SSH/PAM auth events.
+#   - Creates two journal-to-file logger services so Fail2Ban can use
+#     the reliable file backend instead of systemd journal (avoids
+#     known issues with pvedaemon worker / sshd journal reads).
+#   - Three jails: [sshd] (aggressive, 2 retries / 9h ban),
+#     [proxmox] (8006, 3 retries / 1h ban), [proxmenux] (8008 +
+#     http/https, 3 retries / 1h ban).
+#   - Auto-detects firewall backend (nftables preferred, iptables
+#     fallback) and sets the matching ban actions.
+#   - SSH hardening: sets MaxAuthTries=3 (Lynis SSH-7408 recommendation),
+#     backing up the original value for clean restore on uninstall.
+#   - Reinstall flow rewrites all jails with current defaults.
+#   - Clean uninstall: removes jails, logger services, journald drop-in
+#     and restores the original SSH MaxAuthTries.
+#   - Component status tracked in components_status.json.
+# ==========================================================
 # Hybrid script: works from terminal (dialog) and web panel (ScriptTerminalModal)
 
 SCRIPT_TITLE="Fail2Ban Installer for Proxmox VE"

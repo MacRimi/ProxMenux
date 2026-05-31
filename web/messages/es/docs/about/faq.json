@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "FAQ | ProxMenux Documentation",
+    "description": "Preguntas frecuentes sobre ProxMenux: qué es, instalación, compatibilidad (solo PVE 8+), personalización, actualizaciones, seguridad, uso en producción, seguridad de archivos del sistema, contribuir, desinstalación.",
+    "ogTitle": "FAQ | ProxMenux Documentation",
+    "ogDescription": "Preguntas frecuentes sobre instalación, compatibilidad, seguridad y contribución a ProxMenux."
+  },
+  "header": {
+    "title": "Preguntas frecuentes",
+    "description": "Preguntas comunes sobre ProxMenux: qué es, para quién, cómo instalar / actualizar / desinstalar, compatibilidad, personalización, seguridad y contribuir. Si tu pregunta no está aquí, mira las GitHub Discussions o abre una incidencia.",
+    "section": "Acerca de"
+  },
+  "quickLinks": {
+    "title": "Enlaces rápidos",
+    "installationLabel": "Instalación",
+    "installationSuffix": " — el comando de instalación de una línea + dependencias.",
+    "introductionLabel": "Introducción",
+    "introductionSuffix": " — qué hace ProxMenux, en 5 minutos.",
+    "uninstallLabel": "Desinstalación",
+    "uninstallSuffix": " — eliminación limpia.",
+    "issuesLabel": "GitHub Issues",
+    "discussionsLabel": "Discussions"
+  },
+  "q1": {
+    "question": "¿Qué es ProxMenux y para qué sirve?",
+    "p1Rich": "<strong>ProxMenux</strong> es una herramienta interactiva basada en menús diseñada para hacer <strong>Proxmox VE</strong> accesible a todos los usuarios, independientemente de su experiencia técnica. Simplifica la ejecución de comandos, permitiendo a los usuarios realizar acciones en su sistema sin necesidad de conocimientos avanzados de Linux.",
+    "p2": "Para usuarios menos experimentados, ProxMenux ofrece una forma intuitiva de ejecutar comandos mediante una interfaz de menús estructurada, reduciendo la necesidad de entrada manual por terminal. Para administradores con experiencia, recorta pulsaciones para flujos repetitivos (hardening post-instalación, passthrough de GPU, importación de VMs OVF, rotaciones de snapshots ZFS).",
+    "p3": "Proxmox VE se usa ampliamente para:",
+    "items": [
+      "Virtualización de nivel empresarial",
+      "HomeLab y soluciones de nube personal",
+      "Servidores multimedia, automatización y más"
+    ]
+  },
+  "q2": {
+    "question": "¿Cómo instalo ProxMenux?",
+    "p1Rich": "Sigue la <installlink>guía de instalación</installlink>. En corto:",
+    "stableInstall": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)\"",
+    "p2": "Una vez instalado, simplemente arráncalo con:",
+    "menuCmd": "menu"
+  },
+  "q3": {
+    "question": "¿ProxMenux es compatible con todas las versiones de Proxmox?",
+    "bodyRich": "<strong>No — ProxMenux requiere Proxmox VE 8 o posterior.</strong> PVE 7 y anteriores no están soportados. Si aún estás en PVE 7, sigue primero el procedimiento oficial de upgrade de Proxmox a 8.x; ProxMenux puede entonces encargarse del salto 8 → 9 por ti vía <upgradelink>Utilidades → Actualizar PVE 8 a PVE 9</upgradelink>."
+  },
+  "q4": {
+    "question": "¿Puedo personalizar ProxMenux?",
+    "p1Rich": "Los scripts del núcleo no se pueden modificar directamente porque están alojados en GitHub y se refrescan con el flujo de auto-actualización. Lo que <em>sí</em> puedes personalizar:",
+    "items": [
+      "El banner de la consola vía la herramienta <strong>FastFetch</strong> en las opciones de post-instalación.",
+      "Qué componentes opcionales se instalan (Monitor, Fail2Ban, Lynis…) — elige durante la instalación o vía el menú correspondiente más tarde."
+    ]
+  },
+  "q5": {
+    "question": "¿Cómo actualizo ProxMenux?",
+    "p1Rich": "Cuando hay una nueva versión disponible, ProxMenux la detecta en el siguiente lanzamiento de <code>menu</code> y te pide actualizar. Aceptar reemplaza los archivos de utilidad y las configuraciones en sitio. No hace falta descarga manual.",
+    "p2Rich": "Los usuarios estables reciben releases estables; los usuarios beta reciben releases beta. Cuando se publica una versión estable, ProxMenux notifica a los usuarios beta en el siguiente lanzamiento y ofrece cambiar automáticamente — mira la página del <betalink>programa beta</betalink>."
+  },
+  "q6": {
+    "question": "¿Dónde puedo reportar incidencias?",
+    "p1Rich": "Los reportes de bugs van en <issueslink>GitHub Issues</issueslink>. Incluye pasos de reproducción, mensajes de error y (para incidencias relacionadas con el Monitor) la salida de <code>journalctl -u proxmenux-monitor -n 50</code>.",
+    "p2Rich": "Para problemas de <strong>seguridad</strong>, por favor <strong>no los publiques</strong>. Lee el <coclink>código de conducta y buenas prácticas</coclink> para el procedimiento de divulgación responsable."
+  },
+  "q7": {
+    "question": "¿Puedo contribuir a ProxMenux?",
+    "p1Rich": "<strong>Absolutamente.</strong> ProxMenux es de código abierto y colaborativo. Las contribuciones pueden ser código (bash, Next.js / TypeScript, el venv de Python de traducción), pruebas, documentación, diseño o simplemente ideas.",
+    "item1Rich": "Discute ideas en <discusslink>GitHub Discussions</discusslink> antes de abrir una petición de función.",
+    "item2Rich": "Para PRs, lee primero el <coclink>código de conducta y buenas prácticas</coclink>.",
+    "item3Rich": "Mira la <contriblink>página de colaboradores</contriblink> para los testers y revisores actuales."
+  },
+  "q8": {
+    "question": "¿ProxMenux modifica archivos críticos del sistema?",
+    "p1Rich": "<strong>No.</strong> ProxMenux instala:",
+    "item1Rich": "Dependencias vía apt: <code>dialog</code>, <code>curl</code>, <code>jq</code>, <code>git</code> (y <code>python3</code> + <code>googletrans</code> en la instalación con traducción).",
+    "item2Rich": "El árbol de scripts en <code>/usr/local/share/proxmenux/</code>.",
+    "item3Rich": "El lanzador en <code>/usr/local/bin/menu</code>.",
+    "item4Rich": "Opcional: el servicio systemd del Monitor en <code>proxmenux-monitor.service</code>.",
+    "p2Rich": "ProxMenux <em>no</em> toca la configuración del núcleo de Proxmox a menos que se lo pidas explícitamente vía un menú dedicado (p. ej. el flujo de reparación de red edita <code>/etc/network/interfaces</code> — pero solo después de que confirmes y se haga un backup)."
+  },
+  "q9": {
+    "question": "¿Es seguro usar ProxMenux en producción?",
+    "bodyRich": "<strong>Sí.</strong> Como ProxMenux no modifica archivos del núcleo de Proxmox a menos que se le pida explícitamente, se puede usar en entornos de producción. Como con cualquier automatización, prueba en un entorno controlado primero y ten backups antes de ejecutar flujos destructivos (upgrade PVE 8 → 9, formateo de disco, destrucción de VM…)."
+  },
+  "q10": {
+    "question": "¿Cómo desinstalo ProxMenux?",
+    "p1Rich": "Desde dentro de ProxMenux: <strong>Settings → Desinstalar ProxMenux</strong>. El desinstalador elimina el árbol de scripts, el lanzador y el servicio del Monitor, opcionalmente elimina las dependencias seleccionadas y restaura los backups de <code>/root/.bashrc</code> y <code>/etc/motd</code> tomados en el momento de la instalación.",
+    "p2Rich": "Paso a paso completo: <uninstalllink>Desinstalar ProxMenux</uninstalllink>."
+  },
+  "q11": {
+    "question": "VirusTotal marca la URL de instalación — ¿es seguro?",
+    "p1Rich": "Una detección 1/95 por motores heurísticos (p. ej. <em>Chong Lua Dao</em>) es un falso positivo conocido. El instalador usa el patrón estándar <code>curl | bash</code> y descarga binarios legítimos (como <code>jq</code> desde su release oficial en GitHub), que los escáneres agresivos marcan basándose en el <em>comportamiento</em> y no en código realmente malicioso.",
+    "p2Rich": "ProxMenux es 100% código abierto y el script de instalación es revisable línea por línea: <scriptlink>install_proxmenux.sh</scriptlink>. Más contexto en la <issuelink>Issue #162</issuelink>."
+  }
+}

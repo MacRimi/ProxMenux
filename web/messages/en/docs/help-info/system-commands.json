@@ -1,0 +1,158 @@
+{
+  "meta": {
+    "title": "Proxmox VE System Commands — pveversion, uptime, journalctl, systemctl | ProxMenux",
+    "description": "Reference of essential Proxmox VE and Linux system commands: pveversion, pveperf, uptime, journalctl, systemctl, lscpu, lsblk, df, free, last, who. All read-only and safe to run on any host.",
+    "ogTitle": "Proxmox VE System Commands — pveversion, uptime, journalctl, systemctl",
+    "ogDescription": "Reference of essential Proxmox VE and Linux system commands — version, uptime, services, logs, user info, hardware probes. All read-only.",
+    "twitterTitle": "Proxmox VE System Commands | ProxMenux",
+    "twitterDescription": "Essential system inspection commands for Proxmox VE — version, status, services, logs, user info."
+  },
+  "header": {
+    "title": "Useful System Commands",
+    "description": "Read-only commands to look at the Proxmox host: version, kernel, uptime, memory, web UI status, recent log lines, who's logged in, and a couple of audit / summary tools. None of them modifies the system.",
+    "section": "Help and Info"
+  },
+  "intro": {
+    "title": "What this is",
+    "body": "The same numbered list ProxMenux shows when you choose <em>Useful System Commands</em>. Use the Copy button to grab any command, or look it up to remember the exact flag."
+  },
+  "commandGroups": [
+    {
+      "title": "System Information",
+      "commands": [
+        {
+          "command": "pveversion",
+          "description": "Show Proxmox version"
+        },
+        {
+          "command": "pveversion -v",
+          "description": "Detailed Proxmox version info"
+        },
+        {
+          "command": "hostnamectl",
+          "description": "System hostname and kernel info"
+        },
+        {
+          "command": "uname -a",
+          "description": "Kernel and architecture info"
+        },
+        {
+          "command": "cat /etc/os-release",
+          "description": "OS release details"
+        }
+      ]
+    },
+    {
+      "title": "System Status",
+      "commands": [
+        {
+          "command": "uptime",
+          "description": "System uptime"
+        },
+        {
+          "command": "uptime -p",
+          "description": "Pretty uptime format"
+        },
+        {
+          "command": "free -h",
+          "description": "RAM and swap usage"
+        },
+        {
+          "command": "who -b",
+          "description": "Last system boot time"
+        },
+        {
+          "command": "last -x | grep shutdown",
+          "description": "Previous shutdowns"
+        }
+      ]
+    },
+    {
+      "title": "Service Management",
+      "commands": [
+        {
+          "command": "systemctl status pveproxy",
+          "description": "Check Proxmox Web UI status"
+        },
+        {
+          "command": "systemctl restart pveproxy",
+          "description": "Restart Web UI proxy"
+        },
+        {
+          "command": "journalctl -xe",
+          "description": "System errors and logs"
+        },
+        {
+          "command": "dmesg -T | tail -n 50",
+          "description": "Last 50 kernel log lines"
+        }
+      ]
+    },
+    {
+      "title": "User Information",
+      "commands": [
+        {
+          "command": "whoami",
+          "description": "Current user"
+        },
+        {
+          "command": "id",
+          "description": "Current user UID, GID and groups"
+        },
+        {
+          "command": "who",
+          "description": "Logged-in users"
+        },
+        {
+          "command": "w",
+          "description": "User activity and uptime"
+        },
+        {
+          "command": "uptime && w",
+          "description": "Uptime and who is logged in"
+        },
+        {
+          "command": "cut -d: -f1,3,4 /etc/passwd",
+          "description": "All users with UID and GID"
+        },
+        {
+          "command": "getent passwd | column -t -s :",
+          "description": "Readable user table (UID, shell, etc.)"
+        }
+      ]
+    },
+    {
+      "title": "Auditing & Summary Tools",
+      "commands": [
+        {
+          "command": "lynis audit system",
+          "description": "Run a full system security audit"
+        },
+        {
+          "command": "fastfetch",
+          "description": "Display system summary in ASCII format"
+        }
+      ]
+    }
+  ],
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/help-info/update-commands",
+        "label": "Updates and Packages",
+        "tail": " — apt and pve upgrade commands."
+      },
+      {
+        "href": "/docs/help-info/tools-commands",
+        "label": "System CLI Tools",
+        "tail": " — htop, btop, ncdu and friends."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Help and Info overview",
+        "tail": "."
+      }
+    ]
+  }
+}

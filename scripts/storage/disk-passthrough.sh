@@ -1,30 +1,26 @@
 #!/bin/bash
 
 # ==========================================================
-# ProxMenux - A menu-driven script for Proxmox VE management
+# ProxMenux - Import Disk to VM (Passthrough)
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.2
-# Last Updated: 12/04/2026
 # ==========================================================
 # Description:
-# This script allows users to assign physical disks to existing
-# Proxmox virtual machines (VMs) through an interactive menu.
-# - Detects the system disk and excludes it from selection.
-# - Lists all available VMs for the user to choose from.
-# - Identifies and displays unassigned physical disks.
-# - Allows the user to select multiple disks and attach them to a VM.
-# - Supports interface types: SATA, SCSI, VirtIO, and IDE.
-# - Ensures that disks are not already assigned to active VMs.
-# - Warns about disk sharing between multiple VMs to avoid data corruption.
-# - Configures the selected disks for the VM and verifies the assignment.
-# - Prefers persistent /dev/disk/by-id paths for assignment when available.
+# Assigns physical disks to existing Proxmox VMs via an
+# interactive menu. Uses persistent /dev/disk/by-id paths
+# whenever available and blocks system / already-assigned disks.
 #
-# The goal of this script is to simplify the process of assigning
-# physical disks to Proxmox VMs, reducing manual configurations
-# and preventing potential errors.
+# Features:
+# - Detects and excludes the system disk.
+# - Lists all VMs for selection.
+# - Identifies unassigned physical disks.
+# - Supports SATA, SCSI, VirtIO and IDE interfaces.
+# - Warns about disk sharing between VMs to avoid corruption.
+# - Verifies the assignment after attaching.
 # ==========================================================
 
 
@@ -426,7 +422,11 @@ for i in "${!DISK_LIST[@]}"; do
     IFS=$'\t' read -r _model _size <<< "${DISK_DESCRIPTIONS[$i]}"
 
     INDEX=0
-    while qm config "$VMID" | grep -q "${INTERFACE}${INDEX}"; do
+    # Anchor the match: `^scsi1:` vs `^scsi1\d:`. The previous `grep -q
+    # "scsi1"` matched scsi10/scsi11/... and skipped over a genuinely-free
+    # scsi1 slot — the disk still got attached but a hole was left mid-
+    # range. Audit Tier 6 — `disk-passthrough.sh` slot search no anchored.
+    while qm config "$VMID" | grep -Eq "^${INTERFACE}${INDEX}:"; do
         ((INDEX++))
     done
 

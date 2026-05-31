@@ -1,0 +1,106 @@
+{
+  "meta": {
+    "title": "Script post-instalación de Proxmox VE — Automatizado y personalizable | ProxMenux",
+    "description": "Resumen de los scripts post-instalación de ProxMenux para Proxmox VE. Ejecuta el script Automatizado para valores por defecto sensatos sin preguntas, el script Personalizable para elegir exactamente qué quieres entre 10 categorías (sistema, virtualización, red, almacenamiento, seguridad, rendimiento, opcional), o revierte cualquier cambio por completo con la opción Uninstall Optimizations.",
+    "ogTitle": "Script post-instalación de Proxmox VE — Automatizado y personalizable",
+    "ogDescription": "Aplica optimizaciones comunes post-instalación de Proxmox VE en 10 categorías — automatizadas o a la carta, con opciones reversibles.",
+    "twitterTitle": "Script post-instalación de Proxmox VE | ProxMenux",
+    "twitterDescription": "Optimizaciones post-instalación automatizadas y personalizables para Proxmox VE — con opciones reversibles."
+  },
+  "header": {
+    "title": "Scripts post-instalación",
+    "description": "Configura un host de Proxmox VE recién instalado con las optimizaciones post-instalación de ProxMenux. Tres rutas: ejecutar todo automáticamente, elegir lo que quieres, o revertir cualquier cambio. Todos los cambios quedan registrados.",
+    "section": "Settings post-install Proxmox"
+  },
+  "intro": {
+    "title": "Para qué sirve este menú",
+    "body": "Justo después de instalar Proxmox VE, hay decenas de pequeños cambios que hacen el host más rápido y más fácil de mantener — repositorios sin suscripción, límites sensatos para journald, buffers TCP razonables, almacenamiento de logs amigable con SSD, mejoras en bashrc y más. ProxMenux los automatiza todos, registra lo que cambió y te permite revertirlo."
+  },
+  "openingMenu": {
+    "heading": "Abrir el menú",
+    "body": "Desde el menú principal de ProxMenux, selecciona <strong>Settings post-install Proxmox</strong>. Verás esto:",
+    "imageAlt": "Menú de scripts post-instalación con 3 opciones de ProxMenux (Automatizado / Personalizable / Uninstall) seguidas de la sección Community Scripts"
+  },
+  "threeWays": {
+    "heading": "Tres formas de aplicar optimizaciones",
+    "body": "Las tres entradas de ProxMenux comparten el mismo código subyacente y el mismo registro de herramientas instaladas — solo te dan distintos niveles de control. Elige la que se ajusta a cuánto quieres decidir."
+  },
+  "routes": [
+    {
+      "title": "Automatizado",
+      "description": "Un conjunto curado de 13 optimizaciones seguras y siempre útiles aplicadas en secuencia sin preguntas. Buen valor por defecto para la mayoría de usuarios.",
+      "bullets": [
+        "Repos sin suscripción + upgrade del sistema",
+        "Tuning de memoria, kernel y red",
+        "Log2RAM (autodetectado en SSD/NVMe)",
+        "Límites de tamaño de journald + logrotate",
+        "Nombres de interfaz persistentes"
+      ]
+    },
+    {
+      "title": "Personalizable",
+      "description": "~30 optimizaciones individuales en 10 categorías. Eliges exactamente cuáles aplicar. Mismo motor que el Automatizado, pero con control total.",
+      "bullets": [
+        "UI de checklist por categoría",
+        "Incluye todo lo que hace el Automatizado, más opciones opt-in (IOMMU, Fastfetch, Figurine, Ceph, HA, fixes de AMD…)",
+        "Ejecuta tantas veces como quieras — los cambios son idempotentes"
+      ]
+    },
+    {
+      "title": "Apply Available Updates",
+      "description": "Cuando una optimización post-instalación (Log2Ram, Memory Settings, Logrotate…) tiene en disco una versión más nueva que la registrada en el host, esta entrada muestra solo las que se han movido. Re-ejecuta la función correspondiente y refresca el registro — no toca nada más.",
+      "bullets": [
+        "Opt-in por optimización (solo lo que ha cambiado)",
+        "Mismo selector disponible desde el panel del Monitor",
+        "Una única notificación agrupada cuando llegan actualizaciones nuevas"
+      ]
+    },
+    {
+      "title": "Uninstall Optimizations",
+      "description": "Cada cambio hecho por cualquiera de las rutas queda registrado en un JSON, y cada optimización tiene una función inversa. Elige qué revertir y el host vuelve atrás.",
+      "bullets": [
+        "Detecta automáticamente las optimizaciones aplicadas previamente",
+        "La reversión restaura las configuraciones originales desde archivos de backup",
+        "Pregunta antes de reiniciar si hace falta (VFIO, nombres persistentes, etc.)"
+      ]
+    }
+  ],
+  "whichTitle": "¿Cuál deberías elegir?",
+  "whichBody": "Si es una instalación recién hecha de Proxmox y quieres el baseline sensato sin tener que decidir: <autoLink><strong>Automatizado</strong></autoLink>. Si ya sabes qué tweaks quieres (o cuáles definitivamente no quieres): <customLink><strong>Personalizable</strong></customLink>. Si algo que ya aplicaste tiene una versión más nueva en disco y solo quieres subir esa: <updatesLink><strong>Apply Available Updates</strong></updatesLink>. Si aplicaste algo antes y quieres revertirlo de forma limpia: <uninstallLink><strong>Uninstall Optimizations</strong></uninstallLink>. Puedes mezclarlas — aplicar primero Automatizado, luego abrir Personalizable para añadir opt-ins como Fastfetch o IOMMU, y revertir cualquier item individual más tarde.",
+  "mixing": {
+    "heading": "Mezclar con otros scripts post-instalación",
+    "stackTitle": "No apiles varios scripts post-instalación",
+    "stackBody": "Ejecutar varios scripts post-instalación en el mismo host puede causar archivos de configuración duplicados, entradas sysctl en conflicto, o peor — red rota tras reiniciar. Si ya aplicaste el <strong>Helper-Scripts Post Install</strong>, algunas optimizaciones de ProxMenux pueden solaparse con lo que ya configuró. Quédate con una sola herramienta post-instalación por host.",
+    "xshokTitle": "xshok-proxmox: deprecado",
+    "xshokBody": "Versiones anteriores de ProxMenux referenciaban <a>xshok-proxmox</a> como herramienta post-instalación complementaria. Ese proyecto ahora está deprecado y ya no se ofrece desde ProxMenux. Si una ejecución anterior de xshok-proxmox dejó marcadores en el host, ProxMenux todavía los detecta y te avisa — pero no es algo que debas instalar junto a ProxMenux hoy."
+  },
+  "community": {
+    "heading": "Community scripts",
+    "body": "El menú también expone dos scripts de terceros del proyecto <a>community-scripts</a>: <em>Proxmox VE Post Install</em> y <em>Proxmox VE Microcode</em>. Son wrappers que hacen <code>wget | bash</code> de los scripts de los autores originales. No los mantiene ProxMenux. Mira <link>External Repositories</link> para detalles y consideraciones de confianza antes de ejecutarlos."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "Proxmox System Update",
+        "href": "/docs/utils/system-update",
+        "tail": " — mantiene el host actualizado una vez ya se ha hecho la post-instalación."
+      },
+      {
+        "label": "Seguridad",
+        "href": "/docs/security",
+        "tail": " — Fail2Ban + Lynis sobre el hardening de la post-instalación."
+      },
+      {
+        "label": "Mostrar información de versión",
+        "href": "/docs/settings/show-version-information",
+        "tail": " — ver qué componentes post-instalación están registrados como instalados."
+      },
+      {
+        "label": "Comandos de actualizaciones y paquetes",
+        "href": "/docs/help-info/update-commands",
+        "tail": " — referencia de apt / pveupgrade."
+      }
+    ]
+  }
+}

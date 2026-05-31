@@ -1,0 +1,142 @@
+{
+  "meta": {
+    "title": "Format / Wipe Physical Disk | ProxMenux Documentation",
+    "description": "Secure physical disk wipe and format on Proxmox VE using ProxMenux. Four operation modes, strict safety filters (system / mounted / in-use disks blocked) and double confirmation including full path typing.",
+    "ogTitle": "Format / Wipe Physical Disk | ProxMenux Documentation",
+    "ogDescription": "Securely wipe or format a physical disk on Proxmox. Safe visibility rules, 4 operation modes, double confirmation."
+  },
+  "header": {
+    "title": "Format / Wipe Physical Disk",
+    "description": "Securely wipe or format a physical disk on the Proxmox host. ProxMenux only shows disks that are fully free (no system use, no guest reference, no mounts) and forces a double confirmation — yes/no plus typing the full disk path — before destroying any data.",
+    "section": "Disk Manager · Utilities"
+  },
+  "danger": {
+    "title": "Destructive tool",
+    "body": "Every operation here writes to the disk. There is no undo. ProxMenux applies strict safety filters and confirmations, but the responsibility for picking the right disk is yours. Read the disk path out loud twice before you type it."
+  },
+  "howRuns": {
+    "heading": "How the script runs",
+    "body": "The flow has two phases with a triple-gate safety filter in between. The disk list, the operation mode and the file system details are all collected in Phase 1; nothing is written until Phase 2 passes a final re-validation right before executing."
+  },
+  "visibility": {
+    "heading": "Visibility rules",
+    "intro": "Before the menu even appears, ProxMenux filters the disk list. Only candidates that are provably safe are shown:",
+    "items": [
+      "<strong>Shown</strong> — disks <em>not</em> used by the host (root pool, swap, mounted, active ZFS/LVM/RAID) and <em>not</em> referenced by any VM/LXC config (running or stopped).",
+      "<strong>Hidden</strong> — host / system disks.",
+      "<strong>Hidden</strong> — disks referenced by a VM/LXC config."
+    ],
+    "safetyTitle": "Safety at confirmation and execution",
+    "safetyItems": [
+      "Disks with stale / active metadata show detailed warnings <em>before</em> you confirm.",
+      "Disks used by a <strong>running</strong> VM are <strong>hard-blocked</strong> at confirmation.",
+      "Disks with mounted partitions are <strong>hard-blocked</strong> at execution (a fresh re-validation runs right before anything is written).",
+      "Two confirmations are always required: <em>yes/no</em> dialog + typing the full disk path exactly."
+    ]
+  },
+  "modes": {
+    "heading": "Operation modes",
+    "intro": "After picking a disk you choose one of four modes. They differ in what they destroy and what they leave behind:",
+    "headerMode": "Mode",
+    "headerPart": "Partition table",
+    "headerData": "Data",
+    "headerUseCase": "Use case",
+    "rows": [
+      {
+        "mode": "1. Wipe all",
+        "part": "Destroyed",
+        "data": "Signatures wiped",
+        "useCase": "Starting fresh: everything on the disk goes, ready for a new layout."
+      },
+      {
+        "mode": "2. Remove FS labels",
+        "part": "Preserved",
+        "data": "Preserved",
+        "useCase": "Clears stale ZFS / LVM / RAID signatures so the disk stops being auto-claimed, without touching the data."
+      },
+      {
+        "mode": "3. Zero all data",
+        "part": "Preserved",
+        "data": "Destroyed (zeroed)",
+        "useCase": "Sanitise before handing the disk over, keeping the existing partition layout."
+      },
+      {
+        "mode": "4. Full format",
+        "part": "New GPT",
+        "data": "Destroyed",
+        "useCase": "Ready-to-use disk with a single new partition and a fresh filesystem."
+      }
+    ],
+    "fullFormatOutro": "<strong>Full format</strong> continues with two extra dialogs:",
+    "fullFormatItems": [
+      "<strong>Filesystem</strong> — <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portable), or <code>btrfs</code>. Missing tools (for example <code>mkfs.btrfs</code>) abort with a clear message.",
+      "<strong>Label</strong> — optional filesystem label for identification."
+    ]
+  },
+  "steps": {
+    "heading": "Step-by-step",
+    "stepLabel": "Step",
+    "list": [
+      {
+        "title": "Pick a free disk",
+        "body": "ProxMenux lists every disk that passes the visibility filters above. Disks with ⚠ markers carry stale metadata and are shown with the details so you know what you are about to overwrite."
+      },
+      {
+        "title": "Pick an operation mode",
+        "bodyRich": "Choose between <strong>Wipe all</strong>, <strong>Remove FS labels</strong>, <strong>Zero all data</strong> or <strong>Full format</strong> according to the table above."
+      },
+      {
+        "title": "(Full format only) Pick filesystem and label",
+        "body": "ext4 / xfs / exfat / btrfs, plus an optional label."
+      },
+      {
+        "title": "Confirm twice",
+        "bodyRich": "ProxMenux shows a summary of what will happen. You accept with a yes/no dialog and <strong>type the full disk path</strong> exactly as shown (for example <code>/dev/sdc</code>). Anything else aborts."
+      },
+      {
+        "title": "Re-validation and execution",
+        "body": "Just before writing, the script re-checks the disk state. If a partition has been mounted or a VM started in the meantime, execution is aborted. Otherwise the chosen operation runs and a summary is printed at the end."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manual equivalents",
+    "body": "If you prefer to run the equivalent commands by hand:"
+  },
+  "troubleshoot": {
+    "notListedTitle": "Disk not listed in the menu",
+    "notListedBody": "It was filtered for safety. Common reasons: it is mounted (even at <code>/mnt/tmp</code>), it is an active ZFS / LVM / RAID member, it is referenced by a VM or LXC config, or it is your Proxmox root disk. Run <code>lsblk -f</code> and <code>cat /proc/mdstat</code> on the host to understand why.",
+    "busyTitle": "\"Disk may be busy\" / unmount failed",
+    "busyBody": "Something is still holding an open file on a partition of that disk — most often a container or a shell whose cwd is inside a mountpoint. Identify it with <code>lsof | grep /dev/sdX</code> or <code>fuser -vm /dev/sdX1</code>, stop it, then re-run the tool."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/disk-manager/smart-disk-test",
+        "label": "SMART Disk Health & Test",
+        "tail": " — check a disk before / after wiping to confirm it's healthy."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Import Disk to VM",
+        "tail": " — pass a freshly-formatted disk to a VM."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Add local disk as Proxmox storage",
+        "tail": " — register a wiped disk as a Proxmox storage pool."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Storage and Disks commands",
+        "tail": " — lsblk, blkid, parted reference."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Disk Manager overview",
+        "tail": "."
+      }
+    ]
+  }
+}

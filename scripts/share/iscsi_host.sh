@@ -4,12 +4,22 @@
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : MIT
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
+# Version     : 1.0
 # ==========================================================
 # Description:
-# Adds iSCSI targets as Proxmox storage (pvesm add iscsi).
-# Proxmox manages the connection natively via open-iscsi.
-# iSCSI storage provides block devices for VM disk images.
+# Registers iSCSI targets as Proxmox storage via
+# pvesm add iscsi. Proxmox manages the session natively via
+# open-iscsi; LUNs appear as raw block devices for VM disks.
+#
+# Features:
+# - Auto-installs open-iscsi + enables iscsid service.
+# - sendtargets discovery against a portal (IP:port).
+# - Auto-selects a single target; menu when several.
+# - Storage ID derived from the IQN suffix.
+# - Content type fixed to 'images' (block storage only).
+# - View, remove and connectivity-test for existing storages.
 # ==========================================================
 
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"

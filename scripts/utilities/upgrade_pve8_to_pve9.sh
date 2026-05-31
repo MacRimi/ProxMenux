@@ -1,12 +1,45 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenuX - Upgrade PVE 8 → 9 (Simplified, per official guide)
+# ProxMenux - Upgrade PVE 8 to PVE 9
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 14/08/2025
+# ==========================================================
+# Description:
+# Automated or interactive Proxmox VE 8 -> 9 major-version upgrade.
+# Follows the official Proxmox upgrade procedure (Debian Bookworm ->
+# Trixie + PVE 8 -> 9) with comprehensive safeguards, repository
+# migration, Ceph version validation and post-upgrade verification.
+#
+# A major-version upgrade is destructive and not reversible -- the
+# script enforces multiple safety gates and refuses to run from the
+# Proxmox web terminal.
+#
+# Features:
+#   - Mode menu: Automatic (unattended), Interactive, Pre-check,
+#     Manual guide.
+#   - Blocks execution from the web terminal (termproxy / vncshell);
+#     requires SSH or physical / IPMI / iKVM console.
+#   - Pre-flight: pve8to9 --full, disk-space check
+#     (/var/cache/apt/archives >= 1024 MB), connectivity to
+#     download.proxmox.com, Ceph 19.x Squid validation when present.
+#   - Brings PVE 8 to the latest 8.4.x patch level first via the
+#     PVE 8 update worker.
+#   - Repository migration: sed bookworm -> trixie, deb822 .sources
+#     files for proxmox + debian + ceph, automatic fallback from
+#     Enterprise to no-subscription on 401 Unauthorized.
+#   - Validates 'proxmox-ve' candidate is 9.x and that the dry-run
+#     dist-upgrade does not propose removing it (would indicate
+#     broken repo config).
+#   - dist-upgrade with --force-confdef --force-confold in
+#     unattended mode; user-driven dpkg prompts in interactive mode.
+#   - Post-upgrade: installs grub-efi-amd64 on EFI hosts, restarts
+#     pve-manager, re-runs pve8to9 to surface residual issues.
+#   - Reboot prompt at the end.
+#   - Full log written to /var/log/pve8-a-pve9-<timestamp>.log.
 # ==========================================================
 
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
@@ -20,6 +53,15 @@ fi
 
 load_language
 initialize_cache
+
+# Load shared global functions: cleanup_duplicate_repos and ensure_repositories
+# are referenced by the auto-repair flow below and live in these files.
+if [[ -f "$LOCAL_SCRIPTS/global/common-functions.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/common-functions.sh"
+fi
+if [[ -f "$LOCAL_SCRIPTS/global/utils-install-functions.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/utils-install-functions.sh"
+fi
 
 # ==========================================================
 
@@ -594,6 +636,17 @@ regenerate_pve_cache
 # ---------------------------
 
 run_pve8to9_check() {
+  # Same recursion guard as in pve8to9_check.sh — auto-repair followed by
+  # re-check could otherwise loop indefinitely if repairs don't actually
+  # resolve the FAIL. Cap at 3 attempts. Audit Tier 6.
+  : "${_PVE8TO9_DEPTH:=0}"
+  _PVE8TO9_DEPTH=$((_PVE8TO9_DEPTH + 1))
+  if (( _PVE8TO9_DEPTH > 3 )); then
+    msg_error "$(translate "Maximum auto-repair attempts reached (3). Please review the log and run any remaining commands manually.")"
+    _PVE8TO9_DEPTH=0
+    return 1
+  fi
+
   local tmp
   tmp="$(mktemp)"
   echo -e
@@ -637,9 +690,9 @@ run_pve8to9_check() {
       
       # Error 4: Repository configuration issues
       if grep -q -E '(repository.*issue|repo.*problem|sources.*error)' "$tmp"; then
-        repair_commands+=("cleanup_duplicate_repos && configure_repositories")
+        repair_commands+=("cleanup_duplicate_repos && ensure_repositories")
         repair_descriptions+=("$(translate "Fix repository configuration")")
-        echo -e "${YW}$(translate "Fix repositories:") ${CL}cleanup_duplicate_repos && configure_repositories"
+        echo -e "${YW}$(translate "Fix repositories:") ${CL}cleanup_duplicate_repos && ensure_repositories"
       fi
       
       # Error 5: Package conflicts
@@ -1003,9 +1056,9 @@ run_pve8to9_check2() {
       
       # Error 4: Repository configuration issues
       if grep -q -E '(repository.*issue|repo.*problem|sources.*error)' "$tmp"; then
-        repair_commands+=("cleanup_duplicate_repos && configure_repositories")
+        repair_commands+=("cleanup_duplicate_repos && ensure_repositories")
         repair_descriptions+=("$(translate "Fix repository configuration")")
-        echo -e "${YW}$(translate "Fix repositories:") ${CL}cleanup_duplicate_repos && configure_repositories"
+        echo -e "${YW}$(translate "Fix repositories:") ${CL}cleanup_duplicate_repos && ensure_repositories"
       fi
       
       # Error 5: Package conflicts

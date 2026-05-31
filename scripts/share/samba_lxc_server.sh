@@ -1,15 +1,24 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenux CT - Samba Manager for Proxmox LXC
+# ProxMenux - Samba Server Manager for LXC
 # ==========================================================
-# Based on ProxMenux by MacRimi
+# Author      : MacRimi
+# Copyright   : (c) 2024 MacRimi
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
+# Version     : 1.0
 # ==========================================================
 # Description:
-# This script allows you to manage Samba shares inside Proxmox CTs:
-# - Create shared folders
-# - View configured shares
-# - Delete existing shares
-# - Check Samba service status
+# Manages Samba (SMB / CIFS) shares from inside a Proxmox LXC
+# container. Requires a privileged container.
+#
+# Features:
+# - Install and configure samba inside the CT.
+# - Expose folders under /mnt as Samba shares.
+# - Set up a universal "sharedfiles" group (GID 101000) on the
+#   CT as a convention for cross-CT file sharing.
+# - List configured shares and check service status.
+# - Remove shares cleanly.
 # ==========================================================
 
 # Configuration
@@ -146,7 +155,11 @@ create_share() {
         if ! pct exec "$CTID" -- id "$USERNAME" &>/dev/null; then
             pct exec "$CTID" -- adduser --disabled-password --gecos "" "$USERNAME"
         fi
-        pct exec "$CTID" -- bash -c "echo -e '$PASSWORD\n$PASSWORD' | smbpasswd -a '$USERNAME'"
+        # Pipe the password via stdin instead of interpolating into a `bash -c`
+        # shell string. The previous form broke (and was injectable) when the
+        # password contained a single quote. `-s` makes smbpasswd read silently
+        # from stdin and `printf` keeps the bytes literal — no shell expansion.
+        printf '%s\n%s\n' "$PASSWORD" "$PASSWORD" | pct exec "$CTID" -- smbpasswd -s -a "$USERNAME"
         
         msg_ok "$(translate "Samba server installed successfully.")"
     else
@@ -159,11 +172,15 @@ create_share() {
     IS_MOUNTED=$(pct exec "$CTID" -- mount | grep "$MOUNT_POINT" || true)
     if [[ -n "$IS_MOUNTED" ]]; then
         msg_info "$(translate "Detected a mounted directory from host. Setting up shared group...")"
-        
-        SHARE_GID=999
+
+        # The `sharedfiles` group bridges Samba- and NFS-served paths so a
+        # file written by one protocol is writable by the other. Fixed GID
+        # 101000 keeps the group ID consistent across CTs / hosts that
+        # share the same mount.
+        SHARE_GID=101000
         GROUP_EXISTS=$(pct exec "$CTID" -- getent group sharedfiles || true)
         GID_IN_USE=$(pct exec "$CTID" -- getent group "$SHARE_GID" | cut -d: -f1 || true)
-        
+
         if [[ -z "$GROUP_EXISTS" ]]; then
             if [[ -z "$GID_IN_USE" ]]; then
                 pct exec "$CTID" -- groupadd -g "$SHARE_GID" sharedfiles
@@ -175,30 +192,25 @@ create_share() {
         else
             msg_ok "$(translate "Group 'sharedfiles' already exists inside the CT")"
         fi
-        
-        if pct exec "$CTID" -- getent group sharedfiles >/dev/null; then
-            pct exec "$CTID" -- usermod -aG sharedfiles "$USERNAME"
-            pct exec "$CTID" -- chown root:sharedfiles "$MOUNT_POINT"
-            pct exec "$CTID" -- chmod 2775 "$MOUNT_POINT"
-        else
-            msg_error "$(translate "Group 'sharedfiles' was not created successfully. Skipping chown/usermod.")"
-        fi
-        
-        HAS_ACCESS=$(pct exec "$CTID" -- su -s /bin/bash -c "test -w '$MOUNT_POINT' && echo yes || echo no" "$USERNAME" 2>/dev/null)
-        if [ "$HAS_ACCESS" = "no" ]; then
-            pct exec "$CTID" -- setfacl -R -m "u:$USERNAME:rwx" "$MOUNT_POINT"
-            msg_warn "$(translate "ACL permissions applied to allow write access for user:") $USERNAME"
-        else
-            msg_ok "$(translate "Write access confirmed for user:") $USERNAME"
-        fi
+
+        # Hand off ownership/perm setup to the shared helper. It detects
+        # the underlying filesystem (ext4/xfs/zfs/exfat/ntfs-fuse/…), picks
+        # the right strategy (chown+chmod, ACLs, or just inform the user
+        # if the FS can't carry POSIX permissions), and verifies write
+        # access with `runuser` (avoids the `su: cannot set groups`
+        # PAM quirk that hits `pct exec`).
+        pmx_setup_share_permissions "$CTID" "$MOUNT_POINT" "$USERNAME"
     else
         msg_ok "$(translate "No shared mount detected. Applying standard local access.")"
+        # Local (CT-internal) path: rootfs is always POSIX-friendly, so
+        # chown/chmod always succeed. Keep the previous behaviour.
         pct exec "$CTID" -- chown -R "$USERNAME:$USERNAME" "$MOUNT_POINT"
         pct exec "$CTID" -- chmod -R 755 "$MOUNT_POINT"
-        
-        HAS_ACCESS=$(pct exec "$CTID" -- su -s /bin/bash -c "test -w '$MOUNT_POINT' && echo yes || echo no" "$USERNAME" 2>/dev/null)
+
+        HAS_ACCESS=$(pct exec "$CTID" -- runuser -u "$USERNAME" -- \
+            bash -c "test -w '$MOUNT_POINT' && echo yes || echo no" 2>/dev/null)
         if [ "$HAS_ACCESS" = "no" ]; then
-            pct exec "$CTID" -- setfacl -R -m "u:$USERNAME:rwx" "$MOUNT_POINT"
+            pct exec "$CTID" -- setfacl -R -m "u:$USERNAME:rwx" "$MOUNT_POINT" 2>/dev/null || true
             msg_warn "$(translate "ACL permissions applied for local access for user:") $USERNAME"
         else
             msg_ok "$(translate "Write access confirmed for user:") $USERNAME"
@@ -213,6 +225,14 @@ create_share() {
     
     SHARE_NAME=$(basename "$MOUNT_POINT")
     
+    # `force user = $USERNAME` makes every Samba file operation happen
+    # under that unix UID regardless of the connecting Windows account.
+    # Combined with `force group = sharedfiles` and the matching
+    # ownership / ACLs applied earlier, this is what keeps writes
+    # consistent on host bind-mounts where the kernel sees Samba's
+    # impersonated UID — without it Windows can authenticate fine but
+    # writes silently fail because Samba ends up writing as some other
+    # mapped UID with no permission on the target.
     case "$SHARE_OPTIONS" in
         rw)
             CONFIG=$(cat <<EOF
@@ -224,6 +244,7 @@ create_share() {
     browseable = yes
     guest ok = no
     valid users = $USERNAME
+    force user = $USERNAME
     force group = sharedfiles
     create mask = 0664
     directory mask = 2775
@@ -243,6 +264,7 @@ EOF
     browseable = yes
     guest ok = no
     valid users = $USERNAME
+    force user = $USERNAME
     force group = sharedfiles
     veto files = /lost+found/
 EOF
@@ -255,6 +277,7 @@ EOF
     comment = Custom shared folder for $USERNAME
     path = $MOUNT_POINT
     valid users = $USERNAME
+    force user = $USERNAME
     force group = sharedfiles
     $CUSTOM_CONFIG
     veto files = /lost+found/
@@ -271,6 +294,7 @@ EOF
     browseable = yes
     guest ok = no
     valid users = $USERNAME
+    force user = $USERNAME
     force group = sharedfiles
     create mask = 0664
     directory mask = 2775

@@ -11,38 +11,105 @@ Author: MacRimi
 """
 
 import json
+import logging
 import time
 import urllib.request
 import urllib.error
 import urllib.parse
 from abc import ABC, abstractmethod
 from collections import deque
-from typing import Tuple, Optional, Dict, Any
+from typing import Tuple, Optional, Dict, Any, List
+
+
+# Server-side defense-in-depth for user-supplied URLs in channel configs.
+# `notification_manager.validate_external_url` rejects RFC1918 / loopback,
+# but Gotify is commonly self-hosted on a LAN so we relax that — and only
+# reject well-known SSRF targets (cloud metadata + the local PVE API).
+# Audit Tier 6 — sin validación SSRF en URLs de webhooks/canales.
+_KNOWN_SSRF_TARGETS = {
+    '169.254.169.254',  # AWS/GCE/Azure metadata
+    'metadata.google.internal',
+    'metadata.aws.internal',
+}
+_BLOCKED_LOOPBACK_PORTS = {'8006', '8007'}  # PVE API HTTPS / HTTPS-alt
+
+
+def _validate_user_webhook_url(url: str) -> Tuple[bool, str]:
+    """Lightweight SSRF guard for Gotify-style channels.
+
+    Allows RFC1918 / loopback hosts (legit self-hosting), but rejects:
+      - schemes other than http(s)
+      - cloud-metadata IPs and well-known internal hostnames
+      - loopback paired with the PVE API ports — typical pivot target
+    """
+    if not isinstance(url, str) or not url:
+        return False, "URL is required"
+    try:
+        parsed = urllib.parse.urlparse(url.strip())
+    except ValueError:
+        return False, "URL is malformed"
+    if parsed.scheme not in ('http', 'https'):
+        return False, "Only http:// and https:// are accepted"
+    host = (parsed.hostname or '').lower()
+    if not host:
+        return False, "URL is missing a hostname"
+    if host in _KNOWN_SSRF_TARGETS:
+        return False, f"Host {host} is a known cloud-metadata endpoint"
+    port = parsed.port
+    if (host in ('localhost', '127.0.0.1', '::1')
+            and str(port or '') in _BLOCKED_LOOPBACK_PORTS):
+        return False, f"Cannot point at the local PVE API ({host}:{port})"
+    return True, ""
 
 
 # ─── Rate Limiter ────────────────────────────────────────────────
 
 class RateLimiter:
-    """Token-bucket rate limiter: max N messages per window."""
-    
+    """Token-bucket rate limiter: max N messages per window.
+
+    Thread-safe: `allow()` and `wait_time()` are called from the dispatch
+    thread plus channel test paths concurrently. Without the lock the deque
+    could throw IndexError on concurrent popleft / append, and the count
+    could go inconsistent. Audit Tier 6 (Notification stack — `RateLimiter.allow()`
+    no thread-safe).
+    """
+
     def __init__(self, max_calls: int = 30, window_seconds: int = 60):
+        import threading as _threading
         self.max_calls = max_calls
         self.window = window_seconds
         self._timestamps: deque = deque()
-    
+        self._lock = _threading.Lock()
+        # Counter of events dropped while over the rate limit. Surfaced via
+        # `consume_drop_count()` so the dispatch loop can periodically log
+        # "X events suppressed by rate-limit" instead of letting them
+        # disappear silently. Audit Tier 6 — `RateLimiter` descarta
+        # silenciosamente eventos sobre el límite.
+        self._dropped: int = 0
+
     def allow(self) -> bool:
         now = time.monotonic()
-        while self._timestamps and now - self._timestamps[0] > self.window:
-            self._timestamps.popleft()
-        if len(self._timestamps) >= self.max_calls:
-            return False
-        self._timestamps.append(now)
-        return True
-    
+        with self._lock:
+            while self._timestamps and now - self._timestamps[0] > self.window:
+                self._timestamps.popleft()
+            if len(self._timestamps) >= self.max_calls:
+                self._dropped += 1
+                return False
+            self._timestamps.append(now)
+            return True
+
+    def consume_drop_count(self) -> int:
+        """Return the number of drops since the last call and reset to 0."""
+        with self._lock:
+            n = self._dropped
+            self._dropped = 0
+            return n
+
     def wait_time(self) -> float:
-        if not self._timestamps:
-            return 0.0
-        return max(0.0, self.window - (time.monotonic() - self._timestamps[0]))
+        with self._lock:
+            if not self._timestamps:
+                return 0.0
+            return max(0.0, self.window - (time.monotonic() - self._timestamps[0]))
 
 
 # ─── Base Channel ────────────────────────────────────────────────
@@ -96,6 +163,16 @@ class NotificationChannel(ABC):
         """Wrap a send function with rate limiting and retry logic."""
         if not self._rate_limiter.allow():
             wait = self._rate_limiter.wait_time()
+            # Surface the cumulative drop count every ~10 events so the
+            # operator notices that they're losing notifications. Calling
+            # consume_drop_count() resets the counter so the next bucket
+            # of drops gets its own summary.
+            try:
+                dropped = self._rate_limiter.consume_drop_count()
+                if dropped >= 10:
+                    print(f"[{self.__class__.__name__}] Rate-limit suppressed {dropped} events in the last window")
+            except Exception:
+                pass
             return {
                 'success': False,
                 'error': f'Rate limited. Retry in {wait:.0f}s',
@@ -274,8 +351,9 @@ class GotifyChannel(NotificationChannel):
             return False, 'Server URL is required'
         if not self.app_token:
             return False, 'Application token is required'
-        if not self.server_url.startswith(('http://', 'https://')):
-            return False, 'Server URL must start with http:// or https://'
+        ok, err = _validate_user_webhook_url(self.server_url)
+        if not ok:
+            return False, f'Invalid Gotify URL: {err}'
         return True, ''
     
     def send(self, title: str, message: str, severity: str = 'INFO',
@@ -333,11 +411,29 @@ class DiscordChannel(NotificationChannel):
         super().__init__()
         self.webhook_url = webhook_url.strip()
     
+    _DISCORD_HOSTS = {
+        'discord.com', 'discordapp.com',
+        'ptb.discord.com', 'canary.discord.com',
+    }
+
     def validate_config(self) -> Tuple[bool, str]:
         if not self.webhook_url:
             return False, 'Webhook URL is required'
-        if 'discord.com/api/webhooks/' not in self.webhook_url:
+        # Substring match (`'discord.com/api/webhooks/' in url`) accepted
+        # crafted URLs like `http://attacker.example/proxy?u=https://discord.com/api/webhooks/...`.
+        # Parse properly: require https + exact discord hostname + the
+        # /api/webhooks/<id>/<token> path.
+        try:
+            from urllib.parse import urlparse as _urlparse
+            parsed = _urlparse(self.webhook_url)
+        except Exception:
             return False, 'Invalid Discord webhook URL'
+        if parsed.scheme != 'https':
+            return False, 'Discord webhook must use https://'
+        if (parsed.hostname or '').lower() not in self._DISCORD_HOSTS:
+            return False, 'Invalid Discord webhook URL (host must be discord.com)'
+        if not parsed.path.startswith('/api/webhooks/'):
+            return False, 'Invalid Discord webhook URL (path must be /api/webhooks/...)'
         return True, ''
     
     def send(self, title: str, message: str, severity: str = 'INFO',
@@ -413,14 +509,22 @@ class EmailChannel(NotificationChannel):
     
     def __init__(self, config: Dict[str, str]):
         super().__init__()
-        self.host = config.get('host', '')
+        self.host = (config.get('host', '') or '').strip()
         self.port = int(config.get('port', 587) or 587)
-        self.username = config.get('username', '')
-        self.password = config.get('password', '')
-        self.tls_mode = config.get('tls_mode', 'starttls')  # none | starttls | ssl
-        self.from_address = config.get('from_address', '')
+        self.username = config.get('username', '') or ''
+        self.password = config.get('password', '') or ''
+        # `dict.get(k, default)` only returns default when the key is MISSING;
+        # if the user previously saved an empty string or null, we'd end up
+        # with `tls_mode=''` and silently skip STARTTLS — which causes
+        # `SMTPNotSupportedError: SMTP AUTH extension not supported by server`
+        # on Gmail/Outlook because they only advertise AUTH post-STARTTLS.
+        tls_raw = (config.get('tls_mode') or 'starttls').strip().lower()
+        if tls_raw not in ('none', 'starttls', 'ssl'):
+            tls_raw = 'starttls'
+        self.tls_mode = tls_raw
+        self.from_address = config.get('from_address', '') or ''
         self.to_addresses = self._parse_recipients(config.get('to_addresses', ''))
-        self.subject_prefix = config.get('subject_prefix', '[ProxMenux]')
+        self.subject_prefix = config.get('subject_prefix', '[ProxMenux]') or '[ProxMenux]'
         self.timeout = int(config.get('timeout', 10) or 10)
     
     @staticmethod
@@ -434,11 +538,31 @@ class EmailChannel(NotificationChannel):
             return False, 'No recipients configured'
         if not self.from_address:
             return False, 'No from address configured'
+        # Credentials without an explicit SMTP host would silently fall back to
+        # `/usr/sbin/sendmail`, which ignores username/password entirely — the
+        # test returns OK because Postfix queued the message, but the relay is
+        # never authenticated and the mail rots in the local mailq. Reported by
+        # Ignacio Seijo: "dejando host/puerto en blanco el test pasa pero el
+        # correo nunca llega".
+        if (self.username or self.password) and not self.host:
+            return False, ('SMTP credentials provided but no host configured. '
+                           'Set host (e.g. smtp.gmail.com) and port (587) — '
+                           'without a host the message goes to the local MTA '
+                           'and your username/password are ignored.')
         # Must have SMTP host OR local sendmail available
         if not self.host:
             import os
             if not os.path.exists('/usr/sbin/sendmail'):
                 return False, 'No SMTP host configured and /usr/sbin/sendmail not found'
+        # Reject configurations that would send credentials in cleartext over
+        # the network. Loopback (`localhost` / `127.0.0.1`) and the local-only
+        # sendmail path are exempt — those don't traverse a wire that an
+        # attacker could sniff. Audit Tier 6 (Notification stack — SMTP TLS).
+        host_lower = (self.host or '').lower()
+        is_local = host_lower in ('', 'localhost', 'localhost.localdomain', '127.0.0.1', '::1')
+        if (self.tls_mode == 'none' and self.username and self.password and not is_local):
+            return False, ('SMTP TLS is disabled but credentials would travel over plain '
+                           'text. Use STARTTLS or SSL/TLS, or remove the username/password.')
         return True, ''
     
     def send(self, title: str, message: str, severity: str = 'INFO',
@@ -487,8 +611,33 @@ class EmailChannel(NotificationChannel):
                     server.ehlo()  # Re-identify after TLS -- server re-announces AUTH
             
             if self.username and self.password:
+                # If the server doesn't advertise AUTH after our EHLO sequence,
+                # smtplib's `login()` raises `SMTPNotSupportedError` with the
+                # opaque message "SMTP AUTH extension not supported by server".
+                # That fired for users who left tls_mode blank or pointed at
+                # port 587 without STARTTLS — Gmail only advertises AUTH after
+                # the TLS handshake. Surface the real reason here.
+                if not server.has_extn('auth'):
+                    hint = (
+                        f"server={self.host}:{self.port} tls_mode={self.tls_mode}"
+                    )
+                    if self.tls_mode == 'none':
+                        return 0, (
+                            'SMTP server did not advertise AUTH after EHLO. '
+                            'TLS is disabled — most providers (Gmail, Outlook, '
+                            'Office365) only allow login after STARTTLS or SSL. '
+                            f'Switch TLS Mode to STARTTLS (port 587) or SSL/TLS '
+                            f'(port 465). [{hint}]'
+                        )
+                    return 0, (
+                        'SMTP server did not advertise AUTH after EHLO. '
+                        'Verify the host/port/TLS combination. For Gmail use '
+                        'smtp.gmail.com:587 with STARTTLS and an App Password '
+                        '(https://myaccount.google.com/apppasswords); for '
+                        f'Outlook use smtp.office365.com:587 with STARTTLS. [{hint}]'
+                    )
                 server.login(self.username, self.password)
-            
+
             server.send_message(msg)
             server.quit()
             server = None
@@ -497,8 +646,10 @@ class EmailChannel(NotificationChannel):
             return 0, f'SMTP authentication failed (check username/password or app-specific password): {e}'
         except smtplib.SMTPNotSupportedError as e:
             return 0, (f'SMTP AUTH not supported by server. '
-                       f'This may mean the server requires OAuth2 or an App Password '
-                       f'instead of regular credentials: {e}')
+                       f'TLS mode: {self.tls_mode}, port: {self.port}. '
+                       f'Gmail/Outlook require STARTTLS on 587 or SSL/TLS on 465. '
+                       f'For Gmail, generate an App Password at '
+                       f'https://myaccount.google.com/apppasswords. Detail: {e}')
         except smtplib.SMTPConnectError as e:
             return 0, f'SMTP connection failed: {e}'
         except smtplib.SMTPException as e:
@@ -851,8 +1002,10 @@ class EmailChannel(NotificationChannel):
         return rows
     
     def test(self) -> Tuple[bool, str]:
-        import socket as _socket
-        hostname = _socket.gethostname().split('.')[0]
+        # Lazy import to avoid a circular dependency with notification_manager,
+        # which already imports from this module at load time.
+        from notification_manager import _resolve_display_hostname
+        hostname = _resolve_display_hostname()
         result = self.send(
             'ProxMenux Test Notification',
             'This is a test notification from ProxMenux Monitor.\n'
@@ -867,6 +1020,208 @@ class EmailChannel(NotificationChannel):
             }
         )
         return result.get('success', False), result.get('error', '')
+
+
+# ─── Apprise ─────────────────────────────────────────────────────
+
+class _AppriseLogCapture(logging.Handler):
+    """Buffers records emitted by the `apprise` logger during a single
+    notify() call so the surrounding channel can surface the real
+    failure reason — e.g. "error=400" plus the destination's response
+    body — instead of the opaque "transport failure" string
+    apprise.notify() leaves behind on a False return.
+
+    Captures everything at DEBUG so the response body (which apprise's
+    custom_json plugin logs only at DEBUG) is available; `summary()`
+    keeps the output bounded for UI display."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.records: List[logging.LogRecord] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            self.records.append(record)
+        except Exception:
+            pass
+
+    def summary(self) -> str:
+        """Concise digest of the captured records — WARNING+ messages
+        first (the failure reason), then a single "Response Details"
+        DEBUG line if present (the destination's reply body, useful for
+        decoding 400s like `{"error": "field X missing"}`). Capped per
+        line so a noisy plugin can't blow past the 200-char truncation
+        `_send_with_retry` applies on the way out."""
+        warn_msgs: List[str] = []
+        response_body: str = ''
+        for r in self.records:
+            try:
+                msg = r.getMessage()
+            except Exception:
+                continue
+            if not msg:
+                continue
+            if r.levelno >= logging.WARNING:
+                if msg not in warn_msgs:
+                    warn_msgs.append(msg[:160])
+            elif 'Response Details' in msg and not response_body:
+                # Plugin logs the body as `Response Details:\r\n%r` — the
+                # %r already wraps the bytes in repr(b'…'), strip it for
+                # readability.
+                body = msg.split('Response Details:', 1)[1].strip()
+                if body.startswith(("b'", 'b"')):
+                    body = body[2:]
+                if body.endswith(("'", '"')):
+                    body = body[:-1]
+                body = body.replace('\\r\\n', ' ').replace('\\n', ' ').strip()
+                if body:
+                    response_body = body[:300]
+        parts: List[str] = []
+        if warn_msgs:
+            parts.extend(warn_msgs)
+        if response_body:
+            parts.append(f'response: {response_body}')
+        return ' | '.join(parts)
+
+
+class AppriseChannel(NotificationChannel):
+    """Apprise meta-channel — a single URL talks to ~80 services.
+
+    Apprise (https://github.com/caronc/apprise) is a Python library that
+    normalises a wide catalogue of notification destinations behind a
+    single URL scheme: `tgram://`, `discord://`, `slack://`, `gotify://`,
+    `ntfy://`, `matrix://`, `mailto://`, `pushover://`, `signal://`, etc.
+    The operator pastes one URL and ProxMenux delegates the transport.
+
+    Requested in issue #207 by @0berkampf. Implemented as a *separate
+    channel type* (not a replacement for the native Telegram / Gotify /
+    Discord / Email channels), so installs that already have a working
+    native channel don't need to migrate — Apprise is opt-in for users
+    who want to reach a service we don't support natively.
+
+    The library is loaded lazily on first send. Older deployments that
+    haven't installed it yet surface a clean validation error instead
+    of crashing the notification manager at import time.
+    """
+
+    def __init__(self, url: str):
+        super().__init__()
+        self.url = (url or '').strip()
+
+    # Lazy import so installs that haven't picked up the new dep yet
+    # don't crash on module load. Each call re-imports cheaply — Python
+    # caches the module reference after the first hit.
+    def _load_apprise(self):
+        try:
+            import apprise  # type: ignore
+            return apprise
+        except ImportError:
+            return None
+
+    def validate_config(self) -> Tuple[bool, str]:
+        if not self.url:
+            return False, 'Apprise URL is required'
+        apprise = self._load_apprise()
+        if apprise is None:
+            return False, (
+                'apprise library not installed in this deployment. '
+                'Reinstall ProxMenux Monitor or run `pip install apprise` '
+                'inside the AppImage environment.'
+            )
+        # `add(url)` returns True only if Apprise recognised the scheme
+        # — useful as a syntactic validation without sending anything.
+        try:
+            apobj = apprise.Apprise()
+            ok = apobj.add(self.url)
+            if not ok:
+                return False, 'Apprise rejected the URL (unrecognised scheme or bad format)'
+        except Exception as e:
+            return False, f'Apprise rejected the URL: {e}'
+        return True, ''
+
+    def _severity_to_notify_type(self, apprise_mod, severity: str):
+        """Map ProxMenux severities to Apprise NotifyType constants so
+        services that render severity (e.g. Pushover priority, ntfy
+        priority headers) get the right indicator."""
+        sev = (severity or '').upper()
+        if sev == 'CRITICAL':
+            return apprise_mod.NotifyType.FAILURE
+        if sev == 'WARNING':
+            return apprise_mod.NotifyType.WARNING
+        if sev == 'SUCCESS':
+            return apprise_mod.NotifyType.SUCCESS
+        return apprise_mod.NotifyType.INFO
+
+    def send(self, title: str, message: str, severity: str = 'INFO',
+             data: Optional[Dict] = None) -> Dict[str, Any]:
+        ok, err = self.validate_config()
+        if not ok:
+            return {'success': False, 'error': err, 'channel': 'apprise'}
+
+        # Rate limit (shared with the other channels) before dispatch.
+        def _send_via_apprise() -> Tuple[int, str]:
+            apprise = self._load_apprise()
+            if apprise is None:
+                # Shouldn't happen — validate_config caught it above —
+                # but defend in depth so the retry loop reports cleanly.
+                return 0, 'apprise library not available'
+
+            # Capture Apprise's internal logger during notify(). When the
+            # plugin (jsons://, ntfy://, slack://, ...) gets a non-2xx
+            # from the destination it logs at WARNING with the HTTP
+            # status code — e.g. "Failed to send JSON POST notification:
+            # error=400.". Without this capture, `notify()` just returns
+            # False and we'd surface a useless "transport failure" with
+            # no clue why. Reported by a beta user on 2026-05-30: jsons://
+            # → HTTP 400 from their webhook, no way to see the 400 in
+            # the Monitor UI.
+            apprise_logger = logging.getLogger('apprise')
+            handler = _AppriseLogCapture()
+            handler.setLevel(logging.DEBUG)
+            prev_level = apprise_logger.level
+            apprise_logger.addHandler(handler)
+            # Drop the logger to DEBUG only while notify() runs so we
+            # also capture the destination's response body (apprise
+            # plugins emit that line at DEBUG). _AppriseLogCapture.summary
+            # caps the included output, so this doesn't flood the UI.
+            apprise_logger.setLevel(logging.DEBUG)
+            try:
+                apobj = apprise.Apprise()
+                apobj.add(self.url)
+                sent = apobj.notify(
+                    body=message or '',
+                    title=title or '',
+                    notify_type=self._severity_to_notify_type(apprise, severity),
+                )
+            except Exception as e:
+                apprise_logger.removeHandler(handler)
+                apprise_logger.setLevel(prev_level)
+                return 0, str(e)
+            apprise_logger.removeHandler(handler)
+            apprise_logger.setLevel(prev_level)
+
+            if sent:
+                return 200, ''
+
+            # `notify` returns False iff every URL endpoint rejected.
+            # Surface the warnings the apprise plugin emitted so the
+            # operator can see the actual HTTP status / reason.
+            detail = handler.summary()
+            if not detail:
+                detail = 'destination rejected the notification (no detail from apprise)'
+            return 500, detail
+
+        result = self._send_with_retry(_send_via_apprise)
+        result['channel'] = 'apprise'
+        return result
+
+    def test(self) -> Tuple[bool, str]:
+        result = self.send(
+            title='ProxMenux Monitor — Test',
+            message='Apprise channel is configured correctly. If you can read this, the URL is valid and the service accepted the notification.',
+            severity='INFO',
+        )
+        return bool(result.get('success')), result.get('error') or ''
 
 
 # ─── Channel Factory ─────────────────────────────────────────────
@@ -893,16 +1248,21 @@ CHANNEL_TYPES = {
                         'from_address', 'to_addresses', 'subject_prefix'],
         'class': EmailChannel,
     },
+    'apprise': {
+        'name': 'Apprise',
+        'config_keys': ['url'],
+        'class': AppriseChannel,
+    },
 }
 
 
 def create_channel(channel_type: str, config: Dict[str, str]) -> Optional[NotificationChannel]:
     """Create a channel instance from type name and config dict.
-    
+
     Args:
-        channel_type: 'telegram', 'gotify', or 'discord'
+        channel_type: 'telegram', 'gotify', 'discord', 'email', or 'apprise'
         config: Dict with channel-specific keys (see CHANNEL_TYPES)
-    
+
     Returns:
         Channel instance or None if creation fails
     """
@@ -924,6 +1284,8 @@ def create_channel(channel_type: str, config: Dict[str, str]) -> Optional[Notifi
             )
         elif channel_type == 'email':
             return EmailChannel(config)
+        elif channel_type == 'apprise':
+            return AppriseChannel(url=config.get('url', ''))
     except Exception as e:
         print(f"[NotificationChannels] Failed to create {channel_type}: {e}")
     return None

@@ -1,13 +1,21 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Square, Thermometer, Archive, Info, Clock, Usb, Server, Activity, FileText, Play, Loader2, Download, Plus, Trash2, Settings } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { fetchApi } from "../lib/api-config"
+import { DiskTemperatureDetailModal } from "./disk-temperature-detail-modal"
+import { DiskTemperatureCard } from "./disk-temperature-card"
+import {
+  useDiskTempThresholds,
+  loadDiskTempThresholds,
+  getDiskTempThresholdsSync,
+  type DiskTempMap,
+} from "../lib/health-thresholds"
 
 interface DiskInfo {
   name: string
@@ -101,6 +109,38 @@ interface ProxmoxStorageData {
   error?: string
 }
 
+// Sprint 13: shape returned by /api/mounts. Lists every NFS/CIFS/SMB
+// mount on the host with a per-mount health status — complements the
+// PVE-storage list above with arbitrary mounts done outside PVE
+// (fstab, manual `mount` commands).
+interface RemoteMount {
+  source: string
+  target: string
+  fstype: string
+  options: string
+  readonly: boolean
+  reachable: boolean
+  error?: string | null
+  status: "ok" | "stale" | "readonly"
+  // Sprint 13.16: extra fields the modal renders. Backend fills them
+  // when the mount is reachable; nullable when df couldn't run (stale).
+  proxmox_managed?: boolean
+  total_bytes?: number | null
+  used_bytes?: number | null
+  available_bytes?: number | null
+  // Sprint 13.24: present only on LXC-internal mounts.
+  lxc_id?: string
+  lxc_name?: string
+  lxc_pid?: string
+}
+
+interface RemoteMountsData {
+  mounts: RemoteMount[]
+  lxc_mounts?: RemoteMount[]
+  available: boolean
+  error?: string
+}
+
 const formatStorage = (sizeInGB: number): string => {
   if (sizeInGB < 1) {
     // Less than 1 GB, show in MB
@@ -113,9 +153,56 @@ const formatStorage = (sizeInGB: number): string => {
   }
 }
 
+// Translate the short ATA/SCSI error codes that appear inside `{ ... }`
+// in a raw kernel observation (e.g. `error: { IDNF }`) into a one-line
+// human description. Mirrors `_translate_ata_error` in
+// notification_events.py — kept here so both the dialog and the printable
+// SMART report can render a friendlier line under the raw message
+// without round-tripping to the backend. Returns null when no recognised
+// code is present, so the caller hides the extra line for non-ATA rows.
+function translateAtaError(raw: string): string | null {
+  if (!raw) return null
+  const ATA_CODES: Record<string, string> = {
+    IDNF: 'Sector address not found — possible bad sector or cable issue',
+    UNC: 'Uncorrectable read error — bad sector',
+    ABRT: 'Command aborted by drive',
+    AMNF: 'Address mark not found — surface damage',
+    TK0NF: 'Track 0 not found — drive hardware failure',
+    BBK: 'Bad block detected',
+    ICRC: 'Interface CRC error — cable or connector issue',
+    MC: 'Media changed',
+    MCR: 'Media change requested',
+    WP: 'Write protected',
+  }
+  const m = raw.match(/\{\s*([A-Z0-9 ]+)\s*\}/)
+  if (!m) return null
+  const codes = m[1].split(/\s+/).filter(Boolean)
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const c of codes) {
+    const desc = ATA_CODES[c]
+    if (desc && !seen.has(c)) {
+      seen.add(c)
+      out.push(desc)
+    }
+  }
+  return out.length ? out.join('; ') : null
+}
+
 export function StorageOverview() {
+  // User-configurable disk temperature thresholds (Settings → Health
+  // Monitor Thresholds). Until the API responds the hook returns
+  // sensible defaults from `lib/health-thresholds`, so first paint
+  // never blocks on the network.
+  const dtThresholds = useDiskTempThresholds()
+
   const [storageData, setStorageData] = useState<StorageData | null>(null)
   const [proxmoxStorage, setProxmoxStorage] = useState<ProxmoxStorageData | null>(null)
+  const [remoteMounts, setRemoteMounts] = useState<RemoteMount[]>([])
+  // Sprint 13.19: detail modal for a single remote mount. Tracks the
+  // mount object itself rather than just an id so a stale data fetch
+  // can't leave the modal showing nothing.
+  const [mountDetail, setMountDetail] = useState<RemoteMount | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedDisk, setSelectedDisk] = useState<DiskInfo | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
@@ -130,16 +217,21 @@ export function StorageOverview() {
     history?: Array<{ filename: string; timestamp: string; test_type: string; date_readable: string }>
   } | null>(null)
   const [loadingSmartJson, setLoadingSmartJson] = useState(false)
+  const [tempHistoryDisk, setTempHistoryDisk] = useState<DiskInfo | null>(null)
 
   const fetchStorageData = async () => {
     try {
-      const [data, proxmoxData] = await Promise.all([
+      const [data, proxmoxData, mountsData] = await Promise.all([
         fetchApi<StorageData>("/api/storage"),
         fetchApi<ProxmoxStorageData>("/api/proxmox-storage"),
+        // Sprint 13 — host-level NFS/CIFS/SMB mounts. Wrapped in catch
+        // so a failure here doesn't blank the whole storage tab.
+        fetchApi<RemoteMountsData>("/api/mounts").catch(() => ({ mounts: [], available: false } as RemoteMountsData)),
       ])
 
       setStorageData(data)
       setProxmoxStorage(proxmoxData)
+      setRemoteMounts(mountsData?.mounts || [])
     } catch (error) {
       console.error("Error fetching storage data:", error)
     } finally {
@@ -190,37 +282,19 @@ export function StorageOverview() {
   const getTempColor = (temp: number, diskName?: string, rotationRate?: number) => {
     if (temp === 0) return "text-gray-500"
 
-    // Determinar el tipo de disco
-    let diskType = "HDD" // Por defecto
-    if (diskName) {
-      if (diskName.startsWith("nvme")) {
-        diskType = "NVMe"
-      } else if (!rotationRate || rotationRate === 0) {
-        diskType = "SSD"
-      }
+    // Resolve disk class → threshold pair from the user-configurable
+    // backend (single source of truth). The semantics: temp BELOW warn
+    // is green, between warn and hot is amber, hot or above is red.
+    let cls: keyof DiskTempMap = "HDD"
+    if (diskName?.startsWith("nvme")) {
+      cls = "NVMe"
+    } else if (!rotationRate || rotationRate === 0) {
+      cls = "SSD"
     }
-
-    // Aplicar rangos de temperatura según el tipo
-    switch (diskType) {
-      case "NVMe":
-        // NVMe: ≤70°C verde, 71-80°C amarillo, >80°C rojo
-        if (temp <= 70) return "text-green-500"
-        if (temp <= 80) return "text-yellow-500"
-        return "text-red-500"
-
-      case "SSD":
-        // SSD: ≤59°C verde, 60-70°C amarillo, >70°C rojo
-        if (temp <= 59) return "text-green-500"
-        if (temp <= 70) return "text-yellow-500"
-        return "text-red-500"
-
-      case "HDD":
-      default:
-        // HDD: ≤45°C verde, 46-55°C amarillo, >55°C rojo
-        if (temp <= 45) return "text-green-500"
-        if (temp <= 55) return "text-yellow-500"
-        return "text-red-500"
-    }
+    const t = dtThresholds[cls]
+    if (temp >= t.hot) return "text-red-500"
+    if (temp >= t.warn) return "text-yellow-500"
+    return "text-green-500"
   }
 
   const formatHours = (hours: number) => {
@@ -344,7 +418,16 @@ export function StorageOverview() {
       nfs: "bg-orange-500/10 text-orange-500 border-orange-500/20",
       cifs: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
     }
-    return typeColors[type.toLowerCase()] || "bg-gray-500/10 text-gray-500 border-gray-500/20"
+    // Sprint 13: /proc/mounts reports `nfs4`, `cifs2`, `smb3`, `smbfs`,
+    // etc. PVE storage types are clean (`nfs`, `cifs`) but the kernel
+    // mount types carry version suffixes. Match the family so the
+    // Remote Mounts list shows the same colour as the matching PVE
+    // storage row instead of falling through to the grey default.
+    const lower = type.toLowerCase()
+    if (typeColors[lower]) return typeColors[lower]
+    if (lower.startsWith("nfs")) return typeColors.nfs
+    if (lower.startsWith("cifs") || lower.startsWith("smb")) return typeColors.cifs
+    return "bg-gray-500/10 text-gray-500 border-gray-500/20"
   }
 
   const getStatusIcon = (status: string) => {
@@ -352,6 +435,8 @@ export function StorageOverview() {
       case "active":
       case "online":
         return <CheckCircle2 className="h-5 w-5 text-green-500" />
+      case "namespace_restricted":
+        return <CheckCircle2 className="h-5 w-5 text-blue-400" />
       case "inactive":
       case "offline":
         return <Square className="h-5 w-5 text-gray-500" />
@@ -401,9 +486,12 @@ export function StorageOverview() {
     const wearPercent = wearIndicator.value
     const hoursUsed = disk.power_on_hours
 
-    // Si el desgaste es 0, no podemos calcular
+    // If the drive reports zero wear we cannot extrapolate (division by zero).
+    // The drive is alive and healthy — return a friendlier label than "N/A",
+    // which users mistook for "the monitor is broken". A new drive can sit at
+    // 0% wear for hundreds of hours before the first measurable tick.
     if (wearPercent === 0) {
-      return "N/A"
+      return "No wear detected yet"
     }
 
     // Calcular horas totales estimadas: hoursUsed / (wearPercent / 100)
@@ -733,8 +821,20 @@ export function StorageOverview() {
                         <Database className="h-5 w-5 text-muted-foreground" />
                         <h3 className="font-semibold text-lg">{storage.name}</h3>
                         <Badge className={getStorageTypeBadge(storage.type)}>{storage.type}</Badge>
+                        {/* Sprint 13: hint that this PVE storage also
+                            shows up below in Remote Mounts where the
+                            user can inspect mount options + health.
+                            Uses the default Badge size to match the
+                            adjacent type / status badges — earlier
+                            versions used text-[10px] which looked
+                            shrunken next to them. */}
+                        {/^(nfs|cifs|smb)/i.test(storage.type) && (
+                          <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20">
+                            remote mount
+                          </Badge>
+                        )}
                         {isExcluded && (
-                          <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-[10px]">
+                          <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20">
                             excluded
                           </Badge>
                         )}
@@ -743,6 +843,11 @@ export function StorageOverview() {
                       <div className="flex md:hidden items-center gap-2 flex-1">
                         <Database className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                         <Badge className={getStorageTypeBadge(storage.type)}>{storage.type}</Badge>
+                        {/^(nfs|cifs|smb)/i.test(storage.type) && (
+                          <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20">
+                            remote
+                          </Badge>
+                        )}
                         <h3 className="font-semibold text-base flex-1 min-w-0 truncate">{storage.name}</h3>
                         {isExcluded ? (
                           <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-[10px]">
@@ -761,12 +866,23 @@ export function StorageOverview() {
                               ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
                               : storage.status === "active"
                                 ? "bg-green-500/10 text-green-500 border-green-500/20"
-                                : storage.status === "error"
-                                  ? "bg-red-500/10 text-red-500 border-red-500/20"
-                                  : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                                : storage.status === "namespace_restricted"
+                                  ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                                  : storage.status === "error"
+                                    ? "bg-red-500/10 text-red-500 border-red-500/20"
+                                    : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                          }
+                          title={
+                            storage.status === "namespace_restricted"
+                              ? "Storage reachable; datastore size hidden by ACL (e.g. PBS DatastoreAdmin on a single namespace)"
+                              : undefined
                           }
                         >
-                          {isExcluded ? "not monitored" : storage.status}
+                          {isExcluded
+                            ? "not monitored"
+                            : storage.status === "namespace_restricted"
+                              ? "namespace-restricted"
+                              : storage.status}
                         </Badge>
                         <span className="text-sm font-medium">{storage.percent}%</span>
                       </div>
@@ -815,6 +931,256 @@ export function StorageOverview() {
           </CardContent>
         </Card>
       )}
+
+      {/* Sprint 13 — Remote Mounts (NFS/CIFS/SMB) detected on the
+          host. Renders only when at least one is present so a
+          standalone host with no shares doesn't see an empty card.
+          Stale mounts get a red bg + critical icon; read-only get
+          amber; healthy get a green dot. */}
+      {remoteMounts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Remote Mounts
+              <Badge variant="outline" className="ml-2 text-[10px]">
+                {remoteMounts.length}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {remoteMounts
+                .slice()
+                .sort((a, b) => a.target.localeCompare(b.target))
+                .map((mount) => {
+                  const isStale = mount.status === "stale"
+                  const isReadonly = mount.status === "readonly"
+                  const cardClasses = isStale
+                    ? "border-red-500/50 bg-red-500/5 sm:hover:bg-red-500/10"
+                    : isReadonly
+                      ? "border-amber-500/40 bg-amber-500/5 sm:hover:bg-amber-500/10"
+                      : "border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5"
+                  return (
+                    <div
+                      key={mount.target}
+                      onClick={() => setMountDetail(mount)}
+                      className={`cursor-pointer border rounded-lg p-3 transition-colors ${cardClasses}`}
+                    >
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                              isStale ? "bg-red-500" : isReadonly ? "bg-amber-500" : "bg-green-500"
+                            }`}
+                          />
+                          <h3 className="font-mono text-sm truncate">{mount.target}</h3>
+                          <Badge className={getStorageTypeBadge(mount.fstype)}>{mount.fstype}</Badge>
+                          {/* Sprint 13.18: makes it explicit that the
+                              row corresponds to an entry already in the
+                              Proxmox Storage card above. Default size
+                              keeps it visually consistent with the
+                              adjacent type badge. */}
+                          {mount.proxmox_managed && (
+                            <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+                              managed by Proxmox
+                            </Badge>
+                          )}
+                          {mount.readonly && (
+                            <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">
+                              ro
+                            </Badge>
+                          )}
+                        </div>
+                        <Badge
+                          className={
+                            isStale
+                              ? "bg-red-500/10 text-red-500 border-red-500/20"
+                              : isReadonly
+                                ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                : "bg-green-500/10 text-green-500 border-green-500/20"
+                          }
+                        >
+                          {isStale ? "stale" : isReadonly ? "read-only" : "reachable"}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-2 truncate">
+                        <span className="font-medium text-foreground">Source:</span>{" "}
+                        <span className="font-mono">{mount.source || "—"}</span>
+                      </div>
+                      {isStale && mount.error && (
+                        <p className="text-xs text-red-400 mt-2">{mount.error}</p>
+                      )}
+                    </div>
+                  )
+                })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Sprint 13.29: the "Remote Mounts (LXC)" card that previously
+          lived here was removed because the information was redundant
+          with the host card (the same NAS shows up twice) and a
+          Storage page is the wrong scope for per-CT details anyway.
+          LXC mount-points are now surfaced inside the LXC modal
+          (VMs & LXCs tab) where they belong contextually. The
+          backend helper `mount_monitor.scan_lxc_mounts()` is kept so
+          the health monitor can still alert on stale mounts inside
+          containers in the background. */}
+
+      {/* Sprint 13.19: remote mount detail modal.
+          Uses shadcn Dialog for the same typography (DialogTitle =
+          text-lg, DialogDescription = text-sm muted) and behaviour as
+          the disk details modal — earlier version was a hand-rolled
+          overlay with text-xs/text-[10px] all over and looked
+          shrunken next to the rest of the modals. */}
+      <Dialog open={!!mountDetail} onOpenChange={(open) => { if (!open) setMountDetail(null) }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] sm:max-h-[85vh] overflow-hidden flex flex-col p-0">
+          {mountDetail && (() => {
+            const m = mountDetail
+            const isStale = m.status === "stale"
+            const isReadonly = m.status === "readonly"
+            const optionEntries = (m.options || "")
+              .split(",")
+              .filter(Boolean)
+              .map((opt) => {
+                const eq = opt.indexOf("=")
+                if (eq === -1) return { key: opt, value: null as string | null }
+                return { key: opt.slice(0, eq), value: opt.slice(eq + 1) }
+              })
+            const flags = optionEntries.filter((o) => o.value === null).map((o) => o.key)
+            const keyValues = optionEntries.filter((o) => o.value !== null) as Array<{ key: string; value: string }>
+            const fmtBytes = (b: number | null | undefined) => {
+              if (b == null) return "—"
+              const gb = b / 1024 ** 3
+              return formatStorage(gb)
+            }
+            const usedPct =
+              m.total_bytes && m.used_bytes != null && m.total_bytes > 0
+                ? Math.round((m.used_bytes / m.total_bytes) * 100)
+                : null
+            return (
+              <>
+                <DialogHeader className="px-6 pt-6 pb-2">
+                  <DialogTitle className="flex items-center gap-2 flex-wrap">
+                    <Database className="h-5 w-5 text-cyan-500" />
+                    <span className="font-mono">{m.target}</span>
+                    <Badge
+                      className={
+                        isStale
+                          ? "bg-red-500/10 text-red-500 border-red-500/20"
+                          : isReadonly
+                            ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                            : "bg-green-500/10 text-green-500 border-green-500/20"
+                      }
+                    >
+                      {isStale ? "stale" : isReadonly ? "read-only" : "reachable"}
+                    </Badge>
+                  </DialogTitle>
+                  <DialogDescription>
+                    <span className="font-mono">{m.source || "—"}</span>
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="px-6 pb-6 overflow-auto space-y-5">
+                  {/* Type + tags */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className={getStorageTypeBadge(m.fstype)}>{m.fstype}</Badge>
+                    {m.proxmox_managed && (
+                      <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+                        managed by Proxmox
+                      </Badge>
+                    )}
+                    {m.lxc_id && (
+                      <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20">
+                        CT {m.lxc_id}{m.lxc_name ? `: ${m.lxc_name}` : ""}
+                      </Badge>
+                    )}
+                    {flags.map((f) => (
+                      <Badge key={f} variant="outline" className="font-mono">
+                        {f}
+                      </Badge>
+                    ))}
+                  </div>
+
+                  {/* Capacity. df can hang on stale NFS so the backend
+                      skips it and we render n/a here. Headers use the
+                      same `<h4 className="font-semibold">` shape as
+                      the disk-details modal in this same file (no
+                      explicit text-sm override) so the typography
+                      lines up — the body inherits text-base from the
+                      Dialog content, not text-sm. */}
+                  <div>
+                    <h4 className="font-semibold mb-3">Capacity</h4>
+                    {m.reachable && m.total_bytes ? (
+                      <div className="space-y-2">
+                        <Progress
+                          value={usedPct ?? 0}
+                          className={`h-2 ${
+                            (usedPct ?? 0) > 90
+                              ? "[&>div]:bg-red-500"
+                              : (usedPct ?? 0) > 75
+                                ? "[&>div]:bg-yellow-500"
+                                : "[&>div]:bg-blue-500"
+                          }`}
+                        />
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">Total</p>
+                            <p className="font-medium">{fmtBytes(m.total_bytes)}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Used</p>
+                            <p className="font-medium">
+                              {fmtBytes(m.used_bytes)} {usedPct != null && `(${usedPct}%)`}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Available</p>
+                            <p className="font-medium">{fmtBytes(m.available_bytes)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">
+                        {isStale ? "df skipped: mount is stale." : "n/a"}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Mount options grid — readable parse of the
+                      key=value list from /proc/mounts so the user
+                      doesn't have to scan a 200-char string. */}
+                  {keyValues.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-3">Mount options</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+                        {keyValues.map((kv) => (
+                          <div key={kv.key} className="flex items-baseline gap-2 min-w-0">
+                            <span className="font-mono text-muted-foreground truncate">{kv.key}</span>
+                            <span className="font-mono text-foreground truncate">= {kv.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Error — only renders when something is wrong. */}
+                  {m.error && (
+                    <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-3">
+                      <h4 className="font-semibold text-red-400 mb-2">Error</h4>
+                      <p className="text-red-300 font-mono whitespace-pre-wrap break-all">
+                        {m.error}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* ZFS Pools */}
       {storageData.zfs_pools && storageData.zfs_pools.length > 0 && (
@@ -1434,6 +1800,31 @@ export function StorageOverview() {
                 // --- Only render if we have meaningful wear data ---
                 if (wearUsed === null && lifeRemaining === null) return null
 
+                // Sprint 14 honest-data fix: a `percent_used == 0` from
+                // firmwares like the WD CL SN720 isn't real wear data —
+                // the drive simply hasn't started ticking. We don't want
+                // to assert "100% life remaining" in that case. Show
+                // only Data Written, since that's the one number we
+                // know we can trust for these drives.
+                const hasReportedWear = (wearUsed !== null && wearUsed > 0)
+
+                if (!hasReportedWear) {
+                  if (!dataWritten) return null
+                  return (
+                    <div className="border-t pt-4">
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        Wear & Lifetime
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Data Written</p>
+                          <p className="text-sm font-medium">{dataWritten}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+
                 const lifeColor = lifeRemaining !== null
                   ? (lifeRemaining >= 50 ? '#22c55e' : lifeRemaining >= 20 ? '#eab308' : '#ef4444')
                   : '#6b7280'
@@ -1459,7 +1850,16 @@ export function StorageOverview() {
                         </div>
                       )}
                       <div className="flex-1 space-y-3 min-w-0">
-                        {wearUsed !== null && (
+                        {/*
+                          Hide the "Wear" bar and "Est. Life" entirely when the
+                          drive firmware reports zero wear (some NVMe families
+                          like the WD SN720 don't tick percentage_used until
+                          significant wear is reached). The 100% life ring + the
+                          Avail. Spare and Data Written numbers are enough to
+                          convey "drive is healthy without any reportable wear
+                          data" — repeating "0%" three times is just visual noise.
+                        */}
+                        {wearUsed !== null && wearUsed > 0 && (
                           <div>
                             <div className="flex items-center justify-between mb-1.5">
                               <p className="text-xs text-muted-foreground">Wear</p>
@@ -1469,7 +1869,7 @@ export function StorageOverview() {
                           </div>
                         )}
                         <div className="grid grid-cols-2 gap-3">
-                          {estimatedLife && (
+                          {estimatedLife && wearUsed !== null && wearUsed > 0 && (
                             <div>
                               <p className="text-xs text-muted-foreground">Est. Life</p>
                               <p className="text-sm font-medium">{estimatedLife}</p>
@@ -1496,15 +1896,22 @@ export function StorageOverview() {
 
               <div className="border-t pt-4">
                 <h4 className="font-semibold mb-3">SMART Attributes</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Temperature</p>
-                    <p
-                      className={`font-medium ${getTempColor(selectedDisk.temperature, selectedDisk.name, selectedDisk.rotation_rate)}`}
-                    >
-                      {selectedDisk.temperature > 0 ? `${selectedDisk.temperature}°C` : "N/A"}
-                    </p>
+                {/*
+                  Sprint 14: temperature lives in its own full-width card
+                  with an inline 1-hour mini chart. The remaining attributes
+                  flow below in the same 2-col grid as before.
+                */}
+                {selectedDisk.connection_type !== 'usb' && (
+                  <div className="mb-4">
+                    <DiskTemperatureCard
+                      diskName={selectedDisk.name}
+                      liveTemperature={selectedDisk.temperature}
+                      diskType={getDiskTypeBadge(selectedDisk.name, selectedDisk.rotation_rate).label}
+                      onOpenDetail={selectedDisk.temperature > 0 ? () => setTempHistoryDisk(selectedDisk) : undefined}
+                    />
                   </div>
+                )}
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Power On Hours</p>
                     <p className="font-medium">
@@ -1553,6 +1960,15 @@ export function StorageOverview() {
                       {selectedDisk.crc_errors ?? 0}
                     </p>
                   </div>
+                  {/* USB drives lose the chart card; show plain temperature here. */}
+                  {selectedDisk.connection_type === 'usb' && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Temperature</p>
+                      <p className={`font-medium ${getTempColor(selectedDisk.temperature, selectedDisk.name, selectedDisk.rotation_rate)}`}>
+                        {selectedDisk.temperature > 0 ? `${selectedDisk.temperature}°C` : "N/A"}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1748,27 +2164,30 @@ export function StorageOverview() {
                       {diskObservations.map((obs) => (
                         <div
                           key={obs.id}
-                          className={`rounded-lg border p-3 text-sm ${
-                            obs.severity === 'critical'
-                              ? 'bg-red-500/5 border-red-500/20'
-                              : 'bg-blue-500/5 border-blue-500/20'
-                          }`}
+                          className="rounded-lg border p-3 text-sm bg-blue-500/5 border-blue-500/20"
                         >
-                          {/* Header with type badge */}
+                          {/* Header with type badge — always blue.
+                              The earlier red/blue split-by-severity was
+                              confusing here because the Observations
+                              panel is a *history* view, not a live
+                              alert; the severity already reaches the
+                              user through the notification channels.
+                              The card just records what happened. */}
                           <div className="flex items-center gap-2 flex-wrap mb-2">
-                            <Badge className={`text-[10px] px-1.5 py-0 ${
-                              obs.severity === 'critical'
-                                ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                                : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                            }`}>
+                            <Badge className="text-[10px] px-1.5 py-0 bg-blue-500/10 text-blue-400 border-blue-500/20">
                               {obsTypeLabel(obs.error_type)}
                             </Badge>
                           </div>
                           
                           {/* Error message - responsive text wrap */}
-                          <p className="text-xs whitespace-pre-wrap break-words opacity-90 font-mono leading-relaxed mb-3">
+                          <p className="text-xs whitespace-pre-wrap break-words opacity-90 font-mono leading-relaxed mb-1">
                             {obs.raw_message}
                           </p>
+                          {translateAtaError(obs.raw_message) && (
+                            <p className="text-xs italic opacity-75 mb-3 break-words">
+                              ↳ {translateAtaError(obs.raw_message)}
+                            </p>
+                          )}
                           
                           {/* Dates - stacked on mobile, inline on desktop */}
                           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-[10px] text-muted-foreground border-t border-white/5 pt-2">
@@ -1812,12 +2231,44 @@ export function StorageOverview() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {tempHistoryDisk && (
+        <DiskTemperatureDetailModal
+          open={!!tempHistoryDisk}
+          onOpenChange={(o) => { if (!o) setTempHistoryDisk(null) }}
+          diskName={tempHistoryDisk.name}
+          diskModel={tempHistoryDisk.model}
+          liveTemperature={tempHistoryDisk.temperature}
+          diskType={getDiskTypeBadge(tempHistoryDisk.name, tempHistoryDisk.rotation_rate).label}
+        />
+      )}
     </div>
   )
 }
 
 // Generate SMART Report HTML and open in new window (same pattern as Lynis/Latency reports)
-function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttributes: SmartAttribute[], observations: DiskObservation[] = [], lastTestDate?: string, targetWindow?: Window, isHistorical = false) {
+interface DiskTempHistoryPoint { timestamp: number; value: number; min?: number; max?: number }
+interface DiskTempHistoryPayload { data: DiskTempHistoryPoint[]; stats: { min: number; max: number; avg: number; current: number } }
+
+// The report wants the broadest temperature history possible, but the
+// `month` bucket (2h granularity) returns <2 points on freshly-deployed
+// hosts where data only spans ~1 hour. Cascade through coarser → finer
+// timeframes and use the first one that yields a renderable chart.
+async function fetchTempHistoryForReport(diskName: string): Promise<DiskTempHistoryPayload | undefined> {
+  for (const tf of ['month', 'week', 'day', 'hour']) {
+    try {
+      const result = await fetchApi<DiskTempHistoryPayload>(
+        `/api/disk/${encodeURIComponent(diskName)}/temperature/history?timeframe=${tf}`,
+      )
+      if (result?.data && result.data.length >= 2) return result
+    } catch {
+      /* try next */
+    }
+  }
+  return undefined
+}
+
+function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttributes: SmartAttribute[], observations: DiskObservation[] = [], lastTestDate?: string, targetWindow?: Window, isHistorical = false, tempHistory?: DiskTempHistoryPayload) {
   const now = new Date().toLocaleString()
   const logoUrl = `${window.location.origin}/images/proxmenux-logo.png`
   const reportId = `SMART-${Date.now().toString(36).toUpperCase()}`
@@ -2120,48 +2571,45 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
   const criticalAttrs = smartAttributes.filter(a => a.status !== 'ok')
   const hasCritical = criticalAttrs.length > 0
   
-  // Temperature color based on disk type
+  // Temperature color and threshold strings for the printable report —
+  // both pulled from the user-configurable backend cache so the report
+  // prints whatever the operator set in Settings.
+  const _reportThresholds = getDiskTempThresholdsSync(diskType)
   const getTempColorForReport = (temp: number): string => {
     if (temp <= 0) return '#94a3b8' // gray for N/A
-    switch (diskType) {
-      case 'NVMe':
-        // NVMe: <=70 green, 71-80 yellow, >80 red
-        if (temp <= 70) return '#16a34a'
-        if (temp <= 80) return '#ca8a04'
-        return '#dc2626'
-      case 'SSD':
-        // SSD: <=59 green, 60-70 yellow, >70 red
-        if (temp <= 59) return '#16a34a'
-        if (temp <= 70) return '#ca8a04'
-        return '#dc2626'
-      case 'SAS':
-        // SAS enterprise: <=55 green, 56-65 yellow, >65 red
-        if (temp <= 55) return '#16a34a'
-        if (temp <= 65) return '#ca8a04'
-        return '#dc2626'
-      case 'HDD':
-      default:
-        // HDD: <=45 green, 46-55 yellow, >55 red
-        if (temp <= 45) return '#16a34a'
-        if (temp <= 55) return '#ca8a04'
-        return '#dc2626'
-    }
+    if (temp >= _reportThresholds.hot) return '#dc2626'
+    if (temp >= _reportThresholds.warn) return '#ca8a04'
+    return '#16a34a'
   }
-  
-  // Temperature thresholds for display
-  const tempThresholds = diskType === 'NVMe'
-    ? { optimal: '<=70°C', warning: '71-80°C', critical: '>80°C' }
-    : diskType === 'SSD'
-    ? { optimal: '<=59°C', warning: '60-70°C', critical: '>70°C' }
-    : diskType === 'SAS'
-    ? { optimal: '<=55°C', warning: '56-65°C', critical: '>65°C' }
-    : { optimal: '<=45°C', warning: '46-55°C', critical: '>55°C' }
 
+  // Temperature thresholds for display
+  const tempThresholds = {
+    optimal: `<${_reportThresholds.warn}°C`,
+    warning: `${_reportThresholds.warn}-${_reportThresholds.hot - 1}°C`,
+    critical: `≥${_reportThresholds.hot}°C`,
+  }
   const isNvmeDisk = diskType === 'NVMe'
-  
-  // NVMe Wear & Lifetime data
-  const nvmePercentUsed = testStatus.smart_data?.nvme_raw?.percent_used ?? disk.percentage_used ?? 0
-  const nvmeAvailSpare = testStatus.smart_data?.nvme_raw?.avail_spare ?? 100
+
+  // NVMe Wear & Lifetime data. Sprint 14 fix: the previous code used
+  // `?? 0` / `?? 100` as fallbacks, which made the report invent
+  // "100% Life Remaining" + "100% Available Spare" for drives that
+  // simply don't report those metrics (some early WDC SN720, some
+  // Samsung OEM, etc.). The dashboard modal already hides its wear
+  // section in that case — we mirror the same gating here so the
+  // printable report doesn't lie.
+  const nvmePercentUsedRaw = testStatus.smart_data?.nvme_raw?.percent_used ?? disk.percentage_used
+  const nvmeAvailSpareRaw = testStatus.smart_data?.nvme_raw?.avail_spare
+  // Sprint 14 honest-data fix (refined): only render the full Wear &
+  // Lifetime block when the firmware has actually started ticking
+  // percent_used. Drives like the WD CL SN720 expose `percent_used: 0`
+  // until significant wear is reached — treating that as "100% life
+  // remaining" is misleading. In that case we fall back to a minimal
+  // Data-Written-only block (handled separately below).
+  const hasNvmeWearData = (
+    typeof nvmePercentUsedRaw === 'number' && nvmePercentUsedRaw > 0
+  )
+  const nvmePercentUsed = nvmePercentUsedRaw ?? 0
+  const nvmeAvailSpare = nvmeAvailSpareRaw ?? 100
   const nvmeDataWritten = testStatus.smart_data?.nvme_raw?.data_units_written ?? 0
   // Data units are in 512KB blocks, convert to TB
   const nvmeDataWrittenTB = (nvmeDataWritten * 512 * 1024) / (1024 * 1024 * 1024 * 1024)
@@ -2305,6 +2753,7 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
           <div style="margin-bottom:12px;">
             <div style="font-size:10px;color:#475569;margin-bottom:4px;">Raw Message:</div>
             <div style="font-family:monospace;font-size:11px;color:#1e293b;background:#f8fafc;padding:10px;border-radius:4px;white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto;">${obs.raw_message || 'N/A'}</div>
+            ${translateAtaError(obs.raw_message || '') ? `<div style="font-size:11px;color:#475569;font-style:italic;margin-top:6px;padding-left:4px;">↳ ${translateAtaError(obs.raw_message || '')}</div>` : ''}
           </div>
           
           <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:10px;font-size:11px;padding-top:10px;border-top:1px solid ${infoColor}20;">
@@ -2356,7 +2805,124 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
     </div>
     `
   }
-  
+
+  // Per-disk temperature history chart (Sprint 14). Rendered as inline
+  // SVG so it survives the print-to-PDF path. Only emits markup when the
+  // backend has actually sampled this disk; otherwise the section is
+  // omitted entirely (no point printing an empty card).
+  let temperatureChartHtml = ''
+  if (tempHistory && tempHistory.data && tempHistory.data.length >= 2) {
+    const points = tempHistory.data
+    const stats = tempHistory.stats
+    const W = 720, H = 200
+    const padL = 38, padR = 14, padT = 16, padB = 28
+    const innerW = W - padL - padR
+    const innerH = H - padT - padB
+
+    const ts0 = points[0].timestamp
+    const ts1 = points[points.length - 1].timestamp
+    const span = Math.max(1, ts1 - ts0)
+    const vals = points.map(p => p.value)
+    const dataMin = Math.min(...vals)
+    const dataMax = Math.max(...vals)
+    // Pad the y-domain a couple of degrees on each side so the line
+    // doesn't sit flush against the chart border.
+    const yMin = Math.max(0, Math.floor(dataMin - 3))
+    const yMax = Math.ceil(dataMax + 3)
+    const yRange = Math.max(1, yMax - yMin)
+
+    const xFor = (t: number) => padL + ((t - ts0) / span) * innerW
+    const yFor = (v: number) => padT + (1 - (v - yMin) / yRange) * innerH
+
+    // Threshold reference lines pulled from the user-configurable
+    // backend cache. `getDiskTempThresholdsSync` reads the in-memory
+    // map populated by `useDiskTempThresholds` mounted on the parent
+    // component — no extra fetch in the print flow.
+    const _dt = getDiskTempThresholdsSync(diskType)
+    const warnAt = _dt.warn
+    const hotAt = _dt.hot
+
+    const linePath = points.map((p, i) => {
+      const cmd = i === 0 ? 'M' : 'L'
+      return `${cmd}${xFor(p.timestamp).toFixed(1)},${yFor(p.value).toFixed(1)}`
+    }).join(' ')
+
+    // Area fill below the line (closing back along the bottom).
+    const areaPath = `${linePath} L${xFor(ts1).toFixed(1)},${(padT + innerH).toFixed(1)} L${xFor(ts0).toFixed(1)},${(padT + innerH).toFixed(1)} Z`
+
+    const formatXLabel = (ts: number) => {
+      const d = new Date(ts * 1000)
+      if (span <= 86400 * 2) {
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+      return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+    }
+
+    // Y axis ticks — 4 evenly spaced labels.
+    const yTicks: number[] = []
+    for (let i = 0; i <= 4; i++) {
+      yTicks.push(yMin + (yRange * i) / 4)
+    }
+
+    // X axis ticks — start, mid, end.
+    const xTicks = [ts0, ts0 + span / 2, ts1]
+
+    // Per the user's preference the report chart is blue rather than
+    // colour-coded. Threshold bands and reference lines below still use
+    // the warn/hot palette so a hot stretch is visible without changing
+    // the line itself.
+    const lineColor = '#2563eb'
+    const samples = points.length
+
+    // Threshold band y-coords (clamped to chart area).
+    const yWarnBand = Math.max(padT, yFor(hotAt))
+    const yHotTop = padT
+    const yHotHeight = Math.max(0, yWarnBand - yHotTop)
+    const yMidTop = Math.max(padT, yFor(hotAt))
+    const yMidBottom = Math.min(padT + innerH, yFor(warnAt))
+    const yMidHeight = Math.max(0, yMidBottom - yMidTop)
+
+    temperatureChartHtml = `
+  <div style="margin-top:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:0.04em;">Temperature history</div>
+        <div style="font-size:10px;color:#64748b;margin-top:2px;">${samples} samples · ${formatXLabel(ts0)} → ${formatXLabel(ts1)}</div>
+      </div>
+      <div style="display:flex;gap:14px;font-size:11px;">
+        <div><span style="color:#64748b;">Min</span> <strong style="color:#16a34a;">${stats.min}°C</strong></div>
+        <div><span style="color:#64748b;">Avg</span> <strong style="color:#1e293b;">${stats.avg}°C</strong></div>
+        <div><span style="color:#64748b;">Max</span> <strong style="color:#dc2626;">${stats.max}°C</strong></div>
+      </div>
+    </div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none" style="display:block;max-height:200px;">
+      <!-- threshold bands -->
+      ${yHotHeight > 0 ? `<rect x="${padL}" y="${yHotTop}" width="${innerW}" height="${yHotHeight}" fill="#fee2e2" opacity="0.55"/>` : ''}
+      ${yMidHeight > 0 ? `<rect x="${padL}" y="${yMidTop}" width="${innerW}" height="${yMidHeight}" fill="#fef3c7" opacity="0.55"/>` : ''}
+      <!-- chart frame -->
+      <rect x="${padL}" y="${padT}" width="${innerW}" height="${innerH}" fill="none" stroke="#cbd5e1" stroke-width="1"/>
+      <!-- y grid + labels -->
+      ${yTicks.map(t => {
+        const y = yFor(t).toFixed(1)
+        return `<line x1="${padL}" y1="${y}" x2="${padL + innerW}" y2="${y}" stroke="#e2e8f0" stroke-width="0.6" stroke-dasharray="2,3"/>` +
+               `<text x="${padL - 5}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="9" fill="#64748b">${Math.round(t)}°</text>`
+      }).join('')}
+      <!-- x labels -->
+      ${xTicks.map(t => {
+        const x = xFor(t).toFixed(1)
+        return `<text x="${x}" y="${(padT + innerH + 16).toFixed(1)}" text-anchor="middle" font-size="9" fill="#64748b">${formatXLabel(t)}</text>`
+      }).join('')}
+      <!-- threshold reference lines -->
+      ${warnAt > yMin && warnAt < yMax ? `<line x1="${padL}" y1="${yFor(warnAt).toFixed(1)}" x2="${padL + innerW}" y2="${yFor(warnAt).toFixed(1)}" stroke="#ca8a04" stroke-width="0.7" stroke-dasharray="3,2"/>` : ''}
+      ${hotAt > yMin && hotAt < yMax ? `<line x1="${padL}" y1="${yFor(hotAt).toFixed(1)}" x2="${padL + innerW}" y2="${yFor(hotAt).toFixed(1)}" stroke="#dc2626" stroke-width="0.7" stroke-dasharray="3,2"/>` : ''}
+      <!-- area + line -->
+      <path d="${areaPath}" fill="${lineColor}" fill-opacity="0.12"/>
+      <path d="${linePath}" fill="none" stroke="${lineColor}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>
+    <div style="font-size:9px;color:#94a3b8;margin-top:4px;">Bands: amber = warn (≥${warnAt}°C), red = critical (≥${hotAt}°C). Sampled every 60s.</div>
+  </div>`
+  }
+
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2704,11 +3270,12 @@ function pmxPrint(){
     </div>
   </div>
   ` : ''}
+  ${temperatureChartHtml}
 </div>
 
 
 
-${isNvmeDisk ? `
+${isNvmeDisk && hasNvmeWearData ? `
 <!-- NVMe Wear & Lifetime (Special Section) -->
 <div class="section">
   <div class="section-title">3. NVMe Wear & Lifetime</div>
@@ -2811,6 +3378,35 @@ ${isNvmeDisk ? `
   })()}
 </div>
 ` : ''}
+
+${isNvmeDisk && !hasNvmeWearData ? (() => {
+  // Fallback for NVMe drives whose firmware does not tick percent_used
+  // (e.g. WD CL SN720). Skip the misleading "100% Life Remaining /
+  // Excellent" gauge and only print the data we trust: total written.
+  const dwUnits = testStatus.smart_data?.nvme_raw?.data_units_written ?? 0
+  if (!dwUnits) return ''
+  const dwTB = (dwUnits * 512 * 1024) / (1024 ** 4)
+  const dwLabel = dwTB >= 1 ? dwTB.toFixed(2) + ' TB' : (dwTB * 1024).toFixed(1) + ' GB'
+  const pCycles = testStatus.smart_data?.nvme_raw?.power_cycles ?? disk.power_cycles ?? null
+  return `
+<!-- NVMe wear-not-reported fallback -->
+<div class="section">
+  <div class="section-title">3. NVMe Wear &amp; Lifetime</div>
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div>
+        <div style="font-size:10px;color:#475569;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Data Written</div>
+        <div style="font-size:18px;font-weight:700;color:#1e293b;margin-top:4px;">${dwLabel}</div>
+      </div>
+      ${pCycles !== null ? `<div>
+        <div style="font-size:10px;color:#475569;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Power Cycles</div>
+        <div style="font-size:18px;font-weight:700;color:#1e293b;margin-top:4px;">${fmtNum(pCycles as number)}</div>
+      </div>` : ''}
+    </div>
+  </div>
+</div>
+`
+})() : ''}
 
 ${!isNvmeDisk && diskType === 'SSD' ? (() => {
   // Try to find SSD wear indicators from SMART attributes
@@ -3028,7 +3624,7 @@ ${observationsHtml}
   <!-- Footer -->
 <div class="rpt-footer">
   <div>Report generated by ProxMenux Monitor</div>
-  <div>ProxMenux Monitor v1.2.0</div>
+  <div>ProxMenux Monitor v1.2.2</div>
 </div>
 
 </body>
@@ -3483,10 +4079,26 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
       
       {/* View Full Report Button */}
       <div className="pt-4 border-t">
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="w-full gap-2 bg-blue-500/10 border-blue-500/30 text-blue-500 hover:bg-blue-500/20 hover:text-blue-400"
-          onClick={() => openSmartReport(disk, testStatus, smartAttributes, observations, lastTestDate)}
+          onClick={async () => {
+            // Open placeholder window synchronously so the popup blocker
+            // sees the user gesture; then fetch temp history and hand
+            // the populated tempHistory + targetWindow to openSmartReport.
+            const reportWindow = window.open('about:blank', '_blank')
+            if (reportWindow) {
+              reportWindow.document.write('<html><body style="background:#0f172a;color:#e2e8f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><div style="border:3px solid transparent;border-top-color:#06b6d4;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:0 auto"></div><p style="margin-top:16px">Loading report...</p><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div></body></html>')
+            }
+            // Warm the disk-temp threshold cache in parallel with the
+            // history fetch so openSmartReport's sync read picks up
+            // the user's customised values instead of stale defaults.
+            const [tempHistory] = await Promise.all([
+              fetchTempHistoryForReport(disk.name),
+              loadDiskTempThresholds(),
+            ])
+            openSmartReport(disk, testStatus, smartAttributes, observations, lastTestDate, reportWindow || undefined, false, tempHistory)
+          }}
         >
           <FileText className="h-4 w-4" />
           View Full SMART Report
@@ -3571,7 +4183,12 @@ function HistoryTab({ disk }: { disk: DiskInfo }) {
       const fullStatus = await fetchApi<SmartTestStatus>(`/api/storage/smart/${disk.name}`)
       const attrs = fullStatus.smart_data?.attributes || []
 
-      openSmartReport(disk, fullStatus, attrs, [], entry.timestamp, reportWindow || undefined, true)
+      const [tempHistory] = await Promise.all([
+        fetchTempHistoryForReport(disk.name),
+        loadDiskTempThresholds(),
+      ])
+
+      openSmartReport(disk, fullStatus, attrs, [], entry.timestamp, reportWindow || undefined, true, tempHistory)
     } catch {
       if (reportWindow && !reportWindow.closed) {
         reportWindow.document.body.innerHTML = '<p style="color:#ef4444;text-align:center;margin-top:40vh">Failed to load report data.</p>'

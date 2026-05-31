@@ -7,6 +7,31 @@ ProxMenux Flask Server
 - Integrates a web terminal powered by xterm.js
 """
 
+# ─── gevent monkey-patch — MUST be the first executable code ─────────────
+#
+# When SSL is enabled we serve the dashboard with `gevent.pywsgi.WSGIServer`.
+# Without `monkey.patch_all()` gevent runs as a single-threaded cooperative
+# event loop: a request that calls `subprocess.run(pvesh ...)` blocks the
+# whole event loop, so every other request lined up in parallel returns 502
+# until that subprocess finishes. The frontend's `/api/vms` page fires 3-4
+# parallel requests on mount, which is exactly the symptom that surfaced as
+# "first load 502, second load fine" under HTTPS.
+#
+# `patch_all()` replaces stdlib blocking primitives (socket, subprocess,
+# select, threading, ssl, time.sleep, ...) with gevent-friendly equivalents
+# that yield to the event loop instead of blocking it. This must run BEFORE
+# any other import touches those primitives — otherwise the unpatched
+# versions get bound in the module and the patch is silently ineffective.
+#
+# Wrapped in a try/except so a host without gevent installed (HTTP-only
+# mode) still imports cleanly: the patch is only meaningful when gevent is
+# actually being used as the WSGI server.
+try:
+    from gevent import monkey
+    monkey.patch_all()
+except ImportError:
+    pass
+
 import glob
 import json
 import logging
@@ -51,6 +76,7 @@ from flask_security_routes import security_bp  # noqa: E402
 from flask_notification_routes import notification_bp  # noqa: E402
 from flask_oci_routes import oci_bp  # noqa: E402
 from notification_manager import notification_manager  # noqa: E402
+import post_install_versions  # noqa: E402  — Sprint 12A: detect post-install function updates
 from jwt_middleware import require_auth  # noqa: E402
 import auth_manager  # noqa: E402
 
@@ -139,7 +165,43 @@ def get_proxmox_node_name() -> str:
 # Flask application and Blueprints
 # -------------------------------------------------------------------
 app = Flask(__name__)
-CORS(app)  # Enable CORS for Next.js frontend
+# DoS / cost-amplification cap (audit Tier 3.1 — sin body-size cap en POSTs).
+# Without this an authenticated client could POST a 100 MB body to /api/notifications/test-ai
+# (or any other AI endpoint) and stall the dispatch thread plus rack up real
+# money on the configured AI provider. 1 MB is generous for any legitimate
+# request — settings payloads top out around 50 KB, AI prompts at 8 KB.
+app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024  # 1 MB
+
+# Restrict CORS to known origins (audit Tier 3 #18). The previous wide-open
+# `CORS(app)` enabled drive-by attacks: any malicious site visited by an
+# admin's browser could call the API directly.
+#
+# In production the AppImage serves both Flask AND the Next.js static export
+# from the same origin — CORS isn't actually needed for the dashboard itself
+# in that case. We keep the dev origin (`localhost:3000` for `npm run dev`)
+# always allowed, and let operators add their own deployment URL via the
+# PROXMENUX_CORS_ORIGINS env var (comma-separated).
+_cors_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8008",
+    "http://127.0.0.1:8008",
+    "https://localhost:8008",
+    "https://127.0.0.1:8008",
+]
+_extra_origins = os.environ.get("PROXMENUX_CORS_ORIGINS", "").strip()
+if _extra_origins:
+    _cors_origins.extend(o.strip() for o in _extra_origins.split(",") if o.strip())
+CORS(app, origins=_cors_origins, supports_credentials=True)
+
+# Sprint 12A: scan for post-install function updates BEFORE the rest of
+# the update-check pipeline (Proxmox upgrade poll, ProxMenux self-update
+# check) kicks in. The scan parses the on-disk auto/customizable post-
+# install scripts and compares each declared `# version:` against the
+# version recorded in installed_tools.json — anything bumped is cached
+# in memory + written to updates_available.json so the bash menu and
+# the notification poller can read it without re-parsing.
+post_install_versions.scan_at_startup()
 
 # Register Blueprints
 app.register_blueprint(auth_bp)
@@ -154,6 +216,47 @@ init_terminal_routes(app)
 
 
 # -------------------------------------------------------------------
+# Security headers — defense-in-depth (audit Tier 2 #16)
+# -------------------------------------------------------------------
+# Defense-in-depth header policy. The XSS sinks in the React frontend are
+# closed (audit Tier 2 #13/#14/#17b — VM notes, Lynis report, terminal
+# interaction message). This header layer is the second line of defense.
+#
+# `script-src 'self' 'unsafe-inline' 'unsafe-eval'`:
+#   - `'unsafe-inline'` is REQUIRED because Next.js static export injects
+#     `<script id="__NEXT_DATA__">` and a small bootstrap inline script for
+#     hydration. Without it the dashboard renders a blank page.
+#   - `'unsafe-eval'` is also required because the Next.js client runtime
+#     uses `Function()` for some lazy-loaded chunks.
+#   A nonce-based CSP would let us drop these, but it requires per-request
+#   nonce generation that the static export doesn't support — switching to
+#   nonces is a build-system change, not a header change.
+# `style-src 'self' 'unsafe-inline'`: shadcn components and the Lynis
+#   printable report use inline styles by design.
+# `connect-src` includes `wss:` for terminal WebSockets and `https:` for
+#   third-party AI providers (OpenAI / Anthropic).
+@app.after_request
+def _apply_security_headers(response):
+    # Don't override if a downstream handler already set a custom CSP.
+    if 'Content-Security-Policy' not in response.headers:
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob: https:; "
+            "font-src 'self' data:; "
+            "connect-src 'self' ws: wss: https:; "
+            "frame-ancestors 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self'"
+        )
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    response.headers.setdefault('X-Frame-Options', 'DENY')
+    return response
+
+
+# -------------------------------------------------------------------
 # Fail2Ban application-level ban check (for reverse proxy scenarios)
 # -------------------------------------------------------------------
 # When users access via a reverse proxy, iptables/nftables cannot block
@@ -162,18 +265,35 @@ init_terminal_routes(app)
 # is banned in the 'proxmenux' fail2ban jail and blocks at app level.
 import subprocess as _f2b_subprocess
 import time as _f2b_time
+import shutil as _f2b_shutil
 
 # Cache banned IPs for 30 seconds to avoid calling fail2ban-client on every request
 _f2b_banned_cache = {"ips": set(), "ts": 0, "ttl": 30}
+# One-time check at module import — when Fail2Ban isn't installed we want
+# the @app.before_request middleware to be a no-op. Without this guard
+# every HTTP request to the Monitor went through _f2b_get_banned_ips() →
+# execve fail2ban-client → ENOENT, and the negative result wasn't cached
+# (only the success branch updated `ts`), so a missing binary triggered
+# one failed execve per HTTP request. strace on a host without Fail2Ban
+# captured 250+ failed execve attempts in 10 min from this single path.
+# Fixed in v1.2.1.4 perf audit.
+_F2B_BINARY = _f2b_shutil.which("fail2ban-client")
+
 
 def _f2b_get_banned_ips():
     """Get currently banned IPs from the proxmenux jail, with caching."""
+    if _F2B_BINARY is None:
+        # Fail2Ban isn't installed on this host. Skip the subprocess
+        # entirely; the @app.before_request middleware will see an empty
+        # banned-IPs set and let every request through (which is the
+        # correct behaviour — there's no Fail2Ban to honour).
+        return _f2b_banned_cache["ips"]
     now = _f2b_time.time()
     if now - _f2b_banned_cache["ts"] < _f2b_banned_cache["ttl"]:
         return _f2b_banned_cache["ips"]
     try:
         result = _f2b_subprocess.run(
-            ["fail2ban-client", "status", "proxmenux"],
+            [_F2B_BINARY, "status", "proxmenux"],
             capture_output=True, text=True, timeout=5
         )
         if result.returncode == 0:
@@ -182,20 +302,33 @@ def _f2b_get_banned_ips():
                     ip_str = line.split(":", 1)[1].strip()
                     banned = set(ip.strip() for ip in ip_str.split() if ip.strip())
                     _f2b_banned_cache["ips"] = banned
-                    _f2b_banned_cache["ts"] = now
-                    return banned
     except Exception:
         pass
+    # Always update the timestamp — even on exception / non-zero rc /
+    # missing jail. Caches the negative result for the same TTL so a
+    # transient Fail2Ban outage doesn't trigger one subprocess call per
+    # HTTP request until it recovers.
+    _f2b_banned_cache["ts"] = now
     return _f2b_banned_cache["ips"]
 
+# XFF / X-Real-IP are only honored when the operator opts in by setting
+# PROXMENUX_TRUST_PROXY=1 (deployment is behind a real reverse proxy that the
+# admin controls). The previous unconditional trust let any client spoof
+# `X-Forwarded-For: 1.2.3.4` to bypass Fail2Ban (each request appears to
+# come from a different IP, so the per-IP attempt counter never trips) and
+# poison the access logs. See audit Tier 3 #20.
+_TRUST_PROXY = os.environ.get("PROXMENUX_TRUST_PROXY", "0") == "1"
+
+
 def _f2b_get_client_ip():
-    """Get the real client IP, supporting reverse proxies."""
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    real_ip = request.headers.get("X-Real-IP", "")
-    if real_ip:
-        return real_ip.strip()
+    """Get the real client IP, supporting reverse proxies only when explicitly trusted."""
+    if _TRUST_PROXY:
+        forwarded = request.headers.get("X-Forwarded-For", "")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        real_ip = request.headers.get("X-Real-IP", "")
+        if real_ip:
+            return real_ip.strip()
     return request.remote_addr or "unknown"
 
 @app.before_request
@@ -594,37 +727,61 @@ def _temperature_collector_loop():
     - Cleanup: every 60 min at offset 120s
     """
     import time as _time
-    
+
     RECORD_INTERVAL = 60
     TEMP_OFFSET = 40      # Record temp at :40 of each minute
     LATENCY_OFFSET = 25   # Record latency at :25 of each minute
+    # v1.2.1.4 perf audit: disk SMART polling used to fire on the exact
+    # same tick as CPU temp (offset :40). Keeping it on the same 60s
+    # cadence — operator wants per-minute disk temperature chart data —
+    # but shifted to offset :55 so the smartctl burst (one per disk)
+    # doesn't pile on top of the CPU temp read and the upcoming latency
+    # ping of the next cycle (:25 + 60). Net effect: load is now spread
+    # across :25 (latency), :40 (CPU temp), :55 (disk SMART burst)
+    # instead of stacking at :25 + :40.
+    DISK_TEMP_DELAY_AFTER_CPU = 15
     CLEANUP_INTERVAL = 3600  # 60 minutes
     CLEANUP_OFFSET = 120  # Cleanup at 2 min after the hour mark
-    
+
     # Initial delays to stagger from other collectors
     _time.sleep(LATENCY_OFFSET)  # Start latency first
-    
+
     last_temp = _time.monotonic()
     last_latency = _time.monotonic()
     last_cleanup = _time.monotonic() - CLEANUP_INTERVAL + CLEANUP_OFFSET  # First cleanup after offset
-    
+
     while True:
         now = _time.monotonic()
-        
+
         # Latency pings (offset 25s - runs first in each cycle)
         if now - last_latency >= RECORD_INTERVAL:
             _record_latency()
             last_latency = now
-        
-        # Temperature record (offset 40s - 15s after latency)
+
+        # CPU / sensors temperature record (offset 40s - 15s after latency)
         _time.sleep(15)
         _record_temperature()
+        # Sprint 14: per-disk SMART temperature sampler — kept on every
+        # tick (operator-visible chart granularity) but offset further
+        # into the cycle so the smartctl subprocess burst (one per disk)
+        # doesn't collide with the cheap CPU/latency reads.
+        _time.sleep(DISK_TEMP_DELAY_AFTER_CPU)
+        try:
+            import disk_temperature_history
+            disk_temperature_history.record_all_disk_temperatures()
+        except Exception as e:
+            print(f"[ProxMenux] Disk temperature sample failed: {e}")
         last_temp = _time.monotonic()
-        
+
         # Cleanup check (every hour, offset from main cycles)
         if _time.monotonic() - last_cleanup >= CLEANUP_INTERVAL:
             _cleanup_old_temperature_data()
             _cleanup_old_latency_data()
+            try:
+                import disk_temperature_history
+                disk_temperature_history.cleanup_old_disk_temperature_data()
+            except Exception:
+                pass
             last_cleanup = _time.monotonic()
         
         # Sleep remaining time until next cycle
@@ -915,10 +1072,23 @@ def _capture_health_journal_context(categories: list, reason: str = '') -> str:
         if not pattern:
             return ""
         
-        # Capture recent journal entries matching keywords
-        # Use -b 0 to only include logs from the current boot
+        # Capture recent journal entries matching keywords.
+        # Use -b 0 to only include logs from the current boot.
+        # Filter out the Monitor's own stdout (AppRun, [HealthPersistence],
+        # proxmenux-auth, etc.) BEFORE keyword matching — otherwise a startup
+        # line like "[HealthPersistence] Database initialized with 13 tables"
+        # leaks into the AI context because grep -iE 'ata' matches the
+        # substring "ata" in "dATAbase". Self-logs are never system evidence.
+        #
+        # Also exclude systemd actions on the proxmenux-monitor unit itself
+        # (e.g. "proxmenux-monitor.service: Killed process 2010621 with
+        # signal SIGKILL"). When a kernel event fires within the same
+        # 10-min window as one of our own watchdog kills, the SIGKILL
+        # line would otherwise leak into the journal_context and the AI
+        # would paste it under the unrelated event as "📝 Log: …".
         cmd = (
             f"journalctl -b 0 --since='10 minutes ago' --no-pager -n 500 2>/dev/null | "
+            f"grep -vE 'AppRun\\[|proxmenux-auth|\\[HealthPersistence\\]|\\[ProxMenux\\]|\\[NotificationManager\\]|\\[AIEnhancer\\]|proxmenux-monitor\\.service' | "
             f"grep -iE '{pattern}' | tail -n 30"
         )
         
@@ -997,33 +1167,81 @@ def _health_collector_loop():
             details = result.get('details', {})
             degraded = []
             
-            # Map health categories to specific event types for toggle checks
+            # Map health categories to specific event types for toggle checks.
+            # `_CATEGORY_EVENT_MAP` is keyword-based for sub-types (network_down vs
+            # network_latency). `_BROAD_CATEGORY_TO_EVENT` is the catch-all fallback
+            # used when no keyword matches: if the user has muted the direct
+            # Resources/Storage event for a category (e.g. ram_high, cpu_high), do
+            # not re-emit the same condition under the Health Monitor banner. This
+            # closes the "muted ram_high but still got health_degraded for memory"
+            # double-event reported by users.
             _CATEGORY_EVENT_MAP = {
                 # (category, reason_contains) -> event_type to check
                 ('network', 'latency'): 'network_latency',
                 ('network', 'connectivity'): 'network_down',
                 ('network', 'unreachable'): 'network_down',
             }
-            
+            _BROAD_CATEGORY_TO_EVENT = {
+                'cpu': 'cpu_high',
+                'memory': 'ram_high',
+                'load': 'load_high',
+                'temperature': 'temp_high',
+                'disk': 'disk_space_low',
+                'disks': 'disk_io_error',
+                'smart': 'disk_io_error',
+                'zfs': 'disk_io_error',
+                'storage': 'storage_unavailable',
+                # 'network' intentionally not here — handled by the keyword map above.
+                'pve_services': 'service_fail',
+                'security': 'auth_fail',
+                'updates': 'update_summary',
+            }
+
+            # Sub-categories already rolled up into details['storage']
+            # by _check_proxmox_storage_status. Emitting them as their
+            # own health_degraded entries duplicates the same warning
+            # (e.g. "Storage Mounts & Space" + "PVE Storage Capacity"
+            # both saying "PBS-Cloud (pbs) usage ≥70%"). Skip them at
+            # the notification layer — they still update _prev_statuses
+            # so a future degradation transition is detected normally.
+            _STORAGE_SUBCATEGORIES = {
+                'pve_storage_capacity', 'zfs_pool_capacity',
+                'lxc_disk', 'lxc_mounts', 'remote_mounts',
+            }
+
             for cat_key, cat_data in details.items():
                 cur_status = cat_data.get('status', 'OK')
                 prev_status = _prev_statuses.get(cat_key, 'OK')
                 cur_rank = _SEV_RANK.get(cur_status, 0)
                 prev_rank = _SEV_RANK.get(prev_status, 0)
-                
+
+                if cat_key in _STORAGE_SUBCATEGORIES:
+                    _prev_statuses[cat_key] = cur_status
+                    continue
+
                 if cur_rank > prev_rank and cur_rank >= 2:  # WARNING or CRITICAL
                     reason = cat_data.get('reason', f'{cat_key} status changed to {cur_status}')
                     reason_lower = reason.lower()
                     cat_name = _CAT_NAMES.get(cat_key, cat_key)
-                    
-                    # Check if this specific notification type is enabled
+
+                    # Check if this specific notification type is enabled.
                     skip_notification = False
+                    keyword_matched = False
                     for (map_cat, map_keyword), event_type in _CATEGORY_EVENT_MAP.items():
                         if cat_key == map_cat and map_keyword in reason_lower:
+                            keyword_matched = True
                             if not notification_manager.is_event_enabled(event_type):
                                 skip_notification = True
-                                break
-                    
+                            break
+
+                    # Broad category fallback — only when no keyword sub-type matched.
+                    # If the user explicitly muted the linked Resources/Storage event,
+                    # don't surface the same condition through health_degraded.
+                    if not keyword_matched and not skip_notification:
+                        broad_event = _BROAD_CATEGORY_TO_EVENT.get(cat_key)
+                        if broad_event and not notification_manager.is_event_enabled(broad_event):
+                            skip_notification = True
+
                     # Startup grace period: skip transient issues from categories
                     # that typically need time to stabilize after boot
                     if startup_grace.should_suppress_category(cat_key):
@@ -1068,23 +1286,37 @@ def _health_collector_loop():
                     severity = max_sev
                 
                 try:
-                    notification_manager.send_notification(
+                    # Use emit_event (not send_notification) so the
+                    # 24h fingerprint cooldown applies. send_notification
+                    # was bypassing the cooldown — every 5-min run of
+                    # this loop fired a fresh notification, producing a
+                    # cascade like "PVE storage ≥85%" every 6-10 min for
+                    # the same condition. The fingerprint includes the
+                    # set of degraded categories, so a *different*
+                    # category degrading later still notifies.
+                    cat_signature = ','.join(sorted(
+                        d.get('cat_key', d.get('category', '').lower())
+                        for d in degraded
+                    ))
+                    notification_manager.emit_event(
                         event_type='health_degraded',
                         severity=severity,
-                        title=title,
-                        message=body,
                         data={
                             'hostname': hostname,
                             'count': str(len(degraded)),
-                            '_journal_context': journal_context,  # For AI enrichment
+                            'title': title,
+                            'reason': body,
+                            '_journal_context': journal_context,
                         },
                         source='health_monitor',
+                        entity='node',
+                        entity_id=f'health_{cat_signature}',
                     )
                 except Exception as e:
                     print(f"[ProxMenux] Health notification error: {e}")
         except Exception as e:
             print(f"[ProxMenux] Health collector error: {e}")
-        
+
         time.sleep(300)  # Every 5 minutes
 
 
@@ -1092,7 +1324,8 @@ def _vital_signs_sampler():
     """Dedicated thread for rapid CPU, memory & temperature sampling.
 
     Runs independently of the 5-min health collector loop.
-    - CPU usage:   sampled every 30s  (10 samples in 5 min for sustained detection)
+    - CPU usage:   sampled every 5s   (matches dashboard refresh; also feeds /api/system + /api/prometheus
+                                       through state_history cache to avoid gevent races with psutil.cpu_percent)
     - Memory:      sampled every 30s  (10 samples in 5 min for sustained detection)
     - Temperature: sampled every 15s  (12 samples in 3 min for temporal logic)
     Uses time.monotonic() to avoid drift.
@@ -1105,15 +1338,16 @@ def _vital_signs_sampler():
     time.sleep(15)
 
     TEMP_INTERVAL = 15   # seconds (was 10s - reduced frequency by 33%)
-    CPU_INTERVAL  = 30   # seconds
-    MEM_INTERVAL  = 30   # seconds (aligned with CPU for sustained-RAM detection)
+    CPU_INTERVAL  = 5    # seconds — exclusive owner of psutil.cpu_percent baseline;
+                         # API handlers read the cached value to avoid 0% reads under gevent.
+    MEM_INTERVAL  = 30   # seconds (aligned with original CPU cadence for sustained-RAM detection)
 
     # Stagger: CPU starts immediately, Temp after 7s, Mem after 15s
     next_cpu  = time.monotonic()
     next_temp = time.monotonic() + 7
     next_mem  = time.monotonic() + 15
 
-    print("[ProxMenux] Vital signs sampler started (CPU: 30s, Mem: 30s, Temp: 15s)")
+    print("[ProxMenux] Vital signs sampler started (CPU: 5s, Mem: 30s, Temp: 15s)")
 
     while True:
         try:
@@ -1168,7 +1402,15 @@ _pvesh_cache = {
     'storage_list': None,
     'storage_list_time': 0,
 }
-_PVESH_CACHE_TTL = 2  # 2 seconds - near real-time, single consistent data source for list + modal
+_PVESH_CACHE_TTL = 5  # 5 seconds — Sprint 14.7: bumped from 2s.
+# At 2 s the cache routinely thrashed when two parallel callers raced
+# the first `pvesh` (~1 s under gevent without monkey-patch on PVE 9):
+# both saw an empty cache, both spawned a `pvesh`, and the dashboard
+# served stale data interleaved with 502s. 5 s comfortably covers the
+# longest pvesh response while still feeling real-time for the UI
+# (which refreshes its widgets every 10–30 s). Coupled with the
+# in-flight lock below this also prevents thundering-herd against PVE.
+_pvesh_cluster_resources_lock = threading.Lock()
 
 # Cache for sensors output (temperature readings)
 _sensors_cache = {
@@ -1210,27 +1452,82 @@ _HARDWARE_CACHE_TTL = 300  # 5 minutes - hardware doesn't change
 
 
 def get_cached_pvesh_cluster_resources_vm():
-    """Get cluster VM resources with 30s cache."""
+    """Get cluster VM resources with a per-process cache.
+
+    `_PVESH_CACHE_TTL` controls cache freshness; `_pvesh_cluster_resources_lock`
+    serialises in-flight calls so a thundering herd of dashboard fetches
+    after a TTL expiry results in ONE `pvesh` instead of N. After the
+    holder of the lock finishes, every other caller picks up the freshly
+    populated cache and returns immediately.
+    """
     global _pvesh_cache
     now = time.time()
-    
+
     if _pvesh_cache['cluster_resources_vm'] is not None and \
        now - _pvesh_cache['cluster_resources_vm_time'] < _PVESH_CACHE_TTL:
         return _pvesh_cache['cluster_resources_vm']
-    
+
+    with _pvesh_cluster_resources_lock:
+        # Re-check inside the lock — another thread may have refreshed
+        # while we were waiting for our turn. This is the single-flight
+        # pattern: only the first thread runs `pvesh`, everyone else
+        # benefits from the same result without spawning duplicates.
+        now = time.time()
+        if _pvesh_cache['cluster_resources_vm'] is not None and \
+           now - _pvesh_cache['cluster_resources_vm_time'] < _PVESH_CACHE_TTL:
+            return _pvesh_cache['cluster_resources_vm']
+
+        try:
+            result = subprocess.run(
+                ['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'],
+                capture_output=True, text=True, timeout=10
+            )
+            if result.returncode == 0:
+                data = json.loads(result.stdout)
+                _pvesh_cache['cluster_resources_vm'] = data
+                _pvesh_cache['cluster_resources_vm_time'] = now
+                return data
+        except Exception:
+            pass
+        return _pvesh_cache['cluster_resources_vm'] or []
+
+
+# Sprint 14 perf pass: three backup endpoints (`/api/backups`,
+# `/api/backup-storages`, `/api/vms/<id>/backups`) all enumerate storages
+# via `pvesh get /storage`, each independently. Each invocation is
+# ~860 ms, and the dashboard's Backups tab triggers all three in quick
+# succession. A 30 s TTL is far below the rate of change for storage
+# config (operators add storages once a quarter at most) and turns
+# three sequential calls into one cached read.
+_PVESH_STORAGE_LIST_TTL = 30
+
+
+def get_cached_pvesh_storage_list():
+    """Get the cluster-wide list of configured storages with 30s cache.
+    Returns the raw `pvesh get /storage` JSON (a list of dicts with
+    storage, type, content, etc.). Returns [] if pvesh is unavailable
+    rather than raising — callers iterate the list and tolerate empty.
+    """
+    global _pvesh_cache
+    now = time.time()
+
+    if _pvesh_cache['storage_list'] is not None and \
+       now - _pvesh_cache['storage_list_time'] < _PVESH_STORAGE_LIST_TTL:
+        return _pvesh_cache['storage_list']
+
     try:
         result = subprocess.run(
-            ['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'],
-            capture_output=True, text=True, timeout=10
+            ['pvesh', 'get', '/storage', '--output-format', 'json'],
+            capture_output=True, text=True, timeout=10,
         )
         if result.returncode == 0:
             data = json.loads(result.stdout)
-            _pvesh_cache['cluster_resources_vm'] = data
-            _pvesh_cache['cluster_resources_vm_time'] = now
+            _pvesh_cache['storage_list'] = data
+            _pvesh_cache['storage_list_time'] = now
             return data
     except Exception:
         pass
-    return _pvesh_cache['cluster_resources_vm'] or []
+    return _pvesh_cache['storage_list'] or []
 
 
 def get_cached_sensors_output():
@@ -3220,9 +3517,36 @@ def get_pcie_link_speed(disk_name):
 
 # get_pcie_link_speed function definition ends here
 
-def get_smart_data(disk_name):
-    """Get SMART data for a specific disk - Enhanced with multiple device type attempts"""
-    smart_data = {
+# ─── SMART data cache (Sprint 14 perf pass) ──────────────────────────────────
+#
+# `_get_smart_data_uncached` cycles through up to 14 smartctl variants per
+# disk to find one that works. The Storage page polls /api/storage every few
+# seconds, so without caching that was 4× <variants> smartctl forks every
+# poll on a typical 4-disk host. Three caches mirror the pattern proven in
+# `disk_temperature_history`:
+#
+#   * `_smart_probe_cache`  — remembers the smartctl args that worked for
+#                             each disk. Subsequent calls skip the fallback
+#                             chain.
+#   * `_smart_result_cache` — memoises the parsed dict for 30 s. SMART
+#                             counters (temp, sectors) change slowly enough
+#                             that this is invisible to the user.
+#   * `_smart_fail_backoff` — disks that keep failing every variant get
+#                             re-probed at most once an hour.
+_SMART_RESULT_TTL = 30
+_SMART_FAIL_BACKOFF_SEC = 3600
+_SMART_FAIL_THRESHOLD = 3
+_SMART_TIMEOUT = 5
+
+_smart_probe_cache: dict[str, list] = {}
+_smart_result_cache: dict[str, tuple] = {}
+_smart_fail_counts: dict[str, int] = {}
+_smart_fail_backoff: dict[str, float] = {}
+
+
+def _smart_default_payload() -> dict:
+    """Empty SMART payload shared by cache-miss and probe-fail paths."""
+    return {
         'temperature': 0,
         'health': 'unknown',
         'power_on_hours': 0,
@@ -3232,23 +3556,80 @@ def get_smart_data(disk_name):
         'reallocated_sectors': 0,
         'pending_sectors': 0,
         'crc_errors': 0,
-        'rotation_rate': 0,  # Added rotation rate (RPM)
-        'power_cycles': 0,   # Added power cycle count
-        'percentage_used': None,  # NVMe: Percentage Used (0-100)
-        'media_wearout_indicator': None,  # SSD: Media Wearout Indicator (Intel/Samsung)
-        'wear_leveling_count': None,  # SSD: Wear Leveling Count
-        'total_lbas_written': None,  # SSD/NVMe: Total LBAs Written
-        'ssd_life_left': None,  # SSD: SSD Life Left percentage
-        'firmware': None, # Added firmware
-        'family': None, # Added model family
-        'sata_version': None, # Added SATA version
-        'form_factor': None # Added Form Factor
+        'rotation_rate': 0,
+        'power_cycles': 0,
+        'percentage_used': None,
+        'media_wearout_indicator': None,
+        'wear_leveling_count': None,
+        'total_lbas_written': None,
+        'ssd_life_left': None,
+        'firmware': None,
+        'family': None,
+        'sata_version': None,
+        'form_factor': None,
     }
-    
+
+
+def _smart_data_useful(d: dict) -> bool:
+    """Did the probe return anything actionable? Used to decide if the
+    result is worth caching and to drive the failure backoff."""
+    return (
+        d.get('model', 'Unknown') != 'Unknown'
+        or d.get('serial', 'Unknown') != 'Unknown'
+        or (d.get('temperature') or 0) > 0
+        or d.get('smart_status', 'unknown') not in ('unknown', '')
+    )
+
+
+def get_smart_data(disk_name):
+    """Cached wrapper around the underlying smartctl probe.
+
+    Three short-circuits stack on top of the original 14-variant
+    fallback chain:
+      1. Result cache — within 30 s of a successful probe, return the
+         memoised payload immediately. This is the by-far hottest path
+         because the dashboard polls /api/storage every few seconds.
+      2. Failure backoff — after 3 consecutive failures, return an
+         empty payload for an hour instead of re-running every variant.
+      3. Probe cache (inside the implementation) — once one smartctl
+         invocation works for a disk, memoise its argv so the next call
+         tries that command first instead of cycling through all 14.
+    """
+    now = time.time()
+
+    cached = _smart_result_cache.get(disk_name)
+    if cached and now - cached[0] < _SMART_RESULT_TTL:
+        return dict(cached[1])
+
+    retry_at = _smart_fail_backoff.get(disk_name, 0)
+    if retry_at > now:
+        return dict(cached[1]) if cached else _smart_default_payload()
+
+    result = _get_smart_data_uncached(disk_name)
+
+    if _smart_data_useful(result):
+        _smart_result_cache[disk_name] = (now, dict(result))
+        _smart_fail_counts.pop(disk_name, None)
+        _smart_fail_backoff.pop(disk_name, None)
+    else:
+        n = _smart_fail_counts.get(disk_name, 0) + 1
+        _smart_fail_counts[disk_name] = n
+        if n >= _SMART_FAIL_THRESHOLD:
+            _smart_fail_backoff[disk_name] = now + _SMART_FAIL_BACKOFF_SEC
+            _smart_probe_cache.pop(disk_name, None)
+    return result
+
+
+def _get_smart_data_uncached(disk_name):
+    """Original 14-variant smartctl probe — the slow path. Wrapped by
+    `get_smart_data` for caching. Probe-cache lives inside this fn so a
+    successful run also remembers which command worked."""
+    smart_data = _smart_default_payload()
+
 
     
     try:
-        commands_to_try = [
+        all_commands = [
             ['smartctl', '-a', '-j', f'/dev/{disk_name}'],  # JSON auto-detect (preferred)
             ['smartctl', '-a', '-j', '-d', 'scsi', f'/dev/{disk_name}'],  # JSON SCSI/SAS (early for SAS disks)
             ['smartctl', '-a', '-d', 'ata', f'/dev/{disk_name}'],  # JSON with ATA device type
@@ -3264,7 +3645,18 @@ def get_smart_data(disk_name):
             ['smartctl', '-a', '-d', 'sat,12', f'/dev/{disk_name}'],  # Text SAT with 12-byte commands
             ['smartctl', '-a', '-d', 'sat,16', f'/dev/{disk_name}'],  # Text SAT with 16-byte commands
         ]
-        
+
+        # Probe-cache: if we already know which command works for this
+        # disk, try that first. The fallback chain is still kept after
+        # in case the cached probe stops working (kernel upgrade swapped
+        # the auto-detect path, drive replaced, etc.) — we'll catch the
+        # change and re-cache below.
+        cached_cmd = _smart_probe_cache.get(disk_name)
+        if cached_cmd is not None:
+            commands_to_try = [cached_cmd] + [c for c in all_commands if c != cached_cmd]
+        else:
+            commands_to_try = all_commands
+
         process = None # Initialize process to None
         for cmd_index, cmd in enumerate(commands_to_try):
             # print(f"[v0] Attempt {cmd_index + 1}/{len(commands_to_try)}: Running command: {' '.join(cmd)}")
@@ -3272,7 +3664,7 @@ def get_smart_data(disk_name):
             try:
                 process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 # Use communicate with a timeout to avoid hanging if the process doesn't exit
-                stdout, stderr = process.communicate(timeout=15)
+                stdout, stderr = process.communicate(timeout=_SMART_TIMEOUT)
                 result_code = process.returncode
                 
                 # print(f"[v0] Command return code: {result_code}")
@@ -3340,10 +3732,14 @@ def get_smart_data(disk_name):
                                     smart_data['percentage_used'] = nvme_data['percentage_used']
 
                                 if 'data_units_written' in nvme_data:
-                                    # data_units_written está en unidades de 512KB
+                                    # NVMe spec (NVM Command Set, Log Page 02h "SMART/Health Information"):
+                                    # data_units_written is reported in THOUSANDS of 512-byte units
+                                    # (1 unit = 1000 * 512 bytes = 512,000 bytes), rounded up.
+                                    # The previous comment ("unidades de 512KB") was wrong and the
+                                    # resulting value was ~2.4% under the real bytes written.
                                     data_units = nvme_data['data_units_written']
-                                    # Convertir a GB (data_units * 512KB / 1024 / 1024)
-                                    total_gb = (data_units * 512) / (1024 * 1024)
+                                    total_bytes = data_units * 1000 * 512
+                                    total_gb = total_bytes / (1024 ** 3)
                                     smart_data['total_lbas_written'] = round(total_gb, 2)
 
                             
@@ -3463,10 +3859,11 @@ def get_smart_data(disk_name):
                                                 except (ValueError, TypeError):
                                                     pass
                             
-                            # If we got good data, break out of the loop
+                            # If we got good data, break out of the loop and
+                            # memoise this command so subsequent calls skip
+                            # straight to it instead of re-trying the chain.
                             if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
-                                # print(f"[v0] Successfully extracted complete data from JSON (attempt {cmd_index + 1})")
-                                pass
+                                _smart_probe_cache[disk_name] = list(cmd)
                                 break
                                 
                         except json.JSONDecodeError as e:
@@ -3640,10 +4037,10 @@ def get_smart_data(disk_name):
                                         pass
                                         continue
 
-                        # If we got complete data, break
+                        # If we got complete data, break and memoise the
+                        # winning command for the next call.
                         if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
-                            # print(f"[v0] Successfully extracted complete data from text output (attempt {cmd_index + 1})")
-                            pass
+                            _smart_probe_cache[disk_name] = list(cmd)
                             break
                         elif smart_data['model'] != 'Unknown' or smart_data['serial'] != 'Unknown':
                             # print(f"[v0] Extracted partial data from text output, continuing to next attempt...")
@@ -3691,29 +4088,35 @@ def get_smart_data(disk_name):
             pass
         
         # Temperature-based health (only if we have a valid temperature)
-        # Thresholds differ by disk type to avoid false warnings
+        # Thresholds differ by disk class (HDD/SSD/NVMe/SAS) and are
+        # user-configurable via health_thresholds; the values below are
+        # the recommended defaults that ship out of the box.
         if smart_data['health'] == 'healthy' and smart_data['temperature'] > 0:
             temp = smart_data['temperature']
-            
-            # Determine disk type for temperature thresholds
-            if disk_name.startswith('nvme'):
-                # NVMe: warning >80°C, critical >85°C (NVMe runs hotter)
-                if temp > 85:
-                    smart_data['health'] = 'critical'
-                elif temp > 80:
-                    smart_data['health'] = 'warning'
-            elif smart_data['rotation_rate'] == 0:
-                # SSD (non-NVMe): warning >70°C, critical >75°C
-                if temp > 75:
-                    smart_data['health'] = 'critical'
-                elif temp > 70:
-                    smart_data['health'] = 'warning'
-            else:
-                # HDD: warning >60°C, critical >65°C
-                if temp > 65:
-                    smart_data['health'] = 'critical'
-                elif temp > 60:
-                    smart_data['health'] = 'warning'
+            try:
+                import health_thresholds as _ht
+                if disk_name.startswith('nvme'):
+                    cls = 'nvme'
+                    fb_warn, fb_crit = 80, 85
+                elif smart_data['rotation_rate'] == 0:
+                    cls = 'ssd'
+                    fb_warn, fb_crit = 70, 75
+                else:
+                    cls = 'hdd'
+                    fb_warn, fb_crit = 60, 65
+                warn = _ht.get('disk_temperature', cls, 'warning', default=fb_warn)
+                crit = _ht.get('disk_temperature', cls, 'critical', default=fb_crit)
+            except Exception:
+                if disk_name.startswith('nvme'):
+                    warn, crit = 80, 85
+                elif smart_data['rotation_rate'] == 0:
+                    warn, crit = 70, 75
+                else:
+                    warn, crit = 60, 65
+            if temp > crit:
+                smart_data['health'] = 'critical'
+            elif temp > warn:
+                smart_data['health'] = 'warning'
 
         # CHANGE: Use -1 to indicate HDD with unknown RPM instead of inventing 7200 RPM
         # Fallback: Check kernel's rotational flag if smartctl didn't provide rotation_rate
@@ -3744,8 +4147,38 @@ def get_smart_data(disk_name):
 
     return smart_data
 
-# START OF CHANGES FOR get_proxmox_storage
+# ─── Proxmox storage cache (Sprint 14 perf pass) ─────────────────────────────
+#
+# `_get_proxmox_storage_uncached` does a pvesh /cluster/resources --type storage
+# subprocess call (~860 ms on a typical cluster). Without caching, every hit
+# on /api/proxmox-storage paid that cost — and the dashboard's Storage page
+# polls it on an interval. A 30 s TTL is well below the rate of change for
+# storage state (capacity, mount status) and matches the result-cache window
+# we use for SMART data.
+_PROXMOX_STORAGE_TTL = 30
+_proxmox_storage_cache: dict = {'data': None, 'time': 0.0}
+
+
 def get_proxmox_storage():
+    """Cached wrapper. The Storage page polls this every few seconds; the
+    underlying pvesh call costs ~860 ms, so the wrapper memoises the
+    fully-post-processed result for 30 s."""
+    now = time.time()
+    cached = _proxmox_storage_cache
+    if cached['data'] is not None and now - cached['time'] < _PROXMOX_STORAGE_TTL:
+        return cached['data']
+    result = _get_proxmox_storage_uncached()
+    # Only cache successful responses — error payloads should retry sooner
+    # so a transient pvesh hiccup doesn't pin "pvesh not available" on the
+    # UI for a full TTL window.
+    if isinstance(result, dict) and 'error' not in result:
+        cached['data'] = result
+        cached['time'] = now
+    return result
+
+
+# START OF CHANGES FOR get_proxmox_storage
+def _get_proxmox_storage_uncached():
     """Get Proxmox storage information using pvesh (filtered by local node)"""
     try:
         # local_node = socket.gethostname()
@@ -3798,8 +4231,15 @@ def get_proxmox_storage():
             used_gb = round(used / (1024**3), 2)
             available_gb = round(available / (1024**3), 2)
             
-            # Determine storage status
-            if total == 0:
+            # Determine storage status. Sprint 11.6: a remote PBS where the
+            # user only has DatastoreAdmin on their own namespace reports
+            # `status=available` + `total=0` — the storage IS reachable, the
+            # ACL just hides the datastore size. Surface as
+            # 'namespace_restricted' so the UI can render INFO instead of
+            # CRITICAL. Real outages still flag (status != available).
+            if total == 0 and status.lower() == "available" and storage_type == 'pbs':
+                storage_status = 'namespace_restricted'
+            elif total == 0:
                 storage_status = 'error'
             elif status.lower() != "available":
                 storage_status = 'error'
@@ -4345,16 +4785,56 @@ def get_network_info():
             'vm_lxc_total_count': 0
         }
 
+def _get_lxc_update_status_map() -> dict:
+    """Read the managed_installs registry and project the LXC update
+    state into a quick lookup ``{vmid: {available, count, security_count,
+    last_check, packages[]}}``. Used to decorate ``/api/vms`` output
+    without forcing the frontend to fetch a second endpoint.
+
+    Returns an empty dict if the registry module isn't available or
+    nothing is registered — callers must treat absence as "no info".
+    """
+    try:
+        import managed_installs
+    except Exception:
+        return {}
+    try:
+        active = managed_installs.get_active_items() or []
+    except Exception:
+        return {}
+
+    out: dict = {}
+    for it in active:
+        if it.get('type') != 'lxc':
+            continue
+        vmid = it.get('_vmid') or it.get('id', '').removeprefix('lxc:')
+        if not vmid:
+            continue
+        update = it.get('update_check') or {}
+        out[str(vmid)] = {
+            'available': bool(update.get('available')),
+            'count': int(update.get('_count') or 0),
+            'security_count': int(update.get('_security_count') or 0),
+            'last_check': update.get('last_check'),
+            'latest': update.get('latest'),
+            'error': update.get('error'),
+            # Cap packages list shipped to UI — modal uses first 30 max
+            'packages': (update.get('_packages') or [])[:30],
+        }
+    return out
+
+
 def get_proxmox_vms():
     """Get Proxmox VM and LXC information (requires pvesh command) - only from local node"""
     try:
         all_vms = []
-        
+        lxc_updates_map = _get_lxc_update_status_map()
+
         try:
             # local_node = socket.gethostname()
             local_node = get_proxmox_node_name()
             # print(f"[v0] Local node detected: {local_node}")
-        
+
             resources = get_cached_pvesh_cluster_resources_vm()
             if resources:
                 for resource in resources:
@@ -4362,12 +4842,13 @@ def get_proxmox_vms():
                     if node != local_node:
                         # print(f"[v0] Skipping VM {resource.get('vmid')} from remote node: {node}")
                         continue
-                    
+
+                    vm_type = 'lxc' if resource.get('type') == 'lxc' else 'qemu'
                     vm_data = {
                         'vmid': resource.get('vmid'),
                         'name': resource.get('name', f"VM-{resource.get('vmid')}"),
                         'status': resource.get('status', 'unknown'),
-                        'type': 'lxc' if resource.get('type') == 'lxc' else 'qemu',
+                        'type': vm_type,
                         'cpu': resource.get('cpu', 0),
                         'mem': resource.get('mem', 0),
                         'maxmem': resource.get('maxmem', 0),
@@ -4379,6 +4860,14 @@ def get_proxmox_vms():
                         'diskread': resource.get('diskread', 0),
                         'diskwrite': resource.get('diskwrite', 0)
                     }
+                    # Decorate LXC rows with the apt update status if the
+                    # managed_installs registry has it. Absent key means
+                    # either the user hasn't enabled the feature or the
+                    # CT isn't running / isn't Debian/Ubuntu.
+                    if vm_type == 'lxc':
+                        upd = lxc_updates_map.get(str(resource.get('vmid')))
+                        if upd is not None:
+                            vm_data['update_check'] = upd
                     all_vms.append(vm_data)
 
                 return all_vms
@@ -6473,7 +6962,39 @@ def get_gpu_info():
     
     return gpus
 
+# ─── Hardware info cache (Sprint 14 perf pass) ───────────────────────────────
+#
+# `_get_hardware_info_uncached` runs ~51 subprocess calls per invocation
+# (lscpu, dmidecode ×3, lsblk ×2, smartctl per disk, nvidia-smi, lspci, ...)
+# for a total of ~985 ms on a typical Proxmox host. The Hardware page hits
+# /api/hardware on every load and tab switch, and almost nothing in the
+# returned payload changes at runtime — same CPU model, same RAM modules,
+# same motherboard, same NICs. The dynamic bits (temperatures, fans,
+# power, UPS, coral, usb) are already split into /api/hardware/live which
+# the active page polls every 3-5 s, so caching the full /api/hardware
+# response for a minute is invisible to the user.
+#
+# A USB plug/unplug or a hot-added device will be reflected on the next
+# cache miss (within 60 s) — well within the noticeable lag budget for
+# manual hardware changes.
+_HARDWARE_INFO_TTL = 60  # seconds
+_hardware_info_cache: dict = {'data': None, 'time': 0.0}
+
+
 def get_hardware_info():
+    """Cached wrapper around the heavy hardware enumeration."""
+    now = time.time()
+    cached = _hardware_info_cache
+    if cached['data'] is not None and now - cached['time'] < _HARDWARE_INFO_TTL:
+        return cached['data']
+    data = _get_hardware_info_uncached()
+    if isinstance(data, dict) and data:
+        cached['data'] = data
+        cached['time'] = now
+    return data
+
+
+def _get_hardware_info_uncached():
     """Get comprehensive hardware information"""
     try:
         # Initialize with default structure, including the new power_meter field
@@ -7110,10 +7631,19 @@ def get_hardware_info():
 def api_system():
     """Get system information including CPU, memory, and temperature"""
     try:
-        # Non-blocking: returns %CPU since the last psutil call (sampler or prior API hit).
-        # The background vital-signs sampler keeps psutil's internal state primed.
-        cpu_usage = psutil.cpu_percent(interval=0)
-        
+        # Read from the vital-signs sampler cache. The sampler is the *only*
+        # consumer of psutil.cpu_percent under gevent, so the API handler never
+        # races against it (calling psutil.cpu_percent here under monkey-patched
+        # gevent would return 0% whenever a concurrent greenlet had primed the
+        # baseline less than one /proc/stat tick ago — typical for the dashboard's
+        # parallel system+vms+storage+network requests every 5s).
+        try:
+            from health_monitor import health_monitor
+            _hist = health_monitor.state_history.get('cpu_usage') or []
+            cpu_usage = _hist[-1]['value'] if _hist else psutil.cpu_percent(interval=0.1)
+        except Exception:
+            cpu_usage = psutil.cpu_percent(interval=0.1)
+
         memory = psutil.virtual_memory()
         memory_used_gb = memory.used / (1024 ** 3)
         memory_total_gb = memory.total / (1024 ** 3)
@@ -7181,6 +7711,31 @@ def api_temperature_history():
         return jsonify(result)
     except Exception as e:
         return jsonify({'data': [], 'stats': {'min': 0, 'max': 0, 'avg': 0, 'current': 0}}), 500
+
+
+@app.route('/api/disk/<disk_name>/temperature/history', methods=['GET'])
+@require_auth
+def api_disk_temperature_history(disk_name):
+    """Sprint 14: per-disk temperature history.
+
+    Mirrors the CPU temperature endpoint shape so the frontend can
+    reuse the same chart component / hook with just a different URL.
+    The disk_name is whitelisted inside the helper to keep the
+    sqlite query parameter-only.
+    """
+    empty = {'data': [], 'stats': {'min': 0, 'max': 0, 'avg': 0, 'current': 0}}
+    try:
+        import disk_temperature_history
+    except ImportError:
+        return jsonify(empty)
+    try:
+        timeframe = request.args.get('timeframe', 'hour')
+        if timeframe not in ('hour', 'day', 'week', 'month'):
+            timeframe = 'hour'
+        result = disk_temperature_history.get_disk_temperature_history(disk_name, timeframe)
+        return jsonify(result)
+    except Exception:
+        return jsonify(empty), 500
 
 
 @app.route('/api/network/latency/history', methods=['GET'])
@@ -8608,41 +9163,76 @@ def api_smart_tools_install():
         if not packages:
             return jsonify({'error': 'No packages specified'}), 400
         
-        # Run apt-get update first
-        update_proc = subprocess.run(
-            ['apt-get', 'update'],
-            capture_output=True, text=True, timeout=60
-        )
-        
-        results = {}
-        all_success = True
-        for pkg in packages:
-            if pkg not in ('smartmontools', 'nvme-cli'):
-                results[pkg] = {'success': False, 'error': 'Invalid package name'}
-                all_success = False
-                continue
-            
-            # Install package
-            proc = subprocess.run(
-                ['apt-get', 'install', '-y', pkg],
-                capture_output=True, text=True, timeout=120
-            )
-            success = proc.returncode == 0
-            results[pkg] = {
-                'success': success,
-                'output': proc.stdout if success else proc.stderr
-            }
-            if not success:
-                all_success = False
-        
-        # Check what's now installed
-        tools = _ensure_smart_tools()
-        
-        return jsonify({
-            'success': all_success,
-            'results': results,
-            'tools': tools
-        })
+        # Serialise concurrent installs by holding the dpkg lock-frontend.
+        # Two parallel `apt-get install` calls otherwise race for it and one
+        # silently fails with "Could not get lock" — which we'd return as
+        # "Installation failed" with no further detail. Audit Tier 6 —
+        # `/api/storage/smart/tools/install` ignora `apt-get update` returncode.
+        import fcntl as _fcntl_apt
+        _LOCK_PATH = '/var/lib/dpkg/lock-frontend'
+        try:
+            _lockfd = os.open(_LOCK_PATH, os.O_RDWR | os.O_CREAT, 0o640)
+        except Exception as e:
+            return jsonify({'error': f'cannot open dpkg lock: {e}'}), 500
+
+        try:
+            try:
+                _fcntl_apt.flock(_lockfd, _fcntl_apt.LOCK_EX | _fcntl_apt.LOCK_NB)
+            except BlockingIOError:
+                return jsonify({'error': 'apt is busy (another install in progress)'}), 409
+
+            try:
+                # Run apt-get update first. Surface its returncode — silently
+                # continuing with a stale package cache made post-Bookworm
+                # installs fail in confusing ways for the user.
+                update_proc = subprocess.run(
+                    ['apt-get', 'update'],
+                    capture_output=True, text=True, timeout=60
+                )
+                if update_proc.returncode != 0:
+                    return jsonify({
+                        'success': False,
+                        'error': 'apt-get update failed',
+                        'output': (update_proc.stderr or update_proc.stdout)[:1000],
+                    }), 500
+
+                results = {}
+                all_success = True
+                for pkg in packages:
+                    if pkg not in ('smartmontools', 'nvme-cli'):
+                        results[pkg] = {'success': False, 'error': 'Invalid package name'}
+                        all_success = False
+                        continue
+
+                    proc = subprocess.run(
+                        ['apt-get', 'install', '-y', pkg],
+                        capture_output=True, text=True, timeout=120
+                    )
+                    success = proc.returncode == 0
+                    results[pkg] = {
+                        'success': success,
+                        'output': proc.stdout if success else proc.stderr
+                    }
+                    if not success:
+                        all_success = False
+
+                tools = _ensure_smart_tools()
+
+                return jsonify({
+                    'success': all_success,
+                    'results': results,
+                    'tools': tools
+                })
+            finally:
+                try:
+                    _fcntl_apt.flock(_lockfd, _fcntl_apt.LOCK_UN)
+                except Exception:
+                    pass
+        finally:
+            try:
+                os.close(_lockfd)
+            except Exception:
+                pass
     except subprocess.TimeoutExpired:
         return jsonify({'error': 'Installation timeout'}), 504
     except Exception as e:
@@ -8857,36 +9447,57 @@ def api_vm_metrics(vmid):
             return jsonify({'error': f'Invalid timeframe. Must be one of: {", ".join(valid_timeframes)}'}), 400
         
         # Get local node name
-        # local_node = socket.gethostname()
         local_node = get_proxmox_node_name()
 
-        
-        # First, determine if it's a qemu VM or lxc container
-
-        result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/qemu/{vmid}/status/current', '--output-format', 'json'],
-                              capture_output=True, text=True, timeout=10)
-        
-        vm_type = 'qemu'
-        if result.returncode != 0:
-
-            # Try LXC
-            result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/lxc/{vmid}/status/current', '--output-format', 'json'],
-                                  capture_output=True, text=True, timeout=10)
-            if result.returncode == 0:
-                vm_type = 'lxc'
-
-            else:
-                # print(f"[v0] ERROR: VM/LXC {vmid} not found")
-                pass
-                return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
-        else:
-            # print(f"[v0] Found as QEMU")
+        # Determine if it's a qemu VM or lxc container.
+        #
+        # Previously this fired up to two `pvesh ... status/current` calls
+        # just to find out which one — for an LXC that's ~1.7 s of pure
+        # probing overhead before the actual RRD fetch. The cluster
+        # resources cache (refreshed every 2 s, populated by /api/vms,
+        # /api/cluster, /api/health, etc.) already knows the type of
+        # every guest on every node, so we look it up there and skip
+        # the probes entirely on the hot path. We only fall back to the
+        # subprocess probes when the vmid isn't in the cache — that
+        # handles the narrow race window where someone created a guest
+        # in the last 2 s and the dashboard tries to chart it before
+        # the next cache refresh.
+        vm_type = None
+        try:
+            for resource in (get_cached_pvesh_cluster_resources_vm() or []):
+                if resource.get('node') != local_node:
+                    continue
+                if resource.get('vmid') == vmid:
+                    rtype = resource.get('type')
+                    if rtype == 'lxc':
+                        vm_type = 'lxc'
+                    elif rtype in ('qemu', 'vm'):
+                        vm_type = 'qemu'
+                    break
+        except Exception:
             pass
-        
+
+        if vm_type is None:
+            # Cache miss / brand-new guest — fall back to the original
+            # qemu-then-lxc probe.
+            result = subprocess.run(
+                ['pvesh', 'get', f'/nodes/{local_node}/qemu/{vmid}/status/current', '--output-format', 'json'],
+                capture_output=True, text=True, timeout=10,
+            )
+            if result.returncode == 0:
+                vm_type = 'qemu'
+            else:
+                result = subprocess.run(
+                    ['pvesh', 'get', f'/nodes/{local_node}/lxc/{vmid}/status/current', '--output-format', 'json'],
+                    capture_output=True, text=True, timeout=10,
+                )
+                if result.returncode == 0:
+                    vm_type = 'lxc'
+                else:
+                    return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
+
         # Get RRD data
-        # print(f"[v0] Fetching RRD data for {vm_type} {vmid} with timeframe {timeframe}...")
-        pass
-        rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/{vm_type}/{vmid}/rrddata', 
+        rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/{vm_type}/{vmid}/rrddata',
                                     '--timeframe', timeframe, '--output-format', 'json'],
                                    capture_output=True, text=True, timeout=10)
         
@@ -8921,21 +9532,53 @@ def api_vm_metrics(vmid):
 
         return jsonify({'error': str(e)}), 500
 
+# Per-process cache for the RRD payload of /api/node/metrics. Two unrelated
+# dashboard components (`network-traffic-chart` for the network panel and
+# `node-metrics-charts` for the CPU/memory panel) mount in parallel on the
+# Overview page and each fires this endpoint independently with the same
+# `?timeframe=` argument. The underlying `pvesh get rrddata` call takes
+# ~1 second; without a cache, the second fetch blocks behind the first
+# (especially under gevent), occasionally surfacing as a transient 502
+# while gevent is single-threaded for blocking calls. RRD data is updated
+# on a per-minute cadence by PVE, so a 10-second cache is safe and the
+# UI experience is materially better.
+_NODE_METRICS_CACHE = {}
+_NODE_METRICS_TTL = 10.0  # seconds
+
+
+def _node_metrics_cache_get(timeframe):
+    entry = _NODE_METRICS_CACHE.get(timeframe)
+    if not entry:
+        return None
+    if time.monotonic() - entry['ts'] > _NODE_METRICS_TTL:
+        return None
+    return entry['payload']
+
+
+def _node_metrics_cache_set(timeframe, payload):
+    _NODE_METRICS_CACHE[timeframe] = {'payload': payload, 'ts': time.monotonic()}
+
+
 @app.route('/api/node/metrics', methods=['GET'])
 @require_auth
 def api_node_metrics():
-    """Get historical metrics (RRD data) for the node"""
+    """Get historical metrics (RRD data) for the node.
+
+    Per-timeframe cached for ~10 s so the two dashboard panels that mount
+    together don't hit `pvesh` twice; see `_NODE_METRICS_CACHE` comment.
+    """
     try:
         timeframe = request.args.get('timeframe', 'week')  # hour, day, week, month, year
-        
 
-        
         # Validate timeframe
         valid_timeframes = ['hour', 'day', 'week', 'month', 'year']
         if timeframe not in valid_timeframes:
-            # print(f"[v0] ERROR: Invalid timeframe: {timeframe}")
-            pass
             return jsonify({'error': f'Invalid timeframe. Must be one of: {", ".join(valid_timeframes)}'}), 400
+
+        # Serve from cache when fresh — completely skips the pvesh call.
+        cached = _node_metrics_cache_get(timeframe)
+        if cached is not None:
+            return jsonify(cached)
         
         # Get local node name
         # local_node = socket.gethostname()
@@ -8966,18 +9609,20 @@ def api_node_metrics():
         
         if rrd_result.returncode == 0:
             rrd_data = json.loads(rrd_result.stdout)
-            
+
             if zfs_arc_size > 0:
                 for item in rrd_data:
                     # If zfsarc field is missing or 0, add current value
                     if 'zfsarc' not in item or item.get('zfsarc', 0) == 0:
                         item['zfsarc'] = zfs_arc_size
-            
-            return jsonify({
+
+            payload = {
                 'node': local_node,
                 'timeframe': timeframe,
                 'data': rrd_data
-            })
+            }
+            _node_metrics_cache_set(timeframe, payload)
+            return jsonify(payload)
         else:
             # Check if RRD file is empty or corrupted
             stderr_lower = rrd_result.stderr.lower() if rrd_result.stderr else ''
@@ -9000,40 +9645,120 @@ def api_node_metrics():
 
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/logs/counts', methods=['GET'])
+@require_auth
+def api_logs_counts():
+    """Return exact total / errors / warnings / info counts for a
+    date range, without loading the actual log entries.
+
+    Used by the dashboard so the "Total Entries / Errors / Warnings"
+    cards reflect the REAL counts on the host even when /api/logs
+    only loads the first 10 000 entries (cap-for-performance).
+
+    Implementation: three `journalctl --quiet ... | wc -l` calls, one
+    per priority bucket. Each runs in well under a second even on a
+    busy host because there's no JSON output and no per-entry parsing.
+    """
+    try:
+        since_days = request.args.get('since_days', '1')
+        try:
+            days = max(1, min(int(since_days), 90))
+        except (TypeError, ValueError):
+            days = 1
+
+        def _count(extra_args):
+            cmd = ['journalctl', '--quiet', '--no-pager',
+                   '--since', f'{days} days ago'] + extra_args
+            try:
+                out = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+                if out.returncode != 0:
+                    return 0
+                # `journalctl --quiet` emits one line per entry; the
+                # trailing newline produces an extra empty split, so
+                # filter it.
+                return sum(1 for ln in out.stdout.split('\n') if ln)
+            except (subprocess.TimeoutExpired, OSError):
+                return 0
+
+        total = _count([])
+        errors = _count(['-p', '0..3'])      # emerg..err
+        warnings = _count(['-p', '4..4'])    # warning only
+        info = max(0, total - errors - warnings)
+
+        return jsonify({
+            'since_days': days,
+            'total': total,
+            'errors': errors,
+            'warnings': warnings,
+            'info': info,
+        })
+    except Exception as e:
+        return jsonify({
+            'error': f'Unable to compute log counts: {str(e)}',
+            'since_days': 1,
+            'total': 0,
+            'errors': 0,
+            'warnings': 0,
+            'info': 0,
+        })
+
+
 @app.route('/api/logs', methods=['GET'])
 @require_auth
 def api_logs():
-    """Get system logs"""
+    """Get system logs.
+
+    Hard-capped at MAX_ENTRIES results per request to keep the JSON
+    response under a few MB. Without this cap, a busy host (e.g. .55
+    with 438k entries in a single day driven by an SSL handshake
+    loop) returned ~50 MB of JSON, which took 15-20 s to fetch and
+    parse on the client. The cap returns the MOST RECENT entries
+    (journalctl -n) — the dashboard pairs this with /api/logs/counts
+    to show accurate Total/Errors/Warnings cards and a "Load more"
+    button when the user reaches the bottom of the loaded slice.
+    """
+    MAX_ENTRIES = 10000
     try:
         limit = request.args.get('limit', '200')
         priority = request.args.get('priority', None)  # 0-7 (0=emerg, 3=err, 4=warning, 6=info)
         service = request.args.get('service', None)
         since_days = request.args.get('since_days', None)
-        
+
         if since_days:
             try:
                 days = int(since_days)
                 # Cap at 90 days to prevent excessive queries
                 days = min(days, 90)
-                # No -n limit when using --since: the time range already bounds the query.
-                # A hard -n 10000 was masking differences between date ranges on busy servers.
-                cmd = ['journalctl', '--since', f'{days} days ago', '--output', 'json', '--no-pager']
+                # Both `--since` AND `-n MAX_ENTRIES`: the date range
+                # bounds the query, and -n caps how many of those are
+                # actually returned to the client. journalctl applies
+                # -n to the END of the matching range, so we get the
+                # most-recent entries within the window. Without -n a
+                # 438k-entry day produced a 50 MB JSON response.
+                cmd = ['journalctl', '--since', f'{days} days ago', '-n', str(MAX_ENTRIES),
+                       '--output', 'json', '--no-pager']
             except ValueError:
                 cmd = ['journalctl', '-n', limit, '--output', 'json', '--no-pager']
         else:
+            # Cap the user-supplied limit too — a misbehaving client
+            # could ask for limit=1000000 otherwise.
+            try:
+                limit = str(min(int(limit), MAX_ENTRIES))
+            except (TypeError, ValueError):
+                limit = str(MAX_ENTRIES)
             cmd = ['journalctl', '-n', limit, '--output', 'json', '--no-pager']
-        
+
         # Add priority filter if specified
         if priority:
             cmd.extend(['-p', priority])
-        
+
         # Add service filter by SYSLOG_IDENTIFIER (not -u which filters by systemd unit)
         # We filter after fetching since journalctl doesn't have a direct SYSLOG_IDENTIFIER flag
         service_filter = service
-        
+
         # Longer timeout for date-range queries which may return many entries
         query_timeout = 120 if since_days else 30
-        
+
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=query_timeout)
 
         if result.returncode == 0:
@@ -9042,23 +9767,25 @@ def api_logs():
                 '0': 'emergency', '1': 'alert', '2': 'critical', '3': 'error',
                 '4': 'warning', '5': 'notice', '6': 'info', '7': 'debug'
             }
-            for line in result.stdout.strip().split('\n'):
+            raw_lines = result.stdout.strip().split('\n')
+            total_seen = sum(1 for ln in raw_lines if ln)
+            for line in raw_lines:
                 if line:
                     try:
                         log_entry = json.loads(line)
                         timestamp_us = int(log_entry.get('__REALTIME_TIMESTAMP', '0'))
                         timestamp = datetime.fromtimestamp(timestamp_us / 1000000).strftime('%Y-%m-%d %H:%M:%S')
-                        
+
                         priority_num = str(log_entry.get('PRIORITY', '6'))
                         level = priority_map.get(priority_num, 'info')
-                        
+
                         syslog_id = log_entry.get('SYSLOG_IDENTIFIER', '')
                         systemd_unit = log_entry.get('_SYSTEMD_UNIT', '')
                         service_name = syslog_id or systemd_unit or 'system'
-                        
+
                         if service_filter and service_name != service_filter:
                             continue
-                        
+
                         logs.append({
                             'timestamp': timestamp,
                             'level': level,
@@ -9071,8 +9798,16 @@ def api_logs():
                         })
                     except (json.JSONDecodeError, ValueError):
                         continue
-            
-            return jsonify({'logs': logs, 'total': len(logs)})
+
+            # `truncated` is true when journalctl hit the -n cap.
+            # `total_seen` is what we asked journalctl for; the real
+            # underlying count (post-filter on disk) may be larger.
+            return jsonify({
+                'logs': logs,
+                'total': len(logs),
+                'truncated': total_seen >= MAX_ENTRIES,
+                'max_entries': MAX_ENTRIES,
+            })
         else:
             return jsonify({
                 'error': 'journalctl not available or failed',
@@ -9320,15 +10055,13 @@ def api_backups():
     """Get list of all backup files from Proxmox storage"""
     try:
         backups = []
-        
-        # Get list of storage locations
+
+        # Get list of storage locations (shared 30s cache — same
+        # underlying call also serves /api/backup-storages and
+        # /api/vms/<id>/backups).
         try:
-            result = subprocess.run(['pvesh', 'get', '/storage', '--output-format', 'json'], 
-                                  capture_output=True, text=True, timeout=10)
-            
-            if result.returncode == 0:
-                storages = json.loads(result.stdout)
-                
+            storages = get_cached_pvesh_storage_list()
+            if storages:
                 # For each storage, get backup files
                 for storage in storages:
                     storage_id = storage.get('storage')
@@ -9413,19 +10146,15 @@ def api_backup_storages():
         # Get current node name
         node_result = subprocess.run(['hostname'], capture_output=True, text=True, timeout=5)
         node = node_result.stdout.strip() if node_result.returncode == 0 else 'localhost'
-        
-        # Get all storages
-        result = subprocess.run(['pvesh', 'get', '/storage', '--output-format', 'json'],
-                              capture_output=True, text=True, timeout=10)
-        
-        if result.returncode == 0:
-            all_storages = json.loads(result.stdout)
-            
+
+        # Get all storages (shared 30s cache)
+        all_storages = get_cached_pvesh_storage_list()
+        if all_storages:
             for storage in all_storages:
                 storage_id = storage.get('storage', '')
                 content = storage.get('content', '')
                 storage_type = storage.get('type', '')
-                
+
                 # Only include storages that support backup content
                 if 'backup' in content or storage_type == 'pbs':
                     # Get storage status for space info - use correct path with node
@@ -9584,19 +10313,15 @@ def api_vm_backups(vmid):
         # Get current node name
         node_result = subprocess.run(['hostname'], capture_output=True, text=True, timeout=5)
         node = node_result.stdout.strip() if node_result.returncode == 0 else 'localhost'
-        
-        # Get list of storage locations
-        result = subprocess.run(['pvesh', 'get', '/storage', '--output-format', 'json'],
-                              capture_output=True, text=True, timeout=10)
-        
-        if result.returncode == 0:
-            storages = json.loads(result.stdout)
-            
+
+        # Get list of storage locations (shared 30s cache)
+        storages = get_cached_pvesh_storage_list()
+        if storages:
             for storage in storages:
                 storage_id = storage.get('storage')
                 storage_type = storage.get('type')
                 content = storage.get('content', '')
-                
+
                 # Only check storages that can contain backups
                 if 'backup' in content or storage_type == 'pbs':
                     try:
@@ -9730,11 +10455,42 @@ def api_events():
 @app.route('/api/task-log/<path:upid>')
 @require_auth
 def get_task_log(upid):
-    """Get complete task log from Proxmox using UPID"""
+    """Get complete task log from Proxmox using UPID."""
+    # Confine all log reads to /var/log/pve/tasks/. The route uses <path:upid>
+    # so slashes pass through unchanged, and `upid` is later interpolated into
+    # a filesystem path. Without this guard a crafted UPID containing `..`
+    # segments could read arbitrary files as root (e.g. /etc/shadow,
+    # /etc/pve/priv/*). See audit Tier 1 #12.
+    _PVE_TASKS_DIR = '/var/log/pve/tasks'
+    # Resolve the prefix once so that on hosts where /var/log is a symlink
+    # (some test boxes, BSDs, macOS dev setups) the candidate's resolved path
+    # and the prefix are compared on the same canonical form.
+    try:
+        _PVE_TASKS_DIR_REAL = os.path.realpath(_PVE_TASKS_DIR)
+    except (OSError, ValueError):
+        _PVE_TASKS_DIR_REAL = _PVE_TASKS_DIR
+
+    def _confined_path(candidate):
+        """Return the candidate path if it stays inside _PVE_TASKS_DIR, else None."""
+        try:
+            resolved = os.path.realpath(candidate)
+        except (OSError, ValueError):
+            return None
+        # `os.path.realpath` collapses `..` and resolves symlinks. We then
+        # verify the result is inside the allowed prefix using a path-aware
+        # comparison (commonpath) so that `/var/log/pve/tasks-evil` doesn't
+        # pass a naive startswith check.
+        try:
+            if os.path.commonpath([resolved, _PVE_TASKS_DIR_REAL]) != _PVE_TASKS_DIR_REAL:
+                return None
+        except ValueError:
+            return None
+        return resolved
+
     try:
         # print(f"[v0] Getting task log for UPID: {upid}")
         pass
-        
+
         # Proxmox stores files without trailing :: but API may include them
         upid_clean = upid.rstrip(':')
         # print(f"[v0] Cleaned UPID: {upid_clean}")
@@ -9758,65 +10514,41 @@ def get_task_log(upid):
         pass
         
         # Try with cleaned UPID (no trailing colons)
-        log_file_path = f"/var/log/pve/tasks/{index}/{upid_clean}"
-        # print(f"[v0] Trying log file: {log_file_path}")
-        pass
-        
-        if os.path.exists(log_file_path):
+        log_file_path = _confined_path(f"{_PVE_TASKS_DIR}/{index}/{upid_clean}")
+        if log_file_path and os.path.exists(log_file_path):
             with open(log_file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 log_text = f.read()
-            # print(f"[v0] Successfully read {len(log_text)} bytes from log file")
-            pass
             return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
-        
+
         # Try with single trailing colon
-        log_file_path_single = f"/var/log/pve/tasks/{index}/{upid_clean}:"
-        # print(f"[v0] Trying alternative path with single colon: {log_file_path_single}")
-        pass
-        
-        if os.path.exists(log_file_path_single):
+        log_file_path_single = _confined_path(f"{_PVE_TASKS_DIR}/{index}/{upid_clean}:")
+        if log_file_path_single and os.path.exists(log_file_path_single):
             with open(log_file_path_single, 'r', encoding='utf-8', errors='ignore') as f:
                 log_text = f.read()
-            # print(f"[v0] Successfully read {len(log_text)} bytes from alternative log file")
-            pass
             return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
-        
+
         # Try with uppercase index
-        log_file_path_upper = f"/var/log/pve/tasks/{index.upper()}/{upid_clean}"
-        # print(f"[v0] Trying uppercase index path: {log_file_path_upper}")
-        pass
-        
-        if os.path.exists(log_file_path_upper):
+        log_file_path_upper = _confined_path(f"{_PVE_TASKS_DIR}/{index.upper()}/{upid_clean}")
+        if log_file_path_upper and os.path.exists(log_file_path_upper):
             with open(log_file_path_upper, 'r', encoding='utf-8', errors='ignore') as f:
                 log_text = f.read()
-            # print(f"[v0] Successfully read {len(log_text)} bytes from uppercase index log file")
-            pass
             return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
         
         # List available files in the directory for debugging
-        tasks_dir = f"/var/log/pve/tasks/{index}"
-        if os.path.exists(tasks_dir):
+        tasks_dir = _confined_path(f"{_PVE_TASKS_DIR}/{index}")
+        if tasks_dir and os.path.isdir(tasks_dir):
             available_files = os.listdir(tasks_dir)
-            # print(f"[v0] Available files in {tasks_dir}: {available_files[:10]}")  # Show first 10
-            pass
-            
             upid_prefix = ':'.join(parts[:5])  # Get first 5 parts of UPID
             for filename in available_files:
                 if filename.startswith(upid_prefix):
-                    matched_file = f"{tasks_dir}/{filename}"
-
+                    matched_file = _confined_path(f"{tasks_dir}/{filename}")
+                    if not matched_file:
+                        continue
                     with open(matched_file, 'r', encoding='utf-8', errors='ignore') as f:
                         log_text = f.read()
-                    # print(f"[v0] Successfully read {len(log_text)} bytes from matched file")
-                    pass
                     return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
-        else:
-            # print(f"[v0] Tasks directory does not exist: {tasks_dir}")
-            pass
-        
-        # print(f"[v0] Log file not found after trying all variations")
-        pass
-        return jsonify({'error': 'Log file not found', 'tried_paths': [log_file_path, log_file_path_single, log_file_path_upper]}), 404
+
+        return jsonify({'error': 'Log file not found'}), 404
             
     except Exception as e:
         # print(f"[v0] Error fetching task log for UPID {upid}: {type(e).__name__}: {e}")
@@ -9832,23 +10564,220 @@ def api_health():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'version': '1.2.0'
+        'version': '1.2.2'
     })
+
+# ─── User-configurable health thresholds ─────────────────────────────────────
+# GET   /api/health/thresholds                    — effective tree (defaults + overrides)
+# PUT   /api/health/thresholds                    — partial save with validation
+# POST  /api/health/thresholds/reset              — wipe all overrides
+# POST  /api/health/thresholds/reset?section=cpu  — wipe one section's overrides
+#
+# All routes require auth via @require_auth (the decorator transparently
+# bypasses when auth isn't configured, matching every other route).
+
+# ─── ProxMenux-managed installs registry (Sprint 14.7) ──────────────────────
+# GET  /api/managed-installs
+#   Active items (no removed_at) with their latest update_check state.
+#   The Hardware tab uses this to render "Update available: vX.Y.Z"
+#   inline next to detected GPU/Tailscale entries.
+# POST /api/managed-installs/refresh
+#   Force a fresh detect_and_register + check_for_updates run, bypassing
+#   the per-source caches. Useful for the user clicking a manual
+#   "re-check" button.
+
+@app.route('/api/managed-installs', methods=['GET'])
+@require_auth
+def api_managed_installs_get():
+    try:
+        import managed_installs
+        items = managed_installs.get_active_items()
+        # Strip private fields (anything starting with `_`) before
+        # exposing — they're internal helpers for the checker chain,
+        # not part of the public API contract.
+        cleaned = []
+        for it in items:
+            cleaned_it = {k: v for k, v in it.items() if not k.startswith('_')}
+            uc = cleaned_it.get('update_check')
+            if isinstance(uc, dict):
+                cleaned_it['update_check'] = {
+                    k: v for k, v in uc.items() if not k.startswith('_')
+                }
+            cleaned.append(cleaned_it)
+        return jsonify({'success': True, 'items': cleaned})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/managed-installs/refresh', methods=['POST'])
+@require_auth
+def api_managed_installs_refresh():
+    try:
+        import managed_installs
+        managed_installs.detect_and_register()
+        managed_installs.check_for_updates(force=True)
+        return api_managed_installs_get()
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# ─── LXC Update Detection toggle ────────────────────────────────────────────
+# Dedicated toggle so the operator can opt out of the per-CT `pct exec apt
+# list --upgradable` scan entirely. The Notifications section keeps its own
+# `lxc_updates_available` toggle (delivery only), but the UI hides it while
+# detection is OFF — the underlying preference is preserved in the DB and
+# re-appears when detection is flipped back ON.
+
+@app.route('/api/lxc-updates/detection', methods=['GET'])
+@require_auth
+def api_lxc_updates_detection_get():
+    try:
+        import managed_installs
+        return jsonify({
+            'success': True,
+            'enabled': managed_installs._lxc_updates_detection_enabled(),
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/lxc-updates/detection', methods=['POST'])
+@require_auth
+def api_lxc_updates_detection_set():
+    try:
+        import managed_installs
+        data = request.get_json(silent=True) or {}
+        if 'enabled' not in data:
+            return jsonify({'success': False, 'message': 'Missing "enabled" field'}), 400
+        enabled = bool(data['enabled'])
+        result = managed_installs.set_lxc_updates_detection_enabled(enabled)
+        if not result.get('ok'):
+            return jsonify({
+                'success': False,
+                'message': result.get('error') or 'Failed to persist setting',
+            }), 500
+        return jsonify({
+            'success': True,
+            'enabled': enabled,
+            'purged': result.get('purged', 0),
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/health/thresholds', methods=['GET'])
+@require_auth
+def api_health_thresholds_get():
+    """Return the effective threshold tree (defaults merged with the
+    user's overrides). Each leaf carries `value`, `recommended`,
+    `customised`, `unit`, `min`, `max`, `step` so the UI can render
+    inputs and badges without re-fetching the schema."""
+    try:
+        import health_thresholds as ht
+        return jsonify({
+            'success': True,
+            'thresholds': ht.load_effective(),
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/health/thresholds', methods=['PUT'])
+@require_auth
+def api_health_thresholds_put():
+    """Save a partial threshold payload. Body shape mirrors DEFAULTS
+    but the leaves are bare numbers, not metadata dicts. Sections not
+    in the payload keep their existing overrides."""
+    try:
+        import health_thresholds as ht
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return jsonify({'success': False, 'message': 'Body must be a JSON object'}), 400
+        try:
+            effective = ht.save(payload)
+        except ht.ThresholdValidationError as e:
+            return jsonify({'success': False, 'message': str(e)}), 400
+        return jsonify({'success': True, 'thresholds': effective})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/health/thresholds/reset', methods=['POST'])
+@require_auth
+def api_health_thresholds_reset():
+    """Reset thresholds. ?section=<name> resets one section, no
+    parameter resets everything to recommended."""
+    try:
+        import health_thresholds as ht
+        section = request.args.get('section', '').strip()
+        try:
+            if section:
+                effective = ht.reset_section(section)
+            else:
+                effective = ht.reset_all()
+        except ht.ThresholdValidationError as e:
+            return jsonify({'success': False, 'message': str(e)}), 400
+        return jsonify({'success': True, 'thresholds': effective})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 
 @app.route('/api/health/acknowledge', methods=['POST'])
 @require_auth
 def api_health_acknowledge():
-    """Acknowledge/dismiss a health error by error_key."""
+    """Acknowledge/dismiss a health error by error_key.
+
+    Optional ``suppression_hours`` body field overrides the category default
+    (positive integer for hours; ``-1`` for permanent dismiss).
+    """
     try:
         data = request.get_json()
         error_key = data.get('error_key', '')
         if not error_key:
             return jsonify({'error': 'error_key is required'}), 400
-        
-        result = health_persistence.acknowledge_error(error_key)
+
+        sup_override = None
+        if 'suppression_hours' in data and data['suppression_hours'] is not None:
+            try:
+                sup_override = int(data['suppression_hours'])
+                if sup_override < -1 or sup_override == 0:
+                    return jsonify({'error': 'suppression_hours must be a positive integer or -1 (permanent)'}), 400
+            except (ValueError, TypeError):
+                return jsonify({'error': 'suppression_hours must be an integer'}), 400
+
+        result = health_persistence.acknowledge_error(error_key, suppression_hours=sup_override)
         return jsonify({'success': True, 'result': result})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/health/un-acknowledge', methods=['POST'])
+@require_auth
+def api_health_unacknowledge():
+    """Reverse a previous dismiss — re-enables the alert so it can fire again.
+
+    Used by the Settings → Active Suppressions panel.
+    """
+    try:
+        data = request.get_json()
+        error_key = data.get('error_key', '')
+        if not error_key:
+            return jsonify({'error': 'error_key is required'}), 400
+
+        result = health_persistence.unacknowledge_error(error_key)
+        # Invalidate caches so the next health fetch reflects the new state.
+        for ck in ['_bg_overall', '_bg_detailed', 'overall_health',
+                   'storage_check', 'vms_check', 'logs_analysis',
+                   'pve_services', 'updates_check', 'security_check',
+                   'cpu_check', 'network_check']:
+            health_monitor.last_check_times.pop(ck, None)
+            health_monitor.cached_results.pop(ck, None)
+
+        status = 200 if result.get('success') else 404
+        return jsonify(result), status
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/prometheus', methods=['GET'])
 @require_auth
@@ -9859,9 +10788,15 @@ def api_prometheus():
         timestamp = int(datetime.now().timestamp() * 1000)
         node = socket.gethostname()
 
-        # Non-blocking: returns %CPU since the last psutil call (sampler keeps state primed).
-        # Avoids 500ms worker block on each Prometheus scrape.
-        cpu_usage = psutil.cpu_percent(interval=0)
+        # Read from the vital-signs sampler cache to avoid the gevent race
+        # that turns concurrent psutil.cpu_percent(interval=0) calls into 0%.
+        # Falls back to a 100ms sample only if the cache is empty (cold start).
+        try:
+            from health_monitor import health_monitor
+            _hist = health_monitor.state_history.get('cpu_usage') or []
+            cpu_usage = _hist[-1]['value'] if _hist else psutil.cpu_percent(interval=0.1)
+        except Exception:
+            cpu_usage = psutil.cpu_percent(interval=0.1)
         memory = psutil.virtual_memory()
         load_avg = os.getloadavg()
         uptime_seconds = time.time() - psutil.boot_time()
@@ -10114,7 +11049,7 @@ def api_info():
     """Root endpoint with API information"""
     return jsonify({
         'name': 'ProxMenux Monitor API',
-        'version': '1.2.0',
+        'version': '1.2.2',
         'endpoints': [
             '/api/system',
             '/api/system-info',
@@ -10367,6 +11302,31 @@ def get_vm_config(vmid):
         pass
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/lxc/<int:vmid>/mount-points', methods=['GET'])
+@require_auth
+def api_lxc_mount_points(vmid):
+    """Sprint 13.29: per-LXC mount points enumeration.
+
+    Returns the parsed ``mpX:`` entries from the container config plus,
+    when the container is running, runtime status (mounted/not, real
+    fstype, options, stale detection) and any ad-hoc NFS/CIFS/SMB the
+    user mounted from inside the CT. Capacity is always populated from
+    the host-side source (PVE storage or `df` of the host path) so the
+    info is meaningful even on stopped containers.
+    """
+    try:
+        import lxc_mount_points
+    except ImportError as e:
+        return jsonify({"ok": False, "error": f"helper unavailable: {e}"}), 503
+    try:
+        result = lxc_mount_points.get_lxc_mount_points(str(vmid))
+        if not result.get("ok"):
+            return jsonify(result), 400
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @app.route('/api/vms/<int:vmid>/logs', methods=['GET'])
 @require_auth
 def api_vm_logs(vmid):
@@ -10415,6 +11375,105 @@ def api_vm_logs(vmid):
         pass
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/vms/<int:vmid>/firewall/log', methods=['GET'])
+@require_auth
+def api_vm_firewall_log(vmid):
+    """Per-VM/CT firewall log entries — proxies the official PVE API:
+    `/nodes/<node>/{lxc,qemu}/<vmid>/firewall/log`. Returns the matching
+    lines from `/var/log/pve-firewall.log` already filtered by VMID so
+    the frontend doesn't have to parse the host-wide log itself.
+
+    Implements issue #14554 from the helper-scripts discussions —
+    "view individual VM/CT firewall logs" — without writing any custom
+    log parsing: PVE's API does it natively.
+
+    Query string:
+      * `start` — 0-based offset into the log (default 0).
+      * `limit` — number of lines to return (default 500, cap 5000).
+
+    Response shape mirrors the `/api/vms/<vmid>/logs` endpoint so the
+    frontend log viewer can reuse the same renderer.
+    """
+    try:
+        start = max(int(request.args.get('start', 0)), 0)
+        limit = min(max(int(request.args.get('limit', 500)), 1), 5000)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'start/limit must be integers'}), 400
+
+    try:
+        resources = get_cached_pvesh_cluster_resources_vm()
+        if not resources:
+            return jsonify({'error': 'Failed to enumerate cluster VMs'}), 500
+
+        vm_info = next((r for r in resources if r.get('vmid') == vmid), None)
+        if not vm_info:
+            return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
+
+        vm_type = 'lxc' if vm_info.get('type') == 'lxc' else 'qemu'
+        node = vm_info.get('node', 'pve')
+
+        log_result = subprocess.run(
+            [
+                'pvesh', 'get',
+                f'/nodes/{node}/{vm_type}/{vmid}/firewall/log',
+                '--start', str(start),
+                '--limit', str(limit),
+                '--output-format', 'json',
+            ],
+            capture_output=True, text=True, timeout=10,
+        )
+
+        if log_result.returncode != 0:
+            stderr = (log_result.stderr or '').strip()
+            # PVE returns this exact wording when the firewall is OFF
+            # for the guest — surface it as a structured flag so the
+            # frontend can render a "firewall disabled" callout instead
+            # of a generic error toast.
+            firewall_disabled = (
+                'firewall' in stderr.lower() and 'disable' in stderr.lower()
+            ) or '404' in stderr
+            return jsonify({
+                'vmid': vmid,
+                'name': vm_info.get('name'),
+                'type': vm_type,
+                'node': node,
+                'firewall_enabled': not firewall_disabled,
+                'logs': [],
+                'error': stderr[:300] if stderr else 'pvesh returned non-zero',
+            }), 200 if firewall_disabled else 500
+
+        entries = []
+        try:
+            data = json.loads(log_result.stdout or '[]')
+            if isinstance(data, list):
+                for row in data:
+                    if isinstance(row, dict):
+                        entries.append({
+                            'n': row.get('n'),
+                            't': row.get('t', ''),
+                        })
+        except (json.JSONDecodeError, ValueError):
+            # Older PVE versions or oddly-shaped output: fall back to
+            # plain text parsing, one entry per line.
+            for i, line in enumerate(log_result.stdout.split('\n')):
+                if line.strip():
+                    entries.append({'n': start + i, 't': line})
+
+        return jsonify({
+            'vmid': vmid,
+            'name': vm_info.get('name'),
+            'type': vm_type,
+            'node': node,
+            'firewall_enabled': True,
+            'log_lines': len(entries),
+            'logs': entries,
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'pvesh timed out reading firewall log'}), 504
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/vms/<int:vmid>/control', methods=['POST'])
 @require_auth
 def api_vm_control(vmid):
@@ -10458,19 +11517,69 @@ def api_vm_control(vmid):
                     'message': f'Successfully executed {action} on {vm_info.get("name")}'
                 })
             else:
+                # `pvesh` failed → fire the matching vm_fail / ct_fail
+                # notification so the user gets paged on their channels
+                # too, not just an in-dashboard alert. Previously this
+                # path silently returned a 500 to the browser and lost
+                # the event entirely (reported on .1.10: tried to start
+                # VM 106 while log2ram tmpfs was full → 500 in the UI
+                # but no Telegram message). The stderr is the most
+                # useful single line we have — `pvesh` reliably prints
+                # the underlying daemon failure there (e.g.
+                # "start failed: command '/usr/bin/kvm …' failed with
+                # exit code 1: no space left on device").
+                err_text = (control_result.stderr or '').strip() \
+                    or (control_result.stdout or '').strip() \
+                    or f'{action} returned exit code {control_result.returncode}'
+                # Truncate runaway stderr (some pvesh failures dump
+                # multi-KB tracebacks) — keep the notification readable.
+                if len(err_text) > 500:
+                    err_text = err_text[:500] + ' …'
+
+                try:
+                    from notification_manager import notification_manager as _nm
+                    import socket as _sock
+                    _host = _sock.gethostname()
+                    event_type = 'ct_fail' if vm_type == 'lxc' else 'vm_fail'
+                    _nm.emit_event(
+                        event_type=event_type,
+                        severity='CRITICAL',
+                        data={
+                            'hostname': _host,
+                            'vmid': str(vmid),
+                            'vmname': vm_info.get('name') or f'{vm_type}-{vmid}',
+                            'reason': f'{action} failed: {err_text}',
+                            'action': action,
+                        },
+                        source='dashboard',
+                        entity='vm',
+                        entity_id=str(vmid),
+                    )
+                except Exception as _emit_err:
+                    print(f"[api_vm_control] failed to emit {vm_type}_fail "
+                          f"notification: {type(_emit_err).__name__}: {_emit_err}")
+
                 return jsonify({
                     'success': False,
-                    'error': control_result.stderr
+                    'vmid': vmid,
+                    'action': action,
+                    'error': err_text,
                 }), 500
         else:
             return jsonify({'error': 'Failed to get VM details'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/vms/<int:vmid>/config', methods=['PUT'])
+@app.route('/api/vms/<int:vmid>/description', methods=['PUT'])
+@app.route('/api/vms/<int:vmid>/config', methods=['PUT'])  # legacy alias
 @require_auth
 def api_vm_config_update(vmid):
-    """Update VM/LXC configuration (description/notes)"""
+    """Update VM/LXC description (notes).
+
+    The endpoint is named `/description` because that's all it touches —
+    the legacy `/config` URL kept for backward compatibility with older
+    frontends. Audit Tier 7 — `PUT /api/vms/<vmid>/config` mal nombrado.
+    """
     try:
         data = request.get_json()
         description = data.get('description', '')
@@ -10516,6 +11625,7 @@ def api_vm_config_update(vmid):
 
 
 @app.route('/api/scripts/execute', methods=['POST'])
+@require_auth
 def execute_script():
     """Execute a script with real-time logging"""
     try:
@@ -10560,6 +11670,7 @@ def execute_script():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/scripts/status/<session_id>', methods=['GET'])
+@require_auth
 def get_script_status(session_id):
     """Get status of a running script"""
     try:
@@ -10569,6 +11680,7 @@ def get_script_status(session_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/scripts/respond', methods=['POST'])
+@require_auth
 def respond_to_script():
     """Respond to script interaction"""
     try:
@@ -10583,6 +11695,7 @@ def respond_to_script():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/scripts/logs/<session_id>', methods=['GET'])
+@require_auth
 def stream_script_logs(session_id):
     """Stream logs from a running script"""
     try:
@@ -10657,6 +11770,101 @@ if __name__ == '__main__':
         # Record initial readings immediately
         _record_temperature()
         _record_latency()
+        # Sprint 14: per-disk temperature history shares the same DB
+        # and the same 60s collector loop — initialize the table and
+        # take a baseline sample so the first chart draw isn't empty.
+        try:
+            import disk_temperature_history
+            if disk_temperature_history.init_disk_temperature_db():
+                disk_temperature_history.record_all_disk_temperatures()
+        except Exception as e:
+            print(f"[ProxMenux] Disk temperature history init failed: {e}")
+
+        # Sprint 14.7: managed-installs registry. Run a detection
+        # sweep at startup so manual NVIDIA/Tailscale installs that
+        # predated this build show up immediately — without waiting
+        # for the first 24h notification cycle to populate the file.
+        try:
+            import managed_installs
+            managed_installs.detect_and_register()
+            print("[ProxMenux] Managed-installs registry initialised")
+        except Exception as e:
+            print(f"[ProxMenux] managed_installs init failed: {e}")
+
+        # Self-healing maintenance run on every startup. Two passes, both
+        # idempotent and safe to run repeatedly. They exist because issues
+        # observed in the field (see comments below) silently corrupt user
+        # data and were until now only fixable by manual SQL surgery.
+        try:
+            import sqlite3
+            from pathlib import Path
+            MONITOR_VERSION = '1.2.2'
+            db_path = Path('/usr/local/share/proxmenux/health_monitor.db')
+            if db_path.exists():
+                conn = sqlite3.connect(str(db_path), timeout=10)
+                conn.execute('PRAGMA journal_mode=WAL')
+
+                # Pass 1 — backfill resolution_type on orphan errors.
+                # Some legacy code paths set `resolved_at` without setting
+                # `resolution_type`, which leaves the rows in a half-resolved
+                # state. The Monitor's overall-status badge counts them as
+                # ACTIVE while the per-error list endpoint hides them
+                # (resolved_at is non-NULL), producing a "Warning badge with
+                # an empty modal" that the user has no way to clear from
+                # the UI. We backfill `resolution_type='auto_cleanup'` so
+                # both queries agree.
+                orphans = conn.execute(
+                    "UPDATE errors SET resolution_type = 'auto_cleanup', "
+                    "resolution_reason = COALESCE(resolution_reason, "
+                    "'Backfilled at startup — resolved_at present without "
+                    "resolution_type') "
+                    "WHERE resolved_at IS NOT NULL AND "
+                    "(resolution_type IS NULL OR resolution_type = '')"
+                ).rowcount
+
+                # Pass 2 — version-bump cooldown reset.
+                # When the AppImage is updated, drop the per-fingerprint
+                # cooldowns for the "updates available" family so the first
+                # poll cycle of the new build emits its initial summary
+                # again. Without this, the global 24h cooldown (added in
+                # 1.2.1.1-beta) silently swallows that ping — users who
+                # relied on it as a "Monitor restarted OK" signal stopped
+                # seeing anything after a redeploy. Only fires when the
+                # version actually changed.
+                row = conn.execute(
+                    "SELECT setting_value FROM user_settings "
+                    "WHERE setting_key = 'last_known_monitor_version'"
+                ).fetchone()
+                last_version = row[0] if row else ''
+                cleared = 0
+                if last_version != MONITOR_VERSION:
+                    cleared = conn.execute(
+                        "DELETE FROM notification_last_sent WHERE "
+                        "fingerprint LIKE '%update_summary%' OR "
+                        "fingerprint LIKE '%nvidia_driver_update_available%' OR "
+                        "fingerprint LIKE '%post_install_update%' OR "
+                        "fingerprint LIKE '%secure_gateway_update_available%'"
+                    ).rowcount
+                    conn.execute(
+                        "INSERT OR REPLACE INTO user_settings "
+                        "(setting_key, setting_value, updated_at) VALUES (?, ?, ?)",
+                        ('last_known_monitor_version', MONITOR_VERSION,
+                         datetime.now().isoformat())
+                    )
+
+                conn.commit()
+                conn.close()
+
+                if orphans:
+                    print(f"[ProxMenux] startup: backfilled "
+                          f"{orphans} orphan error(s) (resolved_at set "
+                          f"without resolution_type)")
+                if cleared:
+                    print(f"[ProxMenux] startup: Monitor version bumped "
+                          f"({last_version or '<none>'} → {MONITOR_VERSION}); "
+                          f"cleared {cleared} update-related cooldown(s)")
+        except Exception as e:
+            print(f"[ProxMenux] startup self-heal failed: {e}")
         # Start background collector thread (handles both temp and latency)
         temp_thread = threading.Thread(target=_temperature_collector_loop, daemon=True)
         temp_thread.start()
@@ -10736,17 +11944,71 @@ if __name__ == '__main__':
             # Try gevent with SSL for proper WebSocket (WSS) support
             try:
                 from gevent import pywsgi
-                from geventwebsocket.handler import WebSocketHandler
                 import ssl
-                
+
                 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
                 ssl_context.load_cert_chain(ssl_cert, ssl_key)
-                
+
+                # Defensive: silence the ~30-line traceback that gevent
+                # prints whenever a client sends plain HTTP against this
+                # https endpoint. We observed Home-Assistant integrations
+                # with `http://host:8008/...` URLs and iPad Safari opening
+                # ws:// (instead of wss://) generating ~4 errors/sec on
+                # .55, which inflated journal volume and pushed RSS into
+                # the gigabytes — on one occasion to 4.4 GB before OOM.
+                # Earlier attempts to fix this by subclassing WSGIServer
+                # and catching SSLError in `wrap_socket_and_handle` broke
+                # the legitimate wss handshake path (SSLWantReadError
+                # propagation tangled with the script_runner read thread).
+                # This monkey-patch is the surgical alternative: it
+                # intercepts ONLY the traceback printer of `Greenlet`,
+                # filters by exception type + message text, and leaves
+                # everything else (sockets, gevent's event loop,
+                # SSLWantRead/Write flow-control) entirely untouched.
+                try:
+                    import gevent.hub as _gh
+                    _orig_handle_error = _gh.Hub.handle_error
+                    def _quiet_ssl_handle_error(self, context, type_, value, tb):
+                        try:
+                            if isinstance(value, ssl.SSLError):
+                                msg = str(value)
+                                # Drop only "hard" client-side errors —
+                                # NEVER touch SSLWantReadError /
+                                # SSLWantWriteError / SSLZeroReturnError
+                                # which are normal control flow.
+                                if ('HTTP_REQUEST' in msg or
+                                    'RECORD_LAYER_FAILURE' in msg or
+                                    'WRONG_VERSION_NUMBER' in msg or
+                                    'UNKNOWN_PROTOCOL' in msg):
+                                    return
+                        except Exception:
+                            pass
+                        return _orig_handle_error(self, context, type_, value, tb)
+                    _gh.Hub.handle_error = _quiet_ssl_handle_error
+                    print("[ProxMenux] SSL handshake-error traceback suppression installed", flush=True)
+                except Exception as _e:
+                    print(f"[ProxMenux] WARN: could not install SSL traceback filter ({_e}); journals may grow under misconfigured clients", flush=True)
+
                 print("[ProxMenux] Starting gevent server with SSL/WSS support...")
+                # IMPORTANT: do NOT pass `handler_class=WebSocketHandler`
+                # from geventwebsocket. flask-sock (the library wiring our
+                # /ws/terminal and /ws/script/<id> routes) already implements
+                # the WebSocket protocol on top of any standard WSGI server
+                # via `simple-websocket`. Stacking the geventwebsocket
+                # handler on top causes both layers to respond to the
+                # client's upgrade request — the server emits two
+                # `HTTP/1.1 101 Switching Protocols` headers back-to-back,
+                # which the browser interprets as a corrupt frame and
+                # closes with "WebSocket connection error" the moment the
+                # terminal modal opens. Using the default WSGIHandler lets
+                # flask-sock own the upgrade end-to-end.
+                #
+                # `::` binds IPv6 + IPv4 (v4-mapped) on Linux when
+                # net.ipv6.bindv6only=0 (the default). Issue #192 — IPv4-only
+                # listening broke ProxMenux on dual-stack / v6-only hosts.
                 server = pywsgi.WSGIServer(
-                    ('0.0.0.0', 8008), 
-                    app, 
-                    handler_class=WebSocketHandler,
+                    ('::', 8008),
+                    app,
                     ssl_context=ssl_context
                 )
                 gevent_available = True
@@ -10758,14 +12020,14 @@ if __name__ == '__main__':
                 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
                 ssl_context.load_cert_chain(ssl_cert, ssl_key)
                 print("[ProxMenux] Starting Flask server with SSL (using flask-sock for WebSockets)...")
-                app.run(host='0.0.0.0', port=8008, debug=False, ssl_context=ssl_context)
+                app.run(host='::', port=8008, debug=False, ssl_context=ssl_context)
         else:
             # HTTP mode - use Flask dev server (simpler, works fine without SSL)
             print("[ProxMenux] Starting Flask server with HTTP...")
-            app.run(host='0.0.0.0', port=8008, debug=False)
+            app.run(host='::', port=8008, debug=False)
     except Exception as e:
         if ssl_ctx and not gevent_available:
             print(f"[ProxMenux] SSL startup failed ({e}), falling back to HTTP")
-            app.run(host='0.0.0.0', port=8008, debug=False)
+            app.run(host='::', port=8008, debug=False)
         else:
             raise e

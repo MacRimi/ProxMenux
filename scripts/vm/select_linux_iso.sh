@@ -1,27 +1,28 @@
 #!/usr/bin/env bash
 
 # ==========================================================
-# ProxMenuX - Virtual Machine Creator Script
+# ProxMenux - Linux ISO Selector
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 07/05/2025
 # ==========================================================
 # Description:
-# This script is part of the central ProxMenux VM creation module. It allows users
-# to create virtual machines (VMs) in Proxmox VE using either default or advanced
-# configurations, streamlining the deployment of Linux, Windows, and other systems.
+# Linux installation source selector for the ProxMenux VM creator.
+# Offers three paths to obtain the Linux installation media and
+# also exposes the "Others" prebuilt VM menu used by the main
+# dispatcher for community-maintained installers.
 #
-# Key features:
-# - Supports both virtual disk creation and physical disk passthrough.
-# - Automates CPU, RAM, BIOS, network and storage configuration.
-# - Provides a user-friendly menu to select OS type, ISO image and disk interface.
-# - Automatically generates a detailed and styled HTML description for each VM.
-#
-# All operations are designed to simplify and accelerate VM creation in a 
-# consistent and maintainable way, using ProxMenux standards.
+# Features:
+# - Curated list of official Linux ISOs (Ubuntu, Debian, Fedora,
+#   Arch, Rocky, Mint, openSUSE, Alpine, Kali, Manjaro) with
+#   direct download URLs.
+# - Cloud-Init automated installers (community scripts).
+# - Pick an existing ISO from any Proxmox ISO storage.
+# - Separate "Others Prebuilt VMs" selector (HAOS, Docker, Nextcloud)
+#   used by the main menu's Community Scripts path.
 # ==========================================================
 
 
@@ -32,6 +33,9 @@ VENV_PATH="/opt/googletrans-env"
 ISO_DIR="/var/lib/vz/template/iso"
 
 [[ -f "$UTILS_FILE" ]] && source "$UTILS_FILE"
+if [[ -f "$LOCAL_SCRIPTS/global/iso_storage_helpers.sh" ]]; then
+  source "$LOCAL_SCRIPTS/global/iso_storage_helpers.sh"
+fi
 load_language
 initialize_cache
 
@@ -61,7 +65,7 @@ function select_linux_iso() {
                   20 70 10 \
                   1 "$(printf '%-35s│ %s' 'Instalar con metodo tradicional' 'Desde ISO oficial')" \
                   2 "$(printf '%-35s│ %s' 'Instalar con script Cloud-Init' 'Helper Scripts')" \
-                  3 "$(printf '%-35s│ %s' 'Instalar con ISO personal' 'Almacenamiento local')" \
+                  3 "$(printf '%-35s│ %s' 'Instalar con ISO personal' 'Almacenamiento ISO')" \
                   4 "Volver al menú principal" \
                   3>&1 1>&2 2>&3)
                         else
@@ -78,13 +82,13 @@ function select_linux_iso() {
         18 70 10 \
         1 "$(printf '%-35s│ %s' "$desc1" "From official ISO")" \
         2 "$(printf '%-35s│ %s' "$desc2" "Helper Scripts")" \
-        3 "$(printf '%-35s│ %s' "$desc3" "Local Storage")" \
+        3 "$(printf '%-35s│ %s' "$desc3" "ISO Storage")" \
         4 "$back" \
         3>&1 1>&2 2>&3)
     fi
 
     if [[ $? -ne 0 || "$CHOICE" == "4" ]]; then
-      unset ISO_NAME ISO_TYPE ISO_URL ISO_FILE ISO_PATH HN
+      unset ISO_NAME ISO_TYPE ISO_URL ISO_FILE ISO_PATH ISO_VOLID HN
       return 1
     fi
 
@@ -150,6 +154,7 @@ function select_linux_iso_official() {
   IFS='|' read -r ISO_NAME ISO_TYPE SOURCE ISO_URL <<< "$SELECTED"
   ISO_FILE=$(basename "$ISO_URL")
   ISO_PATH="$ISO_DIR/$ISO_FILE"
+  ISO_VOLID="local:iso/$ISO_FILE"
 
   HN=$(echo "$ISO_NAME" | \
     sed 's/ (.*)//' | \
@@ -158,7 +163,7 @@ function select_linux_iso_official() {
     sed 's/-*$//' | \
     cut -c1-63)
               
-  export ISO_NAME ISO_TYPE ISO_URL ISO_FILE ISO_PATH HN
+  export ISO_NAME ISO_TYPE ISO_URL ISO_FILE ISO_PATH ISO_VOLID HN
   export OS_TYPE="3"
   return 0
 }
@@ -224,34 +229,35 @@ function select_linux_cloudinit() {
 
 
 function select_linux_custom_iso() {
+  local volid
   ISO_LIST=()
-  while read -r line; do
-    FILENAME=$(basename "$line")
-    SIZE=$(du -h "$line" | cut -f1)
-    ISO_LIST+=("$FILENAME" "$SIZE")
-  done < <(find "$ISO_DIR" -type f -iname "*.iso" | sort)
+  while read -r volid; do
+    [[ -z "$volid" ]] && continue
+    ISO_LIST+=("$volid" "$(iso_dialog_description "$volid")")
+  done < <(iso_list_volids "all")
 
   if [[ ${#ISO_LIST[@]} -eq 0 ]]; then
     header_info
-    msg_error "$(translate "No ISO images found in") $ISO_DIR."
+    msg_error "$(translate "No ISO images found in Proxmox ISO storages.")"
     sleep 2
     return 1
   fi
 
-  ISO_FILE=$(dialog --backtitle "ProxMenux" --title "$(translate "Available ISO Images")" \
-    --menu "$(translate "Select a custom ISO to use:")" 20 70 10 \
+  ISO_VOLID=$(dialog --backtitle "ProxMenux" --title "$(translate "Available ISO Images")" \
+    --menu "$(translate "Select a custom ISO to use:")\n\n$(printf '%-42s │ %-14s │ %s' "$(translate "ISO")" "$(translate "Storage")" "$(translate "Size")")" 22 86 12 \
     "${ISO_LIST[@]}" 3>&1 1>&2 2>&3)
 
-  if [[ -z "$ISO_FILE" ]]; then
+  if [[ -z "$ISO_VOLID" ]]; then
     header_info
     msg_warn "$(translate "No ISO selected.")"
     return 1
   fi
 
-  ISO_PATH="$ISO_DIR/$ISO_FILE"
+  ISO_FILE=$(iso_name_from_volid "$ISO_VOLID")
+  ISO_PATH=$(iso_volid_to_path "$ISO_VOLID")
   ISO_NAME="$ISO_FILE"             
 
-  export ISO_PATH ISO_FILE ISO_NAME
+  export ISO_PATH ISO_FILE ISO_NAME ISO_VOLID
   export OS_TYPE="3"
   return 0
 }
@@ -307,7 +313,5 @@ whiptail --title "Proxmox VE Helper-Scripts" \
 return 1
 
 }
-
-
 
 

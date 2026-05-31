@@ -51,6 +51,7 @@ MENU_SCRIPT="menu"
 VENV_PATH="/opt/googletrans-env"
 
 MONITOR_INSTALL_DIR="$BASE_DIR"
+MONITOR_RUNTIME_DIR="$BASE_DIR/monitor-app"
 MONITOR_SERVICE_FILE="/etc/systemd/system/proxmenux-monitor.service"
 MONITOR_PORT=8008
 
@@ -576,10 +577,60 @@ detect_latest_appimage() {
 get_appimage_version() {
     local appimage_path="$1"
     local filename=$(basename "$appimage_path")
-    
-    local version=$(echo "$filename" | grep -oP 'ProxMenux-\K[0-9]+\.[0-9]+\.[0-9]+')
-    
+
+    # Match any dotted number sequence + optional pre-release suffix
+    # (e.g. "-beta"). The previous `[0-9]+\.[0-9]+\.[0-9]+` was hardcoded
+    # to three segments and dropped both the fourth segment AND the
+    # `-beta` suffix on a name like `ProxMenux-1.2.1.2-beta.AppImage`.
+    local version=$(echo "$filename" | grep -oP 'ProxMenux-\K[0-9]+(?:\.[0-9]+)+(?:-[A-Za-z0-9]+)?')
+
     echo "$version"
+}
+
+# ── AppImage runtime extraction ────────────────────────────
+# Extract the AppImage's squashfs to a stable directory and run AppRun
+# directly. Avoids the FUSE mount under /tmp/.mount_ProxMe<random>, which
+# trips Wazuh rule 521 / rkhunter "Possible kernel level rootkit" alerts
+# (issue #101) — those scanners flag any directory that appears in
+# readdir() but is hidden from lstat(), which is exactly what AppImage's
+# FUSE mount layer looks like to them. Running from a plain extracted
+# directory has the same files but no FUSE indirection, so the false
+# positive disappears.
+extract_appimage_to_runtime_dir() {
+    local appimage_path="$1"
+    local target_runtime_dir="$2"
+    local tmp_extract_dir
+    tmp_extract_dir=$(mktemp -d /tmp/proxmenux-extract.XXXXXX) || return 1
+
+    msg_info "Extracting AppImage runtime to ${target_runtime_dir}..."
+
+    if ! ( cd "$tmp_extract_dir" && "$appimage_path" --appimage-extract >/dev/null 2>&1 ); then
+        msg_error "Failed to extract AppImage."
+        rm -rf "$tmp_extract_dir"
+        return 1
+    fi
+
+    if [ ! -x "$tmp_extract_dir/squashfs-root/AppRun" ]; then
+        msg_error "Extracted AppImage missing AppRun."
+        rm -rf "$tmp_extract_dir"
+        return 1
+    fi
+
+    rm -rf "${target_runtime_dir}.new"
+    mv "$tmp_extract_dir/squashfs-root" "${target_runtime_dir}.new"
+    rm -rf "$tmp_extract_dir"
+
+    if [ -d "$target_runtime_dir" ]; then
+        rm -rf "${target_runtime_dir}.old"
+        mv "$target_runtime_dir" "${target_runtime_dir}.old"
+    fi
+    mv "${target_runtime_dir}.new" "$target_runtime_dir"
+    rm -rf "${target_runtime_dir}.old"
+
+    rm -f "$appimage_path"
+
+    msg_ok "AppImage runtime extracted (no FUSE mount; bypasses Wazuh rule 521)."
+    return 0
 }
 
 install_proxmenux_monitor() {
@@ -625,7 +676,12 @@ install_proxmenux_monitor() {
     local target_path="$MONITOR_INSTALL_DIR/ProxMenux-Monitor.AppImage"
     cp "$appimage_source" "$target_path"
     chmod +x "$target_path"
-    
+
+    if ! extract_appimage_to_runtime_dir "$target_path" "$MONITOR_RUNTIME_DIR"; then
+        update_config "proxmenux_monitor" "extract_failed"
+        return 1
+    fi
+
     msg_ok "ProxMenux Monitor v$appimage_version installed."
     
     if [ "$service_exists" = false ]; then
@@ -649,8 +705,8 @@ install_proxmenux_monitor() {
 
 create_monitor_service() {
     msg_info "Creating ProxMenux Monitor service..."
-    
-    local exec_path="$MONITOR_INSTALL_DIR/ProxMenux-Monitor.AppImage"
+
+    local exec_path="$MONITOR_RUNTIME_DIR/AppRun"
     
     if [ -f "$TEMP_DIR/systemd/proxmenux-monitor.service" ]; then
         sed "s|ExecStart=.*|ExecStart=$exec_path|g" \
@@ -739,7 +795,8 @@ install_normal_version() {
     fi
 
     for pkg in "${BASIC_DEPS[@]}"; do
-        if ! dpkg -l | grep -qw "$pkg"; then
+        # Strict per-package check — see comment in install_translation_version().
+        if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed"; then
             if apt-get install -y "$pkg" > /dev/null 2>&1; then
                 update_config "$pkg" "installed"
             else
@@ -887,7 +944,12 @@ install_translation_version() {
     
     DEPS=("dialog" "curl" "git" "python3" "python3-venv" "python3-pip")
     for pkg in "${DEPS[@]}"; do
-        if ! dpkg -l | grep -qw "$pkg"; then
+        # `dpkg -l | grep -qw "$pkg"` treats `-` as a word boundary, so a
+        # query for `python3` would falsely match `python3-pip` and skip
+        # the real `python3` install. `dpkg-query -W -f='${Status}'` asks
+        # for the EXACT package and reports "install ok installed" only
+        # when truly present. Issue #205 traced back here.
+        if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed"; then
             if apt-get install -y "$pkg" > /dev/null 2>&1; then
                 update_config "$pkg" "installed"
             else
@@ -1075,7 +1137,17 @@ install_proxmenux() {
     if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
     fi
-    
+
+    # ── Legacy gpu-guard hookscript auto-cleanup ──────────────
+    # Previous ProxMenux versions attached a hookscript to VMs/LXCs with GPU
+    # passthrough; that reference in the guest .conf broke backup/restore to
+    # hosts without the snippet. The hookscript system has been removed.
+    # This silently purges any leftover references and the snippet file.
+    # Idempotent: does nothing on hosts that never had the legacy hook.
+    if [ -x "$LOCAL_SCRIPTS/global/cleanup_gpu_hookscripts.sh" ]; then
+        bash "$LOCAL_SCRIPTS/global/cleanup_gpu_hookscripts.sh" || true
+    fi
+
     msg_title "ProxMenux has been installed successfully"
     
     if systemctl is-active --quiet proxmenux-monitor.service; then

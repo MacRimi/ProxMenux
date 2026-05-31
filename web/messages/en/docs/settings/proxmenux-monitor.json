@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor | ProxMenux Documentation",
+    "description": "Activate or deactivate the proxmenux-monitor.service systemd unit and inspect its current state. The Monitor exposes a web UI on TCP 8008 for visual host monitoring.",
+    "ogTitle": "ProxMenux Monitor | ProxMenux Documentation",
+    "ogDescription": "Toggle the proxmenux-monitor systemd service and check its status from the Settings menu."
+  },
+  "header": {
+    "title": "ProxMenux Monitor",
+    "description": "Two related actions inside the Settings menu: toggle the proxmenux-monitor.service systemd unit (start / stop and enable / disable in one click), and view its current detailed status. The Monitor exposes a web UI on TCP 8008 for visual host monitoring.",
+    "section": "Settings"
+  },
+  "intro": {
+    "title": "What is ProxMenux Monitor?",
+    "body": "ProxMenux Monitor is an integrated web dashboard that provides real-time visibility into your Proxmox infrastructure — accessible from any browser on your network, without needing a terminal."
+  },
+  "offers": {
+    "heading": "What it offers",
+    "items": [
+      "Real-time monitoring of CPU, RAM, disk usage and network traffic.",
+      "Overview of running VMs and LXC containers with status indicators.",
+      "Login authentication to protect access.",
+      "Two-Factor Authentication (2FA) with TOTP support.",
+      "Reverse proxy support (Nginx / Traefik).",
+      "Designed to work across desktop and mobile devices."
+    ]
+  },
+  "access": {
+    "heading": "Access",
+    "intro": "Once installed, the dashboard is available at:",
+    "url": "http://<your-proxmox-ip>:8008",
+    "outro": "The Monitor is installed automatically as part of the standard ProxMenux installation and runs as a systemd service (<code>proxmenux-monitor.service</code>) that starts automatically on boot."
+  },
+  "warnConditional": {
+    "title": "Settings options only visible when Monitor is installed",
+    "body": "The two menu entries described below only appear in Settings if <code>proxmenux-monitor.service</code> is registered with systemd. If you don't see them, the Monitor wasn't installed (it's optional during ProxMenux install). To add it later, reinstall ProxMenux with the latest version and pick the Monitor option."
+  },
+  "toggle": {
+    "heading": "Activate / Deactivate",
+    "intro": "The first menu entry is a single toggle that flips between two states based on whether the service is currently running:",
+    "headerState": "Current state",
+    "headerLabel": "Menu label shown",
+    "headerAction": "Action on confirm",
+    "rows": [
+      {
+        "state": "active",
+        "label": "Deactivate ProxMenux Monitor",
+        "action": "systemctl stop + disable"
+      },
+      {
+        "state": "inactive",
+        "label": "Activate ProxMenux Monitor",
+        "action": "systemctl enable + start"
+      }
+    ],
+    "outro": "Each toggle requires an explicit yes/no dialog before running. Activate / Deactivate is symmetric: deactivating stops the service <em>and</em> disables auto-start at boot; activating enables auto-start <em>and</em> starts the service immediately."
+  },
+  "status": {
+    "heading": "Show Monitor Service Status",
+    "intro": "The second menu entry is read-only. It clears the screen, shows the ProxMenux logo and the title <em>\"ProxMenux Monitor Service Verification\"</em>, then reports:",
+    "items": [
+      "<strong>Service status:</strong> active, inactive or not_installed.",
+      "<strong>Web UI URL</strong> (only when active): <code>http://&lt;host_ip&gt;:8008</code> — derived from <code>hostname -I | awk '''{print $1}'''</code>.",
+      "<strong>Detailed systemd output:</strong> <code>systemctl status proxmenux-monitor.service --no-pager -l</code> — shows recent log lines, ExecStart, MainPID, etc."
+    ]
+  },
+  "manual": {
+    "title": "Manual equivalents",
+    "intro": "From any shell:",
+    "code": "systemctl status proxmenux-monitor.service       # detailed status\nsystemctl is-active proxmenux-monitor.service    # one-word status\nsystemctl enable --now proxmenux-monitor.service # enable + start\nsystemctl disable --now proxmenux-monitor.service # stop + disable\njournalctl -u proxmenux-monitor.service -f       # follow live logs"
+  },
+  "reset": {
+    "heading": "Reset ProxMenux Monitor Password",
+    "intro": "Recovery path for the operator who lost the dashboard password (or 2FA device). The option only appears when the Monitor is installed on the host. Selecting it:",
+    "items": [
+      "Asks for confirmation with a yes/no dialog — the action is destructive for the login credentials.",
+      "Backs up the existing <code>/root/.config/proxmenux-monitor/auth.json</code> to <code>auth.json.bak-&lt;UTC timestamp&gt;</code> (mode <code>0600</code>) so the previous state can be restored manually if the reset was a mistake.",
+      "Stops the <code>proxmenux-monitor</code> service so the on-disk edit can't race with an in-flight login.",
+      "Clears the identity fields in <code>auth.json</code>: <code>enabled=false</code>, <code>configured=false</code>, empties <code>username</code>, <code>password_hash</code>, <code>totp_secret</code> and the backup codes array.",
+      "<strong>Preserves</strong> the <code>jwt_secret</code> and the registered <code>api_tokens</code> / <code>revoked_tokens</code> — so long-lived API tokens used by Home Assistant or other scripts <em>continue to authenticate</em> after the reset.",
+      "Restarts the service. The next visit to <code>http://&lt;host&gt;:8008</code> shows the first-launch setup wizard so a fresh admin account can be created."
+    ],
+    "preservedTitle": "What survives the reset, what doesn't",
+    "preservedBody": "<strong>Wiped:</strong> username, password hash, 2FA TOTP secret, backup codes. <strong>Preserved:</strong> <code>jwt_secret</code>, <code>api_tokens</code> metadata, <code>revoked_tokens</code> list. If you actively want to also invalidate every existing API token (full clean slate), delete <code>auth.json</code> manually instead of using this menu option — the next start of the service regenerates the JWT secret and everything else from scratch.",
+    "trustTitle": "Physical-host access is the trust anchor",
+    "trustBody": "This reset path requires root shell on the host. Anyone who can run the <code>menu</code> command as root already controls the box, so giving them password recovery is not a privilege escalation — it's consistent with how every other admin tool on Proxmox works. The corollary: the Monitor login won't protect anything from someone you've already let into the Proxmox shell.",
+    "seeAlso": "See also <link>Monitor → Access &amp; Auth → Recovering a lost password</link> for the same flow described from the dashboard side, plus the wider context on how passwords are hashed and how the JWT secret is generated."
+  },
+  "files": {
+    "heading": "Files involved",
+    "code": "/etc/systemd/system/proxmenux-monitor.service       # systemd unit\n/root/.config/proxmenux-monitor/                    # runtime config dir\n/var/log/proxmenux-auth.log                         # Flask app auth log\n                                                    # (read by Fail2Ban [proxmenux] jail)"
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "missingTitle": "Both menu options are missing",
+    "missingBody": "The Monitor isn't registered with systemd. Confirm with <code>systemctl list-unit-files | grep proxmenux-monitor</code> — if there's no output, reinstall ProxMenux from the official installer with the latest version and pick the Monitor option during install.",
+    "unreachableTitle": "Service activated but the URL is unreachable",
+    "unreachableBody": "The Settings status output gives you the IP. Confirm:",
+    "unreachableCmd": "ss -tlnp | grep 8008                # is anything listening?\njournalctl -u proxmenux-monitor -n 100 --no-pager  # recent errors\ncurl -sI http://localhost:8008      # local reachability",
+    "unreachableOutro": "If localhost works but external doesn't, check your host firewall (<code>pve-firewall</code> or nftables) for inbound TCP 8008.",
+    "stopsTitle": "Activated the service but it stops itself a few seconds later",
+    "stopsBody": "Most often a port conflict (something else on 8008) or a dependency check failing. The journal will say which: <code>journalctl -u proxmenux-monitor.service -b</code>."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/security/fail2ban",
+        "label": "Fail2Ban",
+        "tailRich": " — the <code>[proxmenux]</code> jail protects the Monitor on TCP 8008."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Settings overview",
+        "tail": "."
+      }
+    ]
+  }
+}

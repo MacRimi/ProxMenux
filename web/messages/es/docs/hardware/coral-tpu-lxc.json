@@ -1,0 +1,120 @@
+{
+  "meta": {
+    "title": "Añadir Coral TPU a LXC | ProxMenux Documentation",
+    "description": "Pasa una Google Coral TPU (USB o M.2 / PCIe) a un contenedor LXC de Proxmox. ProxMenux escribe las entradas correctas de dev / cgroup / mount para cada variante, arranca el contenedor e instala el runtime de Edge TPU dentro para que apps como Frigate puedan usar el acelerador."
+  },
+  "header": {
+    "title": "Añadir Coral TPU a LXC",
+    "description": "Comparte una Google Coral TPU (USB Accelerator o M.2 / Mini-PCIe) con un contenedor LXC de Proxmox. ProxMenux se encarga de la config del LXC y de la instalación del runtime Edge TPU dentro del contenedor. Coral es solo TPU: para compartir GPU / iGPU (Quick Sync, VA-API, NVENC) en el mismo contenedor, ejecuta Añadir GPU a LXC por separado.",
+    "section": "Hardware: GPUs y Coral-TPU"
+  },
+  "intro": {
+    "title": "Qué hace esto",
+    "body": "Escribe la config de passthrough en <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> — entradas distintas dependiendo de si el host tiene un <strong>USB Accelerator</strong>, una <strong>Coral M.2 / PCIe</strong>, o ambos. Luego arranca el contenedor e instala el último runtime <code>libedgetpu</code> de Google dentro de él. El passthrough de iGPU / GPU lo gestiona un script aparte (<lxcGpuLink>Añadir GPU a LXC</lxcGpuLink>) — este se centra en la TPU."
+  },
+  "whenUse": {
+    "heading": "Cuándo usar esto",
+    "body": "Caso de uso típico: ejecutar <frigateLink>Frigate</frigateLink>, Agent DVR, Blue Iris + CodeProject.AI o cualquier otra app de detección de objetos dentro de un LXC y querer que la Coral TPU haga la inferencia ML en lugar de la CPU. Con Coral, la latencia de inferencia baja de ~100 ms a ~5 ms por frame y la carga de CPU se mantiene cerca de cero."
+  },
+  "prereqs": {
+    "title": "Antes de empezar",
+    "drivers": "<strong>Drivers de Coral ya instalados en el host</strong>. Este script no los instala; solo configura el passthrough al contenedor. Ejecuta <hostLink>Install Coral TPU on the Host</hostLink> primero si no lo has hecho.",
+    "driversCheck": "ls /dev/apex_* 2>/dev/null ; lsusb | grep -E '1a6e:089a|18d1:9302'",
+    "container": "<strong>Un contenedor LXC existente</strong>, idealmente con una distro basada en <strong>Debian / Ubuntu</strong>. La instalación dentro del contenedor usa <code>apt-get</code>; los contenedores Alpine / Arch no están soportados por este script actualmente.",
+    "downtime": "<strong>Asume una breve interrupción</strong> del contenedor. El script lo para para aplicar los cambios de config y lo arranca de nuevo para instalar los drivers dentro. No hace falta reiniciar el host."
+  },
+  "hostPrep": {
+    "title": "El host debe estar preparado primero",
+    "body": "Si ejecutas este script antes de instalar los drivers de Coral en el host (el módulo de kernel <code>gasket</code>/<code>apex</code> para M.2, el runtime <code>libedgetpu</code> para USB), la config del LXC se escribe igualmente pero el contenedor no encontrará el dispositivo en tiempo de ejecución. El orden importa: <strong>instalación en el host → passthrough al LXC → app dentro del contenedor</strong>."
+  },
+  "running": {
+    "heading": "Ejecutar el script",
+    "body": "Abre ProxMenux en el host, ve a <strong>Hardware: GPUs and Coral-TPU → Add Coral TPU to LXC</strong>.",
+    "imageAlt": "Entrada del menú 'Add Coral TPU to LXC' dentro de Hardware: GPUs and Coral-TPU"
+  },
+  "howRuns": {
+    "heading": "Cómo se ejecuta el script",
+    "body": "Una decisión por adelantado (¿qué contenedor?), luego el script gestiona los caminos USB y PCIe de forma independiente según lo que encuentre en el host. Si ambos están presentes, ambos se pasan."
+  },
+  "walkthrough": {
+    "heading": "Recorriendo el flujo",
+    "pick": {
+      "title": "Elige el contenedor LXC",
+      "body": "Un diálogo muestra cada LXC del host (desde <code>pct list</code>). Elige el que debería recibir la Coral. En ejecución o parado, da igual — el script gestiona ambos casos (lo para brevemente para escribir la config y luego lo arranca de nuevo para instalar los drivers)."
+    },
+    "gpuHint": {
+      "title": "Sugerencia de passthrough de GPU (opcional)",
+      "body": "Si el host tiene una GPU (Intel iGPU, AMD, NVIDIA) y el contenedor elegido NO tiene passthrough de GPU configurado, el script muestra un diálogo único sugiriendo que ejecutes <lxcGpuLink>Añadir GPU a LXC</lxcGpuLink> primero. La Coral suele combinarse con decodificación de vídeo por hardware (Quick Sync, VA-API, NVENC) para apps como Frigate. Puedes decir sí (sale, ejecutas el script de GPU y vuelves) o no (continúa con el setup solo de TPU)."
+    },
+    "usb": {
+      "title": "Escribir la config del LXC — ruta USB",
+      "body": "Si hay un USB Accelerator presente, el script hace dos cosas: (1) escribe una regla udev en el host para que el dispositivo tenga un nombre estable <code>/dev/coral</code> independientemente del puerto USB en el que esté, y (2) hace bind-mount del árbol <strong>completo</strong> <code>/dev/bus/usb</code> dentro del contenedor.",
+      "whyTitle": "¿Por qué montar /dev/bus/usb en lugar de /dev/coral?",
+      "whyBody": "La ruta del nodo del dispositivo USB (p. ej. <code>/dev/bus/usb/001/005</code>) cambia cuando reconectas el acelerador a otro puerto. Versiones anteriores del script hacían bind-mount del symlink <code>/dev/coral</code>, que apuntaba a una ruta vieja y se rompía. Montar el árbol USB completo significa que el contenedor ve la ruta actual sea cual sea, así que reconectar simplemente funciona."
+    },
+    "pcie": {
+      "title": "Escribir la config del LXC — ruta M.2 / PCIe",
+      "body1": "Si hay una Coral M.2 / PCIe presente en el host y <code>/dev/apex_0</code> existe (el módulo de kernel apex está cargado), el script usa la API moderna <code>dev</code> de Proxmox que gestiona los permisos de cgroup2 automáticamente tanto para contenedores privilegiados como unprivileged:",
+      "body2": "Si el host aún no ha arrancado con el módulo apex cargado (acabas de ejecutar <hostLink>Install Coral on Host</hostLink> y no has reiniciado), <code>/dev/apex_0</code> aún no existe. El script recurre al cgroup2 + bind mount clásico con <code>create=file</code> para que las entradas sean válidas incluso cuando el dispositivo no se ha materializado:",
+      "rebootTitle": "Reinicia el host primero si acabas de instalar los drivers de Coral",
+      "rebootBody": "El fallback de cgroup2 + mount se escribirá, pero el dispositivo solo existe realmente después de un reinicio del host que cargue el módulo <code>apex</code>. Si no has reiniciado, reinicia ahora antes de arrancar el contenedor."
+    },
+    "drivers": {
+      "title": "Arrancar el contenedor + instalar el runtime de Coral dentro",
+      "body": "Los cambios de config en LXC de Proxmox surten efecto en el siguiente arranque — así que el script arranca el contenedor, espera hasta 15 segundos a que <code>pct exec</code> responda y luego deja un bash script dentro que:",
+      "items": [
+        "Ejecuta <code>apt-get update</code>.",
+        "Instala los prerequisitos del repositorio Coral: <code>gnupg</code>, <code>curl</code>, <code>ca-certificates</code>.",
+        "Importa la clave GPG de Coral de Google en <code>/etc/apt/keyrings/coral-edgetpu.gpg</code> (ruta moderna, la misma que usa el instalador del host) y añade el repositorio APT <code>coral-edgetpu-stable</code> con <code>signed-by=</code>.",
+        "Instala el último <code>libedgetpu1-std</code> (por defecto). Si tienes una Coral M.2, se te preguntará entre <code>libedgetpu1-std</code> (estándar) y <code>libedgetpu1-max</code> (máximo rendimiento, calienta más)."
+      ],
+      "noIgpuTitle": "¿Por qué no hay drivers de iGPU aquí?",
+      "noIgpuBody": "Versiones anteriores de este script también instalaban Intel <code>va-driver-all</code>, <code>intel-opencl-icd</code> y compañía para que el mismo contenedor pudiera hacer decode de vídeo Quick Sync junto a la inferencia de Coral. Esa doble responsabilidad causaba fallos confusos cuando el usuario solo quería Coral. El lado iGPU es ahora trabajo exclusivo de <lxcGpuLink>Añadir GPU a LXC</lxcGpuLink> — ejecútalo primero si también quieres decode de vídeo por hardware en el contenedor.",
+      "debianTitle": "Solo contenedores Debian / Ubuntu",
+      "debianBody": "La instalación dentro del contenedor usa <code>apt-get</code> directamente. Los contenedores Alpine, Arch o basados en RHEL no están soportados actualmente — el paso de instalación fallará y dejará el LXC con la config de passthrough pero sin drivers dentro. Para esas distros, instala el runtime de Coral manualmente siguiendo la <coralLink>guía oficial</coralLink> de Google después del paso de config del LXC."
+    },
+    "summary": {
+      "title": "Resumen",
+      "body": "El script imprime una checklist al final resumiendo qué se habilitó (Coral USB, Coral M.2) con marcas ✓ o ⚠ según si el hardware se detectó realmente. El contenedor sigue en ejecución — puedes saltar directamente a la config de Frigate / CodeProject.AI / tu app."
+    }
+  },
+  "manual": {
+    "heading": "Equivalente manual",
+    "body": "Si quieres ver exactamente qué va en la config del LXC, o aplicarlo a mano:",
+    "usbHeading": "Coral USB",
+    "pcieHeading": "Coral M.2 / PCIe",
+    "runtimeHeading": "Dentro del contenedor — runtime de Coral"
+  },
+  "verification": {
+    "heading": "Verificación",
+    "body": "Entra en el contenedor y comprueba que la Coral es visible:"
+  },
+  "troubleshoot": {
+    "heading": "Solución de problemas",
+    "apexTitle": "El contenedor arrancó pero /dev/apex_0 no está dentro",
+    "apexBody": "El módulo apex del host no está cargado. En el host: <code>lsmod | grep apex</code> — si está vacío, ejecuta <code>modprobe apex</code>, o reinicia si acabas de instalar los drivers de Coral. Una vez el host tenga <code>/dev/apex_0</code>, reinicia el contenedor: <code>pct stop &lt;ctid&gt; &amp;&amp; pct start &lt;ctid&gt;</code>.",
+    "replugTitle": "La Coral USB desaparece al reconectarla en otro puerto",
+    "replugBody": "Justo por eso el script monta <code>/dev/bus/usb</code> en lugar del symlink <code>/dev/coral</code>. Si te pasa esto, comprueba que tu config del LXC tiene <code>lxc.mount.entry: /dev/bus/usb dev/bus/usb ...</code> y no una referencia directa a <code>/dev/coral</code>. Las configs viejas de versiones anteriores del script pueden necesitar actualizarse — vuelve a ejecutar el script sobre el mismo contenedor y la config se refresca.",
+    "alpineTitle": "La instalación dentro del contenedor falla en un contenedor Alpine",
+    "alpineBody": "El script usa <code>apt-get</code>, que Alpine no tiene. La config de passthrough del LXC sigue siendo válida — solo instala el runtime de Coral manualmente con <code>apk add</code> siguiendo la guía de Google para Alpine, o usa un contenedor basado en Debian si no necesitas la huella más pequeña.",
+    "frigateTitle": "Frigate dice 'Coral EdgeTPU detected but not available'",
+    "frigateBody": "Casi siempre es un problema de permisos dentro del contenedor. Frigate corre como root por defecto; comprueba que el usuario root está en el grupo <code>plugdev</code> dentro del contenedor (para USB), y que el proceso puede leer <code>/dev/apex_0</code> (para M.2). <code>ls -l /dev/apex_0</code> desde dentro del contenedor debería mostrar el grupo <code>apex</code> — si no, añade el alineamiento de GID a <code>/etc/group</code> o cambia el contenedor a modo privilegiado.",
+    "logsTitle": "Revisa los logs del host y del contenedor",
+    "logsBody": "En el host: <code>journalctl -u pvedaemon | grep -i coral</code>. Dentro del contenedor: revisa los logs de la app (Frigate: <code>/config/logs/</code>, CodeProject.AI: su propio directorio de logs). El patrón clásico de error es \"Coral detected, runtime loaded, but inference engine can't claim it\" — eso son permisos 9 de cada 10 veces."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "Instalar Coral TPU (Host)",
+        "href": "/docs/hardware/install-coral-tpu-host",
+        "tail": " — prerequisito necesario para tarjetas Coral M.2 / PCIe antes de pasarlas a un CT."
+      },
+      {
+        "label": "Añadir GPU a LXC",
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "tail": " — el mismo patrón para GPUs (a menudo emparejado con una Coral TPU en setups de Frigate)."
+      }
+    ]
+  }
+}

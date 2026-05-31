@@ -1,28 +1,29 @@
 #!/usr/bin/env bash
-
 # ==========================================================
-# ProxMenux - UUP Dump ISO Creator Custom
+# ProxMenux - UUP Dump ISO Creator
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 30/06/2025
 # ==========================================================
 # Description:
-# This script is part of the ProxMenux tools for Proxmox VE.
-# It allows downloading and converting official Windows ISO images 
-# from UUP Dump using a shared link (with ID, pack, and edition).
+# Downloads and converts official Windows ISO images from UUP Dump
+# using a shared link (ID + pack + edition). Produces an up-to-date
+# bootable ISO ready for VM creation in Proxmox VE.
 #
-# Key features:
-# - Automatically installs and verifies required dependencies (aria2c, cabextract, wimlib-imagex…)
-# - Downloads the selected Windows edition from UUP Dump using aria2
-# - Converts the downloaded files into a bootable ISO
-# - Stores the resulting ISO in the default template path (/var/lib/vz/template/iso)
-# - Provides a graphical prompt via whiptail for user-friendly usage
-#
-# This tool simplifies the creation of official Windows ISOs
-# for use in virtual machines within Proxmox VE.
+# Features:
+#   - Automatically installs and verifies required dependencies
+#     (aria2c, cabextract, wimlib-imagex, ...).
+#   - Downloads the selected Windows edition from UUP Dump using
+#     aria2 (multi-connection accelerator).
+#   - Converts the downloaded files into a bootable ISO.
+#   - Stores the resulting ISO in the default template path
+#     (/var/lib/vz/template/iso) so it shows up in the Proxmox UI.
+#   - Whiptail-driven UX (URL prompt, edition / pack confirmation,
+#     progress reporting).
+# ==========================================================
 # ==========================================================
 
 BASE_DIR="/usr/local/share/proxmenux"

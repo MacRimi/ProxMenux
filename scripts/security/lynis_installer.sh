@@ -1,10 +1,35 @@
 #!/bin/bash
+# ==========================================================
 # ProxMenux - Lynis Security Audit Tool Installer
-# ============================================
+# ==========================================================
 # Author      : MacRimi
-# License     : MIT
+# Copyright   : (c) 2024 MacRimi
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# ============================================
+# ==========================================================
+# Description:
+# Installs Lynis (CISOfy) from the official upstream GitHub
+# repository so the host always gets the latest scanner, not the
+# older Debian-packaged version. Provides install / update / run /
+# uninstall actions through a unified menu. Hybrid runtime: works
+# from terminal dialogs and from the ProxMenux web panel.
+#
+# Features:
+#   - Clones https://github.com/CISOfy/lynis.git into /opt/lynis.
+#   - Wrapper script at /usr/local/bin/lynis that cd's into /opt/lynis
+#     before invoking ./lynis (Lynis requires being run from its own
+#     directory).
+#   - Detection looks at /usr/local/bin/lynis, /opt/lynis/lynis and
+#     /usr/bin/lynis (apt install path) before showing the menu.
+#   - Update action: 'git pull' inside /opt/lynis. Falls back to a
+#     full reinstall if .git is missing.
+#   - Run-audit action: launches 'lynis audit system --no-colors'
+#     directly from the menu.
+#   - Clean uninstall: removes /opt/lynis and /usr/local/bin/lynis
+#     (does NOT touch an apt-installed Lynis at /usr/bin/lynis).
+#   - Component status tracked in components_status.json.
+# ==========================================================
 # Hybrid script: works from terminal (dialog) and web panel (ScriptTerminalModal)
 
 SCRIPT_TITLE="Lynis Security Audit Tool Installer"
@@ -59,12 +84,19 @@ install_lynis() {
   msg_title "$(translate "$SCRIPT_TITLE")"
   msg_info2 "$(translate "Installing latest Lynis security scan tool...")"
 
-  # Install git if needed
+  # Install git if needed. Verify the install actually succeeded —
+  # `apt-get install -y git >/dev/null 2>&1` followed by `msg_ok` would
+  # otherwise lie about success and the next `git clone` would fail with
+  # an opaque error. Audit Tier 6 — `lynis_installer.sh` apt silent.
   if ! command -v git >/dev/null 2>&1; then
     msg_info "$(translate "Installing Git as a prerequisite...")"
     apt-get update -qq >/dev/null 2>&1
-    apt-get install -y git >/dev/null 2>&1
-    msg_ok "$(translate "Git installed")"
+    if apt-get install -y git >/dev/null 2>&1 && command -v git >/dev/null 2>&1; then
+      msg_ok "$(translate "Git installed")"
+    else
+      msg_error "$(translate "Could not install Git — Lynis cannot be cloned. Run 'apt-get install git' manually.")"
+      return 1
+    fi
   fi
 
   # Remove old installation if present

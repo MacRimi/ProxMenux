@@ -1,0 +1,293 @@
+{
+  "meta": {
+    "title": "Contribuir a ProxMenux | ProxMenux Documentation",
+    "description": "Cómo contribuir a ProxMenux — modelo de ramas (main / develop / feature/*), flujo de pull requests, plantilla de cabecera de script con atribución de autor y enlace opcional de patrocinio, política de diseño UI en dos fases, funciones de mensajes y el camino desde una rama de función hasta un release estable.",
+    "ogTitle": "Contribuir a ProxMenux",
+    "ogDescription": "Modelo de ramas, flujo de trabajo, atribución en la cabecera del script y política de diseño UI en dos fases que los colaboradores deben seguir."
+  },
+  "header": {
+    "title": "Contribuir a ProxMenux",
+    "description": "ProxMenux está abierto a contribuciones de la comunidad — scripts nuevos, arreglos para los existentes, mejoras de diálogos, traducciones, integraciones. Esta página es la puerta formal: cómo está estructurado el repositorio, el modelo de ramas y el flujo de pull requests, la cabecera del script con atribución de autor y enlace opcional de patrocinio, y las convenciones de diseño que toda contribución debe seguir.",
+    "section": "Acerca de"
+  },
+  "twoPagesCallout": {
+    "title": "Dos páginas relacionadas, un proyecto",
+    "body": "No confundas esta página con <contributorsLink>Colaboradores</contributorsLink>: esa celebra a las personas que ya contribuyen (testers, revisores, desarrolladores). Esta página es para <em>ti</em> — el aspirante a colaborador — y explica cómo enviar un PR que vaya a ser mergeado."
+  },
+  "branching": {
+    "heading": "Modelo de ramas",
+    "intro": "ProxMenux usa un modelo de ramas de tres niveles:",
+    "headerBranch": "Rama",
+    "headerPurpose": "Propósito",
+    "rows": [
+      {
+        "branch": "main",
+        "purposeRich": "Código estable, listo para producción. Solo los merges de calidad de release aterrizan aquí. Esto es lo que reciben los usuarios finales cuando instalan ProxMenux normalmente."
+      },
+      {
+        "branch": "develop",
+        "purposeRich": "Rama de desarrollo activo. Todo trabajo nuevo aterriza aquí primero; es el canal \"beta\". Los releases estables se cortan desde aquí hacia <code>main</code> cuando un release está listo."
+      },
+      {
+        "branch": "feature/*",
+        "purposeRich": "Ramas de vida corta por función, arreglo o mejora. Creadas desde <code>develop</code>, mergeadas de vuelta a <code>develop</code> vía un Pull Request tras revisión."
+      }
+    ],
+    "calloutTitle": "Qué significa esto para los usuarios",
+    "calloutBody": "Los usuarios finales siguiendo <code>main</code> reciben releases probados. Los usuarios que quieren las últimas funciones pronto — y a quienes no les importan los ocasionales bordes ásperos — pueden seguir <code>develop</code>. Las funciones nuevas siempre pasan por <code>develop</code> primero; nada llega a <code>main</code> sin pasar por ese ciclo."
+  },
+  "workflow": {
+    "heading": "Flujo de pull request",
+    "intro": "De idea a release mergeado en cinco pasos:",
+    "step1Lead": "<strong>Crea una rama de función desde <code>develop</code></strong>:",
+    "step1Code": "git clone https://github.com/MacRimi/ProxMenux.git\ncd ProxMenux\ngit checkout develop\ngit pull origin develop\ngit checkout -b feature/your-feature-name",
+    "step1Trail": "Usa un nombre de rama descriptivo: <code>feature/zfs-arc-tuning</code>, <code>feature/fix-iommu-detection</code>, <code>feature/add-tailscale-script</code>.",
+    "step2Lead": "<strong>Trabaja en tus cambios y sube la rama:</strong>",
+    "step2Code": "# Make your changes, then:\ngit add scripts/...\ngit commit -m \"Add ZFS ARC tuning script\"\ngit push -u origin feature/your-feature-name",
+    "step3": "<strong>Abre un Pull Request contra <code>develop</code></strong> (no contra <code>main</code>). En la página de creación del PR en GitHub, comprueba dos veces que la rama base esté establecida en <code>develop</code>. Incluye en la descripción: qué hace el script, qué cambia y en qué versiones de Proxmox VE lo probaste.",
+    "step4": "<strong>Tras la revisión, los cambios se mergean en <code>develop</code>.</strong> Un mantenedor revisa la calidad del código, las convenciones de cabecera y la política UI en dos fases. Pueden pedir cambios — empuja más commits a la misma rama y el PR se actualiza automáticamente.",
+    "step5": "<strong>Los releases estables se mergean desde <code>develop</code> hacia <code>main</code>.</strong> Cuando los mantenedores cortan un release, se hace fast-forward de <code>develop</code> a <code>main</code> y se etiqueta. Tu contribución pasa a formar parte de la siguiente versión estable."
+  },
+  "scriptHeader": {
+    "heading": "Cabecera del script — metadatos y descripción",
+    "intro": "Cada script de ProxMenux empieza con dos bloques de comentarios adyacentes que juntos forman la cabecera. Son <strong>ambos obligatorios</strong> — juntos permiten a cualquier lector saber quién escribió el script y qué hace, todo sin abrir el código.",
+    "bullets": [
+      "<strong>Bloque superior — metadatos.</strong> Autor, enlaces opcionales a GitHub / Sponsor, mantenedor, copyright, licencia, versión, fecha de última actualización. Aquí es también donde sucede el <em>reconocimiento al colaborador</em>: cuando escribes un script nuevo, tu nombre va aquí, y opcionalmente puedes incluir un enlace a tu página personal (GitHub) y a un perfil de patrocinio (Ko-fi, GitHub Sponsors, Buy Me a Coffee, etc.).",
+      "<strong>Bloque inferior — descripción.</strong> Un párrafo corto en inglés llano explicando qué hace el script. Esto es lo que los usuarios leen <em>antes</em> de abrir el código — debe ser lo bastante autocontenido como para que alguien que solo ve la cabecera entienda el propósito del script. Lista las acciones principales, los recursos afectados, cualquier prerrequisito."
+    ],
+    "licenseCalloutTitle": "La línea de licencia está fijada — GPL-3.0",
+    "licenseCalloutBody": "ProxMenux se publica bajo la <strong>GNU General Public License v3.0</strong>. Cada script del proyecto se entrega bajo esa misma licencia; la línea <code>License</code> en la cabecera es siempre la referencia GPL-3.0 mostrada en el ejemplo de abajo — no es una elección por script. Al contribuir un script aceptas publicarlo bajo GPL-3.0, lo que significa que cualquiera puede leerlo, modificarlo y redistribuirlo (incluyendo las modificaciones) mientras lo mantenga bajo la misma licencia. El texto completo vive en <licenseLink>MacRimi/ProxMenux/LICENSE</licenseLink>.",
+    "templateCode": "#!/bin/bash\n\n# ==========================================================\n# ProxMenux - A menu-driven script for Proxmox VE management\n# ==========================================================\n# Author      : Your Name\n# GitHub      : github.com/yourhandle\n# Sponsor     : ko-fi.com/yourhandle\n# Maintainer  : MacRimi\n# Copyright   : (c) 2026 MacRimi & contributors\n# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)\n# Version     : 1.0\n# Last Updated: DD/MM/YYYY\n# ==========================================================\n# Description:\n# Short paragraph explaining what the script does.\n# Mention the main actions (e.g. \"creates a ZFS pool\",\n# \"configures IOMMU and reboots\", \"imports an ISO into a VM\"),\n# the resources it touches, and any prerequisites the user\n# should be aware of before running it.\n# ==========================================================",
+    "optionalNote": "Las líneas <code>GitHub</code> y <code>Sponsor</code> son opcionales — déjalas fuera si no quieres publicarlas. Todo lo demás es obligatorio.",
+    "whyCalloutTitle": "Por qué esto importa",
+    "whyCalloutBody": "La contribución de código abierto es trabajo voluntario. Poner el nombre del colaborador y (cuando se proporciona) el enlace de patrocinio directamente en el código fuente da a las personas que construyen los scripts un reconocimiento visible cada vez que alguien lee el código — tu autoría se preserva, no queda oculta bajo \"el proyecto\". El bloque de descripción importa por una razón distinta: es lo primero que lee un futuro mantenedor o un usuario curioso, y una descripción clara es a menudo la diferencia entre un script en el que la gente confía y uno que evitan."
+  },
+  "structure": {
+    "heading": "Estructura del proyecto",
+    "intro": "Dónde vive cada tipo de script en el repositorio:",
+    "treeCode": "scripts/\n├── menus/              # Top-level menu scripts (entry points)\n├── storage/            # Disk, storage and passthrough scripts\n├── share/              # NFS, Samba, local share scripts\n├── vm/                 # VM creation and configuration scripts\n├── gpu_tpu/            # GPU / TPU passthrough scripts\n├── post_install/       # Post-install automation scripts\n├── backup_restore/     # Backup and restore scripts\n├── utilities/          # System utility scripts\n├── global/             # Shared helper libraries (sourced by other scripts)\n├── utils.sh            # Shared utility functions and message helpers\n└── help_info_menu.sh   # Interactive help and command reference",
+    "outro": "Cada script hace source de <code>utils.sh</code> al arrancar para obtener las funciones de mensajes, el spinner, las variables de color y el sistema de traducción. Las bibliotecas de helpers compartidas (en <code>scripts/global/</code>) las hacen source explícitamente los scripts que las necesitan."
+  },
+  "twoPhase": {
+    "heading": "La política de diseño UI en dos fases",
+    "intro": "Esta es la convención más importante en ProxMenux y la que más se les pide arreglar a los PRs. Cada script se divide en <strong>exactamente dos fases</strong>:",
+    "headerPhase": "Fase",
+    "headerPurpose": "Propósito",
+    "headerScreen": "Estado de la pantalla",
+    "rows": [
+      {
+        "phaseRich": "<strong>Fase 1 — Selección</strong>",
+        "purposeRich": "Recopila cada decisión del usuario. Ejecuta cualquier trabajo preparatorio necesario (sondeos, escaneos, comprobaciones).",
+        "screenRich": "Overlays de <code>dialog</code>. Si un sondeo entre dos menús tarda más de un segundo o dos, muestra un spinner <code>msg_info</code> para que el usuario sepa que el script no se ha colgado, después llama a <code>stop_spinner</code> justo antes del siguiente diálogo."
+      },
+      {
+        "phaseRich": "<strong>Fase 2 — Ejecución</strong>",
+        "purposeRich": "Ejecuta cada operación. Muestra el historial completo de progreso acumulándose en pantalla.",
+        "screenRich": "Mensajes visibles de <code>msg_info</code> / <code>msg_ok</code>; nunca <code>dialog</code>."
+      }
+    ],
+    "principle": "El principio: <strong>recopila todo primero, después ejecuta todo</strong>. El usuario ve un menú limpio basado en diálogos (fase 1), después una vista limpia de ejecución estilo log (fase 2). Sin mezclas — sin diálogos apareciendo a mitad de la ejecución, sin ruido de progreso durante la selección.",
+    "phase1Heading": "Fase 1 — patrón típico",
+    "phase1Code": "# Silent preparatory work between dialogs\nmsg_info \"$(translate \"Checking disk assignments...\")\"\nASSIGNED_TO=$(check_assignments \"$DISK\")\nstop_spinner   # ← clears line silently, result saved in variable\n\n# Next dialog can now use ASSIGNED_TO\nif [ -n \"$ASSIGNED_TO\" ]; then\n    dialog --yesno \"$(translate \"Disk already assigned. Continue?\")\" $UI_YESNO_H $UI_YESNO_W\nfi\n\n# Collect multiple decisions per item with parallel arrays\ndeclare -a DISK_LIST=()\ndeclare -a DISK_FORMAT_TYPES=()\ndeclare -a DISK_MOUNT_POINTS=()\nfor DISK in $SELECTED; do\n    msg_info \"$(translate \"Analyzing disk...\")\"\n    CURRENT_FS=$(lsblk -no FSTYPE \"$DISK\" | xargs)\n    stop_spinner\n\n    FORMAT=$(dialog --backtitle \"$BACKTITLE\" \\\n        --title \"$(translate \"Select Filesystem\")\" \\\n        --menu \"...\" $UI_SHORT_MENU_H $UI_SHORT_MENU_W $UI_SHORT_MENU_LIST_H \\\n        \"ext4\" \"...\" \"xfs\" \"...\" \"btrfs\" \"...\" \\\n        2>&1 >/dev/tty)\n    [ -z \"$FORMAT\" ] && continue\n\n    DISK_LIST+=(\"$DISK\")\n    DISK_FORMAT_TYPES+=(\"$FORMAT\")\ndone",
+    "phase1RulesIntro": "<strong>Reglas para la fase 1:</strong>",
+    "phase1Rules": [
+      "Si un spinner de <code>msg_info</code> está actualmente corriendo y necesitas abrir un menú <code>dialog</code> o <code>whiptail</code>, llama primero a <code>stop_spinner</code> — el spinner no puede coexistir con el overlay que dibuja cualquiera de las dos herramientas. Si no hay ningún spinner activo, no hace falta llamarlo.",
+      "Usa <code>show_proxmenux_logo</code> + <code>msg_title</code> + <code>msg_info</code> cuando necesites dar al usuario contexto visual para una operación de larga duración en la fase 1 (p. ej. un sondeo que tarda 5+ segundos). La función incluye un clear de pantalla, así que no llames a <code>clear</code> antes.",
+      "No llames a <code>show_proxmenux_logo</code> entre menús de diálogo cuando no hay nada que mostrar — limpiar la pantalla para un terminal vacío es solo ruido visual.",
+      "Almacena todas las decisiones y resultados de sondeos en variables o arrays paralelos. El recap visible sucede al inicio de la fase 2, no en la fase 1."
+    ],
+    "phase2Heading": "Fase 2 — patrón típico",
+    "phase2Code": "# ── PHASE 2 — EXECUTION ─────────────────────────────\nshow_proxmenux_logo\nmsg_title \"$(translate \"My Script Title\")\"\n\n# Recap Phase 1 preparatory results — show what was already done\nmsg_ok \"$(translate \"CT $CTID selected.\")\"\nmsg_ok \"$(translate \"Repositories verified.\")\"\nmsg_ok \"$(translate \"Disks to process: ${#DISK_LIST[@]}\")\"\n\n# Now execute operations\nfor i in \"${!DISK_LIST[@]}\"; do\n    DISK=\"${DISK_LIST[$i]}\"\n    FORMAT=\"${DISK_FORMAT_TYPES[$i]}\"\n\n    msg_info \"$(translate \"Formatting\") $DISK $(translate \"as\") $FORMAT...\"\n    mkfs.\"$FORMAT\" \"$DISK\" >/dev/null 2>&1\n    msg_ok \"$(translate \"Formatted.\")\"\ndone\n\nmsg_ok \"$(translate \"Completed. ${#DISK_LIST[@]} disk(s) processed.\")\"\nmsg_success \"$(translate \"Press Enter to return to menu...\")\"\nread -r",
+    "phase2Rules": "<strong>Reglas para la fase 2:</strong> siempre empieza con <code>show_proxmenux_logo + msg_title</code>; inmediatamente recapitula los resultados de la fase 1 como líneas de <code>msg_ok</code>; nunca llames a <code>show_proxmenux_logo</code> de nuevo (borraría el progreso acumulado); nunca llames a <code>dialog</code> en la fase 2 — si una decisión en tiempo de ejecución es realmente inevitable, usa <code>whiptail</code> (mira la siguiente sección)."
+  },
+  "dialogVsWhiptail": {
+    "headingRich": "Cuándo usar <code>dialog</code> vs <code>whiptail</code>",
+    "intro": "Ambas herramientas dibujan interfaces de usuario en modo texto, pero se comportan muy distinto en pantalla — y ProxMenux las usa en dos fases distintas por una razón.",
+    "headerTool": "Herramienta",
+    "headerWhen": "Cuándo usarla",
+    "headerEffect": "Efecto en pantalla",
+    "rows": [
+      {
+        "toolRich": "<strong><code>dialog</code></strong>",
+        "whenRich": "<strong>Siempre en la fase 1.</strong> Cada selección interactiva — elegir una VM, un disco, un sistema de archivos, confirmar una acción — usa <code>dialog</code>. Esta es la herramienta UI por defecto de ProxMenux.",
+        "effectRich": "Se apodera del terminal: limpia la pantalla, dibuja su overlay y al cerrarse devuelve el terminal a su estado anterior. Está bien en la fase 1 porque no se está mostrando nada útil aún."
+      },
+      {
+        "toolRich": "<strong><code>whiptail</code></strong>",
+        "whenRich": "<strong>Solo en la fase 2, solo cuando es inevitable.</strong> El caso típico es un preguntar antes de reiniciar al final de la ejecución. No recurras a <code>whiptail</code> para preguntar \"¿continuar?\" a mitad de la ejecución — esa decisión debería haberse tomado en la fase 1.",
+        "effectRich": "Overlay más ligero que <em>no</em> limpia el contexto del terminal. El historial acumulado de <code>msg_ok</code> / <code>msg_info</code> de la fase 2 se queda visible detrás del cuadro de diálogo. Por eso es la elección correcta cuando el progreso ya está en pantalla."
+      }
+    ],
+    "calloutTitle": "Por qué importa la división",
+    "calloutBody": "Si llamas a <code>dialog</code> en mitad de la fase 2, cada línea de <code>msg_ok</code> que el usuario ha estado viendo desaparece. Borras el rastro de auditoría. <code>whiptail</code> evita eso. Así que la regla no es arbitraria — se trata de preservar la vista del usuario de lo que el script ha hecho hasta ahora.",
+    "rebootHeading": "Preguntar antes de reiniciar — el whiptail canónico de la fase 2",
+    "rebootIntro": "Cuando un script termina y puede requerirse un reinicio (p. ej. IOMMU habilitado, parámetros del kernel cambiados), el prompt al final de la fase 2 usa <code>whiptail</code>. Incluye siempre una rama \"No\" que avise al usuario de no usar el recurso afectado hasta que reinicie:",
+    "rebootCode": "if [[ \"$HOST_REBOOT_REQUIRED\" == \"yes\" ]]; then\n  echo \"\"\n  if whiptail --title \"$(translate \"Reboot Required\")\" --yesno \\\n    \"\\n$(translate \"A host reboot is required before starting the VM. Reboot now?\")\" \\\n    13 78; then\n      msg_warn \"$(translate \"Rebooting the system...\")\"\n      reboot\n  else\n      echo \"\"\n      msg_info2 \"$(translate \"Do not start the VM until the system has been rebooted.\")\"\n  fi\nfi\n\nmsg_success \"$(translate \"Press Enter to return to menu...\")\"\nread -r"
+  },
+  "messageFunctions": {
+    "heading": "Referencia de funciones de mensajes",
+    "intro": "Todas definidas en <code>utils.sh</code>. Úsalas como el valor por defecto para cualquier salida visible para el usuario — visuales coherentes entre scripts es la idea. Si tu script necesita una función nueva que no encaja en el conjunto existente (un nuevo nivel de severidad, un nuevo helper de layout, etc.), propónla en tu Pull Request — se revisará y se añadirá a <code>utils.sh</code> si es útil de forma amplia.",
+    "headerFunction": "Función",
+    "headerWhen": "Cuándo usar",
+    "headerSpinner": "Spinner",
+    "rows": [
+      {
+        "function": "msg_info \"text\"",
+        "whenRich": "Operación en curso.",
+        "spinner": "Arranca"
+      },
+      {
+        "function": "stop_spinner",
+        "whenRich": "Fin del trabajo preparatorio silencioso en la fase 1 — mata el spinner, limpia la línea.",
+        "spinner": "Para"
+      },
+      {
+        "function": "msg_ok \"text\"",
+        "whenRich": "Operación con éxito. Úsalo también para \"función habilitada\" incluso cuando se requiere un reinicio.",
+        "spinner": "Para"
+      },
+      {
+        "function": "msg_warn \"text\"",
+        "whenRich": "Advertencia real o estado degradado.",
+        "spinner": "Para"
+      },
+      {
+        "function": "msg_error \"text\"",
+        "whenRich": "Error fatal.",
+        "spinner": "Para"
+      },
+      {
+        "function": "msg_info2 \"text\"",
+        "whenRich": "Aviso no bloqueante (línea de info cian).",
+        "spinner": "Para"
+      },
+      {
+        "function": "msg_success \"text\"",
+        "whenRich": "Prompt final \"Press Enter to return\" al final de la fase 2.",
+        "spinner": "Para"
+      },
+      {
+        "function": "msg_title \"text\"",
+        "whenRich": "Título en negrita con espaciado integrado. Usado al inicio de la fase 2.",
+        "spinner": "—"
+      },
+      {
+        "function": "show_proxmenux_logo",
+        "whenRich": "Limpia la pantalla, muestra el logo. Llamado <em>una vez</em> al inicio de la fase 2 solamente.",
+        "spinner": "—"
+      }
+    ]
+  },
+  "dialogConventions": {
+    "heading": "Convenciones de dialog",
+    "bullets": [
+      "Pasa siempre <code>--backtitle \"$BACKTITLE\"</code> a cada llamada de <code>dialog</code> y <code>whiptail</code>. <code>$BACKTITLE</code> siempre es <code>\"ProxMenux\"</code> — establecido una vez en la cabecera del script y nunca sobrescrito. El usuario debe ver siempre el nombre del proyecto como contexto de encuadre, nunca el propio título del script.",
+      "Envuelve siempre los títulos y mensajes con <code>$(translate \"...\")</code>.",
+      "Redirige siempre la salida de <code>dialog</code> con <code>2&gt;&amp;1 &gt;/dev/tty</code> — el stdout capturado se convierte en la selección del usuario, mientras el diálogo en sí se dibuja en el terminal.",
+      "Usa las variables estándar de dimensiones de UI (<code>$UI_MENU_H</code>, <code>$UI_MSG_W</code>, etc.) para tamaños coherentes entre scripts.",
+      "Comprueba siempre selecciones vacías / canceladas y manéjalas con gracia."
+    ],
+    "exampleIntro": "Ejemplo completo — construyendo un menú de selección de VM y manejando la cancelación:",
+    "exampleCode": "# 1) Build the list of VMs as alternating \"ID  NAME\" pairs.\n#    dialog --menu expects this exact shape: tag1 description1 tag2 description2 ...\nVM_LIST=\"\"\nfor vmid in $(qm list | awk 'NR>1 {print $1}'); do\n    vm_name=$(qm config \"$vmid\" | awk -F': ' '/^name:/ {print $2}')\n    VM_LIST=\"$VM_LIST $vmid \\\"$vm_name\\\"\"\ndone\n\n# 2) Show the dialog. Captured stdout is the user's selection (the VMID).\nVMID=$(eval \"dialog --backtitle \\\"\\$BACKTITLE\\\" \\\n    --title \\\"\\$(translate \\\"Select VM\\\")\\\" \\\n    --menu \\\"\\$(translate \\\"Choose a VM from the list:\\\")\\\" \\\n    \\$UI_MENU_H \\$UI_MENU_W \\$UI_MENU_LIST_H \\\n    $VM_LIST \\\n    2>&1 >/dev/tty\")\n\n# 3) Empty result means the user pressed Cancel or Esc — exit silently.\nif [ -z \"$VMID\" ]; then\n    exit 0\nfi\n\n# 4) Continue with the rest of Phase 1, knowing VMID is now set.\necho \"User selected VMID=$VMID\""
+  },
+  "translation": {
+    "heading": "Política de traducción",
+    "intro": "Todas las cadenas visibles para el usuario deben envolverse con la función <code>translate</code>. ProxMenux las traduce automáticamente a todos los idiomas soportados — tú escribes en inglés, el usuario lee en su idioma nativo.",
+    "code": "msg_ok \"$(translate \"Operation completed successfully.\")\"\nmsg_error \"$(translate \"Failed to start container\") $CTID.\"\ndialog --title \"$(translate \"Select Storage\")\" ...",
+    "bullets": [
+      "Escribe las cadenas en inglés — la traducción la gestiona automáticamente la build.",
+      "Mantén las cadenas concisas. Evita incrustar variables dentro de frases largas siempre que sea posible.",
+      "<strong>No</strong> traduzcas nombres de variables, rutas ni identificadores técnicos."
+    ]
+  },
+  "variableStyle": {
+    "heading": "Convenciones de variables y estilo",
+    "bullets": [
+      "Usa <code>UPPER_CASE</code> para variables a nivel de script.",
+      "Usa <code>lower_case</code> para variables locales de función (declaradas con <code>local</code>).",
+      "Entrecomilla todas las expansiones de variable: <code>\"$VAR\"</code> — no <code>$VAR</code>.",
+      "Usa <code>[[ ]]</code> para condicionales, no <code>[ ]</code> (excepto cuando se requiere POSIX).",
+      "<code>show_proxmenux_logo</code> es la forma apropiada de limpiar la pantalla — incluye el clear y muestra el logo del proyecto para que el usuario siempre tenga contexto visual. Llámalo una vez al inicio de la fase 2 (y opcionalmente antes de un bloque largo de spinner en la fase 1)."
+    ],
+    "standardNamesIntro": "Nombres de variables estándar en todo el proyecto:",
+    "standardNamesCode": "CTID         # container ID\nVMID         # virtual machine ID\nDISK         # device path (e.g. /dev/sdb)\nPARTITION    # partition path (e.g. /dev/sdb1)\nSTORAGE      # Proxmox storage name\nMOUNT_POINT  # filesystem mount path",
+    "redirectHeading": "Redirigir la salida de herramientas durante la fase 2",
+    "redirectIntro": "La fase 2 muestra un log limpio de líneas <code>msg_info → msg_ok</code> acumulándose en pantalla. Si una herramienta que llamas (apt, mkfs, qm, pct, dd, etc.) escribe su propia salida a stdout/stderr, se desplaza por delante de tus mensajes y rompe el flujo visual — acabas con un terminal caótico donde el usuario no puede distinguir las líneas de progreso del propio script del ruido de la herramienta subyacente.",
+    "withoutRedirectIntro": "<strong>Sin redirección</strong> — lo que ve el usuario si no manejas el ruido:",
+    "withoutRedirectCode": "ℹ Installing kernel package...\nReading package lists... Done\nBuilding dependency tree... Done\nReading state information... Done\nThe following NEW packages will be installed:\n  proxmox-kernel-6.5\n0 upgraded, 1 newly installed, 0 to remove and 0 not upgraded.\nNeed to get 12.5 MB of archives.\nAfter this operation, 47.2 MB of additional disk space will be used.\nGet:1 http://download.proxmox.com/debian/pve trixie/pve-no-subscription amd64 ...\n... [200+ more lines of dpkg output] ...\n✓ Kernel installed.",
+    "withRedirectIntro": "<strong>Con redirección</strong> — cómo se ve la misma operación cuando el ruido se envía a otro sitio:",
+    "withRedirectCode": "ℹ Installing kernel package...\n✓ Kernel installed.\nℹ Configuring kernel command line...\n✓ Configured.\nℹ Refreshing boot loader...\n✓ Boot loader updated.",
+    "twoPatternsIntro": "Dos patrones entre los que elegir:",
+    "discardLead": "<strong>Descarta la salida</strong> cuando no la necesites — el más rápido y simple:",
+    "discardCode": "DEBIAN_FRONTEND=noninteractive apt-get install -y \"$package\" >/dev/null 2>&1",
+    "logLead": "<strong>Envía la salida a un archivo de log</strong> cuando puedas querer inspeccionarla más tarde (depurar una instalación fallida, comprobar qué hizo realmente dpkg). Este es el patrón preferido para cualquier operación de apt:",
+    "logCode": "apt-get install -y \"$package\" >> \"$log_file\" 2>&1",
+    "referenceOutro": "El script <code>scripts/global/update-pve9_2.sh</code> es una implementación de referencia — cada llamada de <code>apt-get</code> envía la salida a un archivo de log para que el usuario solo vea el flujo limpio <code>msg_info → msg_ok</code>, mientras el log en disco te permite reconstruir exactamente qué hizo apt si algo va mal."
+  },
+  "dosAndDonts": {
+    "heading": "Qué hacer y qué no",
+    "doHeading": "✅ Hacer",
+    "doBullets": [
+      "<code>stop_spinner</code> antes de un <code>dialog</code> en la fase 1 solo cuando un spinner de <code>msg_info</code> esté actualmente corriendo.",
+      "La fase 2 empieza con <code>show_proxmenux_logo + msg_title + msg_ok</code> recap de los resultados de la fase 1.",
+      "Usa <code>msg_ok</code> para funciones habilitadas con éxito — incluso si se requiere un reinicio.",
+      "Usa <code>whiptail</code> (no <code>dialog</code>) para cualquier prompt post-ejecución que deba aparecer en la fase 2.",
+      "Incluye siempre una rama \"No\" en los diálogos de reinicio que avise al usuario de no arrancar el recurso afectado hasta que reinicie.",
+      "Protege la lógica solo-VM comprobando <code>[[ -f \"/etc/pve/qemu-server/$'{'vmid'}'.conf\" ]]</code> — los controladores y NVMe PCIe no se pueden añadir a contenedores LXC.",
+      "Usa <code>ensure_repositories</code> de <code>utils-install-functions.sh</code> en lugar de <code>apt-get update</code> incondicional.",
+      "Usa arrays paralelos en la fase 1 cuando cada item necesita múltiples diálogos."
+    ],
+    "dontHeading": "❌ No hacer",
+    "dontBullets": [
+      "Llamar a <code>dialog</code> mientras un spinner está activo.",
+      "Saltarte el recap de la fase 1 al inicio de la fase 2.",
+      "Llamar a <code>show_proxmenux_logo</code> una segunda vez — borra todo lo que la fase 2 ha imprimido.",
+      "Usar <code>dialog</code> en la fase 2 (usa <code>whiptail</code> para el raro caso inevitable).",
+      "Usar <code>clear</code> a secas.",
+      "Envolver <code>msg_title</code> en bloques de <code>echo \"\"</code> en blanco — ya incluye espaciado.",
+      "Usar <code>msg_warn</code> para reportar una función habilitada con éxito — eso es un <code>msg_ok</code>.",
+      "Ejecutar <code>apt-get update</code> incondicional — usa <code>ensure_repositories</code>."
+    ]
+  },
+  "submitting": {
+    "heading": "Enviar tu contribución",
+    "steps": [
+      "Haz fork de <code>MacRimi/ProxMenux</code> en GitHub y clona tu fork.",
+      "Crea una rama <code>feature/*</code> desde <code>develop</code> (mira <em>Modelo de ramas</em> arriba).",
+      "Sigue esta guía para cualquier script nuevo o modificado. Escribe la cabecera con tu nombre; añade la línea opcional de patrocinio si quieres.",
+      "Prueba tu script en una instancia real de Proxmox VE — tanto la fase 1 (cada rama de diálogo) como la fase 2 (cada operación tiene éxito y revierte limpiamente en caso de error).",
+      "Abre un Pull Request <strong>contra <code>develop</code></strong> con una descripción clara: qué hace el script, qué cambió, en qué versión de Proxmox VE se probó.",
+      "Asegúrate de que tu contribución respeta el <cocLink>código de conducta</cocLink>."
+    ],
+    "securityOutro": "Para incidencias sensibles de seguridad, sigue el flujo de divulgación en <securityLink>SECURITY.md</securityLink> en lugar de abrir una incidencia pública."
+  },
+  "whereNext": {
+    "heading": "Por dónde seguir",
+    "items": [
+      {
+        "kind": "external",
+        "url": "https://github.com/MacRimi/ProxMenux/blob/main/CONTRIBUTING.md",
+        "label": "CONTRIBUTING.md (guía completa)",
+        "tail": " — la fuente de verdad para cada convención, incluyendo los patrones avanzados de hardware."
+      },
+      {
+        "kind": "internal",
+        "href": "/docs/about/contributors",
+        "label": "Colaboradores",
+        "tail": " — las personas cuyo trabajo ha dado forma a los releases de ProxMenux. (Página distinta a esta.)"
+      },
+      {
+        "kind": "internal",
+        "href": "/docs/about/code-of-conduct",
+        "label": "Código de conducta",
+        "tail": " — los estándares que todo colaborador se compromete a seguir."
+      },
+      {
+        "kind": "external",
+        "url": "https://github.com/MacRimi/ProxMenux/discussions",
+        "label": "GitHub Discussions",
+        "tail": " — pregunta antes de construir si no estás seguro de si una idea encaja, o para encontrar colaboradores en una función más grande."
+      }
+    ]
+  }
+}

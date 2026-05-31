@@ -93,7 +93,7 @@ export function TemperatureDetailModal({ open, onOpenChange, liveTemperature }: 
         setStats(result.stats)
       }
     } catch (err) {
-      console.error("[v0] Failed to fetch temperature history:", err)
+      console.error("Failed to fetch temperature history:", err)
     } finally {
       setLoading(false)
     }

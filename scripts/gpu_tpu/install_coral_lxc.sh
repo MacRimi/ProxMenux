@@ -1,39 +1,46 @@
 #!/bin/bash
-
 # ==========================================================
-# ProxMenux - A menu-driven script for Proxmox VE management
+# ProxMenux - Coral TPU Passthrough to LXC
 # ==========================================================
 # Author      : MacRimi
-# Revision    : @Blaspt (USB passthrough via udev rule with persistent /dev/coral)
+# Revision    : @Blaspt (USB passthrough via udev rule)
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
-# Version     : 1.4 (unprivileged container support, PVE dev API for apex/iGPU)
-# Last Updated: 01/04/2026
+# License     : GPL-3.0
+# Version     : 1.5
+# Last Updated: 27/05/2026
 # ==========================================================
 # Description:
-# This script automates the configuration and installation of
-# Coral TPU and iGPU support in Proxmox VE containers. It:
-# - Configures a selected LXC container for hardware acceleration
-# - Installs and sets up Coral TPU drivers on the Proxmox host
-# - Installs necessary drivers inside the container
-# - Manages required system and container restarts
+# Configures and installs Coral TPU passthrough (USB and
+# M.2 / PCIe) in a Proxmox LXC container. Writes the needed
+# dev / cgroup / mount entries into the LXC config, then
+# boots the container and installs the Edge TPU runtime
+# inside it so apps like Frigate can actually use the TPU.
 #
-# Supports Coral USB and Coral M.2 (PCIe) devices.
-# Includes USB passthrough enhancement using persistent udev alias (/dev/coral).
+# Scope:
+#  - This script is TPU-only. GPU / iGPU passthrough (Intel
+#    Quick Sync, AMD VA-API, NVIDIA) is delegated to
+#    add_gpu_lxc.sh — the script suggests running it first
+#    when a host GPU is detected but the container has no
+#    GPU configured.
 #
-# Changelog v1.3:
-# - Fixed Coral USB passthrough: mount /dev/bus/usb instead of /dev/coral symlink
-#   The udev symlink /dev/coral is not passthrough-safe in LXC; mounting the full
-#   USB bus tree ensures the real device node is accessible inside the container
-#   regardless of which port the Coral USB is connected to.
-#
-# Changelog v1.2:
-# - Fixed symlink detection for /dev/coral (create=dir for symlinks)
-# - Fixed /dev/apex_0 not being mounted in PVE 9 (device existence not required)
-# - Fixed grep patterns to avoid matching commented lines
-# - Improved device type inference for non-existent devices
-# - Added duplicate entry cleanup
-# - Better error handling and logging
+# Features:
+#  - Container picker via `dialog` (matches add_gpu_lxc.sh)
+#  - Coral USB passthrough only when a Coral USB device is
+#    actually present on the host (avoids leaving orphan
+#    cgroup/mount entries when only M.2 is used)
+#  - Auto-detects M.2 via lspci (Global Unichip)
+#  - USB passthrough mounts /dev/bus/usb (not the dynamic
+#    /dev/coral symlink) so the CT sees the real node even
+#    if the user replugs the device
+#  - PCIe/M.2 uses the PVE dev API (devN: /dev/apex_0,gid=apex)
+#    which handles cgroup2 permissions automatically for
+#    privileged and unprivileged containers
+#  - Migrates legacy Coral entries (old cgroup2 + bind mount
+#    pairs) to the PVE dev API on every run
+#  - Inside container: adds Google Coral APT repo and
+#    installs libedgetpu1-std (default) or -max (optional)
+#  - Idempotent: duplicate entries in the LXC config are
+#    cleaned up on every run
 # ==========================================================
 
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
@@ -49,30 +56,38 @@ load_language
 initialize_cache
 
 # ==========================================================
-# CONTAINER SELECTION AND VALIDATION
+# CONTAINER SELECTION (dialog — matches add_gpu_lxc.sh)
 # ==========================================================
 
 select_container() {
-    CONTAINERS=$(pct list | awk 'NR>1 {print $1, $3}' | xargs -n2)
-    if [ -z "$CONTAINERS" ]; then
-        msg_error "$(translate 'No containers available in Proxmox.')"
-        exit 1
+    local menu_items=()
+    while IFS= read -r line; do
+        [[ "$line" =~ ^VMID ]] && continue
+        local ctid status name
+        ctid=$(echo "$line" | awk '{print $1}')
+        status=$(echo "$line" | awk '{print $2}')
+        name=$(echo "$line" | awk '{print $3}')
+        [[ -z "$ctid" ]] && continue
+        menu_items+=("$ctid" "${name:-CT-${ctid}} (${status})")
+    done < <(pct list 2>/dev/null)
+
+    if [[ ${#menu_items[@]} -eq 0 ]]; then
+        dialog --backtitle "ProxMenux" \
+            --title "$(translate 'Install Coral TPU in LXC')" \
+            --msgbox "\n$(translate 'No LXC containers found on this system.')" 8 60
+        exit 0
     fi
 
-    CONTAINER_ID=$(whiptail --title "$(translate 'Select Container')" \
-        --menu "$(translate 'Select the LXC container:')" 20 70 10 $CONTAINERS 3>&1 1>&2 2>&3)
-
-    if [ -z "$CONTAINER_ID" ]; then
-        msg_error "$(translate 'No container selected. Exiting.')"
-        exit 1
-    fi
+    CONTAINER_ID=$(dialog --backtitle "ProxMenux" \
+        --title "$(translate 'Install Coral TPU in LXC')" \
+        --menu "\n$(translate 'Select the LXC container:')" 20 72 12 \
+        "${menu_items[@]}" \
+        2>&1 >/dev/tty) || exit 0
 
     if ! pct list | awk 'NR>1 {print $1}' | grep -qw "$CONTAINER_ID"; then
         msg_error "$(translate 'Container with ID') $CONTAINER_ID $(translate 'does not exist. Exiting.')"
         exit 1
     fi
-
-    msg_ok "$(translate 'Container selected:') $CONTAINER_ID"
 }
 
 validate_container_id() {
@@ -81,11 +96,65 @@ validate_container_id() {
         exit 1
     fi
 
+    CT_WAS_RUNNING=false
     if pct status "$CONTAINER_ID" | grep -q "running"; then
+        CT_WAS_RUNNING=true
         msg_info "$(translate 'Stopping the container before applying configuration...')"
         pct stop "$CONTAINER_ID"
         msg_ok "$(translate 'Container stopped.')"
     fi
+}
+
+# ==========================================================
+# GPU PASSTHROUGH SUGGESTION
+# ==========================================================
+# Coral is typically paired with Quick Sync / NVENC for Frigate. If the host
+# has a GPU but the container has no GPU configured, suggest the user to run
+# Add GPU to LXC first — that's the right script for that job.
+# ==========================================================
+
+suggest_gpu_passthrough_if_needed() {
+    local cfg="/etc/pve/lxc/${CONTAINER_ID}.conf"
+    [[ -f "$cfg" ]] || return 0
+
+    local host_has_gpu=false vendor_label=""
+    if lspci 2>/dev/null | grep -iE "VGA compatible|3D controller|Display controller" \
+        | grep -qi "Intel"; then
+        host_has_gpu=true
+        vendor_label="Intel iGPU"
+    fi
+    if lspci 2>/dev/null | grep -iE "VGA compatible|3D controller|Display controller" \
+        | grep -qiE "AMD|Advanced Micro|Radeon"; then
+        host_has_gpu=true
+        vendor_label="${vendor_label:+$vendor_label / }AMD GPU"
+    fi
+    if lspci 2>/dev/null | grep -iE "VGA compatible|3D controller|Display controller" \
+        | grep -qi "NVIDIA"; then
+        host_has_gpu=true
+        vendor_label="${vendor_label:+$vendor_label / }NVIDIA GPU"
+    fi
+
+    $host_has_gpu || return 0
+
+    # CT already has a GPU configured? Check both the modern dev API and the
+    # legacy lxc.mount.entry / cgroup formats. If any GPU device shows up,
+    # assume the user already handled it and skip the suggestion.
+    if grep -qE '^dev[0-9]+:[[:space:]]*/dev/(dri|nvidia|kfd)' "$cfg" 2>/dev/null \
+        || grep -qE '^lxc\.mount\.entry:[[:space:]]*/dev/(dri|nvidia|kfd)' "$cfg" 2>/dev/null \
+        || grep -qE '^lxc\.cgroup2\.devices\.allow:[[:space:]]+c[[:space:]]+(226|195):' "$cfg" 2>/dev/null; then
+        return 0
+    fi
+
+    local msg
+    msg="\n$(translate 'Host GPU detected'): ${vendor_label}\n\n"
+    msg+="$(translate 'This container has no GPU configured. Coral TPU works best alongside hardware video decoding (Quick Sync, VA-API, NVENC) for apps like Frigate.')\n\n"
+    msg+="$(translate 'Recommended: run')  \"$(translate 'Add GPU to LXC')\"  $(translate 'from the GPUs and Coral-TPU menu first, then run this option again.')\n\n"
+    msg+="$(translate 'Continue with Coral TPU configuration only?')"
+
+    dialog --backtitle "ProxMenux" \
+        --title "$(translate 'GPU Passthrough Not Configured')" \
+        --yesno "$msg" 16 78
+    [[ $? -ne 0 ]] && exit 0
 }
 
 # ==========================================================
@@ -99,10 +168,16 @@ SUBSYSTEM=="usb", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="9302", MODE="0666"
 # Coral Dev Board / Mini PCIe
 SUBSYSTEM=="usb", ATTRS{idVendor}=="1a6e", ATTRS{idProduct}=="089a", MODE="0666", TAG+="uaccess", SYMLINK+="coral"'
 
-    if [[ ! -f "$RULE_FILE" ]] || ! grep -q "18d1.*9302\|1a6e.*089a" "$RULE_FILE"; then
+    if [[ ! -f "$RULE_FILE" ]]; then
         echo "$RULE_CONTENT" > "$RULE_FILE"
         udevadm control --reload-rules && udevadm trigger
         msg_ok "$(translate 'Udev rules for Coral USB devices added and rules reloaded.')"
+    elif ! grep -q "18d1.*9302\|1a6e.*089a" "$RULE_FILE"; then
+        # Append (>>) instead of overwriting (>) so any user-authored
+        # rules in this file survive.
+        printf '\n%s\n' "$RULE_CONTENT" >> "$RULE_FILE"
+        udevadm control --reload-rules && udevadm trigger
+        msg_ok "$(translate 'Udev rules for Coral USB devices appended and rules reloaded.')"
     else
         msg_ok "$(translate 'Udev rules for Coral USB devices already exist.')"
     fi
@@ -116,13 +191,13 @@ add_mount_if_needed() {
     local DEVICE="$1"
     local DEST="$2"
     local CONFIG_FILE="$3"
-    
+
     if grep -q "lxc.mount.entry: $DEVICE" "$CONFIG_FILE"; then
         return 0
     fi
-    
+
     local create_type="dir"
-    
+
     if [ -e "$DEVICE" ]; then
         if [ -L "$DEVICE" ]; then
             create_type="dir"
@@ -147,7 +222,7 @@ add_mount_if_needed() {
                 ;;
         esac
     fi
-    
+
     echo "lxc.mount.entry: $DEVICE $DEST none bind,optional,create=$create_type" >> "$CONFIG_FILE"
 }
 
@@ -157,12 +232,47 @@ add_mount_if_needed() {
 
 cleanup_duplicate_entries() {
     local CONFIG_FILE="$1"
-    local TEMP_FILE=$(mktemp)
+    local TEMP_FILE
+    TEMP_FILE=$(mktemp)
 
     awk '!seen[$0]++' "$CONFIG_FILE" > "$TEMP_FILE"
 
     cat "$TEMP_FILE" > "$CONFIG_FILE"
     rm -f "$TEMP_FILE"
+}
+
+# ==========================================================
+# CLEANUP LEGACY CORAL M.2 ENTRIES
+# ==========================================================
+# Older versions of this script (and some manual setups) used the legacy
+# `lxc.mount.entry: /dev/apex_0 ...` + `lxc.cgroup2.devices.allow: c <maj>:0 rwm`
+# pair for Coral M.2. That pair is superseded by the PVE dev API (devN:)
+# which handles cgroup2 permissions automatically and works in unprivileged
+# containers. Remove the legacy pair so the new dev API entry doesn't stack
+# alongside duplicates.
+#
+# NEVER touch USB-related entries (/dev/coral, /dev/bus/usb, c 189:* rwm)
+# and NEVER touch lines unrelated to Coral (ttyUSB, ttyACM, serial, etc.) —
+# those belong to the user / other scripts.
+# ==========================================================
+
+cleanup_old_coral_m2_entries() {
+    local CONFIG_FILE="$1"
+    [[ -f "$CONFIG_FILE" ]] || return 0
+
+    # Only run when we just installed (or are about to install) /dev/apex_0
+    # via the modern dev API. Without that guard we'd strip the legacy
+    # entries on hosts that legitimately still rely on them.
+    grep -qE '^dev[0-9]+:[[:space:]]*/dev/apex_0' "$CONFIG_FILE" || return 0
+
+    # Take a one-shot backup so the user can recover if anything goes wrong.
+    local BACKUP="${CONFIG_FILE}.proxmenux-coral.bak"
+    if [[ ! -f "$BACKUP" ]]; then
+        cp -a "$CONFIG_FILE" "$BACKUP"
+    fi
+
+    sed -i '/^lxc\.mount\.entry:[[:space:]]*\/dev\/apex_0[[:space:]]/d' "$CONFIG_FILE"
+    sed -i '/^lxc\.cgroup2\.devices\.allow:[[:space:]]*c[[:space:]]\+[0-9]\+:0[[:space:]]\+rwm[[:space:]]*#[[:space:]]*Coral M2 Apex/d' "$CONFIG_FILE"
 }
 
 # Returns the next available dev index (dev0, dev1, ...) in a container config.
@@ -178,13 +288,13 @@ get_next_dev_index() {
 }
 
 # ==========================================================
-# CONFIGURE LXC HARDWARE PASSTHROUGH
+# CONFIGURE LXC CORAL PASSTHROUGH
 # ==========================================================
 
 configure_lxc_hardware() {
     validate_container_id
     CONFIG_FILE="/etc/pve/lxc/${CONTAINER_ID}.conf"
-    
+
     if [ ! -f "$CONFIG_FILE" ]; then
         msg_error "$(translate 'Configuration file for container') $CONTAINER_ID $(translate 'not found.')"
         exit 1
@@ -193,75 +303,39 @@ configure_lxc_hardware() {
     cleanup_duplicate_entries "$CONFIG_FILE"
 
     # ============================================================
-    # Enable nesting feature
+    # Enable nesting feature (needed for Coral userspace tooling)
     # ============================================================
     if ! grep -Pq "^features:.*nesting=1" "$CONFIG_FILE"; then
         if grep -Pq "^features:" "$CONFIG_FILE"; then
-
             sed -i 's/^features: \(.*\)/features: nesting=1,\1/' "$CONFIG_FILE"
         else
-
             echo "features: nesting=1" >> "$CONFIG_FILE"
         fi
         msg_ok "$(translate 'Nesting feature enabled')"
     fi
 
     # ============================================================
-    # iGPU support
-    # ============================================================
-    msg_info "$(translate 'Configuring iGPU support...')"
-
-    # Bind-mount the /dev/dri directory so apps can enumerate available devices
-    add_mount_if_needed "/dev/dri" "dev/dri" "$CONFIG_FILE"
-
-    # Add each DRI device via the PVE dev API (gid=44 = render group).
-    # This approach works in unprivileged containers: PVE manages cgroup2
-    # permissions automatically and maps the GID into the container namespace.
-    local igpu_dev_idx
-    igpu_dev_idx=$(get_next_dev_index "$CONFIG_FILE")
-    for dri_dev in /dev/dri/renderD128 /dev/dri/renderD129 /dev/dri/card0 /dev/dri/card1; do
-        if [[ -c "$dri_dev" ]]; then
-            if ! grep -q ":.*${dri_dev}" "$CONFIG_FILE"; then
-                echo "dev${igpu_dev_idx}: ${dri_dev},gid=44" >> "$CONFIG_FILE"
-                igpu_dev_idx=$((igpu_dev_idx + 1))
-            fi
-        fi
-    done
-
-    msg_ok "$(translate 'iGPU configuration added')"
-
-    # ============================================================
-    # Framebuffer support
-    # ============================================================
-    if [ -e "/dev/fb0" ]; then
-        msg_info "$(translate 'Configuring Framebuffer support...')"
-        
-        if ! grep -Pq "^lxc.cgroup2.devices.allow: c 29:0 rwm" "$CONFIG_FILE"; then
-            echo "lxc.cgroup2.devices.allow: c 29:0 rwm # Framebuffer" >> "$CONFIG_FILE"
-        fi
-        
-        add_mount_if_needed "/dev/fb0" "dev/fb0" "$CONFIG_FILE"
-        msg_ok "$(translate 'Framebuffer configuration added')"
-    fi
-
-    # ============================================================
-    # Coral USB passthrough
+    # Coral USB passthrough — kept untouched on purpose. User said this
+    # part can stay exactly as-is regardless of whether a Coral USB is
+    # connected now: the udev rule + cgroup + /dev/bus/usb mount are
+    # harmless if no USB device is present and let the user plug one in
+    # later without re-running this script.
     # ============================================================
     msg_info "$(translate 'Configuring Coral USB support...')"
-    
+
     add_udev_rule_for_coral_usb
-    
+
     if ! grep -Pq "^lxc.cgroup2.devices.allow: c 189:\\\* rwm" "$CONFIG_FILE"; then
         echo "lxc.cgroup2.devices.allow: c 189:* rwm # Coral USB" >> "$CONFIG_FILE"
     fi
 
     # FIX v1.3: Mount /dev/bus/usb instead of the /dev/coral symlink.
-    # The udev symlink /dev/coral cannot be safely passed through to LXC because
-    # it points to a dynamic path (e.g. /dev/bus/usb/001/005) that changes on
-    # reconnect. Mounting the full USB bus tree makes the real device node
-    # available inside the container regardless of port or reconnection.
+    # The udev symlink /dev/coral points to a dynamic path
+    # (e.g. /dev/bus/usb/001/005) that changes on reconnect — passing
+    # it through directly is unreliable. Mounting the USB bus tree
+    # makes the real device node available regardless of port.
     add_mount_if_needed "/dev/bus/usb" "dev/bus/usb" "$CONFIG_FILE"
-    
+
     if [ -L "/dev/coral" ]; then
         msg_ok "$(translate 'Coral USB configuration added - device detected')"
     else
@@ -276,6 +350,14 @@ configure_lxc_hardware() {
     if lspci | grep -iq "Global Unichip"; then
         msg_info "$(translate 'Coral M.2 Apex detected, configuring...')"
 
+        # Pre-flight: warn if the host driver isn't loaded. Without `apex`
+        # the container will see the device file but the TPU won't actually
+        # be usable, and Frigate / coral-libs error out at runtime — much
+        # later than expected.
+        if ! lsmod 2>/dev/null | grep -q '^apex'; then
+            msg_warn "$(translate 'apex kernel module not loaded on host. Run "Install Coral on Host" first or the container will not see /dev/apex_0.')"
+        fi
+
         local APEX_GID apex_dev_idx
         APEX_GID=$(getent group apex 2>/dev/null | cut -d: -f3 || echo "0")
         apex_dev_idx=$(get_next_dev_index "$CONFIG_FILE")
@@ -283,9 +365,12 @@ configure_lxc_hardware() {
         if [ -e "/dev/apex_0" ]; then
             # Device is visible — use PVE dev API (works in unprivileged containers).
             # PVE handles cgroup2 permissions automatically.
-            if ! grep -q "dev.*apex_0" "$CONFIG_FILE"; then
+            if ! grep -qE "^dev[0-9]+:[[:space:]]*/dev/apex_0" "$CONFIG_FILE"; then
                 echo "dev${apex_dev_idx}: /dev/apex_0,gid=${APEX_GID}" >> "$CONFIG_FILE"
             fi
+            # Migrate legacy M.2 entries (cgroup2 + bind-mount pair) that
+            # pre-dated the dev API on this CT. USB entries are NOT touched.
+            cleanup_old_coral_m2_entries "$CONFIG_FILE"
             msg_ok "$(translate 'Coral M.2 Apex configuration added - device ready')"
         else
             # Device not yet visible (host module not loaded or reboot pending).
@@ -293,30 +378,34 @@ configure_lxc_hardware() {
             # dynamically from /proc/devices to avoid hardcoding it.
             local APEX_MAJOR
             APEX_MAJOR=$(awk '/\bapex\b/{print $1}' /proc/devices 2>/dev/null | head -1)
-            [[ -z "$APEX_MAJOR" ]] && APEX_MAJOR="245"
-            if ! grep -q "lxc.cgroup2.devices.allow: c ${APEX_MAJOR}:0 rwm" "$CONFIG_FILE"; then
-                echo "lxc.cgroup2.devices.allow: c ${APEX_MAJOR}:0 rwm # Coral M2 Apex" >> "$CONFIG_FILE"
+            if [[ -z "$APEX_MAJOR" ]]; then
+                msg_warn "$(translate 'Could not detect apex major number from /proc/devices. Load the apex module first: modprobe apex')"
+                APEX_MAJOR=""
+            fi
+            if [[ -n "$APEX_MAJOR" ]]; then
+                if ! grep -q "lxc.cgroup2.devices.allow: c ${APEX_MAJOR}:0 rwm" "$CONFIG_FILE"; then
+                    echo "lxc.cgroup2.devices.allow: c ${APEX_MAJOR}:0 rwm # Coral M2 Apex" >> "$CONFIG_FILE"
+                fi
             fi
             add_mount_if_needed "/dev/apex_0" "dev/apex_0" "$CONFIG_FILE"
             msg_ok "$(translate 'Coral M.2 Apex configuration added - device will be available after reboot')"
         fi
     fi
 
-
+    # Final pass: drop any duplicates we may have introduced
     cleanup_duplicate_entries "$CONFIG_FILE"
-    
-    msg_ok "$(translate 'Hardware configuration completed for container') $CONTAINER_ID"
+
+    msg_ok "$(translate 'Coral hardware configuration completed for container') $CONTAINER_ID"
 }
 
 # ==========================================================
-# INSTALL DRIVERS INSIDE CONTAINER
+# INSTALL CORAL TPU DRIVER INSIDE CONTAINER
 # ==========================================================
 
 install_coral_in_container() {
-    msg_info "$(translate 'Installing iGPU and Coral TPU drivers inside the container...')"
+    msg_info "$(translate 'Installing Coral TPU driver inside the container...')"
     tput sc
     LOG_FILE=$(mktemp)
-
 
     if ! pct status "$CONTAINER_ID" | grep -q "running"; then
         pct start "$CONTAINER_ID"
@@ -329,14 +418,24 @@ install_coral_in_container() {
         fi
     fi
 
-
     stop_spinner
 
-    # Determine driver package for Coral M.2
+    # Pre-flight: refuse to run on non-Debian-family containers. The
+    # apt-get block below would crash with cryptic errors and leave the
+    # container half-configured.
+    if ! pct exec "$CONTAINER_ID" -- bash -c 'command -v apt-get' &>/dev/null; then
+        msg_error "$(translate 'Container does not have apt-get available. Coral driver installation only supports Debian/Ubuntu containers.')"
+        return 1
+    fi
+
+    # Determine driver package for Coral M.2 (USB always uses -std).
+    # whiptail (not dialog) because this prompt appears in the middle of
+    # the install flow — project convention is dialog for initial menus,
+    # whiptail for mid-flow prompts.
     CORAL_M2=$(lspci | grep -i "Global Unichip")
     if [[ -n "$CORAL_M2" ]]; then
         DRIVER_OPTION=$(whiptail --title "$(translate 'Select driver version')" \
-            --menu "$(translate 'Choose the driver version for Coral M.2:\n\nCaution: Maximum mode generates more heat.')" 15 60 2 \
+            --menu "$(translate 'Choose the driver version for Coral M.2:')\n\n$(translate 'Caution: Maximum mode generates more heat.')" 15 60 2 \
             1 "libedgetpu1-std ($(translate 'standard performance'))" \
             2 "libedgetpu1-max ($(translate 'maximum performance'))" 3>&1 1>&2 2>&3)
 
@@ -349,52 +448,49 @@ install_coral_in_container() {
         DRIVER_PACKAGE="libedgetpu1-std"
     fi
 
-    # Install drivers inside container
+    # Install driver inside container — TPU only, no iGPU userspace.
+    # iGPU drivers (va-driver-all, intel-opencl-icd, vainfo, etc.) are
+    # the job of add_gpu_lxc.sh. Keeping this script focused on TPU.
+    #
+    # Repository layout matches install_coral.sh on the host:
+    #   keyring  : /etc/apt/keyrings/coral-edgetpu.gpg
+    #   list file: /etc/apt/sources.list.d/coral-edgetpu.list
+    #   line     : deb [signed-by=<keyring>] https://packages.cloud.google.com/apt coral-edgetpu-stable main
+    # `apt-get install` (no version pin) always picks the latest libedgetpu
+    # available in the coral-edgetpu-stable channel, in sync with the host.
     script -q -c "pct exec \"$CONTAINER_ID\" -- bash -c '
     set -e
     export DEBIAN_FRONTEND=noninteractive
 
-    echo \"[1/6] Updating package lists...\"
+    echo \"[1/3] Updating package lists...\"
     apt-get update -qq
-    
-    echo \"[2/6] Installing iGPU drivers...\"
-    apt-get install -y -qq va-driver-all ocl-icd-libopencl1 intel-opencl-icd vainfo intel-gpu-tools
-    
-    echo \"[3/6] Configuring DRI permissions...\"
-    if [ -e /dev/dri ]; then
-        chgrp video /dev/dri 2>/dev/null || true
-        chmod 755 /dev/dri 2>/dev/null || true
-    fi
-    
-    echo \"[4/6] Adding users to video/render groups...\"
-    adduser root video 2>/dev/null || true
-    adduser root render 2>/dev/null || true
-    
-    echo \"[5/6] Installing Coral TPU dependencies...\"
+
+    echo \"[2/3] Setting up the Google Coral APT repository...\"
     apt-get install -y -qq gnupg curl ca-certificates
-    
-    echo \"[6/6] Adding Coral TPU repository...\"
-    curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/coral-edgetpu.gpg
-    echo \"deb [signed-by=/usr/share/keyrings/coral-edgetpu.gpg] https://packages.cloud.google.com/apt coral-edgetpu-stable main\" | tee /etc/apt/sources.list.d/coral-edgetpu.list >/dev/null
-    
-    echo \"\"
-    echo \"Updating package lists for Coral repository...\"
+    mkdir -p /etc/apt/keyrings
+    if [ ! -s /etc/apt/keyrings/coral-edgetpu.gpg ]; then
+        curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
+            | gpg --dearmor -o /etc/apt/keyrings/coral-edgetpu.gpg
+        chmod 0644 /etc/apt/keyrings/coral-edgetpu.gpg
+    fi
+    echo \"deb [signed-by=/etc/apt/keyrings/coral-edgetpu.gpg] https://packages.cloud.google.com/apt coral-edgetpu-stable main\" \
+        | tee /etc/apt/sources.list.d/coral-edgetpu.list >/dev/null
     apt-get update -qq
-    
-    echo \"Installing Coral TPU driver ($DRIVER_PACKAGE)...\"
+
+    echo \"[3/3] Installing latest Coral TPU runtime ($DRIVER_PACKAGE)...\"
     apt-get install -y -qq $DRIVER_PACKAGE
-    
+
     '" "$LOG_FILE" 2>&1
 
     if [ $? -eq 0 ]; then
         tput rc
         tput ed
         rm -f "$LOG_FILE"
-        msg_ok "$(translate 'iGPU and Coral TPU drivers installed successfully inside the container.')"
+        msg_ok "$(translate 'Coral TPU driver installed successfully inside the container.')"
     else
         tput rc
         tput ed
-        msg_error "$(translate 'Failed to install drivers inside the container.')"
+        msg_error "$(translate 'Failed to install Coral TPU driver inside the container.')"
         echo ""
         echo "$(translate 'Installation log:')"
         cat "$LOG_FILE"
@@ -404,18 +500,12 @@ install_coral_in_container() {
 }
 
 # ==========================================================
-# VERIFICATION AND SUMMARY
+# VERIFICATION AND SUMMARY (Coral only)
 # ==========================================================
 
 show_configuration_summary() {
     local CONFIG_FILE="/etc/pve/lxc/${CONTAINER_ID}.conf"
-    
-    
-    # iGPU
-    if grep -q "c 226:0 rwm" "$CONFIG_FILE"; then
-        msg_ok2 "✓ iGPU support: $(translate 'Enabled')"
-    fi
-    
+
     # Coral USB
     if grep -q "c 189:.*rwm.*Coral USB" "$CONFIG_FILE"; then
         if [ -L "/dev/coral" ]; then
@@ -424,16 +514,22 @@ show_configuration_summary() {
             msg_ok2 "⚠ Coral USB: $(translate 'Enabled but not connected')"
         fi
     fi
-    
-    # Coral M.2
-    if grep -q "c 245:0 rwm.*Coral M2" "$CONFIG_FILE"; then
+
+    # Coral M.2 — either via dev API or legacy cgroup2 entry
+    local m2_configured=false
+    if grep -qE "^dev[0-9]+:[[:space:]]*/dev/apex_0" "$CONFIG_FILE"; then
+        m2_configured=true
+    elif grep -qE "^lxc\.cgroup2\.devices\.allow:[[:space:]]+c[[:space:]]+[0-9]+:0[[:space:]]+rwm.*Coral M2" "$CONFIG_FILE"; then
+        m2_configured=true
+    fi
+
+    if $m2_configured; then
         if [ -e "/dev/apex_0" ]; then
             msg_ok2 "✓ Coral M.2: $(translate 'Enabled and ready')"
         else
-            msg_ok2 "⚠ Coral M.2: $(translate 'Enabled (device pending)')"
+            msg_ok2 "⚠ Coral M.2: $(translate 'Enabled (device pending — load apex module or reboot)')"
         fi
     fi
-    
 }
 
 # ==========================================================
@@ -442,11 +538,20 @@ show_configuration_summary() {
 
 main() {
     select_container
+    suggest_gpu_passthrough_if_needed
     show_proxmenux_logo
     configure_lxc_hardware
     install_coral_in_container
     show_configuration_summary
-    
+
+    # If the CT was running before we started, leave it running. Otherwise
+    # stop it again so we don't change the user's previous state.
+    if [[ "$CT_WAS_RUNNING" == "false" ]]; then
+        if pct status "$CONTAINER_ID" 2>/dev/null | grep -q "running"; then
+            pct stop "$CONTAINER_ID" >/dev/null 2>&1 || true
+        fi
+    fi
+
     msg_ok "$(translate 'Configuration completed successfully!')"
     echo ""
     msg_success "$(translate 'Press Enter to return to menu...')"

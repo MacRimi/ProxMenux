@@ -178,8 +178,21 @@ class ProxmoxStorageMonitor:
                     'node': node
                 }
                 
-                # Check if storage is available
-                if total == 0 or status.lower() != "available":
+                # Check if storage is available.
+                #
+                # "jc-pbs-friendly" mode (Sprint 11.6): a remote PBS where
+                # the user only has DatastoreAdmin on their own namespace
+                # reports `status=available` + `total=0` — the storage IS
+                # reachable, the user just can't list the datastore size.
+                # Treat that combination as INFO (namespace-restricted)
+                # instead of CRITICAL so we don't spam the operator with
+                # "almacenamiento no disponible" every poll. Real outages
+                # still flag because they come back with `status != available`.
+                if total == 0 and status.lower() == "available" and storage_type == 'pbs':
+                    storage_info['status'] = 'namespace_restricted'
+                    storage_info['status_detail'] = 'namespace_restricted'
+                    available_storages.append(storage_info)
+                elif total == 0 or status.lower() != "available":
                     storage_info['status'] = 'error'
                     storage_info['status_detail'] = 'unavailable' if total == 0 else status
                     unavailable_storages.append(storage_info)

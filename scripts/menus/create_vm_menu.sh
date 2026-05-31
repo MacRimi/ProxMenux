@@ -1,27 +1,26 @@
 #!/usr/bin/env bash
 
 # ==========================================================
-# ProxMenuX - Virtual Machine Creator Script
+# ProxMenux - Virtual Machine Creator Menu
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 07/05/2025
 # ==========================================================
 # Description:
-# This script is part of the central ProxMenux VM creation module. It allows users
-# to create virtual machines (VMs) in Proxmox VE using either default or advanced
-# configurations, streamlining the deployment of Linux, Windows, and other systems.
+# Central VM creation dispatcher for ProxMenux. Presents the user
+# with OS-family options (NAS, Windows, Linux, macOS, Others) and
+# routes to the matching ISO selector and configuration wizard.
 #
-# Key features:
-# - Supports virtual disks, import disks, and Controller + NVMe passthrough.
-# - Automates CPU, RAM, BIOS, network and storage configuration.
-# - Provides a user-friendly menu to select OS type, ISO image and disk interface.
-# - Automatically generates a detailed and styled HTML description for each VM.
-#
-# All operations are designed to simplify and accelerate VM creation in a 
-# consistent and maintainable way, using ProxMenux standards.
+# Features:
+# - Dispatches to ISO selectors: NAS / Windows / Linux / Others.
+# - Default vs Advanced flows: CPU, RAM, BIOS, network, storage.
+# - Virtual disks, disk import, and Controller+NVMe passthrough.
+# - Optional GPU passthrough wizard post-creation.
+# - Auto-generates a styled HTML description for each VM.
+# - macOS path is external: launches the OSX-PROXMOX installer.
 # ==========================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -144,14 +143,13 @@ while true; do
     2 "$(translate "Create") VM System Windows" \
     3 "$(translate "Create") VM System Linux" \
     ""          "" \
-    ""  "\Z4──────────────────────────────────────────────────\Zn" \
+    ""  "\Z4───────────────── Community Scripts ─────────────────\Zn" \
     ""          "" \
     4 "$(translate "Create") VM System macOS (OSX-PROXMOX)" \
     5 "$(translate "Create") VM System Others (based Linux)" \
     ""          "" \
     6 "$(translate "Return to Main Menu")" \
     3>&1 1>&2 2>&3)
-
 
   [[ $? -ne 0 || "$OS_TYPE" == "6" ]] && exec bash "$MENU_REPO/main_menu.sh"
 

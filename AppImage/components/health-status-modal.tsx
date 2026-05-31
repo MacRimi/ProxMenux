@@ -8,6 +8,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   Loader2,
   CheckCircle2,
   AlertTriangle,
@@ -357,8 +365,15 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     }
   }
 
-  const handleAcknowledge = async (errorKey: string, e: React.MouseEvent) => {
-    e.stopPropagation()
+  // `suppressionHours` overrides the category default for this dismiss:
+  //   - undefined → backend uses the category's configured suppression
+  //   - 24, 168 (7 days)  → silence for that many hours
+  //   - -1               → permanent dismiss; only revertible from
+  //                        Settings → Active Suppressions
+  const handleAcknowledge = async (
+    errorKey: string,
+    suppressionHours?: number,
+  ) => {
     setDismissingKey(errorKey)
 
     try {
@@ -369,10 +384,15 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
         headers["Authorization"] = `Bearer ${token}`
       }
 
+      const body: Record<string, unknown> = { error_key: errorKey }
+      if (suppressionHours !== undefined) {
+        body.suppression_hours = suppressionHours
+      }
+
       const response = await fetch(url, {
         method: "POST",
         headers,
-        body: JSON.stringify({ error_key: errorKey }),
+        body: JSON.stringify(body),
       })
 
       const responseData = await response.json().catch(() => ({}))
@@ -390,13 +410,24 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
           severity: responseData.result?.original_severity || 'WARNING',
           reason: 'Dismissed by user',
           dismissed: true,
-          acknowledged_at: new Date().toISOString()
+          // Surface the chosen duration so the row shows the right badge
+          // (countdown vs. "Permanent") without waiting for the refetch.
+          permanent: suppressionHours === -1,
+          suppression_remaining_hours: suppressionHours === -1 ? -1 : undefined,
+          suppression_hours: suppressionHours,
+          acknowledged_at: new Date().toISOString(),
         }
         setDismissedItems(prev => [...prev, dismissedItem])
       }
-      
+
       // Fetch fresh data in background (non-blocking)
       fetchHealthDetails().catch(() => {})
+
+      // Notify other mounted views (e.g. Settings → Active Suppressions
+      // panel) that the suppression set has changed so they can refresh.
+      try {
+        window.dispatchEvent(new CustomEvent("health-suppression-changed"))
+      } catch {}
     } catch (err) {
       console.error("Error dismissing:", err)
     } finally {
@@ -511,32 +542,25 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                 <span className="font-medium shrink-0">{formatCheckLabel(checkKey)}</span>
                 <span className="text-muted-foreground break-words whitespace-pre-wrap min-w-0">{checkData.detail}</span>
                 {checkData.dismissed && (
-                  <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 shrink-0 text-blue-400 border-blue-400/30">
-                    Dismissed
-                  </Badge>
+                  checkData.permanent ? (
+                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 shrink-0 text-amber-400 border-amber-400/40">
+                      Permanent
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 shrink-0 text-blue-400 border-blue-400/30">
+                      Dismissed
+                    </Badge>
+                  )
                 )}
               </div>
               <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                 {(checkStatus === "WARNING" || checkStatus === "CRITICAL" || checkStatus === "UNKNOWN") && isDismissable && !checkData.dismissed && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-5 px-1 sm:px-1.5 shrink-0 hover:bg-red-500/10 hover:border-red-500/50 bg-transparent text-[10px]"
-                    disabled={dismissingKey === (checkData.error_key || checkKey)}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleAcknowledge(checkData.error_key || checkKey, e)
-                    }}
-                  >
-                    {dismissingKey === (checkData.error_key || checkKey) ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <>
-                        <X className="h-3 w-3 sm:mr-0.5" />
-                        <span className="hidden sm:inline">Dismiss</span>
-                      </>
-                    )}
-                  </Button>
+                  <DismissDropdown
+                    onSelect={(hours) =>
+                      handleAcknowledge(checkData.error_key || checkKey, hours)
+                    }
+                    busy={dismissingKey === (checkData.error_key || checkKey)}
+                  />
                 )}
               </div>
             </div>
@@ -681,25 +705,12 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                             <p className="text-xs text-muted-foreground break-words whitespace-pre-wrap flex-1">{reason}</p>
                             {/* Show dismiss button for UNKNOWN status at category level when dismissable */}
                             {status === "UNKNOWN" && categoryData?.dismissable && !hasChecks && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-5 px-1.5 shrink-0 hover:bg-red-500/10 hover:border-red-500/50 bg-transparent text-[10px]"
-                                disabled={dismissingKey === `category_${key}`}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleAcknowledge(`category_${key}_unknown`, e)
-                                }}
-                              >
-                                {dismissingKey === `category_${key}` ? (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                ) : (
-                                  <>
-                                    <X className="h-3 w-3 sm:mr-0.5" />
-                                    <span className="hidden sm:inline">Dismiss</span>
-                                  </>
-                                )}
-                              </Button>
+                              <DismissDropdown
+                                onSelect={(hours) =>
+                                  handleAcknowledge(`category_${key}_unknown`, hours)
+                                }
+                                busy={dismissingKey === `category_${key}_unknown`}
+                              />
                             )}
                           </div>
                         )}
@@ -838,5 +849,58 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
         )}
       </DialogContent>
     </Dialog>
+  )
+}
+
+// Small split button: the visible click opens a 3-option menu so the user
+// chooses how long this specific alert stays silenced. ``-1`` is the
+// permanent sentinel — backend stores it as `suppression_hours = -1` and
+// the alert can only be brought back from Settings → Active Suppressions.
+function DismissDropdown({
+  onSelect,
+  busy,
+}: {
+  onSelect: (suppressionHours: number) => void
+  busy: boolean
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-5 px-1 sm:px-1.5 shrink-0 hover:bg-red-500/10 hover:border-red-500/50 bg-transparent text-[10px]"
+          disabled={busy}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {busy ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <>
+              <X className="h-3 w-3 sm:mr-0.5" />
+              <span className="hidden sm:inline">Dismiss</span>
+            </>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          Silence this alert for
+        </DropdownMenuLabel>
+        <DropdownMenuItem onSelect={() => onSelect(24)} className="text-xs">
+          <Clock className="h-3 w-3 mr-2 text-muted-foreground" /> 24 hours
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onSelect(168)} className="text-xs">
+          <Clock className="h-3 w-3 mr-2 text-muted-foreground" /> 7 days
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onSelect={() => onSelect(-1)}
+          className="text-xs text-red-500 focus:text-red-500 focus:bg-red-500/10"
+        >
+          <BellOff className="h-3 w-3 mr-2" /> Permanently
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

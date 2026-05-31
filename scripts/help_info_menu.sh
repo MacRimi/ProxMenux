@@ -1,21 +1,31 @@
 #!/bin/bash
-
 # ==========================================================
-# ProxMenux - A menu-driven script for Proxmox VE management
+# ProxMenux - Help and Info (Command Reference)
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 28/01/2025
 # ==========================================================
 # Description:
-# This script provides an interactive command reference menu
-# for Proxmox VE via dialog-based UI.
-# - Categorized and translated lists of common and advanced commands.
-# - Covers system, network, storage, VM/CT, updates, GPU passthrough,
-#   ZFS, backup/restore, and essential CLI tools.
-# - Allows users to view or execute commands directly from the menu.
+# Interactive command-reference menu for Proxmox VE. Each
+# section lists numbered commands with translated descriptions;
+# the user can pick a number to execute the command directly,
+# paste a custom command, or press 0 / Esc to go back.
+#
+# Sections (9):
+#   1. Useful System Commands
+#   2. VM and CT Management
+#   3. Storage and Disks
+#   4. Network Commands
+#   5. Updates and Packages
+#   6. GPU / TPU Passthrough
+#   7. ZFS Management
+#   8. Backup and Restore
+#   9. System CLI Tools
+#
+# The menu also auto-installs 'dialog' if missing.
 # ==========================================================
 
 # Configuration ============================================
@@ -38,8 +48,16 @@ GREEN="\033[0;32m"
 NC="\033[0m"
 
 if ! command -v dialog &>/dev/null; then
+    # Surface apt failures so the user knows why the menu won't render.
+    # The previous silent install made the next dialog call error with
+    # "command not found" with no context. Audit Tier 6 — `help_info_menu.sh`
+    # apt silent.
     apt update -qq >/dev/null 2>&1
-    apt install -y dialog >/dev/null 2>&1
+    if ! apt install -y dialog >/dev/null 2>&1; then
+        echo "ERROR: failed to install 'dialog' (required for the help menu)." >&2
+        echo "Run 'apt install dialog' manually and try again." >&2
+        exit 1
+    fi
 fi
 
 
@@ -170,6 +188,10 @@ show_vm_ct_commands() {
         echo -e "11) ${GN}[Only with menu] Show CT users for permission mapping${NC} - $(translate 'root and real users only')"
         echo -e "12) ${GREEN}pct exec <ctid> -- getent passwd | column -t -s :${NC}     - $(translate 'Show CT users in table format')"
         echo -e "13) ${GREEN}pct exec <ctid> -- ps aux --sort=-%mem | head${NC}         - $(translate 'Top memory processes in CT')"
+        echo -e "14) ${GREEN}cat /etc/pve/qemu-server/<vmid>.conf${NC}                  - $(translate 'View raw VM configuration file')"
+        echo -e "15) ${GREEN}cat /etc/pve/lxc/<ctid>.conf${NC}                          - $(translate 'View raw CT configuration file')"
+        echo -e "16) ${GREEN}nano /etc/pve/qemu-server/<vmid>.conf${NC}                 - $(translate 'Edit raw VM configuration file')"
+        echo -e "17) ${GREEN}nano /etc/pve/lxc/<ctid>.conf${NC}                         - $(translate 'Edit raw CT configuration file')"
         echo -e " ${DEF}0) $(translate ' Back to previous menu or Esc + Enter')"
         echo
         echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter a number, or write or paste a command: ') ${CL}"
@@ -222,10 +244,30 @@ show_vm_ct_commands() {
                 ;; 
 
             13)
-            
+
                 echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter CT ID: ')${CL}"
                 read -r id
                 cmd="pct exec $id -- ps aux --sort=-%mem | head"
+                ;;
+            14)
+                echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter VM ID: ')${CL}"
+                read -r id
+                cmd="cat /etc/pve/qemu-server/$id.conf"
+                ;;
+            15)
+                echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter CT ID: ')${CL}"
+                read -r id
+                cmd="cat /etc/pve/lxc/$id.conf"
+                ;;
+            16)
+                echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter VM ID: ')${CL}"
+                read -r id
+                cmd="nano /etc/pve/qemu-server/$id.conf"
+                ;;
+            17)
+                echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter CT ID: ')${CL}"
+                read -r id
+                cmd="nano /etc/pve/lxc/$id.conf"
                 ;;
             0) break ;;
             *) cmd="$user_input" ;;
@@ -271,6 +313,14 @@ show_storage_commands() {
         echo -e "20) ${GREEN}qm importdisk <vmid> <img> <storage>${NC}  - $(translate 'Import disk image to VM')"
         echo -e "21) ${GREEN}qm set <vmid> -<bus><index> <disk>${NC}    - $(translate 'Add physical disk to VM via') passthrough"
         echo -e "22) ${GREEN}qemu-img convert -O <format> <input> <output>${NC} - $(translate 'Convert disk image format')"
+        echo -e "23) ${GREEN}smartctl --scan${NC}                       - $(translate 'List SMART-capable devices')"
+        echo -e "24) ${GREEN}smartctl -H /dev/<disk>${NC}               - $(translate 'Quick health check (PASSED / FAILED)')"
+        echo -e "25) ${GREEN}smartctl -a /dev/<disk>${NC}               - $(translate 'Full SMART info and attributes')"
+        echo -e "26) ${GREEN}smartctl -t short /dev/<disk>${NC}         - $(translate 'Start short self-test (~2 min)')"
+        echo -e "27) ${GREEN}smartctl -t long /dev/<disk>${NC}          - $(translate 'Start long self-test (hours)')"
+        echo -e "28) ${GREEN}smartctl -l selftest /dev/<disk>${NC}      - $(translate 'View self-test log')"
+        echo -e "29) ${GREEN}nvme list${NC}                             - $(translate 'List NVMe devices')"
+        echo -e "30) ${GREEN}nvme smart-log /dev/<nvme>${NC}            - $(translate 'NVMe-specific SMART log')"
         echo -e " ${DEF}0) $(translate ' Back to previous menu or Esc + Enter')"
         echo
         echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter a number, or write or paste a command: ') ${CL}"
@@ -453,6 +503,50 @@ show_storage_commands() {
                 echo -e "\n${YELLOW}$(translate 'Converting image using command:')${NC}"
                 cmd="qemu-img convert -O $output_format $input_image $output_image"
                ;;
+            23) cmd="smartctl --scan" ;;
+            24)
+                lsblk -dno NAME,SIZE,MODEL | grep -vE 'loop|dm-|zd' | sed 's/^/  /'
+                echo
+                echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter device (e.g., sda or nvme0): ')${CL}"
+                read -r dev
+                cmd="smartctl -H /dev/$dev"
+                ;;
+            25)
+                lsblk -dno NAME,SIZE,MODEL | grep -vE 'loop|dm-|zd' | sed 's/^/  /'
+                echo
+                echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter device (e.g., sda or nvme0): ')${CL}"
+                read -r dev
+                cmd="smartctl -a /dev/$dev"
+                ;;
+            26)
+                lsblk -dno NAME,SIZE,MODEL | grep -vE 'loop|dm-|zd' | sed 's/^/  /'
+                echo
+                echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter device (e.g., sda or nvme0): ')${CL}"
+                read -r dev
+                cmd="smartctl -t short /dev/$dev"
+                ;;
+            27)
+                lsblk -dno NAME,SIZE,MODEL | grep -vE 'loop|dm-|zd' | sed 's/^/  /'
+                echo
+                echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter device (e.g., sda or nvme0): ')${CL}"
+                read -r dev
+                cmd="smartctl -t long /dev/$dev"
+                ;;
+            28)
+                lsblk -dno NAME,SIZE,MODEL | grep -vE 'loop|dm-|zd' | sed 's/^/  /'
+                echo
+                echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter device (e.g., sda or nvme0): ')${CL}"
+                read -r dev
+                cmd="smartctl -l selftest /dev/$dev"
+                ;;
+            29) cmd="nvme list" ;;
+            30)
+                ls /dev/nvme* 2>/dev/null | sed 's/^/  /'
+                echo
+                echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter NVMe device (e.g., nvme0): ')${CL}"
+                read -r dev
+                cmd="nvme smart-log /dev/$dev"
+                ;;
             0) break ;;
             *) cmd="$user_input" ;;
         esac

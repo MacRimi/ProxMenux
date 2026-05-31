@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
-import { Shield, Lock, User, AlertCircle, Eye, EyeOff } from "lucide-react"
+import { Shield, Lock, User, AlertCircle, Eye, EyeOff, Upload, Trash2 } from "lucide-react"
 import { getApiUrl } from "../lib/api-config"
 
 interface AuthSetupProps {
@@ -22,6 +22,14 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  // Profile (Fase 2 — v1.2.2). Both optional decorations on top of the
+  // mandatory username + password. Persisted via PUT /api/auth/profile
+  // and POST /api/auth/profile/avatar after the user lands a successful
+  // /api/auth/setup so we don't change the setup endpoint's contract.
+  const [displayName, setDisplayName] = useState("")
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const checkOnboardingStatus = async () => {
@@ -58,34 +66,42 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
     setError("")
 
     try {
-      console.log("[v0] Skipping authentication setup...")
       const response = await fetch(getApiUrl("/api/auth/skip"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       })
 
       const data = await response.json()
-      console.log("[v0] Auth skip response:", data)
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to skip authentication")
       }
 
       if (data.auth_declined) {
-        console.log("[v0] Authentication skipped successfully - APIs should be accessible without token")
       }
 
-      console.log("[v0] Authentication skipped successfully")
       localStorage.setItem("proxmenux-auth-declined", "true")
       localStorage.removeItem("proxmenux-auth-token") // Remove any old token
       setOpen(false)
       onComplete()
     } catch (err) {
-      console.error("[v0] Auth skip error:", err)
+      console.error("Auth skip error:", err)
       setError(err instanceof Error ? err.message : "Failed to save preference")
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleAvatarPick = () => fileInputRef.current?.click()
+
+  const handleAvatarChange = (file: File | null) => {
+    // Revoke the previous local preview so we don't leak blob URLs while
+    // the user picks another file before submitting.
+    if (avatarPreviewUrl) {
+      URL.revokeObjectURL(avatarPreviewUrl)
+    }
+    setAvatarFile(file)
+    setAvatarPreviewUrl(file ? URL.createObjectURL(file) : null)
   }
 
   const handleSetupAuth = async () => {
@@ -109,7 +125,6 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
     setLoading(true)
 
     try {
-      console.log("[v0] Setting up authentication...")
       const response = await fetch(getApiUrl("/api/auth/setup"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -120,7 +135,6 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
       })
 
       const data = await response.json()
-      console.log("[v0] Auth setup response:", data)
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to setup authentication")
@@ -129,13 +143,67 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
       if (data.token) {
         localStorage.setItem("proxmenux-auth-token", data.token)
         localStorage.removeItem("proxmenux-auth-declined")
-        console.log("[v0] Authentication setup successful")
+      }
+
+      // Profile decorations (Fase 2). Sent as a follow-up to the setup
+      // call so the /api/auth/setup endpoint stays minimal (username +
+      // password only) — these calls reuse the existing profile
+      // endpoints and the JWT we just received. Failures here are
+      // non-fatal: the user is already authenticated and can finish
+      // configuring the profile from the /profile page.
+      const token = data.token
+      if (token) {
+        const trimmedDisplayName = displayName.trim()
+        if (trimmedDisplayName) {
+          try {
+            await fetch(getApiUrl("/api/auth/profile"), {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ display_name: trimmedDisplayName }),
+            })
+          } catch (e) {
+            console.warn("[auth-setup] failed to save display_name:", e)
+          }
+        }
+        if (avatarFile) {
+          try {
+            await fetch(getApiUrl("/api/auth/profile/avatar"), {
+              method: "POST",
+              headers: {
+                "Content-Type": avatarFile.type,
+                Authorization: `Bearer ${token}`,
+              },
+              body: avatarFile,
+            })
+          } catch (e) {
+            console.warn("[auth-setup] failed to upload avatar:", e)
+          }
+        }
+      }
+
+      // Release the local preview blob now that the file has been
+      // uploaded (or skipped). The header avatar pulls a fresh copy
+      // from the backend.
+      if (avatarPreviewUrl) {
+        URL.revokeObjectURL(avatarPreviewUrl)
+        setAvatarPreviewUrl(null)
+      }
+
+      // Notify the header AvatarMenu (mounted on dashboard load with
+      // auth_enabled=false) to re-fetch its status + profile so the
+      // avatar appears immediately after first-time setup instead of
+      // requiring a page refresh.
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("proxmenux:profile-changed"))
       }
 
       setOpen(false)
       onComplete()
     } catch (err) {
-      console.error("[v0] Auth setup error:", err)
+      console.error("Auth setup error:", err)
       setError(err instanceof Error ? err.message : "Failed to setup authentication")
     } finally {
       setLoading(false)
@@ -266,6 +334,100 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
                   >
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
+                </div>
+              </div>
+
+              {/* Optional profile decorations (Fase 2). Visually
+                  separated from the mandatory credential fields by a
+                  divider + a small heading so the operator understands
+                  they can skip everything below and still complete the
+                  setup. Both are saved with follow-up calls after the
+                  setup endpoint returns the JWT. */}
+              <div className="pt-3 border-t border-border/60 space-y-4">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                  Profile · optional
+                </p>
+
+                <div className="space-y-2">
+                  <Label htmlFor="display-name" className="text-sm">
+                    Display name
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="display-name"
+                      type="text"
+                      placeholder="Shown above the username in the menu"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      maxLength={64}
+                      className="pl-10 text-base"
+                      disabled={loading}
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Leave empty to render the username itself. Up to 64 characters.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm">Avatar</Label>
+                  <div className="flex items-center gap-3">
+                    {avatarPreviewUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={avatarPreviewUrl}
+                        alt=""
+                        className="w-14 h-14 rounded-full object-cover border border-border bg-cyan-500/5 shrink-0"
+                      />
+                    ) : (
+                      <span className="w-14 h-14 rounded-full bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 flex items-center justify-center text-xl font-semibold border border-border shrink-0">
+                        {(displayName || username || "U").trim().charAt(0).toUpperCase() || "U"}
+                      </span>
+                    )}
+                    <div className="flex flex-col gap-1.5 min-w-0">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null
+                          handleAvatarChange(file)
+                          if (fileInputRef.current) fileInputRef.current.value = ""
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleAvatarPick}
+                          disabled={loading}
+                          className="h-7 text-xs"
+                        >
+                          <Upload className="h-3 w-3 mr-1.5" />
+                          {avatarFile ? "Change" : "Choose image"}
+                        </Button>
+                        {avatarFile && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAvatarChange(null)}
+                            disabled={loading}
+                            className="h-7 text-xs text-red-500 hover:text-red-500 hover:bg-red-500/10"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1.5" />
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        PNG, JPEG, WebP or GIF · up to 2 MB · pre-crop square for best results.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -1,0 +1,327 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Panel: pestaña Settings | ProxMenux Documentation",
+    "description": "La pestaña Settings agrupa las preferencias del panel (unidades de red, duraciones de supresión, exclusiones de almacenamiento / interfaz), el panel embebido de notificaciones + IA y un inventario transparente de cada optimización post-instalación de ProxMenux actualmente activa en el host con acceso al código fuente."
+  },
+  "header": {
+    "title": "Panel: pestaña Settings",
+    "description": "Preferencias del panel, exclusiones de monitorización, el panel embebido de configuración de notificaciones + IA y un inventario en vivo de las optimizaciones post-instalación de ProxMenux actualmente activas en el host.",
+    "section": "ProxMenux Monitor · Panel"
+  },
+  "intro": {
+    "title": "Dónde vive realmente cada setting",
+    "body": "La pestaña Settings es una superficie única para varias preocupaciones distintas: cómo renderiza el panel, qué vigila el Monitor de salud, cómo salen las alertas y qué ha cambiado ya ProxMenux en el host. Las tarjetas que tienen su propia página de documentación profunda enlazan en lugar de duplicar el contenido aquí — Settings es el punto de entrada, no el manual."
+  },
+  "networkUnits": {
+    "heading": "Network Units",
+    "imageAlt": "Tarjeta Network Units con desplegable Network Unit Display puesto en Bytes",
+    "imageCaption": "Elige entre bits por segundo y bytes por segundo para cada rate de red mostrado en el panel.",
+    "body": "Elige cómo se muestra el throughput de red a lo largo del panel: <strong>bits por segundo</strong> (Mbps / Gbps) o <strong>bytes por segundo</strong> (MB/s / GB/s). Bits es el valor por defecto porque es como los fabricantes de NICs e ISPs etiquetan sus productos; bytes es lo que reportan la mayoría de herramientas de transferencia de archivos. El setting afecta cada gráfica, insignia y tooltip que muestra rate de red — aplicado inmediatamente, sin recargar."
+  },
+  "health": {
+    "heading": "Monitor de salud",
+    "intro": "La tarjeta expone el setting <strong>Suppression Duration</strong> por categoría — una vez se descarta una alerta, cuánto tiene que pasar antes de que se permita al escáner volver a dispararla. Cada una de las diez categorías del Monitor de salud (CPU, Memoria, Almacenamiento, Discos, Red, VMs, Servicios PVE, Logs, Updates, Seguridad) tiene su propio desplegable con estos valores:",
+    "items": [
+      "<strong>24 h</strong> — por defecto para la mayoría de categorías transitorias.",
+      "<strong>72 h</strong> — para eventos sobre los que quieres unos días de silencio.",
+      "<strong>168 h</strong> (1 semana) y <strong>720 h</strong> (1 mes) — chequeos periódicos.",
+      "<strong>8760 h</strong> (1 año) — efectivamente \"silencio en el futuro previsible\".",
+      "<strong>-1</strong> — silencio permanente hasta que lo reactives manualmente.",
+      "<strong>Custom hours</strong> — cualquier entero si necesitas un valor intermedio."
+    ],
+    "imageAlt": "Card Settings → Monitor de salud con los desplegables de supresión por categoría y la sección Active Suppressions",
+    "imageCaption": "Card Monitor de salud — los desplegables por categoría fijan los valores por defecto para nuevos dismisses; la sección Active Suppressions debajo lista cada alerta actualmente silenciada y permite revertirlas.",
+    "editTitle": "Modo Edit",
+    "editBody": "La tarjeta es de solo-lectura por defecto. Pulsa <strong>Edit</strong> en la esquina superior derecha de la card para activar los desplegables y los botones Re-enable. <strong>Save</strong> confirma todos los cambios pendientes (cambios de Suppression Duration y re-enables encolados) en un solo lote; <strong>Cancel</strong> los descarta todos. El botón Save solo se activa cuando hay al menos un cambio pendiente.",
+    "activeTitle": "Active Suppressions",
+    "activeIntro": "Debajo de los desplegables de Suppression Duration, la sección <strong>Active Suppressions</strong> lista cada alerta actualmente silenciada — tanto los dismisses time-limited (24 h, 7 días, ventanas custom) como los <em>Permanent</em>. Cada fila muestra:",
+    "activeItems": [
+      "Un badge coloreado — <strong>Permanent</strong> (ámbar) o una cuenta atrás como <strong>24h remaining</strong> / <strong>7d remaining</strong> (azul).",
+      "El identificador de la alerta, normalizado para legibilidad (p. ej. <code>pve_storage_full_PBS-Cloud</code> → <em>PVE Storage Full: PBS-Cloud</em>).",
+      "Categoría, severidad y el timestamp en que se descartó la alerta.",
+      "Un botón <strong>Re-enable</strong> (activo solo en modo Edit) que encola la alerta para ser un-acknowledged al siguiente Save."
+    ],
+    "activeReenableTitle": "Flujo de Re-enable",
+    "activeReenableBody": "Pulsar <strong>Re-enable</strong> en modo Edit marca la fila en verde y tacha su identificador — está encolada pero todavía no aplicada. Volver a hacer clic en la misma fila la <strong>Undo</strong> (la saca de la cola). Cuando pulsas <strong>Save</strong>, cada re-enable encolado dispara <code>POST /api/health/un-acknowledge</code> en paralelo y las filas afectadas desaparecen de la lista. Si la condición subyacente sigue presente y la categoría soporta re-fire, la alerta reaparece en la lista Active del Monitor de salud en el siguiente ciclo de escaneo.",
+    "activePermanentNote": "Los dismisses permanentes (alertas descartadas con <em>Permanently</em> desde el modal del Monitor, o aquellas cuya categoría tenga el default puesto a <code>-1</code>) <strong>solo se pueden revertir desde aquí</strong>. El modal del dashboard no expone un botón un-dismiss para ellas — el panel Active Suppressions es el único log de auditoría + UI de revert.",
+    "activeAutoRefreshTitle": "Auto-refresh",
+    "activeAutoRefreshBody": "La lista se refresca automáticamente cuando descartas o un-dismiss una alerta desde el modal del Monitor de salud (vía un evento in-browser), cuando la pestaña recupera el foco y al cambio de visibilidad. No necesitas recargar la página tras descartar una alerta desde el dashboard.",
+    "calloutTitle": "La semántica completa vive en la página del Monitor de salud",
+    "calloutBody": "Las reglas de escalada (cuándo un re-fire pasa a critical), el comportamiento de auto-resolve para eventos cuyo dispositivo subyacente desaparece y la diferencia entre dismissed y resolved — todo documentado bajo <link>Monitor de salud → Descartar alertas y la Suppression Duration</link>. Esta tarjeta solo expone los desplegables por categoría y el panel Active Suppressions."
+  },
+  "thresholds": {
+    "heading": "Health Monitor Thresholds",
+    "intro": "Donde la tarjeta anterior decide <em>cuánto tiempo quedarse callado tras un dismiss</em>, esta decide <strong>a qué valor se dispara una alerta en primer lugar</strong>. Cada chequeo que ejecuta el Monitor de salud está parametrizado por un par de números — un umbral <strong>Warning</strong> y un umbral <strong>Critical</strong> — y ambos se exponen aquí para que el operador los ajuste.",
+    "whatForTitle": "Para qué sirve",
+    "whatForIntro": "Los valores por defecto que vienen con ProxMenux son sensatos para el host Proxmox medio, pero cada entorno tiene su propio sobre operativo:",
+    "whatForItems": [
+      "Un homelab pequeño con un SSD único puede querer avisar antes en capacidad (75 / 90 %) para dejar margen a snapshots.",
+      "Un host de datacenter con nodos Ceph redundantes puede ser más relajado en avisos de memoria (un working set al 90 % es normal bajo ARC de ZFS).",
+      "Un mini-PC con refrigeración pasiva necesita umbrales de temperatura más bajos que un servidor con refrigeración forzada por aire — misma clase de drive, sobre físico distinto.",
+      "Un host muy virtualizado que clava CPU durante builds no debería avisar en cada pico del 80 %, pero sí debe seguir alertando sobre presión sostenida."
+    ],
+    "whatForOutro": "Editar un umbral surte efecto <strong>en el siguiente scan</strong> — el Monitor de salud relee los valores desde <code>/usr/local/share/proxmenux/health_thresholds.json</code> en cada ciclo, sin reinicio de servicio. Los mismos números también alimentan los rangos de color de los widgets del panel (la línea de temperatura en la modal de temperatura de disco, las barras de las tarjetas de almacenamiento) para que la clasificación visual coincida con lo que dispara la alerta.",
+    "coloursTitle": "Colores de estado: cómo renderizan Warning y Critical en el panel",
+    "coloursIntro": "Cada umbral de abajo produce la misma clasificación de tres estados a lo largo del panel — los mismos colores para barras de almacenamiento, anillos de CPU/memoria, chips de temperatura y el punto de la modal de disco. Leer un color en cualquier sitio del Monitor mapea a un rango definido relativo al par configurado:",
+    "headerColour": "Color",
+    "headerRange": "Rango",
+    "headerMeaning": "Significado",
+    "colourRows": [
+      {
+        "colour": "Verde",
+        "range": "valor < Warning",
+        "meaning": "Rango operativo normal. No se dispara alerta."
+      },
+      {
+        "colour": "Ámbar",
+        "range": "Warning ≤ valor < Critical",
+        "meaning": "Estado warning. El Monitor de salud dispara un evento de severidad WARNING; las notificaciones respetan los filtros del canal y las Quiet Hours."
+      },
+      {
+        "colour": "Rojo",
+        "range": "valor ≥ Critical",
+        "meaning": "Estado critical. El Monitor de salud dispara un evento CRITICAL; CRITICAL salta las Quiet Hours y siempre alcanza al canal."
+      }
+    ],
+    "sectionsTitle": "Secciones y valores por defecto recomendados",
+    "sectionsIntro": "Estos son los valores con los que viene ProxMenux — la baseline recomendada. Es lo que ves en un host recién montado hasta que sobreescribes algo. Las secciones están ordenadas de arriba abajo de <em>cómputo</em> → <em>calor</em> → <em>capacidad de almacenamiento</em>, así que leer hacia abajo va de lo concreto (carga actual) al estado acumulado (espacio libre).",
+    "headerSection": "Sección",
+    "headerWarning": "Warning",
+    "headerCritical": "Critical",
+    "headerGates": "Qué controla",
+    "thresholdRows": [
+      {
+        "section": "Uso de CPU",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Alerta de carga sostenida cuando la CPU promedia por encima del umbral durante la ventana de scan."
+      },
+      {
+        "section": "Memoria",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Presión de RAM en el host."
+      },
+      {
+        "section": "Swap (solo critical)",
+        "warning": "—",
+        "critical": "5 %",
+        "gates": "Swap realmente en uso. El número es intencionadamente bajo: un host Proxmox sano apenas debería tocar swap, así que incluso un 5 % es una señal significativa de presión de RAM."
+      },
+      {
+        "section": "Temperatura de CPU",
+        "warning": "80 °C",
+        "critical": "90 °C",
+        "gates": "Lectura de temperatura de package / core de CPU desde <code>lm-sensors</code>."
+      },
+      {
+        "section": "Temp de disco — HDD",
+        "warning": "60 °C",
+        "critical": "65 °C",
+        "gates": "Drives spinning estándar. El sobre del fabricante topa alrededor de 60–65 °C, así que Critical se fija justo en el límite duro."
+      },
+      {
+        "section": "Temp de disco — SSD",
+        "warning": "70 °C",
+        "critical": "75 °C",
+        "gates": "SSDs SATA 2.5'' / M.2 — corren más frescos que NVMe pero más calientes que HDDs."
+      },
+      {
+        "section": "Temp de disco — NVMe",
+        "warning": "80 °C",
+        "critical": "85 °C",
+        "gates": "Los drives NVMe corren más calientes por diseño; los controladores auto-throttlean por encima de ~85 °C, así que Warning captura la escalada antes de que entre el throttling."
+      },
+      {
+        "section": "Temp de disco — SAS",
+        "warning": "55 °C",
+        "critical": "65 °C",
+        "gates": "Los drives SAS enterprise comparten el mismo límite de fabricante de ~65 °C que los HDDs, pero se despliegan normalmente en chasis rack con refrigeración activa. Una lectura a 55 °C ya señala un problema de refrigeración (ventilador fallando, problema de HVAC) <em>antes</em> de que el propio drive esté en riesgo — de ahí un Warning más bajo que HDD, no porque SAS sea menos tolerante al calor."
+      },
+      {
+        "section": "Espacio de disco — host",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Capacidad de <code>/</code> y cada mountpoint del host (<code>/var/lib/vz</code>, <code>/mnt/*</code>…)."
+      },
+      {
+        "section": "Espacio de disco — rootfs LXC",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Disco raíz por contenedor, evaluado contra el tamaño del rootfs según PVE."
+      },
+      {
+        "section": "Mount points LXC",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Capacidad de mountpoints dentro de CTs en ejecución (mp0, mp1, NFS, bind mounts). Excluye rootfs."
+      },
+      {
+        "section": "Almacenamiento PVE",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Almacenamientos PVE estilo bloque (LVM, LVM-thin, ZFS-pool, RBD/Ceph, PBS)."
+      },
+      {
+        "section": "Pool ZFS",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Pools ZFS a nivel host — independiente del registro PVE."
+      }
+    ],
+    "defaultsTitle": "Valores por defecto, overrides y reset",
+    "defaultsBody": "El backend expone una vista fundida: cada sección parte de los valores por defecto de ProxMenux (los que ves cuando el host está recién hecho) y sobreescribes solo los knobs que te importan. La tarjeta muestra el valor <em>efectivo</em> — la sobreescritura si pones una, en otro caso el valor por defecto. Un botón <strong>Reset</strong> limpia cada override y vuelve a los valores por defecto en todas las secciones de una vez.",
+    "validationTitle": "Validación",
+    "validationBody": "Guardar rechaza valores que no tienen sentido (porcentajes fuera de 0–100, critical por debajo de warning, temperaturas negativas). El frontend muestra el error inline; el backend valida otra vez antes de persistir, así que no se puede engañar a la API con un PUT hecho a mano para que acepte un umbral roto."
+  },
+  "lxcDetection": {
+    "heading": "LXC Update Detection",
+    "imageAlt": "Tarjeta LXC Update Detection con un único switch — cuando está activo, el Monitor escanea periódicamente contenedores LXC Debian/Ubuntu/Alpine en ejecución buscando paquetes con update pendiente.",
+    "imageCaption": "El toggle para el scan periódico <code>apt list --upgradable</code> / <code>apk list -u</code> a lo largo de cada CT en ejecución. Por defecto ON. El toggle de notificación correspondiente en Notifications → Services solo aparece mientras la detección está activa.",
+    "intro": "Un toggle dedicado para el scan de actualizaciones LXC, situado entre Health Monitor Thresholds y la tarjeta Notifications. Cuando está ON, ProxMenux recorre cada CT en ejecución del host y consulta al gestor de paquetes dentro del contenedor por updates pendientes; los resultados aterrizan en los contadores de insignias de la pestaña Hardware y alimentan la notificación <code>lxc_updates_available</code>. Cuando está OFF, el scan se detiene por completo (sin llamadas <code>pct exec</code>) y cualquier entrada LXC existente en <code>managed_installs.json</code> se purga inmediatamente, así el panel y el endpoint <code>/api/managed-installs</code> dejan de reportar estado de update LXC sin esperar al siguiente ciclo de 24h.",
+    "whatRunsTitle": "Qué ejecuta realmente el scan",
+    "whatRunsIntro": "Para cada CT en estado <code>running</code> con un gestor de paquetes soportado:",
+    "whatRunsItems": [
+      "<strong>Gate de frescura de caché.</strong> Si la caché de metadatos apt/apk dentro del contenedor es más vieja que <strong>24 horas</strong>, primero corre un refresh best-effort (<code>apt-get update -qq</code> en Debian/Ubuntu, <code>apk update</code> en Alpine) con un timeout de 60 s. Cualquier fallo (sin red, repo roto, timeout) se traga en silencio — el listado de abajo sigue corriendo contra la caché que exista, así que un problema transitorio de repo nunca puede empeorar la detección.",
+      "<strong>Listing.</strong> Después ProxMenux ejecuta <code>apt list --upgradable</code> / <code>apk list -u</code> y parsea la salida en un recuento estructurado más una muestra de los nombres de paquetes top.",
+      "<strong>Dedup por CT.</strong> Una fingerprint construida a partir del recuento, security-count y los nombres top ordenados se almacena para que un conjunto estable de updates pendientes no re-notifique diariamente, mientras que un conjunto significativamente distinto sí lo haga."
+    ],
+    "selfUpdateTitle": "Los CTs que se auto-actualizan fuera de apt pueden legítimamente reportar 0",
+    "selfUpdateBody": "La detección solo ve lo que el gestor de paquetes dentro del contenedor conoce. Un CT cuyo software clave se actualiza fuera de apt (el cron <code>plexupdate</code> de Plex, contenedores Docker actualizados vía <code>docker pull</code>, el actualizador integrado de Frigate, etc.) seguirá reportando updates apt bajos o cero aunque el appliance se mantenga al día activamente — eso es correcto, no es un bug. El sistema base a nivel apt del mismo CT puede aún tener sus propios updates pendientes, que sí saca a la luz el scan.",
+    "refreshTitle": "Por qué el auto-refresh de 24 h",
+    "refreshBody": "Los CTs appliance de larga vida con frecuencia acaban con cachés apt meses desactualizadas porque nadie ejecuta rutinariamente <code>apt update</code> dentro de ellos. Sin el refresh, <code>apt list --upgradable</code> reporta 0 updates desde una snapshot congelada y el operador nunca ve el backlog. El umbral coincide con el resto del ciclo de chequeo — si el CT se refrescó en las últimas 24 h, ProxMenux confía en esa señal y se salta el refresh.",
+    "toggleTitle": "Toggle de notificación condicional",
+    "toggleBody": "El toggle de notificación por canal <code>lxc_updates_available</code> en <strong>Notifications → Services</strong> solo se renderiza mientras la detección está activa. Cuando pones la detección en OFF, esa fila desaparece de la lista de categorías de cada canal — pero su preferencia almacenada se preserva en la DB, así que reactivar la detección trae el toggle de vuelta al valor que tenía antes.",
+    "purgeTitle": "Qué se purga al desactivar la detección",
+    "purgeBody": "Apagar el switch elimina inmediatamente cada entrada <code>type=lxc</code> de <code>/usr/local/share/proxmenux/managed_installs.json</code>. Las insignias de la pestaña Hardware caen a cero en el siguiente refresco del panel. Volver a activarlo repuebla el registro en el siguiente ciclo de detección (o antes si disparas un refresh manual desde la API)."
+  },
+  "storageExclusions": {
+    "heading": "Remote Storage Exclusions",
+    "imageAlt": "Tarjeta Remote Storage Exclusions listando almacenamientos PBS-Cloud, PBS y PBS2 con toggles Health y Alerts por fila",
+    "imageCaption": "Toggles <em>Health</em> y <em>Alerts</em> por almacenamiento. Los almacenamientos con ambos toggles en off dejan de contar contra el Monitor de salud y dejan de generar notificaciones — pero siguen renderizándose en la pestaña Almacenamiento marcados como excluidos.",
+    "intro": "Marca los almacenamientos gestionados por Proxmox (NFS / CIFS / PBS / Ceph / iSCSI / etc.) como excluidos de monitorización. Dos toggles independientes por almacenamiento:",
+    "items": [
+      "<strong>Health</strong> — cuando está off, el almacenamiento deja de contribuir a la categoría Almacenamiento del Monitor de salud. Útil para volúmenes de archivo que están intencionadamente offline la mayor parte del tiempo o destinos de backup remotos que solo se encienden a horario.",
+      "<strong>Alerts</strong> — cuando está off, las alertas sobre este almacenamiento dejan de salir a través de los canales configurados, aunque los chequeos Health sigan activos. Útil cuando quieres la vista del panel pero no las notificaciones."
+    ],
+    "outro": "Los almacenamientos excluidos siguen renderizándose en la <link>pestaña Almacenamiento</link> con una insignia morada <em>excluded</em> para que la entrada no desaparezca silenciosamente de tu inventario. El estado se persiste en la tabla SQLite <code>excluded_storages</code>."
+  },
+  "interfaceExclusions": {
+    "heading": "Network Interface Exclusions",
+    "imageAlt": "Tarjeta Network Interface Exclusions listando vmbr0, vmbr1, vmbr2, bond0 y eno1 con toggles Health y Alerts por interfaz",
+    "imageCaption": "La misma forma que Storage Exclusions — toggles <em>Health</em> y <em>Alerts</em> por interfaz. Cada fila muestra la interfaz, insignia de tipo (bridge / bond / física), la IP y la velocidad del enlace.",
+    "intro": "La misma forma que Storage Exclusions pero para interfaces de red. Por interfaz: excluir de los chequeos Health y/o excluir de las notificaciones. Casos de uso típicos:",
+    "items": [
+      "Un bridge spare intencionadamente down.",
+      "Una NIC que se retiró físicamente pero sigue referenciada en <code>/etc/network/interfaces</code>.",
+      "Una sub-interfaz VLAN usada solo durante ventanas de mantenimiento.",
+      "Un bridge de gestión que está up pero no lleva tráfico — flappeando ruidosamente en cada ciclo."
+    ],
+    "outro": "El estado se persiste en la tabla SQLite <code>excluded_interfaces</code>. La misma insignia morada <em>excluded</em> en la <link>pestaña Red</link> para que las interfaces excluidas sigan visibles."
+  },
+  "notifications": {
+    "heading": "Notificaciones e IA",
+    "body1": "Esta sección de la pestaña Settings es donde se activan las notificaciones de ProxMenux Monitor y el reescritor con IA. Pulsar <em>Enable Notifications</em> arranca el hilo de envío en background, registra un target de webhook de Proxmox VE en el host para que los eventos emitidos por PVE fluyan al mismo pipeline y despliega el formulario de canales para que puedas conectar Telegram, Discord, Email, Gotify y el resto. El reescritor con IA vive dentro del mismo panel como una sección avanzada colapsable.",
+    "body2": "Ambas superficies tienen muchas piezas en movimiento — canales, toggles por evento, mensajes Rich, el Display Name, el pipeline de envío (dedup, cooldown, agregación, quiet hours), la integración del webhook PVE, proveedores de IA, modos de prompt — y viven en sus propias páginas dedicadas en lugar de repetirse aquí:",
+    "items": [
+      "<notifLink>Notificaciones</notifLink> — recorridos por canal (Telegram, Discord, Gotify, Email + app passwords de Gmail / Microsoft, ntfy, Slack, Teams, webhook genérico), categorías por evento, mensajes Rich, Display Name, pipeline de envío, integración del webhook PVE, historial y API.",
+      "<aiLink>Asistente de IA</aiLink> — proveedores (OpenAI, Anthropic, Gemini, Groq, OpenRouter, Ollama), selección de modelo, modos de prompt (default / custom), idioma de salida, niveles de detalle por canal y sugerencias de IA."
+    ]
+  },
+  "optimizations": {
+    "heading": "ProxMenux Optimizations",
+    "intro": "Un inventario en vivo y transparente de cada optimización post-instalación de ProxMenux actualmente activa en el host. Cada vez que aplicas una opción post-instalación desde el lado Scripts — ya sea vía el <autoLink>Automated post-install</autoLink> o vía el <customLink>Customizable post-install</customLink> a la carta — el script correspondiente se registra a sí mismo en <code>/usr/local/share/proxmenux/installed_tools.json</code>. El Monitor lee ese archivo y renderiza esta tarjeta para que veas, de un vistazo, qué se ha cambiado en tu servidor.",
+    "imageAlt": "Tarjeta ProxMenux Optimizations con rejilla de herramientas instaladas, cada fila mostrando un punto verde, nombre de la herramienta y versión. Ejemplos incluyen APT IPv4 Force, Bashrc Customization, Fastfetch, Log2ram SSD Protection, Memory Settings Optimization, Setting persistent network interfaces, System Limits Increase, APT Language Skip, Entropy Generation haveged con insignia Legacy, Kernel Panic Configuration, Logrotate Optimization, Network Optimizations, Subscription Banner Removal, VFIO IOMMU Passthrough — 14 activas en total",
+    "imageCaption": "La tarjeta lista cada optimización activa con su nombre, versión, un punto coloreado y un contador naranja <em>14 active</em> arriba a la derecha. Las herramientas cuyo source es alcanzable son pulsables.",
+    "dotsTitle": "Qué significan los puntos",
+    "dotsItems": [
+      "<green/> <strong>Punto verde</strong> — optimización actual, registrada por la versión activa de ProxMenux. El código fuente es alcanzable: pulsa la fila para abrirlo.",
+      "<amber/> <strong>Punto ámbar + insignia <em>legacy</em></strong> — aplicada por una versión más vieja de ProxMenux cuyo script ha sido renombrado o reemplazado desde entonces. Sigue activa en el host; el source abre en modo \"legacy\" (con un acento ámbar) para que puedas auditar qué se ejecutó realmente."
+    ],
+    "clickTitle": "Acceso al código fuente",
+    "clickBody": "Pulsar una herramienta abre una modal con la función bash exacta que aplicó el cambio, más la ruta del archivo de script en el que vive (<code>auto_post_install.sh</code> para el bundle Automated, <code>customizable_post_install.sh</code> para el lado à la carte). Los comentarios y constructos de shell tienen syntax highlighting; un botón Copy pone el source en tu portapapeles. Esta es la superficie \"muestra tu trabajo\" — verifica lo que ProxMenux le hizo a tu host antes de cualquier cambio manual que añadas encima.",
+    "detailAlt": "Modal de código fuente de herramienta para APT IPv4 Force mostrando la función bash force_apt_ipv4 desde customizable_post_install.sh versión 1.0 con código resaltado que configura /etc/apt/apt.conf.d/99-force-ipv4 con Acquire ForceIPv4 true, registra la herramienta y emite un mensaje translate APT IPv4 configuration completed",
+    "detailCaption": "Modal de source para <em>APT IPv4 Force</em> — función <code>force_apt_ipv4()</code> exacta de <code>customizable_post_install.sh v1.0</code>, con syntax highlighting y un Copy de un clic.",
+    "whyTitle": "Por qué importa esto",
+    "whyBody": "ProxMenux cambia cosas en tu host: parámetros de kernel, configuración de repositorios, bits de red, rotación de logs, passthrough de GPU, etc. Saber exactamente qué está activo es esencial antes de empezar a añadir customización manual encima — y aún más si un admin distinto opera el host del que lo montó. Esta tarjeta es el registro auditable de cada optimización actualmente en efecto, con el código exacto que la produjo.",
+    "updatesTitle": "Banner Updates available",
+    "updatesBody": "Cuando una optimización post-instalación tiene en disco una versión más nueva que la actualmente registrada en el host, la tarjeta muestra un banner \"Updates available\" arriba con el recuento y un botón <strong>Apply</strong>. Pulsar <strong>Apply</strong> abre un selector por optimización (el mismo disponible desde la entrada <em>Apply available updates</em> del menú Post-Install). Elige qué optimizaciones aplicar; ProxMenux relanza la función correspondiente y refresca la versión en el registro. Cuando todo está al día, el banner desaparece.",
+    "updatesAlt": "Tarjeta ProxMenux Optimizations con un banner Updates available arriba — recuento de updates pendientes más un botón Apply que abre el selector por optimización",
+    "updatesCaption": "El banner solo se renderiza cuando al menos una optimización tiene una versión más nueva en disco. Mira <link>Apply Available Updates</link> para el flujo completo de update y el equivalente Path-A en el menú de la shell.",
+    "revertTitle": "Revertir una optimización",
+    "revertBody": "La tarjeta es de solo lectura — para deshacer una optimización, ejecuta la opción correspondiente <link>Uninstall Optimizations</link> del menú ProxMenux Scripts. El paso de desinstalación elimina la entrada de <code>installed_tools.json</code>, así que desaparece de esta tarjeta en el siguiente refresco."
+  },
+  "dataCollected": {
+    "heading": "Cómo se recopilan los datos",
+    "headerCard": "Tarjeta",
+    "headerEndpoint": "Endpoint",
+    "headerSource": "Fuente",
+    "rows": [
+      {
+        "card": "Network Units",
+        "endpoint": "/api/settings",
+        "source": "Persistido en la tabla SQLite de settings del panel."
+      },
+      {
+        "card": "Duraciones del Monitor de salud",
+        "endpoint": "/api/health/settings",
+        "source": "Duraciones de supresión por categoría en la DB de Health."
+      },
+      {
+        "card": "Exclusiones de almacenamiento / interfaz",
+        "endpoint": "/api/storage/exclusions, /api/network/exclusions",
+        "source": "Tablas SQLite <code>excluded_storages</code> y <code>excluded_interfaces</code>."
+      },
+      {
+        "card": "Panel Notificaciones e IA",
+        "endpoint": "/api/notifications/*",
+        "source": "Mira las páginas dedicadas <notifLink>Notificaciones</notifLink> / <aiLink>Asistente de IA</aiLink>."
+      },
+      {
+        "card": "Lista ProxMenux Optimizations",
+        "endpoint": "/api/proxmenux/installed-tools",
+        "source": "Lee <code>/usr/local/share/proxmenux/installed_tools.json</code>, escrito por llamadas <code>register_tool</code> dentro de los scripts post-instalación."
+      },
+      {
+        "card": "Modal de código fuente de optimización",
+        "endpoint": "/api/proxmenux/tool-source",
+        "source": "Extrae la función bash correspondiente de <code>auto_post_install.sh</code> o <code>customizable_post_install.sh</code> en el host."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Por dónde seguir",
+    "items": [
+      {
+        "label": "Notificaciones",
+        "href": "/docs/monitor/notifications",
+        "tail": " — canales, toggles por evento, overrides de canal, historial, test-send."
+      },
+      {
+        "label": "Asistente de IA",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": " — proveedores, modelos, modos de prompt, idiomas, niveles de detalle por canal."
+      },
+      {
+        "label": "Monitor de salud → Descartar alertas y la Suppression Duration",
+        "href": "/docs/monitor/health-monitor#dismissing-alerts-and-the-suppression-duration",
+        "tail": " — la semántica detrás de los desplegables por categoría de arriba."
+      },
+      {
+        "label": "ProxMenux Scripts → Automated post-install",
+        "href": "/docs/post-install/automated",
+        "tailRich": " y <customLink>Customizable post-install</customLink> — los scripts reales que se registran en la lista de optimizaciones de arriba."
+      },
+      {
+        "label": "Uninstall Optimizations",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — cómo revertir una optimización registrada arriba."
+      },
+      {
+        "label": "Índice del panel",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — volver al resumen de la pestaña."
+      }
+    ]
+  }
+}

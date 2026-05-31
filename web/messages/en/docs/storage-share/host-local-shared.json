@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "title": "Host: Add shared directory on Host | ProxMenux Documentation",
+    "description": "Create a host directory ready for LXC bind mounts, with permissions that work for privileged and unprivileged containers at once. Sticky bit + world-rwx + ACLs for default inheritance.",
+    "ogTitle": "Host: Add shared directory on Host | ProxMenux Documentation",
+    "ogDescription": "Prepare a host directory for LXC bind mounts with permissions compatible with privileged and unprivileged CTs."
+  },
+  "header": {
+    "title": "Host: Add shared directory on Host",
+    "description": "Create a host directory designed to be bind-mounted into one or more LXC containers. ProxMenux applies a set of permissions that works for both privileged and unprivileged CTs at once — no shifted UID headache, no per-container chowns — and registers the directory so the LXC Mount Manager can pick it up later.",
+    "section": "Storage & Share · Host"
+  },
+  "intro": {
+    "title": "What this is (and is NOT)",
+    "body": "This tool does <strong>not</strong> register anything in Proxmox (no <code>pvesm add</code> here). It just prepares a directory on the host — <code>/mnt/shared</code>, by default — with permissions that any LXC container can read and write, regardless of whether the CT is privileged or unprivileged. The usual next step is to bind-mount it into each CT with the <mountLink>LXC Mount Manager</mountLink>."
+  },
+  "why": {
+    "heading": "Why a dedicated tool for this",
+    "intro": "When you bind-mount a host directory into an LXC container, permissions depend on:",
+    "items": [
+      "Whether the CT is <strong>privileged</strong> (UID 0 in CT = UID 0 on host) or <strong>unprivileged</strong> (UID 0 in CT = UID 100000 on host — everything is shifted by +100000).",
+      "The ownership of the host directory (a file owned by UID 1000 on the host appears as \"others\" from the perspective of an unprivileged CT, because no CT user maps to host UID 1000).",
+      "Whether multiple CTs share the same directory (different CTs may have different UID ranges)."
+    ],
+    "outro": "The pragmatic trick ProxMenux uses here is to <strong>give everybody access</strong> at the filesystem level: world-rwx plus the sticky bit, plus ACLs so new files inherit the same permissions. Any mapped UID can read and write; no UID / GID alignment is required."
+  },
+  "howRuns": {
+    "heading": "How the script runs",
+    "body": "The script has no main menu — it runs a single action, <strong>Create shared directory</strong>. Phase 1 collects the target path; Phase 2 creates the directory and applies permissions."
+  },
+  "bits": {
+    "heading": "What each permission bit does",
+    "intro": "The number <strong>1777</strong> is not arbitrary — it's the same mode Linux uses for <code>/tmp</code>. Three properties combined:",
+    "headerBit": "Bit",
+    "headerEffect": "Effect",
+    "headerWhy": "Why it matters here",
+    "rows": [
+      {
+        "bit": "1 (sticky)",
+        "effect": "Only the file owner can delete / rename a file.",
+        "why": "Prevents CT-A from deleting files created by CT-B in the same directory."
+      },
+      {
+        "bit": "777 (rwx-rwx-rwx)",
+        "effect": "Everyone can read, write and traverse.",
+        "why": "Unprivileged CT UIDs (100000+) appear as \"others\" from the host, so world-rwx gives them access."
+      },
+      {
+        "bit": "ACLs (default)",
+        "effect": "Inherited on every newly created file / subdir.",
+        "why": "The permissions apply forever — new content keeps the open profile without re-running the script."
+      }
+    ],
+    "privTitle": "Privileged CTs see the same thing, just without the shift",
+    "privBody": "For a privileged CT, UID 0 in the CT is UID 0 on the host, so <code>root</code> inside the CT can read / write the host directory directly. <code>1777</code> is still fine — it just means non-root users inside the CT can also use the directory. The same permissions cover both cases."
+  },
+  "where": {
+    "heading": "Where to put the shared directory",
+    "intro": "The location picker offers four options:",
+    "opt1Title": "1. Create new folder in /mnt",
+    "opt1Body": "The usual choice. ProxMenux auto-suggests the first free name (<code>shared</code>, <code>shared2</code>, <code>shared3</code>, …). You just confirm or type a different name.",
+    "opt2Title": "2. Enter custom path",
+    "opt2Body": "For directories outside <code>/mnt</code>. Any absolute path works (e.g. <code>/srv/media</code>, <code>/data/family</code>). The script applies the same permissions.",
+    "opt3Title": "3. View existing folders in /mnt",
+    "opt3Body": "Read-only diagnostic: lists every directory under <code>/mnt</code> with its permissions, owner and available space. Useful before creating a new one to avoid name collisions.",
+    "opt4Title": "4. Cancel",
+    "opt4Body": "Exits without creating anything. Same as pressing <kbd>Esc</kbd>.",
+    "tipTitle": "Where does /mnt live?",
+    "tipBody": "By default <code>/mnt</code> sits on the Proxmox root filesystem. If you want the shared directory on a different disk (a data disk, a ZFS pool), mount that disk under <code>/mnt/&lt;name&gt;</code> first (Disk Manager or <diskLink>Add local disk as Proxmox storage</diskLink>), and then create the shared directory as a subfolder inside it — or pick \"Enter custom path\" here and point to the mounted disk."
+  },
+  "manual": {
+    "heading": "Manual equivalent",
+    "body": "The whole flow can be replayed by hand:"
+  },
+  "next": {
+    "heading": "Next step: bind-mount into containers",
+    "body": "Creating the directory only prepares it — no container sees it yet. To make it visible inside one or more LXCs, use the <mountLink>LXC Mount Manager</mountLink> to bind-mount <code>/mnt/&lt;name&gt;</code> into the CTs. Because the permissions are already open, the Mount Manager will <strong>not</strong> offer to change them — the directory is ready to use as-is."
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "mkdirTitle": "\"Failed to create directory\"",
+    "mkdirBody": "Usually a filesystem issue: <code>/mnt</code> is on a read-only filesystem, the path contains a component that is not a directory (e.g. you typed <code>/etc/passwd/sub</code>), or disk is full. Check with <code>df -h /mnt</code> and <code>mount | grep /mnt</code>.",
+    "writeTitle": "Container cannot write despite open permissions",
+    "writeBody": "Double-check the CT is actually using the bind mount (<code>pct config &lt;ctid&gt; | grep ^mp</code>). Inside the CT, run <code>touch /mnt/data/test-$(date +%s)</code> — if this fails with permission denied, the mount may be on a host filesystem that does not honour ACLs (some older <code>ext3</code> or <code>vfat</code> mounts). Move the shared directory to an ext4 / xfs / btrfs / zfs backing.",
+    "aclTitle": "ACL commands silently unavailable",
+    "aclBody": "On a minimal Proxmox install <code>setfacl</code> / <code>getfacl</code> may not be installed. The script falls back gracefully (<code>command -v setfacl</code> check) and applies POSIX permissions only — which is often enough, but new files will not automatically inherit the permissive profile. Install <code>acl</code> with <code>apt-get install -y acl</code> and re-run the script on the directory."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "LXC Mount Manager",
+        "tail": " — the natural next step: bind-mount this directory into one or more containers."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Add local disk as Proxmox storage",
+        "tailRich": " — if you want the shared directory on a dedicated disk, prepare the disk first, mount it under <code>/mnt</code>, then create the shared subfolder here."
+      }
+    ]
+  }
+}
