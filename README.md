@@ -24,7 +24,7 @@
 <div align="center" style="margin-top: 14px;">
     <a href="https://github.com/MacRimi/ProxMenux/releases/latest"><img src="https://img.shields.io/github/v/release/MacRimi/ProxMenux?display_name=tag&label=latest&color=2A3A5D&style=flat-square" alt="Latest release" /></a>
     <a href="https://github.com/MacRimi/ProxMenux/releases?q=prerelease%3Atrue"><img src="https://img.shields.io/github/v/release/MacRimi/ProxMenux?include_prereleases&label=beta&color=E64804&style=flat-square" alt="Latest beta" /></a>
-    <a href="https://github.com/MacRimi/ProxMenux/blob/main/LICENSE"><img src="https://img.shields.io/github/license/MacRimi/ProxMenux?color=2A3A5D&style=flat-square" alt="License" /></a>
+    <a href="https://github.com/MacRimi/ProxMenux/blob/main/LICENSE"><img src="https://img.shields.io/github/license/MacRimi/ProxMenux?color=2A3A5D&style=flat-square&cacheSeconds=300" alt="License" /></a>
     <a href="https://github.com/MacRimi/ProxMenux/stargazers"><img src="https://img.shields.io/github/stars/MacRimi/ProxMenux?style=flat-square" alt="GitHub stars" /></a>
     <a href="https://github.com/MacRimi/ProxMenux/issues"><img src="https://img.shields.io/github/issues/MacRimi/ProxMenux?color=2A3A5D&style=flat-square" alt="Open issues" /></a>
 </div>
