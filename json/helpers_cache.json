@@ -10275,6 +10275,41 @@
     "os": "debian"
   },
   {
+    "name": "MatterJS-Server",
+    "slug": "matterjs-server",
+    "desc": "JavaScript-based Matter controller server (successor to Python Matter Server). Provides a WebSocket API compatible with the Home Assistant Matter integration.",
+    "script": "ct/matterjs-server.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/matterjs-server.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/matterjs-server.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00016"
+    ],
+    "category_names": [
+      "IoT & Smart Home"
+    ],
+    "notes": [
+      "For Matter-over-Thread (Thread Border Router), IPv6 must be enabled in the LXC container."
+    ],
+    "warnings": [
+      "This is a Beta version. Not yet officially CSA-certified."
+    ],
+    "port": 5580,
+    "website": "https://github.com/matter-js/matterjs-server",
+    "documentation": "https://github.com/matter-js/matterjs-server",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/matter.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Mattermost",
     "slug": "mattermost",
     "desc": "Mattermost is an open source platform for secure collaboration across the entire software development lifecycle. It's written in Go and React and runs as a single Linux binary with MySQL or PostgreSQL. It has a slimilar interface and features to Slack or Discord.",
