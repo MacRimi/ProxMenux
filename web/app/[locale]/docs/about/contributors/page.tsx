@@ -54,6 +54,27 @@ const contributors: Contributor[] = [
     roleKey: "testing",
     avatar: "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/avatars/Kamunhas.png",
   },
+  // Added 2026-05-31 after the v1.2.2 release.
+  {
+    name: "heriberto",
+    roleKey: "testing",
+    avatar: "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/avatars/heriberto.png",
+  },
+  {
+    name: "JF_Car",
+    roleKey: "testing",
+    avatar: "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/avatars/JF_Car.png",
+  },
+  {
+    name: "rafapuerta",
+    roleKey: "testing",
+    avatar: "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/avatars/rafapuerta.png",
+  },
+  {
+    name: "JcMinarro",
+    roleKey: "testing",
+    avatar: "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/avatars/JcMinarro.png",
+  },
 ]
 
 export default async function ContributorsPage({ params }: { params: Promise<{ locale: string }> }) {
