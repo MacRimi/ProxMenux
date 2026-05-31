@@ -11,6 +11,7 @@ from pathlib import Path
 from collections import deque
 from flask import Blueprint, jsonify, request
 from notification_manager import notification_manager, SENSITIVE_PLACEHOLDER, validate_external_url
+from notification_channels import CHANNEL_TYPES as _NOTIF_CHANNEL_TYPES
 from jwt_middleware import require_auth
 
 
@@ -175,14 +176,18 @@ _TIMESTAMP_MAX_DRIFT = 60
 
 # ─── Input validation whitelists ──────────────────────────────────
 # Used by the mutating routes (test, send) and the history filter.
-# `severity` is small enough to whitelist; `channel` mirrors
-# `notification_channels.CHANNEL_TYPES` plus 'all' for test_channel.
+# `severity` is small enough to whitelist; `channel` is derived live
+# from `notification_channels.CHANNEL_TYPES` (plus 'all' for the
+# fan-out test endpoint) so adding a new channel implementation can't
+# silently regress the validator — caught 2026-05-31 when 'apprise'
+# was missing from a hard-coded set and every Apprise test/send
+# returned 400 "Invalid channel" before the channel was even invoked.
 # `event_type` is bounded by length + charset rather than enumerated —
 # the catalogue has 70+ entries and `render_template` already handles
 # unknown event types via a fallback. Audit Tier 3.1 — sin validación
 # de event_type/severity/channel en rutas mutantes.
 _VALID_SEVERITIES = {'info', 'warning', 'critical', 'error', 'INFO', 'WARNING', 'CRITICAL', 'ERROR'}
-_VALID_CHANNELS = {'all', 'telegram', 'gotify', 'discord', 'email'}
+_VALID_CHANNELS = {'all'} | set(_NOTIF_CHANNEL_TYPES.keys())
 import re as _re_validate
 _EVENT_TYPE_RE = _re_validate.compile(r'^[a-zA-Z0-9_]{1,64}$')
 
