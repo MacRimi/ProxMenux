@@ -16,7 +16,12 @@ APPIMAGE_NAME="ProxMenux-${VERSION}.AppImage"
 
 echo "🚀 Building ProxMenux Monitor AppImage v${VERSION} with hardware monitoring tools..."
 
-APPIMAGETOOL_CACHE="/var/cache/proxmenux-build/appimagetool"
+# Cache the downloaded appimagetool across builds. Prefer the XDG user
+# cache so this works the same way under root (local .50 build) and
+# under the non-root GitHub Actions runner — previously hardcoded to
+# /var/cache/, which the CI user can't write to (mkdir Permission
+# denied → build aborted before doing any actual work).
+APPIMAGETOOL_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/proxmenux-build/appimagetool"
 
 # Preserve a cached copy of appimagetool across builds. wget -q has bitten
 # us repeatedly when GitHub momentarily rate-limits or the runner has no
