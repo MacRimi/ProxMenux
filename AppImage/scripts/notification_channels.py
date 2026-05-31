@@ -11,13 +11,14 @@ Author: MacRimi
 """
 
 import json
+import logging
 import time
 import urllib.request
 import urllib.error
 import urllib.parse
 from abc import ABC, abstractmethod
 from collections import deque
-from typing import Tuple, Optional, Dict, Any
+from typing import Tuple, Optional, Dict, Any, List
 
 
 # Server-side defense-in-depth for user-supplied URLs in channel configs.
@@ -1023,6 +1024,66 @@ class EmailChannel(NotificationChannel):
 
 # ─── Apprise ─────────────────────────────────────────────────────
 
+class _AppriseLogCapture(logging.Handler):
+    """Buffers records emitted by the `apprise` logger during a single
+    notify() call so the surrounding channel can surface the real
+    failure reason — e.g. "error=400" plus the destination's response
+    body — instead of the opaque "transport failure" string
+    apprise.notify() leaves behind on a False return.
+
+    Captures everything at DEBUG so the response body (which apprise's
+    custom_json plugin logs only at DEBUG) is available; `summary()`
+    keeps the output bounded for UI display."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.records: List[logging.LogRecord] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            self.records.append(record)
+        except Exception:
+            pass
+
+    def summary(self) -> str:
+        """Concise digest of the captured records — WARNING+ messages
+        first (the failure reason), then a single "Response Details"
+        DEBUG line if present (the destination's reply body, useful for
+        decoding 400s like `{"error": "field X missing"}`). Capped per
+        line so a noisy plugin can't blow past the 200-char truncation
+        `_send_with_retry` applies on the way out."""
+        warn_msgs: List[str] = []
+        response_body: str = ''
+        for r in self.records:
+            try:
+                msg = r.getMessage()
+            except Exception:
+                continue
+            if not msg:
+                continue
+            if r.levelno >= logging.WARNING:
+                if msg not in warn_msgs:
+                    warn_msgs.append(msg[:160])
+            elif 'Response Details' in msg and not response_body:
+                # Plugin logs the body as `Response Details:\r\n%r` — the
+                # %r already wraps the bytes in repr(b'…'), strip it for
+                # readability.
+                body = msg.split('Response Details:', 1)[1].strip()
+                if body.startswith(("b'", 'b"')):
+                    body = body[2:]
+                if body.endswith(("'", '"')):
+                    body = body[:-1]
+                body = body.replace('\\r\\n', ' ').replace('\\n', ' ').strip()
+                if body:
+                    response_body = body[:300]
+        parts: List[str] = []
+        if warn_msgs:
+            parts.extend(warn_msgs)
+        if response_body:
+            parts.append(f'response: {response_body}')
+        return ' | '.join(parts)
+
+
 class AppriseChannel(NotificationChannel):
     """Apprise meta-channel — a single URL talks to ~80 services.
 
@@ -1104,6 +1165,26 @@ class AppriseChannel(NotificationChannel):
                 # Shouldn't happen — validate_config caught it above —
                 # but defend in depth so the retry loop reports cleanly.
                 return 0, 'apprise library not available'
+
+            # Capture Apprise's internal logger during notify(). When the
+            # plugin (jsons://, ntfy://, slack://, ...) gets a non-2xx
+            # from the destination it logs at WARNING with the HTTP
+            # status code — e.g. "Failed to send JSON POST notification:
+            # error=400.". Without this capture, `notify()` just returns
+            # False and we'd surface a useless "transport failure" with
+            # no clue why. Reported by a beta user on 2026-05-30: jsons://
+            # → HTTP 400 from their webhook, no way to see the 400 in
+            # the Monitor UI.
+            apprise_logger = logging.getLogger('apprise')
+            handler = _AppriseLogCapture()
+            handler.setLevel(logging.DEBUG)
+            prev_level = apprise_logger.level
+            apprise_logger.addHandler(handler)
+            # Drop the logger to DEBUG only while notify() runs so we
+            # also capture the destination's response body (apprise
+            # plugins emit that line at DEBUG). _AppriseLogCapture.summary
+            # caps the included output, so this doesn't flood the UI.
+            apprise_logger.setLevel(logging.DEBUG)
             try:
                 apobj = apprise.Apprise()
                 apobj.add(self.url)
@@ -1112,15 +1193,23 @@ class AppriseChannel(NotificationChannel):
                     title=title or '',
                     notify_type=self._severity_to_notify_type(apprise, severity),
                 )
-                # `notify` returns True iff at least one target accepted
-                # the message. False means every URL endpoint rejected
-                # — we don't get a per-URL status code back, hence the
-                # opaque "Apprise rejected the notification".
-                if sent:
-                    return 200, ''
-                return 500, 'Apprise rejected the notification (transport failure)'
             except Exception as e:
+                apprise_logger.removeHandler(handler)
+                apprise_logger.setLevel(prev_level)
                 return 0, str(e)
+            apprise_logger.removeHandler(handler)
+            apprise_logger.setLevel(prev_level)
+
+            if sent:
+                return 200, ''
+
+            # `notify` returns False iff every URL endpoint rejected.
+            # Surface the warnings the apprise plugin emitted so the
+            # operator can see the actual HTTP status / reason.
+            detail = handler.summary()
+            if not detail:
+                detail = 'destination rejected the notification (no detail from apprise)'
+            return 500, detail
 
         result = self._send_with_retry(_send_via_apprise)
         result['channel'] = 'apprise'
