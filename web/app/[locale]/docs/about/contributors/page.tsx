@@ -61,9 +61,9 @@ const contributors: Contributor[] = [
     avatar: "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/avatars/heriberto.png",
   },
   {
-    name: "JF_Carr",
+    name: "JF_Car",
     roleKey: "testing",
-    avatar: "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/avatars/JF_Carr.png",
+    avatar: "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/avatars/JF_Car.png",
   },
   {
     name: "rafapuerta",
