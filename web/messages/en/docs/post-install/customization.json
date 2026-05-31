@@ -1,0 +1,74 @@
+{
+  "meta": {
+    "title": "Post-Install: Customization | ProxMenux Documentation",
+    "description": "Customization options in the ProxMenux Customizable post-install script: a colored bash prompt with useful aliases, a ProxMenux banner in the MOTD, and the option to remove the Proxmox subscription nag from the web interface."
+  },
+  "header": {
+    "title": "Post-Install: Customization",
+    "description": "Cosmetic and quality-of-life tweaks for the Proxmox host. None of them change functional behaviour — they just make the shell nicer to use and hide the subscription nag in the web UI. All three are tracked and reversible from the Uninstall menu.",
+    "section": "Settings post-install Proxmox"
+  },
+  "intro": {
+    "title": "What this category covers",
+    "body": "Three small, independent options: a <strong>colored bash prompt + aliases</strong> for the root shell, a one-line <strong>MOTD banner</strong> visible on SSH login, and removal of the <strong>\"No valid subscription\" popup</strong> that Proxmox shows on every login to the web UI."
+  },
+  "bashrc": {
+    "heading": "Customize bashrc",
+    "intro": "Injects a curated block into <code>/root/.bashrc</code> with a colored prompt, timestamped history, standard <code>ls</code> / <code>grep</code> aliases, and a <code>source</code> for bash completion. Makes working over SSH noticeably more pleasant and makes it obvious which host you're on when you have many tabs open.",
+    "writesTitle": "What ProxMenux adds to .bashrc",
+    "writesOutro": "The block is delimited by the <code>PMX_CORE_BASHRC</code> markers. Running the script again replaces the previous block instead of duplicating it. The original <code>.bashrc</code> is backed up once to <code>/root/.bashrc.bak</code>, and a <code>source /root/.bashrc</code> line is appended to <code>/root/.bash_profile</code> so the prompt also applies on login shells (e.g. after <code>su -</code>).",
+    "rootTitle": "Applies to root only",
+    "rootBody": "The customization targets the root account's shell. Other users you create on the host keep their own defaults. If you administer Proxmox exclusively over the web UI and never use the shell, this option is pure aesthetics and you can skip it."
+  },
+  "motd": {
+    "heading": "Set up custom MOTD banner",
+    "intro": "Prepends <em>\"This system is optimised by: ProxMenux\"</em> to <code>/etc/motd</code>, the message shown after a successful SSH login (above the shell prompt, before any <code>update-motd</code> scripts run). Harmless and purely informational — useful as a quick visual confirmation that ProxMenux has been applied on this host.",
+    "writesTitle": "What ProxMenux writes",
+    "writesOutro": "Original <code>/etc/motd</code> is backed up to <code>/etc/motd.bak</code> on first apply. The operation is idempotent: if the marker line is already present, nothing is added."
+  },
+  "banner": {
+    "heading": "Remove subscription banner",
+    "intro": "Removes the <em>\"You do not have a valid subscription for this server\"</em> modal that pops up every time someone logs into the Proxmox web UI without an enterprise subscription. The patch is version-aware: different Proxmox major versions have different UI bundles, so ProxMenux dispatches to the right script.",
+    "versionTitle": "Version-aware dispatch",
+    "versionItems": [
+      "<strong>PVE 9.x</strong> → runs <code>remove-banner-pve-v3.sh</code> (patches both the desktop <code>proxmoxlib.js</code> and the new Yew-based mobile UI).",
+      "<strong>PVE 8.x</strong> → runs <code>remove-banner-pve8.sh</code> (desktop-only)."
+    ],
+    "versionOutro": "Before patching, ProxMenux backs up the original JS/template files to <code>/usr/local/share/proxmenux/backups/</code> with a timestamp. The Uninstall flow uses those backups to restore the original files, and falls back to reinstalling the Proxmox UI packages if the backup is missing or corrupt.",
+    "breakTitle": "Can break after Proxmox updates",
+    "breakBody": "Proxmox regularly ships UI updates that overwrite <code>proxmoxlib.js</code>. When that happens, the banner comes back. You can re-apply this option after every Proxmox update to re-patch the file, or just accept the nag until you reapply. ProxMenux also installs an APT hook that auto-re-patches on package upgrades — see <link>Uninstall Optimizations</link> for how that hook is reversed.",
+    "legalTitle": "Legal note (always worth repeating)",
+    "legalBody": "This option only hides the UI nag. It does <strong>not</strong> grant you enterprise support, access to the enterprise repository, or any rights to ship Proxmox commercially without a subscription. If you run Proxmox in a revenue-generating environment, buy a subscription — it supports the project and gets you the stable enterprise channel."
+  },
+  "verify": {
+    "heading": "Verification",
+    "intro": "After applying all three:",
+    "reversibleTitle": "All three are reversible",
+    "reversibleBody": "<link>Uninstall Optimizations</link> restores <code>/root/.bashrc</code> and <code>/etc/motd</code> from their <code>.bak</code> backups, and either restores the patched UI files from the backup directory or reinstalls <code>pve-manager</code>, <code>proxmox-widget-toolkit</code>, <code>libjs-extjs</code> and <code>libpve-http-server-perl</code> with <code>--force-confnew</code> to bring the web UI back to vanilla."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "label": "Optional",
+        "href": "/docs/post-install/optional",
+        "tail": " — Fastfetch and Figurine (other visual customizations)."
+      },
+      {
+        "label": "Show Version Information",
+        "href": "/docs/settings/show-version-information",
+        "tail": " — confirms the customizations are tracked as installed."
+      },
+      {
+        "label": "Uninstall Optimizations",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — revert bashrc, motd, subscription nag."
+      },
+      {
+        "label": "Customizable Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — back to the parent menu."
+      }
+    ]
+  }
+}

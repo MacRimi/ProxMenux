@@ -1,0 +1,297 @@
+{
+  "meta": {
+    "title": "Crear VM: Otros sistemas NAS | ProxMenux Documentation",
+    "description": "Crea máquinas virtuales de TrueNAS SCALE, TrueNAS CORE, OpenMediaVault, XigmaNAS, Rockstor y ZimaOS en Proxmox VE con ProxMenux. Cubre la configuración por defecto / avanzada, el nuevo plan de almacenamiento, el passthrough de GPU opcional y las specs recomendadas por sistema.",
+    "ogTitle": "Crear VM: Otros sistemas NAS | ProxMenux Documentation",
+    "ogDescription": "Crea VMs de TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor y ZimaOS en Proxmox VE con ProxMenux.",
+    "ogImageAlt": "Selector NAS de ProxMenux"
+  },
+  "header": {
+    "title": "Crear VM: Otros sistemas NAS",
+    "description": "ProxMenux puede crear una VM lista para instalar TrueNAS SCALE, TrueNAS CORE, OpenMediaVault, XigmaNAS, Rockstor y ZimaOS. Esta página cubre el flujo de creación compartido (configuración por defecto / avanzada, el nuevo plan de almacenamiento, passthrough de GPU opcional) más notas por sistema y specs recomendadas.",
+    "section": "Máquinas virtuales · NAS"
+  },
+  "intro": {
+    "title": "Cómo se crean estos sistemas",
+    "bodyRich": "Los seis sistemas comparten el mismo asistente de ProxMenux. El selector de NAS elige el instalador correspondiente (autodetectando la última versión estable para TrueNAS, OMV, XigmaNAS y Rockstor) y luego cede el control al configurador genérico de VM y al plan de almacenamiento. ZimaOS usa su propio script de instalador (<code>vm/zimaos.sh</code>) pero sigue la misma secuencia de CPU / RAM / almacenamiento / GPU opcional."
+  },
+  "config": {
+    "heading": "Configuración por defecto vs Avanzada",
+    "intro": "Cuando se selecciona un NAS, ProxMenux pregunta si usar el perfil de VM por defecto o abrir el asistente avanzado. Los valores por defecto están ajustados para cargas NAS — más RAM que una VM Linux normal porque los sistemas basados en ZFS la necesitan para la caché ARC.",
+    "defaultHeading": "Configuración por defecto",
+    "headerParam": "Parámetro",
+    "headerValue": "Valor por defecto",
+    "defaultRowsRich": [
+      {
+        "param": "Machine type",
+        "valueRich": "<code>q35</code>"
+      },
+      {
+        "param": "BIOS",
+        "valueRich": "OVMF (UEFI)<note> — SeaBIOS para OpenMediaVault</note>"
+      },
+      {
+        "param": "CPU type",
+        "valueRich": "Host"
+      },
+      {
+        "param": "Cores",
+        "valueRich": "2"
+      },
+      {
+        "param": "RAM",
+        "valueRich": "8192 MB<note> — 4096 MB para ZimaOS</note>"
+      },
+      {
+        "param": "Bridge",
+        "valueRich": "<code>vmbr0</code>"
+      },
+      {
+        "param": "MAC address",
+        "valueRich": "Generada automáticamente"
+      },
+      {
+        "param": "Start on completion",
+        "valueRich": "No"
+      }
+    ],
+    "advancedHeading": "Configuración avanzada",
+    "advancedIntro": "El asistente avanzado expone cada parámetro de forma individual:",
+    "headerOptions": "Opciones",
+    "advancedRowsRich": [
+      {
+        "param": "Machine type",
+        "optionsRich": "<code>q35</code> o <code>i440fx</code>"
+      },
+      {
+        "param": "BIOS",
+        "optionsRich": "OVMF (UEFI) o SeaBIOS (Legacy)"
+      },
+      {
+        "param": "CPU type",
+        "optionsRich": "Host o KVM64"
+      },
+      {
+        "param": "Cores",
+        "optionsRich": "Número de núcleos de CPU"
+      },
+      {
+        "param": "RAM",
+        "optionsRich": "Memoria asignada a la VM"
+      },
+      {
+        "param": "Bridge",
+        "optionsRich": "Bridge de red"
+      },
+      {
+        "param": "MAC address",
+        "optionsRich": "MAC personalizada"
+      },
+      {
+        "param": "VLAN",
+        "optionsRich": "Tag VLAN (opcional)"
+      },
+      {
+        "param": "MTU",
+        "optionsRich": "Tamaño de la MTU"
+      }
+    ],
+    "zfsCalloutTitle": "ZFS y RAM",
+    "zfsCalloutBody": "TrueNAS SCALE / CORE y XigmaNAS están basados en ZFS. ZFS usa la memoria libre como caché ARC, así que los 8 GB por defecto son un mínimo — súbela a 16 GB o más si tienes pensado guardar algo serio. OMV (ext4/XFS), Rockstor (Btrfs) y ZimaOS son mucho menos exigentes con la memoria."
+  },
+  "storagePlan": {
+    "heading": "Plan de almacenamiento",
+    "intro": "Después de CPU / RAM, ProxMenux abre el menú Storage Plan, donde puedes combinar discos virtuales, discos importados y dispositivos PCI passthrough en la misma VM, añadiendo items uno a uno y terminando cuando hayas acabado.",
+    "virtualHeading": "a. Añadir disco virtual",
+    "virtualItemsRich": [
+      "Lista los volúmenes de almacenamiento Proxmox disponibles en el host.",
+      "Eliges el almacenamiento destino y el tamaño en GB.",
+      "El disco se adjunta a la VM como SATA (<code>sata0</code>, <code>sata1</code>, … hasta 6)."
+    ],
+    "importHeading": "b. Añadir disco importado",
+    "importItemsRich": [
+      "Detecta los discos físicos que es seguro importar (los discos del sistema y protegidos están ocultos).",
+      "Seleccionas uno o varios discos mediante una checklist.",
+      "Los discos importados se adjuntan como SATA mediante <code>qm set</code>."
+    ],
+    "pciHeading": "c. Añadir controladora o NVMe (PCI passthrough)",
+    "pciItemsRich": [
+      "Detecta HBAs SATA/SAS y dispositivos NVMe del host y te deja pasar una <em>controladora entera</em> a la VM. IOMMU debe estar habilitado; el script se ofrece a habilitarlo y reinicia si hace falta.",
+      "Un paso de confirmación advierte del riesgo a nivel de controladora (la tarjeta completa, incluidos todos los discos que tenga, deja de estar en el host).",
+      "Los dispositivos PCI seleccionados se adjuntan mediante <code>qm set hostpciN: …</code>."
+    ],
+    "resetCalloutTitle": "Resetear y terminar",
+    "resetCalloutBodyRich": "El menú también ofrece <strong>r</strong> (resetear la selección actual y empezar de nuevo) y <strong>d</strong> (terminar y continuar). No puedes terminar con un plan vacío."
+  },
+  "gpu": {
+    "heading": "Passthrough de GPU opcional",
+    "bodyRich": "Después del plan de almacenamiento, si se detecta una GPU compatible en el host, ProxMenux ofrece lanzar el asistente de passthrough de GPU. Consulta <link>Añadir GPU a una VM (Passthrough)</link> para ver cómo funciona el asistente — puede que sea necesario reiniciar el host."
+  },
+  "autoFeatures": {
+    "heading": "Funciones automáticas de la VM",
+    "efiTitle": "Disco EFI",
+    "efiBody": "Cuando se selecciona OVMF (UEFI), ProxMenux crea automáticamente un disco EFI de 4 MB en el almacenamiento que elijas, formateado para coincidir con el tipo de almacenamiento (raw para almacenamiento basado en directorio).",
+    "isoTitle": "Montaje de la ISO",
+    "isoBodyRich": "La ISO de instalación se descarga (si hace falta) y se adjunta a <code>ide2</code> como CD-ROM, lista para el primer arranque.",
+    "guestTitle": "QEMU Guest Agent",
+    "guestBody": "El canal del guest agent se habilita en la configuración de la VM. Aún tienes que instalar el agente dentro del guest una vez el SO NAS esté arriba."
+  },
+  "endToEnd": {
+    "heading": "Qué hace el script de principio a fin",
+    "itemsRich": [
+      "Detecta y descarga la última ISO estable (o usa la versión de fallback si el upstream no es accesible).",
+      "Aplica la configuración por defecto o avanzada de CPU / RAM / BIOS / machine type.",
+      "Abre el plan de almacenamiento y adjunta los discos virtuales, discos importados y dispositivos PCI seleccionados.",
+      "Crea un disco EFI si se selecciona UEFI.",
+      "Monta la ISO de instalación en <code>ide2</code>.",
+      "Configura el orden de arranque (primero el disco, luego la ISO).",
+      "Habilita el canal del QEMU Guest Agent.",
+      "Opcionalmente ejecuta el asistente de passthrough de GPU.",
+      "Genera una descripción HTML con estilo adjuntada a la VM.",
+      "Arranca la VM si lo elegiste."
+    ]
+  },
+  "perSystem": {
+    "heading": "Notas por sistema",
+    "shellLabel": "Interfaz shell",
+    "webLabel": "Interfaz web"
+  },
+  "systems": {
+    "truenasScale": {
+      "id": "truenas-scale",
+      "title": "TrueNAS SCALE",
+      "icon": "Database",
+      "officialName": "TrueNAS SCALE",
+      "officialUrl": "https://www.truenas.com/truenas-scale/",
+      "description": "TrueNAS basado en Debian con apps Docker / Kubernetes, Linux KVM y ZFS como filesystem principal. El sucesor moderno de FreeNAS para quien quiere ZFS más un ecosistema de contenedores.",
+      "specs": [
+        "Interfaz recomendada: SATA o SCSI (ambas soportan discard/trim)",
+        "RAM mínima: 8 GB (16 GB+ recomendado para cargas reales)",
+        "Núcleos de CPU mínimos: 2 (4+ recomendado)",
+        "Arranque UEFI (OVMF) recomendado",
+        "Adaptador de red VirtIO para mejor throughput"
+      ],
+      "shellImg": "/vm/truenas/truenas-scale-shell.png",
+      "webImg": "/vm/truenas/truenas-scale-web.png",
+      "shellAlt": "Interfaz shell de TrueNAS SCALE",
+      "webAlt": "Interfaz web de TrueNAS SCALE"
+    },
+    "truenasCore": {
+      "id": "truenas-core",
+      "title": "TrueNAS CORE",
+      "icon": "Database",
+      "officialName": "TrueNAS CORE",
+      "officialUrl": "https://www.truenas.com/truenas-core/",
+      "description": "TrueNAS basado en FreeBSD (el antiguo FreeNAS). Almacenamiento ZFS maduro con jails y plugins, pero sin Docker / Kubernetes. Se está descontinuando en favor de SCALE pero sigue ampliamente desplegado.",
+      "specs": [
+        "Interfaz recomendada: SATA",
+        "RAM mínima: 8 GB (16 GB+ recomendado)",
+        "Núcleos de CPU mínimos: 2 (4+ recomendado)",
+        "Arranque UEFI (OVMF) recomendado",
+        "Adaptador de red VirtIO para mejor throughput"
+      ],
+      "shellImg": "/vm/truenas/truenas-core-shell.png",
+      "webImg": "/vm/truenas/truenas-core-web.png",
+      "shellAlt": "Interfaz shell de TrueNAS CORE",
+      "webAlt": "Interfaz web de TrueNAS CORE"
+    },
+    "openmediavault": {
+      "id": "openmediavault",
+      "title": "OpenMediaVault",
+      "icon": "Server",
+      "officialName": "openmediavault.org",
+      "officialUrl": "https://www.openmediavault.org",
+      "description": "NAS basado en Debian con un sistema modular de plugins. Ligero de recursos y fácil de correr en hardware modesto — la opción natural cuando no necesitas ZFS.",
+      "specs": [
+        "Interfaz recomendada: SATA o VirtIO",
+        "RAM mínima: 2 GB (4 GB+ recomendado)",
+        "Núcleos de CPU mínimos: 1 (2+ recomendado)",
+        "BIOS: ProxMenux por defecto usa SeaBIOS para OMV (cámbialo en Avanzado si hace falta)",
+        "Adaptador de red VirtIO para mejor throughput"
+      ],
+      "shellImg": "/vm/openmediavault/openmediavault-shell.png",
+      "webImg": "/vm/openmediavault/openmediavault-web.png",
+      "shellAlt": "Interfaz shell de OpenMediaVault",
+      "webAlt": "Interfaz web de OpenMediaVault"
+    },
+    "xigmanas": {
+      "id": "xigmanas",
+      "title": "XigmaNAS",
+      "icon": "Database",
+      "officialName": "xigmanas.com",
+      "officialUrl": "https://www.xigmanas.com",
+      "description": "NAS basado en FreeBSD — la continuación directa del código original de FreeNAS (0.7). Centrado en ZFS y simplicidad, con menor huella que TrueNAS.",
+      "specs": [
+        "Interfaz recomendada: SATA o SCSI",
+        "RAM mínima: 4 GB (8 GB+ recomendado para ZFS)",
+        "Núcleos de CPU mínimos: 2",
+        "Arranque UEFI (OVMF) recomendado",
+        "Adaptador de red VirtIO para mejor throughput"
+      ]
+    },
+    "rockstor": {
+      "id": "rockstor",
+      "title": "Rockstor",
+      "icon": "HardDrive",
+      "officialName": "rockstor.com",
+      "officialUrl": "https://rockstor.com",
+      "description": "NAS basado en openSUSE Leap construido en torno a Btrfs. Snapshots, subvolúmenes y el framework de apps Rock-ons (Docker) para multimedia, compartición de archivos y backup.",
+      "specs": [
+        "Interfaz recomendada: SATA o VirtIO",
+        "RAM mínima: 2 GB (4 GB+ recomendado)",
+        "Núcleos de CPU mínimos: 2",
+        "Arranque UEFI (OVMF) recomendado",
+        "Adaptador de red VirtIO para mejor throughput"
+      ],
+      "shellImg": "/vm/rockstor/rockstor-shell.png",
+      "webImg": "/vm/rockstor/rockstor-web.png",
+      "shellAlt": "Interfaz shell de Rockstor",
+      "webAlt": "Interfaz web de Rockstor"
+    },
+    "zimaos": {
+      "id": "zimaos",
+      "title": "ZimaOS",
+      "icon": "MonitorIcon",
+      "officialName": "zimaspace.com",
+      "officialUrl": "https://www.zimaspace.com/zimaos",
+      "description": "SO ligero de NAS / home server construido sobre Debian, con foco en multimedia, apps Docker y domótica. ZimaOS usa un instalador dedicado de ProxMenux (vm/zimaos.sh) que descarga una imagen pre-construida, pero el perfil de la VM sigue el mismo flujo que los otros sistemas NAS.",
+      "specs": [
+        "Interfaz recomendada: SATA o VirtIO",
+        "RAM por defecto: 4 GB (suficiente para multimedia / apps autoalojadas)",
+        "Núcleos de CPU mínimos: 2",
+        "Arranque UEFI (OVMF)",
+        "Adaptador de red VirtIO para mejor throughput"
+      ]
+    }
+  },
+  "related": {
+    "heading": "Relacionado",
+    "itemsRich": [
+      {
+        "href": "/docs/create-vm/system-nas",
+        "label": "Resumen de System NAS",
+        "tail": " — comparativa rápida entre todas las opciones NAS."
+      },
+      {
+        "href": "/docs/create-vm/system-nas/synology",
+        "label": "VM Synology",
+        "tail": " — para el flujo de Synology DSM (Xpenology)."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importar disco a VM",
+        "tail": " — recomendado para casos de uso NAS (discos reales > discos virtuales)."
+      },
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "Comandos de gestión de ZFS",
+        "tail": " — si eliges TrueNAS u otra distribución respaldada por ZFS."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "Resumen de Crear VM",
+        "tail": "."
+      }
+    ]
+  }
+}

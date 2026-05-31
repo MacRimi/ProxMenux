@@ -1,0 +1,106 @@
+{
+  "meta": {
+    "title": "Script Personalizable post-instalación | ProxMenux Documentation",
+    "description": "Elige exactamente qué optimizaciones aplicar a un host Proxmox VE con ProxMenux. 10 categorías, ~30 herramientas individuales, UI de checklist. Incluye todo lo que hace el script Automatizado, más funcionalidades opt-in (IOMMU, Fastfetch, Figurine, Ceph, HA, fixes de AMD…).",
+    "ogTitle": "Script Personalizable post-instalación | ProxMenux Documentation",
+    "ogDescription": "10 categorías, ~30 optimizaciones individuales. Elige exactamente qué quieres en un host Proxmox VE. Totalmente reversible."
+  },
+  "header": {
+    "title": "Script Personalizable post-instalación",
+    "description": "Elige exactamente qué optimizaciones aplicar a un host Proxmox VE. ProxMenux agrupa ~30 herramientas individuales en 10 categorías, cada una con su propio diálogo de checklist. Mismo motor que el Automatizado, pero con control total sobre qué se aplica.",
+    "section": "Post-Install · Customizable"
+  },
+  "intro": {
+    "title": "Cuándo elegir Personalizable",
+    "body": "Elige esta ruta cuando ya sabes qué tweaks quieres en el host — o cuáles definitivamente no quieres. El script presenta un checklist por categoría para que puedas preseleccionar, deseleccionar o mezclar optimizaciones. Cada item puede aplicarse otra vez más tarde (es idempotente) o revertirse desde <link>Uninstall Optimizations</link>."
+  },
+  "compare": {
+    "heading": "Comparación con el Automatizado",
+    "body": "Personalizable es un superset del <link>script Automatizado</link>. Cubre las mismas 13 optimizaciones de baseline más una larga lista de opt-ins que el Automatizado se salta a propósito — cosas que solo son útiles en hardware específico (fixes de AMD), hosting específico (OVH RTM), o cargas específicas (IOMMU/VFIO, repo de Ceph, High Availability, Fastfetch, Figurine, tuning del ARC de ZFS, pigz, ZFS auto-snapshot, límites de velocidad de vzdump, Open vSwitch, TCP BBR…)."
+  },
+  "categoriesSection": {
+    "heading": "Las 10 categorías",
+    "body": "El script Personalizable agrupa optimizaciones en 10 categorías. Cada categoría tiene su propio diálogo de checklist y su propia página de documentación — abre una de las tarjetas de abajo para ver el razonamiento, los valores por defecto y los pasos de verificación por opción."
+  },
+  "categories": [
+    {
+      "name": "Basic Settings",
+      "description": "Repositorios, upgrade del sistema, zona horaria, locale, utilidades comunes."
+    },
+    {
+      "name": "System",
+      "description": "Journald, logrotate, límites del kernel, tuning de memoria, kernel panic, reinicios rápidos."
+    },
+    {
+      "name": "Virtualization",
+      "description": "Auto-instalación de guest agent, activación de IOMMU/VFIO para passthrough de PCI."
+    },
+    {
+      "name": "Network",
+      "description": "APT sobre IPv4, tuning de sysctl de red, Open vSwitch, TCP BBR, nombres de interfaz persistentes."
+    },
+    {
+      "name": "Storage",
+      "description": "Dimensionado del ARC de ZFS, ZFS auto-snapshot, límites de velocidad de backups vzdump."
+    },
+    {
+      "name": "Security",
+      "description": "Desactivar portmapper/rpcbind para reducir la superficie de ataque."
+    },
+    {
+      "name": "Customization",
+      "description": "Colores y aliases de bashrc, banner MOTD, eliminación del aviso de suscripción."
+    },
+    {
+      "name": "Monitoring",
+      "description": "OVH Real-Time Monitoring (solo en servidores detectados como OVH)."
+    },
+    {
+      "name": "Performance",
+      "description": "gzip paralelo (pigz) para compresión más rápida en backups y transferencias."
+    },
+    {
+      "name": "Optional",
+      "description": "Fixes de CPU AMD, Fastfetch, Figurine, repo de Ceph, High Availability, Log2RAM."
+    }
+  ],
+  "mixTip": {
+    "title": "Mezcla Automatizado y Personalizable",
+    "body": "Un patrón común: ejecutar primero <strong>Automatizado</strong> para fijar el baseline sensato, luego abrir <strong>Personalizable</strong> y elegir solo las herramientas opt-in que te interesan (por ejemplo, IOMMU en un host que va a hacer passthrough de GPU). Los cambios se registran de forma independiente; el menú Uninstall muestra todo lo que has aplicado independientemente de qué ruta lo añadió."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "Automated Post-Install",
+        "href": "/docs/post-install/automated",
+        "tail": " — valores por defecto sensatos aplicados sin preguntas."
+      },
+      {
+        "label": "Uninstall Optimizations",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — revierte cualquier selección de forma limpia."
+      },
+      {
+        "label": "Basic Settings",
+        "href": "/docs/post-install/basic-settings",
+        "tail": " — repos, hora, idioma, utilidades."
+      },
+      {
+        "label": "Virtualization",
+        "href": "/docs/post-install/virtualization",
+        "tail": " — IOMMU + VFIO para passthrough."
+      },
+      {
+        "label": "Security",
+        "href": "/docs/post-install/security",
+        "tailRich": " · <storageLink>Storage</storageLink> · <networkLink>Network</networkLink> · <customLink>Customization</customLink> — otras categorías."
+      },
+      {
+        "label": "Resumen de Post-Install",
+        "href": "/docs/post-install",
+        "tail": "."
+      }
+    ]
+  }
+}

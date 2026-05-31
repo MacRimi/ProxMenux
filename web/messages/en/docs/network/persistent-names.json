@@ -1,0 +1,130 @@
+{
+  "meta": {
+    "title": "Persistent Interface Names | ProxMenux Documentation",
+    "description": "Pin Proxmox interface names (eno1, enp3s0, …) to MAC addresses via systemd .link files so names survive PCI re-enumeration, kernel upgrades and adding / removing other NICs.",
+    "ogTitle": "Persistent Interface Names | ProxMenux Documentation",
+    "ogDescription": "Stop Proxmox interface names from changing when you alter hardware. Uses systemd .link files keyed on MAC address."
+  },
+  "header": {
+    "title": "Persistent interface names",
+    "description": "Generates a systemd .link file per physical NIC that pins the kernel-assigned name to the card's MAC address. Once applied (after the next reboot), interface names stop drifting when you add, remove or move PCIe cards.",
+    "section": "Network"
+  },
+  "intro": {
+    "title": "What this does",
+    "body": "For every physical NIC on the host, writes a small file under <code>/etc/systemd/network/10-&lt;iface&gt;.link</code> that says: <em>\"the device with this MAC must always be called this name\"</em>. systemd-udevd applies the rule at every boot, before <code>ifupdown</code> reads <code>/etc/network/interfaces</code>."
+  },
+  "problem": {
+    "heading": "The problem this solves",
+    "intro": "Linux derives default interface names from PCI topology — <code>eno1</code> = onboard, <code>enp3s0</code> = the card in PCI bus 3, slot 0, etc. The naming scheme is deterministic <em>given the same hardware layout</em>. Change the layout and names shift:",
+    "items": [
+      "Add a GPU in front of an existing NIC → the NIC bus number can change → name changes.",
+      "Move a card to a different PCIe slot → name changes.",
+      "BIOS / UEFI update that re-enumerates devices → names can change.",
+      "Replace a faulty card with the same model in a different slot → name changes."
+    ],
+    "outro": "After such a change, <code>/etc/network/interfaces</code> still references the <em>old</em> name; the bridge fails to come up; the host loses network. Setting up persistent names prevents this scenario from happening again."
+  },
+  "howWorks": {
+    "heading": "How it works",
+    "arrowLabel": "per NIC",
+    "nodes": {
+      "detectLabel": "Detect physical NICs",
+      "detectDetail": "ls /sys/class/net/\nfilter out vmbr / bond /\ndocker / veth / wireguard …",
+      "readLabel": "Read each MAC",
+      "readDetail": "cat /sys/class/net/\n  '<'iface'>'/address",
+      "writeLabel": "Write .link file",
+      "writeDetail": "/etc/systemd/network/\n  10-'<'iface'>'.link"
+    },
+    "minimalIntro": "Each generated file is intentionally minimal:",
+    "minimalOutro": "At boot, systemd-udevd matches the device by MAC and assigns the requested name <em>before</em> any other component (ifupdown, kernel default naming) gets to it. The file prefix <code>10-</code> ensures these rules load early, ahead of the default <code>99-default.link</code>."
+  },
+  "scope": {
+    "heading": "What gets written, what gets skipped",
+    "headerType": "Type",
+    "headerBehaviour": "Behaviour",
+    "headerWhy": "Why",
+    "rows": [
+      {
+        "type": "Onboard / PCIe NIC",
+        "behaviour": "<code>.link</code> file written",
+        "why": "Backed by a real PCI device — the case the tool is for"
+      },
+      {
+        "type": "Wi-Fi (phy80211)",
+        "behaviour": "<code>.link</code> file written",
+        "why": "Has a real MAC and benefits from name stability"
+      },
+      {
+        "type": "Bridges (vmbrX)",
+        "behaviour": "Skipped",
+        "why": "Virtual; name comes from <code>/etc/network/interfaces</code>"
+      },
+      {
+        "type": "Bonds (bondX)",
+        "behaviour": "Skipped",
+        "why": "Virtual; bond name is set by ifupdown"
+      },
+      {
+        "type": "veth / docker0 / br-XXXX",
+        "behaviour": "Skipped",
+        "why": "Created on demand by Docker / LXC — not persistent hardware"
+      },
+      {
+        "type": "tap / fwpr / fwln",
+        "behaviour": "Skipped",
+        "why": "Created on demand by Proxmox per VM/CT"
+      },
+      {
+        "type": "WireGuard / Cilium / Tailscale",
+        "behaviour": "Skipped",
+        "why": "Software interfaces managed by their own daemons"
+      }
+    ]
+  },
+  "safety": {
+    "heading": "Safety net: previous .link files are backed up",
+    "intro": "If <code>/etc/systemd/network/</code> already contains <code>.link</code> files (from a previous run or other tooling), they are copied to a timestamped backup directory before the new ones are generated:",
+    "outro": "To roll back: copy the files back from the backup directory and reboot.",
+    "rebootTitle": "Takes effect on next reboot, not immediately",
+    "rebootBody": "Changes to <code>.link</code> files only apply at boot, when udev re-enumerates devices. The tool reports <em>\"Changes will apply after reboot\"</em> for this reason. Renaming an interface live is risky and not attempted: an active <code>vmbr0</code> with members would have to be reconfigured atomically, which is why the operation is deferred to the next clean boot."
+  },
+  "afterReboot": {
+    "heading": "After the reboot",
+    "intro": "Once the names are pinned, the workflow for future hardware changes is simple:",
+    "items": [
+      "Power off, change hardware (add card, move slot, …), boot.",
+      "Each NIC keeps its previous name because its MAC matches a <code>.link</code> file.",
+      "If a NIC is replaced (different MAC), it gets a default kernel name (<code>enp&lt;bus&gt;s&lt;slot&gt;</code>); re-run this menu to add a <code>.link</code> entry for the new card's MAC."
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "emptyTitle": "\"No physical interfaces found\" after running the tool",
+    "emptyBody": "The host has no PCI / phy80211-backed interfaces visible to the kernel. Confirm with <code>ls -l /sys/class/net/</code> — every entry should have either a <code>device</code> symlink (PCI) or a <code>phy80211</code> entry (Wi-Fi). If both are missing for what should be a real NIC, the driver is not loaded.",
+    "noChangeTitle": "After the reboot, names did not change as expected",
+    "noChangeBody": "Check that the file is present and well-formed: <code>cat /etc/systemd/network/10-&lt;iface&gt;.link</code>. Then check udev logs: <code>journalctl -u systemd-udevd -b | grep -i link</code>. A common cause is a stale <code>net.ifnames=0</code> kernel parameter that disables predictable naming entirely — remove it from <code>/etc/default/grub</code>, run <code>update-grub</code>, reboot.",
+    "undoTitle": "I want to undo persistent naming",
+    "undoBody": "Either delete the <code>.link</code> files (<code>rm /etc/systemd/network/10-*.link</code>) or restore from the backup directory generated on the previous run. Reboot to apply."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "label": "Bridge analysis & guided repair",
+        "href": "/docs/network/bridge-analysis",
+        "tailRich": " — the recovery path when names <em>have</em> already shifted."
+      },
+      {
+        "label": "Config analysis & guided cleanup",
+        "href": "/docs/network/config-analysis",
+        "tail": " — to remove orphan blocks left behind by name shifts."
+      },
+      {
+        "label": "Diagnostics",
+        "href": "/docs/network/diagnostics",
+        "tailRich": " — confirm the new names with <em>Show Routing Table</em> after reboot."
+      }
+    ]
+  }
+}

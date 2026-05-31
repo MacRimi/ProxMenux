@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Diagnostics | ProxMenux Documentation",
+    "description": "Three read-only one-shot diagnostic checks: Show Routing Table, Test Connectivity and Advanced Diagnostics. Pure inspection — never writes to /etc/network/interfaces and never runs a modifying command (one explicit, opt-in exception for purging NetworkManager when detected).",
+    "ogTitle": "Diagnostics | ProxMenux Documentation",
+    "ogDescription": "Read-only network diagnostics for the Proxmox host: routing, reachability, advanced statistics."
+  },
+  "header": {
+    "title": "Diagnostics",
+    "description": "Three one-shot read-only checks that inspect the live network state: routing table, connectivity test and advanced statistics. None of them write to /etc/network/interfaces — safe to use at any time, including over SSH. For interactive live monitoring, see Live monitoring tools.",
+    "section": "Network"
+  },
+  "intro": {
+    "title": "What this does",
+    "body": "Reports on routing, reachability and aggregate statistics <strong>without modifying anything</strong>. Use it to confirm the network is healthy or identify duplicate IPs. For continuous traffic observation see <monitoringLink>Live monitoring tools</monitoringLink>; for viewing the raw config file see <backupLink>Interfaces backup & restart</backupLink>."
+  },
+  "routing": {
+    "heading": "Show Routing Table",
+    "body": "Lists every route the kernel currently uses (<code>ip route show</code>) and highlights the default gateway. Useful for confirming that traffic to the internet leaves through the expected interface and that no leftover routes are taking precedence."
+  },
+  "connectivity": {
+    "heading": "Test Connectivity",
+    "intro": "Sends two ICMP probes to three targets in sequence and reports each one. Then runs an <code>nslookup google.com</code> to verify DNS resolution independently of ICMP.",
+    "headerTest": "Test",
+    "headerTarget": "Target",
+    "headerConfirms": "What it confirms",
+    "rows": [
+      {
+        "test": "Google DNS",
+        "target": "8.8.8.8",
+        "confirms": "External reachability via well-known anycast IP"
+      },
+      {
+        "test": "Cloudflare DNS",
+        "target": "1.1.1.1",
+        "confirms": "Independent second-opinion if Google blocks ICMP"
+      },
+      {
+        "test": "Gateway",
+        "target": "(default route)",
+        "confirms": "L2 / L3 connectivity to the local router"
+      },
+      {
+        "test": "DNS Resolution",
+        "target": "google.com",
+        "confirms": "DNS server is reachable and answering"
+      }
+    ],
+    "readingTitle": "Reading the result",
+    "readingBody": "If the gateway test passes but the public DNS targets fail, you have local connectivity but no internet — check the gateway's upstream. If DNS resolution fails but pings to <code>8.8.8.8</code> succeed, the issue is the resolver, not the network: check <code>/etc/resolv.conf</code>."
+  },
+  "advanced": {
+    "heading": "Advanced Diagnostics",
+    "intro": "Aggregates network-wide statistics and runs a battery of common-issue checks. Reports active connection counts, listening ports, total interfaces and flags two anti-patterns explicitly:",
+    "items": [
+      "<strong>NetworkManager running on a Proxmox host.</strong> NetworkManager and Proxmox's <code>ifupdown</code> conflict — both try to manage interfaces, leading to bridges that flap or refuse to come up. If detected, the tool offers an interactive prompt to stop, disable and purge it (this is the <em>only</em> diagnostic that can modify the system, and only after explicit consent).",
+      "<strong>Duplicate IP addresses on different interfaces.</strong> Two interfaces holding the same IPv4 cause intermittent connectivity that's extremely hard to debug from inside the VM. Detected via <code>ip -4 addr show | sort | uniq -d</code>."
+    ],
+    "nmTitle": "The NetworkManager prompt is the only modifying action here",
+    "nmBody": "Every other check in Advanced Diagnostics is read-only. NetworkManager removal is gated behind a yes/no dialog and runs <code>systemctl stop / disable</code> + <code>apt-get purge -y network-manager</code>. If you decline, nothing changes."
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "gwTitle": "Test Connectivity reports the gateway as failed but the host has internet",
+    "gwBody": "Some routers do not respond to ICMP from their internal interface even when they happily forward traffic. Test with <code>traceroute 8.8.8.8</code> from a console: if the second hop is your ISP and the public DNS test passed, the gateway is fine despite the failed ping.",
+    "dupTitle": "Advanced Diagnostics keeps flagging duplicate IPs after I removed one",
+    "dupBody": "The check looks at the live kernel state, not the config file. Run <code>ip -4 addr show</code> to confirm; if the duplicate is still present, an interface is still holding it. Use <code>ip addr del &lt;IP&gt;/&lt;mask&gt; dev &lt;iface&gt;</code> to remove it from the live state, then edit <code>/etc/network/interfaces</code> if it is also persistent."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "label": "Live monitoring tools",
+        "href": "/docs/network/monitoring",
+        "tail": " — interactive iftop / iptraf-ng / iperf3 launchers."
+      },
+      {
+        "label": "Bridge analysis & guided repair",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — when a vmbrX is missing its physical port."
+      },
+      {
+        "label": "Config analysis & guided cleanup",
+        "href": "/docs/network/config-analysis",
+        "tail": " — when an old NIC is still declared but no longer present."
+      },
+      {
+        "label": "Interfaces backup & restart",
+        "href": "/docs/network/backup-restore",
+        "tail": " — to snapshot the config before any change."
+      }
+    ]
+  }
+}

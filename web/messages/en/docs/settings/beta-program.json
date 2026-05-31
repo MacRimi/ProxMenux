@@ -1,0 +1,112 @@
+{
+  "meta": {
+    "title": "Change Release Channel | ProxMenux Documentation",
+    "description": "Switch ProxMenux between the Stable (main) and Beta (develop) channels in one dialog. Bidirectional, idempotent, runs the official installer for the chosen channel and normalises the Monitor service.",
+    "ogTitle": "Change Release Channel | ProxMenux Documentation",
+    "ogDescription": "One Settings option to switch between Stable and Beta channels — no rerunning installers by hand."
+  },
+  "header": {
+    "title": "Change Release Channel",
+    "description": "One unified Settings option to switch ProxMenux between the Stable (main branch) and Beta (develop branch) channels. The previous one-way 'Deactivate Beta Program' has been replaced by a bidirectional dialog that always offers both directions and runs the official installer for whichever channel you pick.",
+    "section": "Settings"
+  },
+  "intro": {
+    "title": "What changed",
+    "body": "Earlier versions of ProxMenux exposed two separate flows — “Deactivate Beta Program” (only visible when beta was active) and a manual rerun of the beta installer to re-join. They are merged into a single <strong>Change Release Channel</strong> entry that is always present, shows the current channel and lets you flip between Stable and Beta in either direction."
+  },
+  "why": {
+    "heading": "Why this option exists",
+    "intro": "ProxMenux ships from two git branches:",
+    "items": [
+      "<strong>Stable</strong> — the <code>main</code> branch. What the README points at, what most operators want, with a slower release cadence and only changes that have already been through beta validation.",
+      "<strong>Beta</strong> — the <code>develop</code> branch. Newer features and Monitor builds; carries the tag the next stable release will inherit. Some things may not work perfectly — that's the deal you sign up for and the way new features get tested before they ship."
+    ],
+    "outro": "Hopping between channels used to require remembering the right installer URL, copying it in from the README, and editing <code>config.json</code> by hand if something got out of sync. The unified option does the whole flow as a single guided action."
+  },
+  "dialog": {
+    "heading": "The dialog",
+    "intro": "From the main menu, <strong>Settings → Change Release Channel</strong>. A two-line menu shows up:",
+    "options": [
+      "<code>stable</code> — Stable (main branch)",
+      "<code>beta</code> — Beta (develop branch)"
+    ],
+    "behaviour": "The current channel is pre-selected and shown at the top of the menu. Picking the same channel returns a friendly “This release channel is already active” message — the dialog is fully idempotent. Picking a different channel pops up a confirmation with channel-specific text:",
+    "directions": [
+      "<strong>Stable → Beta:</strong> warns that beta builds may contain bugs or incomplete features.",
+      "<strong>Beta → Stable:</strong> warns that beta update checks will stop and the stable installer will reinstall the Stable channel components."
+    ]
+  },
+  "confirm": {
+    "heading": "What happens when you confirm",
+    "items": [
+      "<strong>Downloads the official installer</strong> for the target channel:<ul><li>Stable: <code>install_proxmenux.sh</code> from <code>main</code></li><li>Beta: <code>install_proxmenux_beta.sh</code> from <code>develop</code></li></ul>The download is verified to exist and made executable before the next step.",
+      "<strong>Runs the installer</strong> end-to-end. The installer is the same one the README publishes — no custom path, no shortcut. That means existing component detection, file backups, dependency installs, language preservation, etc. all behave identically to a fresh install of the target channel.",
+      "When switching to <strong>Stable</strong>, the menu then prunes any leftover beta metadata from <code>config.json</code>: <code>beta_program</code>, <code>beta_version</code>, <code>install_branch</code>, <code>update_available.beta*</code> are deleted, and <code>proxmenux_monitor.status = beta_updated</code> is normalised to <code>updated</code>. The leftover <code>beta_version.txt</code> file and any downloaded beta installer are removed.",
+      "When switching to Stable, the Monitor systemd unit file is also re-written from the Stable template (drops the “Beta” suffix from the unit description, points <code>ExecStart</code> back at the runtime dir) so a fresh <code>systemctl status</code> reflects the channel you're on.",
+      "Reloads the configuration menu. The next visit to <em>Show Version Information</em> will show the new channel."
+    ]
+  },
+  "switching": {
+    "heading": "Switching back and forth",
+    "intro": "Both directions go through the same installer — they are <strong>not</strong> special-cased uninstall + reinstall flows. Each direction simply runs the channel's own installer, which is designed to be idempotent and safe to re-execute over an existing install. Practical consequences:",
+    "items": [
+      "Your existing config, ProxMenux Monitor login (<code>auth.json</code>), notification channels, post-install registry, custom thresholds — none of those are touched. The channel switch only swaps the script tree and the binary AppImage.",
+      "A Monitor that was active before the switch stays active after; one that was deactivated stays deactivated.",
+      "ProxMenux Monitor <code>auth.json</code>, API tokens and the JWT secret are preserved across channel changes. Sessions don't get logged out.",
+      "You can flip channels as many times as you like — the dialog will accept it every time and rerun the installer. No restart of Proxmox is required."
+    ]
+  },
+  "feedback": {
+    "heading": "Reporting issues from the beta",
+    "intro": "If something behaves unexpectedly while you're on the Beta channel, opening an issue with enough context is what closes the gap to a stable release. The most useful report includes:",
+    "items": [
+      "What you did and what you expected to happen.",
+      "Any error messages shown on screen.",
+      "The relevant Monitor logs:"
+    ],
+    "logsCommand": "journalctl -u proxmenux-monitor -n 50 --no-pager",
+    "versionLine": "The current ProxMenux version (Settings → <link>Show Version Information</link>).",
+    "issueLine": "Open a <ghlink>GitHub Issue</ghlink> with that information and we get to the fix faster."
+  },
+  "manual": {
+    "heading": "Manual equivalent",
+    "intro": "If you prefer the shell or are scripting the channel switch, the dialog is just a thin wrapper around these commands:"
+  },
+  "unifiedCallout": {
+    "title": "Why both directions are now one option",
+    "body": "The previous “Deactivate Beta Program” only existed if the host had ever joined the beta. Operators wanting to <em>join</em> had to find the beta installer URL elsewhere; operators wanting to <em>leave</em> sometimes had to manually clean up <code>beta_*</code> metadata to be sure. The unified <strong>Change Release Channel</strong> option always shows up, makes the current channel explicit, and treats both directions as the same kind of operation — runnable, repeatable, idempotent."
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "downloadTitle": "“Could not download the installer”",
+    "downloadBody": "Outbound HTTPS to <code>raw.githubusercontent.com</code> failed. Check connectivity and DNS from the host:",
+    "downloadCmd": "curl -fsSL -o /tmp/test https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh && head -1 /tmp/test",
+    "downloadOutro": "If this fails outside ProxMenux, it's a network / proxy issue on the host.",
+    "errorsTitle": "“Installer finished with errors”",
+    "errorsBody": "The installer surfaced a non-zero exit code. The previous channel and any already-installed components are left as they were before the switch. Re-run the action; if it keeps failing, run the installer manually from a shell (see the manual equivalent above) — that gives you the full output instead of the dialog summary.",
+    "configTitle": "“Could not update config file” after switching to Stable",
+    "configBody": "The post-install cleanup of beta metadata failed — usually because <code>config.json</code> has a syntax error from a manual edit. Validate it:",
+    "configCmd": "jq . /usr/local/share/proxmenux/config.json",
+    "configOutro": "Fix or restore the file and rerun the option."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Show Version Information",
+        "tail": " — confirm which channel is active now."
+      },
+      {
+        "href": "/docs/settings/proxmenux-monitor",
+        "label": "ProxMenux Monitor",
+        "tail": " — the Monitor service that gets rebuilt as part of the switch."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Settings overview",
+        "tail": "."
+      }
+    ]
+  }
+}

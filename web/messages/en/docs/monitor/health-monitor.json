@@ -1,0 +1,369 @@
+{
+  "meta": {
+    "title": "Proxmox Health Monitor — CPU, Memory, Storage, SMART, ZFS, Logs | ProxMenux",
+    "description": "Proactive Proxmox VE health monitoring: ten categories scanned every five minutes (CPU & temperature, memory & swap, storage, disks/SMART, network, VMs, services, logs, updates, security), four severity levels, per-category suppression durations, automatic cleanup of resolved errors, a permanent disk observation history and the path from a raw event to a Telegram, Discord, Gotify or email notification.",
+    "ogTitle": "Proxmox Health Monitor — CPU, Memory, Storage, SMART, ZFS, Logs",
+    "ogDescription": "Proactive Proxmox VE health monitoring across ten categories with severity levels, suppression durations and event-driven notifications.",
+    "twitterTitle": "Proxmox Health Monitor | ProxMenux",
+    "twitterDescription": "Proactive Proxmox VE health monitoring across ten categories with severity levels and notifications."
+  },
+  "header": {
+    "title": "Health Monitor",
+    "description": "The continuous self-check that scans ten categories of host state on a five-minute cycle, samples vital signs continuously between cycles, deduplicates findings into a structured event stream, and feeds the dashboard, the notification engine and the optional AI rewriter from one source of truth.",
+    "section": "ProxMenux Monitor"
+  },
+  "intro": {
+    "title": "One scanner, three consumers",
+    "body": "A background thread runs the full health cycle every 5 minutes, persists each finding into SQLite under a stable <code>error_key</code>, and lets <strong>(1)</strong> the dashboard render the current state, <strong>(2)</strong> the notification engine fan out new events to the configured channels, and <strong>(3)</strong> the optional AI assistant rewrite alerts in plain language. You configure the scanner once; everything downstream stays in sync."
+  },
+  "howItWorks": {
+    "heading": "How it works",
+    "intro": "The Health Monitor runs on two parallel lanes inside the Monitor process. A lightweight <strong>vital signs sampler</strong> reads CPU, memory and temperature every few seconds so that sustained-threshold conditions are detected fast; in parallel, the <strong>full health cycle</strong> runs every five minutes and exercises every category from end to end. Both lanes converge into the same SQLite tables — and from there, three consumers read the state independently.",
+    "scannerTitle": "From sample to stored finding",
+    "scannerCaption": "The scanner. Vital signs are sampled fast so sustained-CPU / sustained-memory pressure can be detected before the next 5-min cycle. The full cycle reads those buffers and runs the heavier checks (SMART, ZFS pool state, journal scanning, service health, etc.) before writing the structured findings to SQLite.",
+    "scannerArrowLabel": "step",
+    "scannerNodes": {
+      "samplerLabel": "Vital signs sampler",
+      "samplerDetail": "CPU usage 30 s\nMemory 30 s\nTemperature 15 s\n→ history buffers",
+      "cycleLabel": "Full health cycle",
+      "cycleDetail": "Every 5 min\nReads buffers\n+ live probes\n(SMART, ZFS,\nservices, journal…)",
+      "checksLabel": "Per-category checks",
+      "checksDetail": "Ten categories\n(CPU, memory,\nstorage, disks,\nnetwork, VMs,\nservices, logs,\nupdates, security)",
+      "sqliteLabel": "SQLite",
+      "sqliteDetail": "errors table\n(active +\ndismissed)\n+ disk_observations\n(permanent\nper-disk history)"
+    },
+    "notifTitle": "From stored finding to user",
+    "notifCaption": "The notification path. The same errors table also drives the dashboard view (Active / Dismissed lists rendered live) and is consumed by the cleanup routine at the end of each cycle to auto-resolve stale entries — both run from the same data without going through the dispatcher.",
+    "notifArrowLabel": "event",
+    "notifNodes": {
+      "errorsLabel": "errors table",
+      "errorsDetail": "Active +\nDismissed rows\nkeyed by\nerror_key",
+      "dispatcherLabel": "Notification dispatcher",
+      "dispatcherDetail": "New + escalated\nevents queued\nThrough toggles\n+ cooldown",
+      "templatesLabel": "Templates + AI rewrite",
+      "templatesDetail": "Per-event\ntemplate\n→ optional AI\nplain-language\nrewrite",
+      "channelsLabel": "Channels",
+      "channelsDetail": "Telegram\nDiscord\nGotify\nEmail (SMTP)"
+    }
+  },
+  "categories": {
+    "heading": "The ten categories",
+    "imageAlt": "Health Monitor view showing the ten categories with their current statuses (CPU, Memory, Storage, Disks, Network, VMs, Services, Logs, Updates, Security)",
+    "imageCaption": "Health Monitor view — the ten categories with their current status. Categories on a healthy host all show OK; warnings and critical events appear inline with the rows that produced them.",
+    "intro": "Every cycle exercises ten independent checkers. Each produces one of four statuses (<strong>OK</strong>, <strong>INFO</strong>, <strong>WARNING</strong>, <strong>CRITICAL</strong>) plus a structured payload — device names, sample log lines, exact thresholds — that surface in the dashboard and travel through to the notification body.",
+    "headerCategory": "Category",
+    "headerChecks": "Sub-checks",
+    "headerEvents": "Typical events",
+    "rows": [
+      {
+        "category": "CPU & Temperature",
+        "checks": "CPU usage with hysteresis, sensor temperature",
+        "events": "High sustained load; CPU temperature crossing the vendor warning / critical thresholds."
+      },
+      {
+        "category": "Memory & Swap",
+        "checks": "RAM usage, swap usage",
+        "events": "Sustained memory pressure; OOM-killer activity; swap exhaustion."
+      },
+      {
+        "category": "Storage",
+        "checks": "Proxmox storages, root filesystem",
+        "events": "Storage offline (NFS server unreachable, CIFS expired creds); root mount > 90 %; LVM thin pool nearing full."
+      },
+      {
+        "category": "Disks & SMART",
+        "checks": "SMART, dmesg I/O errors, ZFS pools, LVM, filesystem errors",
+        "events": "SMART health failed; reallocated / pending sectors; ATA I/O errors; ZFS pool DEGRADED / FAULTED; ext4 read-only remount."
+      },
+      {
+        "category": "Network",
+        "checks": "Connectivity, link state, gateway latency",
+        "events": "Bridge or bond down; gateway unreachable; persistent latency spikes."
+      },
+      {
+        "category": "VMs & Containers",
+        "checks": "QMP communication, VM startup, container startup",
+        "events": "Failed VM boot; CT shutdown failure; QMP socket timeout; missing config / disk after a clone."
+      },
+      {
+        "category": "PVE Services",
+        "checks": "<code>pveproxy</code>, <code>pvedaemon</code>, <code>pvestatd</code>, <code>pve-cluster</code>, cluster mode",
+        "events": "Service crashed; cluster quorum lost; <code>pmxcfs</code> stuck."
+      },
+      {
+        "category": "System Logs",
+        "checks": "Persistent errors, error spikes, error cascades, critical kernel messages",
+        "events": "Repeated identical errors; sudden burst of warnings (cascade pattern); <code>BUG:</code> / <code>OOPS:</code> / <code>oom-killer</code> in dmesg."
+      },
+      {
+        "category": "System Updates",
+        "checks": "Pending updates, security updates, kernel / PVE version, system age",
+        "events": "Security updates available; pinned kernel several minor versions behind; host uptime > 90 days."
+      },
+      {
+        "category": "Security & Certificates",
+        "checks": "Login attempts, certificates expiring, optional Fail2Ban jail status",
+        "events": "Repeated SSH / web auth failures; PVE certificate < 30 days from expiring; Fail2Ban active bans."
+      }
+    ]
+  },
+  "severity": {
+    "heading": "Severity model",
+    "headerStatus": "Status",
+    "headerColour": "Colour",
+    "headerMeaning": "Meaning",
+    "headerNotification": "Notification",
+    "rows": [
+      {
+        "status": "OK",
+        "colour": "Green",
+        "meaning": "Healthy. No findings in this category.",
+        "notification": "Silent."
+      },
+      {
+        "status": "INFO",
+        "colour": "Blue",
+        "meaning": "Transient or already-resolved condition worth noting once. Also used for categories that have <em>only</em> dismissed items left.",
+        "notification": "Optional. Each event type can be opted in or out per channel."
+      },
+      {
+        "status": "WARNING",
+        "colour": "Yellow",
+        "meaning": "Attention is needed but the host is still functional. Cause is non-trivial — read the details.",
+        "notification": "Sent when the per-event toggle is on for the channel."
+      },
+      {
+        "status": "CRITICAL",
+        "colour": "Red",
+        "meaning": "Functionality broken or data loss possible. Action required.",
+        "notification": "Sent when the per-event toggle is on for the channel. CPU temperature CRITICAL is treated as a safety alert that re-fires even if previously dismissed."
+      }
+    ],
+    "infoNote": "A category that is <strong>OK</strong> but has dismissed events still inside their suppression window is rendered as <strong>INFO</strong> — to remind you that something is being silenced rather than that nothing was ever wrong.",
+    "unknownTitle": "UNKNOWN, when a check can't complete",
+    "unknownBody": "A check that fails to produce a verdict for three cycles in a row (a probe that times out, a sensor that disappeared, a tool that exits with an error) is recorded internally as <code>UNKNOWN</code>. The dashboard surfaces this as a yellow status — the overall view caps <code>UNKNOWN</code> at <strong>WARNING</strong> so it never escalates a healthy host to CRITICAL on its own."
+  },
+  "dashboardView": {
+    "heading": "The dashboard view",
+    "intro": "The Health Monitor lives inside the <strong>Overview</strong> tab. The header status pill (Healthy / Warning / Critical) opens a modal that splits findings into two lists:",
+    "items": [
+      "<strong>Active</strong> — every category with an unresolved finding. Each row expands to show the individual checks that produced the status, the raw <code>reason</code> string, the device or VM ID involved, and (for categories that link to a tab) a click-through into Storage / Network / VMs / Logs / Hardware to investigate.",
+      "<strong>Dismissed</strong> — items previously acknowledged by the user that are still inside their suppression window. Each row shows how much of the suppression remains and the configured duration. When the window expires, the item disappears from this list; if the underlying condition is still present and the category supports re-firing, it re-appears in <em>Active</em>."
+    ],
+    "pillTitle": "The pill mirrors the worst category",
+    "pillBody": "The dashboard header colour is the highest severity across the ten categories: any CRITICAL → red, else any WARNING → yellow, else any INFO → blue, else green. The same logic drives the favicon dot and the PWA badge."
+  },
+  "dismiss": {
+    "heading": "Dismissing alerts and the Suppression Duration",
+    "intro": "Some events are noisy by nature — a <em>System Updates: pending updates available</em> stays true until you patch the host, and you don't want a notification every five minutes for a week. The Health Monitor solves this with two coupled mechanisms:",
+    "step1": "<strong>Per-event Dismiss action</strong> in the modal. The Dismiss button opens a small dropdown with three options — <strong>24 hours</strong>, <strong>7 days</strong> or <strong>Permanently</strong> — letting you choose how long this specific alert stays silenced regardless of the category's default. Picking one calls <code>POST /api/health/acknowledge</code> with the <code>error_key</code> and the chosen <code>suppression_hours</code> (<code>-1</code> for permanent). The event moves to the Dismissed list with a timestamped <code>acknowledged_at</code>.",
+    "dropdownImageAlt": "Dismiss dropdown on a Health Monitor alert — 24 hours, 7 days or Permanently",
+    "dropdownImageCaption": "Per-event Dismiss dropdown. The chosen window applies to this single alert; if no per-event window is selected the category's default is used. Permanent dismisses are tagged with a distinct amber <em>Permanent</em> badge in the Dismissed list and never re-fire.",
+    "step2": "<strong>Per-category Suppression Duration setting</strong>. From the Settings → Health Monitor card (or <code>POST /api/health/settings</code>), each of the ten categories has its own default window applied when a Dismiss is fired without a per-event choice:",
+    "imageAlt": "Per-category Suppression Duration settings card in Settings → Health Monitor",
+    "imageCaption": "Suppression Duration card — one dropdown per category. Pick a longer window for noisy events (e.g. pending updates) and shorter for ones you want to re-evaluate quickly. Active Suppressions are listed underneath (see below).",
+    "outro": "While an event is suppressed, the scanner still runs and updates the row's <code>last_seen</code> timestamp, but no new notification is dispatched and the dashboard stays calm. When the window expires, the next cycle re-evaluates the condition and either re-fires fresh or, if the condition has cleared on its own, drops the row from the lists.",
+    "activeSuppressionsTitle": "Reviewing and reverting dismisses — the Active Suppressions panel",
+    "activeSuppressionsBody": "Every currently-silenced alert (time-limited and permanent) is listed under <strong>Settings → Health Monitor → Active Suppressions</strong>. Each row shows the alert identifier, category, severity, when it was dismissed and how much time is left, plus a <strong>Re-enable</strong> button that clears the acknowledgment so the alert can fire again on the next scan. Permanent dismisses can only be reverted from here; time-limited ones can also be force-revived without waiting for the countdown. The Re-enable action is gated by the Health Monitor <em>Edit</em> mode at the top of that card — toggle Edit, click Re-enable on each row you want to revive (queued rows show a green border and a strike-through), then click Save to commit. Cancel discards the queue.",
+    "autoTitle": "Auto-suppression when you change the Duration",
+    "autoBody": "Setting a category's Suppression Duration to anything other than the default 24 h has a second effect beyond user-initiated dismissals: <strong>future findings in that category enter the table already acknowledged</strong> with that duration. This is by design — if you've told the Monitor that you want disk-related events silenced for a week, brand-new disk findings honour that intent without you having to dismiss each one by hand. They appear directly in the Dismissed list with the configured remaining time. Categories left at 24 h are unaffected and behave the classic way (new findings land in Active until you act).",
+    "tempTitle": "CPU temperature CRITICAL is the safety override",
+    "tempBody": "One specific finding bypasses the suppression entirely: <strong>CPU temperature CRITICAL</strong>. If the sensor crosses the critical threshold, the alert re-fires regardless of any prior dismissal — a cooked CPU is a cooked CPU. This is the only built-in override of the dismiss model.",
+    "nonDismissableTitle": "Findings that cannot be dismissed",
+    "nonDismissableBody": "A handful of findings are flagged non-dismissable on purpose — they signal a condition where silencing the alert could cost data, hardware or connectivity. The Dismiss button is hidden for these rows; the alert clears only when the underlying condition recovers and the auto-resolve cleanup picks it up. Other findings (transient I/O events on a healthy disk, recovered states) are also marked non-dismissable but for the opposite reason: there's nothing to silence because the row is already informational and self-clearing.",
+    "headerFinding": "Finding",
+    "headerWhy": "Why it can't be dismissed",
+    "rows": [
+      {
+        "finding": "CPU temperature warning / critical",
+        "why": "Hardware risk — sustained over-temperature damages silicon. Silencing would let a cooking CPU run unnoticed."
+      },
+      {
+        "finding": "Filesystem space critical (root mount)",
+        "why": "Data loss risk — a full root prevents writes and corrupts state. The alert must remain visible until you free space."
+      },
+      {
+        "finding": "ZFS pool DEGRADED / FAULTED",
+        "why": "Data integrity risk — pool failure threatens every dataset on it. Silencing while the pool is unhealthy is never the right answer."
+      },
+      {
+        "finding": "Disk I/O errors with SMART FAILED",
+        "why": "Drive failure confirmed by SMART — masking hides real hardware dying. The alert stays until the device is replaced (or removed from the host)."
+      },
+      {
+        "finding": "Network interface DOWN",
+        "why": "Connectivity loss — bridges, bonds and physical interfaces with active traffic must stay visible. Silencing them would mask a remote-management outage."
+      },
+      {
+        "finding": "I/O events on healthy disks (INFO)",
+        "why": "Transient ATA / dmesg events on a disk whose SMART says OK — flagged INFO and self-clearing. Nothing to dismiss because the next cycle already removes them."
+      }
+    ],
+    "principle": "Everything else can be dismissed. The principle is: alerts that indicate \"real damage in progress\" or that have already self-resolved are kept off the dismiss path; alerts about sustained conditions you may want to acknowledge and re-check later (high CPU usage, pending updates, certificate near expiry, log warnings, VM startup hiccups, etc.) all expose the Dismiss button."
+  },
+  "autoresolve": {
+    "heading": "Auto-resolution and cleanup",
+    "intro": "Many alerts should clear themselves when the condition goes away — a VM that was failing to start and is now running, a disk that's no longer in the system, a temperature that dropped back to normal. A cleanup routine runs at the end of each five-minute cycle and applies these rules:",
+    "headerTrigger": "Trigger",
+    "headerAction": "Action",
+    "rows": [
+      {
+        "trigger": "CPU usage back to normal range after a CPU-related warning.",
+        "action": "Marked resolved. Drops out of the Active list."
+      },
+      {
+        "trigger": "Memory pressure back below the warning threshold after an OOM / memory warning.",
+        "action": "Marked resolved."
+      },
+      {
+        "trigger": "VM / CT referenced by the error no longer exists (<code>qm status</code> / <code>pct status</code> non-zero).",
+        "action": "Marked resolved as resource removed."
+      },
+      {
+        "trigger": "Disk referenced by the error no longer present in <code>/dev/</code>.",
+        "action": "Marked resolved as device removed. The permanent observation history is preserved (see next section)."
+      },
+      {
+        "trigger": "Findings sourced from the journal (<code>logs</code> category, SMART entries, ATA / I/O errors) when their suppression window expires.",
+        "action": "Removed cleanly. Each scan inspects fresh journal entries from that point forward; the same historic line in the journal is not re-emitted."
+      },
+      {
+        "trigger": "Resolved errors older than seven days.",
+        "action": "Deleted from the database to keep the table small. Notification history is independent and kept longer."
+      }
+    ],
+    "permanentTitle": "Permanent suppression is not the same as resolved",
+    "permanentBody": "Setting a category's Suppression Duration to <code>-1</code> (<em>permanent</em>) silences future alerts for items you dismiss in that category — but it does not skip the auto-resolve check above. If the underlying condition disappears (resource deleted, threshold no longer breached), the item is still cleaned up automatically."
+  },
+  "observations": {
+    "heading": "Disk observations — the permanent history",
+    "intro": "Disk events are special. A SMART warning on <code>/dev/sdh</code> at 02:14 AM is something you want to remember even after the I/O storm subsided and the error auto-resolved — the disk has a track record now. For that purpose, the Health Monitor keeps a separate <strong>permanent</strong> table: <code>disk_observations</code>.",
+    "headerProperty": "Property",
+    "headerErrors": "<code>errors</code> table (Active)",
+    "headerObs": "<code>disk_observations</code> table",
+    "rows": [
+      {
+        "property": "Purpose",
+        "errors": "Drives the <em>current</em> health view + notification dispatch.",
+        "obs": "Permanent per-disk audit trail."
+      },
+      {
+        "property": "Auto-resolve",
+        "errors": "Yes — rows are cleared when the condition disappears.",
+        "obs": "No — entries persist forever unless the user explicitly dismisses them."
+      },
+      {
+        "property": "Dedup key",
+        "errors": "<code>error_key</code> (e.g. <code>smart_sdh</code>).",
+        "obs": "<code>(disk_registry_id, error_type, error_signature)</code> with stable signatures stripped of volatile data."
+      },
+      {
+        "property": "Where shown",
+        "errors": "Health Monitor modal (Active / Dismissed lists).",
+        "obs": "Disk detail card in the <strong>Storage</strong> tab, with an \"X obs.\" badge per disk."
+      },
+      {
+        "property": "What it records",
+        "errors": "Whatever is currently failing.",
+        "obs": "SMART warnings (sector issues / temperature / CRC / failed self-tests), I/O errors (ATA / NVMe / dm), filesystem errors, ZFS pool events."
+      }
+    ],
+    "outro": "Practical consequence: an alert can clear from the dashboard while the same incident is still recorded in the disk's history. When you click into a disk under Storage, the card shows the count of outstanding observations and a list with timestamps, severity and the original raw message — useful when you're deciding whether a drive needs replacement.",
+    "renameTitle": "Cross-device renames are merged automatically",
+    "renameBody": "Disks sometimes appear under transient names (<code>ata8</code>, <code>nvme0n1p3</code>) before getting a stable block-device name. The observation layer consolidates entries by serial number when known: if an event was first recorded as <code>ata8</code> and the same disk is later identified as <code>sdh</code>, the historic observations are reattached to <code>sdh</code> on the next cycle so the history isn't fragmented."
+  },
+  "notification": {
+    "heading": "From a finding to a notification",
+    "intro": "Every active error is also a candidate for the notification engine. The flow:",
+    "items": [
+      "The scanner records the finding with category + severity + structured details.",
+      "If the event type is <strong>enabled</strong> in the global notification settings, and the channel hasn't silenced this category, an event is queued.",
+      "The template engine renders a (title, body) pair from the structured details. If the AI rewriter is enabled, the same pair is also passed through the configured provider for a plain-language version.",
+      "The channel implementation ships it: Telegram message, Discord embed, Gotify push or email. The dispatch outcome is stored in <code>notification_history</code>.",
+      "If a dismiss arrives later, the suppression window kicks in and any further re-fires of the same <code>error_key</code> stay queue-side until the window closes."
+    ],
+    "outro": "Channel configuration (Telegram bot token, webhook URLs, AI provider keys, per-event toggles, channel overrides) is documented in <notifLink>Notifications</notifLink> and <aiLink>AI Assistant</aiLink>."
+  },
+  "rest": {
+    "heading": "REST endpoints",
+    "intro": "Everything the modal does is callable from the API — handy for scripts, custom dashboards or your own chat-bot integration.",
+    "headerEndpoint": "Endpoint",
+    "headerMethod": "Method",
+    "headerUse": "Use",
+    "rows": [
+      {
+        "endpoint": "/api/health",
+        "method": "GET",
+        "use": "Small health probe — returns JSON with <code>status</code>, <code>timestamp</code> and <code>version</code>. Suitable for Uptime Kuma keyword checks; the receiver must send the bearer header."
+      },
+      {
+        "endpoint": "/api/health/status",
+        "method": "GET",
+        "use": "Overall health verdict — single severity + summary string. Authenticated."
+      },
+      {
+        "endpoint": "/api/health/details",
+        "method": "GET",
+        "use": "All ten categories with their per-category statuses and the structured payload that produced each one."
+      },
+      {
+        "endpoint": "/api/health/full",
+        "method": "GET",
+        "use": "Full snapshot — categories + active errors + dismissed list + custom suppression settings. Backs the modal in one round-trip and uses a 6-min background cache for instant response."
+      },
+      {
+        "endpoint": "/api/health/active-errors",
+        "method": "GET",
+        "use": "Just the Active list. Filterable by <code>?category=&lt;name&gt;</code>."
+      },
+      {
+        "endpoint": "/api/health/dismissed",
+        "method": "GET",
+        "use": "Just the Dismissed list, with remaining suppression hours."
+      },
+      {
+        "endpoint": "/api/health/acknowledge",
+        "method": "POST",
+        "use": "Body: <code>'{'\"error_key\":\"smart_sdh\"'}'</code>. Dismiss an alert with the category's configured window."
+      },
+      {
+        "endpoint": "/api/health/settings",
+        "method": "GET / POST",
+        "use": "Read or write the per-category Suppression Duration values."
+      },
+      {
+        "endpoint": "/api/health/cleanup-orphans",
+        "method": "POST",
+        "use": "Manual cleanup of errors whose underlying device / VM is gone. Idempotent."
+      }
+    ],
+    "codeComment1": "# Snapshot the current health for a script",
+    "codeComment2": "# Dismiss a specific error",
+    "codeComment3": "# Set the disks-category suppression to a week"
+  },
+  "whereNext": {
+    "heading": "Where to next",
+    "items": [
+      {
+        "label": "Dashboard",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — where the Health Monitor modal is opened from in the UI."
+      },
+      {
+        "label": "Notifications",
+        "href": "/docs/monitor/notifications",
+        "tail": " — channels, per-event toggles, the AI rewrite hook, history."
+      },
+      {
+        "label": "AI Assistant",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": " — provider configuration (OpenAI / Anthropic / Gemini / Groq / Ollama / OpenRouter), prompt mode, per-channel detail level, language."
+      },
+      {
+        "label": "Architecture",
+        "href": "/docs/monitor/architecture",
+        "tailRich": " — the SQLite schema (<code>errors</code>, <code>disk_observations</code>, <code>events</code>) and the background-thread cadence."
+      }
+    ]
+  }
+}

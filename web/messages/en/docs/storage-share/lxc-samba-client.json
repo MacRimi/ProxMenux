@@ -1,0 +1,155 @@
+{
+  "meta": {
+    "title": "Samba client in LXC | ProxMenux Documentation",
+    "description": "Mount Samba / CIFS shares directly from inside a Proxmox LXC container with ProxMenux. Auto-installs cifs-utils + smbclient, supports auto-discovery, secure credential storage, and persistent mounts via /etc/fstab. Requires a privileged container.",
+    "ogTitle": "Samba client in LXC | ProxMenux Documentation",
+    "ogDescription": "Mount Samba / CIFS shares from inside a privileged LXC container. Auto-discovery, secure credential file, /etc/fstab persistence."
+  },
+  "header": {
+    "title": "Samba client in LXC",
+    "description": "Mount Samba (SMB / CIFS) shares directly from inside a Proxmox LXC container. The container becomes a real CIFS client — talks to the Samba server over the network, runs mount.cifs, stores credentials securely, and writes to /etc/fstab. ProxMenux installs cifs-utils + smbclient for you and validates credentials against the server before mounting.",
+    "section": "Storage & Share · LXC"
+  },
+  "privReq": {
+    "title": "Privileged container required",
+    "body": "The kernel <code>mount.cifs</code> client needs capabilities (<code>SYS_ADMIN</code> at minimum) that unprivileged LXC containers do not expose. The script enforces this — it asks you to pick a CT and <strong>aborts if it is unprivileged</strong>. If you need the share inside an unprivileged CT, mount it on the Proxmox host first (with <hostSambaLink>Samba / CIFS as Proxmox storage</hostSambaLink>) and bind-mount it into the CT with the <mountLink>LXC Mount Manager</mountLink>."
+  },
+  "what": {
+    "heading": "What this does",
+    "body": "The container speaks CIFS over the network and mounts the share on its own. The Proxmox host is just the network bridge — it does not see or manage the mount.",
+    "diagramServerLabel": "Samba Server",
+    "diagramServerDetail": "//srv/share",
+    "diagramHostLabel": "Proxmox Host",
+    "diagramHostDetail": "(just a\nnetwork bridge)",
+    "diagramCtLabel": "LXC (privileged)",
+    "diagramCtDetail": "/mnt/share\nmount.cifs inside CT",
+    "diagramArrow": "CIFS",
+    "twoWaysTitle": "Two ways to give a CT a Samba share — pick one",
+    "twoWaysBind": "<strong>Bind mount via host</strong> (<mountLink>LXC Mount Manager</mountLink>): host mounts the CIFS once, every CT bind-mounts the same path. Works with unprivileged CTs. Recommended when several CTs need the same share.",
+    "twoWaysDirect": "<strong>Direct CIFS mount inside the CT</strong> (this page): the CT mounts the CIFS itself. Requires privileged. Useful when the CT must own its own credentials, or when each CT talks to a different server."
+  },
+  "opening": {
+    "heading": "Opening the tool",
+    "body": "From ProxMenux's main menu, open <strong>Storage &amp; Share Manager → Configure Samba Client in LXC (only privileged)</strong>. ProxMenux first asks you to <strong>pick the target CT</strong> (and starts it if stopped); aborts if unprivileged. Once the CT is selected you see this sub-menu:",
+    "imageAlt": "Samba Client Manager menu — Mount / View / Unmount / Test connectivity"
+  },
+  "howRuns": {
+    "heading": "How the script runs (Mount flow)"
+  },
+  "creds": {
+    "heading": "Where the password lives",
+    "body": "ProxMenux <strong>never stores the password in plain text</strong> in the mount command or in <code>/etc/fstab</code>. Instead it writes a credentials file inside the CT:",
+    "whyTitle": "Why a separate file rather than fstab",
+    "whyBody": "The CIFS module accepts <code>username=</code> / <code>password=</code> options inline in fstab, but anyone who can read <code>/etc/fstab</code> sees the password in clear. Putting credentials in a root-only file and pointing fstab at it (<code>credentials=</code>) keeps the password out of world-readable config."
+  },
+  "options": {
+    "heading": "Mount options explained",
+    "headerOption": "Option",
+    "headerEffect": "What it does",
+    "rows": [
+      {
+        "option": "rw / ro",
+        "effect": "Read-write or read-only mode for the whole mount."
+      },
+      {
+        "option": "file_mode=0664",
+        "effect": "Permissions reported for files via CIFS. Default lets owner+group write, others read."
+      },
+      {
+        "option": "dir_mode=0775",
+        "effect": "Permissions reported for directories. Default lets owner+group enter and create, others traverse."
+      },
+      {
+        "option": "iocharset=utf8",
+        "effect": "Force UTF-8 for filenames coming over the wire. Avoids mojibake on non-ASCII names."
+      },
+      {
+        "option": "credentials=file",
+        "effect": "Read username / password from the file (added automatically for user auth)."
+      },
+      {
+        "option": "guest",
+        "effect": "Authenticate as guest, no credentials needed (added automatically when guest is chosen)."
+      },
+      {
+        "option": "_netdev",
+        "effect": "Tells the init system this mount needs the network. Boot does not block waiting for it."
+      },
+      {
+        "option": "x-systemd.automount",
+        "effect": "Lazy mount: only mounts on first access. CIFS server unreachable at boot does not stall the CT."
+      },
+      {
+        "option": "noauto",
+        "effect": "Skip eager mount at boot. Combined with the automount unit, the mount is established lazily."
+      }
+    ],
+    "netEffectTitle": "Net effect of the fstab flags",
+    "netEffectBody": "Your container always boots, even if the Samba server is offline. The first time something touches the mount path, systemd quietly mounts it. If the server is still down, that one access fails with <em>resource temporarily unavailable</em> — but nothing else in the CT is affected."
+  },
+  "manual": {
+    "heading": "Manual equivalent",
+    "body": "Replicate the whole flow by hand — every command runs <strong>inside the CT</strong> via <code>pct exec &lt;ctid&gt; --</code> or directly via <code>pct enter &lt;ctid&gt;</code>:",
+    "guestIntro": "Guest variant — no credentials file needed:"
+  },
+  "view": {
+    "heading": "View current mounts",
+    "body": "Lists every CIFS mount point active inside the CT (<code>mount -t cifs</code>) plus every CIFS line in the CT's <code>/etc/fstab</code>. For each fstab entry the live mount status is shown — useful to spot permanent mounts that did not come up at boot."
+  },
+  "unmount": {
+    "heading": "Unmount Samba share",
+    "body": "Combines the live mounts and the fstab entries into one list, lets you pick one, and <strong>removes the corresponding line from <code>/etc/fstab</code></strong> plus the matching credentials file. The script does not run <code>umount</code> on the live mount — instead it tells you a CT reboot is needed for the unmount to take effect.",
+    "warnTitle": "The script removes fstab entries, not live mounts",
+    "warnBody": "Same design as the NFS client: <code>umount</code> on a busy mount fails with \"device busy\". Removing the fstab entry guarantees the mount disappears cleanly on the next CT start. If you want the mount gone <em>now</em>, run <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> by hand after the script finishes."
+  },
+  "test": {
+    "heading": "Test Samba connectivity",
+    "body": "Diagnostic pass inside the CT: confirms <code>cifs-utils</code> is installed, lists current CIFS mounts, then for every server referenced in fstab checks ping → ports 139/445 → guest listing. \"Requires authentication\" on the guest test is normal for any server that doesn't expose public shares."
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "privTitle": "Privileged container required (script aborts)",
+    "privBody": "The selected CT is unprivileged. The kernel CIFS client needs <code>SYS_ADMIN</code> capability that unprivileged CTs do not expose. Either convert the CT to privileged, or use the alternative path described in the warning at the top of this page.",
+    "aptTitle": "apt-get install fails",
+    "aptIntro": "The script assumes a Debian-family CT (<code>apt-get</code>). On Alpine / Arch / Rocky / Alma, install the CIFS client by hand:",
+    "aptItems": [
+      "Alpine: <code>apk add cifs-utils samba-client</code>",
+      "Arch: <code>pacman -S cifs-utils smbclient</code>",
+      "Rocky / Alma: <code>dnf install cifs-utils samba-client</code>"
+    ],
+    "aptOutro": "Then re-run the ProxMenux script — the install step skips when the tools are already present.",
+    "guestFallbackTitle": "\"The server connected you as guest instead of the specified user\"",
+    "guestFallbackBody": "The script's active validation caught a real auth problem. The server accepted the connection but downgraded it to guest because the credentials are wrong. Common causes: typo in the username / password, the user does not exist on the server, the user is locked out, or the workgroup / domain is mismatched. Re-run the flow and re-enter credentials carefully (the password is hidden in the dialog).",
+    "denyTitle": "\"NT_STATUS_ACCESS_DENIED\" when mounting",
+    "denyBody": "Credentials were validated but the share denies access. Check on the server side whether the user has permissions on that specific share (validation only confirms login, not per-share ACLs). Also check whether the server requires a specific SMB protocol version: append <code>vers=3.0</code> (or <code>2.1</code>, <code>2.0</code>) to the mount options.",
+    "utf8Title": "UTF-8 / non-ASCII filenames are mangled",
+    "utf8Body": "The default options include <code>iocharset=utf8</code>, but some server configurations report an unexpected codepage. If filenames with accents / symbols look wrong, also try <code>nounix</code> (some Linux Samba servers need this when the client is also Linux) or set the server side to <code>unix extensions = no</code>.",
+    "bootTitle": "Permanent mount succeeds but does not come up at boot",
+    "bootBody": "Almost always one of: the network is not ready when the CT mounts (the script's <code>_netdev,x-systemd.automount,noauto</code> flags fix this), the server is unreachable at boot (auto-mount waits for first access — that's normal), or DNS is unresolved at boot (use the server's IP, not its hostname)."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "LXC Mount Points (Host ↔ Container)",
+        "tail": " — the alternative for unprivileged CTs: mount on host, bind into CT."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-client",
+        "label": "NFS client in LXC",
+        "tail": " — sibling page, same pattern for NFS shares."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-server",
+        "label": "Samba server in LXC",
+        "tailRich": " — the inverse: expose folders <em>from</em> a CT over Samba."
+      },
+      {
+        "href": "/docs/storage-share/host-samba",
+        "label": "Samba / CIFS as Proxmox storage",
+        "tail": " — register the share in Proxmox itself instead of inside a single CT."
+      }
+    ]
+  }
+}

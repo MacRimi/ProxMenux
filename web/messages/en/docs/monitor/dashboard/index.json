@@ -1,0 +1,91 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Dashboard | ProxMenux Documentation",
+    "description": "The dashboard is the main UI of ProxMenux Monitor: nine tabs (System Overview, Storage, Network, VMs & LXCs, Hardware, System Logs, Terminal, Security, Settings) plus the global header with the Health Monitor status pill."
+  },
+  "header": {
+    "title": "Dashboard",
+    "description": "The dashboard is the everyday view of ProxMenux Monitor — nine tabs each focused on one slice of the host plus a global header with the Health Monitor status pill, the node identity and the quick-refresh control.",
+    "section": "ProxMenux Monitor"
+  },
+  "oneHeader": {
+    "title": "One header, nine tabs",
+    "body": "The header (logo, node name, status pill, uptime, refresh, theme toggle) stays visible everywhere. The active tab below it changes the entire content area. The status pill colour mirrors the worst category of the <link>Health Monitor</link> — it's the same data point seen from the dashboard."
+  },
+  "tabs": {
+    "heading": "The nine tabs",
+    "intro": "Each tab has its own dedicated page. Pages are added incrementally as the documentation is filled in; below is the full list and what each one is responsible for.",
+    "headerTab": "Tab",
+    "headerOwns": "What it owns",
+    "rows": [
+      {
+        "name": "System Overview",
+        "linksTo": "/docs/monitor/dashboard/system-overview",
+        "owns": "CPU / memory / temperature widgets, active VM & LXC count, historical metrics charts, storage and network summaries. Default landing tab."
+      },
+      {
+        "name": "Storage",
+        "owns": "Proxmox pools, physical disks, SMART data, ZFS state, wear & lifetime, observation history."
+      },
+      {
+        "name": "Network",
+        "owns": "Every interface (physical / bond / bridge / OVS), IP/MAC, RX/TX graphs, historical RRD per interface."
+      },
+      {
+        "name": "VMs & LXCs",
+        "owns": "Inventory of guests, drill-in for config / metrics / logs, start / stop / reboot / shutdown actions."
+      },
+      {
+        "name": "Hardware",
+        "owns": "CPU model and topology, memory layout, PCIe topology, GPUs with per-slot real-time monitoring."
+      },
+      {
+        "name": "System Logs",
+        "owns": "Live <code>journalctl</code> with filters, Proxmox task history, notification log, downloadable log bundles."
+      },
+      {
+        "name": "Terminal",
+        "owns": "Browser shell to host or to any VM/CT, powered by <code>xterm.js</code> over WebSockets."
+      },
+      {
+        "name": "Security",
+        "owns": "Auth setup, password / 2FA / API tokens, audit log, optional Fail2Ban panel, Secure Gateway deployment."
+      },
+      {
+        "name": "Settings",
+        "owns": "Notification channels, AI provider, suppression durations, branding, advanced flags."
+      }
+    ]
+  },
+  "headerAnatomy": {
+    "heading": "Header anatomy",
+    "items": [
+      "<strong>Logo + product name</strong> on the left. The logo turns into an \"update available\" variant when a newer Monitor release is detected.",
+      "<strong>Node identity</strong> — the Proxmox node name resolved from <code>pvesh get /nodes</code>, falling back to <code>hostname</code>.",
+      "<strong>Health status pill</strong> — Healthy (green), Warning (yellow), Critical (red). Click it to open the Health Monitor modal. An extra blue <em>info</em> badge appears when there are dismissed items still inside their suppression window.",
+      "<strong>Uptime</strong> — host uptime, formatted human-readable.",
+      "<strong>Refresh button</strong> — re-issues all the live API calls without a full page reload.",
+      "<strong>Theme toggle</strong> — light / dark / system. Persisted in <code>localStorage</code>."
+    ]
+  },
+  "whereNext": {
+    "heading": "Where to next",
+    "items": [
+      {
+        "label": "System Overview tab",
+        "href": "/docs/monitor/dashboard/system-overview",
+        "tail": " — the landing tab, fully documented."
+      },
+      {
+        "label": "Health Monitor",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — the modal behind the header status pill, ten categories deep-dive."
+      },
+      {
+        "label": "Architecture",
+        "href": "/docs/monitor/architecture",
+        "tail": " — how the dashboard talks to the Flask backend."
+      }
+    ]
+  }
+}

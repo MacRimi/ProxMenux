@@ -1,0 +1,162 @@
+{
+  "meta": {
+    "title": "Comandos de passthrough de GPU en Proxmox — lspci, VFIO, IOMMU, qm set hostpci | ProxMenux",
+    "description": "Referencia para passthrough de GPU en Proxmox VE: identificación de dispositivos con lspci, módulos VFIO, grupos IOMMU (intel_iommu / amd_iommu), actualizaciones de GRUB e initramfs, qm set hostpci0, configuración de passthrough NVIDIA / AMD / Intel.",
+    "ogTitle": "Comandos de passthrough de GPU en Proxmox — lspci, VFIO, IOMMU, qm set hostpci",
+    "ogDescription": "Referencia para inspeccionar y configurar passthrough de GPU en Proxmox VE — dispositivos PCI, módulos VFIO, grupos IOMMU, parámetros de arranque del kernel, qm set hostpci.",
+    "twitterTitle": "Comandos de passthrough de GPU en Proxmox | ProxMenux",
+    "twitterDescription": "Inspeccionar dispositivos PCI, configurar VFIO e IOMMU y asignar GPUs a VMs en Proxmox VE."
+  },
+  "header": {
+    "title": "Passthrough de GPU",
+    "description": "Referencia para inspeccionar y configurar passthrough de GPU / TPU en Proxmox: identificación de dispositivos (lspci), configuración del módulo VFIO, validación de IOMMU, actualizaciones de initramfs / GRUB y configuración de passthrough por VM (qm set hostpci, machine q35, bios ovmf).",
+    "section": "Ayuda e información"
+  },
+  "intro": {
+    "title": "IOMMU debe estar activado en BIOS / UEFI",
+    "body": "Antes de que ninguno de estos comandos importe, IOMMU tiene que estar activado a nivel de firmware (busca <em>VT-d</em>, <em>AMD-Vi</em> o <em>IOMMU</em> en BIOS / UEFI). Parámetros habituales de GRUB para activarlo del lado de Linux: <code>intel_iommu=on</code> (Intel) o <code>amd_iommu=on</code> (AMD), a menudo combinados con <code>iommu=pt video=efifb:off video=vesa:off</code>."
+  },
+  "commandGroups": [
+    {
+      "title": "Identificación de dispositivos",
+      "commands": [
+        {
+          "command": "lspci -nn | grep -i nvidia",
+          "description": "Listar dispositivos PCI NVIDIA"
+        },
+        {
+          "command": "lspci -nn | grep -i vga",
+          "description": "Listar todos los dispositivos compatibles con VGA"
+        },
+        {
+          "command": "lspci -nn | grep -i amd",
+          "description": "Listar dispositivos PCI AMD"
+        },
+        {
+          "command": "lspci -nnk | grep -A3 VGA",
+          "description": "Listar dispositivos VGA con sus drivers del kernel"
+        },
+        {
+          "command": "lspci -v -s <PCI_ID>",
+          "description": "Mostrar información detallada de un dispositivo PCI concreto"
+        }
+      ]
+    },
+    {
+      "title": "Configuración de VFIO",
+      "commands": [
+        {
+          "command": "dmesg | grep -i vfio",
+          "description": "Comprobar mensajes del módulo VFIO"
+        },
+        {
+          "command": "cat /etc/modprobe.d/vfio.conf",
+          "description": "Revisar la configuración de passthrough VFIO"
+        },
+        {
+          "command": "ls -la /etc/modprobe.d/",
+          "description": "Listar todos los ficheros de configuración de modprobe"
+        },
+        {
+          "command": "cat /etc/modules",
+          "description": "Mostrar los módulos cargados en el arranque"
+        },
+        {
+          "command": "lsmod | grep vfio",
+          "description": "Comprobar si los módulos VFIO están cargados"
+        }
+      ]
+    },
+    {
+      "title": "Configuración de IOMMU",
+      "commands": [
+        {
+          "command": "cat /etc/default/grub",
+          "description": "Revisar las opciones de GRUB para IOMMU"
+        },
+        {
+          "command": "update-grub",
+          "description": "Aplicar los cambios de GRUB"
+        },
+        {
+          "command": "dmesg | grep -i iommu",
+          "description": "Comprobar mensajes de IOMMU en el log del kernel"
+        },
+        {
+          "command": "dmesg | grep -e DMAR -e IOMMU",
+          "description": "Comprobar mensajes DMAR e IOMMU"
+        },
+        {
+          "command": "find /sys/kernel/iommu_groups/ -type l | sort -V",
+          "description": "Listar grupos IOMMU"
+        }
+      ]
+    },
+    {
+      "title": "Actualizaciones del sistema",
+      "commands": [
+        {
+          "command": "update-initramfs -u",
+          "description": "Aplicar cambios al initramfs (VFIO)"
+        },
+        {
+          "command": "update-initramfs -u -k all",
+          "description": "Actualizar el initramfs para todos los kernels"
+        },
+        {
+          "command": "cat /proc/cmdline",
+          "description": "Mostrar los parámetros de arranque del kernel actuales"
+        }
+      ]
+    },
+    {
+      "title": "Configuración de la VM",
+      "commands": [
+        {
+          "command": "qm config <vmid> | grep hostpci",
+          "description": "Mostrar la configuración de passthrough PCI de una VM"
+        },
+        {
+          "command": "qm set <vmid> -hostpci0 <PCI_ID>,pcie=1,x-vga=1",
+          "description": "Añadir passthrough de GPU a una VM"
+        },
+        {
+          "command": "cat /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Ver el fichero de configuración de la VM"
+        },
+        {
+          "command": "qm set <vmid> -machine q35",
+          "description": "Hacer que la VM use el chipset Q35 (recomendado para passthrough)"
+        },
+        {
+          "command": "qm set <vmid> -bios ovmf",
+          "description": "Hacer que la VM use UEFI/OVMF (necesario para passthrough de GPU)"
+        }
+      ]
+    }
+  ],
+  "afterChangesTip": {
+    "title": "Después de cambiar GRUB o configs de modprobe",
+    "bodyRich": "Ejecuta <code>update-grub</code> + <code>update-initramfs -u</code> y reinicia. Verifica con <code>cat /proc/cmdline</code> (parámetros del kernel), <code>dmesg | grep -i iommu</code> (IOMMU inicializado) y <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code> (grupos presentes)."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Añadir GPU a VM (passthrough)",
+        "tail": " — flujo interactivo de ProxMenux."
+      },
+      {
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "label": "Añadir GPU a LXC",
+        "tail": " — passthrough a un contenedor en lugar de a una VM."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Resumen de Ayuda e información",
+        "tail": "."
+      }
+    ]
+  }
+}

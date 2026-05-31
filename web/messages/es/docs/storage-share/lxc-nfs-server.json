@@ -1,0 +1,159 @@
+{
+  "meta": {
+    "title": "Servidor NFS en LXC | ProxMenux Documentation",
+    "description": "Expón carpetas por NFS desde dentro de un contenedor LXC de Proxmox con ProxMenux. Auto-instala nfs-kernel-server, configura una convención de grupo sharedfiles universal, gestiona /etc/exports, ACL de red y desinstalación. Requiere un contenedor privileged.",
+    "ogTitle": "Servidor NFS en LXC | ProxMenux Documentation",
+    "ogDescription": "Ejecuta un servidor NFS dentro de un contenedor LXC privileged. Grupo sharedfiles universal, ACL de red y desinstalación completa."
+  },
+  "header": {
+    "title": "Servidor NFS en LXC",
+    "description": "Ejecuta un servidor NFS de kernel dentro de un contenedor LXC de Proxmox y expón carpetas a otras máquinas en la red. ProxMenux instala nfs-kernel-server, configura una convención de grupo sharedfiles universal para que múltiples CTs privileged puedan compartir archivos limpiamente, gestiona /etc/exports y ofrece una ruta de desinstalación completa.",
+    "section": "Almacenamiento y compartición · LXC"
+  },
+  "privReq": {
+    "title": "Contenedor privileged requerido",
+    "body": "<code>nfs-kernel-server</code> necesita montar el sistema de archivos del kernel <code>nfsd</code> en <code>/proc/fs/nfsd</code>, lo que requiere <code>CAP_SYS_ADMIN</code> en el namespace del kernel del host — no solo en el namespace de usuario del contenedor. LXC unprivileged no expone esa capability. En la práctica, el servicio simplemente falla al arrancar con <code>rpc.nfsd: Unable to access /proc/fs/nfsd errno 2 (No such file or directory)</code> y systemd marca <code>nfs-server.service</code> como una dependencia fallida. El script impone un CT privileged y <strong>aborta si es unprivileged</strong>. Si no puedes usar un CT privileged, ejecuta el servidor NFS dentro de una VM."
+  },
+  "what": {
+    "heading": "Qué hace",
+    "body": "Esto es lo <em>opuesto</em> de la página del cliente NFS. El contenedor se convierte en un <strong>servidor</strong> NFS: expone una carpeta de su sistema de archivos a clientes en la red. Otros CTs, el host Proxmox, VMs o máquinas físicas pueden entonces montar esa carpeta.",
+    "diagramServerLabel": "LXC (privileged) — servidor NFS",
+    "diagramServerDetail": "/mnt/data\n(carpeta que expones)\n\nchown root:sharedfiles\nchmod 2775 (SGID)\n\nnfs-kernel-server\n+ rpcbind corriendo",
+    "diagramClientLabel": "Cualquier cliente en la red",
+    "diagramClientDetail": "otro CT, el host,\nuna VM, una máquina física…",
+    "diagramArrow": "export NFS"
+  },
+  "shared": {
+    "heading": "La convención del grupo \"sharedfiles\"",
+    "body": "Antes de exportar la carpeta, ProxMenux crea un grupo llamado <code>sharedfiles</code> con <strong>GID 101000</strong> dentro del contenedor, añade cada usuario regular a él, luego pone el directorio del export a <code>root:sharedfiles</code> con modo <code>2775</code>. El <code>2</code> al principio es el bit SGID — cada archivo o carpeta creada dentro hereda automáticamente el grupo <code>sharedfiles</code>.",
+    "gidTitle": "Por qué GID 101000 específicamente",
+    "gidBody": "Mapea al GID <strong>1000</strong> del host cuando un contenedor unprivileged lee el mismo archivo (el idmap por defecto de LXC desplaza todo en +100000). En el flujo actual de ProxMenux el propio servidor NFS corre en un CT <strong>privileged</strong> (sin desplazamiento de su lado), pero la convención mantiene el GID numéricamente consistente con CTs cliente unprivileged que puedan montar este share después. Dos CTs privileged usando ambos <code>sharedfiles</code> con GID 101000 pueden leer / escribir los archivos del otro limpiamente porque los números de GID coinciden de principio a fin.",
+    "remapTitle": "El script también crea usuarios 'remap_*' — son vestigiales aquí",
+    "remapBody": "Por cada usuario regular en el CT (y para UIDs comunes como 33 = www-data, 1000, 1001, 1002), el script crea un usuario paralelo <code>remap_&lt;uid&gt;</code> con UID = <code>&lt;uid&gt; + 100000</code>, todos miembros de <code>sharedfiles</code>. El desplazamiento <code>+100000</code> imita el idmap unprivileged de LXC, pero como este script impone un CT <strong>privileged</strong> (sin desplazamiento), esos usuarios <code>remap_*</code> son cuentas shadow sin contraparte real en el host. Son restos inofensivos de una intención de diseño más ambiciosa. Si no los ves en <code>getent passwd</code>, no se rompe nada."
+  },
+  "defaults": {
+    "heading": "Opciones de export por defecto — léelo primero",
+    "warnTitle": "Las opciones por defecto incluyen no_root_squash",
+    "warnBody": "ProxMenux usa por defecto <code>rw,sync,no_subtree_check,'<'strong'>'no_root_squash'<'/strong'>'</code>. Esto significa que <strong>cualquier usuario root del cliente puede escribir como root en el export</strong> — apropiado para una LAN doméstica de confianza pero nunca para una red no confiable. Si tu CT es alcanzable desde un segmento no confiable (una red pública, un VPS, una VLAN hostil), <strong>cambia las opciones del export a <code>root_squash</code></strong> en el diálogo de opciones custom."
+  },
+  "opening": {
+    "heading": "Abrir la herramienta",
+    "body": "Desde el menú principal de ProxMenux, abre <strong>Storage &amp; Share Manager → Configure NFS Server in LXC (only privileged)</strong>. ProxMenux te pide primero elegir el CT destino (y lo arranca si está parado); aborta si es unprivileged. Una vez seleccionado el CT ves este submenú con cinco opciones:",
+    "imageAlt": "Menú NFS Server Manager — Create / View / Delete / Status / Uninstall"
+  },
+  "howRuns": {
+    "heading": "Cómo se ejecuta el script (flujo Create)"
+  },
+  "network": {
+    "heading": "ACL de red — quién puede montar el share",
+    "intro": "El campo network en <code>/etc/exports</code> filtra qué clientes pueden montar. ProxMenux ofrece tres modos:",
+    "headerMode": "Modo",
+    "headerValue": "Valor escrito en /etc/exports",
+    "headerWhen": "Cuándo elegirlo",
+    "rows": [
+      {
+        "mode": "Red local",
+        "value": "192.168.0.0/16",
+        "whenRich": "LAN doméstica / SOHO estándar. Cubre cada dirección <code>192.168.*.*</code>."
+      },
+      {
+        "mode": "Subnet personalizada",
+        "value": "tu CIDR (p. ej. 10.0.0.0/24)",
+        "when": "Cuando tu LAN no está en 192.168.x.x o quieres un alcance más estrecho."
+      },
+      {
+        "mode": "Host único",
+        "value": "tu IP (p. ej. 10.0.0.42)",
+        "when": "Solo una máquina específica debería montar. La más restrictiva."
+      }
+    ]
+  },
+  "options": {
+    "heading": "Opciones de export explicadas",
+    "headerOption": "Opción",
+    "headerEffect": "Qué hace",
+    "rows": [
+      {
+        "option": "rw / ro",
+        "effect": "Permitir acceso de lectura-escritura o solo lectura para los clientes que conecten."
+      },
+      {
+        "option": "sync",
+        "effectRich": "Responder a las peticiones de escritura solo después de que los datos estén en disco. Más seguro que <code>async</code> a costa de throughput."
+      },
+      {
+        "option": "no_subtree_check",
+        "effect": "Saltar la comprobación por petición de que el archivo sigue dentro del subárbol exportado. Más rápido y evita problemas cuando los archivos se renombran a mitad de operación."
+      },
+      {
+        "option": "no_root_squash",
+        "effectRich": "<strong>Confiar en el root del cliente.</strong> Un cliente que monte como root escribe como root en el servidor. Bueno para LANs de confianza (p. ej. herramientas de backup necesitan preservar la propiedad). Reemplázalo con <code>root_squash</code> si no confías plenamente en cada máquina de la ACL de red."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Equivalente manual",
+    "body": "Reproduce el flujo entero a mano — cada comando se ejecuta <strong>dentro del CT</strong> vía <code>pct exec &lt;ctid&gt; --</code> o <code>pct enter &lt;ctid&gt;</code>:"
+  },
+  "view": {
+    "heading": "Ver exports actuales",
+    "body": "Cat de <code>/etc/exports</code> desde dentro del CT (saltando comentarios / blancos) e imprime cada export con su ACL de red y cadena de opciones. Útil para comprobar qué carpetas están expuestas antes de compartir la IP del CT con alguien."
+  },
+  "delete": {
+    "heading": "Eliminar un export",
+    "body": "Lista cada línea en <code>/etc/exports</code> para selección, elimina la elegida (<code>sed -i</code>), ejecuta <code>exportfs -ra</code> y reinicia <code>nfs-kernel-server</code>. La propia carpeta y su contenido se dejan intactos."
+  },
+  "status": {
+    "heading": "Comprobar estado NFS",
+    "body": "Pasada de diagnóstico: confirma que <code>nfs-kernel-server</code> y <code>rpcbind</code> están instalados y activos, imprime la salida de <code>exportfs -v</code>, lista las sesiones NFS activas (<code>showmount -a</code>) y las conexiones de cliente actuales."
+  },
+  "uninstall": {
+    "heading": "Desinstalar servidor NFS",
+    "body": "Limpieza completa tras confirmación: para + deshabilita <code>nfs-kernel-server</code> y <code>rpcbind</code>, vacía <code>/etc/exports</code>, hace <code>apt-get purge</code> de los paquetes NFS, elimina el grupo <code>sharedfiles</code> y los usuarios <code>remap_*</code>, mata cualquier proceso residual. Las <strong>propias carpetas exportadas no se borran</strong> — solo la configuración NFS y los paquetes.",
+    "warnTitle": "El script se detiene en la línea del export, no en los datos",
+    "warnBody": "Tanto <em>Delete export</em> como <em>Uninstall NFS server</em> eliminan la configuración del export. Los datos en la carpeta exportada se preservan. Para borrar también los datos, hazlo explícitamente con <code>rm -rf</code> después de que el script termine — y haz backup primero si alguien todavía podría necesitarlos."
+  },
+  "troubleshoot": {
+    "heading": "Solución de problemas",
+    "privTitle": "Contenedor privileged requerido (el script aborta)",
+    "privBody": "El CT seleccionado es unprivileged. <code>nfs-kernel-server</code> no puede arrancar ahí porque montar <code>/proc/fs/nfsd</code> necesita <code>CAP_SYS_ADMIN</code> en el namespace del kernel del host, y el módulo <code>nfsd</code> tampoco está expuesto al namespace del contenedor (<code>modprobe nfsd</code> desde dentro devuelve <code>FATAL: Module nfsd not found</code>). Si te saltas el gate, verás <code>rpc.nfsd: Unable to access /proc/fs/nfsd errno 2 (No such file or directory)</code> en el journal y ningún puerto NFS llegará a abrirse. Las únicas opciones viables son: convertir el CT a privileged, o mover el servidor NFS a una VM.",
+    "aptTitle": "apt-get install falla",
+    "aptIntro": "El script asume un CT de la familia Debian. En Alpine / Arch / Rocky / Alma, instala los paquetes del servidor NFS a mano:",
+    "aptItems": [
+      "Alpine: <code>apk add nfs-utils</code>",
+      "Arch: <code>pacman -S nfs-utils</code>",
+      "Rocky / Alma: <code>dnf install nfs-utils</code>"
+    ],
+    "aptOutro": "Después reejecuta el script de ProxMenux — el paso de instalación se salta cuando las herramientas ya están presentes.",
+    "aclTitle": "El cliente no puede montar: 'access denied by server'",
+    "aclBody": "La IP del cliente está fuera de la ACL de red que configuraste. Vuelve a crear el export con una subnet más amplia, o añade la IP exacta del cliente. Pega común: los clientes que conectan a través de NAT del router pueden aparecer con la IP WAN del router, no la IP LAN del cliente — comprueba en el servidor con <code>tcpdump -n port 2049</code>.",
+    "ownTitle": "Los archivos escritos por el cliente aparecen con propiedad rara en el servidor",
+    "ownIntro": "Dos posibilidades:",
+    "ownItems": [
+      "Con <code>no_root_squash</code> (por defecto), el root del cliente escribe como root en el servidor. Los archivos pertenecen a <code>root:sharedfiles</code> gracias al SGID de la carpeta.",
+      "Los usuarios cliente no-root escriben como su propio UID/GID. Si su UID no existe en el servidor, los archivos aparecen con números raw (p. ej. <code>1234:1234</code>). Usa el grupo <code>sharedfiles</code> también en el cliente, o alinea UIDs entre los sistemas que comparten archivos."
+    ],
+    "noShowTitle": "El servidor es alcanzable pero showmount no devuelve nada",
+    "noShowBody": "Tras editar <code>/etc/exports</code>, debes recargar la tabla de exports con <code>exportfs -ra</code> y reiniciar <code>nfs-kernel-server</code> — el script hace ambas cosas, pero si editaste el archivo a mano, hazlo tú. Confirma también que el firewall en el CT (y en el host Proxmox) permite TCP/UDP 2049 y el puerto rpcbind (111)."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-nfs-client",
+        "label": "Cliente NFS en LXC",
+        "tail": " — el inverso: monta shares NFS externos desde dentro de un CT."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-server",
+        "label": "Servidor Samba en LXC",
+        "tail": " — página hermana, mismo patrón con SMB / CIFS en vez de NFS."
+      },
+      {
+        "href": "/docs/storage-share/host-nfs",
+        "label": "Share NFS como almacenamiento de Proxmox",
+        "tailRich": " — una vez que tu CT esté exportando, registra ese share NFS en Proxmox para que aparezca bajo <em>Datacenter → Storage</em>."
+      }
+    ]
+  }
+}

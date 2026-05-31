@@ -1,0 +1,172 @@
+{
+  "meta": {
+    "title": "Automated Post-Install Script | ProxMenux Documentation",
+    "description": "The ProxMenux Automated post-install script applies a curated set of 13 safe, hardware-aware optimizations to a fresh Proxmox VE host with zero prompts. Every change is registered for later reversal via Uninstall Optimizations.",
+    "ogTitle": "Automated Post-Install Script | ProxMenux Documentation",
+    "ogDescription": "13 curated optimizations applied to a fresh Proxmox VE host with zero prompts. Hardware-aware (SSD/NVMe auto-detect) and fully reversible."
+  },
+  "header": {
+    "title": "Automated Post-Install Script",
+    "description": "One click, zero prompts — ProxMenux applies a curated set of 13 safe optimizations that almost every Proxmox host benefits from. Every change is registered in the tools JSON so you can undo any of them later from Uninstall Optimizations.",
+    "section": "Post-Install · Automated"
+  },
+  "intro": {
+    "title": "When to pick Automated",
+    "body": "Run this on a freshly installed Proxmox host when you want the sensible baseline without making decisions. The script is idempotent — running it twice is safe, it just re-applies the same configurations. Opt-in features (Fastfetch, IOMMU, Ceph repo, HA, AMD fixes…) are intentionally <strong>not</strong> part of this path; pick them from <link>Customizable</link> if you need them."
+  },
+  "applies": {
+    "heading": "What the script applies",
+    "intro": "The optimizations are applied in this exact order. The <em>Category</em> column links to the detailed documentation of each change in the Customizable reference.",
+    "headerNum": "#",
+    "headerTool": "Tool",
+    "headerWhat": "What it does",
+    "headerCategory": "Category"
+  },
+  "optimizations": [
+    {
+      "tool": "APT repositories + full upgrade",
+      "what": "Disables the enterprise pve-enterprise.sources and ceph.sources, writes a clean no-subscription source for the host's Debian codename, then runs apt update && apt full-upgrade -y (Proxmox's official upgrade command).",
+      "category": "Basic Settings",
+      "categorySlug": "basic-settings"
+    },
+    {
+      "tool": "Subscription banner removal",
+      "what": "Patches the web UI to hide the 'No valid subscription' banner. Asks for confirmation before applying; reversible from Uninstall Optimizations.",
+      "category": "Customization",
+      "categorySlug": "customization"
+    },
+    {
+      "tool": "Force IPv4",
+      "what": "Writes /etc/apt/apt.conf.d/99-force-ipv4 so apt uses IPv4 only — bypasses flaky IPv6 mirror setups.",
+      "category": "Network",
+      "categorySlug": "network"
+    },
+    {
+      "tool": "Skip language packages",
+      "what": "Writes /etc/apt/apt.conf.d/99-disable-translations to stop downloading locale-specific packages. Faster, lighter apt updates.",
+      "category": "Basic Settings",
+      "categorySlug": "basic-settings"
+    },
+    {
+      "tool": "Increase system limits",
+      "what": "Raises inotify watches, nofile/nproc limits, kernel keyring limits and fs.file-max across sysctl.d, limits.d, pam and systemd — high enough for container-heavy hosts.",
+      "category": "System",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Memory tuning",
+      "what": "Sets vm.swappiness=10, balanced dirty ratios, vm.overcommit_memory=1, vm.max_map_count=262144 and compaction proactiveness when supported.",
+      "category": "System",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Kernel panic behaviour",
+      "what": "Configures the host to reboot 10 seconds after a panic / oops / hardlockup instead of freezing indefinitely.",
+      "category": "System",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Network stack tuning",
+      "what": "TCP buffer sizing, IPv4 hardening (redirects off, rp_filter=2, martian log off), local port range 1024-65535, TCP MTU probing, RFC 1337, plus a oneshot systemd unit to normalise virtual firewall bridges.",
+      "category": "Network",
+      "categorySlug": "network"
+    },
+    {
+      "tool": "Bashrc customisation (root)",
+      "what": "Colored PS1, common aliases (l/la/ll/ls/grep), timestamped history and bash-completion sourcing, all inside a PMX_CORE_BASHRC fenced block so it is easy to remove.",
+      "category": "Customization",
+      "categorySlug": "customization"
+    },
+    {
+      "tool": "Log2RAM (SSD-aware, auto)",
+      "what": "Detects whether the root disk is SSD / NVMe and installs Log2RAM from upstream git. Sizes the ramdisk by host RAM (128M / 256M / 512M), schedules periodic sync and a 95 % threshold auto-sync. Adjusts journald limits to fit in the ramdisk.",
+      "category": "Storage",
+      "categorySlug": "storage"
+    },
+    {
+      "tool": "ZFS autotrim (SSD-only)",
+      "what": "Enables zpool autotrim=on on every ZFS pool whose vdevs are all SSD/NVMe with TRIM support (checks /sys/block/<dev>/queue/rotational and discard_granularity). Pools backed by HDDs are skipped automatically. Only pools actually changed by ProxMenux are recorded for uninstall — pools you set autotrim on manually are left alone.",
+      "category": "Storage",
+      "categorySlug": "storage"
+    },
+    {
+      "tool": "Journald size limits",
+      "what": "Forces persistent storage, caps SystemMaxUse=64M / RuntimeMaxUse=60M, sets compression, info-level logging (required for the Monitor). Skipped automatically when Log2RAM is active (it does its own adjustment).",
+      "category": "System",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Logrotate tuning",
+      "what": "Daily rotation with size cap 10M, 7 rotations, compression and copytruncate — Log2RAM-friendly.",
+      "category": "System",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Persistent interface names",
+      "what": "Writes /etc/systemd/network/10-*.link files matching each physical NIC by MAC so eth0 / enp… names stay stable across reboots and new NIC additions.",
+      "category": "Network",
+      "categorySlug": "network"
+    }
+  ],
+  "hardwareTitle": "Hardware-aware defaults",
+  "hardwareBody": "The script reads the host hardware before applying settings. Log2RAM is only installed on SSD / NVMe root disks by default (it prompts if detection says otherwise). Log2RAM ramdisk size is picked from total RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). The journald limits are matched to the ramdisk size when Log2RAM is active, to avoid filling it.",
+  "upgrade": {
+    "heading": "Update and upgrade system",
+    "intro": "The very first step of the Automated bundle is the Proxmox upgrade. Proxmox's own upgrade guidance for a running host (within the same major version) is to run:",
+    "after": "That single line is the official command on any current Proxmox release. The Automated script runs <strong>exactly</strong> that, and wraps it with the repo hygiene and post-upgrade cleanup the official upgrade guide also recommends — same steps as the standalone <link>Proxmox System Update</link> utility:",
+    "items": [
+      "Disables the enterprise <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, removes legacy repo files, writes a clean no-subscription source for the host's codename.",
+      "Runs the upgrade non-interactively with <code>DEBIAN_FRONTEND=noninteractive</code> and <code>--force-confdef --force-confold</code> — config files you customised stay yours when upstream also changed them.",
+      "Installs essential Proxmox packages if missing (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
+      "LVM metadata sanity check, <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>, and a reboot prompt only if the kernel actually changed."
+    ],
+    "sameTitle": "Same updater, two entry points",
+    "sameBody": "The Automated bundle and the standalone <link>Proxmox System Update</link> utility share the same underlying scripts (<code>update-pve8.sh</code> / <code>update-pve9_2.sh</code>). Use the utility on its own when you only want to upgrade the host without applying the rest of the optimizations."
+  },
+  "endResult": {
+    "heading": "Expected end result",
+    "body": "When the script finishes, you will see a success message with the per-step output and a reboot prompt (some kernel settings require a restart to take effect). Declining the reboot is safe; the settings apply at the next boot.",
+    "imageAlt": "Automated post-install script — final terminal output showing each optimization applied successfully"
+  },
+  "notDoes": {
+    "heading": "What this script does NOT do",
+    "items": [
+      "Timezone auto-detection (commented out upstream; use Customizable if you want it).",
+      "Disable portmapper / rpcbind (see <secLink>Security</secLink>).",
+      "Enable IOMMU / VFIO (see <virtLink>Virtualization</virtLink>).",
+      "Install Fastfetch / Figurine / Ceph repo / HA / AMD CPU fixes (see <optLink>Optional</optLink>).",
+      "Install pigz or apply ZFS ARC tuning (see <perfLink>Performance</perfLink> / <storLink>Storage</storLink>)."
+    ]
+  },
+  "xshokTitle": "xshok-proxmox detection",
+  "xshokBody": "If the host has previously run the <code>xshok-proxmox</code> script, ProxMenux detects the marker file and warns you before continuing. Some tweaks can overlap. The companion script is deprecated — if you decide to continue anyway, review <link>the overview</link> for context.",
+  "revert": {
+    "heading": "Reverting",
+    "body": "Every tool in the table above registers itself in <code>/usr/local/share/proxmenux/installed_tools.json</code>. Open <link>Uninstall Optimizations</link> to pick individual items to revert. Backups of modified config files are placed next to the originals with a <code>.bak</code> suffix."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "label": "Customizable Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — pick exactly what you want from the same catalog."
+      },
+      {
+        "label": "Uninstall Optimizations",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — revert any subset of what was applied here."
+      },
+      {
+        "label": "Useful System Commands",
+        "href": "/docs/help-info/system-commands",
+        "tail": " — verify the changes (uptime, free, journalctl, etc.)."
+      },
+      {
+        "label": "Post-Install overview",
+        "href": "/docs/post-install",
+        "tail": "."
+      }
+    ]
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "meta": {
+    "title": "Post-Install: Performance | ProxMenux Documentation",
+    "description": "Performance options in the ProxMenux Customizable post-install script. Replaces single-threaded gzip with pigz (parallel gzip) for faster backups and compression on multi-core hosts."
+  },
+  "header": {
+    "title": "Post-Install: Performance",
+    "description": "Performance options inside the Customizable post-install script. Currently this category contains a single optimization: replacing gzip with pigz so backups and compression use every CPU core instead of one.",
+    "section": "Settings post-install Proxmox"
+  },
+  "intro": {
+    "title": "What this category covers",
+    "body": "The only performance option here rewires the system's gzip to a parallel implementation. Other performance-related tweaks (memory tuning, I/O scheduling, ZFS ARC sizing, kernel limits) live under their own categories (<em>System</em>, <em>Storage</em>) because they affect different subsystems."
+  },
+  "pigz": {
+    "heading": "Use pigz for faster gzip compression",
+    "intro": "Standard <code>gzip</code> compresses data using a <strong>single CPU core</strong>. On modern Proxmox hosts with 8, 16 or 32 cores, that is a huge bottleneck during <code>vzdump</code> VM/CT backups, log rotation, and anything else that pipes through <code>gzip</code>. <a>pigz</a> is a drop-in parallel replacement: same gzip-compatible output, but it spreads the work across every core.",
+    "doesTitle": "What ProxMenux does",
+    "doesIntro": "Four steps, all idempotent:",
+    "doesItems": [
+      "Sets <code>pigz: 1</code> in <code>/etc/vzdump.conf</code> so Proxmox's backup tool uses pigz natively.",
+      "Installs the <code>pigz</code> apt package if not already present.",
+      "Writes a wrapper script at <code>/bin/pigzwrapper</code> that forwards every argument to <code>/usr/bin/pigz</code>.",
+      "Moves the original <code>/bin/gzip</code> aside to <code>/bin/gzip.original</code> and replaces <code>/bin/gzip</code> with the wrapper. From now on, <em>anything</em> that calls <code>gzip</code> — logrotate, <code>tar czf</code>, scripts, vzdump — uses pigz transparently."
+    ],
+    "replacesTitle": "This replaces a system binary",
+    "replacesBody": "Replacing <code>/bin/gzip</code> with a wrapper is unusual. It is safe (the wrapper produces gzip-compatible output), but worth knowing: scripts that hardcode paths, run inside restrictive chroots, or verify binary hashes may behave differently. The original binary is preserved as <code>/bin/gzip.original</code> so you can always swap it back.",
+    "revertTitle": "Not reversible from the Uninstall menu",
+    "revertBody": "This optimization is applied by Customizable, but <strong>does not currently have a matching entry in the Uninstall Optimizations menu</strong>. To revert it by hand, restore the original gzip and clear the wrapper:",
+    "verifyTitle": "Verification",
+    "verifyBody": "After applying, <code>gzip --version</code> should mention pigz. A quick benchmark also shows the speed difference on a multi-core host:",
+    "whenTitle": "When this matters most",
+    "whenBody": "The impact scales with <strong>how many cores the host has</strong> and <strong>how often you run backups</strong>. On a 2-core home-lab box with one daily vzdump, the benefit is marginal. On a 16-core production host backing up a dozen VMs every night, pigz can cut the backup window to a fraction of what single-threaded gzip takes."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "label": "Backup and Restore commands",
+        "href": "/docs/help-info/backup-commands",
+        "tailRich": " — vzdump CLI reference, including <code>--pigz</code> threads option."
+      },
+      {
+        "label": "Storage",
+        "href": "/docs/post-install/storage",
+        "tail": " — vzdump speed limits and ZFS ARC tuning."
+      },
+      {
+        "label": "System",
+        "href": "/docs/post-install/system",
+        "tail": " — file-descriptor and memory tuning."
+      },
+      {
+        "label": "Customizable Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — back to the parent menu."
+      }
+    ]
+  }
+}

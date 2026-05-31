@@ -1,0 +1,87 @@
+{
+  "meta": {
+    "title": "Proxmox Commands Reference — qm, pct, vzdump, zpool, pveversion | ProxMenux",
+    "description": "Curated reference of essential Proxmox VE and Linux commands organised by topic: system inspection, VM and LXC management (qm / pct), storage and disks, networking, updates, GPU passthrough, ZFS, backup and restore, and day-to-day CLI tools.",
+    "ogTitle": "Proxmox Commands Reference — qm, pct, vzdump, zpool",
+    "ogDescription": "Curated reference of the most useful Proxmox VE and Linux commands, grouped by topic — system, VM/CT, storage, network, updates, GPU passthrough, ZFS, backup and CLI tools.",
+    "twitterTitle": "Proxmox Commands Reference | ProxMenux",
+    "twitterDescription": "Curated reference of the most useful Proxmox VE and Linux commands, grouped by topic."
+  },
+  "header": {
+    "title": "Help and Info",
+    "description": "Curated compendium of useful Linux and Proxmox VE commands organised by topic. Nine categories — covers everything from a quick pveversion check to a multi-line zfs send/receive — meant to live alongside the GPU, disk and share sections of ProxMenux as a one-stop reference.",
+    "section": "Help and Info"
+  },
+  "intro": {
+    "title": "What this is",
+    "body": "A reference catalog of the commands you actually use on a Proxmox host, grouped by topic. Inside ProxMenux you can pick a number to run a command directly or paste your own at the prompt; on this site each category is a copy-paste table."
+  },
+  "opening": {
+    "heading": "Opening the menu",
+    "body": "From ProxMenux's main menu, press <kbd>h</kbd>. You will see this:",
+    "imageAlt": "Help and Info menu with 9 categories of commands"
+  },
+  "categories": {
+    "heading": "The nine categories",
+    "options": [
+      {
+        "icon": "Terminal",
+        "href": "/docs/help-info/system-commands",
+        "title": "Useful System Commands",
+        "description": "pveversion, uptime, free, journalctl, hostnamectl, current-user info, lynis audit, fastfetch."
+      },
+      {
+        "icon": "Cpu",
+        "href": "/docs/help-info/vm-ct-commands",
+        "title": "VM and CT Management",
+        "description": "qm list / config / start / stop / migrate, pct list / config / enter, snapshots, cloning."
+      },
+      {
+        "icon": "HardDrive",
+        "href": "/docs/help-info/storage-commands",
+        "title": "Storage and Disks",
+        "description": "lsblk, blkid, smartctl, mount info, pvesm status, LVM commands."
+      },
+      {
+        "icon": "Network",
+        "href": "/docs/help-info/network-commands",
+        "title": "Network Commands",
+        "description": "ip / ss / nmcli, bridge inspection, ping / traceroute, DNS lookups, fail2ban-client."
+      },
+      {
+        "icon": "Package",
+        "href": "/docs/help-info/update-commands",
+        "title": "Updates and Packages",
+        "description": "apt update / dist-upgrade, apt-cache policy, dpkg queries, repo file checks."
+      },
+      {
+        "icon": "Cpu",
+        "href": "/docs/help-info/gpu-commands",
+        "title": "GPU Passthrough",
+        "description": "lspci / dmesg checks, IOMMU enablement verification, vfio-pci binding, GPU usage from the host."
+      },
+      {
+        "icon": "Database",
+        "href": "/docs/help-info/zfs-commands",
+        "title": "ZFS Management",
+        "description": "zpool / zfs commands for status, datasets, snapshots, send/receive, ARC tuning, trimming."
+      },
+      {
+        "icon": "Archive",
+        "href": "/docs/help-info/backup-commands",
+        "title": "Backup and Restore",
+        "description": "vzdump, qmrestore / pct restore, Proxmox Backup Server helpers, snapshot operations."
+      },
+      {
+        "icon": "Wrench",
+        "href": "/docs/help-info/tools-commands",
+        "title": "System CLI Tools",
+        "description": "tmux, screen, htop / btop, ncdu, jq, dig, lsof, watch — daily-driver admin tools."
+      }
+    ]
+  },
+  "tip": {
+    "title": "Searchable from the global search",
+    "body": "Every command in these pages is indexed by the documentation search. If you remember a flag or fragment but not which page it's on, hit the search bar at the top — you'll land directly on the right entry."
+  }
+}

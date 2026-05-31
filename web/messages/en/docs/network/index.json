@@ -1,0 +1,107 @@
+{
+  "meta": {
+    "title": "Proxmox Network Management — Bridges, Bonds, Diagnostics, Repair | ProxMenux",
+    "description": "Read-only diagnostics, analyze-then-suggest workflows and guided repairs for the Debian / Proxmox network stack (/etc/network/interfaces). Inspect bridges and bonds, run live monitoring tools, persist interface names, back up and safely restart networking — with mandatory backups and step-by-step previews.",
+    "ogTitle": "Proxmox Network Management — Bridges, Bonds, Diagnostics, Repair",
+    "ogDescription": "Diagnostics, analysis and guided repairs for the Proxmox network stack with mandatory backups and step-by-step previews.",
+    "twitterTitle": "Proxmox Network Management | ProxMenux",
+    "twitterDescription": "Bridges, bonds, diagnostics and guided repairs for the Proxmox network stack with mandatory backups."
+  },
+  "header": {
+    "title": "Network Management",
+    "description": "Read-only diagnostics, analyze-then-suggest reports and guided repairs for the classic Debian/Proxmox network stack. Every destructive flow takes a backup first and previews the exact changes before applying them.",
+    "section": "Network"
+  },
+  "intro": {
+    "title": "What this menu is for",
+    "body": "Inspect, diagnose and (when needed) repair the Proxmox host network configuration without losing remote access. The tools are designed around one principle: <strong>read first, propose, then apply only with explicit consent and a safety backup</strong>. There is no \"auto-fix everything\" button."
+  },
+  "openingMenu": {
+    "heading": "Opening the menu",
+    "intro": "From ProxMenux's main menu, select <strong>Network</strong>. You will see this:",
+    "imageAlt": "Network Management menu with diagnostics, monitoring, analysis, repair, persistent names and backup options"
+  },
+  "safety": {
+    "heading": "The safety model",
+    "body": "Editing network configuration on a remote Proxmox host is one of the easiest ways to lock yourself out. ProxMenux treats every action accordingly. The tools fall into three behavioural tiers — pick the card that matches your intent:"
+  },
+  "tiers": {
+    "readOnly": {
+      "title": "Read-only",
+      "body": "Pure inspection. Cannot modify the system under any circumstance.",
+      "items": [
+        "Routing table, connectivity tests, advanced statistics",
+        "Live traffic monitoring (iftop, iptraf-ng)",
+        "Bandwidth test (iperf3)"
+      ]
+    },
+    "analyze": {
+      "title": "Analyze, then suggest",
+      "body": "Detects issues, prints a report with proposed shell commands, and stops. You decide whether to enter the guided repair afterwards.",
+      "items": [
+        "Bridge configuration analysis",
+        "Network configuration analysis"
+      ]
+    },
+    "apply": {
+      "title": "Apply with backup",
+      "body": "Modifies the system. Always takes a timestamped backup of the affected file first and shows a preview before writing.",
+      "items": [
+        "Persistent interface names (.link files)",
+        "Manual backup, restore and service restart"
+      ]
+    }
+  },
+  "classicTitle": "Classic stack only",
+  "classicBody": "Every analysis and repair function checks the active network manager before touching anything. If the host runs <strong>netplan</strong>, <strong>systemd-networkd</strong> or <strong>NetworkManager</strong>, the tool aborts immediately with a clear message — the menu only supports the classic Debian/Proxmox stack at <code>/etc/network/interfaces</code>. This is intentional: editing a netplan file with rules written for <code>ifupdown</code> would silently corrupt the configuration.",
+  "backups": {
+    "heading": "Where backups go",
+    "intro": "Every guided repair, restore or manual backup writes a timestamped copy of <code>/etc/network/interfaces</code> to <code>/var/backups/proxmenux/</code>:",
+    "rollbackIntro": "To roll back manually from a console:"
+  },
+  "readOnlySection": {
+    "heading": "Read-only inspection",
+    "body": "The starting point when something feels off. Pure inspection — never writes to <code>/etc/network/interfaces</code> and never runs a modifying command (with one explicit, opt-in exception for purging NetworkManager when detected). Safe to use over SSH at any time.",
+    "options": [
+      {
+        "title": "Diagnostics",
+        "description": "Three one-shot read-only checks: Show Routing Table, Test Connectivity and Advanced Diagnostics. Pure inspection — never writes to the system."
+      },
+      {
+        "title": "Live monitoring tools",
+        "description": "Three interactive launchers: iftop (real-time bandwidth per host pair), iptraf-ng (multi-mode traffic monitor) and iperf3 (bandwidth test, server / client mode)."
+      }
+    ]
+  },
+  "analyzeSection": {
+    "heading": "Analyze, then suggest",
+    "body": "Used when an inspection (or a real outage) points at a configuration issue. Each tool walks the relevant part of <code>/etc/network/interfaces</code>, prints a detailed report with the exact shell command that would fix each finding, and <strong>stops</strong>. If you accept the optional guided repair afterwards, every change is backed up and previewed before being written.",
+    "options": [
+      {
+        "title": "Bridge analysis & guided repair",
+        "description": "Detects vmbrX bridges with missing or invalid ports (typical after PCI re-enumeration). Shows a report first; only repairs when you accept the 5-step guided flow."
+      },
+      {
+        "title": "Config analysis & guided cleanup",
+        "description": "Finds physical interfaces declared in /etc/network/interfaces that no longer exist (orphan configs left behind by hardware changes). Reports them and offers a guided removal."
+      }
+    ]
+  },
+  "applySection": {
+    "heading": "Apply with backup",
+    "body": "Tools that write to disk by design. Each one takes a timestamped backup of the affected file before writing, and the destructive options (restore, restart) require an explicit yes/no confirmation. <em>Persistent interface names</em> takes effect at the next reboot, not immediately, so it is safe to schedule even on a remote host.",
+    "options": [
+      {
+        "title": "Persistent interface names",
+        "description": "Pins interface names (eno1, enp3s0, …) to MAC addresses via systemd .link files. Names survive PCI slot changes, kernel upgrades and adding / removing other NICs."
+      },
+      {
+        "title": "Interfaces backup & restart",
+        "description": "Manual snapshot of /etc/network/interfaces, browse and restore previous backups, view the live config, and restart the networking service when needed."
+      }
+    ]
+  },
+  "consoleTitle": "Have console access ready",
+  "consoleSubTitle": "Before any repair on a remote host",
+  "consoleBody": "If you are connected over SSH and only have one path to the host, have a fallback before applying network changes: physical / IPMI / iKVM console, or another machine on the same LAN. The guided repairs are safe and always offer a roll-back command, but a misconfigured bridge or a dropped link can still leave you locked out until you can reach the console."
+}

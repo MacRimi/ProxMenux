@@ -1,0 +1,235 @@
+{
+  "meta": {
+    "title": "Proxmox Backup Commands — vzdump, qmrestore, pct restore | ProxMenux",
+    "description": "Reference of Proxmox VE backup and restore commands: vzdump for VMs and LXC containers, qmrestore for VMs, pct restore for containers, scheduled backups in /etc/pve/jobs.cfg, hook scripts and exclude paths.",
+    "ogTitle": "Proxmox Backup Commands — vzdump, qmrestore, pct restore",
+    "ogDescription": "Reference of vzdump, qmrestore and pct restore commands for backing up and restoring Proxmox VMs and LXC containers.",
+    "twitterTitle": "Proxmox Backup Commands | ProxMenux",
+    "twitterDescription": "vzdump, qmrestore and pct restore commands for backing up and restoring Proxmox VMs and containers."
+  },
+  "header": {
+    "title": "Backup and Restore",
+    "description": "Curated reference of vzdump, qmrestore and pct restore commands for Proxmox backup workflows. Includes scheduling, advanced options like hook scripts / exclude paths / I/O priority, and backup file management.",
+    "section": "Help and Info"
+  },
+  "intro": {
+    "title": "Three backup modes",
+    "body": "<strong>snapshot</strong> uses a live snapshot — guest stays running, briefly pauses I/O. <strong>suspend</strong> freezes the VM during backup (safer than snapshot for non-snapshot-aware FS). <strong>stop</strong> shuts down the VM, backs up cold, restarts. Pick by guest tolerance and storage capability."
+  },
+  "commandGroups": [
+    {
+      "title": "VM Backup",
+      "commands": [
+        {
+          "command": "vzdump <vmid>",
+          "description": "Create a backup of a specific VM/CT"
+        },
+        {
+          "command": "vzdump <vmid> --storage <storage>",
+          "description": "Backup VM to specific storage"
+        },
+        {
+          "command": "vzdump <vmid> --mode snapshot",
+          "description": "Create snapshot backup (for VMs)"
+        },
+        {
+          "command": "vzdump <vmid> --mode suspend",
+          "description": "Suspend VM during backup"
+        },
+        {
+          "command": "vzdump <vmid> --mode stop",
+          "description": "Stop VM during backup"
+        },
+        {
+          "command": "vzdump --all",
+          "description": "Backup all VMs and containers"
+        },
+        {
+          "command": "vzdump --exclude <vmid1>,<vmid2>",
+          "description": "Backup all except specified VMs"
+        }
+      ]
+    },
+    {
+      "title": "Backup Options",
+      "commands": [
+        {
+          "command": "vzdump <vmid> --compress zstd",
+          "description": "Use zstd compression for backup"
+        },
+        {
+          "command": "vzdump <vmid> --pigz <threads>",
+          "description": "Use pigz with multiple threads"
+        },
+        {
+          "command": "vzdump <vmid> --notes <text>",
+          "description": "Add notes to backup"
+        },
+        {
+          "command": "vzdump <vmid> --mailto <email>",
+          "description": "Send notification email"
+        },
+        {
+          "command": "vzdump <vmid> --maxfiles <n>",
+          "description": "Keep only n backups per VM"
+        },
+        {
+          "command": "vzdump <vmid> --stdexcludes 0",
+          "description": "Don't exclude temporary files"
+        },
+        {
+          "command": "vzdump <vmid> --quiet 1",
+          "description": "Suppress output messages"
+        }
+      ]
+    },
+    {
+      "title": "Restore Backups",
+      "commands": [
+        {
+          "command": "qmrestore <backup-file> <vmid>",
+          "description": "Restore VM from backup"
+        },
+        {
+          "command": "qmrestore <backup-file> <vmid> --storage <storage>",
+          "description": "Restore to specific storage"
+        },
+        {
+          "command": "qmrestore <backup-file> <vmid> --unique",
+          "description": "Create a VM with unique ID"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file>",
+          "description": "Restore container from backup"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --storage <storage>",
+          "description": "Restore container to specific storage"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --rootfs <storage>",
+          "description": "Restore to specific rootfs"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --unprivileged 1",
+          "description": "Restore as unprivileged CT"
+        }
+      ]
+    },
+    {
+      "title": "Backup Management",
+      "commands": [
+        {
+          "command": "ls -la /var/lib/vz/dump/",
+          "description": "List backups in default location"
+        },
+        {
+          "command": "find /var/lib/vz/dump/ -name \"*.vma*\"",
+          "description": "Find VM backups"
+        },
+        {
+          "command": "find /var/lib/vz/dump/ -name \"*.tar*\"",
+          "description": "Find container backups"
+        },
+        {
+          "command": "pvesm list <storage>",
+          "description": "List backups in specific storage"
+        },
+        {
+          "command": "rm /var/lib/vz/dump/<backup-file>",
+          "description": "Delete a backup file"
+        },
+        {
+          "command": "cat /etc/vzdump.conf",
+          "description": "Show backup configuration"
+        }
+      ]
+    },
+    {
+      "title": "Scheduled Backups",
+      "commands": [
+        {
+          "command": "cat /etc/cron.d/vzdump",
+          "description": "Show backup schedule"
+        },
+        {
+          "command": "nano /etc/vzdump.conf",
+          "description": "Edit backup configuration"
+        },
+        {
+          "command": "systemctl list-timers",
+          "description": "List all scheduled tasks"
+        },
+        {
+          "command": "systemctl status cron",
+          "description": "Check cron service status"
+        },
+        {
+          "command": "grep vzdump /var/log/syslog",
+          "description": "Check backup logs in syslog"
+        },
+        {
+          "command": "tail -f /var/log/vzdump.log",
+          "description": "Monitor backup log in real-time"
+        }
+      ]
+    },
+    {
+      "title": "Advanced Operations",
+      "commands": [
+        {
+          "command": "qmrestore <backup> <vmid> --force",
+          "description": "Force restore, overwriting existing VM"
+        },
+        {
+          "command": "vzdump <vmid> --dumpdir <directory>",
+          "description": "Specify custom backup directory"
+        },
+        {
+          "command": "vzdump <vmid> --script <script>",
+          "description": "Run hook script during backup"
+        },
+        {
+          "command": "vzdump <vmid> --exclude-path <path>",
+          "description": "Exclude specific paths from backup"
+        },
+        {
+          "command": "vzdump <vmid> --ionice <priority>",
+          "description": "Set I/O priority for backup process"
+        },
+        {
+          "command": "vzdump <vmid> --lockwait <minutes>",
+          "description": "Wait for lock"
+        },
+        {
+          "command": "qm importdisk <vmid> <backup> <storage>",
+          "description": "Import disk from backup"
+        }
+      ]
+    }
+  ],
+  "testRestores": {
+    "title": "Test your restores",
+    "bodyRich": "A backup you've never restored isn't a backup. Periodically pick a backup, restore it to a test VMID with <code>qmrestore --unique</code>, boot the resulting VM and confirm the contents are intact. Same idea for containers via <code>pct restore</code>."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "VM and CT Management",
+        "tail": " — qm and pct lifecycle commands."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Storage and Disks",
+        "tail": " — pvesm storage management."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Help and Info overview",
+        "tail": "."
+      }
+    ]
+  }
+}

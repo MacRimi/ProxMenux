@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "Backup y reinicio de interfaces | ProxMenux Documentation",
+    "description": "Snapshot manual, navegación y restauración de backups de /etc/network/interfaces almacenados en /var/backups/proxmenux/. Incluye un reinicio del servicio de red con confirmación y una vista rápida de la configuración en vivo.",
+    "ogTitle": "Backup y reinicio de interfaces | ProxMenux Documentation",
+    "ogDescription": "Snapshot y restauración de la configuración de red de Proxmox; reinicia el servicio de red con confirmación."
+  },
+  "header": {
+    "title": "Backup y reinicio de interfaces",
+    "description": "Cuatro utilidades que giran en torno a /etc/network/interfaces: hacer un snapshot manual, ver la config en vivo, restaurar un backup previo con previsualización opcional y reiniciar el servicio de red con consentimiento explícito. Mismo directorio de backups que usan los flujos de reparación guiada.",
+    "section": "Red"
+  },
+  "intro": {
+    "title": "Qué hace",
+    "body": "Gestiona el mismo directorio de backups que usan los flujos de reparación guiada (<code>/var/backups/proxmenux/</code>). Te permite hacer un snapshot extra antes de cualquier cambio manual, navegar todos los backups existentes y hacer rollback a cualquiera de ellos — siempre con un nuevo backup previo a la restauración tomado automáticamente como segunda red de seguridad."
+  },
+  "shared": {
+    "heading": "El directorio de backups compartido",
+    "intro": "Cada backup tomado en cualquier sitio del menú Red aterriza en el mismo lugar:",
+    "outro": "Los nombres llevan timestamp, se ordenan por fecha y nunca se sobrescriben. El directorio se crea la primera vez que se usa."
+  },
+  "show": {
+    "heading": "Mostrar el fichero de config de red",
+    "body": "Imprime <code>/etc/network/interfaces</code> tal cual en el terminal. Solo lectura. Útil como comprobación antes de hacer un backup o después de una restauración — no hay una herramienta separada de \"diff con el backup anterior\", así que mirar el fichero en vivo es la forma más fácil de confirmar lo que tienes."
+  },
+  "create": {
+    "heading": "Crear backup de red",
+    "body": "Copia el <code>/etc/network/interfaces</code> actual al directorio de backups con un timestamp nuevo. Ya está — sin análisis, sin prompts, solo un snapshot.",
+    "whenTitle": "Cuándo hacer un backup manual",
+    "whenBody": "Antes de editar <code>/etc/network/interfaces</code> a mano, antes de instalar un paquete que pueda tocar la stack de red (p. ej. NetworkManager, Open vSwitch) o antes de cualquier cambio de hardware. Las reparaciones guiadas ya hacen snapshot automáticamente — esta opción es para los momentos <em>manuales</em>."
+  },
+  "restore": {
+    "heading": "Restaurar backup de red",
+    "intro": "Lista todos los backups en <code>/var/backups/proxmenux/</code> ordenados de más nuevo a más antiguo y guía una restauración protegida:",
+    "steps": [
+      {
+        "title": "1. Elige un backup",
+        "body": "Un menú lista cada backup por su timestamp. Si no hay backups, el flujo sale con un mensaje claro.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Previsualización opcional",
+        "body": "Ofrece abrir el backup seleccionado en una vista con scroll antes de confirmar. Sí por defecto — no te lo saltes en un host remoto.",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Backup previo a la restauración",
+        "body": "Antes de sobrescribir <code>/etc/network/interfaces</code>, hace <strong>otro</strong> backup del estado actual. Restaurar un backup es en sí una acción destructiva, así que el nuevo snapshot previo te permite volver atrás si el backup elegido resulta ser el equivocado.",
+        "tone": "amber"
+      },
+      {
+        "title": "4. Aplica la restauración",
+        "body": "Copia el backup elegido sobre <code>/etc/network/interfaces</code>. El cambio de fichero está en disco; el estado en vivo del kernel sigue reflejando la config anterior.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Reinicio opcional",
+        "body": "Pregunta si ejecutar <code>systemctl restart networking</code> ahora. Rechaza para diferir el cambio al siguiente reinicio.",
+        "tone": "emerald"
+      }
+    ],
+    "autoBackupTitle": "Una restauración hace su propio backup automáticamente",
+    "autoBackupBody": "Seleccionar <em>Restaurar backup de red</em> siempre crea un snapshot fresco de la config <em>actual</em> antes de sobrescribirla. Si restauras al backup equivocado, el fichero más reciente en <code>/var/backups/proxmenux/</code> es el estado del que venías."
+  },
+  "restart": {
+    "heading": "Reiniciar el servicio de red",
+    "body": "Ejecuta <code>systemctl restart networking</code> tras una confirmación sí/no. Reporta el resultado con <code>msg_ok</code> / <code>msg_error</code>. La mayoría de flujos de este menú ofrecen su propio prompt de reinicio al final; esta opción es para reiniciar tras una edición manual o tras haber rechazado antes el reinicio dentro del flujo.",
+    "warnTitle": "Desconexión breve garantizada; desconexión permanente posible",
+    "warnBody": "Reiniciar <code>networking</code> baja y vuelve a aplicar cada interfaz declarada en <code>/etc/network/interfaces</code>. Las sesiones SSH alojadas en esas interfaces se caen. Si la nueva config es inválida, la red no vuelve. Ejecuta esto solo cuando:",
+    "warnItems": [
+      "Tienes acceso a consola / IPMI / iKVM listo, <em>o</em>",
+      "Estás físicamente al lado de la máquina, <em>o</em>",
+      "Acabas de hacer rollback con éxito a una config buena conocida y quieres aplicarla."
+    ]
+  },
+  "manualRollback": {
+    "heading": "Rollback manual desde una consola",
+    "intro": "Si no puedes llegar al menú (sin SSH, dialog que se cae, …) pero sí a una consola, el rollback son dos comandos:",
+    "outro": "Es la <em>misma</em> operación que hace el menú, solo que tecleada a mano. Si <code>networking</code> sigue sin arrancar, mira <code>journalctl -u networking -b</code> para ver el error de sintaxis / driver subyacente."
+  },
+  "troubleshoot": {
+    "heading": "Solución de problemas",
+    "noneTitle": "\"No backups found\" al restaurar",
+    "noneBody": "El directorio <code>/var/backups/proxmenux/</code> no existe o no contiene ficheros <code>interfaces_backup_*</code>. Ejecuta <em>Crear backup de red</em> al menos una vez, o ejecuta cualquier reparación guiada (que crea uno automáticamente). Confirma con <code>ls /var/backups/proxmenux/</code>.",
+    "unreachTitle": "El reinicio de networking funciona pero el host sigue inalcanzable",
+    "unreachBody": "O la nueva config está mal, o has reiniciado a una configuración que no enlaza tu IP de gestión. Haz rollback desde la consola (ver arriba). Tras el rollback, usa el <bridgeLink>análisis de bridges</bridgeLink> y el <configLink>análisis de configuración</configLink> para entender qué estaba mal antes de volver a aplicar.",
+    "emptyTitle": "La previsualización de restauración muestra un fichero vacío",
+    "emptyBody": "El fichero de backup está vacío (0 bytes). Esto pasa si una copia falló silenciosamente en una ejecución anterior. Elige un backup más antiguo, o vuelve a ejecutar <em>Crear backup de red</em> ahora mismo si la config en vivo está sana."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "Análisis de bridges y reparación guiada",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — la razón más habitual por la que un backup acaba aquí."
+      },
+      {
+        "label": "Análisis de config y limpieza guiada",
+        "href": "/docs/network/config-analysis",
+        "tailRich": " — también escribe en <code>/var/backups/proxmenux/</code> automáticamente."
+      },
+      {
+        "label": "Diagnóstico",
+        "href": "/docs/network/diagnostics",
+        "tail": " — verifica el estado en vivo tras una restauración."
+      }
+    ]
+  }
+}

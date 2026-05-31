@@ -1,0 +1,240 @@
+{
+  "meta": {
+    "title": "Post-Install: Basic Settings | ProxMenux Documentation",
+    "description": "Foundational post-install options: switch to free Proxmox repositories and upgrade, auto-detect timezone and enable NTP, skip APT language downloads, and pick from 25 common system utilities to install."
+  },
+  "header": {
+    "title": "Post-Install: Basic Settings",
+    "section": "Settings post-install Proxmox"
+  },
+  "intro": {
+    "title": "What this category covers",
+    "body": "Four foundational options you typically want on any fresh Proxmox host: switch to the free community repositories and run a full system upgrade, auto-configure the timezone and NTP sync, strip APT language downloads to save bandwidth and disk, and pick from a list of 25 common system utilities."
+  },
+  "upgrade": {
+    "heading": "Update and upgrade system",
+    "intro": "Reconfigures APT to use the free <em>pve-no-subscription</em> repository (instead of the enterprise repo that requires a subscription) and runs a full system upgrade. The exact steps depend on the Proxmox VE major version: ProxMenux detects it and dispatches to the right script.",
+    "headerVersion": "PVE version",
+    "headerScript": "Dispatcher script",
+    "headerCodename": "Debian codename",
+    "rows": [
+      {
+        "version": "9.x",
+        "script": "update-pve9_2.sh",
+        "codename": "trixie"
+      },
+      {
+        "version": "8.x",
+        "script": "update-pve8.sh",
+        "codename": "bookworm"
+      }
+    ],
+    "officialTitle": "The official Proxmox recommendation",
+    "officialBody": "Proxmox's own upgrade guidance is to run, in this exact order:",
+    "officialOutro": "That single line is all you need on any current Proxmox release. The challenge isn't the command itself — it's making sure the repositories on the host are sane <em>before</em> running it.",
+    "doesTitle": "What the ProxMenux option does — verified against the script",
+    "doesIntro": "The ProxMenux update wraps the exact apt commands above and adds a number of pre/post steps you would otherwise have to remember by hand. Every item below is what the dispatcher script actually does (see <link>Proxmox System Update</link> for the full breakdown):",
+    "doesItems": [
+      "<strong>Repository hygiene first.</strong> Disables the enterprise <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, removes legacy repo files left over from previous PVE versions, and writes a clean <code>proxmox.sources</code> pointing at the free <em>pve-no-subscription</em> channel (matching the host's Debian codename: trixie for PVE 9, bookworm for PVE 8).",
+      "<strong>Debian repos rewritten</strong> with main / updates / security, including <code>non-free-firmware</code>, so the firmware warning during upgrade goes away.",
+      "<strong>Runs the official upgrade.</strong> <code>apt-get update</code> followed by <code>apt full-upgrade -y</code> (PVE 9) or <code>apt dist-upgrade -y</code> (PVE 8), both launched non-interactively with <code>--force-confdef --force-confold</code> so any configuration files you customised stay yours.",
+      "<strong>Installs essential packages</strong> if they are missing: <code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>.",
+      "<strong>LVM metadata sanity check.</strong> Looks for VMs with disk passthrough that may have scribbled stale physical-volume headers onto raw disks; warns if anything is off (no automatic fix).",
+      "<strong>Cleans up afterwards:</strong> <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>, then prompts for a reboot if the kernel was updated or <code>/var/run/reboot-required</code> is present."
+    ],
+    "shortTitle": "In short",
+    "shortBody": "The option runs the exact <code>apt update && apt full-upgrade -y</code> Proxmox recommends, wraps it with the repo hygiene and post-upgrade cleanup that the official guide also tells you to do, and prompts for the reboot at the end. See <link>Proxmox System Update</link> — the same updater is also available as a standalone utility in the main menu, with the full process diagram.",
+    "subTitle": "Don't apply to a subscribed host",
+    "subBody": "If you actually have a Proxmox subscription and want to keep using the enterprise repositories, skip this option. Re-running it would disable the enterprise repo and route you to the community channel. You can restore enterprise repos from the Uninstall menu if you change your mind later.",
+    "safetyTitle": "Post-update safety check",
+    "safetyBody": "After the upgrade, the script checks for disks with stale PV (Physical Volume) metadata — an edge case that can happen when a VM with disk passthrough scribbles LVM headers onto a raw disk. If anything suspicious is found you'll see a warning suggesting <code>pvs</code> to inspect. No action is taken automatically."
+  },
+  "time": {
+    "heading": "Synchronize time automatically",
+    "intro": "Detects the server's public IP via <code>dig myip.opendns.com @resolver1.opendns.com</code>, then queries <code>ipapi.co/'{'ip'}'/timezone</code> to look up the matching IANA timezone, and applies it with <code>timedatectl set-timezone</code>. Finally enables NTP with <code>timedatectl set-ntp true</code>.",
+    "depTitle": "Depends on two external services",
+    "depBody": "The lookup relies on OpenDNS and <code>ipapi.co</code> being reachable, and on their responses being correct. If you run Proxmox behind a VPN or on a VLAN that egresses from a different region, the auto-detected timezone may be wrong. In that case skip this option and set the timezone by hand:",
+    "revertTitle": "Reversible from the Uninstall menu",
+    "revertBody": "<link>Uninstall Optimizations</link> resets the timezone to UTC (a safe default). It does not disable NTP — your clock keeps syncing, just anchored to UTC until you set a new timezone manually."
+  },
+  "languages": {
+    "heading": "Skip downloading additional languages",
+    "intro": "On every <code>apt update</code>, Debian by default pulls translation files for every locale it ships — a lot of traffic and disk space for something you'll rarely see. This option tells APT to only fetch the main metadata. Before disabling, ProxMenux <strong>makes sure the host's own locale is actually generated</strong> (reads <code>/etc/default/locale</code> or <code>/etc/environment</code>, appends to <code>/etc/locale.gen</code> if missing, and runs <code>locale-gen</code>). So you don't lose your shell locale as a side effect.",
+    "writtenTitle": "What gets written",
+    "revertTitle": "Reversible from the Uninstall menu",
+    "revertBody": "Deleting <code>/etc/apt/apt.conf.d/99-disable-translations</code> (either manually or from the Uninstall menu) restores the default behaviour and APT downloads language files again."
+  },
+  "utilities": {
+    "heading": "Install common system utilities",
+    "intro": "Opens a checklist with <strong>25 curated utilities</strong> organised into groups. Pick the ones you want, confirm, and ProxMenux installs each via <code>apt</code>, verifying the package worked and showing a summary at the end.",
+    "imageAlt": "Checklist dialog showing the list of ProxMenux system utilities with space to select and enter to confirm",
+    "reuseTitle": "Same list is reused elsewhere",
+    "reuseBody": "The 25-utility catalogue lives in a single source of truth (<code>PROXMENUX_UTILS</code> in <code>scripts/global/utils-install-functions.sh</code>). The <em>Utilities and Tools → System Utilities</em> menu on the main ProxMenux menu exposes the same list, so you can come back later and install more without re-running post-install.",
+    "listTitle": "What's in the list",
+    "groups": [
+      {
+        "group": "System monitors",
+        "items": [
+          {
+            "pkg": "htop",
+            "desc": "Interactive process viewer"
+          },
+          {
+            "pkg": "btop",
+            "desc": "Modern resource monitor (CPU, RAM, disks, net, processes)"
+          },
+          {
+            "pkg": "s-tui",
+            "desc": "Terminal-based CPU stress & monitoring UI"
+          },
+          {
+            "pkg": "iftop",
+            "desc": "Live per-connection bandwidth usage"
+          },
+          {
+            "pkg": "iotop",
+            "desc": "Per-process disk I/O"
+          },
+          {
+            "pkg": "iptraf-ng",
+            "desc": "Interactive IP LAN monitor"
+          }
+        ]
+      },
+      {
+        "group": "Network",
+        "items": [
+          {
+            "pkg": "iperf3",
+            "desc": "Measure maximum achievable bandwidth between hosts"
+          },
+          {
+            "pkg": "net-tools",
+            "desc": "Legacy tools (ifconfig, netstat, route). Still handy for quick checks."
+          },
+          {
+            "pkg": "ipset",
+            "desc": "Manage large IP sets in the kernel — useful with iptables/nftables rules."
+          }
+        ]
+      },
+      {
+        "group": "Download and archive",
+        "items": [
+          {
+            "pkg": "axel",
+            "desc": "Lightweight parallel download accelerator"
+          },
+          {
+            "pkg": "aria2",
+            "desc": "Multi-source / multi-protocol downloader (HTTP, FTP, BitTorrent, Metalink)"
+          },
+          {
+            "pkg": "unzip",
+            "desc": "Extract ZIP archives"
+          },
+          {
+            "pkg": "zip",
+            "desc": "Create ZIP archives"
+          },
+          {
+            "pkg": "cabextract",
+            "desc": "Extract Microsoft CAB archives (handy when working with Windows ISOs)"
+          },
+          {
+            "pkg": "wimtools",
+            "desc": "Manipulate Windows WIM images (extract, split, mount, apply)"
+          },
+          {
+            "pkg": "genisoimage",
+            "desc": "Build ISO 9660 images from a directory tree"
+          }
+        ]
+      },
+      {
+        "group": "Text and files",
+        "items": [
+          {
+            "pkg": "dos2unix",
+            "desc": "Convert CRLF (Windows) to LF (Unix) line endings"
+          },
+          {
+            "pkg": "grc",
+            "desc": "Generic colouriser — wraps ping, traceroute, dig, tail, etc. with syntax highlighting"
+          },
+          {
+            "pkg": "plocate",
+            "desc": "Fast file search (indexed). Run `updatedb` after install to build the index."
+          }
+        ]
+      },
+      {
+        "group": "Remote and sessions",
+        "items": [
+          {
+            "pkg": "sshpass",
+            "desc": "Non-interactive SSH password auth — useful for scripts, not for daily use"
+          },
+          {
+            "pkg": "tmux",
+            "desc": "Terminal multiplexer — detach sessions, split panes, survive disconnects"
+          }
+        ]
+      },
+      {
+        "group": "Hardware and low-level",
+        "items": [
+          {
+            "pkg": "msr-tools",
+            "desc": "Read/write CPU model-specific registers (rdmsr, wrmsr)"
+          },
+          {
+            "pkg": "intel-gpu-tools",
+            "desc": "Intel GPU diagnostic utilities including `intel_gpu_top`"
+          }
+        ]
+      },
+      {
+        "group": "Virtualization",
+        "items": [
+          {
+            "pkg": "libguestfs-tools",
+            "desc": "Inspect and modify VM disk images (virt-ls, virt-cat, guestmount…)"
+          },
+          {
+            "pkg": "chntpw",
+            "desc": "Edit Windows SAM — useful for password recovery on Windows VMs you inherit"
+          }
+        ]
+      }
+    ],
+    "actionTitle": "A few of them in action",
+    "noBulkTitle": "No bulk uninstall for utilities",
+    "noBulkBody": "The Uninstall Optimizations menu does <strong>not</strong> track which utilities you installed — only whether the \"apt languages\", \"time sync\" and \"apt upgrade\" options were applied. To remove a specific utility later, uninstall it by hand:"
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "label": "Proxmox System Update",
+        "href": "/docs/utils/system-update",
+        "tail": " — re-runs the apt update + dist-upgrade cycle on demand."
+      },
+      {
+        "label": "System Utilities Installer",
+        "href": "/docs/utils/system-utils",
+        "tail": " — install (or re-install) utilities individually after post-install."
+      },
+      {
+        "label": "Updates and Packages commands",
+        "href": "/docs/help-info/update-commands",
+        "tail": " — apt reference."
+      },
+      {
+        "label": "Customizable Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — back to the parent menu."
+      }
+    ]
+  }
+}

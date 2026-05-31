@@ -1,0 +1,182 @@
+{
+  "meta": {
+    "title": "Proxmox qm and pct Commands — VM and LXC Container Management | ProxMenux",
+    "description": "Reference of Proxmox VE qm and pct commands for VMs and LXC containers: list, config, start, stop, shutdown, reboot, destroy, clone, migrate, snapshot, resize, plus pct exec / enter / push / pull for containers.",
+    "ogTitle": "Proxmox qm and pct Commands — VM and LXC Container Management",
+    "ogDescription": "Reference of Proxmox VE qm and pct commands — manage virtual machines and LXC containers from the CLI: start, stop, configure, snapshot, migrate, clone, destroy.",
+    "twitterTitle": "Proxmox qm / pct Commands | ProxMenux",
+    "twitterDescription": "Curated qm / pct commands for managing virtual machines and LXC containers in Proxmox VE."
+  },
+  "header": {
+    "title": "VM and CT Management",
+    "description": "Curated reference for the qm (VMs) and pct (LXC containers) commands. Listing, lifecycle (start / stop / shutdown / destroy), config inspection, and container-specific operations like exec, enter, push and pull.",
+    "section": "Help and Info"
+  },
+  "intro": {
+    "title": "Find a VMID or CTID first",
+    "body": "Almost every command needs a numeric ID. Use <code>qm list</code> for VMs and <code>pct list</code> for containers. Replace <code>&lt;vmid&gt;</code> / <code>&lt;ctid&gt;</code> in the snippets with the actual ID before running."
+  },
+  "commandGroups": [
+    {
+      "title": "Listing and Information",
+      "commands": [
+        {
+          "command": "qm list",
+          "description": "List all virtual machines"
+        },
+        {
+          "command": "pct list",
+          "description": "List all LXC containers"
+        },
+        {
+          "command": "qm config <vmid>",
+          "description": "Show VM configuration (parsed by qm)"
+        },
+        {
+          "command": "pct config <ctid>",
+          "description": "Show container configuration (parsed by pct)"
+        }
+      ]
+    },
+    {
+      "title": "Configuration Files (raw)",
+      "commands": [
+        {
+          "command": "cat /etc/pve/qemu-server/<vmid>.conf",
+          "description": "View raw VM configuration file"
+        },
+        {
+          "command": "cat /etc/pve/lxc/<ctid>.conf",
+          "description": "View raw CT configuration file"
+        },
+        {
+          "command": "nano /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Edit raw VM configuration file (nano)"
+        },
+        {
+          "command": "nano /etc/pve/lxc/<ctid>.conf",
+          "description": "Edit raw CT configuration file (nano)"
+        },
+        {
+          "command": "vi /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Edit raw VM configuration file (vi)"
+        },
+        {
+          "command": "vi /etc/pve/lxc/<ctid>.conf",
+          "description": "Edit raw CT configuration file (vi)"
+        }
+      ]
+    },
+    {
+      "title": "VM Management",
+      "commands": [
+        {
+          "command": "qm start <vmid>",
+          "description": "Start a virtual machine. Use the correct <vmid>"
+        },
+        {
+          "command": "qm stop <vmid>",
+          "description": "Force stop a virtual machine. Use the correct <vmid>"
+        },
+        {
+          "command": "qm shutdown <vmid>",
+          "description": "Gracefully shutdown a virtual machine"
+        },
+        {
+          "command": "qm reset <vmid>",
+          "description": "Reset a virtual machine (hard reboot)"
+        },
+        {
+          "command": "qm suspend <vmid>",
+          "description": "Suspend a virtual machine"
+        },
+        {
+          "command": "qm resume <vmid>",
+          "description": "Resume a suspended virtual machine"
+        },
+        {
+          "command": "qm destroy <vmid>",
+          "description": "Delete a VM (irreversible). Use the correct <vmid>"
+        }
+      ]
+    },
+    {
+      "title": "Container Management",
+      "commands": [
+        {
+          "command": "pct start <ctid>",
+          "description": "Start a container. Use the correct <ctid>"
+        },
+        {
+          "command": "pct stop <ctid>",
+          "description": "Force stop a container. Use the correct <ctid>"
+        },
+        {
+          "command": "pct shutdown <ctid>",
+          "description": "Gracefully shutdown a container"
+        },
+        {
+          "command": "pct restart <ctid>",
+          "description": "Restart a container"
+        },
+        {
+          "command": "pct destroy <ctid>",
+          "description": "Delete a CT (irreversible). Use the correct <ctid>"
+        }
+      ]
+    },
+    {
+      "title": "Container Operations",
+      "commands": [
+        {
+          "command": "pct exec <ctid> -- getent passwd | column -t -s :",
+          "description": "Show CT users in table format"
+        },
+        {
+          "command": "pct exec <ctid> -- ps aux --sort=-%mem | head",
+          "description": "Top memory processes in CT"
+        },
+        {
+          "command": "pct enter <ctid>",
+          "description": "Enter container shell"
+        },
+        {
+          "command": "pct push <ctid> <source> <dest>",
+          "description": "Copy file from host to container"
+        },
+        {
+          "command": "pct pull <ctid> <source> <dest>",
+          "description": "Copy file from container to host"
+        }
+      ]
+    }
+  ],
+  "destroyWarn": {
+    "title": "Destroy is irreversible",
+    "bodyRich": "<code>qm destroy</code> and <code>pct destroy</code> delete the VM / CT and all its disks. There is no confirmation prompt by default. Take a backup first if there's any chance you might want the data back — see <backupLink>Backup and Restore</backupLink>."
+  },
+  "qmConfigTip": {
+    "title": "qm config vs editing the .conf file directly",
+    "bodyRich": "<code>qm config &lt;vmid&gt;</code> and <code>pct config &lt;ctid&gt;</code> read the file through Proxmox's own parser — output is normalised, comments stripped, pending changes shown separately. Editing <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> or <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> directly bypasses the parser. Useful for fixing a corrupted config or applying a setting <code>qm set</code> won't accept, but stop the guest first to avoid races. The cluster filesystem (<code>pmxcfs</code>) takes care of propagating the change to other nodes."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/help-info/backup-commands",
+        "label": "Backup and Restore",
+        "tail": " — vzdump and qmrestore / pct restore."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Storage and Disks",
+        "tail": " — qm importdisk and disk management."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Help and Info overview",
+        "tail": "."
+      }
+    ]
+  }
+}

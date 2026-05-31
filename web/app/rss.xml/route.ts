@@ -2,12 +2,35 @@ import { NextResponse } from "next/server"
 import fs from "fs"
 import path from "path"
 
+export const dynamic = "force-static"
+
 interface ChangelogEntry {
   version: string
   date: string
   content: string
   url: string
   title: string
+  image?: string
+}
+
+// Default channel image when no entry image is available.
+const DEFAULT_CHANNEL_IMAGE =
+  "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/main.png"
+
+// Pull the first markdown image URL out of a raw entry block. Returns an
+// absolute URL or null if the entry has no image.
+function extractFirstImage(rawContent: string): string | null {
+  const match = rawContent.match(/!\[[^\]]*\]\(([^)]+)\)/)
+  if (!match) return null
+  const url = match[1]
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url.replace(
+      "https://macrimi.github.io/ProxMenux",
+      "https://proxmenux.com",
+    )
+  }
+  if (url.startsWith("/")) return `https://proxmenux.com${url}`
+  return `https://proxmenux.com/${url}`
 }
 
 function escapeXml(text: string): string {
@@ -73,6 +96,8 @@ async function parseChangelog(): Promise<ChangelogEntry[]> {
       if (versionMatch || dateMatch) {
         if (currentEntry && contentLines.length > 0) {
           const rawContent = contentLines.join("\n").trim()
+          const firstImage = extractFirstImage(rawContent)
+          if (firstImage) currentEntry.image = firstImage
           currentEntry.content = formatContentForRSS(rawContent)
           if (currentEntry.version && currentEntry.date && currentEntry.title) {
             entries.push(currentEntry as ChangelogEntry)
@@ -108,6 +133,8 @@ async function parseChangelog(): Promise<ChangelogEntry[]> {
 
     if (currentEntry && contentLines.length > 0) {
       const rawContent = contentLines.join("\n").trim()
+      const firstImage = extractFirstImage(rawContent)
+      if (firstImage) currentEntry.image = firstImage
       currentEntry.content = formatContentForRSS(rawContent)
       if (currentEntry.version && currentEntry.date && currentEntry.title) {
         entries.push(currentEntry as ChangelogEntry)
@@ -125,18 +152,29 @@ export async function GET() {
   const entries = await parseChangelog()
   const siteUrl = "https://proxmenux.com"
 
+  // Use the latest entry image as the channel image when available, otherwise
+  // fall back to the static ProxMenux brand image. Channel-level <image> is the
+  // RSS 2.0 standard way to express a feed icon; <media:thumbnail> per item is
+  // what most modern readers (Feedly, NetNewsWire, Inoreader, etc.) render.
+  const channelImage = entries.find((e) => e.image)?.image ?? DEFAULT_CHANNEL_IMAGE
+
   const rssXml = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:media="http://search.yahoo.com/mrss/">
   <channel>
     <title>ProxMenux Changelog</title>
-    <description>Latest updates and changes in ProxMenux - An Interactive Menu for Proxmox VE Management</description>
+    <description>Release notes and changes in ProxMenux — an open-source interactive menu and web dashboard for Proxmox VE management.</description>
     <link>${siteUrl}/changelog</link>
     <atom:link href="${siteUrl}/rss.xml" rel="self" type="application/rss+xml"/>
     <language>en-US</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     <generator>ProxMenux RSS Generator</generator>
     <ttl>60</ttl>
-    
+    <image>
+      <url>${escapeXml(channelImage)}</url>
+      <title>ProxMenux Changelog</title>
+      <link>${siteUrl}/changelog</link>
+    </image>
+
     ${entries
       .map(
         (entry) => `
@@ -147,7 +185,10 @@ export async function GET() {
       <link>${entry.url}</link>
       <guid isPermaLink="true">${entry.url}</guid>
       <pubDate>${new Date(entry.date).toUTCString()}</pubDate>
-      <category>Changelog</category>
+      <category>Changelog</category>${entry.image ? `
+      <media:thumbnail url="${escapeXml(entry.image)}"/>
+      <media:content url="${escapeXml(entry.image)}" medium="image"/>
+      <enclosure url="${escapeXml(entry.image)}" type="image/png" length="0"/>` : ""}
     </item>`,
       )
       .join("")}

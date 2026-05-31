@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "title": "External Repositories | ProxMenux Documentation",
+    "description": "ProxMenux integrates with selected external script repositories (community-scripts, ZimaOS) as alternatives in some menu sections. Each external script is clearly labelled with its source; bug reports go to the original maintainer.",
+    "ogTitle": "External Repositories | ProxMenux Documentation",
+    "ogDescription": "External script repositories integrated into ProxMenux as alternative options in menus."
+  },
+  "header": {
+    "title": "External Repositories",
+    "description": "ProxMenux integrates with selected external script repositories as alternative options in some menu sections. These scripts come from trusted third-party sources and are clearly labelled with their origin when shown in the menu.",
+    "section": "External Repositories"
+  },
+  "practice": {
+    "title": "What this means in practice",
+    "body": "When a menu option is backed by an external script (rather than ProxMenux's own code), the menu explicitly says where it's from and which repository it loads. ProxMenux acts as a launcher — it doesn't modify the external scripts. Issues with what an external script does belong to that repository's maintainer, not to ProxMenux."
+  },
+  "integrated": {
+    "heading": "Currently integrated",
+    "usedInLabel": "Used in:",
+    "items": [
+      {
+        "name": "community-scripts / ProxmoxVE",
+        "url": "https://community-scripts.github.io/ProxmoxVE/",
+        "description": "Spiritual successor to tteck's helper scripts. Large catalog of one-shot scripts to deploy LXCs (Home Assistant, Plex, Frigate, …), VMs, addons and PVE tweaks.",
+        "usedIn": "Helper Scripts launcher, Network (NIC offloading fix for Intel e1000e)"
+      }
+    ]
+  },
+  "attribution": {
+    "heading": "Attribution & recognition",
+    "items": [
+      "Credit is always given to the original authors in the menu and in the documentation page that wraps the script.",
+      "A link to the source repository is shown — both before running the script and on the matching docs page.",
+      "Users are encouraged to support the developers of these external projects (give a ⭐, sponsor, file quality bug reports)."
+    ]
+  },
+  "report": {
+    "title": "Where to report problems with external scripts",
+    "body": "If a script from one of these external repositories doesn't work as expected, <strong>report it directly to that repository</strong> — not to ProxMenux. ProxMenux just downloads and runs the script verbatim; it doesn't modify the source. The original maintainer is the right person to triage and fix it. ProxMenux issues are for problems with the launcher itself or with how ProxMenux integrates the external script."
+  },
+  "suggest": {
+    "heading": "Suggesting new external repositories",
+    "intro": "Found a script or repository that would fit nicely into a ProxMenux menu? Suggest it via:",
+    "discussionTitle": "💬 Open a Discussion",
+    "discussionBody": "Best for ideas — gets community input before becoming a feature request.",
+    "issueTitle": "🐛 Open an Issue",
+    "issueBody": "For specific feature requests with a clear scope."
+  },
+  "candidate": {
+    "title": "What makes a good integration candidate",
+    "items": [
+      "Open source with an active maintainer.",
+      "Idempotent / safe to run more than once.",
+      "Doesn't silently modify Proxmox core config.",
+      "Solves a problem ProxMenux doesn't already cover (avoids feature duplication)."
+    ]
+  }
+}

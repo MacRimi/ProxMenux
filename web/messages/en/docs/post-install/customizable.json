@@ -1,0 +1,106 @@
+{
+  "meta": {
+    "title": "Customizable Post-Install Script | ProxMenux Documentation",
+    "description": "Cherry-pick exactly which optimizations to apply to a Proxmox VE host with ProxMenux. 10 categories, ~30 individual tools, checklist UI. Includes everything the Automated script does, plus opt-in features (IOMMU, Fastfetch, Figurine, Ceph, HA, AMD fixes…).",
+    "ogTitle": "Customizable Post-Install Script | ProxMenux Documentation",
+    "ogDescription": "10 categories, ~30 individual optimizations. Pick exactly what you want on a Proxmox VE host. Fully reversible."
+  },
+  "header": {
+    "title": "Customizable Post-Install Script",
+    "description": "Cherry-pick exactly which optimizations to apply to a Proxmox VE host. ProxMenux groups ~30 individual tools into 10 categories, each with its own checklist dialog. Same engine as Automated, but with full control over what gets applied.",
+    "section": "Post-Install · Customizable"
+  },
+  "intro": {
+    "title": "When to pick Customizable",
+    "body": "Choose this path when you already know which tweaks you want on the host — or which you definitely do not want. The script presents a checklist per category so you can pre-select, deselect or mix-and-match optimizations. Every item can be applied again later (it is idempotent) or reverted from <link>Uninstall Optimizations</link>."
+  },
+  "compare": {
+    "heading": "How it compares to Automated",
+    "body": "Customizable is a superset of the <link>Automated script</link>. It covers the same 13 baseline optimizations plus a long list of opt-in ones that Automated intentionally skips — things that are useful only on specific hardware (AMD fixes), specific hosting (OVH RTM), or specific workloads (IOMMU/VFIO, Ceph repo, High Availability, Fastfetch, Figurine, ZFS ARC tuning, pigz, ZFS auto-snapshot, vzdump speed limits, Open vSwitch, TCP BBR…)."
+  },
+  "categoriesSection": {
+    "heading": "The 10 categories",
+    "body": "The Customizable script groups optimizations into 10 categories. Each category has its own checklist dialog and its own documentation page — open one of the cards below for the per-option rationale, defaults and verification steps."
+  },
+  "categories": [
+    {
+      "name": "Basic Settings",
+      "description": "Repositories, system upgrade, timezone, locale, common utilities."
+    },
+    {
+      "name": "System",
+      "description": "Journald, logrotate, kernel limits, memory tuning, kernel panic, fast reboots."
+    },
+    {
+      "name": "Virtualization",
+      "description": "Guest agent auto-install, IOMMU/VFIO enablement for PCI passthrough."
+    },
+    {
+      "name": "Network",
+      "description": "APT over IPv4, network sysctl tuning, Open vSwitch, TCP BBR, persistent interface names."
+    },
+    {
+      "name": "Storage",
+      "description": "ZFS ARC sizing, ZFS auto-snapshot, vzdump backup speed limits."
+    },
+    {
+      "name": "Security",
+      "description": "Disable portmapper/rpcbind to reduce the attack surface."
+    },
+    {
+      "name": "Customization",
+      "description": "Bashrc colors & aliases, MOTD banner, subscription-notice removal."
+    },
+    {
+      "name": "Monitoring",
+      "description": "OVH Real-Time Monitoring (only on detected OVH servers)."
+    },
+    {
+      "name": "Performance",
+      "description": "Parallel gzip (pigz) for faster compression in backups and transfers."
+    },
+    {
+      "name": "Optional",
+      "description": "AMD CPU fixes, Fastfetch, Figurine, Ceph repo, High Availability, Log2RAM."
+    }
+  ],
+  "mixTip": {
+    "title": "Mix Automated and Customizable",
+    "body": "A common pattern: run <strong>Automated</strong> first to lock in the sensible baseline, then open <strong>Customizable</strong> and pick only the opt-in tools you care about (for example, IOMMU on a host that will do GPU passthrough). Changes are tracked independently; the Uninstall menu shows everything you have applied regardless of which path added it."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "label": "Automated Post-Install",
+        "href": "/docs/post-install/automated",
+        "tail": " — sane defaults applied with zero prompts."
+      },
+      {
+        "label": "Uninstall Optimizations",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — back any selection out cleanly."
+      },
+      {
+        "label": "Basic Settings",
+        "href": "/docs/post-install/basic-settings",
+        "tail": " — repos, time, language, utilities."
+      },
+      {
+        "label": "Virtualization",
+        "href": "/docs/post-install/virtualization",
+        "tail": " — IOMMU + VFIO for passthrough."
+      },
+      {
+        "label": "Security",
+        "href": "/docs/post-install/security",
+        "tailRich": " · <storageLink>Storage</storageLink> · <networkLink>Network</networkLink> · <customLink>Customization</customLink> — other categories."
+      },
+      {
+        "label": "Post-Install overview",
+        "href": "/docs/post-install",
+        "tail": "."
+      }
+    ]
+  }
+}

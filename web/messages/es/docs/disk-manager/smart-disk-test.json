@@ -1,0 +1,146 @@
+{
+  "meta": {
+    "title": "Salud y test SMART de disco | ProxMenux Documentation",
+    "description": "Ejecuta chequeos de salud SMART y tests de disco en Proxmox VE con ProxMenux. Soporta SATA / SAS (smartmontools) y NVMe (nvme-cli). Self-tests cortos y largos, exportación JSON para integración con ProxMenux Monitor.",
+    "ogTitle": "Salud y test SMART de disco | ProxMenux Documentation",
+    "ogDescription": "Chequeos de salud SMART y self-tests para unidades SATA / SAS y NVMe en Proxmox. Exportación JSON para el Monitor."
+  },
+  "header": {
+    "title": "Salud y test SMART de disco",
+    "description": "Lee datos SMART y lanza self-tests en los discos físicos adjuntos al host Proxmox. ProxMenux instala automáticamente smartmontools para SATA / SAS y nvme-cli para NVMe, ejecuta la acción dentro del firmware de la unidad (los tests largos sobreviven al cierre del terminal) y exporta los resultados en JSON para el ProxMenux Monitor.",
+    "section": "Disk Manager · Utilidades"
+  },
+  "intro": {
+    "title": "Para qué sirve esto",
+    "body": "SMART (Self-Monitoring, Analysis and Reporting Technology) permite que la propia unidad reporte su salud y ejecute self-tests. Esta herramienta expone esos datos sin que tengas que recordar la invocación correcta de <code>smartctl</code> / <code>nvme</code>, y persiste la salida como JSON para que el Monitor pueda graficar tendencias en el tiempo."
+  },
+  "howRuns": {
+    "heading": "Cómo se ejecuta el script",
+    "body": "Todas las acciones aquí son no destructivas — SMART lee los contadores del firmware de la unidad y los self-tests se ponen en cola dentro de la propia unidad. No hace falta separación de fases. El flujo es: chequeo de dependencias → selección de disco → selección de acción → invocación de la herramienta (smartctl o nvme-cli según el bus del disco) → salida impresa más exportación JSON para el Monitor."
+  },
+  "deps": {
+    "heading": "Dependencias",
+    "body": "La herramienta autoinstala lo que necesita en la primera ejecución. Las unidades SATA / SAS dependen de <code>smartmontools</code>; las unidades NVMe dependen de <code>nvme-cli</code>. Ambos:"
+  },
+  "actions": {
+    "heading": "Acciones disponibles",
+    "headerAction": "Acción",
+    "headerWhat": "Qué lee / ejecuta",
+    "headerDur": "Duración",
+    "rows": [
+      {
+        "action": "Estado de salud rápido",
+        "whatRich": "PASSED/FAILED global + atributos clave.<br /><code>smartctl -H</code> + <code>-A</code> (SATA/SAS) o <code>nvme smart-log</code> (NVMe).",
+        "dur": "Instantáneo"
+      },
+      {
+        "action": "Informe completo",
+        "whatRich": "Datos SMART completos, scrollables. <code>smartctl -x</code> para SATA/SAS o <code>nvme smart-log</code> + <code>id-ctrl</code> para NVMe.",
+        "dur": "Instantáneo"
+      },
+      {
+        "action": "Test corto",
+        "what": "Comprobación básica de superficie y eléctrica, encolada dentro del firmware de la unidad.",
+        "dur": "~2 minutos"
+      },
+      {
+        "action": "Test largo",
+        "what": "Escaneo completo de toda la superficie. Se ejecuta en el hardware de la unidad — persiste aunque cierres el terminal.",
+        "dur": "Horas (depende del tamaño del disco)"
+      },
+      {
+        "action": "Comprobar el progreso del test",
+        "what": "Estado del self-test activo o más reciente.",
+        "dur": "Instantáneo"
+      }
+    ],
+    "tipTitle": "Los tests largos sobreviven al cierre del terminal",
+    "tipBody": "Un test largo se encola <em>dentro de la unidad</em> — no depende de que el proceso de ProxMenux siga vivo. Puedes cerrar el terminal, reiniciar el host Proxmox (el test continúa donde lo dejó en algunas unidades) o simplemente volver más tarde y usar <strong>Comprobar el progreso del test</strong> para ver el resultado."
+  },
+  "json": {
+    "heading": "Exportación JSON para el Monitor",
+    "intro": "Cada ejecución escribe un archivo JSON con marca de tiempo en <code>/usr/local/share/proxmenux/smart/&lt;disk&gt;/</code>. La estructura es:",
+    "outro": "El ProxMenux Monitor los recoge para renderizar tendencias de salud por disco; los archivos viejos se rotan automáticamente cuando se alcanza el límite de retención."
+  },
+  "steps": {
+    "heading": "Paso a paso",
+    "stepLabel": "Paso",
+    "list": [
+      {
+        "title": "Elige un disco",
+        "body": "ProxMenux lista cada disco físico del host con su modelo y tamaño. A diferencia de la herramienta Format, esta lista no se filtra por seguridad — leer SMART es una operación no destructiva.",
+        "img": "/disk/smart/disk-selection.png",
+        "alt": "Menú de selección de disco SMART",
+        "caption": "Menú de selección de disco SMART"
+      },
+      {
+        "title": "Elige una acción",
+        "body": "Elige entre Estado de salud rápido, Informe completo, Test corto, Test largo o Comprobar progreso. El menú se queda abierto después de cada acción para que puedas encadenar varias consultas sobre el mismo disco.",
+        "img": "/disk/smart/action-menu.png",
+        "alt": "Menú de acciones SMART",
+        "caption": "Menú de acciones SMART (5 acciones + cancelar)"
+      },
+      {
+        "title": "(Solo test largo) Confirma ejecución en background",
+        "body": "ProxMenux te avisa de que el test seguirá corriendo después de cerrar el terminal y muestra dónde caerá el resultado JSON. Acepta para encolarlo.",
+        "img": "/disk/smart/long-test-warning.png",
+        "alt": "Diálogo de confirmación del test largo",
+        "caption": "Confirmación del test largo — corre en background, resultado guardado en JSON"
+      },
+      {
+        "title": "Revisa los resultados",
+        "bodyRich": "El estado y el informe se imprimen en el terminal y se escriben en JSON. Para los tests largos, vuelve más tarde y ejecuta <strong>Comprobar el progreso del test</strong> en el mismo disco para ver el resultado.",
+        "img": "/disk/smart/quick-status.png",
+        "alt": "Salida del estado de salud rápido",
+        "caption": "Salida del estado de salud rápido (SATA — smartctl -H + -A)"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Equivalentes manuales",
+    "nvmeWarnTitle": "Los self-tests NVMe dependen del firmware de la unidad",
+    "nvmeWarnBody": "No toda unidad NVMe soporta el comando de self-test corto/largo. Si una unidad rechaza el test, el log SMART y los datos del ID controller (<code>nvme smart-log</code> + <code>id-ctrl</code>) siguen siendo la señal de salud más fiable."
+  },
+  "troubleshoot": {
+    "heading": "Solución de problemas",
+    "noSmartTitle": "\"Could not read SMART data from /dev/sdX\"",
+    "noSmartBody": "El disco está probablemente detrás de una controladora RAID / SAS que no pasa SMART. Con tarjetas basadas en megaraid, prueba <code>smartctl -d megaraid,N /dev/sdX</code>. Para HBAs en modo IT la invocación directa funciona.",
+    "longTitle": "El test largo no termina nunca",
+    "longBody": "El test se encola en el firmware de la unidad y pausa si el disco tiene carga pesada. Ejecutarlo de noche en un sistema en reposo suele funcionar. También puedes revisar <code>smartctl -c</code> para ver el porcentaje restante; si se queda atascado en un LBA fijo, el disco está fallando en ese sector."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/disk-manager/format-disk",
+        "label": "Formatear / borrar disco físico",
+        "tail": " — reutilizar un disco después de confirmar que está sano."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Comandos de almacenamiento y discos → Salud SMART de disco",
+        "tail": " — referencia de smartctl / nvme lista para copiar y pegar."
+      },
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "Comandos de gestión de ZFS",
+        "tail": " — zpool scrub como equivalente a los tests SMART a nivel de capa de almacenamiento."
+      },
+      {
+        "href": "/docs/monitor/dashboard/storage",
+        "label": "ProxMenux Monitor — pestaña Almacenamiento",
+        "tail": " — drill-in de disco que consume el JSON exportado aquí (tabla SMART completa, historial, informe PDF)."
+      },
+      {
+        "href": "/docs/monitor/dashboard/hardware",
+        "label": "ProxMenux Monitor — pestaña Hardware",
+        "tail": " — Storage Summary con modelo, capacidad y velocidad de link negociada (actual vs máxima en NVMe)."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Resumen de Disk Manager",
+        "tail": "."
+      }
+    ]
+  }
+}

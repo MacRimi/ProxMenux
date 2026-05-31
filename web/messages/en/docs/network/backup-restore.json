@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "Interfaces Backup & Restart | ProxMenux Documentation",
+    "description": "Manual snapshot, browse and restore /etc/network/interfaces backups stored under /var/backups/proxmenux/. Includes a network service restart with confirmation and a quick view of the live configuration.",
+    "ogTitle": "Interfaces Backup & Restart | ProxMenux Documentation",
+    "ogDescription": "Snapshot and restore Proxmox network configuration; restart the networking service with confirmation."
+  },
+  "header": {
+    "title": "Interfaces backup & restart",
+    "description": "Four utilities that revolve around /etc/network/interfaces: take a manual snapshot, view the live config, restore a previous backup with optional preview, and restart the networking service with explicit consent. Same backup directory used by the guided repair flows.",
+    "section": "Network"
+  },
+  "intro": {
+    "title": "What this does",
+    "body": "Manages the same backup directory used by the guided repair flows (<code>/var/backups/proxmenux/</code>). Lets you take an extra snapshot before any manual change, browse all existing backups, and roll back to any of them — always with a fresh pre-restore backup taken automatically as a second safety net."
+  },
+  "shared": {
+    "heading": "The shared backup directory",
+    "intro": "Every backup taken anywhere in the Network menu lands in the same place:",
+    "outro": "Filenames are timestamped, sorted by date, and never overwritten. The directory is created on first use."
+  },
+  "show": {
+    "heading": "Show Network Config File",
+    "body": "Prints <code>/etc/network/interfaces</code> verbatim to the terminal. Read-only. Useful as a sanity check before taking a backup or after a restore — there is no separate \"diff with previous backup\" tool, so eyeballing the live file is the easiest way to confirm what you have."
+  },
+  "create": {
+    "heading": "Create Network Backup",
+    "body": "Copies the current <code>/etc/network/interfaces</code> into the backup directory with a fresh timestamp. That's it — no analysis, no prompts, just a snapshot.",
+    "whenTitle": "When to take a manual backup",
+    "whenBody": "Before editing <code>/etc/network/interfaces</code> by hand, before installing a package that may touch the network stack (e.g. NetworkManager, Open vSwitch), or before any hardware change. The guided repairs already snapshot automatically — this option is for the <em>manual</em> moments."
+  },
+  "restore": {
+    "heading": "Restore Network Backup",
+    "intro": "Lists every backup in <code>/var/backups/proxmenux/</code> sorted from newest to oldest, and walks through a guarded restore:",
+    "steps": [
+      {
+        "title": "1. Pick a backup",
+        "body": "A menu lists each backup by its timestamp. If no backups exist, the flow exits with a clear message.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Optional preview",
+        "body": "Offers to open the selected backup in a scrollable view before committing. Yes by default — do not skip it on a remote host.",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Pre-restore backup",
+        "body": "Before overwriting <code>/etc/network/interfaces</code>, takes <strong>another</strong> backup of the current state. Restoring a backup is itself a destructive action, so the new pre-restore snapshot lets you go back if the chosen backup turns out to be the wrong one.",
+        "tone": "amber"
+      },
+      {
+        "title": "4. Apply the restore",
+        "body": "Copies the chosen backup over <code>/etc/network/interfaces</code>. The file change is on disk; the live kernel state still reflects the previous config.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Optional restart",
+        "body": "Asks whether to run <code>systemctl restart networking</code> now. Decline to defer the change to the next reboot.",
+        "tone": "emerald"
+      }
+    ],
+    "autoBackupTitle": "A restore takes its own backup automatically",
+    "autoBackupBody": "Selecting <em>Restore Network Backup</em> always creates a fresh snapshot of the <em>current</em> config before overwriting it. If you restore to the wrong backup, the most recent file in <code>/var/backups/proxmenux/</code> is the state you came from."
+  },
+  "restart": {
+    "heading": "Restart Network Service",
+    "body": "Runs <code>systemctl restart networking</code> after a yes/no confirmation. Reports the result with <code>msg_ok</code> / <code>msg_error</code>. Most flows in this menu offer their own restart prompt at the end; this option is for restarting after a manual edit or after declining the in-flow restart earlier.",
+    "warnTitle": "Brief disconnection guaranteed; permanent disconnection possible",
+    "warnBody": "Restarting <code>networking</code> tears down and re-applies every interface declared in <code>/etc/network/interfaces</code>. SSH sessions hosted on those interfaces drop. If the new config is invalid, the network never comes back. Run this only when:",
+    "warnItems": [
+      "You have console / IPMI / iKVM access ready, <em>or</em>",
+      "You are physically next to the machine, <em>or</em>",
+      "You have just successfully rolled back to a known-good config and want to apply it."
+    ]
+  },
+  "manualRollback": {
+    "heading": "Manual rollback from a console",
+    "intro": "If you cannot reach the menu (no SSH, dialog crashing, …) but can reach a console, rollback is two commands:",
+    "outro": "This is the <em>same</em> operation the menu performs, just typed by hand. If <code>networking</code> still fails to start, check <code>journalctl -u networking -b</code> for the underlying syntax / driver error."
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "noneTitle": "\"No backups found\" in Restore",
+    "noneBody": "The directory <code>/var/backups/proxmenux/</code> does not exist or contains no <code>interfaces_backup_*</code> files. Run <em>Create Network Backup</em> at least once, or run any guided repair (which auto-creates one). Confirm with <code>ls /var/backups/proxmenux/</code>.",
+    "unreachTitle": "Restart networking succeeds but the host is still unreachable",
+    "unreachBody": "Either the new config is wrong, or you restarted into a configuration that does not bind your management IP. Roll back from the console (see above). After rollback, use <bridgeLink>bridge analysis</bridgeLink> and <configLink>config analysis</configLink> to understand what was wrong before re-applying.",
+    "emptyTitle": "Restore preview shows an empty file",
+    "emptyBody": "The backup file is empty (0 bytes). This happens if a copy failed silently during a previous run. Pick an older backup, or re-run <em>Create Network Backup</em> right now if the live config is healthy."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "label": "Bridge analysis & guided repair",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — the most common reason a backup ends up here."
+      },
+      {
+        "label": "Config analysis & guided cleanup",
+        "href": "/docs/network/config-analysis",
+        "tailRich": " — also writes to <code>/var/backups/proxmenux/</code> automatically."
+      },
+      {
+        "label": "Diagnostics",
+        "href": "/docs/network/diagnostics",
+        "tail": " — verify the live state after a restore."
+      }
+    ]
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "title": "Add Controller or NVMe to VM | ProxMenux Documentation",
+    "description": "PCI passthrough of a storage controller (SATA / SAS HBA) or NVMe device to a Proxmox VM using ProxMenux. Handles IOMMU enablement, conflict detection and qm set --hostpci wiring.",
+    "ogTitle": "Add Controller or NVMe to VM | ProxMenux Documentation",
+    "ogDescription": "Pass a whole SATA / SAS HBA or NVMe device into a Proxmox VM. ProxMenux handles IOMMU, conflict detection and hostpci wiring."
+  },
+  "header": {
+    "title": "Add Controller or NVMe to VM",
+    "description": "Pass a whole SATA / SAS host bus adapter (HBA) or NVMe device into a Proxmox VM via PCI passthrough. ProxMenux checks and — with your consent — enables IOMMU, enumerates the passthrough-eligible devices, filters out conflicts and wires the assignment with qm set --hostpci.",
+    "section": "Disk Manager · VM"
+  },
+  "intro": {
+    "title": "What this does (and does not) do",
+    "body": "This is <strong>device-level passthrough</strong>: the PCIe card leaves the host kernel's view and is bound to <code>vfio-pci</code>. The VM sees the controller itself — not the individual disks behind it — and loads its own driver for that exact model. Every disk attached to that controller follows it automatically, with native SMART data, full firmware features and no Proxmox layer in between."
+  },
+  "howRuns": {
+    "heading": "How the script runs",
+    "body": "The flow has two phases with clear separation between \"collecting information, checking IOMMU and listing candidates\" and \"actually attaching the PCI device\". Until the final confirmation nothing is written to the VM config."
+  },
+  "iommu": {
+    "heading": "IOMMU groups — why the whole card leaves at once",
+    "body": "PCI passthrough is done per <strong>IOMMU group</strong>, which is the smallest unit the CPU's IOMMU can isolate. Everything inside a group moves together. If your SATA controller shares its IOMMU group with the USB controller, passing the SATA card to a VM also takes the USB ports with it — often undesirable.",
+    "outro": "ProxMenux shows the IOMMU group next to each device and warns you when a group carries more than just the controller you want. You can still proceed if the extra devices in the group are acceptable (all disk controllers, for example), or back out if they are not."
+  },
+  "prereqs": {
+    "heading": "Prerequisites",
+    "items": [
+      "<strong>CPU and motherboard support</strong> VT-d (Intel) or AMD-Vi, and it is enabled in firmware (BIOS/UEFI). ProxMenux can enable the kernel side for you, but it cannot flip the firmware switch.",
+      "The target VM is <strong>powered off</strong> before attaching PCI devices.",
+      "The controller/NVMe <strong>is not the one holding the Proxmox root filesystem</strong>. The script hides anything in use by the host.",
+      "Guest OS has drivers for the controller model. Linux covers virtually every HBA out of the box; Windows needs the vendor driver installed <em>before</em> you boot with the controller attached."
+    ],
+    "warnTitle": "Live migration is not possible",
+    "warnBody": "A VM with PCI passthrough is tied to the node that physically holds the card. Live migration across nodes will fail. Plan backups / replication accordingly."
+  },
+  "steps": {
+    "heading": "Step-by-step",
+    "stepLabel": "Step",
+    "list": [
+      {
+        "title": "Pick the target VM",
+        "bodyRich": "ProxMenux reads <code>qm list</code> and shows every VM. Pick the one that will receive the controller.",
+        "img": "/disk/nvme-passthrough/vm-selection.png",
+        "alt": "VM selection dialog",
+        "caption": "VM selection dialog"
+      },
+      {
+        "title": "IOMMU check",
+        "bodyRich": "If IOMMU is not enabled on the kernel cmdline, ProxMenux offers to enable it. It edits <code>/etc/kernel/cmdline</code> (for systemd-boot) or <code>/etc/default/grub</code> (for GRUB) and appends the correct parameter for your CPU:",
+        "items": [
+          "<code>intel_iommu=on</code> for Intel CPUs.",
+          "<code>amd_iommu=on</code> for AMD CPUs."
+        ],
+        "outro": "A reboot is required after this change. The script prompts you to reboot now or later; the passthrough cannot continue until the new kernel cmdline is active.",
+        "img": "/disk/nvme-passthrough/iommu-warning.png",
+        "alt": "IOMMU Required dialog",
+        "caption": "IOMMU Required — offer to enable and reboot"
+      },
+      {
+        "title": "Device enumeration",
+        "body": "ProxMenux lists every storage controller (SATA / SAS HBA) and every NVMe device on the PCI bus. For each device it shows:",
+        "items": [
+          "PCI address (<code>00:17.0</code>, <code>01:00.0</code>, …).",
+          "Vendor / device description.",
+          "IOMMU group — and a ⚠ warning if the group is shared with other, unrelated devices.",
+          "The disks currently behind the controller (so you know what will follow it to the VM)."
+        ],
+        "img": "/disk/nvme-passthrough/device-list.png",
+        "alt": "Controller / NVMe device enumeration",
+        "caption": "Controller / NVMe device enumeration with IOMMU group info"
+      },
+      {
+        "title": "Conflict detection",
+        "bodyRich": "The script blocks devices that are clearly unsafe: already assigned to another VM (via <code>hostpci</code> in that VM's config), in use by the host (root disk controller), or sitting in an IOMMU group whose other members the script cannot identify safely. Eligible devices are available for selection.",
+        "img": "/disk/nvme-passthrough/conflict-warning.png",
+        "alt": "Conflict detection warning",
+        "caption": "Conflict detection — device blocked with reason"
+      },
+      {
+        "title": "Attach and finalise",
+        "bodyRich": "For every selected device ProxMenux runs <code>qm set &lt;VMID&gt; --hostpciN &lt;pci-addr&gt;,pcie=1</code>, choosing the next free <code>hostpci</code> slot. If IOMMU was enabled during this session you are reminded to reboot before starting the VM.",
+        "img": "/disk/nvme-passthrough/assignment.png",
+        "alt": "Assignment summary",
+        "caption": "Assignment summary — hostpciN slots and PCI addresses attached"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manual equivalent"
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "noGroupsTitle": "IOMMU enabled but no groups under /sys/kernel/iommu_groups/",
+    "noGroupsBody": "Reboot is required for the kernel cmdline to take effect. If the groups are still missing after reboot, VT-d / AMD-Vi is probably disabled in firmware — check the BIOS/UEFI setup.",
+    "busyTitle": "VM fails to start with \"hostpciN: device busy\"",
+    "busyBody": "Another process still holds the PCI device. Most common causes: a previous VM that crashed without releasing it, or the host kernel reclaimed it on the last boot. Run <code>lspci -nnk -s &lt;addr&gt;</code> to see which driver is bound; it should be <code>vfio-pci</code>. A full host reboot usually clears this.",
+    "noDisksTitle": "Guest sees the controller but not the disks",
+    "noDisksBody": "The controller model lacks an in-guest driver. Linux almost never hits this; Windows does — install the vendor driver (e.g. LSI / Broadcom for older SAS HBAs) while the card is detached, then reboot with the card attached.",
+    "sharedTitle": "Shared IOMMU group also exports an unrelated device",
+    "sharedBody": "Options: (a) move the card to a different PCIe slot to change its group, (b) enable <em>ACS override</em> in the kernel to split groups (security trade-off — research before applying), or (c) pick a different card in a cleaner group."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Import Disk to VM",
+        "tail": " — alternative model: attach a physical disk via Proxmox without full PCIe passthrough."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Add GPU to VM (Passthrough)",
+        "tail": " — same IOMMU / VFIO concepts applied to a GPU."
+      },
+      {
+        "href": "/docs/help-info/gpu-commands",
+        "label": "GPU Passthrough commands",
+        "tail": " — IOMMU verification commands also apply to controller / NVMe passthrough."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Disk Manager overview",
+        "tail": "."
+      }
+    ]
+  }
+}

@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Host: Mount NFS share on Host | ProxMenux Documentation",
+    "description": "Mount an external NFS export on the Proxmox host — either as Proxmox storage (pvesm add nfs), as a plain host fstab mount (NOT visible in Datacenter > Storage), or both. The fstab method is ideal for bind-mounting the share into LXC containers without exposing it as a Proxmox storage.",
+    "ogTitle": "Host: Mount NFS share on Host | ProxMenux Documentation",
+    "ogDescription": "Mount an external NFS export on the Proxmox host via pvesm, fstab, or both. fstab path is ideal for LXC bind-mounts."
+  },
+  "header": {
+    "title": "Host: Mount NFS share on Host",
+    "description": "Mount an external NFS export (from a NAS, another server, a homelab share…) on the Proxmox host. Pick one or both methods: register it as Proxmox storage (visible in Datacenter > Storage) and/or add a plain /etc/fstab mount at a path you choose (useful for bind-mounting the share into LXC containers without exposing it as a Proxmox storage).",
+    "section": "Storage & Share · Host"
+  },
+  "intro": {
+    "title": "What this does",
+    "body": "ProxMenux offers two mount methods for any NFS export: <strong>(1) Proxmox storage</strong> via <code>pvesm add nfs</code> — the share shows up in Datacenter > Storage and Proxmox manages the mount at <code>/mnt/pve/&lt;id&gt;</code>; <strong>(2) Host fstab mount</strong> at a path you pick — persistent via <code>/etc/fstab</code>, NOT visible as Proxmox storage, ideal for bind-mounting to LXC containers (Proxmox UI stays clean). You can run one method, the other, or both."
+  },
+  "opening": {
+    "heading": "Opening the tool",
+    "body": "From ProxMenux's main menu, open <strong>Storage &amp; Share Manager → Mount NFS Share on Host</strong>. You will see this sub-menu with four options:",
+    "imageAlt": "NFS Host Manager menu — Mount / View / Remove / Test connectivity"
+  },
+  "howRuns": {
+    "heading": "How the script runs",
+    "body": "The flow has two phases with clear separation between \"discovering, validating and choosing\" and \"actually mounting / writing config\". After selecting an export, you pick mount method(s) via a checklist; the rest of the dialogs only ask for params for the methods you selected. Until the final confirmation, neither <code>/etc/pve/storage.cfg</code> nor <code>/etc/fstab</code> are touched."
+  },
+  "modes": {
+    "heading": "Mount method picker (two options, mark one or both)",
+    "intro": "After selecting and validating the export, ProxMenux shows a checklist with the two mount methods. You can mark either, or both. If you press OK without marking anything, the dialog re-appears until you choose at least one option or press Cancel to exit the flow.",
+    "imageAlt": "Mount method checklist with pvesm and fstab options",
+    "headerMethod": "Method",
+    "headerMount": "Mount path",
+    "headerUi": "Visible in Datacenter > Storage",
+    "headerUseCase": "Typical use case",
+    "rows": [
+      {
+        "method": "<strong>As Proxmox storage (pvesm)</strong>",
+        "mountRich": "<code>/mnt/pve/&lt;storage-id&gt;</code> (managed by Proxmox)",
+        "ui": "Yes",
+        "useCase": "VM disk images, backups, ISOs, LXC templates — anything that needs to appear in the Proxmox UI."
+      },
+      {
+        "method": "<strong>Host fstab only</strong>",
+        "mountRich": "<code>/mnt/&lt;path&gt;</code> (you pick the path)",
+        "ui": "No",
+        "useCaseRich": "Bind-mounting the share into one or more LXCs <em>without</em> exposing it as a Proxmox storage. Keeps the Datacenter UI clean."
+      },
+      {
+        "method": "<strong>Both</strong>",
+        "mount": "Both paths above (two independent NFS connections to the server)",
+        "ui": "Yes",
+        "useCase": "You want UI integration AND a stable host-side path with open permissions for LXC bind-mounts. Server sees two connections from the host."
+      }
+    ],
+    "bothTitle": "\"Both\" creates two independent NFS mounts",
+    "bothBody": "Marking both options runs each method independently — pvesm mounts at <code>/mnt/pve/&lt;id&gt;</code>, fstab mounts at <code>/mnt/&lt;path&gt;</code>. The server sees two TCP connections from the Proxmox host. This is intentional: it lets you keep the pvesm storage clean (default Proxmox options) while having a separate host-side mount with open permissions for LXC bind-mounts."
+  },
+  "pvesmBranch": {
+    "heading": "Method A — As Proxmox storage (pvesm)",
+    "intro": "If <em>As Proxmox storage</em> is marked, ProxMenux runs the original pvesm flow:",
+    "items": [
+      "<strong>Storage ID</strong> — what Proxmox will call this storage. Default is <code>nfs-&lt;server-ip-with-dashes&gt;</code>. Only letters, digits, <code>-</code> and <code>_</code> are accepted.",
+      "<strong>Content types</strong> — Proxmox ties content categories to storage volumes; pick what this NFS is allowed to hold:"
+    ],
+    "headerType": "Content type",
+    "headerAllows": "What it allows",
+    "rows": [
+      {
+        "type": "import",
+        "allowsRich": "Disk image imports (selected by default). Needed for <em>Import Disk Image to VM</em>."
+      },
+      {
+        "type": "backup",
+        "allowsRich": "VM and CT backup files (<code>vzdump</code>)."
+      },
+      {
+        "type": "iso",
+        "allows": "Installation ISO images."
+      },
+      {
+        "type": "vztmpl",
+        "allows": "LXC templates."
+      },
+      {
+        "type": "images",
+        "allows": "Live VM disk images (this turns the NFS into a VM disk store)."
+      },
+      {
+        "type": "rootdir",
+        "allows": "LXC root filesystems (rare for NFS — read the note below)."
+      },
+      {
+        "type": "snippets",
+        "allows": "Hook scripts and cloud-init snippets."
+      }
+    ],
+    "warnTitle": "images and rootdir on NFS",
+    "warnBody": "Marking <code>images</code> on an NFS storage lets Proxmox place live VM disks there. It works, but NFS latency + its lock semantics make this noticeably slower than local storage (and a network outage pauses every VM backed by that store). Marking <code>rootdir</code> means you will host LXC root filesystems over NFS, which historically has trouble with unprivileged containers (overlay / chown interactions). Prefer keeping <code>images</code> / <code>rootdir</code> on local or iSCSI storage and using NFS for <code>backup</code> / <code>iso</code> / <code>vztmpl</code>.",
+    "result": "The result is <code>pvesm add nfs &lt;id&gt; --server &lt;srv&gt; --export &lt;path&gt; --content &lt;csv&gt;</code> and Proxmox auto-mounts at <code>/mnt/pve/&lt;id&gt;</code>."
+  },
+  "fstabBranch": {
+    "heading": "Method B — Host fstab mount only",
+    "intro": "If <em>As host fstab mount only</em> is marked, ProxMenux asks for a host mount path and persistent options, then mounts and writes the entry to <code>/etc/fstab</code>:",
+    "items": [
+      "<strong>Host mount path</strong> — default <code>/mnt/&lt;export-basename&gt;</code>. Must be an absolute path. If something is already mounted there, or a fstab entry exists for the same path, ProxMenux warns you and offers to replace it.",
+      "<strong>Mount options</strong> — pick <em>Read/Write</em> (default with <code>rw,hard,nofail,_netdev,rsize=131072,wsize=131072,timeo=600,retrans=2</code>), <em>Read-only</em>, or <em>Custom</em> (type your own option string)."
+    ],
+    "appliesIntro": "Once you confirm, the script:",
+    "applies": [
+      "<code>mkdir -p</code> the mount path.",
+      "<code>mount -t nfs -o &lt;opts&gt; &lt;srv&gt;:&lt;export&gt; &lt;path&gt;</code>.",
+      "Writes a one-line entry to <code>/etc/fstab</code>: <code>&lt;srv&gt;:&lt;export&gt; &lt;path&gt; nfs &lt;opts&gt; 0 0</code>.",
+      "Runs <code>systemctl daemon-reload</code> so systemd picks up the new fstab entry.",
+      "Attempts <code>chmod 1777</code> + <code>setfacl o::rwx</code> on the mount point (silent best-effort — only succeeds if the NFS server allows it; many NAS exports already serve world-writable paths)."
+    ],
+    "lxcTitle": "Using the fstab mount from an LXC",
+    "lxcBody": "The script prints the exact <code>pct set</code> command at the end to bind-mount the path into a container, e.g. <code>pct set &lt;ctid&gt; -mp0 /mnt/&lt;path&gt;,mp=/mnt/&lt;ct-path&gt;,shared=1,backup=0</code>. Or use the <mountLink>LXC Mount Manager</mountLink>, which detects the fstab mount automatically. <strong>No changes are made inside the container</strong> — for unprivileged LXCs to read/write the NFS data, the script relies on server-side world-writable export semantics (typical for Synology, TrueNAS, OMV defaults). If your NFS server squashes root or restricts perms, see Troubleshooting.",
+    "noUiTitle": "The fstab mount is NOT a Proxmox storage",
+    "noUiBody": "The host fstab mount is invisible to the Proxmox web UI — by design. It does not appear in <em>Datacenter > Storage</em>, you cannot select it in the VM / CT creator, and Proxmox backup jobs cannot target it. It is purely a host filesystem path. If you also want UI integration, mark <em>both</em> methods in the picker."
+  },
+  "manual": {
+    "heading": "Manual equivalent",
+    "pvesmIntro": "Method A (pvesm) maps to:",
+    "fstabIntro": "Method B (fstab) maps to:"
+  },
+  "view": {
+    "heading": "View configured NFS storages",
+    "body": "Lists every NFS entry in Proxmox (<code>pvesm status | awk ''$2 == \"nfs\"''</code>) with server, export, content types, mount path and live status. <strong>Note:</strong> this view only shows pvesm-registered storages — fstab-only mounts are not listed here. Check those with <code>findmnt -t nfs</code> or <code>grep nfs /etc/fstab</code>."
+  },
+  "remove": {
+    "heading": "Remove NFS storage",
+    "body": "Runs <code>pvesm remove &lt;storage-id&gt;</code> after a confirmation that shows the server / export / content. Only the Proxmox-side registration is removed — <strong>the remote NFS server itself is never touched</strong>, no files are deleted. To remove a fstab-only mount, edit <code>/etc/fstab</code> by hand and run <code>umount &lt;path&gt;</code>.",
+    "warnTitle": "Back up dependencies first",
+    "warnBody": "If VMs, CTs or backup jobs still reference this storage (by ID), removing it leaves them pointing at a disappeared store. Proxmox will flag the error but not clean up. Move or drop those references first, then remove the storage."
+  },
+  "test": {
+    "heading": "Test NFS connectivity",
+    "body": "Runs a diagnostic pass over every NFS storage registered in Proxmox: checks that <code>showmount</code> is available, that <code>rpcbind</code> is running, pings each server, probes port 2049, calls <code>showmount -e</code>, and finally reports Proxmox's own view (<code>pvesm status</code>). Good first stop when a storage shows as <em>inactive</em> in the Proxmox UI."
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "noServersTitle": "\"No NFS servers found on the network\"",
+    "noServersBody": "Auto-discover uses <code>nmap -p 2049 --open &lt;subnet&gt;/24</code>. The server may not respond if: it is on a different VLAN / subnet, its firewall blocks nmap probes (many do) or port 2049 is intentionally closed on that interface. Use the <em>Manual</em> option with the server's IP or hostname instead.",
+    "portTitle": "\"NFS port (2049) is not accessible\"",
+    "portBody": "Ping succeeded but <code>nc -z -w 3 &lt;server&gt; 2049</code> failed. Check the NFS service is running on the server (<code>systemctl status nfs-server</code> on Linux, Control Panel → File Services on Synology, NFS plugin on OMV / TrueNAS), and that the firewall allows 2049 from the Proxmox host.",
+    "showmountTitle": "\"Failed to connect\" from showmount",
+    "showmountBody": "The server refused the export-list query. Common causes: the server enforces strict client ACLs (your Proxmox IP is not on the allowed list), <code>rpcbind</code> is not running on the server, or the server exposes only NFSv4 with <code>showmount</code> disabled. The export path can still be added manually if you know it.",
+    "inactiveTitle": "Storage shows as inactive in the Proxmox UI",
+    "inactiveBody": "Run <em>Test NFS Connectivity</em> first — 99 % of the time this flags the exact hop that breaks (DNS, port, mount permissions). If connectivity is fine but Proxmox still flags inactive, check <code>journalctl -u pvestatd</code> on the Proxmox node; intermittent DNS or slow NFS mounts on boot can leave storages in an inactive state until <code>pvesm set &lt;id&gt; --disable 0</code> is re-applied.",
+    "lxcNoWriteTitle": "fstab mount works but unprivileged LXC can't write through a bind-mount",
+    "lxcNoWriteBody": "NFS permissions are enforced server-side, not by the host. The fstab options (<code>uid=</code>, <code>file_mode=</code>) that work for CIFS do <strong>not</strong> apply to NFS. If your unprivileged LXC (root inside CT = UID 100000 on host, mapped to NFS as \"others\") cannot write, the NFS server is either squashing root or has restrictive perms. Fix on the server: change the export to <code>no_root_squash</code> if you trust the host, or set the export world-writable (Synology, TrueNAS, OMV all expose this in the UI). The script tries <code>chmod 1777</code> on the mount but that only succeeds when the server permits it.",
+    "fstabBootTitle": "fstab mount does not come up after reboot",
+    "fstabBootBody": "The script adds <code>nofail,_netdev</code> so a missing share at boot does not block startup. If the mount never comes up: confirm the network is reachable (<code>ping &lt;server&gt;</code>), check <code>journalctl -u remote-fs.target</code>, and verify the entry is valid with <code>mount -fav | grep nfs</code>. <code>mount -a</code> after boot mounts everything that is currently missing."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/storage-share/host-samba",
+        "label": "Samba / CIFS as Proxmox storage",
+        "tail": " — same flow pattern (Method A pvesm + Method B fstab) for SMB/CIFS shares."
+      },
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "LXC Mount Manager",
+        "tailRich": " — bind-mount the fstab-only path <code>/mnt/&lt;path&gt;</code> into one or more containers."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-client",
+        "label": "NFS client in LXC",
+        "tail": " — alternative: mount NFS directly from inside a privileged container (skips the host)."
+      }
+    ]
+  }
+}

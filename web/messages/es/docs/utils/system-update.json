@@ -1,0 +1,162 @@
+{
+  "meta": {
+    "title": "Actualización del sistema Proxmox | ProxMenux Documentation",
+    "description": "Ejecuta la secuencia oficial de upgrade de Proxmox (apt update + apt full-upgrade -y) y añade la higiene de repos, comprobación de paquetes esenciales, escaneo de sanity de LVM, autoremove/autoclean y preguntar antes de reiniciar que la guía de upgrade también recomienda. Detecta la versión mayor en ejecución automáticamente.",
+    "ogTitle": "Actualización del sistema Proxmox | ProxMenux Documentation",
+    "ogDescription": "apt full-upgrade / dist-upgrade oficial envuelto con higiene de repos, autoremove y un preguntar antes de reiniciar inteligente."
+  },
+  "header": {
+    "title": "Actualización del sistema Proxmox",
+    "description": "Wrapper que detecta la versión mayor de Proxmox en ejecución y delega en el worker correspondiente (PVE 8 o PVE 9). Los repos se limpian, se habilita la fuente sin suscripción, se actualizan todos los paquetes, se eliminan los paquetes conflictivos y el sistema se limpia después. El preguntar antes de reiniciar solo se dispara cuando el kernel realmente se ha actualizado.",
+    "section": "Utilidades"
+  },
+  "calloutWhat": {
+    "title": "Qué hace",
+    "body": "Lleva el host al último nivel de parches de su versión mayor actual. <strong>No</strong> hace el salto entre versiones mayores — para PVE 8 → PVE 9 mira <link>Actualizar PVE 8 a PVE 9</link>."
+  },
+  "official": {
+    "heading": "La recomendación oficial de Proxmox",
+    "intro": "La guía de upgrade de la propia Proxmox para un host en ejecución (dentro de la misma versión mayor) es ejecutar:",
+    "code": "apt update && apt full-upgrade -y",
+    "outro": "Esa única línea es el comando oficial en cualquier release actual de Proxmox. La parte difícil no es el upgrade en sí; es asegurar que los repositorios están limpios, que están habilitados los correctos y que el host queda en un estado razonable después."
+  },
+  "onTop": {
+    "heading": "Qué hace ProxMenux encima — verificado contra el script",
+    "intro": "Esta opción ejecuta <strong>exactamente</strong> el comando apt de arriba, envuelto con la higiene de repos y la limpieza post-upgrade que la guía oficial de upgrade también recomienda. La lista de abajo mapea 1:1 a <code>scripts/utilities/proxmox_update.sh</code> y a los scripts worker por versión — nada implícito, cada paso está en el código:",
+    "items": [
+      "<strong>Detecta la versión mayor de PVE</strong> (<code>pveversion | grep -oP ''pve-manager/\\K[0-9]+''</code>) y despacha a <code>update-pve8.sh</code> o <code>update-pve9_2.sh</code> para que se usen el codename y las URLs de repo correctas.",
+      "<strong>Limpia los repositorios</strong> antes de tocar apt: deshabilita la fuente enterprise (que devuelve 401 sin suscripción), elimina archivos de repo heredados y escribe una fuente sin suscripción limpia para el codename del host.",
+      "<strong>Ejecuta el upgrade no interactivamente</strong> con <code>DEBIAN_FRONTEND=noninteractive</code> y <code>--force-confdef --force-confold</code> — esto significa que si un archivo de configuración que ya modificaste también cambió upstream, tu versión se queda en su sitio. Sin sobrescrituras silenciosas de configuraciones propias.",
+      "<strong>Instala paquetes esenciales de Proxmox</strong> si falta alguno (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
+      "<strong>Comprobación de sanity de metadatos LVM</strong> contra cabeceras PV sueltas de discos en passthrough (solo aviso, sin arreglo automático).",
+      "<strong>Limpia después:</strong> <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>.",
+      "<strong>Preguntar antes de reiniciar</strong> solo si el kernel realmente cambió (presencia de <code>/var/run/reboot-required</code> o <code>linux-image</code> en el log del upgrade)."
+    ]
+  },
+  "calloutOneSentence": {
+    "title": "En una frase",
+    "body": "El mismo upgrade que Proxmox te dice que ejecutes, más la limpieza de repos, la comprobación de paquetes esenciales, el escaneo de sanity de LVM, el autoremove/autoclean después y un preguntar antes de reiniciar solo cuando toca."
+  },
+  "confirm": {
+    "heading": "Diálogo de confirmación",
+    "intro": "Seleccionar la opción abre un resumen de lo que va a hacer el worker, requiriendo una confirmación explícita:",
+    "imageAlt": "Diálogo de confirmación de Actualización del sistema Proxmox listando higiene de repos, actualizaciones de paquetes, limpieza"
+  },
+  "routes": {
+    "heading": "Cómo enruta el wrapper",
+    "nodes": {
+      "source": {
+        "label": "proxmox_update.sh",
+        "detail": "pveversion |\ngrep -oP ''pve-manager/\\K[0-9]+''"
+      },
+      "bridge": {
+        "label": "Selección del worker",
+        "detail": "PVE 8 → update-pve8.sh\nPVE 9 → update-pve9_2.sh"
+      },
+      "target": {
+        "label": "Post-actualización",
+        "detail": "apt-get autoremove\napt-get autoclean\nPreguntar antes de reiniciar si toca"
+      }
+    }
+  },
+  "worker": {
+    "heading": "Qué hace el worker",
+    "intro": "Ambos workers (<code>scripts/global/update-pve8.sh</code> para PVE 8 y <code>scripts/global/update-pve9_2.sh</code> para PVE 9) siguen el mismo esquema, con URLs de repo y nombres de paquete propios de cada versión:",
+    "items": [
+      "<strong>Higiene de repos.</strong> Elimina entradas duplicadas de <code>/etc/apt/sources.list</code> y <code>/etc/apt/sources.list.d/</code>. Comenta el repo enterprise si el host no tiene suscripción y escribe / habilita la fuente sin suscripción.",
+      "<strong>Apt update + full-upgrade.</strong> Trae las últimas listas de paquetes y aplica todas las actualizaciones disponibles para la versión mayor actual, ejecutándose con <code>DEBIAN_FRONTEND=noninteractive</code> y <code>--force-confdef --force-confold</code> para que cualquier archivo de configuración que personalizaste mantenga su contenido actual cuando upstream también lo cambió.",
+      "<strong>Comprobación de paquetes esenciales.</strong> Instala <code>zfsutils-linux</code>, <code>chrony</code>, <code>ifupdown2</code> y unos pocos más si el host no los tiene.",
+      "<strong>Comprobación de sanity de LVM / almacenamiento.</strong> Repara cabeceras PV faltantes si se detectan.",
+      "<strong>Eliminación de paquetes conflictivos.</strong> Quita paquetes conocidos por chocar en Proxmox (p. ej. algunos demonios de sincronización horaria que pelean con chrony)."
+    ]
+  },
+  "post": {
+    "heading": "Limpieza post-actualización y reinicio",
+    "intro": "Tras salir el worker, el wrapper ejecuta:",
+    "code": "apt-get autoremove -y    # drop unused dependencies pulled in by old packages\napt-get autoclean        # drop downloaded .deb files no longer in the index",
+    "afterCode": "Después comprueba si hace falta un reinicio. Dos señales disparan el prompt:",
+    "items": [
+      "<code>/var/run/reboot-required</code> existe (creado por el hook post-install del paquete del kernel)",
+      "El log del upgrade contiene entradas de <code>linux-image</code> (el kernel se actualizó de verdad)"
+    ],
+    "outro": "Si alguna es cierta, un diálogo whiptail pregunta <em>\"Some changes require a reboot to take effect. Do you want to restart now?\"</em>. Decline para seguir corriendo en el kernel antiguo hasta que elijas reiniciar manualmente (p. ej. durante una ventana de mantenimiento planificada)."
+  },
+  "end": {
+    "heading": "Qué ves al final",
+    "intro": "Cuando el worker termina, el terminal muestra la salida de la limpieza y (si el kernel cambió) el preguntar antes de reiniciar:",
+    "imageAlt": "Resumen de finalización de Actualización del sistema Proxmox con salida de limpieza y preguntar antes de reiniciar"
+  },
+  "calloutDeclineReboot": {
+    "title": "Decline el reinicio solo si sabes por qué",
+    "body": "Correr en un kernel antiguo tras actualizar <code>linux-image-*</code> significa que estás en un sistema medio actualizado: userspace nuevo, kernel viejo. La mayoría del tiempo las cosas funcionan, pero los módulos ZFS, grupos IOMMU, KSMBD y cualquier driver fuera del árbol solo cuadran con el kernel para el que fueron construidos — un desajuste produce fallos oscuros. Reinicia en el primer momento razonable."
+  },
+  "noSub": {
+    "heading": "Cuándo ocurre el cambio a sin suscripción",
+    "intro": "Proxmox entrega los hosts con el repo enterprise habilitado por defecto. Sin una suscripción de pago, ese repo devuelve 401 en <code>apt-get update</code>. El worker detecta esto y:",
+    "items": [
+      "Comenta (o deshabilita) <code>/etc/apt/sources.list.d/pve-enterprise.list</code> (o el equivalente deb822)",
+      "Escribe <code>/etc/apt/sources.list.d/pve-no-subscription.list</code> (o el deb822 <code>proxmox.sources</code> para PVE 9) con el codename correspondiente (<code>bookworm</code> para PVE 8, <code>trixie</code> para PVE 9)",
+      "Vuelve a ejecutar <code>apt-get update</code>"
+    ],
+    "outro": "Si tienes una suscripción de pago, comenta la fuente sin suscripción y descomenta la enterprise antes de ejecutar esta opción."
+  },
+  "cluster": {
+    "heading": "Consideraciones de clúster",
+    "calloutTitle": "En clústeres: actualiza un nodo a la vez",
+    "calloutBody": "En un clúster Proxmox, ejecuta esta opción en <strong>un nodo a la vez</strong> y espera a que el reinicio se complete antes de pasar al siguiente. Migra primero los guests fuera del nodo para evitar una interrupción de servicio en todo el clúster. Versiones menores mezcladas (p. ej. 8.4.1 y 8.4.5) funcionan bien durante horas; kernels en ejecución mezclados pueden producir comportamientos inesperados en guests gestionados por HA."
+  },
+  "doesnt": {
+    "heading": "Qué no hace",
+    "items": [
+      "<strong>Salto de versión mayor.</strong> 8 → 9 es una operación aparte — mira <link>Actualizar PVE 8 a PVE 9</link>.",
+      "<strong>Backup.</strong> Sin snapshots, sin rollback. Las operaciones de apt no son transaccionales. Combínalo con tu disciplina normal de backups (PBS, vzdump, snapshots ZFS).",
+      "<strong>Actualizaciones de contenedores / VMs.</strong> Solo se actualiza el host; los guests se quedan en paz.",
+      "<strong>Actualizaciones de firmware.</strong> Microcódigo de CPU, firmware de NIC, BIOS — fuera de alcance."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Solución de problemas",
+    "items": [
+      {
+        "title": "apt update falla con 401 Unauthorized",
+        "body": "El repo enterprise sigue habilitado pero no tienes suscripción. El worker debería detectarlo y cambiar automáticamente; si no lo hizo, comenta la línea en <code>/etc/apt/sources.list.d/pve-enterprise.list</code> (o pon <code>Enabled: false</code> en el deb822 <code>pve-enterprise.sources</code>) y vuelve a ejecutar."
+      },
+      {
+        "title": "dist-upgrade se queda colgado en \"Configuring grub-pc\"",
+        "body": "Un prompt de dpkg está preguntando en qué dispositivo(s) instalar GRUB. El wrapper pasa <code>--force-confold</code> para archivos de configuración pero la instalación del cargador de arranque es un prompt aparte. Usa <kbd>Tab</kbd> + <kbd>Space</kbd> para seleccionar todos tus discos de arranque, después OK. Mejor evitarlo seleccionando los discos de arranque una vez con <code>dpkg-reconfigure grub-pc</code> de antemano."
+      },
+      {
+        "title": "El kernel se actualizó pero los nuevos módulos faltan para un driver fuera del árbol",
+        "body": "Los módulos fuera del árbol (NVIDIA, ZFS vía DKMS, drivers de NIC propios) necesitan reconstruirse contra el nuevo kernel. La mayoría los gestiona automáticamente DKMS durante el upgrade — confirma con <code>dkms status</code>. Si falta algo: <code>dkms autoinstall</code>."
+      },
+      {
+        "title": "El preguntar antes de reiniciar no apareció pero estoy seguro de que el kernel cambió",
+        "body": "Tienen que coincidir dos señales (<code>/var/run/reboot-required</code> y <code>linux-image</code> en el log del upgrade). Si el archivo marcador se borró pero el log se está parseando mal, reinicia manualmente con <code>shutdown -r now</code>. Para confirmar que hubo una actualización de kernel: <code>grep linux-image /var/log/apt/history.log</code>."
+      }
+    ]
+  },
+  "files": {
+    "heading": "Archivos implicados",
+    "code": "scripts/utilities/proxmox_update.sh           # this script (wrapper)\nscripts/global/update-pve8.sh                 # worker for PVE 8 hosts\nscripts/global/update-pve9_2.sh               # worker for PVE 9 hosts\nscripts/global/common-functions.sh            # cleanup_duplicate_repos used by workers\n/etc/apt/sources.list                         # may be edited\n/etc/apt/sources.list.d/*                     # may be edited / created\n/var/run/reboot-required                      # read to decide on reboot prompt\n/var/log/apt/history.log                      # read to detect kernel changes"
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/utils/upgrade-pve8-pve9",
+        "label": "Actualizar PVE 8 a PVE 9",
+        "tail": " — para el salto de versión mayor (herramienta distinta, modelo de seguridad distinto)."
+      },
+      {
+        "href": "/docs/utils/system-utils",
+        "label": "Instalador de utilidades del sistema",
+        "tail": " — para instalar las herramientas CLI que quieras alrededor de las actualizaciones (htop / btop / ncdu)."
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Resumen de Utilidades",
+        "tail": " — volver al resumen de la sección."
+      }
+    ]
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Import Disk to LXC | ProxMenux Documentation",
+    "description": "Attach a physical disk to an existing LXC container on Proxmox VE using ProxMenux. Handles filesystem detection / formatting, mount point, unprivileged → privileged conversion and persistent device paths.",
+    "ogTitle": "Import Disk to LXC | ProxMenux Documentation",
+    "ogDescription": "Attach a physical disk to an existing LXC container. Handles filesystem, mount point and unprivileged → privileged conversion."
+  },
+  "header": {
+    "title": "Import Disk to LXC",
+    "description": "Attach a physical disk to an existing LXC container on the Proxmox host. ProxMenux detects free disks, optionally formats them with a supported filesystem, and wires the partition to a mount point inside the container using persistent device paths.",
+    "section": "Disk Manager · LXC"
+  },
+  "intro": {
+    "title": "VM passthrough vs LXC passthrough",
+    "body": "LXC passthrough is <strong>not a raw block device</strong>. The container gets a <em>mount point</em> — i.e. a directory backed by a partition you pick on the host. Unlike a VM, the guest kernel is the host kernel, so the filesystem (ext4 / xfs / btrfs) is read and managed by Proxmox itself and then exposed to the container."
+  },
+  "howRuns": {
+    "heading": "How the script runs",
+    "body": "The flow has two phases with clear separation between \"collecting information and decisions\" and \"actually changing the container config\". Until the final confirmation, nothing is mounted into the CT.",
+    "summary": "ProxMenux filters out the root disk, mounted disks, and disks already referenced by any VM/LXC config. Disks with active ZFS/LVM/RAID membership are hidden; stale signatures show a ⚠ label so you can wipe them before formatting."
+  },
+  "prereqs": {
+    "heading": "Prerequisites",
+    "items": [
+      "At least one LXC container defined on the host.",
+      "The container is <strong>privileged</strong>, or you accept the script's offer to convert it.",
+      "At least one physical disk not in use by the host or any other guest."
+    ],
+    "warnTitle": "Privileged container required",
+    "warnBody": "Direct device passthrough to an LXC container only works if the container is <strong>privileged</strong>. If the script detects <code>unprivileged: 1</code> in the config it offers to convert it in place (edits <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>). Cancel if you cannot accept the security trade-off of a privileged container."
+  },
+  "steps": {
+    "heading": "Step-by-step",
+    "stepLabel": "Step",
+    "list": [
+      {
+        "title": "Pick the target container",
+        "img": "/disk/select-container.png",
+        "caption": "Container selection menu",
+        "bodyRich": "ProxMenux lists every LXC container on the host (<code>pct list</code>). Pick the one that will receive the disk. If the container is unprivileged you are offered to convert it now."
+      },
+      {
+        "title": "Pick the physical disk",
+        "img": "/disk/disk-selection-ct.png",
+        "caption": "Free disks detected on the host (with ⚠ labels for stale metadata)",
+        "bodyRich": "Only safe candidates are shown. Unlike the VM flow, this script attaches <strong>one disk per run</strong> — run it again for each extra disk you want to add."
+      },
+      {
+        "title": "Format or reuse",
+        "intro": "The script inspects the disk:",
+        "items": [
+          "If it already carries a supported filesystem (ext4 / xfs / btrfs) you can reuse it as-is (existing files are preserved).",
+          "If it has no supported filesystem you are offered to format it. Pick ext4 / xfs / btrfs."
+        ]
+      },
+      {
+        "title": "Pick the mount point",
+        "bodyRich": "Type the path where the container should see the disk, e.g. <code>/mnt/data</code> or <code>/mnt/disk_passthrough</code>. This is the path <em>inside</em> the container; the host already sees the partition under <code>/dev/disk/by-id/…</code>."
+      },
+      {
+        "title": "Attach and verify",
+        "img": "/disk/assignment-ct.png",
+        "caption": "Assignment to CT",
+        "bodyRich": "ProxMenux appends a fresh <code>mpN:</code> entry to the container config, skipping indexes already in use, and re-reads the config to confirm. If the container is running the mount is exec'd live; otherwise it takes effect on the next start.",
+        "extraImg": "/disk/result-point.png",
+        "extraAlt": "Mount point created successfully",
+        "extraCaption": "Mount point created and verified"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manual equivalent",
+    "body": "The script wraps <code>pct set</code>. A direct invocation for a single disk looks like:"
+  },
+  "important": {
+    "heading": "Important considerations",
+    "items": [
+      "<strong>One disk per run</strong>. Re-run the script for each additional disk.",
+      "Do <strong>not</strong> attach the same partition to several containers that might mount it simultaneously — concurrent writes corrupt the filesystem.",
+      "<strong>Old metadata</strong> (RAID / ZFS / LVM signatures) must be cleared manually before the script will let you format, otherwise <code>mkfs</code> refuses to overwrite. Use the <wipeLink>Format / Wipe Physical Disk</wipeLink> tool for that."
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "unprivTitle": "\"Cannot continue with an unprivileged container\"",
+    "unprivBody": "You declined the conversion offer. Either re-run and accept the conversion, or convert the container manually by editing <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> and replacing <code>unprivileged: 1</code> with <code>unprivileged: 0</code>. You can also rebuild the container as privileged if you prefer not to convert in place.",
+    "permsTitle": "Permissions inside the container are wrong",
+    "permsBody": "Mounts from the host into a privileged container land as <code>root:root</code>. If the service inside the CT runs as a different user (e.g. <code>www-data</code> for Nextcloud), <code>chown</code>/<code>chmod</code> inside the container to match its UID/GID after the first mount."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Import Disk to VM",
+        "tail": " — equivalent flow for VMs."
+      },
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "LXC Mount Points (Host ↔ CT)",
+        "tail": " — share host directories with a CT instead of attaching a whole disk."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "VM and CT Management commands",
+        "tail": " — pct config / push / pull reference."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Disk Manager overview",
+        "tail": "."
+      }
+    ]
+  }
+}

@@ -1,0 +1,342 @@
+{
+  "meta": {
+    "title": "Proxmox AI Assistant — OpenAI, Claude, Gemini, Groq, Ollama | ProxMenux Monitor",
+    "description": "ProxMenux Monitor's optional AI Assistant rewrites Proxmox VE notification bodies in plain language. Six providers supported: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter and local Ollama. Twelve languages, three detail levels per channel, custom prompt mode with a community library, and a context-enrichment layer that adds uptime, recurrence and SMART data to disk events.",
+    "ogTitle": "Proxmox AI Assistant — OpenAI, Claude, Gemini, Groq, Ollama",
+    "ogDescription": "Rewrite Proxmox VE notifications in plain language with OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter or local Ollama.",
+    "twitterTitle": "Proxmox AI Assistant | ProxMenux Monitor",
+    "twitterDescription": "Rewrite Proxmox VE notifications in plain language with OpenAI, Anthropic, Gemini, Groq, OpenRouter or local Ollama."
+  },
+  "header": {
+    "title": "AI Assistant",
+    "description": "The opt-in rewriter that runs every outbound notification through an LLM before fan-out — turning structured templates into plain-language messages, with per-channel detail levels, twelve languages, a custom prompt mode with a public community library, and a context-enrichment layer that adds uptime, recurrence, SMART data and known-error matches to the prompt.",
+    "section": "ProxMenux Monitor"
+  },
+  "intro": {
+    "title": "Off by default, single switch to enable",
+    "body": "AI rewrite is opt-in. Until you flip the master toggle inside <em>Settings → Notifications → Advanced: AI Enhancement</em>, every event is dispatched with the original templated body. When the toggle is on and a provider call fails or times out, the dispatcher falls back to the templated body silently — your notifications never block on the LLM."
+  },
+  "howItWorks": {
+    "heading": "How it works",
+    "intro": "Every event the Monitor dispatches goes through the same pipeline. The AI rewriter is one optional stage that sits between the templated body and the channel send. End to end, a single event walks through four steps:",
+    "steps": [
+      "<strong>Event + template.</strong> An event arrives from one of the six collectors and is rendered into a structured plain-text body by <code>notification_templates.py</code>. This is the body the channel would send if AI rewrite were off.",
+      "<strong>Context enrichment.</strong> The dispatcher inspects the event and conditionally appends the relevant extra signals — system uptime (only for critical system failures), event frequency, SMART data (only for disk events), Known Errors database matches and journal log lines.",
+      "<strong>Prompt builder.</strong> The system prompt is assembled from the template plus the per-channel settings: target language, detail level, emoji rules from <em>Rich messages</em>, and the AI Suggestions addon if enabled. In Custom prompt mode, your prompt replaces the system prompt entirely. The user message is built from the templated body plus the enriched context blocks.",
+      "<strong>Provider call.</strong> The configured provider (Groq, OpenAI, Anthropic, Gemini, Ollama or OpenRouter) returns a rewritten title and body. The dispatcher parses the response, replaces the original title and body for that channel, and hands it off to the channel adapter for delivery."
+    ],
+    "notesIntro": "Three details worth holding on to before reading the rest of this page:",
+    "notes": [
+      "<strong>The AI does not produce events.</strong> Every event is born from a real signal (Health Monitor scan, journal line, PVE webhook, etc.) and is rendered into a templated body before the AI ever sees it. The AI is a translator and re-formatter, not a watcher.",
+      "<strong>The AI runs per-channel.</strong> Telegram and Discord can use a brief rewrite while Email gets a detailed report — same event, different shape, all from one provider call per channel.",
+      "<strong>Failure is silent.</strong> If the provider 5xx's, times out, returns malformed output or rejects the request, the dispatcher logs the error and falls back to the original templated body for that channel. You never lose a notification because the LLM had a bad day."
+    ]
+  },
+  "enabling": {
+    "heading": "Enabling the panel",
+    "intro": "The AI configuration lives at the bottom of the Notifications panel inside the Settings tab, as a collapsible <em>Advanced: AI Enhancement</em> block. Click the header to expand:",
+    "collapsedAlt": "Collapsed Advanced AI Enhancement header with chevron indicator",
+    "collapsedCaption": "Collapsed by default — one click expands the panel.",
+    "panelAlt": "Expanded AI Enhancement panel showing AI-Enhanced Messages master toggle, Provider Google Gemini, API Key masked, Model gemini-2.5-flash, Prompt Mode Default, Language English, Detail Level per Channel for Telegram Discord Gotify Email, AI Suggestions toggle and Test Connection button",
+    "panelCaption": "The full AI Enhancement panel — every control documented in this page maps to one of the fields above.",
+    "outro": "Top to bottom, the panel exposes: the <em>AI-Enhanced Messages</em> master toggle, the provider selector with an information modal next to it, the API key input (or Ollama URL for local mode), the model dropdown (loaded from the provider after entering the key), the prompt mode (<em>Default</em> / <em>Custom</em>), the output language, the per-channel detail level, the <em>AI Suggestions</em> opt-in, and a <em>Test Connection</em> button that sends a probe message to the provider to validate the credentials."
+  },
+  "context": {
+    "heading": "What context the AI receives",
+    "intro": "Before the prompt is built, the dispatcher walks a context-enrichment routine that decides which extra signals are relevant to the event at hand. The aim is to give the LLM enough information to produce a useful message, without flooding it (and your wallet) with noise that doesn't apply. Five context blocks can be added to the user message:",
+    "headerBlock": "Block",
+    "headerWhen": "When it's injected",
+    "headerWhat": "What it carries",
+    "rows": [
+      {
+        "block": "System uptime",
+        "when": "Only for critical system-level failures: <code>crash</code>, <code>panic</code>, <code>oom</code>, <code>kernel</code>, <code>split_brain</code>, <code>quorum_lost</code>, <code>node_offline</code>, <code>node_fail</code>, <code>system_fail</code>, <code>boot_fail</code>. Skipped for disk errors, warnings and routine operations to keep the prompt tight.",
+        "what": "A line such as <code>System uptime: 14 days (stable system)</code>. Lets the LLM distinguish startup issues from long-running failures."
+      },
+      {
+        "block": "Event frequency",
+        "when": "Always, when the Monitor has seen the same fingerprint before.",
+        "what": "Occurrence count, first-seen timestamp, optional pattern label (recurring / one-off / spike). The LLM uses this to phrase \"recurring issue\" vs \"first time seen\"."
+      },
+      {
+        "block": "SMART data",
+        "when": "Only for disk-related events (event type contains <code>disk</code>, <code>smart</code>, <code>storage</code>, <code>io_error</code>, or the body mentions <code>/dev/sd</code>, <code>ata</code>, <code>i/o error</code>).",
+        "what": "Output of <code>smartctl</code> for the affected device — overall health (PASSED / FAILED) plus the relevant attributes for the failure mode."
+      },
+      {
+        "block": "Known errors DB",
+        "when": "When the body or journal context matches a Proxmox-specific error pattern shipped with the Monitor.",
+        "what": "A <code>KNOWN PROXMOX ERROR DETECTED</code> block with the matched cause and a concrete solution. The prompt instructs the LLM to translate this verbatim — no paraphrasing of the recommended fix."
+      },
+      {
+        "block": "Journal logs",
+        "when": "Whenever the originating collector captured journal lines for the event (mostly the journal watcher and the task watcher).",
+        "what": "Raw <code>journalctl</code> excerpts. The prompt tells the LLM to extract IDs, timestamps and root-cause hints, and to ignore unrelated entries."
+      }
+    ],
+    "afterBlocks": "Once these blocks are joined, the user message sent to the LLM has this shape:",
+    "calloutTitle": "No telemetry beyond the event itself",
+    "calloutBody": "The Monitor only sends what it has on hand for the current event — no system-wide telemetry, no historical metric series, no inventory dumps. The five blocks above are the upper bound of what leaves the host on a single AI rewrite."
+  },
+  "tokens": {
+    "heading": "Tokens — what they are and how they're consumed",
+    "intro1": "Every commercial provider charges per <em>token</em>, so it's worth understanding what a token is before picking a plan. A token is roughly four characters of English text or about three quarters of a word. The phrase <em>\"Backup completed on storage local-bak\"</em> is around eight tokens. A short journal excerpt of ten lines can be 200-400 tokens depending on the technical density.",
+    "intro2": "Two things are billed on every call:",
+    "items": [
+      "<strong>Input tokens</strong> — the system prompt plus the user message (severity, title, body, enriched context). For ProxMenux the system prompt alone is on the order of 1.5-2 KB (≈ 400-500 tokens) and the user message varies from 50 tokens (a clean backup-complete) to ~1500 tokens (a disk error with 30 lines of journal context).",
+      "<strong>Output tokens</strong> — what the model writes back. The Monitor caps this with <code>max_tokens</code> (see the table below). The cap is a <em>limit</em>, not a charge: if the model produces 250 tokens with a cap of 1500, you pay for 250."
+    ],
+    "capsIntro": "These are the actual caps the dispatcher applies, taken straight from <code>AI_DETAIL_TOKENS</code> in <code>notification_templates.py</code>:",
+    "headerLevel": "Detail level",
+    "headerCap": "Output cap (tokens)",
+    "headerConsumption": "Typical real consumption",
+    "capRows": [
+      {
+        "level": "brief",
+        "cap": "500",
+        "consumption": "50-200 output tokens for short events."
+      },
+      {
+        "level": "standard",
+        "cap": "1500",
+        "consumption": "200-700 output tokens for typical events with light context."
+      },
+      {
+        "level": "detailed",
+        "cap": "3000",
+        "consumption": "500-2000 output tokens for full email reports with logs and SMART tables."
+      }
+    ],
+    "customNote": "Custom prompt mode uses a fixed cap of 500 output tokens regardless of detail level — the custom prompt is in your control and the cap protects against runaway responses.",
+    "sizingTitle": "Practical sizing",
+    "sizingBody": "A homelab with 50-100 events per day on <code>standard</code> typically consumes a few thousand tokens per day. With the free tiers offered by Groq and Gemini, that fits without touching a paid plan. With OpenAI or Anthropic, billed per-token, the cost lands in the cents-per-month range for that volume. If your event count is much higher, the <link>Detail level per channel</link> section explains how to keep chat channels on <code>brief</code> while letting Email take the full report."
+  },
+  "providers": {
+    "heading": "AI providers",
+    "intro": "Six providers are wired into the Monitor. The provider dropdown in the UI shows them all; an information button next to it opens a modal with a one-line description for each. Below is the full reference, with the URL for getting an API key, the description shown in the UI and the relevant notes from the codebase.",
+    "imageAlt": "AI Providers Information modal listing the six supported providers — Groq, OpenAI, Anthropic Claude, Google Gemini, Ollama, OpenRouter — each with its icon and one-line description, and a special OpenAI-Compatible APIs note for OpenAI",
+    "imageCaption": "The in-app modal — six cards, one per provider, with the same descriptions documented below.",
+    "groq": {
+      "heading": "Groq",
+      "tagline": "Very fast, generous free tier (30 req/min). Ideal to start.",
+      "items": [
+        "API key: <a>console.groq.com/keys</a>",
+        "Verified models: <code>llama-3.3-70b-versatile</code>, <code>llama-3.1-70b-versatile</code>, <code>llama-3.1-8b-instant</code>, <code>llama3-70b-8192</code>, <code>llama3-8b-8192</code>, <code>mixtral-8x7b-32768</code>, <code>gemma2-9b-it</code>.",
+        "Recommended: <strong><code>llama-3.3-70b-versatile</code></strong> — best quality at full Groq inference speed."
+      ]
+    },
+    "openai": {
+      "heading": "OpenAI",
+      "tagline": "Industry standard. Very accurate and widely used.",
+      "items": [
+        "API key: <a>platform.openai.com/api-keys</a>",
+        "Verified models: <code>gpt-4.1-nano</code>, <code>gpt-4.1-mini</code>, <code>gpt-4o-mini</code>, <code>gpt-4.1</code>, <code>gpt-4o</code>, <code>gpt-5-chat-latest</code>, <code>gpt-5.4-nano</code>, <code>gpt-5.4-mini</code>.",
+        "Recommended: <strong><code>gpt-4.1-nano</code></strong> — the cheapest member of the chat family, sufficient quality for translation and re-formatting. Reasoning models (o-series, gpt-5 non-chat) are supported by the provider plumbing but kept off the verified list: higher latency without measurable quality gain on this workload."
+      ],
+      "baseUrlTitle": "OpenAI-compatible base URL",
+      "baseUrlBody": "The OpenAI provider also accepts a custom <em>Base URL</em>, which lets you point the Monitor at any OpenAI-compatible endpoint. Confirmed to work with <strong>BytePlus / ByteDance (Kimi K2.5)</strong>, <strong>LocalAI</strong>, <strong>LM Studio</strong>, <strong>vLLM</strong>, <strong>Together AI</strong>, <strong>Fireworks AI</strong>, and any other service that speaks the OpenAI <code>/v1/chat/completions</code> dialect. Set the URL in the OpenAI tab next to the API key field."
+    },
+    "anthropic": {
+      "heading": "Anthropic (Claude)",
+      "tagline": "Excellent for writing and translation. Fast and economical.",
+      "items": [
+        "API key: <a>console.anthropic.com/settings/keys</a>",
+        "Verified models: <code>claude-3-5-haiku-latest</code>, <code>claude-3-5-sonnet-latest</code>, <code>claude-3-opus-latest</code>.",
+        "Recommended: <strong><code>claude-3-5-haiku-latest</code></strong> — Claude's smallest, fastest model with strong language quality for the translation workload."
+      ]
+    },
+    "gemini": {
+      "heading": "Google Gemini",
+      "tagline": "Free tier available, great quality/price ratio.",
+      "items": [
+        "API key: <a>aistudio.google.com/app/apikey</a>",
+        "Verified models: <code>gemini-2.5-flash-lite</code>, <code>gemini-2.5-flash</code>, <code>gemini-3-flash-preview</code>.",
+        "Recommended: <strong><code>gemini-2.5-flash-lite</code></strong> — flash and flash-lite pass the verifier consistently. The pro variants reject the <code>thinkingBudget=0</code> setting the Monitor uses and are overkill for this workload."
+      ]
+    },
+    "openrouter": {
+      "heading": "OpenRouter",
+      "tagline": "Aggregator with access to 100+ models using a single API key. Maximum flexibility.",
+      "items": [
+        "API key: <a>openrouter.ai/keys</a>",
+        "Verified models: <code>meta-llama/llama-3.3-70b-instruct</code>, <code>meta-llama/llama-3.1-70b-instruct</code>, <code>meta-llama/llama-3.1-8b-instruct</code>, <code>anthropic/claude-3.5-haiku</code>, <code>anthropic/claude-3.5-sonnet</code>, <code>google/gemini-flash-1.5</code>, <code>openai/gpt-4o-mini</code>, <code>mistralai/mistral-7b-instruct</code>, <code>mistralai/mixtral-8x7b-instruct</code>.",
+        "Recommended: <strong><code>meta-llama/llama-3.3-70b-instruct</code></strong> — same model as the Groq entry but routed through OpenRouter, which means a single key for all the listed models."
+      ]
+    },
+    "ollama": {
+      "heading": "Ollama (Local)",
+      "tagline": "Uses models available on your Ollama server. 100% local, no costs, total privacy.",
+      "items": [
+        "No API key. Set the <em>Ollama URL</em> field to your server (default <code>http://localhost:11434</code> or whatever host runs your Ollama instance).",
+        "Models: <strong>not filtered.</strong> The Monitor reads whichever models you have pulled on the Ollama side via <code>ollama pull &lt;model&gt;</code>. The dropdown is populated from <code>GET /api/tags</code> on your Ollama server.",
+        "Install: <a>ollama.com/download</a> — runs on Linux, macOS, Windows. For best results pick a model that fits in RAM with a large enough context window for the journal blocks the dispatcher injects."
+      ]
+    }
+  },
+  "models": {
+    "heading": "Why these specific models",
+    "intro": "The model dropdown for each commercial provider is populated from a curated list shipped with the Monitor (<code>verified_ai_models.json</code>). Models on this list have been tested end-to-end with the chat / completions API format the Monitor uses, with the exact <code>system_prompt + user_message + max_tokens</code> shape the AI Enhancer sends. The list is refreshed before each ProxMenux release with a private verifier tool that probes every candidate model and prunes the ones that misbehave.",
+    "consequencesIntro": "Two consequences worth being aware of:",
+    "consequences": [
+      "<strong>The recommended model</strong> for each provider is the one that has the best balance of quality, latency and cost for notification translation specifically — not the most capable model the provider sells. Notification rewrites don't need frontier-model reasoning; they need fast and cheap.",
+      "<strong>You can still pick another verified model</strong> from the dropdown — sometimes you have a free-tier quota you want to spend on a particular model, or you have a strong preference. Pick any of the listed entries; they've all passed the verifier."
+    ],
+    "ollamaTitle": "Ollama is the exception",
+    "ollamaBody": "Ollama models are local and the Monitor doesn't filter them — the dropdown reflects whatever you have pulled. Pick a model in the 7B-13B range with at least an 8K context window for the AI rewrite to behave reasonably with the journal context blocks."
+  },
+  "defaultPrompt": {
+    "heading": "Default prompt",
+    "intro": "With prompt mode set to <em>Default</em>, the Monitor uses the system prompt below. The prompt is templated at runtime: <code>'{'language'}'</code>, <code>'{'detail_level'}'</code>, <code>'{'emoji_instructions'}'</code> and <code>'{'suggestions_addon'}'</code> are replaced before the call. The variants for rich vs plain channels and the AI Suggestions addon are shown immediately after.",
+    "showFullSummary": "Show full default system prompt",
+    "passagesIntro": "Two passages in the prompt above are placeholders that get swapped depending on the per-channel <em>Rich messages</em> toggle:",
+    "passages": [
+      "<strong>Rich on</strong> → an emoji block is injected listing the icons the LLM may use, plus a hostname rule (the LLM must keep the hostname prefix from the title verbatim) and a handful of formatted examples (backup start, backup complete, updates, VM start, health degraded). This is what produces the emoji-prefixed messages on Telegram and Discord.",
+      "<strong>Rich off</strong> → a one-line block tells the LLM to use plain ASCII only — no emojis, no Unicode symbols. Used for email and any channel where formatting noise hurts inbox rules or readability."
+    ],
+    "suggestionsPlaceholder": "And the <code>'{'suggestions_addon'}'</code> placeholder is empty unless you enable AI Suggestions (next section), in which case this block gets injected:",
+    "showAddonSummary": "Show AI Suggestions addon"
+  },
+  "customPrompt": {
+    "heading": "Custom prompt mode",
+    "intro": "Switching the prompt mode to <em>Custom</em> swaps the entire default system prompt for one you write yourself. The custom prompt is stored in the Monitor's SQLite settings and sent verbatim on every AI rewrite call. It's the right escape hatch when you want a completely different voice, structure or focus than the bundled prompt offers.",
+    "imageAlt": "Custom Prompt mode showing a textarea with translation rules and Export Import buttons plus a Community prompts link",
+    "imageCaption": "Custom Prompt — large textarea with the user's prompt, plus <em>Export</em>, <em>Import</em> and a link to the community gallery on GitHub.",
+    "changesTitle": "What changes when Custom is on",
+    "changes": [
+      "<strong>The default prompt is replaced entirely.</strong> The Proxmox mappings, the context-handling rules and the emoji instructions are all gone. If you want to keep any of them, paste them into your prompt — the bundled <code>EXAMPLE_CUSTOM_PROMPT</code> shown below is a starting point.",
+      "<strong>The Language selector is ignored.</strong> The default prompt has a <code>'{'language'}'</code> placeholder; the custom prompt does not. If you want output in a specific language, declare it inside your prompt (\"Translate to Spanish\", \"Output everything in French\").",
+      "<strong>Detail level still applies</strong> in the sense that it's available as a setting per channel, but the cap on output tokens becomes a fixed 500 in custom mode (vs the 500 / 1500 / 3000 ramp of the default prompt). If your custom prompt asks for a long report, raise the cap by editing the prompt or split the request.",
+      "<strong>The Output Format markers are still mandatory.</strong> The Monitor parses the response by looking for <code>[TITLE]</code> and <code>[BODY]</code> on their own lines. A custom prompt that doesn't emit those markers will break the parser and fall back to the original templated body.",
+      "<strong>Rich messages emoji rules are not auto-injected.</strong> If you want emojis, tell the prompt to use them. If you want plain text, tell it not to. The toggle only gates the bundled blocks of the default prompt, not your custom string."
+    ],
+    "starterTitle": "Starter prompt",
+    "starterIntro": "The <em>Custom Prompt</em> textarea ships pre-filled with a minimal example you can adapt:",
+    "showStarterSummary": "Show starter custom prompt",
+    "shareTitle": "Sharing prompts with the community",
+    "shareIntro": "The <em>Export</em> button writes your current custom prompt to a file (<code>.txt</code> / <code>.md</code>) you can keep as a backup or hand to someone else. <em>Import</em> pulls one back in. The third button next to them links to a public community gallery on GitHub:",
+    "shareLinkLabel": "github.com/MacRimi/ProxMenux/discussions — Share custom prompts for AI notifications",
+    "shareOutro": "Browse the discussion to see what other operators have built — terse pager-style alerts, verbose technical reports, language-specific variants. If you tweak yours and like the result, post it there: even a one-paragraph description of what your prompt optimises for helps people pick a good starting point. Feedback on what works and what doesn't is equally welcome."
+  },
+  "suggestions": {
+    "heading": "AI Suggestions (BETA)",
+    "intro": "AI Suggestions is an opt-in addon that lets the LLM append <strong>one</strong> short, actionable tip at the end of the body. It only activates when the prompt mode is <em>Default</em>, the master AI toggle is on, and the <em>AI Suggestions</em> switch is flipped — and even then, the prompt instructs the model to skip the tip whenever the cause or solution is unclear.",
+    "formatIntro": "When a tip is added, it follows this exact format:",
+    "rulesIntro": "The rules baked into the addon (visible in the collapsible block under the Default prompt section above):",
+    "rules": [
+      "The tip is included <em>only</em> if the journal context or the Known Errors database clearly points to a specific fix.",
+      "The tip is capped at 100 characters.",
+      "It must be specific (concrete command or path) — generic advice is rejected by the prompt itself.",
+      "If a Known Error provides a solution, the LLM must use that solution, not invent a new one.",
+      "If nothing in the input gives the LLM enough certainty to suggest a concrete fix, the tip is skipped — no guessing."
+    ],
+    "betaTitle": "Why BETA",
+    "betaBody": "Tip quality depends on two things outside of ProxMenux: the model picked, and how rich the journal context for the event was. With a strong model (Claude 3.5 Haiku, GPT-4.1 Mini, Llama 3.3 70B) and a disk error that comes with smartctl + journal lines, the tip is consistently useful. With a tiny local Ollama model and a one-line event, the tip can fall flat or get skipped entirely. Disable the toggle if you find the tips noisy and re-enable it when you want it back."
+  },
+  "detailLevel": {
+    "heading": "Detail level per channel",
+    "intro": "Each of the four channels (Telegram, Discord, Gotify, Email) has its own detail-level dropdown. Three values are available, mapped to specific output token caps and to specific instructions in the default prompt:",
+    "headerLevel": "Level",
+    "headerLabel": "UI label",
+    "headerCap": "Output cap",
+    "headerProduce": "What the prompt asks the LLM to produce",
+    "rows": [
+      {
+        "level": "brief",
+        "label": "2-3 lines, essential only",
+        "cap": "500 tokens",
+        "produce": "\"What happened + where\". Nothing else."
+      },
+      {
+        "level": "standard",
+        "label": "Concise with basic context",
+        "cap": "1500 tokens",
+        "produce": "3-6 lines: what, where, cause, affected devices."
+      },
+      {
+        "level": "detailed",
+        "label": "Complete technical details",
+        "cap": "3000 tokens",
+        "produce": "Full report: what, where, cause, affected, logs, SMART data, history."
+      }
+    ],
+    "defaultsIntro": "Defaults the Monitor applies on first install:",
+    "defaults": [
+      "<strong>Telegram, Discord, Gotify</strong> — <code>standard</code>.",
+      "<strong>Email</strong> — <code>detailed</code>. Email is the channel where you typically want the full picture for archival."
+    ],
+    "emailTitle": "Email detail level appends the original",
+    "emailBody": "When Email is on <code>detailed</code> and the original templated body has substantial content (more than 50 characters), the dispatcher appends the original message at the bottom of the AI rewrite, separated by a 40-dash divider and an <code>Original message:</code> label. This means a detailed email always carries both the AI-friendly version and the machine-friendly raw template — useful when you want to grep an old alert later."
+  },
+  "language": {
+    "heading": "Language",
+    "intro": "Twelve languages are wired in. The dropdown sets <code>ai_language</code> in the config and the value is interpolated into the system prompt at the place where the prompt says <em>\"translate alerts into '{'language'}'\"</em>. The full list:",
+    "list": "English (<code>en</code>), Spanish (<code>es</code>), French (<code>fr</code>), German (<code>de</code>), Portuguese (<code>pt</code>), Italian (<code>it</code>), Russian (<code>ru</code>), Swedish (<code>sv</code>), Norwegian (<code>no</code>), Japanese (<code>ja</code>), Chinese (<code>zh</code>), Dutch (<code>nl</code>).",
+    "rulesIntro": "Two important rules taken straight from the prompt:",
+    "rules": [
+      "<strong>Translate</strong>: labels, descriptions, status words, units (e.g. GB → Go in French).",
+      "<strong>Do not translate</strong>: hostnames, IPs, paths, VM/CT IDs, device names like <code>/dev/sdX</code>, technical identifiers. These stay verbatim regardless of language."
+    ],
+    "customNote": "Custom prompt mode <strong>does not use</strong> the Language selector. If you switch to Custom and want a specific output language, declare it inside your prompt."
+  },
+  "templates": {
+    "heading": "A note on templates",
+    "body1": "The body the AI receives is not raw event data — it's a pre-rendered template. Each event type (<code>backup_complete</code>, <code>vm_start</code>, <code>auth_fail</code>, <code>health_degraded</code>, etc.) has a template in <code>notification_templates.py</code> that knows how to format that specific event into a structured plain-text body. The AI rewrites that body, it doesn't replace the templating step.",
+    "body2": "Two practical implications: the AI never sees a hostname or VMID it has to invent — those fields are placed by the template before the rewrite. And if AI is disabled, the templated body is what gets dispatched directly. The <link>Notifications</link> page documents the dispatch pipeline in full and is the right cross-reference for everything that happens to an event before it reaches this layer."
+  },
+  "privacy": {
+    "heading": "Privacy & data flow",
+    "intro": "With AI rewrite enabled, the Monitor sends the rendered notification body plus the enriched context blocks to the configured provider. That can include hostnames, IPs, usernames, device paths, journal log lines and SMART attributes for the affected device. Whether that leaves the host depends on which provider you chose:",
+    "headerProvider": "Provider",
+    "headerDestination": "Data destination",
+    "rows": [
+      {
+        "provider": "Ollama",
+        "destination": "Stays on the Ollama host. If Ollama runs on the same Proxmox node, nothing leaves the network at all."
+      },
+      {
+        "provider": "OpenAI",
+        "destination": "<code>api.openai.com</code> (or your custom Base URL endpoint). Subject to OpenAI's data-handling policy at the time of the call."
+      },
+      {
+        "provider": "Anthropic",
+        "destination": "<code>api.anthropic.com</code>."
+      },
+      {
+        "provider": "Google Gemini",
+        "destination": "<code>generativelanguage.googleapis.com</code>."
+      },
+      {
+        "provider": "Groq",
+        "destination": "<code>api.groq.com</code>."
+      },
+      {
+        "provider": "OpenRouter",
+        "destination": "<code>openrouter.ai</code>, which forwards to the underlying model provider chosen in the <code>model</code> field. Two hops instead of one."
+      }
+    ],
+    "calloutTitle": "If event content cannot leave the network",
+    "calloutBody": "Use Ollama, or disable the AI rewriter. There is no middle ground — the dispatcher does not try to redact hostnames or IPs before sending; the prompt is built from the actual event payload as the Monitor sees it."
+  },
+  "whereNext": {
+    "heading": "Where to next",
+    "items": [
+      {
+        "label": "Notifications",
+        "href": "/docs/monitor/notifications",
+        "tail": " — the dispatch pipeline, channels, per-event toggles and the PVE webhook integration that surrounds this layer."
+      },
+      {
+        "label": "Health Monitor",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — the largest single producer of events the AI ends up rewriting, with its own per-category suppression durations."
+      },
+      {
+        "label": "Architecture",
+        "href": "/docs/monitor/architecture",
+        "tail": " — where the AI Enhancer fits into the wider Monitor process (it's a module, not a separate service)."
+      }
+    ],
+    "communityLabel": "Community prompts on GitHub",
+    "communityTail": " — browse, share, ask."
+  }
+}

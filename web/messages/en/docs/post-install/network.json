@@ -1,0 +1,126 @@
+{
+  "meta": {
+    "title": "Post-Install: Network | ProxMenux Documentation",
+    "description": "Network-related optimizations in the ProxMenux Customizable post-install script: force APT over IPv4, apply a curated sysctl tuning profile, install Open vSwitch, enable TCP BBR + Fast Open, and pin interface names to their MAC addresses."
+  },
+  "header": {
+    "title": "Post-Install: Network",
+    "section": "Settings post-install Proxmox"
+  },
+  "intro": {
+    "title": "What this category covers",
+    "body": "Five independent network options. Two are small (<strong>APT over IPv4</strong>, <strong>Open vSwitch install</strong>), two tune TCP behaviour (<strong>network sysctl profile</strong>, <strong>BBR + Fast Open</strong>), and one fixes a common operational headache — <strong>pinning interface names</strong> so a new NIC or a BIOS update doesn't rename <code>enp3s0</code> to <code>enp4s0</code> and break your bridges."
+  },
+  "ipv4": {
+    "heading": "Force APT to use IPv4",
+    "intro": "Writes <code>Acquire::ForceIPv4 \"true\";</code> to <code>/etc/apt/apt.conf.d/99-force-ipv4</code>. APT then refuses to use IPv6 for package downloads, even if the host has IPv6 connectivity.",
+    "tipTitle": "Who benefits",
+    "tipBody": "Useful when your IPv6 path is flaky, slower than IPv4, or the Debian/Proxmox mirror occasionally breaks over IPv6 (it happens). Harmless on hosts without IPv6. On a healthy dual-stack network, it's just a guarantee of predictable behaviour — apt won't surprise you with an IPv6 timeout."
+  },
+  "sysctl": {
+    "heading": "Apply network optimizations",
+    "intro": "Writes a curated sysctl profile to <code>/etc/sysctl.d/99-network.conf</code> covering core socket buffers, ICMP hardening, basic spoof protection, and TCP buffer sizes that make sense on a hypervisor with lots of concurrent flows.",
+    "tunedTitle": "What gets tuned",
+    "headerArea": "Area",
+    "headerSettings": "Key settings",
+    "rows": [
+      {
+        "area": "Core socket buffers",
+        "settings": "<code>netdev_max_backlog=8192</code>, <code>rmem_max=16M</code>, <code>wmem_max=16M</code>, <code>somaxconn=8192</code>"
+      },
+      {
+        "area": "ICMP hardening",
+        "settings": "<code>icmp_echo_ignore_broadcasts=1</code>, <code>icmp_ignore_bogus_error_responses=1</code>"
+      },
+      {
+        "area": "Routing safety",
+        "settings": "<code>accept_redirects=0</code>, <code>accept_source_route=0</code>, <code>secure_redirects=0</code>, <code>send_redirects=0</code>"
+      },
+      {
+        "area": "Reverse path filter",
+        "settings": "<code>rp_filter=2</code> (loose mode, see note below)"
+      },
+      {
+        "area": "TCP",
+        "settings": "<code>tcp_mtu_probing=1</code>, <code>tcp_rfc1337=1</code>, <code>tcp_sack=1</code>, <code>tcp_rmem=8K/87K/16M</code>, <code>tcp_wmem=8K/64K/16M</code>"
+      },
+      {
+        "area": "Ports",
+        "settings": "<code>ip_local_port_range=1024 65535</code> (ephemeral port pool)"
+      },
+      {
+        "area": "Unix sockets",
+        "settings": "<code>net.unix.max_dgram_qlen=4096</code>"
+      }
+    ],
+    "sourceOutro": "It also adds <code>source /etc/network/interfaces.d/*</code> to <code>/etc/network/interfaces</code> if not already present — standard practice so you can drop modular interface snippets without editing the main file.",
+    "rpFilterTitle": "Why rp_filter=2 (loose) instead of 1 (strict)",
+    "rpFilterBody": "Strict reverse-path filtering drops packets whose source would be routed out a <em>different</em> interface. That's the right default on a client machine, but breaks badly on a Proxmox host where VM traffic often arrives on a bridge and leaves on an uplink with asymmetric routes. <code>rp_filter=2</code> (loose) only drops packets with truly unroutable sources. It's a pragmatic trade-off — slight reduction in local-IP-spoof detection in exchange for not breaking your VM network."
+  },
+  "ovs": {
+    "heading": "Install Open vSwitch",
+    "intro": "Installs <code>openvswitch-switch</code> + <code>openvswitch-common</code>. These packages add OVS as a bridge implementation alternative to the standard Linux bridges that Proxmox uses by default. The install alone doesn't change any networking — existing <code>vmbrX</code> bridges keep working. OVS becomes available in the Proxmox UI when you <em>create</em> a new bridge and pick it from the type dropdown.",
+    "tipTitle": "When OVS makes sense",
+    "tipBody": "Consider OVS if you need <strong>VLAN trunking with non-contiguous VLAN IDs</strong>, <strong>LACP with LLDP on specific modes</strong>, <strong>fine-grained flow programming</strong> (OpenFlow), or interoperation with SDN controllers. For a home lab with a couple of VLANs and a single LACP uplink, standard Linux bridges + <code>vmbrX.VID</code> are simpler and perfectly fine.",
+    "revertTitle": "Not reversible from the Uninstall menu",
+    "revertBody": "Installing OVS is not tracked in Uninstall Optimizations. If you decide you don't want it, remove it manually — but only after migrating any bridges back to Linux bridges first:"
+  },
+  "bbr": {
+    "heading": "Enable TCP BBR + TCP Fast Open",
+    "intro": "Writes two sysctl files and reloads them. BBR replaces the default CUBIC congestion control with Google's bandwidth-based algorithm, which handles long-fat pipes and lossy links much better. TCP Fast Open (TFO) eliminates a round trip on repeat TCP connections by piggy-backing data on the SYN.",
+    "verifyTitle": "Verification",
+    "impactTitle": "Impact is workload-dependent",
+    "impactBody": "BBR shines on high-latency or lossy links (cross-continent replication, VPN tunnels, mobile clients). On a LAN between two machines on the same switch, the difference is often within noise. TFO helps short, repeated HTTP connections the most.",
+    "revertTitle": "Not reversible from the Uninstall menu",
+    "revertBody": "BBR/TFO aren't tracked. To revert, remove the two sysctl files and reload:"
+  },
+  "names": {
+    "heading": "Interface Names (persistent)",
+    "intro": "Iterates over every physical NIC the host has (skipping loopback, Docker veths, bridges, TAP devices, bonds, Cilium, ZeroTier, WireGuard) and writes a systemd <code>.link</code> file binding the current interface name to the current MAC address. The kernel's naming logic can then no longer rename that NIC — the MAC wins.",
+    "whyTitle": "Why this matters",
+    "whyItems": [
+      "Adding or removing PCIe devices can shift the bus numbering, turning <code>enp3s0</code> into <code>enp4s0</code>. If your <code>/etc/network/interfaces</code> references the old name, the bridge vanishes on reboot.",
+      "BIOS / firmware updates sometimes change how devices enumerate, with the same effect.",
+      "LXC containers with <code>hotplug</code> NICs and bonded links can race on boot and end up named inconsistently. Pinning fixes that."
+    ],
+    "writtenTitle": "What gets written",
+    "writtenIntro": "One file per physical NIC, at <code>/etc/systemd/network/10-&lt;iface&gt;.link</code>:",
+    "writtenOutro": "Any pre-existing <code>.link</code> files in that directory are copied to <code>/etc/systemd/network/backup-&lt;timestamp&gt;/</code> before touching anything.",
+    "pveTitle": "PVE 9 vs PVE 8",
+    "pveBody": "On Proxmox VE 9 (<code>systemd-networkd</code> native), the script reloads udev rules after writing the <code>.link</code> files so new hotplug NICs pick up the correct name without a reboot. On PVE 8 (<code>ifupdown2</code>), interface naming is resolved at boot anyway — a reboot is required for the changes to take effect. The script sets the reboot flag either way so Customizable prompts you.",
+    "reviewTitle": "Review existing /etc/network/interfaces first",
+    "reviewBody": "If your host has legacy configuration in <code>/etc/network/interfaces</code> that references NIC names generated by the kernel's default scheme, pinning <em>today's</em> names is exactly what you want. But if you've already manually customised the config around specific names, double-check the pinning matches what the interfaces file expects before rebooting.",
+    "revertTitle": "Reversible from the Uninstall menu",
+    "revertBody": "<link>Uninstall Optimizations</link> deletes every <code>.link</code> file from <code>/etc/systemd/network/</code>, restoring the kernel's default naming on next reboot. The timestamped backup of the original files stays behind in case you need to restore specific ones manually."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "label": "Network Management",
+        "href": "/docs/network",
+        "tail": " — diagnostics, bridge analysis, guided repairs."
+      },
+      {
+        "label": "Persistent interface names",
+        "href": "/docs/network/persistent-names",
+        "tail": " — same idea exposed as its own menu later (use either, not both)."
+      },
+      {
+        "label": "Network commands reference",
+        "href": "/docs/help-info/network-commands",
+        "tail": " — ip, ss, ethtool, sysctl."
+      },
+      {
+        "label": "Uninstall Optimizations",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — revert any of these network changes."
+      },
+      {
+        "label": "Customizable Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — back to the parent menu."
+      }
+    ]
+  }
+}

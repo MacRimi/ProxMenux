@@ -1,0 +1,248 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Panel: pestaña VMs y LXCs | ProxMenux Documentation",
+    "description": "La pestaña VMs y LXCs inventaría cada guest del host con uso de CPU / memoria / disco en vivo. La vista en detalle por guest muestra configuración, recursos, backups, logs completos del guest, notas y controles Start / Shutdown / Reboot / Stop."
+  },
+  "header": {
+    "title": "Panel: pestaña VMs y LXCs",
+    "description": "El inventario completo de guests del nodo. Cuatro métricas titulares arriba, una lista ordenable con cada VM y LXC abajo y una vista en detalle por guest con config, recursos, backups, logs y los cuatro controles de ciclo de vida (Start / Shutdown / Reboot / Stop).",
+    "section": "ProxMenux Monitor · Panel"
+  },
+  "intro": {
+    "title": "La superficie de control para guests",
+    "body": "El resto de pestañas son de solo lectura; esta es desde la que actúas. Todo lo que cambia el estado de un guest pasa por <code>POST /api/vms/&lt;vmid&gt;/control</code> con una confirmación explícita y la respuesta se refleja de vuelta en la fila del guest. No hay force-shutdown sin pasar por el botón Stop dedicado."
+  },
+  "topRow": {
+    "heading": "Fila superior: cuatro tarjetas de estadísticas",
+    "intro": "Al abrir la pestaña VMs y LXCs aterrizas en un resumen de cuatro tarjetas del estado de los guests — totales, utilización de CPU, compromiso de memoria vs capacidad del host y asignación de disco.",
+    "imageAlt": "Pestaña VMs y LXCs — fila superior de cuatro tarjetas de estadísticas: Total VMs & LXCs, Total CPU, Total Memory, Total Disk",
+    "imageCaption": "Fila superior de la pestaña VMs y LXCs — totales + insignias Running / Stopped, utilización actual de CPU, memoria desglosada en used / running-allocated / total-allocated (con una insignia Within Limits) y espacio de disco asignado.",
+    "headerCard": "Tarjeta",
+    "headerWhat": "Qué muestra",
+    "totalLabel": "Total VMs & LXCs",
+    "totalWhat": "Recuento total con dos insignias — <em>X Running</em> (verde) y <em>Y Stopped</em> (rojo, solo cuando > 0). El número que miras cuando algo no volvió tras un reinicio.",
+    "cpuLabel": "Total CPU",
+    "cpuWhat": "Utilización agregada de CPU en vivo a lo largo de todos los guests como porcentaje de la CPU física del host, con una línea al pie <em>\"Allocated CPU usage\"</em>.",
+    "memoryLabel": "Total Memory",
+    "memoryIntro": "Tres lecturas apiladas verticalmente:",
+    "memoryItems": [
+      "<strong>Currently used</strong> — valor grande (p. ej. <em>15.4 GB</em>) más <em>X.X % de Y GB</em> contra la RAM total del host. Una barra de progreso azul sigue al porcentaje.",
+      "<strong>Running allocated</strong> + <strong>Total allocated</strong> — suma de <code>maxmem</code> a lo largo de los guests que están <em>actualmente up</em> junto a la misma suma a lo largo de <em>todos</em> los guests incluyendo los parados. El primero importa hoy; el segundo importa cuando arrancas todo a la vez.",
+      "<strong>Insignia Within Limits</strong> (verde) — pasa a <em>Over-committed</em> si el total asignado excede la RAM del host. Un over-commit sano de memoria está bien en hosts con KSM, pero la insignia es el aviso temprano cuando ya no es cómodo."
+    ],
+    "diskLabel": "Total Disk",
+    "diskWhat": "Suma del espacio de disco asignado a lo largo de todos los guests, en la unidad adecuada (GB / TB), con la línea al pie <em>\"Allocated disk space\"</em>."
+  },
+  "inventory": {
+    "heading": "Lista Virtual Machines & Containers",
+    "intro": "Una fila por guest. La lista se nutre de una única fuente, <code>/api/vms</code>, que consolida <code>qm list</code> + <code>pct list</code> + <code>pvesh /cluster/resources</code> en el host.",
+    "imageAlt": "Lista Virtual Machines & Containers — una fila por guest con estado, insignia de tipo, nombre, ID y porcentajes inline de CPU / memoria / disco",
+    "imageCaption": "El layout optimizado para móvil del inventario — los mismos datos que muestra la vista de escritorio, reapilados en una sola columna con los porcentajes e indicadores de estado compactos.",
+    "rowsIntro": "Cada fila muestra:",
+    "rows": [
+      "<strong>Icono de estado</strong> — play verde (running) o cuadrado rojo (stopped). Para guests parados, el resto de la fila se atenúa para que veas al instante qué está offline.",
+      "<strong>Insignia de tipo</strong> — <em>LXC</em> (cian) para contenedores, <em>VM</em> (morado) para máquinas virtuales.",
+      "<strong>Nombre</strong> — hostname / nombre de display del guest.",
+      "<strong>VMID</strong> — el ID numérico de Proxmox bajo el nombre.",
+      "<strong>Métricas inline</strong> — tres porcentajes con su icono (CPU %, Memory %, Disk %). Cada icono se pone naranja cuando la métrica cruza un umbral de atención (p. ej. memoria por encima del 90 %), así un vistazo rápido te dice qué guest está bajo presión sin abrirlo."
+    ],
+    "clickHint": "Pulsar cualquier fila — running o stopped — abre la modal de vista en detalle descrita abajo.",
+    "mobileTitle": "La lista está construida mobile-first",
+    "mobileBody": "En móviles y ventanas estrechas el inventario reflowea a una única columna con insignia de tipo, nombre, ID y los tres porcentajes de métricas, uno por línea — exactamente la captura de arriba. En viewports más anchos los mismos datos se reparten horizontalmente con más espacio para los porcentajes. De cualquier modo, cada fila es el mismo target completo: pulsa para entrar."
+  },
+  "drillIn": {
+    "heading": "Modal de vista en detalle por guest",
+    "intro": "La modal abre con una cabecera que muestra el nombre del guest, VMID, insignia de tipo (LXC / VM), insignia de estado (RUNNING / STOPPED / …) y el uptime actual. Bajo la cabecera hay <strong>dos pestañas</strong> — <em>Status</em> y <em>Backups</em> — y una barra de acciones fija al pie de la modal con los cuatro controles de ciclo de vida (Start / Shutdown / Reboot / Force Stop) y, en contenedores LXC en ejecución, un botón Console.",
+    "statusTitle": "Pestaña 1 — Status",
+    "statusImageAlt": "Modal de vista en detalle por guest — pestaña Status con tarjetas en vivo de CPU / Memoria / Disco, totales de E/S de disco y red, el logo de distro del SO y el bloque Resources / IP Addresses",
+    "statusImageCaption": "Pestaña Status — CPU / Memoria / Disco en vivo con barras de progreso arriba, totales de E/S acumulados (lectura/escritura de disco, descarga/subida de red) abajo, después el bloque estático Resources con expansiones de Notes y + Info y la lista de pastillas IP Addresses.",
+    "statusIntro": "La pestaña por defecto — la vista \"¿este guest se está portando?\". Tres bloques:",
+    "liveTitle": "1. Fila de métricas en vivo",
+    "liveItems": [
+      "<strong>CPU Usage (X cores)</strong> — porcentaje actual con barra de progreso. La cabecera muestra el recuento de cores configurado para que sepas qué significaría un 100 %.",
+      "<strong>Memory</strong> — <em>used / max</em> en GB con barra de progreso.",
+      "<strong>Disk</strong> — <em>used / max</em> a lo largo de la imagen de disco primaria del guest, misma forma."
+    ],
+    "ioTitle": "2. Totales de E/S + logo del SO",
+    "ioItems": [
+      "<strong>Disk I/O</strong> — totales acumulados de lectura (↓) y escritura (↑) desde el arranque. Útil para detectar un guest que se ha vuelto de repente intensivo en E/S comparado con su baseline.",
+      "<strong>Network I/O</strong> — descarga (↓) y subida (↑) acumuladas. Misma idea en el lado de red.",
+      "<strong>Logo de distro del SO</strong> — el icono de Debian / Ubuntu / Alpine / Windows / etc. detectado del tipo de SO del guest. Una pista visual rápida cuando scrolleas varias modales abiertas."
+    ],
+    "resourcesTitle": "3. Bloque Resources",
+    "resourcesIntro": "La configuración del guest tal como la ve Proxmox — CPU Cores, Memory (<code>maxmem</code> configurado), Swap. Dos botones colapsables en la cabecera del bloque:",
+    "resourcesItems": [
+      "<strong>Notes</strong> — el campo de descripción del guest. Editable: escribir aquí y guardar llama <code>PUT /api/vms/&lt;vmid&gt;/config</code> y escribe de vuelta en <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> o <code>/etc/pve/lxc/&lt;vmid&gt;.conf</code>.",
+      "<strong>+ Info</strong> — campos extra que son demasiado verbosos para la vista por defecto: bios mode, machine type, agent state, entradas de hostpci passthrough, mount points (CT), boot order."
+    ],
+    "ipsTitle": "4. IP Addresses",
+    "ipsBody": "Lista de pastillas con cada dirección IPv4 / IPv6 que el guest expone actualmente — pastilla verde por dirección. Vacía cuando el guest está parado o cuando el QEMU agent no está instalado en una VM (los LXCs siempre reportan direcciones directamente).",
+    "mountsTitle": "Pestaña 2 — Mounts (solo LXC)",
+    "mountsImageAlt": "Modal de vista en detalle LXC — pestaña Mounts listando cada mount point que está usando el contenedor: volúmenes PVE, host binds, binds desde almacenamiento PVE y montajes ad-hoc NFS/CIFS que el operador montó desde dentro del CT. Cada tarjeta lleva una insignia de tipo, barra de capacidad, bytes used/total, opciones de montaje y un punto de estado por color (verde sano, ámbar readonly/divergente, rojo stale)",
+    "mountsImageCaption": "Pestaña Mounts — solo se renderiza para contenedores LXC, y solo cuando hay al menos un mount point o un montaje remoto ad-hoc presente. Un CT sin mounts no recibe pestaña.",
+    "mountsIntro": "La propia UI de Proxmox muestra las entradas de mount-point definidas en la config del contenedor (<code>mpX</code>) pero se queda ahí — cualquier cosa que montes desde dentro del CT después (<code>mount.cifs</code>, NFS vía <code>autofs</code>, …) es invisible. Esta pestaña funde <strong>ambas vistas</strong>: los mounts configurados <strong>y</strong> los mounts en runtime que ProxMenux sonda desde dentro del contenedor, con un estado de salud por mount y una barra de capacidad cuando el backend la puede resolver.",
+    "mountTypesTitle": "Tipos de mount detectados",
+    "mountTypesItems": [
+      "<strong>PVE volume</strong> — respaldado por un almacenamiento gestionado por Proxmox (un subvol ZFS, una entrada de directorio, un Ceph RBD, …). La capacidad viene de las stats del almacenamiento PVE para que la barra coincida con lo que el propio Proxmox muestra.",
+      "<strong>Bind from PVE storage</strong> — entrada <code>mpX</code> apuntando a una ruta en un almacenamiento conocido por PVE.",
+      "<strong>Bind from host</strong> — entrada <code>mpX</code> apuntando a una ruta arbitraria del host (<code>/mnt/something</code>). La capacidad es el <code>df</code> de esa ruta del host.",
+      "<strong>Ad-hoc inside CT</strong> — mount que <em>solo</em> existe en el namespace de mounts del contenedor (p. ej. un share NFS que el CT monta por su cuenta). La capacidad se lee vía <code>pct exec &lt;vmid&gt; df</code>, que es la única forma de verla — <code>/proc/&lt;pid&gt;/root</code> desde el host no expone las stats reales del mount remoto."
+    ],
+    "mountStateTitle": "Punto de estado por tarjeta y avisos",
+    "mountStateItems": [
+      "<green/> <strong>Verde</strong> — mount sano y alcanzable.",
+      "<amber/> <strong>Ámbar</strong> — divergente (configurado pero no montado en realidad), read-only o <em>zombie bind</em> (el origen en el host fue retirado pero el CT sigue viendo el bind como montado — típico cuando se desconectó una unidad USB o hubo un <code>umount</code> manual en el host).",
+      "<red/> <strong>Rojo</strong> — stale: la sonda de runtime no pudo alcanzar el mount (común con exports NFS cuyo servidor está caído)."
+    ],
+    "mountsCalloutTitle": "Lo que esto te da sobre la UI nativa",
+    "mountsCalloutBody": "Una vista veraz y consciente de la capacidad de cada sitio donde el contenedor lee o escribe. Shares NFS o CIFS montados desde dentro del CT — invisibles para la UI web de Proxmox — aparecen aquí con el mismo aspecto y la misma sonda de salud que cualquier mount point configurado. Mounts remotos stale y zombie binds salen marcados antes de que muerdan durante un backup.",
+    "backupsTitle": "Pestaña 3 — Backups",
+    "backupsImageAlt": "Modal de vista en detalle por guest — pestaña Backups con la lista de backups disponibles, etiqueta de destino, tamaños y el botón Create Backup",
+    "backupsImageCaption": "Pestaña Backups — cada backup almacenado en los almacenamientos Proxmox configurados para este guest, ordenados de más nuevo a más viejo. La cabecera de la pestaña lleva la insignia de recuento.",
+    "backupsIntro": "Lista cada backup almacenado en los almacenamientos Proxmox configurados para este guest, ordenados de más nuevo a más viejo. El título de la pestaña lleva una insignia de recuento para que veas de un vistazo si el guest está backupeado. Por fila:",
+    "backupsItems": [
+      "<strong>Timestamp</strong> — fecha y hora de la ejecución.",
+      "<strong>Etiqueta de destino</strong> — el almacenamiento donde vive (PBS-Cloud, PBS-Local, NFS-Backup, …) coloreada por estado.",
+      "<strong>Size</strong> — tamaño final en disco del backup."
+    ],
+    "backupsOutro": "El botón <strong>+ Create Backup</strong> arriba a la derecha arranca una nueva ejecución en el almacenamiento marcado como \"Backup target\" en la config de almacenamiento de Proxmox. El restore vive en la UI web de Proxmox — el Monitor expone la vista \"¿este guest tiene backup reciente?\", no el flujo de recuperación.",
+    "updatesTitle": "Insignia de updates (solo LXC)",
+    "updatesImageAlt": "Modal de vista en detalle LXC — insignia violeta pulsable 'updates available' en la cabecera de un contenedor que tiene updates pendientes de apt o apk. Pulsarla expande un panel listando cada paquete actualizable con sus versiones actual y objetivo, más un contador security-only cuando el repo subyacente marca alguno como security",
+    "updatesImageCaption": "La insignia solo aparece en contenedores LXC en ejecución que tengan al menos un paquete actualizable. Pulsa para abrir la lista de paquetes dentro de la modal — no hay pestaña separada en la barra de navegación.",
+    "updatesIntro": "ProxMenux sondea cada contenedor en ejecución del host una vez al día y cuenta los paquetes actualizables. Soportado actualmente en esta fase: <strong>Debian / Ubuntu</strong> vía <code>apt list --upgradable</code> y <strong>Alpine</strong> vía <code>apk list -u</code>. Los contenedores corriendo otras distribuciones (CentOS, Arch, …) se omiten por ahora — no muestran insignia en lugar de un cero engañoso.",
+    "updatesPanelTitle": "Lo que muestra el panel",
+    "updatesPanelItems": [
+      "<strong>Recuento total de actualizables</strong> arriba, más un contador <strong>security</strong> separado cuando el repositorio subyacente marca alguno de los paquetes como security (suite \"-security\" de Debian/Ubuntu). Alpine no expone una suite security separada vía metadatos de apk, así que security siempre es 0 en contenedores Alpine.",
+      "<strong>Lista por paquete</strong> con nombre, versión actual y versión objetivo. Úsala para decidir si lanzar la actualización ahora o esperar a una ventana de mantenimiento."
+    ],
+    "updatesScopeTitle": "Qué rastrea el sistema vs qué cuenta el script",
+    "updatesScopeBody": "Este detector de actualizaciones sigue lo que ya hay instalado dentro del contenedor — <strong>no</strong> instala nada nuevo y <strong>no</strong> sabe de aplicaciones desplegadas fuera de apt / apk (un contenedor Docker corriendo dentro del LXC, un Vaultwarden instalado desde fuente, un binario soltado en <code>/usr/local/bin</code>). Es una vista de <em>gestor de paquetes</em>, no una vista de <em>aplicación</em>. Las fases futuras de este trabajo integrarán metadatos de aplicación de community-scripts para que el seguimiento upstream por app (Vaultwarden, Jellyfin, …) sea posible.",
+    "updatesToggleTitle": "Detección vs notificación — semántica del toggle",
+    "updatesToggleCalloutTitle": "La detección siempre está activa; el toggle solo controla la notificación",
+    "updatesToggleCalloutBody": "La detección de actualizaciones de paquetes en contenedores en ejecución corre incondicionalmente — la insignia aparece en esta modal siempre que haya updates pendientes, independientemente de cualquier otro ajuste. El toggle de notificación <code>lxc_updates_available</code> en <strong>Settings → Notifications</strong> solo controla si se entrega a tus canales un mensaje agrupado \"N CT(s) have pending updates\". Esto mantiene la semántica del toggle consistente con los otros streams de update (driver NVIDIA, driver Coral, optimizaciones ProxMenux): apagar las notificaciones nunca oculta la información en el panel.",
+    "updatesApplyTitle": "Aplicar las actualizaciones",
+    "updatesApplyBody": "Abre la shell del contenedor desde la barra de acciones del pie, o usa <code>pct exec &lt;vmid&gt; -- apt full-upgrade -y</code> / <code>pct exec &lt;vmid&gt; -- apk upgrade -y</code> desde el host. El panel reescanea en su ciclo de 24h (o tras el siguiente refresco manual) y la insignia se actualiza.",
+    "firewallTitle": "Pestaña 5 — Firewall",
+    "firewallIntro": "Lee el log de firewall de Proxmox por guest directamente del host (sin servicio extra, sin polling). La pestaña siempre está presente en la barra de navegación; el panel decide qué renderizar dependiendo de si el firewall está activo para ese guest y si alguna regla está logueando realmente:",
+    "firewallItems": [
+      "<strong>Firewall disabled</strong> — un aviso ámbar explica exactamente dónde activarlo en la UI de Proxmox (<em>&lt;Container|VM&gt; → Firewall → Options</em>) y te recuerda que al menos una regla necesita <code>log: info</code> (o superior) antes de que aparezcan paquetes.",
+      "<strong>Firewall enabled, no events yet</strong> — pista de estado vacío con el mismo requisito de logging, útil cuando acabas de activar el firewall.",
+      "<strong>Events present</strong> — un panel monoespaciado scrolleable con las entradas raw coloreadas por acción: <green>ACCEPT</green> (verde), <orange>REJECT</orange> (naranja), <red>DROP</red> (rojo). Una insignia de recuento en la cabecera muestra cuántas entradas hay cargadas en este momento."
+    ],
+    "firewallRefresh": "Un botón <em>Refresh</em> arriba a la derecha del panel trae las últimas entradas bajo demanda — no hay auto-refresh dentro de la modal, así que la lista es una snapshot del momento en que abriste la pestaña o pulsaste refresh. Los datos vienen del archivo de log por guest que Proxmox escribe bajo <code>/var/log/pve-firewall.log</code> filtrado por VMID, expuesto vía <code>GET /api/vms/&lt;vmid&gt;/firewall/log</code>.",
+    "firewallCalloutTitle": "¿Por qué tenerlo aquí cuando la UI de Proxmox ya lo muestra?",
+    "firewallCalloutBody": "Dos razones: elimina el viaje de ida y vuelta a la UI web de Proxmox cuando ya estás inspeccionando un guest desde el panel, y mantiene la misma vista acotada por VMID que usa el resto de la modal — arrancar el guest, comprobar sus mounts, mirar los hits recientes del firewall y pararlo otra vez sin salir del panel. El Monitor nunca edita reglas de firewall; la edición de reglas se queda en la interfaz nativa de Proxmox donde corresponde.",
+    "actionBarTitle": "Barra de acciones del pie",
+    "actionBarIntro": "Siempre visible al pie de la modal independientemente de qué pestaña esté activa:",
+    "consoleItem": "<strong>Console</strong> (solo LXC, running) — abre una modal que ejecuta <code>pct enter &lt;vmid&gt;</code> y te deja dentro del contenedor. La misma fontanería xterm.js + WebSocket que la <link>pestaña Terminal</link> independiente, incluyendo la <strong>barra para móvil</strong> con ESC, TAB, flechas, Enter y las combinaciones Ctrl (Ctrl+C / Ctrl+X / Ctrl+R) bajo el terminal — haciendo la modal usable desde el teclado de un móvil o tablet. Las VMs no exponen un botón Console aquí; usa la consola web de Proxmox (noVNC) para acceso al guest.",
+    "lifecycleIntro": "Debajo, cuatro botones de ciclo de vida en una rejilla 2×2. Cada uno dispara <code>POST /api/vms/&lt;vmid&gt;/control</code> con la <code>action</code> correspondiente; el estado de enabled depende de si el guest está actualmente en ejecución:",
+    "headerButton": "Botón",
+    "headerEnabled": "Habilitado cuando",
+    "headerAction": "Acción enviada al host",
+    "lifecycleRows": [
+      {
+        "button": "Start",
+        "color": "green",
+        "enabled": "El guest está parado.",
+        "action": "qm start / pct start"
+      },
+      {
+        "button": "Shutdown",
+        "color": "blue",
+        "enabled": "El guest está en ejecución.",
+        "action": "qm shutdown / pct shutdown — graceful, ACPI"
+      },
+      {
+        "button": "Reboot",
+        "color": "blue",
+        "enabled": "El guest está en ejecución.",
+        "action": "qm reboot / pct reboot — reinicio graceful"
+      },
+      {
+        "button": "Force Stop",
+        "color": "red",
+        "enabled": "El guest está en ejecución.",
+        "action": "qm stop / pct stop — apagado en duro"
+      }
+    ],
+    "forceStopTitle": "Force Stop es el kill switch, no la opción educada",
+    "forceStopBody": "<strong>Force Stop</strong> salta la secuencia de apagado del guest — equivalente a tirar del cable de la luz. Usa <strong>Shutdown</strong> cuando el guest responde; recurre a Force Stop solo cuando Shutdown se cuelga y aceptas el riesgo de pérdida de datos de un apagado no coordinado. El botón es rojo y está etiquetado a propósito para que no lo pulses por reflejo."
+  },
+  "dataCollected": {
+    "heading": "Cómo se recopilan los datos",
+    "headerSection": "Sección de la pestaña",
+    "headerEndpoint": "Endpoint",
+    "headerSource": "Fuente",
+    "rows": [
+      {
+        "section": "Lista de inventario",
+        "endpoint": "/api/vms",
+        "source": "<code>pvesh get /cluster/resources --type vm</code> para VMs y CTs."
+      },
+      {
+        "section": "Panel de detalle (config, red, discos)",
+        "endpoint": "/api/vms/<vmid>",
+        "source": "<code>qm config &lt;id&gt;</code> para VMs / <code>pct config &lt;id&gt;</code> para CTs."
+      },
+      {
+        "section": "Gráfica de métricas por guest",
+        "endpoint": "/api/vms/<vmid>/metrics",
+        "source": "Datos RRD de PVE (<code>pvesh get /nodes/&lt;node&gt;/qemu/&lt;id&gt;/rrddata</code>) condensados a una forma amigable para gráficas."
+      },
+      {
+        "section": "Logs recientes de tareas (modal)",
+        "endpoint": "/api/vms/<vmid>/logs",
+        "source": "Tareas para ese <code>vmid</code> desde <code>/var/log/pve/tasks/index</code>."
+      },
+      {
+        "section": "Backups disponibles para el guest",
+        "endpoint": "/api/vms/<vmid>/backups",
+        "source": "<code>pvesm list &lt;storage&gt;</code> filtrado por VMID."
+      },
+      {
+        "section": "Log de firewall por guest (pestaña Firewall)",
+        "endpoint": "/api/vms/<vmid>/firewall/log",
+        "source": "<code>/var/log/pve-firewall.log</code> filtrado por VMID."
+      },
+      {
+        "section": "Botones de power (Start / Stop / Reboot / Shutdown)",
+        "endpoint": "/api/vms/<vmid>/control",
+        "source": "<code>qm start|stop|reboot|shutdown</code> o equivalentes <code>pct</code>."
+      }
+    ],
+    "codeComment1": "# Cross-check de lo que ve el panel contra PVE",
+    "codeComment2": "# Inspeccionar la config de un guest concreto tal como la ve la modal",
+    "codeComment3": "# VM",
+    "codeComment4": "# CT"
+  },
+  "whereNext": {
+    "heading": "Por dónde seguir",
+    "items": [
+      {
+        "label": "Monitor de salud",
+        "href": "/docs/monitor/health-monitor",
+        "tailRich": " — la categoría VMs y Contenedores (boot fallido, timeouts QMP, fallos de shutdown de CT)."
+      },
+      {
+        "label": "Notificaciones",
+        "href": "/docs/monitor/notifications",
+        "tailRich": " — qué disparan aguas abajo los eventos <code>vm_*</code>, <code>ct_*</code>, <code>migration_*</code> y <code>backup_*</code>."
+      },
+      {
+        "label": "Referencia de la API",
+        "href": "/docs/monitor/api",
+        "tailRich": " — los endpoints de VM y backup."
+      },
+      {
+        "label": "Índice del panel",
+        "href": "/docs/monitor/dashboard",
+        "tailRich": " — el resto de pestañas."
+      },
+      {
+        "label": "ProxMenux → Create VM",
+        "href": "/docs/create-vm",
+        "tailRich": " — la cara de provisión: plantillas de System NAS (Synology y otros), VMs Linux / Windows, valores por defecto pensados para Proxmox."
+      }
+    ]
+  }
+}

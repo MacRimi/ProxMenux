@@ -1,0 +1,91 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Panel | ProxMenux Documentation",
+    "description": "El panel es la UI principal de ProxMenux Monitor: nueve pestañas (Resumen del sistema, Almacenamiento, Red, VMs y LXCs, Hardware, Logs del sistema, Terminal, Seguridad, Settings) más la cabecera global con la información de estado del Monitor de salud."
+  },
+  "header": {
+    "title": "Panel",
+    "description": "El panel es la vista del día a día de ProxMenux Monitor — nueve pestañas, cada una centrada en una parte del host, más una cabecera global con la información de estado del Monitor de salud, la identidad del nodo y el control de refresco rápido.",
+    "section": "ProxMenux Monitor"
+  },
+  "oneHeader": {
+    "title": "Una cabecera, nueve pestañas",
+    "body": "La cabecera (logo, nombre del nodo, información de estado, uptime, refresco, conmutador de tema) permanece visible en todo momento. La pestaña activa que hay debajo cambia el área de contenido entera. El color de la información de estado refleja la peor categoría del <link>Monitor de salud</link> — es el mismo dato visto desde el panel."
+  },
+  "tabs": {
+    "heading": "Las nueve pestañas",
+    "intro": "Cada pestaña tiene su propia página dedicada. Las páginas se añaden de forma incremental a medida que se completa la documentación; abajo está la lista completa con lo que cubre cada una.",
+    "headerTab": "Pestaña",
+    "headerOwns": "De qué se encarga",
+    "rows": [
+      {
+        "name": "Resumen del sistema",
+        "linksTo": "/docs/monitor/dashboard/system-overview",
+        "owns": "Widgets de CPU / memoria / temperatura, contador de VMs y LXCs activos, gráficas de métricas históricas, resúmenes de almacenamiento y red. Pestaña por defecto al entrar."
+      },
+      {
+        "name": "Almacenamiento",
+        "owns": "Pools de Proxmox, discos físicos, datos SMART, estado de ZFS, desgaste y vida útil, historial de observaciones."
+      },
+      {
+        "name": "Red",
+        "owns": "Cada interfaz (física / bond / bridge / OVS), IP/MAC, gráficas RX/TX, RRD histórica por interfaz."
+      },
+      {
+        "name": "VMs y LXCs",
+        "owns": "Inventario de guests, vista en detalle de config / métricas / logs, acciones start / stop / reboot / shutdown."
+      },
+      {
+        "name": "Hardware",
+        "owns": "Modelo y topología de CPU, distribución de memoria, topología PCIe, GPUs con monitorización en tiempo real por slot."
+      },
+      {
+        "name": "Logs del sistema",
+        "owns": "<code>journalctl</code> en vivo con filtros, historial de tareas de Proxmox, log de notificaciones, paquetes de logs descargables."
+      },
+      {
+        "name": "Terminal",
+        "owns": "Shell en el navegador al host o a cualquier VM/CT, sobre <code>xterm.js</code> y WebSockets."
+      },
+      {
+        "name": "Seguridad",
+        "owns": "Configuración de autenticación, contraseña / 2FA / tokens API, log de auditoría, panel opcional de Fail2Ban, despliegue de Secure Gateway."
+      },
+      {
+        "name": "Settings",
+        "owns": "Canales de notificación, proveedor de IA, duraciones de supresión, branding, flags avanzados."
+      }
+    ]
+  },
+  "headerAnatomy": {
+    "heading": "Anatomía de la cabecera",
+    "items": [
+      "<strong>Logo de ProxMenux.</strong> El logo cambia a la variante \"actualización disponible\" cuando se detecta una nueva release del Monitor.",
+      "<strong>Identidad del nodo</strong> — el nombre del nodo Proxmox resuelto desde <code>pvesh get /nodes</code>, con fallback a <code>hostname</code>.",
+      "<strong>Información del estado de salud</strong> — Healthy (verde), Warning (amarillo), Critical (rojo). Pulsa encima para abrir la modal del Monitor de salud. Aparece una insignia azul extra de <em>info</em> cuando hay items descartados que siguen dentro de su ventana de supresión.",
+      "<strong>Uptime</strong> — tiempo desde el último arranque del host, formateado de forma legible.",
+      "<strong>Botón de refresco</strong> — relanza todas las llamadas API en vivo sin recargar la página entera.",
+      "<strong>Conmutador de tema</strong> — claro / oscuro / sistema. Persiste en <code>localStorage</code>."
+    ]
+  },
+  "whereNext": {
+    "heading": "Por dónde seguir",
+    "items": [
+      {
+        "label": "Pestaña Resumen del sistema",
+        "href": "/docs/monitor/dashboard/system-overview",
+        "tail": " — la pestaña por defecto, documentada al completo."
+      },
+      {
+        "label": "Monitor de salud",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — la modal detrás de la información de estado, vista en profundidad de las diez categorías."
+      },
+      {
+        "label": "Arquitectura",
+        "href": "/docs/monitor/architecture",
+        "tail": " — cómo habla el panel con el backend Flask."
+      }
+    ]
+  }
+}

@@ -1,0 +1,153 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Dashboard: System Overview tab | ProxMenux Documentation",
+    "description": "The default landing tab of ProxMenux Monitor: four metric cards (CPU, Memory, Active VMs & LXCs, Temperature) with live updates and sparkline, the historical metrics chart, and condensed Storage and Network panels with click-through to their dedicated tabs."
+  },
+  "header": {
+    "title": "Dashboard: System Overview tab",
+    "description": "The first tab the dashboard opens on. Four live metric cards across the top, the historical-metrics chart in the middle, and condensed storage / network panels at the bottom — all derived from the same APIs that drive the dedicated tabs.",
+    "section": "ProxMenux Monitor · Dashboard"
+  },
+  "readOnly": {
+    "title": "A read-only snapshot",
+    "body": "Nothing on this tab is a control surface — every panel is informational. Actions live in the dedicated tabs they link to: drill into Storage to manage disks, into VMs & LXCs to start / stop guests, into the Security tab to configure auth, and so on."
+  },
+  "captureAlt": "System Overview tab — four metric cards (CPU, Memory, Active VMs, Temperature), node metrics chart, and Storage / Network summary cards",
+  "captureCaption": "The System Overview tab — what the dashboard opens on. The four cards are live, the chart below is historical, and the two cards at the bottom summarise Storage and Network.",
+  "topRow": {
+    "heading": "Top row: live metric cards",
+    "intro": "Four cards in a 2×2 grid on mobile, single row on desktop. Each updates from <code>/api/system</code> every few seconds.",
+    "headerCard": "Card",
+    "headerWhat": "What it shows",
+    "headerSource": "Source",
+    "rows": [
+      {
+        "card": "CPU Usage",
+        "what": "Current percentage with a progress bar. Updates ~1 s via the vital-signs sampler.",
+        "source": "psutil.cpu_percent()"
+      },
+      {
+        "card": "Memory Usage",
+        "what": "Used GB, percentage, total GB. Progress bar tracks the percentage.",
+        "source": "psutil.virtual_memory()"
+      },
+      {
+        "card": "Active VM & LXC",
+        "what": "Count of currently running guests, with a Running / Stopped breakdown badge and a footer line for total VMs and LXCs.",
+        "source": "/api/vms (consolidated)"
+      },
+      {
+        "card": "Temperature",
+        "what": "CPU temperature in °C with status badge (cool / warm / hot) and a 5-minute sparkline behind it. Shows <em>N/A</em> when no sensor is detected. Click to open the temperature detail modal.",
+        "source": "sensors / coretemp"
+      }
+    ],
+    "thresholdsTitle": "Status colours and thresholds applied here",
+    "thresholdsIntro": "Every ring, bar, and sparkline on the four metric cards follows the same classification — <green/> <strong>green</strong> below Warning, <amber/> <strong>amber</strong> from Warning to Critical, <red/> <strong>red</strong> at Critical and above. Recommended defaults shipped with ProxMenux:",
+    "thresholdsItems": [
+      "<strong>CPU usage</strong> — Warning 85 %, Critical 95 %.",
+      "<strong>Memory</strong> — Warning 85 %, Critical 95 % (Swap also fires Critical at 5 % used — a healthy Proxmox host should rarely touch swap).",
+      "<strong>CPU temperature</strong> — Warning 80 °C, Critical 90 °C."
+    ],
+    "thresholdsOutro": "Every value is configurable per host — <link>Settings → Health Monitor Thresholds</link> is the single source of truth and explains how to tune them.",
+    "sparklineTitle": "The sparkline is meaningful",
+    "sparklineBody": "The temperature card draws a 5-minute trace under the value, with the line and gradient colour following the same Warning/Critical pair documented above. It's the fastest way to see whether the host is in a thermal climb without opening the detail modal."
+  },
+  "middle": {
+    "heading": "Middle: node metrics charts",
+    "body1": "Below the top row sits the <code>NodeMetricsCharts</code> component — historical CPU, memory and disk-I/O graphs sourced from Proxmox's own RRD store via <code>/api/node/metrics</code>. A timeframe selector switches between <em>1 hour / 24 hours / 7 days / 30 days / 1 year</em>; data resolution drops as the window grows so the chart stays smooth.",
+    "body2": "These are the same graphs that the Proxmox web UI renders for a node, just consolidated into the Monitor's dark theme and aligned with the other panels."
+  },
+  "bottom": {
+    "heading": "Bottom row: Storage & Network summaries",
+    "storageTitle": "Storage Overview card",
+    "storageIntro": "A condensed view of the host's storage state, broken into three blocks:",
+    "storageItems": [
+      "<strong>Total Node Capacity</strong> — sum of all VM/LXC storages plus the local system storage, with a gradient progress bar of the total used / free split.",
+      "<strong>Total Capacity / Physical Disks</strong> — raw capacity headline and the count of physical disks discovered.",
+      "<strong>VM/LXC Storage</strong> — used / free / percentage for the storages where guests live, plus a counter when more than one is configured.",
+      "<strong>Local Storage (System)</strong> — the host's own root / system mount, separately from the guest pool."
+    ],
+    "storageDrillIn": "Drill-in lives in the <link>Storage tab</link> — per-disk SMART, ZFS pool details, observation history, etc.",
+    "networkTitle": "Network Overview card",
+    "networkBody1": "Top line shows the count of active interfaces (physical + bridges combined). Below that, two rows of coloured badges for the interfaces that are <code>up</code> — physical NICs in blue, bridges in a secondary colour. A timeframe selector at the top right (1 hour / 24 hours / 7 days / 30 days / 1 year) controls a small RX / TX traffic chart.",
+    "networkBody2": "Per-interface drill-in (IP/MAC, RRD chart, bridge members, bond mode, etc.) lives in the <link>Network tab</link>."
+  },
+  "refresh": {
+    "heading": "Refresh model",
+    "intro": "Each panel manages its own loading state (<code>loadingStates.cpu</code>, <code>loadingStates.storage</code>, …) so a slow source doesn't block the rest. While a panel is fetching, it shows a pulse-animated skeleton; failed fetches degrade gracefully — for example, a missing temperature sensor renders the card as <em>N/A</em> instead of an error.",
+    "items": [
+      "<strong>Top metric cards</strong> — refresh every ~5 s. The CPU and temperature panels also receive a 1 s push from the vital-signs sampler.",
+      "<strong>Node metrics chart</strong> — refresh every 30 s, or on timeframe change.",
+      "<strong>Storage card</strong> — refresh every 60 s. SMART data is cached longer (the Storage tab triggers a fresh read on demand).",
+      "<strong>Network card</strong> — refresh every 5 s on the active timeframe.",
+      "<strong>Manual refresh</strong> — the Refresh button in the header forces all panels to re-fetch immediately."
+    ]
+  },
+  "dataCollected": {
+    "heading": "How the data is collected",
+    "headerCard": "Card",
+    "headerEndpoint": "Endpoint",
+    "headerSource": "Source",
+    "rows": [
+      {
+        "card": "Header status pill",
+        "endpoint": "/api/health",
+        "source": "The cached overall status produced by the Health Monitor each cycle."
+      },
+      {
+        "card": "CPU / RAM / Swap / Uptime",
+        "endpoint": "/api/system",
+        "source": "<code>/proc/stat</code>, <code>/proc/meminfo</code>, <code>/proc/uptime</code> with short-window CPU sampling."
+      },
+      {
+        "card": "Host info (kernel, BIOS, distro)",
+        "endpoint": "/api/info",
+        "source": "<code>uname -a</code>, <code>dmidecode</code>, PVE version. Cached per process."
+      },
+      {
+        "card": "Storage / network / VMs cards",
+        "endpoint": "/api/storage/summary, /api/network/summary, /api/vms",
+        "source": "See the dedicated tabs for each. The header cards show a compacted view from the same endpoints."
+      },
+      {
+        "card": "Refresh cadence",
+        "endpoint": "—",
+        "source": "CPU / network 5 s; storage / VMs 30 s; static info every 5 min. The Refresh button in the header forces an immediate re-fetch on every panel."
+      }
+    ],
+    "codeComment1": "# Single call that backs the header pill",
+    "codeComment2": "# public, no token",
+    "codeComment3": "# Authenticated snapshot used by the cards"
+  },
+  "whereNext": {
+    "heading": "Where to next",
+    "items": [
+      {
+        "label": "Health Monitor",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — the modal behind the header status pill (ten categories, dismissals, suppression)."
+      },
+      {
+        "label": "API Reference",
+        "href": "/docs/monitor/api",
+        "tail": " — the system, info and health endpoints."
+      },
+      {
+        "label": "Notifications",
+        "href": "/docs/monitor/notifications",
+        "tail": " — how the same statuses turn into Telegram / Discord / Email messages."
+      },
+      {
+        "label": "Dashboard index",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — the other eight tabs at a glance."
+      },
+      {
+        "label": "Architecture",
+        "href": "/docs/monitor/architecture",
+        "tail": " — the background threads and APIs that power this view."
+      }
+    ]
+  }
+}

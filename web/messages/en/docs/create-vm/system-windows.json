@@ -1,0 +1,259 @@
+{
+  "meta": {
+    "title": "Create VM: System Windows | ProxMenux Documentation",
+    "description": "Create and configure Windows virtual machines on Proxmox VE with ProxMenux. Includes UUP Dump ISO and local ISO paths, default / advanced configuration, the unified storage plan, optional GPU passthrough, TPM 2.0 setup and VirtIO driver install.",
+    "ogTitle": "Create VM: System Windows | ProxMenux Documentation",
+    "ogDescription": "Create Windows VMs on Proxmox VE with ProxMenux. UUP Dump or local ISO, unified storage plan, optional GPU passthrough, TPM 2.0 and VirtIO drivers.",
+    "ogImageAlt": "ProxMenux Windows VM menu"
+  },
+  "header": {
+    "title": "Create VM: System Windows",
+    "description": "Create a Windows VM on Proxmox VE. ProxMenux handles ISO selection (UUP Dump or local), CPU / RAM / machine-type configuration, the unified storage plan, optional GPU passthrough, TPM 2.0 setup and VirtIO driver install.",
+    "section": "Virtual Machines"
+  },
+  "intro": {
+    "title": "What this script does",
+    "body": "The Windows flow asks where the ISO comes from (UUP Dump or a local copy already in <code>/var/lib/vz/template/iso</code>) and then runs the shared VM wizard. It applies Windows-friendly defaults — <code>q35</code> + OVMF + TPM 2.0 — attaches the VirtIO drivers ISO to a second CD-ROM slot, and leaves you with a VM ready to boot the Windows installer."
+  },
+  "image": {
+    "alt": "ProxMenux Windows installation options",
+    "caption": "Windows installation options"
+  },
+  "config": {
+    "heading": "Default vs Advanced configuration",
+    "intro": "After the ISO is selected, ProxMenux asks whether to use the default VM profile or open the advanced wizard. The default profile is tuned for modern Windows desktop and server editions.",
+    "defaultHeading": "Default configuration",
+    "headerParam": "Parameter",
+    "headerValue": "Default value",
+    "defaultRows": [
+      {
+        "param": "Machine type",
+        "valueRich": "<code>q35</code>"
+      },
+      {
+        "param": "BIOS",
+        "value": "OVMF (UEFI)"
+      },
+      {
+        "param": "CPU type",
+        "value": "Host"
+      },
+      {
+        "param": "Cores",
+        "value": "4"
+      },
+      {
+        "param": "RAM",
+        "value": "8192 MB"
+      },
+      {
+        "param": "Bridge",
+        "valueRich": "<code>vmbr0</code>"
+      },
+      {
+        "param": "MAC address",
+        "value": "Auto-generated"
+      },
+      {
+        "param": "TPM",
+        "value": "Enabled (v2.0)"
+      },
+      {
+        "param": "Start on completion",
+        "value": "No"
+      }
+    ],
+    "advancedHeading": "Advanced configuration",
+    "advancedIntro": "The advanced wizard exposes every knob individually:",
+    "headerOptions": "Options",
+    "advancedRows": [
+      {
+        "param": "Machine type",
+        "optionsRich": "<code>q35</code> or <code>i440fx</code>"
+      },
+      {
+        "param": "BIOS",
+        "options": "OVMF (UEFI) or SeaBIOS (Legacy)"
+      },
+      {
+        "param": "CPU type",
+        "options": "Host or KVM64"
+      },
+      {
+        "param": "Cores",
+        "options": "Number of CPU cores"
+      },
+      {
+        "param": "RAM",
+        "options": "Memory allocated to the VM"
+      },
+      {
+        "param": "Bridge",
+        "options": "Network bridge"
+      },
+      {
+        "param": "MAC address",
+        "options": "Custom MAC"
+      },
+      {
+        "param": "VLAN",
+        "options": "VLAN tag (optional)"
+      },
+      {
+        "param": "MTU",
+        "options": "MTU size"
+      },
+      {
+        "param": "TPM",
+        "options": "Enable or disable TPM 2.0"
+      }
+    ],
+    "tpmWarnTitle": "Windows 11 and Windows Server 2022 need TPM",
+    "tpmWarnBody": "Windows 11 and Windows Server 2022 refuse to install without a TPM 2.0 device attached to the VM. ProxMenux adds it by default; only disable it in Advanced if you know the target edition does not require it."
+  },
+  "storagePlan": {
+    "heading": "Storage plan",
+    "body": "After CPU / RAM, ProxMenux opens the <strong>Storage Plan</strong> menu, where you can combine virtual disks, imported disks and PCI passthrough devices in the same VM, adding items one at a time and finishing when you are done.",
+    "virtualDiskTitle": "a. Add virtual disk",
+    "virtualDiskItems": [
+      "Lists the Proxmox storage volumes available on the host.",
+      "You pick the target storage and the size in GB.",
+      "The disk is attached to the VM as SATA (<code>sata0</code>, <code>sata1</code>, … up to 6)."
+    ],
+    "importDiskTitle": "b. Add import disk",
+    "importDiskItems": [
+      "Detects physical disks that are safe to import (system and protected disks are hidden).",
+      "You select one or more disks via a checklist.",
+      "Imported disks are attached as SATA via <code>qm set</code>."
+    ],
+    "pciTitle": "c. Add Controller or NVMe (PCI passthrough)",
+    "pciItems": [
+      "Detects SATA/SAS HBAs and NVMe devices on the host and lets you pass an <em>entire controller</em> into the VM. IOMMU must be enabled; the script offers to enable it and reboots if required.",
+      "A confirmation step warns about controller-wide risk (the whole card, including every disk on it, leaves the host).",
+      "The selected PCI devices are attached via <code>qm set hostpciN: …</code>."
+    ],
+    "resetTitle": "Reset and finish",
+    "resetBody": "The menu also offers <strong>r</strong> (reset the current selection and start over) and <strong>d</strong> (finish and continue). You cannot finish with an empty plan."
+  },
+  "gpu": {
+    "heading": "Optional GPU passthrough",
+    "body": "After the storage plan, if a compatible GPU is detected on the host ProxMenux offers to launch the GPU passthrough assistant. See <gpuLink>Add GPU to a VM (Passthrough)</gpuLink> for how the assistant works — a host reboot may be required."
+  },
+  "autoFeatures": {
+    "heading": "Automatic VM features",
+    "efiTitle": "EFI disk",
+    "efiBody": "When OVMF (UEFI) is selected, ProxMenux creates a 4 MB EFI system disk on the storage you pick and attaches it to the VM so the UEFI firmware has a place to store its variables.",
+    "tpmTitle": "TPM 2.0",
+    "tpmBody": "A virtual TPM 2.0 device is added automatically so Windows 11 / Server 2022 installers pass the hardware compatibility check.",
+    "isoTitle": "ISO mounting",
+    "isoBody": "The installation ISO is attached to <code>ide2</code>. The VirtIO drivers ISO is downloaded (if needed) and attached to <code>ide3</code>, ready for the <em>Load driver</em> step.",
+    "guestTitle": "QEMU Guest Agent",
+    "guestBody": "The guest agent channel is enabled in the VM config. The agent itself is installed inside Windows by running <code>virtio-win-guest-tools.exe</code> after setup."
+  },
+  "installOptions": {
+    "heading": "Windows installation options",
+    "intro": "ProxMenux offers two methods to obtain the Windows installation media:",
+    "uupTitle": "UUP Dump ISO Creator",
+    "uupLogoAlt": "UUP Dump logo",
+    "uupBody": "The <strong>UUP Dump ISO Creator</strong> script is a ProxMenux utility that builds a Windows ISO on the fly from Microsoft's Windows Update servers. It pulls clean, official installation files (including Insider Preview builds).",
+    "uupItems": [
+      "Access to the latest Windows builds.",
+      "Supports Insider Preview versions.",
+      "Clean, official Microsoft installation files.",
+      "Automatic ISO creation and mounting in the VM.",
+      "Supports Home, Pro and Enterprise editions."
+    ],
+    "uupLearnMore": "Learn more about UUP Dump ISO Creator",
+    "localTitle": "Install with local ISO",
+    "localBody": "Uses a Windows ISO you have already uploaded to the host's local storage (<code>/var/lib/vz/template/iso</code>). The script lists every non-VirtIO ISO it finds and lets you pick one.",
+    "localImageAlt": "Local ISO selection menu",
+    "localImageCaption": "Local ISO selection menu"
+  },
+  "endToEnd": {
+    "heading": "What the script does end-to-end",
+    "items": [
+      "Obtains the Windows ISO (UUP Dump build or local copy).",
+      "Applies the default or advanced CPU / RAM / BIOS / machine-type configuration.",
+      "Opens the storage plan and attaches the selected virtual disks, imported disks and PCI devices.",
+      "Creates the EFI disk (UEFI installs) and attaches the TPM 2.0 device.",
+      "Mounts the Windows ISO on <code>ide2</code>.",
+      "Downloads and mounts the VirtIO drivers ISO on <code>ide3</code>.",
+      "Sets the boot order (disk first, then ISO).",
+      "Enables the QEMU Guest Agent channel.",
+      "Optionally runs the GPU passthrough assistant.",
+      "Generates a styled HTML description attached to the VM.",
+      "Starts the VM if you chose to."
+    ]
+  },
+  "virtio": {
+    "heading": "VirtIO drivers during installation",
+    "body": "If you leave storage and networking at defaults (SATA + e1000), Windows will install without extra steps. However, the Proxmox storage plan always attaches virtual disks as SATA, which works out of the box. Where VirtIO becomes relevant is if, during the Advanced wizard, you pick VirtIO or SCSI for disks or VirtIO for the NIC — in that case Windows will not see those devices until the matching driver is loaded from the VirtIO ISO mounted at <code>ide3</code>.",
+    "warnTitle": "Without the VirtIO network driver there is no internet during install",
+    "warnBody": "If you picked VirtIO (<code>virtio</code>) as the network interface and do not load the driver during setup, Windows will not have internet access. That can block activation and Windows Update steps during first boot.",
+    "stepLabel": "Step",
+    "steps": [
+      {
+        "title": "Access the \"Where do you want to install Windows?\" screen",
+        "body": "During Windows setup, if no disks are shown, the storage driver for your selected interface (SCSI or VirtIO) is not loaded yet. Load it manually from the mounted VirtIO ISO.",
+        "img": "/vm/windows/virtio-step-1.png",
+        "caption": "Windows setup with no disks shown"
+      },
+      {
+        "title": "Click \"Load driver\"",
+        "bodyRich": "Click <strong>Load driver</strong> to browse the mounted VirtIO ISO and pick the storage driver that matches the interface you chose.",
+        "img": "/vm/windows/virtio-step-2.png",
+        "caption": "Click Load driver to browse the VirtIO ISO"
+      },
+      {
+        "title": "Browse to the correct driver folder",
+        "bodyRich": "On the VirtIO ISO navigate to the folder that matches the interface and Windows version — for example <code>viostor</code> for VirtIO SCSI, with subfolders per Windows edition (10 / 11 / Server).",
+        "img": "/vm/windows/virtio-step-3.png",
+        "caption": "Browse to the appropriate driver folder"
+      },
+      {
+        "title": "Select the driver",
+        "bodyRich": "Windows lists the available drivers. Pick the one that matches your setup (typically <strong>Red Hat VirtIO SCSI controller</strong>) and click <strong>Next</strong>.",
+        "img": "/vm/windows/virtio-step-4.png",
+        "caption": "Select the VirtIO driver that matches your disk interface"
+      },
+      {
+        "title": "(Optional) Install the network driver",
+        "bodyRich": "If you also picked VirtIO as the network interface, load the network driver from the <code>NetKVM</code> folder of the same ISO, selecting the subfolder for your Windows version. Without this step Windows installs without internet access.",
+        "img": "/vm/windows/virtio-step-5.png",
+        "caption": "Load the VirtIO network driver to enable internet during install"
+      }
+    ],
+    "tipTitle": "Post-install: run virtio-win-guest-tools.exe",
+    "tipBody": "After Windows is installed, open the VirtIO ISO from File Explorer and run <code>virtio-win-guest-tools.exe</code>. It installs the remaining drivers (network, display, input, ballooning, QEMU Guest Agent) in one shot."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/utils/UUp-Dump-ISO-Creator",
+        "label": "UUP Dump ISO Creator",
+        "tail": " — generate up-to-date Windows installation ISOs on the Proxmox host."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-image-vm",
+        "label": "Import Disk Image to VM",
+        "tail": " — attach an existing Windows .vhdx / .vmdk to a fresh VM."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Add GPU to VM (Passthrough)",
+        "tail": " — for Windows VMs with hardware-accelerated GPU."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "VM and CT Management commands",
+        "tail": " — qm CLI reference."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "Create VM overview",
+        "tail": "."
+      }
+    ]
+  }
+}

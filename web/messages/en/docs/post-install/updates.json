@@ -1,0 +1,106 @@
+{
+  "meta": {
+    "title": "Apply Available Updates — Post-Install Optimizations | ProxMenux Documentation",
+    "description": "How ProxMenux detects when a post-install optimization (Log2Ram, Memory Settings, System Limits, Logrotate, Network tuning…) has been updated upstream, and how to apply the new version — from the Post-Install menu or from the Monitor dashboard."
+  },
+  "header": {
+    "title": "Apply Available Updates",
+    "description": "When a post-install optimization (Log2Ram, Memory Settings, System Limits, Logrotate…) gets a newer version on disk than the one currently registered on the host, ProxMenux surfaces it as an available update. You can apply it from the Post-Install menu (Scripts side) or from the Monitor dashboard — both paths re-run the same post-install function and refresh the registry.",
+    "section": "Settings post-install Proxmox"
+  },
+  "intro": {
+    "title": "What this is",
+    "body": "ProxMenux post-install optimizations are versioned. Each script in the repository carries a version number (e.g. <code>Log2ram SSD Protection v1.2</code>), and the host keeps a registry of which optimizations are active and at which version in <code>/usr/local/share/proxmenux/installed_tools.json</code>. When a new ProxMenux release ships an updated version of any optimization, ProxMenux detects the mismatch and offers to re-apply just that one — without re-running the whole post-install."
+  },
+  "why": {
+    "heading": "Why this exists",
+    "body": "Post-install optimizations occasionally get improvements — a better sysctl tuning, a stricter Logrotate limit, a new Log2RAM size heuristic, a fix for an edge case reported by a tester. Without an update path the operator had only two options: manually re-run the post-install script (which re-applies <em>every</em> optimization) or skip the improvement entirely. Apply Available Updates is the middle ground: a per-optimization, opt-in re-run that lifts only the versions that actually moved."
+  },
+  "detection": {
+    "heading": "How updates are detected",
+    "steps": [
+      {
+        "title": "Versioned scripts on disk",
+        "body": "Every post-install function declares its version inside the script (<code>scripts/post_install/auto_post_install.sh</code> and <code>scripts/post_install/customizable_post_install.sh</code>). A scanner extracts these versions from the source on disk."
+      },
+      {
+        "title": "Versioned registry on the host",
+        "body": "When the operator applied each optimization, the corresponding <code>register_tool</code> call wrote the active version into <code>/usr/local/share/proxmenux/installed_tools.json</code>. That file is the source of truth for \"what is active on this host right now\"."
+      },
+      {
+        "title": "Monitor compares both sides",
+        "body": "On startup and every 24h, the Monitor compares disk versions against registry versions. Any mismatch produces an entry in <code>/usr/local/share/proxmenux/updates_available.json</code>. That file drives both the Post-Install menu entry and the Monitor dashboard card."
+      },
+      {
+        "title": "One notification per new version",
+        "body": "When at least one optimization has a pending update, the Monitor emits a single grouped notification — for example <em>\"4 ProxMenux optimization update(s) available\"</em> — with one line per tool in the same <code>name (vX → vY)</code> format used for Proxmox package updates. The notification is anti-cascade so it does not repeat day after day for the same set; only a new version (or a fresh tool entering the list) re-triggers it."
+      }
+    ]
+  },
+  "pathA": {
+    "heading": "Path A — From the Post-Install menu",
+    "intro": "From ProxMenux's main menu, open <strong>Settings post-install Proxmox</strong>. When there are pending updates, a new entry <strong>Apply available updates (N)</strong> appears right above <em>Uninstall optimizations</em>. The number reflects how many optimizations have a newer version on disk than what the host currently has registered. When everything is up to date the entry simply does not appear, so the menu stays clean.",
+    "menuAlt": "Post-Install Scripts menu showing the conditional 'Apply available updates (N)' entry positioned just above 'Uninstall optimizations', with the count badge indicating how many optimizations have a newer version on disk",
+    "menuCaption": "The <em>Apply available updates (N)</em> entry only renders when at least one optimization has a pending update — it hides when the host is current.",
+    "checklistBody": "Selecting the entry opens a checklist with every pending update, each row formatted as <code>name (vX → vY)</code>. All rows are pre-checked by default; uncheck any you don't want to apply this round.",
+    "checklistAlt": "Apply Available Updates checklist dialog with one row per pending optimization, each labelled with the optimization name and the version transition (current → available). All rows pre-checked.",
+    "checklistCaption": "Per-optimization opt-in: pick exactly which versions to lift. The same engine that powers Automated and Customizable post-install runs in the background to re-apply each function and refresh its registry version."
+  },
+  "pathB": {
+    "heading": "Path B — From the Monitor dashboard",
+    "intro": "The same updates appear in the Monitor under <link>Settings → ProxMenux Optimizations</link>. When pending updates are detected the card shows an \"Updates available\" banner with the count and an <strong>Apply</strong> action that opens the same per-optimization picker.",
+    "imageAlt": "ProxMenux Optimizations card on the Monitor dashboard with an Updates available banner at the top showing the count of pending updates and an Apply button that opens the per-optimization picker",
+    "imageCaption": "The Optimizations card in the Monitor — when at least one optimization has a newer version on disk, the banner surfaces it without requiring shell access."
+  },
+  "applying": {
+    "heading": "What happens when you apply",
+    "steps": [
+      {
+        "title": "Re-runs the post-install function",
+        "body": "The picked optimization's function is re-executed against the host. Because every post-install function is <strong>idempotent</strong>, re-running it doesn't duplicate config — it overwrites the previous version with the new one (sysctl files, drop-ins, service units, etc.)."
+      },
+      {
+        "title": "Refreshes the registry",
+        "body": "The <code>register_tool</code> call inside the function writes the new version into <code>installed_tools.json</code>. The next scan no longer sees a mismatch and the update entry disappears from both the menu and the Monitor card."
+      },
+      {
+        "title": "No reboot unless the function says so",
+        "body": "Most updates take effect immediately. Updates that touch kernel modules, persistent interface names, or VFIO show the same reboot prompt as a fresh install would."
+      }
+    ]
+  },
+  "differs": {
+    "heading": "How it differs from the other paths",
+    "headerPath": "Path",
+    "headerScope": "Scope",
+    "headerWhen": "When it makes sense",
+    "rows": [
+      {
+        "pathLabel": "Automated",
+        "pathHref": "/docs/post-install/automated",
+        "scope": "Re-applies <em>every</em> optimization in the bundle.",
+        "when": "Fresh host, or full re-baseline of a fully-managed node."
+      },
+      {
+        "pathLabel": "Customizable",
+        "pathHref": "/docs/post-install/customizable",
+        "scope": "Pick from the full catalogue.",
+        "when": "Cherry-pick which optimizations are active on the host."
+      },
+      {
+        "pathLabel": "Apply available updates",
+        "pathHref": null,
+        "scope": "Only the optimizations whose version bumped on disk.",
+        "when": "Keep already-installed optimizations current without touching the rest."
+      },
+      {
+        "pathLabel": "Uninstall optimizations",
+        "pathHref": "/docs/post-install/uninstall",
+        "scope": "Reverse the optimization and remove its registry entry.",
+        "when": "Roll back a specific change."
+      }
+    ]
+  },
+  "notifTitle": "Notification gate",
+  "notifBody": "The notification that announces pending updates is the <em>ProxMenux optimization updates available</em> event. It is enabled by default on every channel, can be muted per-channel from <link>Settings → Notifications</link>, and is anti-cascade — it fires once per distinct set of pending updates, not on every 24h scan."
+}

@@ -1,0 +1,98 @@
+{
+  "meta": {
+    "title": "Change Language | ProxMenux Documentation",
+    "description": "Switch ProxMenux UI between English, Spanish, French, German, Italian or Portuguese. Translation install only — uses googletrans + a pre-cached translation table. The menu reloads automatically with the new language.",
+    "ogTitle": "Change Language | ProxMenux Documentation",
+    "ogDescription": "Pick the ProxMenux interface language from the Settings menu. Six languages supported."
+  },
+  "header": {
+    "title": "Change Language",
+    "description": "Switch the ProxMenux UI between six supported languages. Saves the choice to config.json and re-execs the menu with the new language. Only available on the Translation install type — the Normal (lightweight) install is English-only by design.",
+    "section": "Settings"
+  },
+  "intro": {
+    "title": "What this is",
+    "body": "A dialog menu that lists the six supported languages. Pick one, ProxMenux saves it to <code>config.json</code> as <code>.language</code>, then re-execs <code>config_menu.sh</code> so the new language takes effect immediately."
+  },
+  "warn": {
+    "title": "Translation install only",
+    "body": "This option only appears in Settings if both checks pass: <code>/opt/googletrans-env/bin/activate</code> exists (Python venv with googletrans), <em>and</em> <code>config.json</code> has a non-empty <code>.language</code>. On the Normal (English-only) install neither is present and the language picker is not shown."
+  },
+  "supported": {
+    "heading": "Supported languages",
+    "headerCode": "Code",
+    "headerLang": "Language",
+    "headerNotes": "Notes",
+    "rows": [
+      {
+        "code": "en",
+        "lang": "English",
+        "notes": "Source language — most accurate"
+      },
+      {
+        "code": "es",
+        "lang": "Spanish",
+        "notes": "Cached + auto-translated"
+      },
+      {
+        "code": "fr",
+        "lang": "French",
+        "notes": "Cached + auto-translated"
+      },
+      {
+        "code": "de",
+        "lang": "German",
+        "notes": "Cached + auto-translated"
+      },
+      {
+        "code": "it",
+        "lang": "Italian",
+        "notes": "Cached + auto-translated"
+      },
+      {
+        "code": "pt",
+        "lang": "Portuguese",
+        "notes": "Cached + auto-translated"
+      }
+    ]
+  },
+  "englishTip": {
+    "title": "English is the most accurate",
+    "body": "Non-English strings are produced by a pre-cached table seeded from googletrans. Edge-case strings (rarely triggered options, recent additions) may fall through to a live googletrans call or to the English original. If a translation feels off, English is always the source of truth."
+  },
+  "underHood": {
+    "heading": "How it works under the hood",
+    "items": [
+      "Dialog menu lists the 6 codes; you pick one.",
+      "If <code>config.json</code> exists: <code>jq --arg lang \"$new_language\" '.language = $lang'</code> updates the field in place.",
+      "If <code>config.json</code> doesn't exist: a fresh one is created with the language code in a single-field object.",
+      "Confirmation dialog: <em>\"Language changed to &lt;code&gt;\"</em>.",
+      "<code>exec bash config_menu.sh</code> reloads the Settings menu with the new language active."
+    ]
+  },
+  "manual": {
+    "heading": "Manual equivalent"
+  },
+  "troubleshoot": {
+    "heading": "Troubleshooting",
+    "noOptionTitle": "Option doesn't appear in Settings",
+    "noOptionBody": "You're on the Normal (English-only) install. To get language support, reinstall ProxMenux choosing the Translation install option (it pulls Python venv + googletrans).",
+    "stillEnglishTitle": "Language changed but UI still shows English",
+    "stillEnglishBody": "The menu re-execs itself after the change. If you opened a fresh shell and started a different ProxMenux entrypoint, run <code>menu</code> again to pick up the new language. Confirm: <code>jq -r '.language' /usr/local/share/proxmenux/config.json</code>."
+  },
+  "related": {
+    "heading": "Related",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Show Version Information",
+        "tail": " — confirms install type and current language."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Settings overview",
+        "tail": "."
+      }
+    ]
+  }
+}
