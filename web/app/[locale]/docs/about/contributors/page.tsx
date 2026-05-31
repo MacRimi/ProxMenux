@@ -54,6 +54,31 @@ const contributors: Contributor[] = [
     roleKey: "testing",
     avatar: "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/avatars/Kamunhas.png",
   },
+  // Added 2026-05-31 after the v1.2.2 release. Defaulted to "testing"
+  // and GitHub's avatar service so the entries work immediately
+  // without needing avatar files uploaded under /images/avatars/.
+  // Swap to a per-contributor /images/avatars/<name>.png once the
+  // custom artwork is ready.
+  {
+    name: "heriberto",
+    roleKey: "testing",
+    avatar: "https://github.com/heriberto.png",
+  },
+  {
+    name: "JF_Carr",
+    roleKey: "testing",
+    avatar: "https://github.com/JF_Carr.png",
+  },
+  {
+    name: "rafapuerta",
+    roleKey: "testing",
+    avatar: "https://github.com/rafapuerta.png",
+  },
+  {
+    name: "JcMinarro",
+    roleKey: "testing",
+    avatar: "https://github.com/JcMinarro.png",
+  },
 ]
 
 export default async function ContributorsPage({ params }: { params: Promise<{ locale: string }> }) {

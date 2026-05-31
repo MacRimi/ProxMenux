@@ -6,8 +6,7 @@ on:
       - "main"
     paths:
       - "web/**"
-      - "guides/**"
-      - "scripts/**"
+      - "lang/**"
       - "CHANGELOG.md"
   workflow_dispatch:
 
