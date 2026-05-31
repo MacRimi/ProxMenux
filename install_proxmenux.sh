@@ -704,8 +704,7 @@ install_proxmenux_monitor() {
 }
 
 create_monitor_service() {
-    msg_info "Creating ProxMenux Monitor service..."
-
+    
     local exec_path="$MONITOR_RUNTIME_DIR/AppRun"
     
     if [ -f "$TEMP_DIR/systemd/proxmenux-monitor.service" ]; then
@@ -745,8 +744,8 @@ EOF
         return 0
     else
         msg_warn "ProxMenux Monitor service failed to start."
-        msg_info "Check logs with: journalctl -u proxmenux-monitor -n 20"
-        msg_info "Check status with: systemctl status proxmenux-monitor"
+        msg_info2 "Check logs with: journalctl -u proxmenux-monitor -n 20"
+        msg_info2 "Check status with: systemctl status proxmenux-monitor"
         update_config "proxmenux_monitor" "failed"
         return 1
     fi
