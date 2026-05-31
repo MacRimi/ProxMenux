@@ -1,9 +1,184 @@
 
+## 2026-05-31
+
+### New version ProxMenux v1.2.2 — *Stable consolidation of the v1.2.1.x cycle*
+
+Stable release that brings the four prereleases of the **v1.2.1.x** cycle to the main channel in one move. The work over those four betas centred on three themes: making the Health Monitor genuinely configurable instead of just observable (per-category thresholds, per-event dismiss durations, an audit log of active suppressions), expanding the notification stack to cover roughly 80 services through Apprise while persisting events across Quiet Hours, and turning the Monitor process itself into a quieter, more predictable system citizen on idle hosts. On top of those, this release lands automatic upgrade detection for LXC containers, an end-to-end rewrite of the Coral TPU installer with the latest upstream drivers, and a long list of operator-visible fixes — HTTPS terminal handshake, kernel-update detection on PVE 9.x, NVIDIA installer flow on Alpine LXC, mixed-GPU passthrough audio companion handling, and several runtime optimizations on the Monitor scanning loops. Five direct code contributions from the community ship alongside ([@jcastro](https://github.com/jcastro) ×5, [@pespinel](https://github.com/pespinel) ×1) and the GPU passthrough work was driven by [@ghosthvj](https://github.com/ghosthvj)'s detailed field reports — see the Acknowledgments at the end.
+
+---
+
+## 🩺 Health Monitor — Configurable, Granular, Auditable
+
+Three coupled pieces that together let the operator tune the Health Monitor to the actual envelope of their host instead of working around its defaults, and to manage dismisses with the same fine-grained control they already have over the rest of the dashboard.
+
+### Per-category Warning / Critical thresholds
+
+Every check the Health Monitor runs is parameterised by a pair of numbers — a *Warning* and a *Critical* — and both are now exposed under **Settings → Health Monitor Thresholds**. The defaults that ship with ProxMenux are reasonable for the average Proxmox host, but every environment has its own envelope:
+
+- A small homelab with a single-disk SSD wants to page earlier on capacity (75 / 90 %) to leave room for snapshots.
+- A datacentre node with redundant Ceph storage can be far more relaxed on memory warnings (90 % working set is normal under ZFS ARC).
+- A passively-cooled mini-PC needs lower temperature thresholds than a server with forced-air cooling — same drive class, different physical envelope.
+
+Edits take effect on the next scan — the Health Monitor re-reads the values from `/usr/local/share/proxmenux/health_thresholds.json` on every cycle, no service restart. The same numbers also feed the colour ranges of every dashboard widget (storage bars, CPU/memory rings, temperature chips, the dot on the disk modal), so the visual classification anywhere in the Monitor maps to a definite range relative to the configured pair.
+
+### Per-event dismiss duration with a Permanent badge
+
+The *Dismiss* button on each Health Monitor alert now opens a small dropdown with three options:
+
+- **24 hours** — previous default, behaves exactly as before
+- **7 days** — handy for a temporary condition you don't want to hear about during a week-long migration
+- **Permanently** — silences this specific `error_key` indefinitely
+
+Permanent dismisses persist with `suppression_hours = -1` in the persistence DB, never re-emit, never re-notify and are marked with a distinct amber **Permanent** badge in the Health Monitor so the operator always knows which alerts are intentionally silenced. The backend infrastructure for the permanent sentinel already existed — the UI just lacked a way to set it. The API contract is small and backwards-compatible: `POST /api/health/acknowledge` accepts an optional `suppression_hours` body field (positive integer for hours, `-1` for permanent); omitting it preserves the previous behaviour and uses the category's configured suppression. A second new endpoint `POST /api/health/un-acknowledge {error_key}` clears a previously-recorded acknowledgment so the alert becomes eligible to fire again — used by the Active Suppressions panel below.
+
+### Active Suppressions panel in Settings
+
+A new section inside **Settings → Health Monitor**, right below the per-category suppression durations, lists every currently-silenced alert — both time-limited dismisses (with a *22h remaining* / *6d remaining* badge) and permanent ones (with the amber *Permanent* badge from the dashboard). Each row carries the `error_key`, category, severity, the timestamp the dismiss was recorded, and a **Re-enable** button that clears the acknowledgment server-side. Re-enables are **queued** — clicking the button marks the row green with a strike-through and changes the button to *Undo*, and the actual `POST /api/health/un-acknowledge` only fires when the user clicks **Save**, so a batch of re-enables ships atomically alongside any pending per-category dropdown changes. The action is gated by the Health Monitor *Edit* toggle at the top of the card. Permanent dismisses **can only be reverted from here** — the dashboard intentionally does not expose a per-alert un-dismiss affordance to avoid accidental re-enables, so the Settings panel is the deliberate audit + revert surface for them. The list also refreshes automatically when an alert is dismissed from the Health Monitor modal while the Settings page is already open, via a `health-suppression-changed` browser event plus listeners on `window focus` and `document visibilitychange`.
+
+### Disk I/O severity tiers
+
+A sliding 24 h window now classifies dmesg ATA / SCSI errors into three buckets: silent (0–10 transient events), WARNING (11–100) and CRITICAL (100+, or any hard error like UNC / Buffer I/O / Sense Key Hardware Error). Quiet days stay quiet, but a single Buffer I/O event still pages immediately.
+
+---
+
+## 📨 Apprise Notification Channel — Full Feature Parity
+
+The Apprise integration that landed as a basic adapter in 1.2.1.4-beta has graduated to full parity with the native channels. One Apprise URL now reaches roughly 80 notification services (Pushover, ntfy, Slack, Matrix, mailto, signal, Pushbullet, Mattermost, Microsoft Teams via webhooks, …) without ProxMenux needing a dedicated adapter for each. The Apprise tab in Notifications exposes the same controls as Telegram, Gotify, Discord and Email:
+
+- The full **Notification Categories** block — the same 10 categories with their per-event sub-toggles, identical to the other channels
+- **Quiet Hours** — start/end window per channel, with the same buffering behaviour (events fired during the window are persisted to SQLite and released as a grouped summary when the window closes, rather than being silently dropped)
+- **Daily Digest** — opt-in once-a-day summary delivery at a chosen time
+
+The backend's per-channel filtering already applied generically to every channel including Apprise via the `channel_overrides` block — the UI just wasn't surfacing it.
+
+Three reliability fixes ship alongside, all surfaced after the initial beta rollout:
+
+1. **Mobile overflow** on narrow viewports. The Apprise URL row used to break the design — the placeholder packed four full example URLs into one line and the inline `<code>` examples had no `break-all` rule. The placeholder is now a single concise example (`tgram://bottoken/ChatID`), the URL input wrapper enforces `min-w-0 / flex-1 / shrink-0` on its children, and the examples paragraph uses `break-all min-w-0` so it wraps cleanly at any width.
+
+2. **Backend whitelist regression** that rejected Apprise with HTTP 400. The notifications-test validator's hard-coded channel set (`{telegram, gotify, discord, email, all}`) was missing `apprise`, so every Apprise test or send returned `400 Invalid channel` before the library was even invoked. The whitelist is now derived live from `notification_channels.CHANNEL_TYPES`, so adding a new channel implementation in the future cannot silently regress this validator again.
+
+3. **Opaque error reporting** when the destination returned a non-2xx response. When a destination (`jsons://`, `ntfy://`, `slack://`, …) rejected the payload, the operator only saw a generic *"Apprise rejected the notification (transport failure)"* message. The channel now captures Apprise's internal logger during `notify()` and surfaces the real HTTP status code plus the destination's response body (capped at 300 chars) — so a beta tester debugging a custom webhook can immediately see whether the upstream server is rejecting their payload schema.
+
+---
+
+## 📦 LXC Update Detection
+
+A new dedicated section in **Settings** (between *Health Monitor Thresholds* and *Notifications*) with a single toggle that gates the per-CT `apt list --upgradable` / `apk list -u` scan end-to-end. Default ON. When OFF the scan stops entirely (no `pct exec` calls), every `type=lxc` entry is purged from the managed-installs registry immediately, and the matching notification toggle in *Notifications → Services* disappears from the UI while preserving its stored preference.
+
+The checker also reads the `mtime` of each CT's package-manager metadata cache and triggers `apt-get update` / `apk update` from outside via `pct exec` if it's older than 24 h, with a 60 s timeout and silent failure. Long-running appliance CTs whose caches were months stale finally surface their real upstream backlog — a Debian 12 CT with a 524-day-old cache went from "0 updates" to "117 (12 security)" on lab hardware.
+
+---
+
+## 🐧 Coral TPU on LXC — Latest Upstream Drivers
+
+The Coral installer for LXC (`scripts/gpu_tpu/install_coral_lxc.sh`) was rewritten end-to-end to install the **latest upstream `gasket-dkms` driver** and the **latest `libedgetpu1` runtime** (220 lines added, 150 removed). Coral M.2 / mPCIe modules that previously failed to build on PVE 9 kernels now install and bind cleanly. The registry-driven update notifications that landed in 1.2.1.2 keep both packages fresh going forward: the Hardware tab + Notifications signal when feranick/gasket-driver publishes a newer release, and the `apt`-tracked `libedgetpu1` runtime gets the standard System Updates flow.
+
+The companion **Coral installer uninstall path** also lands in this cycle — mirroring the NVIDIA flow so a Coral install can be cleanly reversed if the user re-deploys the host without TPU acceleration.
+
+---
+
+## ⚡ Monitor Performance Optimizations
+
+A 10-minute strace + sampling run on a live host surfaced three places where the Monitor's background scanner was spawning subprocesses more aggressively than it needed to. All three are fixed in 1.2.2:
+
+### fail2ban subprocess storm
+On hosts where `fail2ban-client` was not installed, the cache wrapper around `_f2b_get_banned_ips()` only updated its timestamp on success. Every HTTP request to the dashboard fell through the cache check and fired a fresh `execve("fail2ban-client", ...)` that immediately failed with `ENOENT` — 250+ failed `execve` calls in a 10-minute window. `shutil.which('fail2ban-client')` is now resolved **once** at module load and the cache timestamp is updated unconditionally. Hosts without Fail2Ban now have zero `fail2ban-client` syscalls per request.
+
+### smartctl scheduler collision
+Disk SMART temperature polling, CPU temperature read and latency probe used to fire at the same offset within each minute, producing a measurable CPU / IO spike when all their subprocesses spawned together. The polls are now staggered (latency first, then CPU temperature, then disk SMART) while preserving the per-disk 60 s cadence — the spike is gone, total CPU under load is unchanged.
+
+### LXC inventory subprocess
+The mount monitor used to call `lxc-info -n <vmid> -p` for every running CT just to get its init PID. It now reads `/proc/<lxc-start-pid>/task/<lxc-start-pid>/children` directly and falls back to `lxc-info` only when the `/proc` read fails. One subprocess per CT per scan cycle eliminated — measurable on hosts with 20+ containers.
+
+---
+
+## 🔌 HTTPS Terminal Handshake
+
+Every terminal modal in the Monitor (dashboard terminal, LXC terminal, script terminal) used to fail with *WebSocket connection error* on hosts where HTTPS was enabled. The root cause was specific to the `gevent + SSL` path: the gevent-websocket `WebSocketHandler` was stacked on top of flask-sock's protocol implementation, so the server emitted **two** consecutive `HTTP/1.1 101 Switching Protocols` headers and the browser closed the connection as a corrupt frame. Dropping the explicit `handler_class=WebSocketHandler` argument restores a single 101 response and the handshake completes normally. The fix is invisible to operators running on plain HTTP — they were unaffected — but unblocks every HTTPS-fronted install (reverse proxies, certificate-managed deployments, anything behind nginx/Traefik).
+
+Additionally, the terminal panel used to lose its WebSocket connection when the user enabled the browser's auto-translate feature (Chrome / Edge / Safari "translate this page" prompts). The translator moves DOM nodes that React still holds refs to, and the WebSocket React component breaks because its container ref points to a moved node. Added `translate="no"` on the terminal container divs so the translator skips the embedded tty entirely — translations on the rest of the page still work.
+
+---
+
+## 🐧 Health Monitor — Kernel Update Detection on PVE 9.x (#208)
+
+On Proxmox VE 9.x hosts, the *System Updates → Kernel / PVE* row used to report "Kernel/PVE up to date" even when an update for the running kernel was waiting upstream. Three combined causes, three combined fixes:
+
+1. **Kernel-package prefix list** now includes `proxmox-kernel-*` and `proxmox-firmware-*` — PVE 9.x ships kernels under `proxmox-kernel-`, not the `pve-kernel-` prefix from 7.x / 8.x. The previous regex never matched the new packages and so never flagged any kernel update on 9.x.
+
+2. **Dry-run switched from `apt-get upgrade --dry-run` to `apt-get dist-upgrade --dry-run`**. PVE 9 ships kernel updates packaged as new installs (not as straight upgrades of an existing package), and the plain `upgrade --dry-run` does not consider new installs at all. `dist-upgrade --dry-run` does.
+
+3. **Running-kernel detection** now reads `uname -r` and flags an update as a *running-kernel update* when the package matches the running release exactly or its branch meta-package (e.g. `proxmox-kernel-6.14` for a host on `6.14.11-4-pve`). The row text distinguishes *"Running kernel update available (reboot required)"* from *"N kernel update(s) available (none for running kernel)"* so the operator knows whether they need to reboot or just install.
+
+---
+
+## 🟢 NVIDIA Installer
+
+Several improvements driven by [@ghosthvj](https://github.com/ghosthvj)'s detailed field reports on mixed GPU configurations (see Acknowledgments):
+
+- **Kernel compatibility window** — the version menu now respects the running kernel's compatible driver range, only offering branches that won't fail to compile against the host kernel.
+- **Alpine LXC support** — the container-side userspace install was reworked so it succeeds on Alpine hosts; free-space detection works reliably across all storage layouts (LVM-thin, ZFS, directory, etc).
+- **NVENC patch awareness** — when the host has the NVENC patch applied, the version menu narrows to drivers supported by the patch so reinstalling never silently loses it.
+- **Uninstall feedback** — the uninstall path now reports a clear completion message instead of returning to the menu silently.
+
+---
+
+## 🌐 Documentation Site — Full i18n Migration
+
+The companion documentation site (proxmenux.com) now ships under locale-prefixed URLs (`/en/...` and `/es/...`) with the next-intl plumbing. Every doc page is bilingual — 107 pages translated to Spanish (no copy-of-English placeholders). The root `/` redirects to `/en/` via meta-refresh + JS so the apex URL still resolves to something useful. RSS feeds work per-locale at `/en/rss.xml` and `/es/rss.xml`, with the canonical `/rss.xml` kept for backward compatibility with existing feed subscribers. Client-side search is wired up via **Pagefind** — the index is built fresh on every CI deploy from the final HTML output and downloaded fragmentally by the client, so search works without a server backend.
+
+New documentation pages cover the **Active Suppressions** section in the Settings tab and the **per-event Dismiss dropdown** in the Health Monitor modal, both with screenshots reflecting the new UI.
+
+---
+
+## 🔧 Other Improvements
+
+- **AI Enhancement section in Notifications** — rewritten from a muted uppercase row that testers consistently scrolled past, to a normal-case foreground label with a leading `Sparkles` icon and a persistent badge (green *Active* when AI is enabled, neutral *Optional* when it isn't) so the feature is discoverable regardless of state.
+- **Disk temperature monitoring** — improved readings, smarter caching across SMART probes, and a redesigned history modal that opens at 24 h by default with min / avg / max statistics.
+- **Post-install function update detection** — the Monitor tracks installed ProxMenux optimizations (Log2Ram, Memory Settings, System Limits, Logrotate, …) and notifies when a newer version is available, with one-click apply from Settings.
+- **Secure Gateway (Tailscale) update flow** — one-click Tailscale update from Settings with Last-checked / Installed / Latest indicators and notification when a new version is published.
+- **Helper-Scripts menu** — richer context and useful information for each entry, making it easier to know what every script does before running it.
+- **Burst aggregation wording** — burst summaries now report only the *additional* events that arrived after the initial individual alert, so the operator no longer sees the first event counted twice.
+- **Known-error classifier** — word-boundary regex on ATA / UNC patterns so kernel messages like `nvidia_uvm:FatalError` are no longer misclassified as ATA cable issues.
+- **VM / CT control errors** — failed start / stop / restart now surfaces the real `pvesh` stderr (e.g. *"no space left on device"*) in the UI toast and fires a `vm_fail` / `ct_fail` notification, instead of the bare 500 INTERNAL SERVER ERROR the operator used to see.
+- **log2ram apply path** — the auto / update flow now restarts log2ram after writing the new size, so a configured `512M` actually takes effect on the running tmpfs without a manual restart.
+- **PVE webhook URL** — the notification webhook now follows the active SSL state automatically, switching between `http://` and `https://` when you toggle HTTPS in the panel.
+- **Frontend 401 cascade** — the login screen no longer swallows a 401 forever after a brief stale-token state; the dedup flag is cleared on mount and on successful login.
+
+---
+
+## 🙏 Acknowledgments
+
+This release includes direct code contributions from the community and a substantial amount of design-shaping feedback. Particular thanks to:
+
+### Code contributors
+
+**[@jcastro](https://github.com/jcastro)** landed five direct improvements that ship with v1.2.2:
+
+- **Select VM ISOs from all ISO storages** — new shared helper `scripts/global/iso_storage_helpers.sh` plus integration in `vm_creator.sh`, `select_linux_iso.sh` and `select_windows_iso.sh`. The ISO picker now reads from every Proxmox storage tagged as ISO content instead of being pinned to `local`. Commit [`092b548d`](https://github.com/MacRimi/ProxMenux/commit/092b548d).
+- **Release channel switcher in Settings** — a proper menu under `scripts/menus/config_menu.sh` to flip between the stable and beta install channels in-place, with the right `version.txt` / `beta_version.txt` handling on each side. Commit [`f8a8c43d`](https://github.com/MacRimi/ProxMenux/commit/f8a8c43d).
+- **ZFS autotrim in the auto post-install** — `auto_post_install.sh` now enables `autotrim=on` on root ZFS pools by default (with the matching disable in the uninstall path), so SSD-backed installs reclaim freed space without manual intervention. Commit [`8877f987`](https://github.com/MacRimi/ProxMenux/commit/8877f987).
+- **Webhook loopback detection + update handoff** — `flask_notification_routes.py` correctly classifies `127.0.0.1` / `localhost` webhooks as loopback, and the `menu` script's update handoff no longer flakes on edge cases. Commit [`70ab072c`](https://github.com/MacRimi/ProxMenux/commit/70ab072c).
+- **Figurine bumped to 2.0.0** — banner tool refresh in `customizable_post_install.sh`, with the doc page updated to match. Commit [`aba94028`](https://github.com/MacRimi/ProxMenux/commit/aba94028).
+
+**[@pespinel](https://github.com/pespinel)** fixed a beta-installer regression that broke service paths after the move to the new runtime layout — `install_proxmenux_beta.sh` now resolves the right systemd unit paths on first install and on update. Commit [`0daab74a`](https://github.com/MacRimi/ProxMenux/commit/0daab74a).
+
+### Field reports that shaped the GPU + Coral work
+
+**[@ghosthvj](https://github.com/ghosthvj)**'s detailed reports and suggestions on the hardware passthrough flow drove the GPU script improvements in this release. The NVIDIA installer fixes, the GPU + audio companion lifecycle hardening on `switch_gpu_mode.sh`, and the iGPU audio-companion checklist on `add_gpu_vm.sh::detect_optional_gpu_audio` all started from his reports of edge cases that the previous code paths handled poorly.
+
+### Everyone else
+
+A huge thank you to every user who opened an issue on GitHub, commented in [GitHub Discussions](https://github.com/MacRimi/ProxMenux/discussions), reported a bug on the community channel, or stopped by to share what worked and what didn't on their hardware. **Many of the internal improvements in this release — the smartctl scheduler stagger, the fail2ban cache fix, the `lxc-info /proc` replacement, the HTTPS terminal handshake, the kernel-update detection on PVE 9.x, the entire Apprise wiring — started as a report from somebody running into the issue.** Keep them coming.
+
+---
+
+
 ## 2026-04-20
 
 ### New version ProxMenux v1.2.1 — *SR-IOV Awareness & GPU Passthrough Hardening*
 
-Targeted release on top of **v1.2.0** addressing three community-reported areas: complete SR-IOV awareness across the GPU/PCI subsystem, robust handling of GPU + audio companions during passthrough attach and detach (Intel iGPU with chipset audio, discrete cards with HDMI audio, mixed-GPU VMs), and compatibility fixes for AI notification providers (OpenAI-compatible custom endpoints such as LiteLLM/MLX/LM Studio, OpenAI reasoning models, and Gemini 2.5+/3.x thinking models). Also includes quality-of-life improvements in the NVIDIA installer, the disk health monitor, and the LXC lifecycle helpers used by the passthrough wizards.
+Targeted release on top of **v1.2.0** addressing three community-reported areas that needed fixing before the next stable cycle: full SR-IOV awareness across the GPU/PCI subsystem, robust handling of GPU + audio companions during passthrough attach and detach (Intel iGPU with chipset audio, discrete cards with HDMI audio, mixed-GPU VMs), and compatibility fixes for the AI notification providers (OpenAI-compatible custom endpoints such as LiteLLM/MLX/LM Studio, OpenAI reasoning models, and Gemini 2.5+/3.x thinking models). Also bundles quality-of-life fixes in the NVIDIA installer, the disk health monitor, and the LXC lifecycle helpers used by the passthrough wizards.
 
 ---
 
