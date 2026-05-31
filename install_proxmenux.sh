@@ -670,7 +670,6 @@ install_proxmenux_monitor() {
         msg_warn "SHA256 checksum not available. Skipping verification."
     fi
     
-    msg_info "Installing ProxMenux Monitor..."
     mkdir -p "$MONITOR_INSTALL_DIR"
     
     local target_path="$MONITOR_INSTALL_DIR/ProxMenux-Monitor.AppImage"
