@@ -10564,7 +10564,7 @@ def api_health():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'version': '1.2.1.4-beta'
+        'version': '1.2.2'
     })
 
 # ─── User-configurable health thresholds ─────────────────────────────────────
@@ -11049,7 +11049,7 @@ def api_info():
     """Root endpoint with API information"""
     return jsonify({
         'name': 'ProxMenux Monitor API',
-        'version': '1.2.1.4-beta',
+        'version': '1.2.2',
         'endpoints': [
             '/api/system',
             '/api/system-info',
@@ -11798,7 +11798,7 @@ if __name__ == '__main__':
         try:
             import sqlite3
             from pathlib import Path
-            MONITOR_VERSION = '1.2.1.4-beta'
+            MONITOR_VERSION = '1.2.2'
             db_path = Path('/usr/local/share/proxmenux/health_monitor.db')
             if db_path.exists():
                 conn = sqlite3.connect(str(db_path), timeout=10)

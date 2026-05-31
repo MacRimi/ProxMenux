@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 
-const APP_VERSION = "1.2.1.4-beta" // Sync with AppImage/package.json
+const APP_VERSION = "1.2.2" // Sync with AppImage/package.json
 
 interface ReleaseNote {
   date: string
@@ -18,6 +18,60 @@ interface ReleaseNote {
 }
 
 export const CHANGELOG: Record<string, ReleaseNote> = {
+  "1.2.2": {
+    date: "May 31, 2026",
+    changes: {
+      added: [
+        "Health Monitor Thresholds - Per-category Warning and Critical levels for CPU, memory, temperature, storage, disks and more, configurable from Settings. The same numbers also feed the colour ranges of every widget (storage bars, CPU/memory rings, temperature chips), so a colour anywhere in the Monitor maps to a definite range relative to the configured pair",
+        "Per-error dismiss duration - The Dismiss button on each Health Monitor alert now opens a small dropdown with three options: 24 hours, 7 days, or Permanently. Permanent dismisses persist with suppression_hours = -1, never re-emit and are marked with a distinct amber Permanent badge so the operator knows the alert is intentionally silenced",
+        "Active Suppressions panel in Settings - New section inside Settings -> Health Monitor (below the per-category suppression durations) that lists every currently-dismissed alert, time-limited and permanent. Each row carries the error_key, category, severity, when it was dismissed, plus a Re-enable button gated by Edit mode. Permanent dismisses can only be reverted from here",
+        "Apprise notification channel - Full feature parity with native channels: the Apprise tab now exposes the same per-event toggles, Quiet Hours and Daily Digest controls as Telegram / Gotify / Discord / Email. One Apprise URL talks to ~80 notification services (Pushover, ntfy, Slack, Matrix, mailto, signal, ...) without ProxMenux needing a dedicated adapter for each",
+        "LXC update detection - New dedicated Settings section with a single toggle that gates the per-CT apt list --upgradable / apk list -u scan end-to-end. The checker now reads the mtime of the CT's package-manager metadata and refreshes it via pct exec if it is older than 24 h, so long-running appliance CTs whose caches were months stale finally surface their real upstream backlog",
+        "Disk I/O severity tiers - Sliding 24 h window classifies dmesg ATA / SCSI errors into silent (0-10), WARNING (11-100) and CRITICAL (100+ or any hard error like UNC / Buffer I/O / Sense Key Hardware Error), so quiet days stay quiet and a single Buffer I/O event still pages immediately",
+        "Quiet Hours buffering - Events suppressed during a channel's quiet window are now persisted to SQLite and released as a grouped summary when the window closes, instead of being silently dropped",
+        "Post-install function update detection - The Monitor tracks installed ProxMenux optimizations (Log2Ram, Memory Settings, System Limits, Logrotate, ...) and notifies when a newer version of any of them is available, with one-click apply from Settings",
+        "NVIDIA driver update notifications - Kernel-aware detection of newer compatible driver versions, surfaced in the Hardware tab and as notifications when an upstream build is published",
+        "Coral TPU installer - Uninstall path mirroring the NVIDIA flow, and registry-driven update notifications for both the PCIe gasket-dkms driver (tracked against feranick/gasket-driver) and the USB libedgetpu1 runtime",
+        "Secure Gateway update flow - One-click Tailscale update from Settings with Last-checked / Installed / Latest indicators and notification when a new version is available",
+        "Helper-Scripts menu - Richer context and useful information for each entry, making it easier to know what every script does before running it",
+      ],
+      changed: [
+        "AI Enhancement section in Notifications - Rewritten from a muted uppercase row to a normal-case foreground label with a Sparkles icon and a persistent badge (green Active when AI is enabled, neutral Optional when it isn't) so the feature is discoverable regardless of state",
+        "Disk temperature monitoring - Improved readings, smarter caching across SMART probes and a redesigned history modal that opens at 24 h by default with min / avg / max statistics",
+        "VM and LXC modal - Expanded with additional information so a single panel covers data you previously had to look up across multiple tabs",
+        "Page load - Faster first paint and lighter network usage on the Overview, Storage and Hardware tabs",
+        "Security improvements - Tighter authentication checks across notification, scripts and terminal endpoints, plus a more conservative default policy for new installs",
+        "POST /api/health/acknowledge accepts an optional suppression_hours body field - positive integer in hours, -1 for permanent. Omitting it preserves the previous behaviour (uses the category default). New endpoint POST /api/health/un-acknowledge {error_key} reverses a dismiss",
+        "Burst aggregation wording - Burst summaries now report only the additional events that arrived after the initial individual alert, so the operator no longer sees the first event counted twice",
+        "Known-error classifier - Word-boundary regex on ATA / UNC patterns so kernel messages like nvidia_uvm:FatalError are no longer misclassified as ATA cable issues",
+        "Resolved notifications severity matches the user-visible severity instead of the silently escalated value the DB may carry during the 24 h same-key cooldown",
+        "log2ram apply path - The auto / update flow now restarts log2ram after writing the new size, so a configured 512M actually takes effect on the running tmpfs",
+        "VM / CT control errors - Failed start / stop / restart now surfaces the real pvesh stderr (e.g. \"no space left on device\") in the UI toast and fires a vm_fail / ct_fail notification, instead of a bare 500 INTERNAL SERVER ERROR",
+        "Mobile design of Quiet Hours / Daily Digest - Time inputs are now full-height with inline labels instead of the cramped grid layout that overflowed on narrow screens",
+        "Health Monitor dismissed annotation - When an alert is acknowledged with suppression_hours = -1, the dashboard payload tags the check with permanent: true alongside dismissed: true so the UI can render the Permanent badge separately from the standard time-limited Dismissed badge",
+      ],
+      fixed: [
+        "Terminal modals on HTTPS hosts - Every terminal modal (dashboard terminal, LXC terminal, script terminal) used to fail with WebSocket connection error on hosts with HTTPS enabled. Root cause: the gevent + SSL path stacked geventwebsocket's WebSocketHandler on top of flask-sock's protocol implementation, so the server emitted two consecutive HTTP/1.1 101 Switching Protocols headers and the browser closed the connection as a corrupt frame. Dropping handler_class=WebSocketHandler restores a single 101 response",
+        "Health Monitor kernel updates on PVE 9.x (#208) - The System Updates -> Kernel / PVE row used to report \"Kernel/PVE up to date\" even when an update for the running kernel was waiting upstream. Three combined fixes: (a) the kernel-package prefix list now includes proxmox-kernel-* and proxmox-firmware-* (PVE 9.x ships kernels under proxmox-kernel-, not pve-kernel- as in 7.x / 8.x), (b) the dry-run switched from apt-get upgrade --dry-run to apt-get dist-upgrade --dry-run so kernel updates packaged as new installs are visible, (c) the categoriser now reads uname -r and flags an update as a running-kernel update when the package matches the running release",
+        "NVIDIA installer - The version menu now respects the running kernel compatibility window, only offering driver branches that won't fail to compile",
+        "NVIDIA installer on Alpine LXC - Container-side userspace install reworked so it succeeds on Alpine hosts, and free-space detection works reliably across all storage layouts",
+        "NVIDIA installer with NVENC patch - When the host has the NVENC patch applied, the version menu narrows to drivers supported by the patch so reinstalling never silently loses it",
+        "Webhook URL - PVE notification webhook now follows the active SSL state automatically, switching between http and https when you toggle HTTPS in the panel",
+        "ATA disk error not recorded - disk_observations is now written before the SMART gate, so transient errors that don't yet trip SMART still build the per-disk history",
+        "Quiet Hours toggle not persisting - get_settings now returns the per-channel quiet_* / digest_* fields so the toggle state reloads correctly after a refresh",
+        "Frontend 401 cascade - Login screen no longer swallows the 401 forever after a brief stale-token state",
+        "Apprise URL section - Mobile overflow - On narrow viewports the Apprise URL row used to break the layout. The placeholder is now a single concise example (tgram://bottoken/ChatID), the URL input enforces min-w-0 / flex-1 / shrink-0 on its children, and the examples paragraph uses break-all min-w-0 so it wraps cleanly on any width",
+        "Apprise channel rejected by backend with HTTP 400 - The notifications-test validator's hard-coded channel whitelist (used by POST /api/notifications/test and the history filter) was missing 'apprise', so every Apprise test or send returned 400 \"Invalid channel\" before the library was even invoked. The whitelist is now derived live from notification_channels.CHANNEL_TYPES, so adding a new channel implementation cannot silently regress this validator again",
+        "Apprise error reporting - When a destination (jsons://, ntfy://, slack://, ...) returns a non-2xx response, the channel now captures Apprise's internal logger during notify() and surfaces the real HTTP status plus the destination's response body (capped at 300 chars) instead of the opaque \"Apprise rejected the notification (transport failure)\" message",
+        "fail2ban-client subprocess storm - The cache wrapper around _f2b_get_banned_ips() only updated its timestamp on success, so on hosts where fail2ban-client returned ENOENT (binary not installed) the function fell through the cache check on every single HTTP request and fired 250+ failed execve calls in a 10-minute window. shutil.which('fail2ban-client') is now resolved once at module load and the cache timestamp is updated unconditionally",
+        "smartctl scheduler collision - Disk SMART temperature polling, CPU temperature read and latency probe used to fire at the same offset within each minute, producing a measurable CPU / IO spike when all subprocesses spawned together. The polls are now staggered (latency, then CPU temperature, then disk SMART) while preserving the per-disk 60 s cadence",
+        "LXC inventory subprocess - The mount monitor used to call `lxc-info -n <vmid> -p` for every running CT just to get its PID. It now reads /proc/<lxc-start-pid>/task/<lxc-start-pid>/children directly and falls back to lxc-info only when /proc reads fail, eliminating one subprocess per CT per scan cycle",
+        "Browser-translated terminal pages - The terminal panel used to lose its WebSocket connection when the user enabled the browser's auto-translate feature, because the translator moved DOM nodes that React still held refs to. Added translate=\"no\" on the terminal container divs so the translator skips the embedded tty entirely",
+        "Active Suppressions Save not activating after Re-enable - The Re-enable button used to fire the API call immediately without touching pendingChanges, so the Health Monitor Save button never registered the action. Re-enables are now queued (visual: green border + strike-through on the row + button label changes to Undo) and applied atomically when the user clicks Save, alongside any per-category dropdown changes",
+        "Active Suppressions stale after dashboard Dismiss - Dismissing an alert from the Health Monitor modal while the Settings page was already open did not refresh the Active Suppressions list. The dashboard now dispatches a `health-suppression-changed` browser event on every dismiss / un-dismiss; the Settings page listens for it (plus window focus and document visibilitychange) and re-fetches the active set",
+      ],
+    },
+  },
   "1.2.1.4-beta": {
     date: "May 30, 2026",
     changes: {
@@ -163,16 +217,20 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 
 const CURRENT_VERSION_FEATURES = [
   {
-    icon: <BellOff className="h-5 w-5" />,
-    text: "Per-error dismiss duration - The Dismiss button on each Health Monitor alert now opens a small dropdown so you choose 24 hours, 7 days, or Permanently for that specific alert. Permanent dismisses get a distinct Permanent badge and never re-notify",
+    icon: <Sliders className="h-5 w-5" />,
+    text: "Health Monitor Thresholds - Per-category Warning and Critical levels for CPU, memory, temperature, storage and more, configurable from Settings. The same numbers feed the colour ranges of the dashboard widgets, so every green / amber / red state maps to a definite range relative to the configured pair",
   },
   {
-    icon: <Sliders className="h-5 w-5" />,
-    text: "Active Suppressions section - New section inside Settings -> Health Monitor that lists every dismissed alert (time-limited and permanent) with a Re-enable button. Permanent dismisses can only be reverted from here. The Re-enable action is gated by Health Monitor Edit mode",
+    icon: <BellOff className="h-5 w-5" />,
+    text: "Granular dismiss control - Each Health Monitor alert can now be dismissed for 24 hours, 7 days or Permanently via a per-event dropdown. A new Active Suppressions panel in Settings lists every silenced alert with a Re-enable button, gated by Edit mode. Permanent dismisses can only be reverted from there",
   },
   {
     icon: <Bell className="h-5 w-5" />,
-    text: "Apprise channel parity - Apprise now exposes the same per-event toggles, Quiet Hours and Daily Digest controls as Telegram / Gotify / Discord / Email. Mobile overflow in the Apprise URL row is also fixed",
+    text: "Apprise notification channel - One Apprise URL reaches ~80 services (Pushover, ntfy, Slack, Matrix, mailto, signal, ...) with full feature parity to the native channels: per-event toggles, Quiet Hours and Daily Digest all apply",
+  },
+  {
+    icon: <Server className="h-5 w-5" />,
+    text: "LXC update detection - Per-CT apt list --upgradable / apk list -u scan from Settings, with an automatic cache refresh on long-running containers so months-old metadata no longer hides real upstream backlog",
   },
 ]
 
