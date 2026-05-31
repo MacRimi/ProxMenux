@@ -7,6 +7,7 @@ on:
     paths:
       - "web/**"
       - "guides/**"
+      - "scripts/**"
       - "CHANGELOG.md"
   workflow_dispatch:
 
@@ -31,15 +32,15 @@ jobs:
         with:
           node-version: "20"
           cache: 'npm'
-          cache-dependency-path: 'web/package.json'
+          cache-dependency-path: 'web/package-lock.json'
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Install dependencies and generate lock file
+      - name: Install dependencies
         run: |
           cd web
-          npm install
+          npm ci
 
       - name: Build with Next.js
         run: |
