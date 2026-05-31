@@ -20803,6 +20803,44 @@
     "os": "debian"
   },
   {
+    "name": "YOURLS",
+    "slug": "yourls",
+    "desc": "YOURLS (Your Own URL Shortener) is a set of PHP scripts that allows you to run your own URL shortener with full control over data, detailed stats, analytics, and plugin support.",
+    "script": "ct/yourls.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/yourls.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/yourls.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00000"
+    ],
+    "category_names": [
+      "Miscellaneous"
+    ],
+    "notes": [
+      "After installation, visit /admin/install.php once to initialize the database and complete setup.",
+      "The admin password is shown at the end of the installation log."
+    ],
+    "warnings": [],
+    "port": 80,
+    "website": "https://yourls.org/",
+    "documentation": "https://yourls.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/yourls.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": "Generated during install"
+    },
+    "os": "debian"
+  },
+  {
     "name": "yt-dlp-webui",
     "slug": "yt-dlp-webui",
     "desc": "A not so terrible web ui for yt-dlp.\nHigh performance extendeable web ui and RPC server for yt-dlp with low impact on resources.\nCreated for the only purpose of fetching videos from my server/nas and monitor upcoming livestreams.",
