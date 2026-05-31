@@ -6,9 +6,6 @@ on:
 permissions:
   contents: write
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -59,7 +56,7 @@ jobs:
         cat ProxMenux-Monitor.AppImage.sha256
 
     - name: Upload AppImage artifact
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: ProxMenux-${{ steps.version.outputs.VERSION }}-beta-AppImage
         path: |

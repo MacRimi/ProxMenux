@@ -9,9 +9,6 @@ on:
     paths: [ 'AppImage/**' ]
   workflow_dispatch:  
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -52,7 +49,7 @@ jobs:
       run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
       
     - name: Upload AppImage artifact
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: ProxMenux-${{ steps.version.outputs.VERSION }}-AppImage
         path: AppImage/dist/*.AppImage
