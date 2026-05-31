@@ -92,7 +92,19 @@ export function DocNavigation({ className }: DocNavigationProps) {
     allPages.push(p)
   }
 
-  const currentPageIndex = allPages.findIndex((page) => page.href === pathname)
+  // Normalize trailing slashes before comparing. Next.js is configured
+  // with `trailingSlash: true` (so GitHub Pages serves `/foo/` as
+  // `foo/index.html`), which means usePathname() returns
+  // `/docs/.../page/` while sidebarItems declares hrefs as
+  // `/docs/.../page` (no trailing slash). Without this normalization
+  // findIndex always returned -1 → prevPage was null and nextPage was
+  // allPages[0] (Introduction) on every page, so the bottom Previous/Next
+  // bar showed "Next: Introduction" everywhere regardless of the route.
+  const stripTrailingSlash = (s: string) => (s !== "/" ? s.replace(/\/+$/, "") : s)
+  const normalizedPathname = stripTrailingSlash(pathname)
+  const currentPageIndex = allPages.findIndex(
+    (page) => stripTrailingSlash(page.href) === normalizedPathname,
+  )
 
   const prevPage = currentPageIndex > 0 ? allPages[currentPageIndex - 1] : null
   const nextPage = currentPageIndex < allPages.length - 1 ? allPages[currentPageIndex + 1] : null
