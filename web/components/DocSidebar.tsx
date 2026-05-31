@@ -32,6 +32,17 @@ function collectHrefs(items: SubMenuItem[]): string[] {
   return out
 }
 
+// Next.js is configured with `trailingSlash: true` (required so GitHub
+// Pages serves /foo/ as foo/index.html). That makes usePathname() return
+// `/docs/.../page/` while sidebar hrefs are declared without the slash,
+// so a naive `pathname === item.href` always fails and the active-item
+// highlight + active-section auto-open both break. Strip the trailing
+// slash on both sides before comparing.
+function stripTrailingSlash(s: string): string {
+  if (!s || s === "/") return s
+  return s.replace(/\/+$/, "")
+}
+
 export const sidebarItems: MenuItem[] = [
   { title: "Introduction", i18nKey: "introduction", href: "/docs/introduction" },
   { title: "Installation", i18nKey: "installation", href: "/docs/installation" },
@@ -273,6 +284,7 @@ export const sidebarItems: MenuItem[] = [
 
 export default function DocSidebar() {
   const pathname = usePathname()
+  const currentPath = stripTrailingSlash(pathname)
   const [openSections, setOpenSections] = useState<{ [key: string]: boolean }>({})
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const t = useTranslations("docSidebar")
@@ -313,9 +325,10 @@ export default function DocSidebar() {
   const renderSubItem = (subItem: SubMenuItem, depth: number) => {
     const hasChildren = !!subItem.submenu && subItem.submenu.length > 0
     if (hasChildren) {
-      const descendantHrefs = collectHrefs(subItem.submenu!)
+      const descendantHrefs = collectHrefs(subItem.submenu!).map(stripTrailingSlash)
+      const subItemPath = stripTrailingSlash(subItem.href)
       const containsActivePage =
-        subItem.href === pathname || descendantHrefs.includes(pathname)
+        subItemPath === currentPath || descendantHrefs.includes(currentPath)
       const sectionKey = `${subItem.href}__${subItem.title}`
       const isOpen = (openSections[sectionKey] ?? containsActivePage) || false
       return (
@@ -325,7 +338,7 @@ export default function DocSidebar() {
               href={subItem.href}
               onClick={() => setIsMobileMenuOpen(false)}
               className={`flex-1 block p-2 rounded-l ${
-                pathname === subItem.href
+                currentPath === subItemPath
                   ? "bg-blue-500 text-white"
                   : containsActivePage
                     ? "bg-blue-50 text-blue-900 font-medium"
@@ -339,7 +352,7 @@ export default function DocSidebar() {
               aria-label={isOpen ? "Collapse" : "Expand"}
               onClick={() => toggleSection(sectionKey)}
               className={`px-2 flex items-center rounded-r ${
-                containsActivePage && pathname !== subItem.href
+                containsActivePage && currentPath !== subItemPath
                   ? "bg-blue-50 text-blue-900 hover:bg-blue-100"
                   : "text-gray-500 hover:bg-gray-200"
               }`}
@@ -361,7 +374,7 @@ export default function DocSidebar() {
         <Link
           href={subItem.href}
           className={`block p-2 rounded ${
-            pathname === subItem.href
+            currentPath === stripTrailingSlash(subItem.href)
               ? "bg-blue-500 text-white"
               : "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
           }`}
@@ -375,7 +388,7 @@ export default function DocSidebar() {
 
   const renderMenuItem = (item: MenuItem) => {
     if (item.submenu) {
-      const containsActivePage = collectHrefs(item.submenu).includes(pathname)
+      const containsActivePage = collectHrefs(item.submenu).map(stripTrailingSlash).includes(currentPath)
       const isOpen = (openSections[item.title] ?? containsActivePage) || false
       return (
         <li key={item.title} className="mb-2">
@@ -403,7 +416,7 @@ export default function DocSidebar() {
           <Link
             href={item.href!}
             className={`block p-2 rounded ${
-              pathname === item.href ? "bg-blue-500 text-white" : "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
+              currentPath === stripTrailingSlash(item.href!) ? "bg-blue-500 text-white" : "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
             }`}
             onClick={() => setIsMobileMenuOpen(false)}
           >
