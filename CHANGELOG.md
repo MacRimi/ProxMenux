@@ -3,7 +3,7 @@
 
 ### New version ProxMenux v1.2.1 — *SR-IOV Awareness & GPU Passthrough Hardening*
 
-Targeted release on top of **v1.2.0** addressing three community-reported areas that needed fixing before the next stable cycle: full SR-IOV awareness across the GPU/PCI subsystem, robust handling of GPU + audio companions during passthrough attach and detach (Intel iGPU with chipset audio, discrete cards with HDMI audio, mixed-GPU VMs), and compatibility fixes for the AI notification providers (OpenAI-compatible custom endpoints such as LiteLLM/MLX/LM Studio, OpenAI reasoning models, and Gemini 2.5+/3.x thinking models). Also bundles quality-of-life fixes in the NVIDIA installer, the disk health monitor, and the LXC lifecycle helpers used by the passthrough wizards.
+Targeted release on top of **v1.2.0** addressing three community-reported areas: complete SR-IOV awareness across the GPU/PCI subsystem, robust handling of GPU + audio companions during passthrough attach and detach (Intel iGPU with chipset audio, discrete cards with HDMI audio, mixed-GPU VMs), and compatibility fixes for AI notification providers (OpenAI-compatible custom endpoints such as LiteLLM/MLX/LM Studio, OpenAI reasoning models, and Gemini 2.5+/3.x thinking models). Also includes quality-of-life improvements in the NVIDIA installer, the disk health monitor, and the LXC lifecycle helpers used by the passthrough wizards.
 
 ---
 

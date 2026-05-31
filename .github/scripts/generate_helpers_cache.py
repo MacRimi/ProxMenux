@@ -67,9 +67,9 @@ def fetch_all_records(url: str, *, expand: str | None = None, per_page: int = 50
     return items
 
 
-def normalize_os_variants(install_methods_json: list[dict[str, Any]]) -> list[str]:
+def normalize_os_variants(install_methods: list[dict[str, Any]]) -> list[str]:
     os_values: list[str] = []
-    for item in install_methods_json:
+    for item in install_methods:
         if not isinstance(item, dict):
             continue
         resources = item.get("resources", {})
@@ -81,6 +81,31 @@ def normalize_os_variants(install_methods_json: list[dict[str, Any]]) -> list[st
             if normalized not in os_values:
                 os_values.append(normalized)
     return os_values
+
+
+def split_notes(notes_raw: list[dict[str, Any]]) -> tuple[list[str], list[str]]:
+    """Split PocketBase notes into (info_notes, warnings).
+
+    Each entry has shape ``{"text": str, "type": "warning"|...}``. Anything
+    flagged ``type == "warning"`` lands in the warnings list so the bash
+    menu can render those in red with a dedicated WARNINGS header. Other
+    notes go to the regular notes list.
+    """
+    info: list[str] = []
+    warns: list[str] = []
+    for note in notes_raw or []:
+        if not isinstance(note, dict):
+            continue
+        text = note.get("text")
+        if not isinstance(text, str) or not text.strip():
+            continue
+        text = text.strip()
+        ntype = (note.get("type") or "").strip().lower()
+        if ntype == "warning":
+            warns.append(text)
+        else:
+            info.append(text)
+    return info, warns
 
 
 def build_script_path(type_name: str, slug: str) -> str:
@@ -138,19 +163,19 @@ def main() -> int:
         full_script_url = f"{SCRIPT_BASE}/{script_path}"
         script_url_mirror = to_mirror_url(full_script_url)
 
-        install_methods_json = raw.get("install_methods_json", [])
-        if not isinstance(install_methods_json, list):
-            install_methods_json = []
+        # Sprint 11.7: PocketBase exposes these as `install_methods` and
+        # `notes`, not `install_methods_json` / `notes_json`. The legacy field
+        # names silently returned [] for every entry, which is why the cache
+        # had empty notes and missing OS variants for every script.
+        install_methods = raw.get("install_methods", [])
+        if not isinstance(install_methods, list):
+            install_methods = []
 
-        notes_json = raw.get("notes_json", [])
-        if not isinstance(notes_json, list):
-            notes_json = []
+        notes_raw = raw.get("notes", [])
+        if not isinstance(notes_raw, list):
+            notes_raw = []
 
-        notes = [
-            note.get("text", "")
-            for note in notes_json
-            if isinstance(note, dict) and isinstance(note.get("text"), str) and note.get("text", "").strip()
-        ]
+        notes, warnings = split_notes(notes_raw)
 
         category_ids = raw.get("categories", [])
         if not isinstance(category_ids, list):
@@ -193,6 +218,7 @@ def main() -> int:
             "categories": category_ids,
             "category_names": category_names,
             "notes": notes,
+            "warnings": warnings,
             "port": raw.get("port", 0),
             "website": raw.get("website", ""),
             "documentation": raw.get("documentation", ""),
@@ -210,7 +236,7 @@ def main() -> int:
         # Emit one entry per install method so the menu shell can offer an
         # explicit OS choice. When there is only one method (or none), a
         # single entry is emitted with os="" (script decides at runtime).
-        os_variants = normalize_os_variants(install_methods_json)
+        os_variants = normalize_os_variants(install_methods)
 
         if len(os_variants) > 1:
             for os_name in os_variants:
@@ -228,11 +254,12 @@ def main() -> int:
     with OUTPUT_FILE.open("w", encoding="utf-8") as f:
         json.dump(cache, f, ensure_ascii=False, indent=2)
 
+    total_notes = sum(len(e.get("notes", [])) for e in cache)
+    total_warns = sum(len(e.get("warnings", [])) for e in cache)
     print(f"\n✅ helpers_cache.json → {OUTPUT_FILE}")
-    print(f"   Guardados: {len(cache)}")
+    print(f"   Guardados: {len(cache)} entries, {total_notes} notes, {total_warns} warnings")
 
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())
