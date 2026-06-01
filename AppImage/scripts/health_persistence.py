@@ -673,11 +673,21 @@ class HealthPersistence:
             cursor = conn.cursor()
             now = datetime.now().isoformat()
 
+            # Persist `reason` into the dedicated resolution_reason column
+            # (and tag resolution_type='auto' so the audit log can tell
+            # auto-resolves apart from explicit admin clears). Previously
+            # this UPDATE only touched resolved_at, so the `reason` arg
+            # every caller passes — including the new
+            # `_reconcile_stale_disk_warnings` pass — was silently dropped
+            # and the resolution_reason column stayed NULL for every
+            # auto-resolved error.
             cursor.execute('''
                 UPDATE errors
-                SET resolved_at = ?
+                SET resolved_at = ?,
+                    resolution_type = COALESCE(resolution_type, 'auto'),
+                    resolution_reason = ?
                 WHERE error_key = ? AND resolved_at IS NULL
-            ''', (now, error_key))
+            ''', (now, reason, error_key))
 
             if cursor.rowcount > 0:
                 self._record_event(cursor, 'resolved', error_key, {'reason': reason})
