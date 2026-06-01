@@ -11637,6 +11637,37 @@
     "os": "debian"
   },
   {
+    "name": "Nexterm",
+    "slug": "nexterm",
+    "desc": "Nexterm is an open-source server management software for SSH, VNC & RDP. It bundles a web interface, file management, monitoring, and team collaboration with two-factor authentication, OIDC SSO, and encrypted credential storage.",
+    "script": "ct/nexterm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/nexterm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/nexterm.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00010"
+    ],
+    "category_names": [
+      "Dashboards & Frontends"
+    ],
+    "notes": [],
+    "warnings": [],
+    "port": 6989,
+    "website": "https://nexterm.dev/",
+    "documentation": "https://docs.nexterm.dev/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nexterm.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "nextExplorer",
     "slug": "nextexplorer",
     "desc": "Self-hosted file access for teams, homelabs, and agencies with a refined interface.",
@@ -13995,6 +14026,42 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Pinchflat",
+    "slug": "pinchflat",
+    "desc": "Pinchflat is a self-hosted YouTube media manager built with yt-dlp for automatically downloading and organizing content from channels and playlists.",
+    "script": "ct/pinchflat.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/pinchflat.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/pinchflat.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Pinchflat data is stored in `/opt/pinchflat/config`",
+      "downloaded media is stored in `/opt/pinchflat/downloads`"
+    ],
+    "warnings": [
+      "For large media libraries, increase disk space or mount external storage at `/opt/pinchflat/downloads` before downloading media to avoid filling the LXC disk."
+    ],
+    "port": 8945,
+    "website": "https://github.com/kieraneglin/pinchflat",
+    "documentation": "https://github.com/kieraneglin/pinchflat/wiki",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pinchflat.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -19312,6 +19379,40 @@
       "username": "admin",
       "password": "umami"
     },
+    "os": "debian"
+  },
+  {
+    "name": "Umbraco CMS",
+    "slug": "umbraco",
+    "desc": "Umbraco is a free, open-source .NET CMS with a friendly editing experience, beautiful backoffice, and powerful customization options. Automatically setup a Umbraco server up, as well as a FTP server so you can publish to this container from Visual Studio.",
+    "script": "ct/umbraco.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/umbraco.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/umbraco.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00025"
+    ],
+    "category_names": [
+      "Business & ERP"
+    ],
+    "notes": [
+      "Cridentials are saved in /root",
+      "The FTPProfile.pubxml can be used to publish directly from Visual Studio, but you can also use the built-in code editor in the Umbraco backoffice."
+    ],
+    "warnings": [],
+    "port": 443,
+    "website": "https://umbraco.com/",
+    "documentation": "https://docs.umbraco.com/",
+    "logo": "https://umbraco.com/media/54xnncgt/umbraco_logo_blue05.webp?rmode=pad&width=680&quality=85&v=1dad6b6701b24f0",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
