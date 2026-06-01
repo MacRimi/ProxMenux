@@ -69,14 +69,19 @@ if [ ! -f "package.json" ]; then
     exit 1
 fi
 
-# Install dependencies if node_modules doesn't exist.
-# `--legacy-peer-deps` is required because vaul@0.9.9 (and a few others) still
-# declare peer-deps for React ≤18 while we're on React 19; npm 7+ refuses by
-# default. The actual runtime works fine with React 19.
-if [ ! -d "node_modules" ]; then
-    echo "📦 Installing dependencies..."
-    npm install --legacy-peer-deps
-fi
+# Always reconcile node_modules against the lockfile. The previous
+# guard (`if [ ! -d "node_modules" ]`) skipped install when an older
+# tree existed on disk — so a bump in package.json silently shipped
+# with the cached version. We hit this when bumping Next.js
+# 15.1.6 -> 15.1.9 for CVE-2025-55182: the build succeeded with the
+# stale node_modules and the AppImage still carried 15.1.6. `npm install`
+# is idempotent: when package.json + lockfile + node_modules already
+# agree it returns in under a second. `--legacy-peer-deps` is required
+# because vaul@0.9.9 (and a few others) still declare peer-deps for
+# React ≤18 while we are on React 19; npm 7+ refuses by default.
+# The actual runtime works fine with React 19.
+echo "📦 Reconciling dependencies against the lockfile..."
+npm install --legacy-peer-deps
 
 echo "🏗️  Building Next.js static export..."
 npm run export
