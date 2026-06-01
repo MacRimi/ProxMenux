@@ -9,6 +9,7 @@
 import { Link, usePathname } from "@/i18n/navigation"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { useEffect, useState } from "react"
 import { sidebarItems } from "@/components/DocSidebar"
 
 interface DocNavigationProps {
@@ -54,6 +55,26 @@ export function DocNavigation({ className }: DocNavigationProps) {
   const pathname = usePathname()
   const tNav = useTranslations("docNav")
   const tSidebar = useTranslations("docSidebar")
+
+  // Capture the URL hash (`#host`, `#lxc-net`, …) on the client so we
+  // can disambiguate Previous/Next when a single doc page hosts several
+  // sidebar entries via in-page anchors (Storage Share Manager is the
+  // canonical case: /docs/storage-share + /docs/storage-share#host +
+  // /docs/storage-share#lxc-net are three distinct sidebar items but a
+  // single physical page; usePathname() returns the same string for
+  // all three because the fragment is not part of the path).
+  //
+  // SSR can't see the hash, so we hydrate with an empty string and
+  // refresh on mount + on hashchange. The brief render before
+  // hydration just shows the navigation as if the user were at the
+  // parent page — same behaviour as before this fix, so no regression.
+  const [hash, setHash] = useState("")
+  useEffect(() => {
+    const sync = () => setHash(window.location.hash || "")
+    sync()
+    window.addEventListener("hashchange", sync)
+    return () => window.removeEventListener("hashchange", sync)
+  }, [])
 
   const tItem = (i18nKey: string | undefined, fallback: string) => {
     if (!i18nKey) return fallback
@@ -102,9 +123,30 @@ export function DocNavigation({ className }: DocNavigationProps) {
   // bar showed "Next: Introduction" everywhere regardless of the route.
   const stripTrailingSlash = (s: string) => (s !== "/" ? s.replace(/\/+$/, "") : s)
   const normalizedPathname = stripTrailingSlash(pathname)
-  const currentPageIndex = allPages.findIndex(
-    (page) => stripTrailingSlash(page.href) === normalizedPathname,
-  )
+
+  // Match attempt order:
+  //   1. pathname + hash (e.g. /docs/storage-share#host)  — exact match
+  //      against sidebar items that intentionally point to an in-page
+  //      anchor as the "current location" for navigation purposes.
+  //   2. pathname alone — the regular case, no anchor in the URL.
+  //
+  // Without step 1, every anchor visit collapsed to the parent page
+  // and Next/Previous walked from there — so on /docs/storage-share#host
+  // the bottom bar offered the same #host as Next (no movement) and on
+  // /docs/storage-share/lxc-mount-points/ Next pointed back at #host
+  // because the entire flat list got indexed from position 0.
+  const effectivePath = normalizedPathname + hash
+  let currentPageIndex = -1
+  if (hash) {
+    currentPageIndex = allPages.findIndex(
+      (page) => stripTrailingSlash(page.href) === effectivePath,
+    )
+  }
+  if (currentPageIndex === -1) {
+    currentPageIndex = allPages.findIndex(
+      (page) => stripTrailingSlash(page.href) === normalizedPathname,
+    )
+  }
 
   const prevPage = currentPageIndex > 0 ? allPages[currentPageIndex - 1] : null
   const nextPage = currentPageIndex < allPages.length - 1 ? allPages[currentPageIndex + 1] : null
