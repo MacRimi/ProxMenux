@@ -2361,18 +2361,102 @@ class HealthMonitor:
         except Exception:
             return fallback
     
+    def _reconcile_stale_disk_warnings(self) -> None:
+        """
+        Reconcile persisted disk_<name> warnings against the current host
+        state before each disk scan.
+
+        The disk-scan loop only resolves an error when the device appears
+        in the current dmesg window with zero events. After a reboot,
+        dmesg is empty for that device, so the loop never iterates it,
+        and a `disk_<name>` WARNING recorded as "SMART: unavailable"
+        during a noisy shutdown can stay active forever — the dashboard
+        keeps showing an orange "Warning" badge for a disk whose SMART
+        is in fact PASSED.
+
+        This pass walks the active disk_* errors (skipping disk_fs_*,
+        which is already reconciled separately below) and:
+
+          - device gone from /dev/ → resolve as "Device no longer present"
+          - device present + SMART now PASSED → resolve as "Transient
+            I/O cleared, SMART now healthy"
+          - device present + SMART still unavailable → leave warning
+            active (the original condition is still ambiguous)
+          - device present + SMART FAILED → leave warning active (the
+            main loop will pick it up and may upgrade to CRITICAL)
+        """
+        try:
+            active = health_persistence.get_active_errors(category='disks')
+        except Exception:
+            return
+        for err in active:
+            err_key = err.get('error_key', '') or ''
+            # Skip the filesystem-mount errors — the dedicated block
+            # below handles them with its own reconciliation rules.
+            if not err_key.startswith('disk_') or err_key.startswith('disk_fs_'):
+                continue
+            # Don't disturb errors the user explicitly acknowledged.
+            if err.get('acknowledged') == 1:
+                continue
+            details = err.get('details', {})
+            if isinstance(details, str):
+                try:
+                    details = json.loads(details)
+                except Exception:
+                    details = {}
+            # Recover the block device name. Prefer the structured
+            # `block_device` field; fall back to `disk` or derive from
+            # the error_key (`disk_nvme2n1` → `nvme2n1`).
+            base_disk = (
+                details.get('block_device') or
+                details.get('disk') or
+                err_key[len('disk_'):]
+            )
+            if not base_disk:
+                continue
+            dev_path = f'/dev/{base_disk}'
+            if not os.path.exists(dev_path):
+                try:
+                    health_persistence.resolve_error(
+                        err_key, 'Device no longer present in system')
+                except Exception:
+                    pass
+                continue
+            # Device exists — query SMART. _quick_smart_health returns
+            # 'PASSED' / 'FAILED' / 'UNKNOWN'.
+            try:
+                smart_health = self._quick_smart_health(base_disk)
+            except Exception:
+                smart_health = 'UNKNOWN'
+            if smart_health == 'PASSED':
+                try:
+                    health_persistence.resolve_error(
+                        err_key,
+                        'Transient I/O cleared, SMART now reports healthy')
+                except Exception:
+                    pass
+            # else: smart UNKNOWN or FAILED — leave active and let the
+            # main loop classify it on the next dmesg window.
+
     def _check_disks_optimized(self) -> Dict[str, Any]:
         """
         Disk I/O error check -- the SINGLE source of truth for disk errors.
-        
+
         Reads dmesg for I/O/ATA/SCSI errors, counts per device, records in
         health_persistence, and returns status for the health dashboard.
         Resolves ATA controller names (ata8) to physical disks (sda).
-        
+
         Cross-references SMART health to avoid false positives from transient
         ATA controller errors. If SMART reports PASSED, dmesg errors are
         downgraded to INFO (transient).
         """
+        # Reconcile any disk_<name> warnings persisted across a noisy
+        # shutdown / reboot before the main scan starts. Without this
+        # pass the main loop only resolves errors for devices that show
+        # fresh events in the current dmesg window — devices that simply
+        # disappeared from dmesg stay flagged indefinitely.
+        self._reconcile_stale_disk_warnings()
+
         current_time = time.time()
         disk_results = {}  # Single dict for both WARNING and CRITICAL
         
