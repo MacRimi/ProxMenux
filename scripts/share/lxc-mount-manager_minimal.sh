@@ -851,28 +851,36 @@ $(translate "Proceed")?"
     fi
     echo ""
 
-    # Step 10: Offer restart
+    # Step 10: Offer restart (only meaningful when the container is
+    # already running — `pct reboot` errors out on a stopped CT, and
+    # a stopped CT will pick up the new mount the next time it boots
+    # without any action on our side).
+    local ct_status
+    ct_status=$(pct status "$container_id" 2>/dev/null | awk '{print $2}')
     echo ""
-    if whiptail --yesno "$(translate "Restart container to activate mount?")" 8 60; then
-        msg_info "$(translate "Restarting container...")"
-        if pct reboot "$container_id"; then
-            sleep 5
-            msg_ok "$(translate "Container restarted successfully")"
+    if [[ "$ct_status" == "running" ]]; then
+        if whiptail --yesno "$(translate "Restart container to activate mount?")" 8 60; then
+            msg_info "$(translate "Restarting container...")"
+            if pct reboot "$container_id"; then
+                sleep 5
+                msg_ok "$(translate "Container restarted successfully")"
 
-            # Quick access test (read-only, no files written)
-            local ct_status
-            ct_status=$(pct status "$container_id" 2>/dev/null | awk '{print $2}')
-            if [[ "$ct_status" == "running" ]]; then
-                echo ""
-                if pct exec "$container_id" -- test -d "$ct_mount_point" 2>/dev/null; then
-                    msg_ok "$(translate "Mount point is accessible inside container")"
-                else
-                    msg_warn "$(translate "Mount point not yet accessible — may need manual permission adjustment")"
+                # Quick access test (read-only, no files written)
+                ct_status=$(pct status "$container_id" 2>/dev/null | awk '{print $2}')
+                if [[ "$ct_status" == "running" ]]; then
+                    echo ""
+                    if pct exec "$container_id" -- test -d "$ct_mount_point" 2>/dev/null; then
+                        msg_ok "$(translate "Mount point is accessible inside container")"
+                    else
+                        msg_warn "$(translate "Mount point not yet accessible — may need manual permission adjustment")"
+                    fi
                 fi
+            else
+                msg_warn "$(translate "Failed to restart — restart manually to activate mount")"
             fi
-        else
-            msg_warn "$(translate "Failed to restart — restart manually to activate mount")"
         fi
+    else
+        msg_info "$(translate "Container is stopped — mount will activate automatically on next start")"
     fi
 
     echo ""
