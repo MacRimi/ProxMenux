@@ -9,7 +9,6 @@
 import { Link, usePathname } from "@/i18n/navigation"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useEffect, useState } from "react"
 import { sidebarItems } from "@/components/DocSidebar"
 
 interface DocNavigationProps {
@@ -31,6 +30,21 @@ interface FlatPage {
   sectionI18nKey?: string
 }
 
+// Sidebar entries whose href contains a fragment (`#host`, `#lxc-net`,
+// …) are visual section headers that group submenu items inside an
+// existing physical page (currently only Storage Share Manager uses
+// this pattern — `Host storage integration` and `LXC network sharing`
+// are headers for groups of subpages, but their href is the parent
+// Overview page with an anchor). They aren't standalone docs the
+// reader can advance to, so including them in the Previous/Next walk
+// produces two regressions: on the page they anchor (`#host`) Next
+// circles back to the same URL, and on a regular page that happens to
+// sit next to one of them in the flat list (`lxc-mount-points`) Next
+// jumps to the section header instead of skipping to the next real
+// subpage. Skip them at walk time so both cases collapse to "the next
+// real page in reading order".
+const isAnchorOnlyHref = (href: string) => href.includes("#")
+
 function walkSubmenu(
   items: SubMenuItem[],
   section: string,
@@ -38,13 +52,15 @@ function walkSubmenu(
   out: FlatPage[],
 ) {
   items.forEach((sub) => {
-    out.push({
-      title: sub.title,
-      i18nKey: sub.i18nKey,
-      href: sub.href,
-      section,
-      sectionI18nKey,
-    })
+    if (!isAnchorOnlyHref(sub.href)) {
+      out.push({
+        title: sub.title,
+        i18nKey: sub.i18nKey,
+        href: sub.href,
+        section,
+        sectionI18nKey,
+      })
+    }
     if (sub.submenu && sub.submenu.length > 0) {
       walkSubmenu(sub.submenu, section, sectionI18nKey, out)
     }
@@ -55,26 +71,6 @@ export function DocNavigation({ className }: DocNavigationProps) {
   const pathname = usePathname()
   const tNav = useTranslations("docNav")
   const tSidebar = useTranslations("docSidebar")
-
-  // Capture the URL hash (`#host`, `#lxc-net`, …) on the client so we
-  // can disambiguate Previous/Next when a single doc page hosts several
-  // sidebar entries via in-page anchors (Storage Share Manager is the
-  // canonical case: /docs/storage-share + /docs/storage-share#host +
-  // /docs/storage-share#lxc-net are three distinct sidebar items but a
-  // single physical page; usePathname() returns the same string for
-  // all three because the fragment is not part of the path).
-  //
-  // SSR can't see the hash, so we hydrate with an empty string and
-  // refresh on mount + on hashchange. The brief render before
-  // hydration just shows the navigation as if the user were at the
-  // parent page — same behaviour as before this fix, so no regression.
-  const [hash, setHash] = useState("")
-  useEffect(() => {
-    const sync = () => setHash(window.location.hash || "")
-    sync()
-    window.addEventListener("hashchange", sync)
-    return () => window.removeEventListener("hashchange", sync)
-  }, [])
 
   const tItem = (i18nKey: string | undefined, fallback: string) => {
     if (!i18nKey) return fallback
@@ -89,7 +85,7 @@ export function DocNavigation({ className }: DocNavigationProps) {
     const flatItems: FlatPage[] = []
 
     sidebarItems.forEach((item) => {
-      if (item.href) {
+      if (item.href && !isAnchorOnlyHref(item.href)) {
         flatItems.push({ title: item.title, i18nKey: item.i18nKey, href: item.href })
       }
 
@@ -124,29 +120,14 @@ export function DocNavigation({ className }: DocNavigationProps) {
   const stripTrailingSlash = (s: string) => (s !== "/" ? s.replace(/\/+$/, "") : s)
   const normalizedPathname = stripTrailingSlash(pathname)
 
-  // Match attempt order:
-  //   1. pathname + hash (e.g. /docs/storage-share#host)  — exact match
-  //      against sidebar items that intentionally point to an in-page
-  //      anchor as the "current location" for navigation purposes.
-  //   2. pathname alone — the regular case, no anchor in the URL.
-  //
-  // Without step 1, every anchor visit collapsed to the parent page
-  // and Next/Previous walked from there — so on /docs/storage-share#host
-  // the bottom bar offered the same #host as Next (no movement) and on
-  // /docs/storage-share/lxc-mount-points/ Next pointed back at #host
-  // because the entire flat list got indexed from position 0.
-  const effectivePath = normalizedPathname + hash
-  let currentPageIndex = -1
-  if (hash) {
-    currentPageIndex = allPages.findIndex(
-      (page) => stripTrailingSlash(page.href) === effectivePath,
-    )
-  }
-  if (currentPageIndex === -1) {
-    currentPageIndex = allPages.findIndex(
-      (page) => stripTrailingSlash(page.href) === normalizedPathname,
-    )
-  }
+  // Anchored URLs (`/docs/storage-share/#host`) share their pathname
+  // with the Overview page, so they collapse to that page's flat-list
+  // index — Previous walks back into the previous section as usual and
+  // Next advances to the first real subpage (`host-nfs`) instead of
+  // looping back to the same anchor.
+  const currentPageIndex = allPages.findIndex(
+    (page) => stripTrailingSlash(page.href) === normalizedPathname,
+  )
 
   const prevPage = currentPageIndex > 0 ? allPages[currentPageIndex - 1] : null
   const nextPage = currentPageIndex < allPages.length - 1 ? allPages[currentPageIndex + 1] : null
