@@ -1,6 +1,16 @@
 
 ## 2026-06-02
 
+### Hotfix ProxMenux v1.2.2.1 — *Restore Monitor service after v1.2.1 → v1.2.2 update*
+
+Single-purpose patch for [#222](https://github.com/MacRimi/ProxMenux/issues/222). Users updating from any v1.2.1.x stable installation to v1.2.2 hit a `proxmenux-monitor.service` that refused to start with `status=203/EXEC`. The v1.2.2 install layout extracts the AppImage into `/usr/local/share/proxmenux/monitor-app/` and runs `AppRun` out of that directory — but the installer's update path was reusing whichever unit file was already present and only refreshing the unit on a fresh install, so the inherited unit kept its old `ExecStart=/usr/local/share/proxmenux/ProxMenux-Monitor.AppImage` line. That path used to be a FUSE-mounted AppImage run, which v1.2.2 deliberately moved away from to clear a Wazuh rule-521 false positive on `/tmp/.mount_*`; under PVE 9.x / Debian 13 the bare AppImage failed to exec and the service entered the activating loop. The installer now always rewrites the unit to point at `AppRun` on every update — idempotent for installs whose unit is already correct, recovering for those whose isn't.
+
+To recover an existing broken v1.2.2 install without waiting for the update prompt, run the installer manually once: `bash -c "$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)"`.
+
+---
+
+## 2026-06-02
+
 ### New version ProxMenux v1.2.2 — *Stable consolidation of the v1.2.1.x cycle*
 
 Stable release that brings the four prereleases of the **v1.2.1.x** cycle to the main channel in one move. The work over those four betas centred on three themes: making the Health Monitor genuinely configurable instead of just observable (per-category thresholds, per-event dismiss durations, an audit log of active suppressions), expanding the notification stack to cover roughly 80 services through Apprise while persisting events across Quiet Hours, and turning the Monitor process itself into a quieter, more predictable system citizen on idle hosts. On top of those, this release lands automatic upgrade detection for LXC containers, an end-to-end rewrite of the Coral TPU installer with the latest upstream drivers, and a long list of operator-visible fixes — HTTPS terminal handshake, kernel-update detection on PVE 9.x, NVIDIA installer flow on Alpine LXC, mixed-GPU passthrough audio companion handling, and several runtime optimizations on the Monitor scanning loops. Five direct code contributions from the community ship alongside ([@jcastro](https://github.com/jcastro) ×5, [@pespinel](https://github.com/pespinel) ×1) and the GPU passthrough work was driven by [@ghosthvj](https://github.com/ghosthvj)'s detailed field reports — see the Acknowledgments at the end.

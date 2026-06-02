@@ -1,6 +1,16 @@
 
 ## 2026-06-02
 
+### Hotfix ProxMenux v1.2.2.1 — *Restaurar el servicio Monitor tras la actualización v1.2.1 → v1.2.2*
+
+Parche puntual para [#222](https://github.com/MacRimi/ProxMenux/issues/222). Los usuarios que actualizaban desde una instalación v1.2.1.x estable a v1.2.2 se encontraban con un `proxmenux-monitor.service` que no arrancaba con `status=203/EXEC`. El layout de instalación de v1.2.2 extrae el AppImage en `/usr/local/share/proxmenux/monitor-app/` y ejecuta `AppRun` desde ese directorio — pero el path de update del installer reutilizaba la unit file existente y solo refrescaba la unit en instalación nueva, así que la unit heredada conservaba su `ExecStart=/usr/local/share/proxmenux/ProxMenux-Monitor.AppImage` antiguo. Ese path era un AppImage montado por FUSE, algo que v1.2.2 abandonó deliberadamente para eliminar un falso positivo de la regla 521 de Wazuh sobre `/tmp/.mount_*`; bajo PVE 9.x / Debian 13 ejecutar el AppImage directamente fallaba y el servicio entraba en bucle de activación. El installer ahora reescribe la unit para que apunte a `AppRun` en cada update — idempotente para instalaciones cuya unit ya es correcta, recuperando las que no lo son.
+
+Para recuperar una instalación v1.2.2 ya rota sin esperar al aviso de actualización, ejecuta el installer manualmente una vez: `bash -c "$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)"`.
+
+---
+
+## 2026-06-02
+
 ### Nueva versión ProxMenux v1.2.2 — *Consolidación estable del ciclo v1.2.1.x*
 
 Release estable que lleva al canal principal las cuatro prereleases del ciclo **v1.2.1.x** en un solo movimiento. El trabajo a lo largo de esas cuatro betas se centró en tres temas: hacer del Health Monitor algo realmente configurable en lugar de solo observable (thresholds por categoría, duraciones de dismiss por evento, un audit log de supresiones activas), expandir el stack de notificaciones para cubrir alrededor de 80 servicios a través de Apprise mientras se persisten eventos durante las Quiet Hours, y convertir el propio proceso del Monitor en un ciudadano del sistema más silencioso y predecible en hosts idle. Por encima de eso, esta release entrega detección automática de updates en contenedores LXC, una reescritura end-to-end del instalador de Coral TPU con los últimos drivers upstream, y una larga lista de fixes visibles para el operador — handshake del terminal HTTPS, detección de kernel updates en PVE 9.x, flujo del instalador NVIDIA en Alpine LXC, gestión del audio acompañante en passthrough de GPU mixta, y varias optimizaciones runtime en los bucles de scan del Monitor. Cinco contribuciones de código directas de la comunidad shipean junto con esta release ([@jcastro](https://github.com/jcastro) ×5, [@pespinel](https://github.com/pespinel) ×1) y el trabajo de GPU passthrough lo impulsaron los reports detallados de campo de [@ghosthvj](https://github.com/ghosthvj) — ver los Acknowledgments al final.

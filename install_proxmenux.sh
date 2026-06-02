@@ -682,14 +682,25 @@ install_proxmenux_monitor() {
     fi
 
     msg_ok "ProxMenux Monitor v$appimage_version installed."
-    
+
     if [ "$service_exists" = false ]; then
         return 0  # New installation - service needs to be created
     else
+        # The v1.2.2 install layout extracts the AppImage into
+        # MONITOR_RUNTIME_DIR/ and runs AppRun out of that directory
+        # (`extract_appimage_to_runtime_dir` above), so the unit must
+        # point at AppRun — not at the bare AppImage. Existing users
+        # updating from v1.2.1.x stable still have a unit whose
+        # ExecStart targets `/usr/local/share/proxmenux/ProxMenux-Monitor.AppImage`
+        # which was fine when the AppImage was FUSE-mounted but breaks
+        # under PVE 9.x / Debian 13 (status=203/EXEC, GitHub issue #222).
+        # Rewrite the unit on every update — idempotent for users
+        # whose unit is already correct.
+        _proxmenux_rewrite_monitor_unit_for_apprun
 
         systemctl start proxmenux-monitor.service
         sleep 2
-        
+
         if systemctl is-active --quiet proxmenux-monitor.service; then
 
             update_config "proxmenux_monitor" "updated"
@@ -700,6 +711,44 @@ install_proxmenux_monitor() {
             return 1
         fi
     fi
+}
+
+# Idempotent rewriter of the proxmenux-monitor unit file. Used by the
+# update path in `install_proxmenux_monitor` so that existing
+# installations updated to v1.2.2+ get their ExecStart corrected to
+# point at the extracted AppRun even when the unit already exists.
+# Mirrors `create_monitor_service`'s unit body so both code paths
+# converge on the same file content. Returns 0 always; failures are
+# logged so the surrounding flow can still attempt the start and
+# report a more accurate failure to the user.
+_proxmenux_rewrite_monitor_unit_for_apprun() {
+    local exec_path="$MONITOR_RUNTIME_DIR/AppRun"
+
+    if [ -f "$TEMP_DIR/systemd/proxmenux-monitor.service" ]; then
+        sed "s|ExecStart=.*|ExecStart=$exec_path|g" \
+            "$TEMP_DIR/systemd/proxmenux-monitor.service" > "$MONITOR_SERVICE_FILE"
+    else
+        cat > "$MONITOR_SERVICE_FILE" << EOF
+[Unit]
+Description=ProxMenux Monitor - Web Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=$MONITOR_INSTALL_DIR
+ExecStart=$exec_path
+Restart=on-failure
+RestartSec=10
+Environment="PORT=$MONITOR_PORT"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    fi
+
+    systemctl daemon-reload
+    return 0
 }
 
 create_monitor_service() {
