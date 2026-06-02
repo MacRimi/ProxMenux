@@ -880,7 +880,12 @@ $(translate "Proceed")?"
             fi
         fi
     else
-        msg_info "$(translate "Container is stopped — mount will activate automatically on next start")"
+        # Use msg_ok (static line) instead of msg_info (which starts a
+        # spinner expecting a matching msg_ok later). There's nothing
+        # to wait on when the CT is stopped, so a left-over spinner
+        # would render as `⠋ Container is stopped …` right before the
+        # "Press Enter" prompt.
+        msg_ok "$(translate "Container is stopped — mount will activate automatically on next start")"
     fi
 
     echo ""
