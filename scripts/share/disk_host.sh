@@ -584,8 +584,36 @@ mount_disk_permanently() {
         msg_ok "$(translate "Added to /etc/fstab using device path")"
     fi
 
+    _apply_lxc_bind_mount_perms "$mount_path"
+
     systemctl daemon-reload 2>/dev/null || true
     return 0
+}
+
+# When the user opted into the host-fstab mount method, the whole
+# point of the mount is to bind-mount it into LXC containers. A fresh
+# ext4/xfs/btrfs filesystem (or a freshly-created /mnt/<id> directory)
+# is owned by root:root with mode 0755 — which an unprivileged LXC
+# sees as "others" (its root uid 0 maps to host uid 100000) and is
+# therefore read-only. lxc-mount-manager_minimal.sh offers the same
+# chmod o+rwx + default-ACL fix when the user adds the bind-mount
+# through that script, but most users don't realise they need to do
+# both steps. Apply the fix here so that "fstab only" really does
+# leave a directory ready to bind-mount from an unprivileged CT.
+# Privileged containers don't need this (root inside = root on host)
+# but the change is harmless: existing owners keep their access.
+_apply_lxc_bind_mount_perms() {
+    local mount_path="$1"
+    [[ "${MODE_FSTAB:-0}" -eq 1 ]] || return 0
+    [[ -d "$mount_path" ]] || return 0
+
+    msg_info "$(translate "Applying host permissions for unprivileged LXC bind-mounts...")"
+    chmod o+rwx "$mount_path" 2>/dev/null || true
+    if command -v setfacl >/dev/null 2>&1; then
+        setfacl -m o::rwx     "$mount_path" 2>/dev/null || true
+        setfacl -m d:o::rwx   "$mount_path" 2>/dev/null || true
+    fi
+    msg_ok "$(translate "Host permissions applied (o+rwx + default ACL) — unprivileged LXCs can read/write through bind-mounts")"
 }
 
 mount_existing_disk() {
@@ -620,6 +648,8 @@ mount_existing_disk() {
         echo "UUID=$disk_uuid  $mount_path  $existing_fs  defaults,nofail  0  2" >> /etc/fstab
         msg_ok "$(translate "Added to /etc/fstab")"
     fi
+
+    _apply_lxc_bind_mount_perms "$mount_path"
 
     DISK_PARTITION="$disk"
     systemctl daemon-reload 2>/dev/null || true
