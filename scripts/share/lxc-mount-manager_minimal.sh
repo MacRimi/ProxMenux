@@ -758,6 +758,41 @@ $(translate "(Only the host directory is modified. Nothing inside the container 
     fi
 }
 
+# Probe the freshly-applied bind-mount from inside the container.
+# Three states the user actually cares about, distinguished here:
+#
+#   1. Mount point missing → the bind-mount didn't take effect at all
+#      (pct set / restart problem). Show an error and stop.
+#   2. Directory visible but read-only → the classic unprivileged-LXC
+#      perms trap (host dir is root:root 755 → others = r-x). The dir
+#      exists, but `touch` fails with EACCES. Surface the actual
+#      "permission denied" line so the user can `chmod o+rwx` on the
+#      host path (or re-run the add flow with the host-perms prompt
+#      accepted this time).
+#   3. touch succeeds → the bind-mount is fully working from the CT.
+_lmm_verify_writable() {
+    local container_id="$1"
+    local ct_mount_point="$2"
+    local probe=".proxmenux_write_test_$$"
+
+    if ! pct exec "$container_id" -- test -d "$ct_mount_point" 2>/dev/null; then
+        msg_warn "$(translate "Mount point not visible inside the container yet")"
+        return 1
+    fi
+
+    if pct exec "$container_id" -- touch "$ct_mount_point/$probe" 2>/dev/null; then
+        pct exec "$container_id" -- rm -f "$ct_mount_point/$probe" 2>/dev/null
+        msg_ok "$(translate "Mount point is writable from inside the container")"
+        return 0
+    fi
+
+    msg_warn "$(translate "Mount point is visible but NOT writable from inside the container")"
+    echo -e "${TAB}${YW}$(translate "Likely cause: host directory permissions deny the container's mapped UID.")${CL}"
+    echo -e "${TAB}${YW}$(translate "Fix: on the host, run") chmod o+rwx ${ct_mount_point} && setfacl -m o::rwx ${ct_mount_point}${CL}"
+    echo -e "${TAB}${YW}$(translate "Or re-run this script and accept the 'apply host permissions' prompt.")${CL}"
+    return 2
+}
+
 # ==========================================================
 # MAIN FUNCTION — ADD MOUNT
 # ==========================================================
@@ -851,10 +886,18 @@ $(translate "Proceed")?"
     fi
     echo ""
 
-    # Step 10: Offer restart (only meaningful when the container is
-    # already running — `pct reboot` errors out on a stopped CT, and
-    # a stopped CT will pick up the new mount the next time it boots
-    # without any action on our side).
+    # Step 10: Activate the mount and verify it's WRITABLE from inside
+    # the container.
+    #
+    # The kernel only picks up a new `pct set mp*` after the CT is
+    # started / rebooted, so a running CT needs a reboot and a stopped
+    # CT needs a start. In both cases the check used to be a read-only
+    # `test -d $ct_mount_point` — which succeeds whenever the directory
+    # exists, even if the bind-mount is read-only because the host
+    # path's "others" bits don't grant rwx (the unprivileged-LXC trap).
+    # Replace it with a real touch+rm round-trip so the user is told
+    # straight away when writes will fail — that's the surprise the
+    # bind-mount is supposed to spare them.
     local ct_status
     ct_status=$(pct status "$container_id" 2>/dev/null | awk '{print $2}')
     echo ""
@@ -864,28 +907,27 @@ $(translate "Proceed")?"
             if pct reboot "$container_id"; then
                 sleep 5
                 msg_ok "$(translate "Container restarted successfully")"
-
-                # Quick access test (read-only, no files written)
-                ct_status=$(pct status "$container_id" 2>/dev/null | awk '{print $2}')
-                if [[ "$ct_status" == "running" ]]; then
-                    echo ""
-                    if pct exec "$container_id" -- test -d "$ct_mount_point" 2>/dev/null; then
-                        msg_ok "$(translate "Mount point is accessible inside container")"
-                    else
-                        msg_warn "$(translate "Mount point not yet accessible — may need manual permission adjustment")"
-                    fi
-                fi
+                _lmm_verify_writable "$container_id" "$ct_mount_point"
             else
                 msg_warn "$(translate "Failed to restart — restart manually to activate mount")"
             fi
         fi
     else
-        # Use msg_ok (static line) instead of msg_info (which starts a
-        # spinner expecting a matching msg_ok later). There's nothing
-        # to wait on when the CT is stopped, so a left-over spinner
-        # would render as `⠋ Container is stopped …` right before the
-        # "Press Enter" prompt.
-        msg_ok "$(translate "Container is stopped — mount will activate automatically on next start")"
+        # A stopped CT can't tell us whether the bind-mount will work
+        # until it boots, so offer to start it now. If the user
+        # declines, fall back to the informational line.
+        if whiptail --yesno "$(translate "Container is stopped. Start it now to verify the mount works?")" 8 70; then
+            msg_info "$(translate "Starting container...")"
+            if pct start "$container_id"; then
+                sleep 5
+                msg_ok "$(translate "Container started successfully")"
+                _lmm_verify_writable "$container_id" "$ct_mount_point"
+            else
+                msg_warn "$(translate "Failed to start container — start manually and check the mount")"
+            fi
+        else
+            msg_ok "$(translate "Container will pick up the mount on next start")"
+        fi
     fi
 
     echo ""
