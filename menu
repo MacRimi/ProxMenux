@@ -46,6 +46,70 @@ is_beta() {
     [[ "$beta_flag" == "active" ]]
 }
 
+# ── Recover broken Monitor unit before anything else ──────
+#
+# v1.2.2 changed the AppImage layout: the binary is extracted to
+# /usr/local/share/proxmenux/monitor-app/ and the systemd unit
+# executes AppRun out of that directory. The install_proxmenux.sh
+# update path before v1.2.2.1 only rewrote the unit on fresh installs,
+# so every user updating from v1.2.1 stable inherited the old unit
+# whose ExecStart still pointed at the bare AppImage. On PVE 9.x /
+# Debian 13 that bare AppImage hits status=203/EXEC immediately and
+# the service enters the activating loop reported in #222.
+#
+# Re-running the new installer fixes it permanently, but the update
+# prompt below uses --defaultno so a user pressing Enter by reflex
+# stays broken. Patch the unit defensively at every menu launch: if
+# the bug's exact fingerprint is present (unit ExecStart matches the
+# bare AppImage path AND the extracted AppRun already exists) we
+# silently rewrite the unit and bounce the service. The check is a
+# no-op for healthy installs and for hosts that never installed the
+# Monitor at all, so it's safe to run unconditionally.
+auto_repair_monitor_unit() {
+    local unit_file="/etc/systemd/system/proxmenux-monitor.service"
+    local extracted_runtime="/usr/local/share/proxmenux/monitor-app"
+    local apprun="$extracted_runtime/AppRun"
+    local bare_appimage="/usr/local/share/proxmenux/ProxMenux-Monitor.AppImage"
+
+    [[ -f "$unit_file" && -x "$apprun" ]] || return 0
+    grep -q "^ExecStart=${bare_appimage}\$" "$unit_file" || return 0
+
+    local port working_dir
+    port=$(awk -F'"' '/^Environment="PORT=/ {print $2; exit}' "$unit_file" 2>/dev/null \
+        | sed 's/^PORT=//')
+    [[ -z "$port" ]] && port="8008"
+    working_dir=$(awk -F'=' '/^WorkingDirectory=/ {print $2; exit}' "$unit_file" 2>/dev/null)
+    [[ -z "$working_dir" ]] && working_dir="/usr/local/share/proxmenux"
+
+    cat > "$unit_file" <<EOF
+[Unit]
+Description=ProxMenux Monitor - Web Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=$working_dir
+ExecStart=$apprun
+Restart=on-failure
+RestartSec=10
+Environment="PORT=$port"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    systemctl daemon-reload >/dev/null 2>&1
+    systemctl restart proxmenux-monitor.service >/dev/null 2>&1
+    sleep 2
+
+    if systemctl is-active --quiet proxmenux-monitor.service 2>/dev/null; then
+        type msg_ok >/dev/null 2>&1 \
+            && msg_ok "$(translate 'ProxMenux Monitor unit repaired and restarted')" \
+            || echo "[ProxMenux] Monitor unit repaired and restarted"
+    fi
+}
+
 # ── Check for updates ──────────────────────────────────────
 check_updates() {
     if is_beta; then
@@ -127,5 +191,6 @@ main_menu() {
 
 load_language
 initialize_cache
+auto_repair_monitor_unit
 check_updates
 main_menu

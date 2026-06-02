@@ -5,6 +5,8 @@
 
 Parche puntual para [#222](https://github.com/MacRimi/ProxMenux/issues/222). Los usuarios que actualizaban desde una instalación v1.2.1.x estable a v1.2.2 se encontraban con un `proxmenux-monitor.service` que no arrancaba con `status=203/EXEC`. El layout de instalación de v1.2.2 extrae el AppImage en `/usr/local/share/proxmenux/monitor-app/` y ejecuta `AppRun` desde ese directorio — pero el path de update del installer reutilizaba la unit file existente y solo refrescaba la unit en instalación nueva, así que la unit heredada conservaba su `ExecStart=/usr/local/share/proxmenux/ProxMenux-Monitor.AppImage` antiguo. Ese path era un AppImage montado por FUSE, algo que v1.2.2 abandonó deliberadamente para eliminar un falso positivo de la regla 521 de Wazuh sobre `/tmp/.mount_*`; bajo PVE 9.x / Debian 13 ejecutar el AppImage directamente fallaba y el servicio entraba en bucle de activación. El installer ahora reescribe la unit para que apunte a `AppRun` en cada update — idempotente para instalaciones cuya unit ya es correcta, recuperando las que no lo son.
 
+El lanzador `menu` se auto-repara además al arrancar: si detecta la huella exacta del bug (la unit con `ExecStart` apuntando al AppImage directo Y el `AppRun` extraído ya presente en disco) reescribe la unit y reinicia el servicio antes de mostrar el aviso de actualización, de modo que un usuario que descarte el update por reflejo termine con el Monitor funcionando.
+
 Para recuperar una instalación v1.2.2 ya rota sin esperar al aviso de actualización, ejecuta el installer manualmente una vez: `bash -c "$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)"`.
 
 ---
