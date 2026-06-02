@@ -396,9 +396,15 @@ class GotifyChannel(NotificationChannel):
 
 class DiscordChannel(NotificationChannel):
     """Discord webhook channel with color-coded embeds."""
-    
-    MAX_EMBED_DESC = 2048
-    
+
+    # Discord webhook hard limits (https://discord.com/developers/docs/resources/channel#embed-object-embed-limits)
+    MAX_EMBED_DESC = 4096       # per embed description
+    MAX_EMBED_TITLE = 256       # per embed title
+    MAX_FIELD_VALUE = 1024      # per field value
+    MAX_FIELDS = 25             # per embed
+    MAX_EMBED_TOTAL = 6000      # title + desc + every field name+value, per embed
+    MAX_EMBEDS_PER_MSG = 10     # per webhook POST
+
     SEVERITY_COLORS = {
         'CRITICAL': 0xED4245,   # red
         'WARNING':  0xFEE75C,   # yellow
@@ -406,7 +412,7 @@ class DiscordChannel(NotificationChannel):
         'OK':       0x57F287,   # green
         'UNKNOWN':  0x99AAB5,   # grey
     }
-    
+
     def __init__(self, webhook_url: str):
         super().__init__()
         self.webhook_url = webhook_url.strip()
@@ -436,43 +442,125 @@ class DiscordChannel(NotificationChannel):
             return False, 'Invalid Discord webhook URL (path must be /api/webhooks/...)'
         return True, ''
     
+    @classmethod
+    def _split_description(cls, text: str) -> List[str]:
+        """Split `text` into chunks ≤ MAX_EMBED_DESC, preferring line breaks.
+
+        Mass-backup digests issued by /api/notifications used to be capped
+        with `message[:2048]`, which silently dropped everything past the
+        cut and lost backup results for the trailing VMs/CTs (#220). The
+        new flow builds one embed per chunk so Discord renders the whole
+        digest. Splitting at "\n" keeps each entry intact; if a single
+        line still exceeds the limit (rare — only if a log line is
+        pathologically long) we fall back to a hard slice.
+        """
+        if len(text) <= cls.MAX_EMBED_DESC:
+            return [text]
+        chunks: List[str] = []
+        current = ''
+        for line in text.splitlines(keepends=True):
+            if len(line) > cls.MAX_EMBED_DESC:
+                if current:
+                    chunks.append(current)
+                    current = ''
+                # hard-slice the oversized line
+                for i in range(0, len(line), cls.MAX_EMBED_DESC):
+                    chunks.append(line[i:i + cls.MAX_EMBED_DESC])
+                continue
+            if len(current) + len(line) > cls.MAX_EMBED_DESC:
+                chunks.append(current)
+                current = line
+            else:
+                current += line
+        if current:
+            chunks.append(current)
+        return chunks
+
     def send(self, title: str, message: str, severity: str = 'INFO',
              data: Optional[Dict] = None) -> Dict[str, Any]:
         color = self.SEVERITY_COLORS.get(severity, 0x5865F2)
-        
-        desc = message[:self.MAX_EMBED_DESC] if len(message) > self.MAX_EMBED_DESC else message
-        
-        embed = {
-            'title': title,
-            'description': desc,
-            'color': color,
-            'footer': {'text': 'ProxMenux Monitor'},
-            'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-        }
-        
-        # Use structured fields from render_template if available
+
+        title = (title or '')[:self.MAX_EMBED_TITLE]
+        chunks = self._split_description(message or '')
+        timestamp = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+
+        # Build fields once; they only attach to the FIRST embed because
+        # Discord's 6000-char-per-embed budget makes repeating them on
+        # every chunk wasteful, and visually the metadata only needs to
+        # appear once at the head of the message.
+        fields: List[Dict[str, Any]] = []
         rendered_fields = (data or {}).get('_rendered_fields', [])
         if rendered_fields:
-            embed['fields'] = [
-                {'name': name, 'value': val[:1024], 'inline': True}
-                for name, val in rendered_fields[:25]  # Discord limit: 25 fields
+            fields = [
+                {'name': name, 'value': val[:self.MAX_FIELD_VALUE], 'inline': True}
+                for name, val in rendered_fields[:self.MAX_FIELDS]
             ]
         elif data:
-            fields = []
             if data.get('category'):
                 fields.append({'name': 'Category', 'value': data['category'], 'inline': True})
             if data.get('hostname'):
                 fields.append({'name': 'Host', 'value': data['hostname'], 'inline': True})
             if data.get('severity'):
                 fields.append({'name': 'Severity', 'value': data['severity'], 'inline': True})
-            if fields:
-                embed['fields'] = fields
-        
-        result = self._send_with_retry(
-            lambda: self._post_webhook(embed)
-        )
-        result['channel'] = 'discord'
-        return result
+
+        embeds: List[Dict[str, Any]] = []
+        for idx, chunk in enumerate(chunks):
+            embed: Dict[str, Any] = {
+                'description': chunk,
+                'color': color,
+            }
+            if idx == 0:
+                # Lead embed carries identity (title + fields).
+                embed['title'] = title
+                if fields:
+                    embed['fields'] = fields
+            if idx == len(chunks) - 1:
+                # Footer/timestamp on the trailing embed so the reader
+                # sees them at the bottom of the whole digest.
+                embed['footer'] = {'text': 'ProxMenux Monitor'}
+                embed['timestamp'] = timestamp
+            embeds.append(embed)
+
+        # Drop any embed whose lead-section (title + fields) plus
+        # description would exceed Discord's 6000-char-per-embed cap.
+        # This only kicks in when many large fields combine with a
+        # chunk that is already near the 4096 description limit.
+        embeds = [self._trim_embed_to_budget(e) for e in embeds]
+
+        # POST one or more webhook messages, batching up to
+        # MAX_EMBEDS_PER_MSG embeds per request.
+        last_result: Dict[str, Any] = {'success': True, 'status': 0, 'response': ''}
+        for batch_start in range(0, len(embeds), self.MAX_EMBEDS_PER_MSG):
+            batch = embeds[batch_start:batch_start + self.MAX_EMBEDS_PER_MSG]
+            last_result = self._send_with_retry(
+                lambda b=batch: self._post_webhook_batch(b)
+            )
+            if not last_result.get('success'):
+                last_result['channel'] = 'discord'
+                return last_result
+            # Polite gap between sequential messages so a burst of
+            # batches doesn't trip Discord's webhook rate limit (5/2s).
+            if batch_start + self.MAX_EMBEDS_PER_MSG < len(embeds):
+                time.sleep(0.4)
+
+        last_result['channel'] = 'discord'
+        return last_result
+
+    @classmethod
+    def _trim_embed_to_budget(cls, embed: Dict[str, Any]) -> Dict[str, Any]:
+        """Ensure title + description + fields fit MAX_EMBED_TOTAL."""
+        used = len(embed.get('title', '')) + len(embed.get('description', ''))
+        for f in embed.get('fields', []):
+            used += len(f.get('name', '')) + len(f.get('value', ''))
+        if used <= cls.MAX_EMBED_TOTAL:
+            return embed
+        # Easiest correct shrink: clip the description. Fields are
+        # individually already capped at 1024 and there are at most 25;
+        # the description is where the bulk lives.
+        overflow = used - cls.MAX_EMBED_TOTAL
+        desc = embed.get('description', '')
+        embed['description'] = desc[:max(0, len(desc) - overflow - 1)] + '…'
+        return embed
     
     def test(self) -> Tuple[bool, str]:
         valid, err = self.validate_config()
@@ -487,11 +575,14 @@ class DiscordChannel(NotificationChannel):
         return result['success'], result.get('error', '')
     
     def _post_webhook(self, embed: Dict) -> Tuple[int, str]:
+        return self._post_webhook_batch([embed])
+
+    def _post_webhook_batch(self, embeds: List[Dict]) -> Tuple[int, str]:
         payload = json.dumps({
             'username': 'ProxMenux',
-            'embeds': [embed]
+            'embeds': embeds,
         }).encode('utf-8')
-        
+
         return self._http_request(
             self.webhook_url, payload, {'Content-Type': 'application/json'}
         )
