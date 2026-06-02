@@ -39,7 +39,6 @@ while true; do
             "2"         "$(translate "Add Samba share  as Proxmox Storage")" \
             "3"         "$(translate "Add iSCSI Target as Proxmox Storage")" \
             "4"         "$(translate "Add Local Disk   as Proxmox Storage")" \
-            ""          "" \
             "5"         "$(translate "Create Shared Directory on Host")" \
             ""          "" \
             ""  "\Z4──────────────────────── LXC ─────────────────────────\Zn" \
