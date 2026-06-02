@@ -347,6 +347,45 @@ select_filesystem() {
     return 0
 }
 
+# Aligns disk_host with nfs_host.sh / samba_host.sh: the user can pick
+# whether the disk shows up as a Proxmox storage (visible in Datacenter
+# → Storage and usable for VM disks, backups, ISOs…) or whether it's
+# only mounted on the host so LXCs can bind-mount it — or both at once.
+# Without this chooser the script always registered as Proxmox storage,
+# which forced users who only wanted host-side LXC bind-mounts to walk
+# through the pvesm flow and then manually remove the storage entry.
+select_mount_method() {
+    MODE_PVESM=0
+    MODE_FSTAB=0
+
+    # ZFS only makes sense as a pvesm zfspool storage — there is no
+    # "fstab only" equivalent for a ZFS pool (it's imported, not
+    # fstab-mounted), so don't bother asking.
+    if [[ "${FILESYSTEM:-}" == "zfs" ]]; then
+        MODE_PVESM=1
+        return 0
+    fi
+
+    local result
+    result=$(dialog --backtitle "ProxMenux" \
+        --title "$(translate "Mount Method")" \
+        --checklist "\n$(translate "Choose how to make the disk available on this host. Mark one or both options:")\n\n$(translate "• Proxmox storage (pvesm): visible in Datacenter > Storage, usable for VMs/backups/ISOs")\n$(translate "• Host fstab: mounted at host path only, for LXC bind-mounts (NOT visible as Proxmox storage)")\n$(translate "• Both: registers as Proxmox storage AND keeps the mount available for LXC bind-mounts")" 20 84 2 \
+        "pvesm" "$(translate "As Proxmox storage")"     off \
+        "fstab" "$(translate "As host fstab mount only")" on \
+        3>&1 1>&2 2>&3)
+    [[ $? -ne 0 ]] && return 1
+
+    if echo "$result" | grep -qw "pvesm"; then MODE_PVESM=1; fi
+    if echo "$result" | grep -qw "fstab"; then MODE_FSTAB=1; fi
+
+    if [[ "$MODE_PVESM" -eq 0 && "$MODE_FSTAB" -eq 0 ]]; then
+        dialog --backtitle "ProxMenux" --title "$(translate "No Method Selected")" \
+            --msgbox "$(translate "You must select at least one mount method to continue.")" 8 60
+        return 1
+    fi
+    return 0
+}
+
 # ==========================================================
 # STORAGE CONFIGURATION
 # ==========================================================
@@ -355,15 +394,28 @@ configure_disk_storage() {
     local disk_name
     disk_name=$(basename "$SELECTED_DISK")
 
-    STORAGE_ID=$(dialog --backtitle "ProxMenux" --title "$(translate "Storage ID")" \
-        --inputbox "$(translate "Enter storage ID for Proxmox:")" \
-        10 60 "disk-${disk_name}" 3>&1 1>&2 2>&3)
+    # The first prompt collects an identifier used both as the Proxmox
+    # storage ID (when MODE_PVESM=1) and as the /mnt/<…> directory name
+    # in either mode. The wording is adjusted so a user in fstab-only
+    # mode isn't asked for a "Storage ID" they'll never see in Proxmox.
+    local id_title id_prompt
+    if [[ "$MODE_PVESM" -eq 1 ]]; then
+        id_title="$(translate "Storage ID")"
+        id_prompt="$(translate "Enter storage ID for Proxmox:")"
+    else
+        id_title="$(translate "Mount Name")"
+        id_prompt="$(translate "Enter a name for the mount point (used as /mnt/<name>):")"
+    fi
+
+    STORAGE_ID=$(dialog --backtitle "ProxMenux" --title "$id_title" \
+        --inputbox "$id_prompt" \
+        10 70 "disk-${disk_name}" 3>&1 1>&2 2>&3)
     [[ $? -ne 0 ]] && return 1
     [[ -z "$STORAGE_ID" ]] && STORAGE_ID="disk-${disk_name}"
 
     if [[ ! "$STORAGE_ID" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]]; then
         dialog --backtitle "ProxMenux" --title "$(translate "Invalid ID")" \
-            --msgbox "$(translate "Invalid storage ID. Use only letters, numbers, hyphens and underscores.")" 8 74
+            --msgbox "$(translate "Invalid name. Use only letters, numbers, hyphens and underscores.")" 8 74
         return 1
     fi
     if [[ "${FILESYSTEM:-}" == "zfs" && ! "$STORAGE_ID" =~ ^[a-zA-Z][a-zA-Z0-9_.:-]*$ ]]; then
@@ -377,6 +429,14 @@ configure_disk_storage() {
         --inputbox "$(translate "Enter mount path on host:")" \
         10 60 "$MOUNT_PATH" 3>&1 1>&2 2>&3)
     [[ $? -ne 0 || -z "$MOUNT_PATH" ]] && return 1
+
+    # Content types are a Proxmox storage concept — skip the prompt
+    # entirely in fstab-only mode and leave MOUNT_CONTENT empty so
+    # add_proxmox_dir_storage is never invoked downstream.
+    if [[ "$MODE_PVESM" -ne 1 ]]; then
+        MOUNT_CONTENT=""
+        return 0
+    fi
 
     CONTENT_TYPE=$(dialog --backtitle "ProxMenux" --title "$(translate "Content Types")" \
         --menu "$(translate "Select content types for this storage:")" 16 70 5 \
@@ -421,7 +481,13 @@ format_and_mount_disk() {
         return 1
     fi
     show_proxmenux_logo
-    msg_title "$(translate "Add Local Disk as Proxmox Storage")"
+    if [[ "$MODE_PVESM" -eq 1 && "$MODE_FSTAB" -eq 1 ]]; then
+        msg_title "$(translate "Add Local Disk (Proxmox storage + host mount)")"
+    elif [[ "$MODE_PVESM" -eq 1 ]]; then
+        msg_title "$(translate "Add Local Disk as Proxmox Storage")"
+    else
+        msg_title "$(translate "Add Local Disk as Host Mount (for LXC bind-mounts)")"
+    fi
     local _disk_model _disk_size _disk_label
     IFS=$'\t' read -r _disk_model _disk_size < <(get_disk_info "$disk")
     _disk_label="$disk"
@@ -430,8 +496,13 @@ format_and_mount_disk() {
     msg_ok "$(translate "Action:") $DISK_ACTION"
     [[ "$DISK_ACTION" == "format" ]] && msg_ok "$(translate "Filesystem:") $FILESYSTEM"
     msg_ok "$(translate "Mount path:") $MOUNT_PATH"
-    msg_ok "$(translate "Storage ID:") $STORAGE_ID"
-    msg_ok "$(translate "Content:") $MOUNT_CONTENT"
+    if [[ "$MODE_PVESM" -eq 1 ]]; then
+        msg_ok "$(translate "Storage ID:") $STORAGE_ID"
+        msg_ok "$(translate "Content:") $MOUNT_CONTENT"
+    else
+        msg_ok "$(translate "Mount Name:") $STORAGE_ID"
+        msg_ok "$(translate "Method:") $(translate "host fstab only (not registered as Proxmox storage)")"
+    fi
     msg_info "$(translate "Wiping existing partition table...")"
     doh_wipe_disk "$disk"
     msg_ok "$(translate "Partition table wiped")"
@@ -670,6 +741,12 @@ add_disk_to_proxmox() {
         fi
     fi
 
+    # Step 3.5: Choose how the disk is exposed to Proxmox / the host.
+    # Sets MODE_PVESM and MODE_FSTAB. ZFS is forced to MODE_PVESM=1
+    # inside the helper because a ZFS pool can't be expressed as a
+    # plain fstab mount.
+    select_mount_method || return
+
     # Step 4: Configure storage options
     configure_disk_storage || return
 
@@ -719,8 +796,14 @@ add_disk_to_proxmox() {
             ;;
     esac
 
-    # Step 6: Register in Proxmox
-    add_proxmox_dir_storage "$STORAGE_ID" "$MOUNT_PATH" "$MOUNT_CONTENT"
+    # Step 6: Register in Proxmox (only if the user opted in)
+    if [[ "$MODE_PVESM" -eq 1 ]]; then
+        add_proxmox_dir_storage "$STORAGE_ID" "$MOUNT_PATH" "$MOUNT_CONTENT"
+    else
+        echo ""
+        msg_ok "$(translate "Disk mounted at") $MOUNT_PATH"
+        msg_info2 "$(translate "Not registered as Proxmox storage — use 'LXC Mount Manager' to bind-mount") $MOUNT_PATH $(translate "into an LXC.")"
+    fi
 
     echo ""
     msg_success "$(translate "Press Enter to continue...")"
