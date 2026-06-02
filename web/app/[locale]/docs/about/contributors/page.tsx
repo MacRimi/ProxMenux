@@ -25,6 +25,7 @@ interface Contributor {
   roleKey: "testing" | "testingReviewer"
   avatar: string
   youtubeUrl?: string
+  githubUrl?: string
 }
 
 const contributors: Contributor[] = [
@@ -48,6 +49,7 @@ const contributors: Contributor[] = [
     roleKey: "testingReviewer",
     avatar: "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/avatars/jonatancastro.png",
     youtubeUrl: "https://www.youtube.com/@JonatanCastro",
+    githubUrl: "https://github.com/jcastro",
   },
   {
     name: "Kamunhas",
@@ -152,7 +154,22 @@ export default async function ContributorsPage({ params }: { params: Promise<{ l
                 <FlaskRound className="h-4 w-4 text-white" aria-hidden />
               </div>
             </div>
-            <h3 className="text-base font-semibold text-gray-900 mt-2 mb-0">{c.name}</h3>
+            <h3 className="text-base font-semibold text-gray-900 mt-2 mb-0">
+              {c.githubUrl ? (
+                <a
+                  href={c.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 hover:text-blue-700 hover:underline"
+                  title={`${c.name} on GitHub`}
+                >
+                  {c.name}
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              ) : (
+                c.name
+              )}
+            </h3>
             <p className="text-xs text-gray-600 mt-0.5">{t(`testers.roles.${c.roleKey}`)}</p>
             {c.youtubeUrl && (
               <a

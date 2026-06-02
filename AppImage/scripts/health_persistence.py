@@ -673,11 +673,21 @@ class HealthPersistence:
             cursor = conn.cursor()
             now = datetime.now().isoformat()
 
+            # Persist `reason` into the dedicated resolution_reason column
+            # (and tag resolution_type='auto' so the audit log can tell
+            # auto-resolves apart from explicit admin clears). Previously
+            # this UPDATE only touched resolved_at, so the `reason` arg
+            # every caller passes — including the new
+            # `_reconcile_stale_disk_warnings` pass — was silently dropped
+            # and the resolution_reason column stayed NULL for every
+            # auto-resolved error.
             cursor.execute('''
                 UPDATE errors
-                SET resolved_at = ?
+                SET resolved_at = ?,
+                    resolution_type = COALESCE(resolution_type, 'auto'),
+                    resolution_reason = ?
                 WHERE error_key = ? AND resolved_at IS NULL
-            ''', (now, error_key))
+            ''', (now, reason, error_key))
 
             if cursor.rowcount > 0:
                 self._record_event(cursor, 'resolved', error_key, {'reason': reason})
@@ -2582,12 +2592,34 @@ class HealthPersistence:
                 if serial not in serial_to_device:
                     serial_to_device[serial] = device_name
             
+            # Resolve which serial currently OWNS each device_name. The
+            # kernel reuses NVMe / SD device names across reboots
+            # (e.g. the disk that was nvme4n1 with 5 NVMes plugged in
+            # comes back as nvme0n1 once 4 are removed), and
+            # disk_registry keeps a row for every (device_name, serial)
+            # combination it has ever seen. Without this check we would
+            # mirror an observation's count onto its serial's
+            # "most-recent" device_name even when that name is now in
+            # use by a DIFFERENT serial — surfacing a "1 obs." badge on
+            # a disk that has no observations of its own and a clean
+            # modal, since the modal correctly scopes by current
+            # (device_name, serial) pair.
+            cursor.execute('''
+                SELECT device_name, serial FROM disk_registry
+                WHERE device_name IS NOT NULL AND device_name != ''
+                ORDER BY last_seen DESC
+            ''')
+            current_owner = {}
+            for device_name, dev_serial in cursor.fetchall():
+                if device_name not in current_owner:
+                    current_owner[device_name] = dev_serial
+
             # Build result
             result = {}
             for serial, cnt in serial_counts.items():
                 result[f'serial:{serial}'] = cnt
                 device_name = serial_to_device.get(serial)
-                if device_name:
+                if device_name and current_owner.get(device_name) == serial:
                     result[device_name] = max(result.get(device_name, 0), cnt)
             
             # For disks WITHOUT serial: group by device_name

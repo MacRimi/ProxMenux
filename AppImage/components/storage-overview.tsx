@@ -520,31 +520,34 @@ export function StorageOverview() {
 
     storageData.disks.forEach((disk) => {
       if (disk.temperature === 0) {
-        // Si no hay temperatura, considerarlo normal
+        // No temperature reading available — count as normal so a
+        // missing sensor doesn't inflate the warning count.
         normal++
         return
       }
 
+      // Reuse the exact threshold lookup that the per-disk badge
+      // (`getTempColor`) uses, so the green / amber / red colour in
+      // the disk card and the "X normal, Y warning, Z critical" tally
+      // at the top of the page always agree.
+      //
+      // Previously this breakdown carried its own hardcoded ladder
+      // (HDD ≤45 normal, ≤55 warning, …) which was far stricter than
+      // the configurable defaults from `useDiskTempThresholds`
+      // (HDD warn 60, hot 65). A disk at 48 °C therefore showed a
+      // green badge but was counted as "warning" in the summary —
+      // exactly the case the user reported. Driving both from the
+      // same source (`dtThresholds`) means the user-tunable values
+      // under Settings → Health Monitor Thresholds → Disk temperature
+      // now apply to the breakdown as well, and the displayed colour
+      // is always the source of truth.
       const diskType = getDiskType(disk.name, disk.rotation_rate)
-
-      switch (diskType) {
-        case "NVMe":
-          if (disk.temperature <= 70) normal++
-          else if (disk.temperature <= 80) warning++
-          else critical++
-          break
-        case "SSD":
-          if (disk.temperature <= 59) normal++
-          else if (disk.temperature <= 70) warning++
-          else critical++
-          break
-        case "HDD":
-        default:
-          if (disk.temperature <= 45) normal++
-          else if (disk.temperature <= 55) warning++
-          else critical++
-          break
-      }
+      const cls: keyof DiskTempMap =
+        diskType === "NVMe" ? "NVMe" : diskType === "SSD" ? "SSD" : "HDD"
+      const t = dtThresholds[cls]
+      if (disk.temperature >= t.hot) critical++
+      else if (disk.temperature >= t.warn) warning++
+      else normal++
     })
 
     return { normal, warning, critical }

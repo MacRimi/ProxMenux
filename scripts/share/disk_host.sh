@@ -347,6 +347,45 @@ select_filesystem() {
     return 0
 }
 
+# Aligns disk_host with nfs_host.sh / samba_host.sh: the user can pick
+# whether the disk shows up as a Proxmox storage (visible in Datacenter
+# → Storage and usable for VM disks, backups, ISOs…) or whether it's
+# only mounted on the host so LXCs can bind-mount it — or both at once.
+# Without this chooser the script always registered as Proxmox storage,
+# which forced users who only wanted host-side LXC bind-mounts to walk
+# through the pvesm flow and then manually remove the storage entry.
+select_mount_method() {
+    MODE_PVESM=0
+    MODE_FSTAB=0
+
+    # ZFS only makes sense as a pvesm zfspool storage — there is no
+    # "fstab only" equivalent for a ZFS pool (it's imported, not
+    # fstab-mounted), so don't bother asking.
+    if [[ "${FILESYSTEM:-}" == "zfs" ]]; then
+        MODE_PVESM=1
+        return 0
+    fi
+
+    local result
+    result=$(dialog --backtitle "ProxMenux" \
+        --title "$(translate "Mount Method")" \
+        --checklist "\n$(translate "Choose how to make the disk available on this host. Mark one or both options:")\n\n$(translate "• Proxmox storage (pvesm): visible in Datacenter > Storage, usable for VMs/backups/ISOs")\n$(translate "• Host fstab: mounted at host path only, for LXC bind-mounts (NOT visible as Proxmox storage)")\n$(translate "• Both: registers as Proxmox storage AND keeps the mount available for LXC bind-mounts")" 20 84 2 \
+        "pvesm" "$(translate "As Proxmox storage")"     off \
+        "fstab" "$(translate "As host fstab mount only")" on \
+        3>&1 1>&2 2>&3)
+    [[ $? -ne 0 ]] && return 1
+
+    if echo "$result" | grep -qw "pvesm"; then MODE_PVESM=1; fi
+    if echo "$result" | grep -qw "fstab"; then MODE_FSTAB=1; fi
+
+    if [[ "$MODE_PVESM" -eq 0 && "$MODE_FSTAB" -eq 0 ]]; then
+        dialog --backtitle "ProxMenux" --title "$(translate "No Method Selected")" \
+            --msgbox "$(translate "You must select at least one mount method to continue.")" 8 60
+        return 1
+    fi
+    return 0
+}
+
 # ==========================================================
 # STORAGE CONFIGURATION
 # ==========================================================
@@ -355,15 +394,28 @@ configure_disk_storage() {
     local disk_name
     disk_name=$(basename "$SELECTED_DISK")
 
-    STORAGE_ID=$(dialog --backtitle "ProxMenux" --title "$(translate "Storage ID")" \
-        --inputbox "$(translate "Enter storage ID for Proxmox:")" \
-        10 60 "disk-${disk_name}" 3>&1 1>&2 2>&3)
+    # The first prompt collects an identifier used both as the Proxmox
+    # storage ID (when MODE_PVESM=1) and as the /mnt/<…> directory name
+    # in either mode. The wording is adjusted so a user in fstab-only
+    # mode isn't asked for a "Storage ID" they'll never see in Proxmox.
+    local id_title id_prompt
+    if [[ "$MODE_PVESM" -eq 1 ]]; then
+        id_title="$(translate "Storage ID")"
+        id_prompt="$(translate "Enter storage ID for Proxmox:")"
+    else
+        id_title="$(translate "Mount Name")"
+        id_prompt="$(translate "Enter a name for the mount point (used as /mnt/<name>):")"
+    fi
+
+    STORAGE_ID=$(dialog --backtitle "ProxMenux" --title "$id_title" \
+        --inputbox "$id_prompt" \
+        10 70 "disk-${disk_name}" 3>&1 1>&2 2>&3)
     [[ $? -ne 0 ]] && return 1
     [[ -z "$STORAGE_ID" ]] && STORAGE_ID="disk-${disk_name}"
 
     if [[ ! "$STORAGE_ID" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]]; then
         dialog --backtitle "ProxMenux" --title "$(translate "Invalid ID")" \
-            --msgbox "$(translate "Invalid storage ID. Use only letters, numbers, hyphens and underscores.")" 8 74
+            --msgbox "$(translate "Invalid name. Use only letters, numbers, hyphens and underscores.")" 8 74
         return 1
     fi
     if [[ "${FILESYSTEM:-}" == "zfs" && ! "$STORAGE_ID" =~ ^[a-zA-Z][a-zA-Z0-9_.:-]*$ ]]; then
@@ -377,6 +429,14 @@ configure_disk_storage() {
         --inputbox "$(translate "Enter mount path on host:")" \
         10 60 "$MOUNT_PATH" 3>&1 1>&2 2>&3)
     [[ $? -ne 0 || -z "$MOUNT_PATH" ]] && return 1
+
+    # Content types are a Proxmox storage concept — skip the prompt
+    # entirely in fstab-only mode and leave MOUNT_CONTENT empty so
+    # add_proxmox_dir_storage is never invoked downstream.
+    if [[ "$MODE_PVESM" -ne 1 ]]; then
+        MOUNT_CONTENT=""
+        return 0
+    fi
 
     CONTENT_TYPE=$(dialog --backtitle "ProxMenux" --title "$(translate "Content Types")" \
         --menu "$(translate "Select content types for this storage:")" 16 70 5 \
@@ -421,7 +481,13 @@ format_and_mount_disk() {
         return 1
     fi
     show_proxmenux_logo
-    msg_title "$(translate "Add Local Disk as Proxmox Storage")"
+    if [[ "$MODE_PVESM" -eq 1 && "$MODE_FSTAB" -eq 1 ]]; then
+        msg_title "$(translate "Add Local Disk (Proxmox storage + host mount)")"
+    elif [[ "$MODE_PVESM" -eq 1 ]]; then
+        msg_title "$(translate "Add Local Disk as Proxmox Storage")"
+    else
+        msg_title "$(translate "Add Local Disk as Host Mount (for LXC bind-mounts)")"
+    fi
     local _disk_model _disk_size _disk_label
     IFS=$'\t' read -r _disk_model _disk_size < <(get_disk_info "$disk")
     _disk_label="$disk"
@@ -430,8 +496,13 @@ format_and_mount_disk() {
     msg_ok "$(translate "Action:") $DISK_ACTION"
     [[ "$DISK_ACTION" == "format" ]] && msg_ok "$(translate "Filesystem:") $FILESYSTEM"
     msg_ok "$(translate "Mount path:") $MOUNT_PATH"
-    msg_ok "$(translate "Storage ID:") $STORAGE_ID"
-    msg_ok "$(translate "Content:") $MOUNT_CONTENT"
+    if [[ "$MODE_PVESM" -eq 1 ]]; then
+        msg_ok "$(translate "Storage ID:") $STORAGE_ID"
+        msg_ok "$(translate "Content:") $MOUNT_CONTENT"
+    else
+        msg_ok "$(translate "Mount Name:") $STORAGE_ID"
+        msg_ok "$(translate "Method:") $(translate "host fstab only (not registered as Proxmox storage)")"
+    fi
     msg_info "$(translate "Wiping existing partition table...")"
     doh_wipe_disk "$disk"
     msg_ok "$(translate "Partition table wiped")"
@@ -513,8 +584,36 @@ mount_disk_permanently() {
         msg_ok "$(translate "Added to /etc/fstab using device path")"
     fi
 
+    _apply_lxc_bind_mount_perms "$mount_path"
+
     systemctl daemon-reload 2>/dev/null || true
     return 0
+}
+
+# When the user opted into the host-fstab mount method, the whole
+# point of the mount is to bind-mount it into LXC containers. A fresh
+# ext4/xfs/btrfs filesystem (or a freshly-created /mnt/<id> directory)
+# is owned by root:root with mode 0755 — which an unprivileged LXC
+# sees as "others" (its root uid 0 maps to host uid 100000) and is
+# therefore read-only. lxc-mount-manager_minimal.sh offers the same
+# chmod o+rwx + default-ACL fix when the user adds the bind-mount
+# through that script, but most users don't realise they need to do
+# both steps. Apply the fix here so that "fstab only" really does
+# leave a directory ready to bind-mount from an unprivileged CT.
+# Privileged containers don't need this (root inside = root on host)
+# but the change is harmless: existing owners keep their access.
+_apply_lxc_bind_mount_perms() {
+    local mount_path="$1"
+    [[ "${MODE_FSTAB:-0}" -eq 1 ]] || return 0
+    [[ -d "$mount_path" ]] || return 0
+
+    msg_info "$(translate "Applying host permissions for unprivileged LXC bind-mounts...")"
+    chmod o+rwx "$mount_path" 2>/dev/null || true
+    if command -v setfacl >/dev/null 2>&1; then
+        setfacl -m o::rwx     "$mount_path" 2>/dev/null || true
+        setfacl -m d:o::rwx   "$mount_path" 2>/dev/null || true
+    fi
+    msg_ok "$(translate "Host permissions applied (o+rwx + default ACL) — unprivileged LXCs can read/write through bind-mounts")"
 }
 
 mount_existing_disk() {
@@ -529,6 +628,8 @@ mount_existing_disk() {
         return 1
     fi
 
+    show_proxmenux_logo
+    msg_title "$(translate "Add Local Disk as Proxmox Storage")"
     msg_info "$(translate "Creating mount point...")"
     mkdir -p "$mount_path"
     msg_ok "$(translate "Mount point created")"
@@ -549,6 +650,8 @@ mount_existing_disk() {
         echo "UUID=$disk_uuid  $mount_path  $existing_fs  defaults,nofail  0  2" >> /etc/fstab
         msg_ok "$(translate "Added to /etc/fstab")"
     fi
+
+    _apply_lxc_bind_mount_perms "$mount_path"
 
     DISK_PARTITION="$disk"
     systemctl daemon-reload 2>/dev/null || true
@@ -670,6 +773,12 @@ add_disk_to_proxmox() {
         fi
     fi
 
+    # Step 3.5: Choose how the disk is exposed to Proxmox / the host.
+    # Sets MODE_PVESM and MODE_FSTAB. ZFS is forced to MODE_PVESM=1
+    # inside the helper because a ZFS pool can't be expressed as a
+    # plain fstab mount.
+    select_mount_method || return
+
     # Step 4: Configure storage options
     configure_disk_storage || return
 
@@ -719,8 +828,14 @@ add_disk_to_proxmox() {
             ;;
     esac
 
-    # Step 6: Register in Proxmox
-    add_proxmox_dir_storage "$STORAGE_ID" "$MOUNT_PATH" "$MOUNT_CONTENT"
+    # Step 6: Register in Proxmox (only if the user opted in)
+    if [[ "$MODE_PVESM" -eq 1 ]]; then
+        add_proxmox_dir_storage "$STORAGE_ID" "$MOUNT_PATH" "$MOUNT_CONTENT"
+    else
+        echo ""
+        msg_ok "$(translate "Disk mounted at") $MOUNT_PATH"
+        msg_info2 "$(translate "Not registered as Proxmox storage — use 'LXC Mount Manager' to bind-mount") $MOUNT_PATH $(translate "into an LXC.")"
+    fi
 
     echo ""
     msg_success "$(translate "Press Enter to continue...")"
@@ -729,40 +844,89 @@ add_disk_to_proxmox() {
 
 view_disk_storages() {
     show_proxmenux_logo
-    msg_title "$(translate "Local Disk Storages in Proxmox")"
+    msg_title "$(translate "Local Disk Storages")"
 
     echo "=================================================="
     echo ""
 
-    if ! command -v pvesm >/dev/null 2>&1; then
-        msg_error "$(translate "pvesm not found.")"
+    # ── Source 1: Proxmox-registered storages (pvesm dir / zfspool) ──
+    # Same discovery as before — only user-created ones are surfaced;
+    # `_is_user_disk_storage` keeps `local`, `local-lvm` and the
+    # auto-generated `local-zfs` (rpool/data) out of the list.
+    local pvesm_paths=()
+    local pvesm_lines=""
+    if command -v pvesm >/dev/null 2>&1; then
+        local DIR_STORAGES
+        DIR_STORAGES=$(pvesm status 2>/dev/null | awk '$2 == "dir" || $2 == "zfspool" {print $1, $2, $3}')
+        if [[ -n "$DIR_STORAGES" ]]; then
+            while IFS=" " read -r s_id s_type s_status; do
+                [[ -z "$s_id" ]] && continue
+                _is_user_disk_storage "$s_id" "$s_type" || continue
+                local path
+                path=$(get_storage_config "$s_id" | awk '$1 == "path" {print $2}')
+                [[ -n "$path" ]] && pvesm_paths+=("$path")
+                pvesm_lines+="$s_id $s_type $s_status"$'\n'
+            done <<< "$DIR_STORAGES"
+        fi
+    fi
+
+    # ── Source 2: fstab /mnt/ entries that are LOCAL DISKS not pvesm-managed ──
+    # The new fstab-only mount method introduced for disk_host (matching
+    # nfs_host / samba_host) doesn't go through pvesm, so a user who
+    # picked "fstab only" needs to see the disk here too. Discovery
+    # uses the same criterion remove_disk_storage already applies:
+    # an /etc/fstab line whose mountpoint lives under /mnt/ and isn't
+    # one of the paths a registered pvesm storage owns.
+    #
+    # Network filesystems (cifs/smbfs/nfs/sshfs) belong to the
+    # samba_host / nfs_host scripts — listing them here would let the
+    # user accidentally remove a Samba/NFS mount from the "disk" menu.
+    # Pseudo filesystems are also skipped, and a final block-device
+    # check excludes anything whose backing source isn't a real disk.
+    local fstab_lines=""
+    while IFS= read -r line; do
+        [[ "$line" =~ ^# || -z "$line" ]] && continue
+        local fs mp fstype rest
+        read -r fs mp fstype rest <<< "$line"
+        [[ "$mp" == /mnt/* ]] || continue
+        case "$fstype" in
+            proc|sysfs|tmpfs|devtmpfs|none) continue ;;
+            cifs|smbfs|nfs|nfs4|nfsv4) continue ;;
+            fuse.sshfs|sshfs|fuse) continue ;;
+        esac
+        local resolved="$fs"
+        [[ "$fs" == UUID=* ]] && resolved=$(blkid -U "${fs#UUID=}" 2>/dev/null || echo "$fs")
+        [[ "$fs" == LABEL=* ]] && resolved=$(blkid -L "${fs#LABEL=}" 2>/dev/null || echo "$fs")
+        # Skip anything whose source isn't a block device. That catches
+        # bind-mounts (which use a directory as source) and any oddball
+        # network-style entry that slips past the fstype filter above.
+        [[ -b "$resolved" ]] || continue
+        local covered=false
+        local p
+        for p in "${pvesm_paths[@]}"; do
+            [[ "$p" == "$mp" ]] && covered=true && break
+        done
+        $covered && continue
+        fstab_lines+="$fs|$mp|$fstype"$'\n'
+    done < /etc/fstab
+
+    # ── Empty-state ──
+    if [[ -z "$pvesm_lines" && -z "$fstab_lines" ]]; then
+        msg_warn "$(translate "No local disk storage configured.")"
+        echo ""
+        msg_info2 "$(translate "Use option 1 to add a local disk (as Proxmox storage and/or as a host mount).")"
         echo ""
         msg_success "$(translate "Press Enter to continue...")"
         read -r
         return
     fi
 
-    # Show local storages managed by this menu (Directory + ZFS Pool), excluding system ones
-    DIR_STORAGES=$(pvesm status 2>/dev/null | awk '$2 == "dir" || $2 == "zfspool" {print $1, $2, $3}')
-    local user_storage_found=false
-    if [[ -n "$DIR_STORAGES" ]]; then
-        while IFS=" " read -r s_id s_type _; do
-            [[ -z "$s_id" ]] && continue
-            _is_user_disk_storage "$s_id" "$s_type" || continue
-            user_storage_found=true
-            break
-        done <<< "$DIR_STORAGES"
-    fi
-    if [[ "$user_storage_found" == "false" ]]; then
-        msg_warn "$(translate "No local storage configured in Proxmox.")"
-        echo ""
-        msg_info2 "$(translate "Use option 1 to add a local disk as Proxmox storage.")"
-    else
-        echo -e "${BOLD}$(translate "Local Storages:")${CL}"
+    # ── Render: pvesm-registered first, then fstab-only ──
+    if [[ -n "$pvesm_lines" ]]; then
+        echo -e "${BOLD}$(translate "Proxmox storages:")${CL}"
         echo ""
         while IFS=" " read -r storage_id storage_type storage_status; do
             [[ -z "$storage_id" ]] && continue
-            _is_user_disk_storage "$storage_id" "$storage_type" || continue
             local storage_info path content pool
             storage_info=$(get_storage_config "$storage_id")
             path=$(echo "$storage_info" | awk '$1 == "path" {print $2}')
@@ -773,7 +937,6 @@ view_disk_storages() {
             if [[ -n "$path" ]]; then
                 disk_device=$(findmnt -n -o SOURCE "$path" 2>/dev/null || true)
             fi
-
             local disk_size=""
             if [[ -n "$disk_device" ]]; then
                 disk_size=$(lsblk -ndo SIZE "$disk_device" 2>/dev/null || true)
@@ -781,7 +944,7 @@ view_disk_storages() {
 
             echo -e "${TAB}${BOLD}$storage_id${CL}"
             echo -e "${TAB}  ${BGN}$(translate "Type:")${CL} ${BL}${storage_type:-unknown}${CL}"
-            echo -e "${TAB}  ${BGN}$(translate "Path:")${CL} ${BL}$path${CL}"
+            [[ -n "$path" ]] && echo -e "${TAB}  ${BGN}$(translate "Path:")${CL} ${BL}$path${CL}"
             [[ -n "$pool" ]] && echo -e "${TAB}  ${BGN}$(translate "Pool:")${CL} ${BL}$pool${CL}"
             [[ -n "$disk_device" ]] && echo -e "${TAB}  ${BGN}$(translate "Device:")${CL} ${BL}$disk_device${CL}"
             [[ -n "$disk_size" ]] && echo -e "${TAB}  ${BGN}$(translate "Size:")${CL} ${BL}$disk_size${CL}"
@@ -792,10 +955,35 @@ view_disk_storages() {
                 echo -e "${TAB}  ${BGN}$(translate "Status:")${CL} ${RD}$storage_status${CL}"
             fi
             echo ""
-        done <<< "$DIR_STORAGES"
+        done <<< "$pvesm_lines"
     fi
 
-    echo ""
+    if [[ -n "$fstab_lines" ]]; then
+        echo -e "${BOLD}$(translate "Host fstab mounts (not registered as Proxmox storage):")${CL}"
+        echo ""
+        while IFS="|" read -r fs mp fstype; do
+            [[ -z "$mp" ]] && continue
+            local device="$fs"
+            [[ "$fs" == UUID=* ]] && device=$(blkid -U "${fs#UUID=}" 2>/dev/null || echo "$fs")
+            local disk_size=""
+            [[ -b "$device" ]] && disk_size=$(lsblk -ndo SIZE "$device" 2>/dev/null || true)
+            local mount_status
+            if findmnt -n "$mp" >/dev/null 2>&1; then
+                mount_status="${GN}$(translate "Mounted")${CL}"
+            else
+                mount_status="${RD}$(translate "Not mounted")${CL}"
+            fi
+
+            echo -e "${TAB}${BOLD}$mp${CL}"
+            echo -e "${TAB}  ${BGN}$(translate "Type:")${CL} ${BL}${fstype:-unknown} (fstab only)${CL}"
+            echo -e "${TAB}  ${BGN}$(translate "Device:")${CL} ${BL}$device${CL}"
+            [[ -n "$disk_size" ]] && echo -e "${TAB}  ${BGN}$(translate "Size:")${CL} ${BL}$disk_size${CL}"
+            echo -e "${TAB}  ${BGN}$(translate "Status:")${CL} $mount_status"
+            echo -e "${TAB}  ${BGN}$(translate "Use:")${CL} ${BL}$(translate "available for LXC bind-mounts via 'LXC Mount Manager'")${CL}"
+            echo ""
+        done <<< "$fstab_lines"
+    fi
+
     msg_success "$(translate "Press Enter to continue...")"
     read -r
 }
@@ -984,20 +1172,32 @@ remove_disk_storage() {
         OPTIONS+=("pvesm:$storage_id" "$label")
     done <<< "$ALL_STORAGES"
 
-    # --- Source 2: fstab /mnt/ entries not already covered by pvesm ---
+    # --- Source 2: fstab /mnt/ entries that are LOCAL DISKS not in pvesm ---
+    # Network filesystems (cifs/nfs/sshfs) are handled by the samba_host
+    # and nfs_host scripts — surfacing them in this disk-only remove
+    # menu would let a user wipe a CIFS/NFS mount expecting it to
+    # belong to a local disk. Pseudo filesystems are skipped, and a
+    # block-device check on the resolved source filters out bind-mounts
+    # and anything else whose backing source isn't a real disk.
     while IFS= read -r line; do
         [[ "$line" =~ ^# || -z "$line" ]] && continue
         local fs mp fstype
         read -r fs mp fstype _ <<< "$line"
         [[ "$mp" == /mnt/* ]] || continue
-        [[ "$fstype" == "proc" || "$fstype" == "sysfs" || "$fstype" == "tmpfs" || "$fstype" == "devtmpfs" || "$fstype" == "none" ]] && continue
+        case "$fstype" in
+            proc|sysfs|tmpfs|devtmpfs|none) continue ;;
+            cifs|smbfs|nfs|nfs4|nfsv4) continue ;;
+            fuse.sshfs|sshfs|fuse) continue ;;
+        esac
         local covered=false
         for p in "${pvesm_paths[@]}"; do [[ "$p" == "$mp" ]] && covered=true && break; done
         $covered && continue
         local device="$fs"
         [[ "$fs" == UUID=* ]] && device=$(blkid -U "${fs#UUID=}" 2>/dev/null || echo "$fs")
-        local size=""
-        [[ -b "$device" ]] && size=$(lsblk -ndo SIZE "$device" 2>/dev/null)
+        [[ "$fs" == LABEL=* ]] && device=$(blkid -L "${fs#LABEL=}" 2>/dev/null || echo "$fs")
+        [[ -b "$device" ]] || continue
+        local size
+        size=$(lsblk -ndo SIZE "$device" 2>/dev/null)
         local label="[fstab] $mp ($fstype)"
         [[ -n "$size" ]] && label+=" [$size]"
         findmnt -n "$mp" >/dev/null 2>&1 && label+=" ✓" || label+=" (not mounted)"
