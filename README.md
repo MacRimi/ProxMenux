@@ -177,7 +177,7 @@ Before contributing, please take a moment to read our [Code of Conduct](https://
 Thanks to everyone who has helped make ProxMenux what it is today.
 
 <a href="https://github.com/MacRimi/ProxMenux/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=MacRimi/ProxMenux" alt="ProxMenux contributors" />
+  <img src="https://contrib.rocks/image?repo=MacRimi/ProxMenux&v=123" alt="ProxMenux contributors" />
 </a>
 
 Made with [contrib.rocks](https://contrib.rocks).
