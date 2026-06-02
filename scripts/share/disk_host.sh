@@ -628,6 +628,8 @@ mount_existing_disk() {
         return 1
     fi
 
+    show_proxmenux_logo
+    msg_title "$(translate "Add Local Disk as Proxmox Storage")"
     msg_info "$(translate "Creating mount point...")"
     mkdir -p "$mount_path"
     msg_ok "$(translate "Mount point created")"
