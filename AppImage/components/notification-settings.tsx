@@ -1459,10 +1459,12 @@ export function NotificationSettings() {
                       {renderChannelCategories("telegram")}
                       {renderQuietHours("telegram")}
                       {renderDailyDigest("telegram")}
-                      {/* Send Test */}
+                      {/* Send Test — channel-colored button (#226). All five
+                          channels follow the same `bg-<channel>-600 ... text-white`
+                          pattern; the color matches the active-tab tint above. */}
                       <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                         <button
-                          className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                          className="h-7 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-1.5 disabled:opacity-50"
                           onClick={() => handleTest("telegram")}
                           disabled={testing === "telegram" || !config.channels.telegram?.bot_token}
                         >
@@ -1553,10 +1555,10 @@ export function NotificationSettings() {
                       {renderChannelCategories("gotify")}
                       {renderQuietHours("gotify")}
                       {renderDailyDigest("gotify")}
-                      {/* Send Test */}
+                      {/* Send Test — channel-colored (see Telegram block). */}
                       <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                         <button
-                          className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                          className="h-7 px-3 text-xs rounded-md bg-green-600 hover:bg-green-700 text-white transition-colors flex items-center gap-1.5 disabled:opacity-50"
                           onClick={() => handleTest("gotify")}
                           disabled={testing === "gotify" || !config.channels.gotify?.url}
                         >
@@ -1635,10 +1637,10 @@ export function NotificationSettings() {
                       {renderChannelCategories("discord")}
                       {renderQuietHours("discord")}
                       {renderDailyDigest("discord")}
-                      {/* Send Test */}
+                      {/* Send Test — channel-colored (see Telegram block). */}
                       <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                         <button
-                          className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                          className="h-7 px-3 text-xs rounded-md bg-indigo-600 hover:bg-indigo-700 text-white transition-colors flex items-center gap-1.5 disabled:opacity-50"
                           onClick={() => handleTest("discord")}
                           disabled={testing === "discord" || !config.channels.discord?.webhook_url}
                         >
@@ -1780,10 +1782,10 @@ export function NotificationSettings() {
                       {renderChannelCategories("email")}
                       {renderQuietHours("email")}
                       {renderDailyDigest("email")}
-                      {/* Send Test */}
+                      {/* Send Test — channel-colored (see Telegram block). */}
                       <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                         <button
-                          className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                          className="h-7 px-3 text-xs rounded-md bg-amber-600 hover:bg-amber-700 text-white transition-colors flex items-center gap-1.5 disabled:opacity-50"
                           onClick={() => handleTest("email")}
                           disabled={testing === "email" || !config.channels.email?.to_addresses}
                         >
@@ -1881,9 +1883,11 @@ export function NotificationSettings() {
                       {renderChannelCategories("apprise")}
                       {renderQuietHours("apprise")}
                       {renderDailyDigest("apprise")}
-                      <div className="flex justify-end pt-2 border-t border-border/50">
+                      {/* Send Test — left-aligned + channel-colored, matching
+                          the other four channels (was right-aligned, #226). */}
+                      <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                         <button
-                          className="h-7 px-3 text-xs rounded-md bg-cyan-600 hover:bg-cyan-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                          className="h-7 px-3 text-xs rounded-md bg-cyan-600 hover:bg-cyan-700 text-white transition-colors flex items-center gap-1.5 disabled:opacity-50"
                           onClick={() => handleTest("apprise")}
                           disabled={testing === "apprise" || !config.channels.apprise?.url}
                         >
