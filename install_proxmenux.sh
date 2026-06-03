@@ -925,11 +925,20 @@ install_normal_version() {
     cp "./version.txt" "$LOCAL_VERSION_FILE"
     cp "./install_proxmenux.sh" "$BASE_DIR/install_proxmenux.sh"
 
+    # A user that previously rode the beta train and then switched back
+    # to stable would still have a leftover beta_version.txt under
+    # $BASE_DIR, which makes the `menu` update check (check_updates_beta)
+    # offer a "Beta update available" prompt on top of the legitimate
+    # stable one. Clearing the marker on every stable install/update
+    # keeps the stable install honestly stable — if the user opts into
+    # the beta program again, the beta installer will recreate the file.
+    rm -f "$BASE_DIR/beta_version.txt"
+
     # Wipe the scripts tree before copying so any file removed upstream
     # (renamed, consolidated, deprecated) disappears from the user install.
     # Only $BASE_DIR/scripts/ is cleared; config.json, cache.json,
-    # components_status.json, version.txt, beta_version.txt, monitor.db,
-    # smart/, oci/ and the AppImage live outside this path and are preserved.
+    # components_status.json, version.txt, monitor.db, smart/, oci/ and
+    # the AppImage live outside this path and are preserved.
     rm -rf "$BASE_DIR/scripts"
     mkdir -p "$BASE_DIR/scripts"
     cp -r "./scripts/"* "$BASE_DIR/scripts/"
@@ -1072,6 +1081,12 @@ install_translation_version() {
     cp "./menu" "$INSTALL_DIR/$MENU_SCRIPT"
     cp "./version.txt" "$LOCAL_VERSION_FILE"
     cp "./install_proxmenux.sh" "$BASE_DIR/install_proxmenux.sh"
+
+    # Clear any leftover beta_version.txt — see the equivalent block
+    # in the update path above for the rationale (in short: prevents
+    # the menu from offering a phantom "Beta update available" after a
+    # user has switched back to the stable channel).
+    rm -f "$BASE_DIR/beta_version.txt"
 
     mkdir -p "$BASE_DIR/scripts"
     cp -r "./scripts/"* "$BASE_DIR/scripts/"
