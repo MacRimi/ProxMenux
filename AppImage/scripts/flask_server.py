@@ -4858,7 +4858,8 @@ def get_proxmox_vms():
                         'netin': resource.get('netin', 0),
                         'netout': resource.get('netout', 0),
                         'diskread': resource.get('diskread', 0),
-                        'diskwrite': resource.get('diskwrite', 0)
+                        'diskwrite': resource.get('diskwrite', 0),
+                        'maxcpu': resource.get('maxcpu', 0)
                     }
                     # Decorate LXC rows with the apt update status if the
                     # managed_installs registry has it. Absent key means
@@ -7640,14 +7641,26 @@ def api_system():
         try:
             from health_monitor import health_monitor
             _hist = health_monitor.state_history.get('cpu_usage') or []
-            cpu_usage = _hist[-1]['value'] if _hist else psutil.cpu_percent(interval=0.1)
+            if _hist:
+                _last = _hist[-1]
+                cpu_usage = _last['value']
+                cpu_user_pct = _last.get('user', 0)
+                cpu_system_pct = _last.get('system', 0)
+            else:
+                cpu_usage = psutil.cpu_percent(interval=0.1)
+                cpu_user_pct = 0
+                cpu_system_pct = 0
         except Exception:
             cpu_usage = psutil.cpu_percent(interval=0.1)
+            cpu_user_pct = 0
+            cpu_system_pct = 0
 
         memory = psutil.virtual_memory()
         memory_used_gb = memory.used / (1024 ** 3)
         memory_total_gb = memory.total / (1024 ** 3)
         memory_usage_percent = memory.percent
+        # Preview restyle: cached + buffers in GB
+        memory_cached_gb = round((getattr(memory, 'cached', 0) + getattr(memory, 'buffers', 0)) / (1024 ** 3), 1)
         
         # Get temperature
         temp = get_cpu_temperature()
@@ -7677,9 +7690,12 @@ def api_system():
 
         return jsonify({
             'cpu_usage': round(cpu_usage, 1),
+            'cpu_user': cpu_user_pct,
+            'cpu_system': cpu_system_pct,
             'memory_usage': round(memory_usage_percent, 1),
             'memory_total': round(memory_total_gb, 1),
             'memory_used': round(memory_used_gb, 1),
+            'memory_cached': memory_cached_gb,
             'temperature': temp,
             'temperature_sparkline': temp_sparkline,
             'uptime': uptime,
@@ -9615,6 +9631,35 @@ def api_node_metrics():
                     # If zfsarc field is missing or 0, add current value
                     if 'zfsarc' not in item or item.get('zfsarc', 0) == 0:
                         item['zfsarc'] = zfs_arc_size
+
+            # 24h downsampling: RRD returns ~1440 minute-level points which
+            # plots as a dense thicket of vertical spikes. Group into 5-min
+            # buckets and average each numeric field — same shape that
+            # `get_temperature_history` uses for its 24h view so the look
+            # is consistent across the dashboard's 24h charts.
+            if timeframe == 'day' and rrd_data:
+                bucket_seconds = 300  # 5-min
+                buckets = {}
+                for item in rrd_data:
+                    t = item.get('time')
+                    if t is None:
+                        continue
+                    bk = (int(t) // bucket_seconds) * bucket_seconds
+                    if bk not in buckets:
+                        buckets[bk] = {'_count': 0, '_sums': {}}
+                    b = buckets[bk]
+                    b['_count'] += 1
+                    for k, v in item.items():
+                        if k == 'time' or not isinstance(v, (int, float)) or isinstance(v, bool):
+                            continue
+                        b['_sums'][k] = b['_sums'].get(k, 0) + v
+                rrd_data = []
+                for bk in sorted(buckets.keys()):
+                    b = buckets[bk]
+                    point = {'time': bk}
+                    for k, total in b['_sums'].items():
+                        point[k] = total / b['_count']
+                    rrd_data.append(point)
 
             payload = {
                 'node': local_node,

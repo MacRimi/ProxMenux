@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 
-const APP_VERSION = "1.2.2" // Sync with AppImage/package.json
+const APP_VERSION = "1.2.2.1-beta" // Sync with AppImage/package.json
 
 interface ReleaseNote {
   date: string
@@ -217,20 +217,16 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 
 const CURRENT_VERSION_FEATURES = [
   {
-    icon: <Sliders className="h-5 w-5" />,
-    text: "Health Monitor Thresholds - Per-category Warning and Critical levels for CPU, memory, temperature, storage and more, configurable from Settings. The same numbers feed the colour ranges of the dashboard widgets, so every green / amber / red state maps to a definite range relative to the configured pair",
+    icon: <Activity className="h-5 w-5" />,
+    text: "Header Critical badge now respects dismissals (#228) - Permanently silencing every critical alert in a category used to leave the badge stuck on Critical even though the popup correctly reported 0 critical. The rollup that drives /api/system-info now runs a dismiss-aware pass over every category, so the badge, the popup and any API consumer all see the same view",
   },
   {
-    icon: <BellOff className="h-5 w-5" />,
-    text: "Granular dismiss control - Each Health Monitor alert can now be dismissed for 24 hours, 7 days or Permanently via a per-event dropdown. A new Active Suppressions panel in Settings lists every silenced alert with a Re-enable button, gated by Edit mode. Permanent dismisses can only be reverted from there",
+    icon: <RefreshCw className="h-5 w-5" />,
+    text: "Auto-reconcile of stale alerts - Errors for resources that no longer exist now auto-clear within the regular cleanup cycle. New cases: a PVE storage removed via pvesm, an NFS/CIFS share whose mount target is no longer in /proc/mounts (the lazy-umount case reported in the field), and LXC mount-capacity alerts whose CT has been deleted",
   },
   {
     icon: <Bell className="h-5 w-5" />,
-    text: "Apprise notification channel - One Apprise URL reaches ~80 services (Pushover, ntfy, Slack, Matrix, mailto, signal, ...) with full feature parity to the native channels: per-event toggles, Quiet Hours and Daily Digest all apply",
-  },
-  {
-    icon: <Server className="h-5 w-5" />,
-    text: "LXC update detection - Per-CT apt list --upgradable / apk list -u scan from Settings, with an automatic cache refresh on long-running containers so months-old metadata no longer hides real upstream backlog",
+    text: "Notification Send Test buttons unified (#226) - All five channel Send Test buttons (Telegram, Gotify, Discord, Email, Apprise) now sit on the left side and carry their channel's brand colour with white text, instead of Apprise being the right-aligned cyan outlier",
   },
 ]
 

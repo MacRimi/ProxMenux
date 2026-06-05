@@ -300,26 +300,49 @@ export function NetworkMetrics() {
   return (
     <div className="space-y-6">
       {/* Network Overview Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
-        <Card className="bg-card border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Network Traffic</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground hidden md:inline">Received:</span>
-                <span className="text-base lg:text-xl font-bold text-green-500">↓ {trafficInFormatted}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground hidden md:inline">Sent:</span>
-                <span className="text-base lg:text-xl font-bold text-blue-500">↑ {trafficOutFormatted}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
+        {/* ── Network Traffic (preview restyle: Down/Up dual headline + stacked bar) ── */}
+        {(() => {
+          const downBytes = networkData.traffic.bytes_recv || 0
+          const upBytes = networkData.traffic.bytes_sent || 0
+          const totalBytes = downBytes + upBytes
+          const downPct = totalBytes > 0 ? (downBytes / totalBytes) * 100 : 50
+          const upPct = totalBytes > 0 ? (upBytes / totalBytes) * 100 : 50
+          return (
+            <Card className="bg-card border-border">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Network Traffic</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <div className="text-xs font-medium text-muted-foreground mb-1">
+                      <span className="text-green-500">↓</span> Down
+                    </div>
+                    <div className="text-xl lg:text-2xl font-bold leading-tight text-green-500">{trafficInFormatted}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-medium text-muted-foreground mb-1">
+                      <span className="text-blue-500">↑</span> Up
+                    </div>
+                    <div className="text-xl lg:text-2xl font-bold leading-tight text-blue-500">{trafficOutFormatted}</div>
+                  </div>
+                </div>
+                <div className="flex h-1.5 rounded-full overflow-hidden gap-[2px]">
+                  <div style={{ width: `${downPct}%`, background: '#22c55e' }}></div>
+                  <div style={{ width: `${upPct}%`, background: '#3b82f6' }}></div>
+                </div>
+                <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>Down {Math.round(downPct)}%</span>
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>Up {Math.round(upPct)}%</span>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })()}
 
+        {/* ── Active Interfaces (preview restyle v2: revertido al original con title uppercase) ── */}
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Active Interfaces</CardTitle>
@@ -330,10 +353,10 @@ export function NetworkMetrics() {
               {(networkData.physical_active_count ?? 0) + (networkData.bridge_active_count ?? 0)}
             </div>
             <div className="flex flex-wrap items-center gap-2 mt-2">
-              <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs">
+              <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
                 Physical: {networkData.physical_active_count ?? 0}/{networkData.physical_total_count ?? 0}
               </Badge>
-              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 text-xs">
+              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
                 Bridges: {networkData.bridge_active_count ?? 0}/{networkData.bridge_total_count ?? 0}
               </Badge>
             </div>
@@ -343,31 +366,43 @@ export function NetworkMetrics() {
           </CardContent>
         </Card>
 
-        {/* Merged Network Config & Health Card */}
+        {/* ── Network Status (preview restyle: packet-loss highlight + 2x2 grid) ── */}
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Network Status</CardTitle>
-            <Badge variant="outline" className={healthColor}>
-              {healthStatus}
-            </Badge>
+            <Badge variant="outline" className={`${healthColor}`}>{healthStatus === 'Healthy' ? '✓ ' : ''}{healthStatus}</Badge>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Hostname</span>
-                <span className="text-xs font-medium text-foreground truncate max-w-[120px]">{hostname}</span>
+            {(() => {
+              const lossPct = Number.parseFloat(avgPacketLoss) || 0
+              const lossColor =
+                lossPct >= 5 ? 'text-red-500' :
+                lossPct >= 1 ? 'text-orange-500' :
+                lossPct > 0  ? 'text-yellow-500' :
+                               'text-blue-500'
+              return (
+                <div className={`mb-3 text-xl lg:text-2xl font-bold ${lossColor} leading-none`}>
+                  {avgPacketLoss}<span className="text-sm font-normal text-muted-foreground">% </span>
+                  <span className="text-sm font-normal text-muted-foreground">Packet Loss</span>
+                </div>
+              )
+            })()}
+            <div className="grid grid-cols-2 gap-x-3 gap-y-3 pt-3 border-t border-border/50 text-sm">
+              <div className="min-w-0">
+                <div className="text-muted-foreground">Hostname:</div>
+                <div className="font-medium font-mono truncate">{hostname}</div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Primary DNS</span>
-                <span className="text-xs font-medium text-foreground font-mono">{primaryDNS}</span>
+              <div className="min-w-0">
+                <div className="text-muted-foreground">DNS:</div>
+                <div className="font-medium font-mono truncate">{primaryDNS}</div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Packet Loss</span>
-                <span className="text-xs font-medium text-foreground">{avgPacketLoss}%</span>
+              <div className="min-w-0">
+                <div className="text-muted-foreground">Errors:</div>
+                <div className="font-medium font-mono">{totalErrors}</div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Errors</span>
-                <span className="text-xs font-medium text-foreground">{totalErrors}</span>
+              <div className="min-w-0">
+                <div className="text-muted-foreground">Domain:</div>
+                <div className="font-medium font-mono truncate">{networkData.domain || '—'}</div>
               </div>
             </div>
           </CardContent>

@@ -690,103 +690,213 @@ export function StorageOverview() {
   return (
     <div className="space-y-6">
       {/* Storage Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Storage</CardTitle>
-            <HardDrive className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl lg:text-2xl font-bold">{storageData.total.toFixed(1)} TB</div>
-            <p className="text-xs text-muted-foreground mt-1">{storageData.disk_count} physical disks</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
+        {/* ── Total Storage (preview restyle: headline + stacked bar Local·Remote·Free) ── */}
+        {(() => {
+          const totalGB = (totalLocalCapacity || 0) + (totalRemoteCapacity || 0)
+          const localPct = totalGB > 0 ? (totalLocalUsed / totalGB) * 100 : 0
+          const remotePct = totalGB > 0 ? (totalRemoteUsed / totalGB) * 100 : 0
+          const freeGB = Math.max(0, totalGB - totalLocalUsed - totalRemoteUsed)
+          return (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Storage Used</CardTitle>
+                <HardDrive className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const totalUsed = totalLocalUsed + totalRemoteUsed
+                  const usedStr = formatStorage(totalUsed)
+                  return (
+                    <div className="flex items-end justify-between mb-3">
+                      <div>
+                        <span className="text-3xl font-bold leading-none">{usedStr.split(' ')[0]}</span>
+                        <span className="text-base font-medium ml-1 text-muted-foreground">{usedStr.split(' ')[1]}</span>
+                      </div>
+                      <Badge variant="outline" className="bg-muted text-muted-foreground border-border">{storageData.disk_count} disks</Badge>
+                    </div>
+                  )
+                })()}
+                <div className="flex h-1.5 rounded-full overflow-hidden gap-[2px]">
+                  <div style={{ width: `${localPct}%`, background: '#3b82f6' }} title={`Local ${formatStorage(totalLocalUsed)}`}></div>
+                  <div style={{ width: `${remotePct}%`, background: '#06b6d4' }} title={`Remote ${formatStorage(totalRemoteUsed)}`}></div>
+                  <div style={{ flex: 1, background: 'rgba(99,102,241,0.15)' }} title={`Free ${formatStorage(freeGB)}`}></div>
+                </div>
+                <div className="mt-2 space-y-1 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><span className="w-1.5 h-1.5 rounded-full" style={{ background: '#3b82f6' }}></span>Local</span>
+                    <span className="font-medium font-mono whitespace-nowrap">{formatStorage(totalLocalUsed)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><span className="w-1.5 h-1.5 rounded-full" style={{ background: '#06b6d4' }}></span>Remote</span>
+                    <span className="font-medium font-mono whitespace-nowrap">{formatStorage(totalRemoteUsed)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><span className="w-1.5 h-1.5 rounded-full opacity-50" style={{ background: 'currentColor' }}></span>Free</span>
+                    <span className="font-medium font-mono whitespace-nowrap">{formatStorage(freeGB)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })()}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Local Used</CardTitle>
-            <Database className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl lg:text-2xl font-bold">{formatStorage(totalLocalUsed)}</div>
-            <p className="text-xs mt-1">
-              <span className={getUsageColor(Number.parseFloat(localUsagePercent))}>{localUsagePercent}%</span>
-              <span className="text-muted-foreground"> of </span>
-              <span className="text-green-500">{formatStorage(totalLocalCapacity)}</span>
-            </p>
-          </CardContent>
-        </Card>
+        {/* ── Local Used (preview restyle: donut + mini-bars Used/Free) ── */}
+        {(() => {
+          const pct = Number.parseFloat(localUsagePercent)
+          const freeGB = Math.max(0, totalLocalCapacity - totalLocalUsed)
+          const stroke = pct >= 90 ? '#ef4444' : pct >= 75 ? '#f59e0b' : '#22c55e'
+          return (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Local Used</CardTitle>
+                <Database className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  <svg viewBox="0 0 36 36" className="w-[72px] h-[72px] flex-shrink-0">
+                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke="rgba(99,102,241,0.15)" strokeWidth="3"/>
+                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke={stroke} strokeWidth="3"
+                            strokeDasharray={`${pct} 100`} strokeLinecap="round"
+                            style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}/>
+                    <text x="18" y="19.5" textAnchor="middle" fontSize="10" fontWeight="700" fill="currentColor">{Math.round(pct)}%</text>
+                  </svg>
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Used</span>
+                      <span className="font-medium font-mono whitespace-nowrap">{formatStorage(totalLocalUsed)}</span>
+                      </div>
+                      <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: stroke }}/>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Free</span>
+                      <span className="font-medium font-mono whitespace-nowrap">{formatStorage(freeGB)}</span>
+                      </div>
+                      <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${100 - pct}%`, background: 'rgba(99,102,241,0.45)' }}/>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Total</span>
+                      <span className="font-medium font-mono whitespace-nowrap">{formatStorage(totalLocalCapacity)}</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })()}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Remote Used</CardTitle>
-            <Archive className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl lg:text-2xl font-bold">
-              {remoteStorageCount > 0 ? formatStorage(totalRemoteUsed) : "None"}
-            </div>
-            <p className="text-xs mt-1">
-              {remoteStorageCount > 0 ? (
-                <>
-                  <span className={getUsageColor(Number.parseFloat(remoteUsagePercent))}>{remoteUsagePercent}%</span>
-                  <span className="text-muted-foreground"> of </span>
-                  <span className="text-green-500">{formatStorage(totalRemoteCapacity)}</span>
-                </>
-              ) : (
-                <span className="text-muted-foreground">No remote storage</span>
-              )}
-            </p>
-          </CardContent>
-        </Card>
+        {/* ── Remote Used (preview restyle: donut + mini-bars Used/Free) ── */}
+        {(() => {
+          const has = remoteStorageCount > 0
+          const pct = has ? Number.parseFloat(remoteUsagePercent) : 0
+          const freeGB = has ? Math.max(0, totalRemoteCapacity - totalRemoteUsed) : 0
+          const stroke = pct >= 90 ? '#ef4444' : pct >= 75 ? '#f59e0b' : '#22c55e'
+          return (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Remote Used</CardTitle>
+                <Archive className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {has ? (
+                  <div className="flex items-center gap-4">
+                    <svg viewBox="0 0 36 36" className="w-[72px] h-[72px] flex-shrink-0">
+                      <circle cx="18" cy="18" r="15.9155" fill="none" stroke="rgba(99,102,241,0.15)" strokeWidth="3"/>
+                      <circle cx="18" cy="18" r="15.9155" fill="none" stroke={stroke} strokeWidth="3"
+                              strokeDasharray={`${pct} 100`} strokeLinecap="round"
+                              style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}/>
+                      <text x="18" y="19.5" textAnchor="middle" fontSize="10" fontWeight="700" fill="currentColor">{Math.round(pct)}%</text>
+                    </svg>
+                    <div className="flex-1 space-y-2">
+                      <div>
+                        <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Used</span>
+                        <span className="font-medium font-mono whitespace-nowrap">{formatStorage(totalRemoteUsed)}</span>
+                        </div>
+                        <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: stroke }}/>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Free</span>
+                        <span className="font-medium font-mono whitespace-nowrap">{formatStorage(freeGB)}</span>
+                        </div>
+                        <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${100 - pct}%`, background: 'rgba(99,102,241,0.45)' }}/>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Total</span>
+                        <span className="font-medium font-mono whitespace-nowrap">{formatStorage(totalRemoteCapacity)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <div className="text-2xl font-bold text-muted-foreground">None</div>
+                    <p className="text-xs text-muted-foreground mt-1">No remote storage</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )
+        })()}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Physical Disks</CardTitle>
-            <HardDrive className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl lg:text-2xl font-bold">{storageData.disk_count} disks</div>
-            <div className="space-y-1 mt-1">
-              <p className="text-xs">
-                {diskTypesBreakdown.nvme > 0 && <span className="text-purple-500">{diskTypesBreakdown.nvme} NVMe</span>}
-                {diskTypesBreakdown.ssd > 0 && (
-                  <>
-                    {diskTypesBreakdown.nvme > 0 && ", "}
-                    <span className="text-cyan-500">{diskTypesBreakdown.ssd} SSD</span>
-                  </>
-                )}
-                {diskTypesBreakdown.hdd > 0 && (
-                  <>
-                    {(diskTypesBreakdown.nvme > 0 || diskTypesBreakdown.ssd > 0) && ", "}
-                    <span className="text-blue-500">{diskTypesBreakdown.hdd} HDD</span>
-                  </>
-                )}
-                {diskTypesBreakdown.usb > 0 && (
-                  <>
-                    {(diskTypesBreakdown.nvme > 0 || diskTypesBreakdown.ssd > 0 || diskTypesBreakdown.hdd > 0) && ", "}
-                    <span className="text-orange-400">{diskTypesBreakdown.usb} USB</span>
-                  </>
-                )}
-              </p>
-              <p className="text-xs">
-                <span className="text-green-500">{diskHealthBreakdown.normal} normal</span>
-                {diskHealthBreakdown.warning > 0 && (
-                  <>
-                    {", "}
-                    <span className="text-yellow-500">{diskHealthBreakdown.warning} warning</span>
-                  </>
-                )}
-                {diskHealthBreakdown.critical > 0 && (
-                  <>
-                    {", "}
-                    <span className="text-red-500">{diskHealthBreakdown.critical} critical</span>
-                  </>
-                )}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* ── Physical Disks (preview restyle: headline + type strip + health badge) ── */}
+        {(() => {
+          const total = Math.max(1, storageData.disk_count || 0)
+          const seg = 100 / total
+          const allHealthy = diskHealthBreakdown.warning === 0 && diskHealthBreakdown.critical === 0
+          const healthBadge = allHealthy
+            ? <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">✓ all healthy</Badge>
+            : diskHealthBreakdown.critical > 0
+              ? <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">{diskHealthBreakdown.critical} critical</Badge>
+              : <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">{diskHealthBreakdown.warning} warning</Badge>
+          const seg_purple = '#a855f7'
+          const seg_cyan = '#06b6d4'
+          const seg_blue = '#3b82f6'
+          const seg_orange = '#f97316'
+          const segments: Array<{ color: string }> = []
+          for (let i = 0; i < diskTypesBreakdown.nvme; i++) segments.push({ color: seg_purple })
+          for (let i = 0; i < diskTypesBreakdown.ssd; i++) segments.push({ color: seg_cyan })
+          for (let i = 0; i < diskTypesBreakdown.hdd; i++) segments.push({ color: seg_blue })
+          for (let i = 0; i < diskTypesBreakdown.usb; i++) segments.push({ color: seg_orange })
+          return (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Physical Disks</CardTitle>
+                <HardDrive className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-end justify-between mb-3">
+                  <div>
+                    <span className="text-3xl font-bold leading-none">{storageData.disk_count}</span>
+                    <span className="text-base font-medium ml-1 text-muted-foreground">disks</span>
+                  </div>
+                  {healthBadge}
+                </div>
+                <div className="flex h-1.5 rounded-full overflow-hidden gap-[2px]">
+                  {segments.map((s, i) => (
+                    <div key={i} style={{ width: `${seg}%`, background: s.color }}></div>
+                  ))}
+                </div>
+                <div className="mt-2 flex flex-wrap justify-between text-sm text-muted-foreground gap-x-2 gap-y-1">
+                  {diskTypesBreakdown.nvme > 0 && <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full" style={{ background: seg_purple }}></span>{diskTypesBreakdown.nvme} NVMe</span>}
+                  {diskTypesBreakdown.ssd > 0 && <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full" style={{ background: seg_cyan }}></span>{diskTypesBreakdown.ssd} SSD</span>}
+                  {diskTypesBreakdown.hdd > 0 && <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full" style={{ background: seg_blue }}></span>{diskTypesBreakdown.hdd} HDD</span>}
+                  {diskTypesBreakdown.usb > 0 && <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full" style={{ background: seg_orange }}></span>{diskTypesBreakdown.usb} USB</span>}
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })()}
       </div>
 
       {proxmoxStorage && proxmoxStorage.storage && proxmoxStorage.storage.length > 0 && (
@@ -1477,7 +1587,7 @@ export function StorageOverview() {
                             </div>
                           )}
                           {(disk.observations_count ?? 0) > 0 && (
-                            <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 gap-1 text-[10px] px-1.5 py-0">
+                            <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 gap-1">
                               <Info className="h-3 w-3" />
                               {disk.observations_count}
                             </Badge>
@@ -2150,7 +2260,7 @@ export function StorageOverview() {
                   <h4 className="font-semibold mb-2 flex items-center gap-2">
                     <Info className="h-4 w-4 text-blue-400" />
                     Observations
-                    <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px] px-1.5 py-0">
+                    <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
                       {diskObservations.length}
                     </Badge>
                   </h4>
@@ -3627,7 +3737,7 @@ ${observationsHtml}
   <!-- Footer -->
 <div class="rpt-footer">
   <div>Report generated by ProxMenux Monitor</div>
-  <div>ProxMenux Monitor v1.2.2</div>
+  <div>ProxMenux Monitor v1.2.2.1-beta</div>
 </div>
 
 </body>

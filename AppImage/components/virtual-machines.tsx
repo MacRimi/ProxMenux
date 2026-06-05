@@ -48,6 +48,7 @@ interface VMData {
   status: string
   type: string
   cpu: number
+  maxcpu?: number
   mem: number
   maxmem: number
   disk: number
@@ -418,13 +419,13 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
           />
           <h3 className="font-mono font-semibold truncate">{mp.target}</h3>
           {mp.mp_index && (
-            <Badge variant="outline" className="font-mono text-xs">
+            <Badge variant="outline" className="font-mono">
               {mp.mp_index}
             </Badge>
           )}
           <Badge className={typeBadgeClass[mp.type]}>{typeLabel[mp.type]}</Badge>
           {mp.runtime_fstype && (
-            <Badge variant="outline" className="font-mono text-xs">
+            <Badge variant="outline" className="font-mono">
               {mp.runtime_fstype}
             </Badge>
           )}
@@ -524,7 +525,7 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
         if (configEntries.length === 0) return null
         return (
           <div className="mt-3">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">
+            <p className="text-xs text-muted-foreground mb-1.5">
               Mount attributes (LXC config)
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -550,7 +551,7 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
           exist. */}
       {(mp.runtime_mounted === true) && (keyValues.length > 0 || flags.length > 0) && (
         <div className="mt-3">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">
+          <p className="text-xs text-muted-foreground mb-1.5">
             Runtime mount options
           </p>
           <div className="flex flex-wrap gap-1.5 mb-2">
@@ -1300,139 +1301,178 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
         }
       `}</style>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-card border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total VMs & LXCs</CardTitle>
-            <Server className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl lg:text-2xl font-bold text-foreground">{safeVMData.length}</div>
-            <div className="vm-badges mt-2">
-              <Badge variant="outline" className="vm-badge bg-green-500/10 text-green-500 border-green-500/20">
-                {safeVMData.filter((vm) => vm.status === "running").length} Running
-              </Badge>
-              <Badge variant="outline" className="vm-badge bg-red-500/10 text-red-500 border-red-500/20">
-                {safeVMData.filter((vm) => vm.status === "stopped").length} Stopped
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 hidden lg:block">Virtual machines configured</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total CPU</CardTitle>
-            <Cpu className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl lg:text-2xl font-bold text-foreground">
-              {(safeVMData.reduce((sum, vm) => sum + (vm.cpu || 0), 0) * 100).toFixed(0)}%
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">Allocated CPU usage</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Memory</CardTitle>
-            <MemoryStick className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {/* Memory Usage (current) */}
-            {physicalMemoryGB !== null && usedMemoryGB !== null && memoryUsagePercent !== null ? (
-              <div>
-                <div className="text-xl lg:text-2xl font-bold text-foreground">{usedMemoryGB.toFixed(1)} GB</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  <span className={getMemoryPercentTextColor(memoryUsagePercent)}>
-                    {memoryUsagePercent.toFixed(1)}%
-                  </span>{" "}
-                  of {physicalMemoryGB.toFixed(1)} GB
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* ── Total VMs & LXCs (preview restyle: B-headline + pills, matching Overview) ── */}
+        {(() => {
+          const running = safeVMData.filter((vm) => vm.status === "running").length
+          const stopped = safeVMData.filter((vm) => vm.status === "stopped").length
+          const total = safeVMData.length
+          const vms = safeVMData.filter((vm) => vm.type === "qemu" || vm.type === "vm").length
+          const lxc = safeVMData.filter((vm) => vm.type === "lxc").length
+          return (
+            <Card className="bg-card border-border">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total VMs &amp; LXCs</CardTitle>
+                <Server className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-end justify-between">
+                  <div>
+                    <span className="text-4xl font-bold leading-none text-foreground">{running}</span>
+                    <span className="text-lg font-medium ml-1 text-muted-foreground">/ {total}</span>
+                  </div>
+                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">{running} running</Badge>
                 </div>
-                <Progress value={memoryUsagePercent} className="h-2 [&>div]:bg-blue-500" />
-              </div>
-            ) : (
-              <div>
-                <div className="text-xl lg:text-2xl font-bold text-muted-foreground">--</div>
-                <div className="text-xs text-muted-foreground mt-1">Loading memory usage...</div>
-              </div>
-            )}
-
-            {/* Allocated RAM (configured) - Split into Running and Total */}
-            <div className="pt-3 border-t border-border">
-              {/* Layout para desktop */}
-              <div className="hidden lg:flex items-center justify-between">
-                <div className="flex gap-6">
-                  {/* Running allocation - most important */}
-                  <div>
-                    <div className="text-lg font-semibold text-foreground">{runningAllocatedMemoryGB} GB</div>
-                    <div className="text-xs text-muted-foreground">Running Allocated</div>
-                  </div>
-                  {/* Total allocation */}
-                  <div>
-                    <div className="text-lg font-semibold text-muted-foreground">{totalAllocatedMemoryGB} GB</div>
-                    <div className="text-xs text-muted-foreground">Total Allocated</div>
-                  </div>
+                <div className="mt-3 flex gap-1 flex-wrap">
+                  {vms > 0 && (
+                    <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">{vms} VMs</Badge>
+                  )}
+                  {lxc > 0 && (
+                    <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">{lxc} LXC</Badge>
+                  )}
+                  {stopped > 0 && (
+                    <Badge variant="outline" className="bg-muted text-muted-foreground border-border">{stopped} stopped</Badge>
+                  )}
                 </div>
-                {physicalMemoryGB !== null && (
-                  <div>
-                    {isMemoryOvercommit ? (
-                      <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
-                        Exceeds Physical
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                        Within Limits
-                      </Badge>
-                    )}
-                  </div>
-                )}
-              </div>
+              </CardContent>
+            </Card>
+          )
+        })()}
 
-              {/* Layout para movil */}
-              <div className="lg:hidden space-y-2">
-                <div className="flex gap-4">
-                  {/* Running allocation */}
-                  <div>
-                    <div className="text-lg font-semibold text-foreground">{runningAllocatedMemoryGB} GB</div>
-                    <div className="text-xs text-muted-foreground">Running</div>
-                  </div>
-                  {/* Total allocation */}
-                  <div>
-                    <div className="text-lg font-semibold text-muted-foreground">{totalAllocatedMemoryGB} GB</div>
-                    <div className="text-xs text-muted-foreground">Total</div>
+        {/* ── Total CPU Allocated (preview restyle: donut + Used/Configured/In use) ── */}
+        {(() => {
+          const allocPct = safeVMData.reduce((sum, vm) => sum + (vm.cpu || 0), 0) * 100
+          const configuredVCPU = safeVMData.reduce((sum, vm) => sum + (vm.maxcpu || 0), 0)
+          const inUseVCPU = safeVMData
+            .filter((vm) => vm.status === "running")
+            .reduce((sum, vm) => sum + (vm.maxcpu || 0), 0)
+          const stroke = allocPct >= 90 ? '#ef4444' : allocPct >= 75 ? '#f59e0b' : '#3b82f6'
+          return (
+            <Card className="bg-card border-border">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total CPU Allocated</CardTitle>
+                <Cpu className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  <svg viewBox="0 0 36 36" className="w-[72px] h-[72px] flex-shrink-0">
+                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke="rgba(99,102,241,0.15)" strokeWidth="3"/>
+                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke={stroke} strokeWidth="3"
+                            strokeDasharray={`${Math.min(100, allocPct)} 100`} strokeLinecap="round"
+                            style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}/>
+                    <text x="18" y="19.5" textAnchor="middle" fontSize="10" fontWeight="700" fill="currentColor">{Math.round(allocPct)}%</text>
+                  </svg>
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Used</span>
+                        <span className="font-medium font-mono whitespace-nowrap">{Math.round(allocPct)}%</span>
+                      </div>
+                      <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${Math.min(100, allocPct)}%`, background: stroke }}/>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Configured</span>
+                      <span className="font-medium font-mono whitespace-nowrap">{configuredVCPU || '—'} vCPU</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">In use</span>
+                      <span className="font-medium font-mono whitespace-nowrap">{inUseVCPU || '—'} vCPU</span>
+                    </div>
                   </div>
                 </div>
-                {physicalMemoryGB !== null && (
-                  <div>
-                    {isMemoryOvercommit ? (
-                      <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
-                        Exceeds Physical
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                        Within Limits
-                      </Badge>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          )
+        })()}
 
-        <Card className="bg-card border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Disk</CardTitle>
-            <HardDrive className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl lg:text-2xl font-bold text-foreground">
-              {formatStorage(safeVMData.reduce((sum, vm) => sum + (vm.maxdisk || 0), 0) / 1024 ** 3)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">Allocated disk space</p>
-          </CardContent>
-        </Card>
+        {/* ── Total Memory (preview restyle: donut + mini-bars Used/Allocated) ── */}
+        {(() => {
+          const usedPct = memoryUsagePercent ?? 0
+          const usedGB = usedMemoryGB ?? 0
+          const totalGB = physicalMemoryGB ?? 0
+          const allocPct = totalGB > 0 ? (allocatedMemoryGB / totalGB) * 100 : 0
+          const stroke = usedPct >= 90 ? '#ef4444' : usedPct >= 75 ? '#f59e0b' : '#3b82f6'
+          return (
+            <Card className="bg-card border-border">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Memory</CardTitle>
+                <MemoryStick className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  <svg viewBox="0 0 36 36" className="w-[72px] h-[72px] flex-shrink-0">
+                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke="rgba(99,102,241,0.15)" strokeWidth="3"/>
+                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke={stroke} strokeWidth="3"
+                            strokeDasharray={`${usedPct} 100`} strokeLinecap="round"
+                            style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}/>
+                    <text x="18" y="19.5" textAnchor="middle" fontSize="10" fontWeight="700" fill="currentColor">{Math.round(usedPct)}%</text>
+                  </svg>
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Used</span>
+                      <span className="font-medium font-mono whitespace-nowrap">{usedGB.toFixed(1)}</span>
+                      </div>
+                      <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${usedPct}%`, background: stroke }}/>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Alloc</span>
+                      <span className="font-medium font-mono whitespace-nowrap">{allocatedMemoryGB.toFixed(1)}</span>
+                      </div>
+                      <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${Math.min(100, allocPct)}%`, background: isMemoryOvercommit ? '#f59e0b' : 'rgba(99,102,241,0.55)' }}/>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Total</span>
+                      <span className="font-medium font-mono whitespace-nowrap">{totalGB.toFixed(0)} GB</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })()}
+
+        {/* ── Total Disk (preview restyle: headline + 2-segment stacked bar Used/Alloc-not-Used) ── */}
+        {(() => {
+          const usedGB = safeVMData.reduce((sum, vm) => sum + (vm.disk || 0), 0) / 1024 ** 3
+          const allocGB = safeVMData.reduce((sum, vm) => sum + (vm.maxdisk || 0), 0) / 1024 ** 3
+          const utilPct = allocGB > 0 ? (usedGB / allocGB) * 100 : 0
+          const idleGB = Math.max(0, allocGB - usedGB)
+          const stroke = utilPct >= 90 ? '#ef4444' : utilPct >= 75 ? '#f59e0b' : '#3b82f6'
+          const usedSeg = allocGB > 0 ? (usedGB / allocGB) * 100 : 0
+          return (
+            <Card className="bg-card border-border">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Disk</CardTitle>
+                <HardDrive className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-end justify-between mb-3">
+                  <div>
+                    <span className="text-xl lg:text-2xl font-bold leading-none">{formatStorage(usedGB)}</span>
+                    <span className="text-sm font-medium ml-1 text-muted-foreground">used</span>
+                  </div>
+                  <Badge variant="outline" className="bg-muted text-muted-foreground border-border">{Math.round(utilPct)}% util</Badge>
+                </div>
+                <div className="flex h-1.5 rounded-full overflow-hidden gap-[2px]">
+                  <div style={{ width: `${usedSeg}%`, background: stroke }} title={`Used ${formatStorage(usedGB)}`}></div>
+                  <div style={{ flex: 1, background: 'rgba(168,85,247,0.45)' }} title={`Idle ${formatStorage(idleGB)}`}></div>
+                </div>
+                <div className="mt-2 flex justify-between text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full" style={{ background: stroke }}></span>Used {formatStorage(usedGB)}</span>
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full" style={{ background: 'rgba(168,85,247,0.55)' }}></span>Alloc {formatStorage(allocGB)}</span>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })()}
       </div>
 
       <Card className="bg-card border-border">
@@ -1465,11 +1505,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                       onClick={() => handleVMClick(vm)}
                     >
                       <div className="flex items-center gap-2 flex-wrap mb-3">
-                        <Badge variant="outline" className={`text-xs flex-shrink-0 ${getStatusColor(vm.status)}`}>
+                        <Badge variant="outline" className={`flex-shrink-0 ${getStatusColor(vm.status)}`}>
                           {getStatusIcon(vm.status)}
                           {vm.status.toUpperCase()}
                         </Badge>
-                        <Badge variant="outline" className={`text-xs flex-shrink-0 ${typeBadge.color}`}>
+                        <Badge variant="outline" className={`flex-shrink-0 ${typeBadge.color}`}>
                           {typeBadge.icon}
                           {typeBadge.label}
                         </Badge>
@@ -2835,7 +2875,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     {backup.storage}
                                   </Badge>
                                 </div>
-                                <Badge variant="outline" className="text-xs font-mono ml-2 flex-shrink-0">
+                                <Badge variant="outline" className="font-mono ml-2 flex-shrink-0">
                                   {backup.size_human}
                                 </Badge>
                               </div>

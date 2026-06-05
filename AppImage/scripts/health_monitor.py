@@ -453,10 +453,19 @@ class HealthMonitor:
         """Lightweight CPU sample: read usage % and append to history. ~30ms cost."""
         try:
             cpu_percent = psutil.cpu_percent(interval=0)
+            try:
+                _times = psutil.cpu_times_percent(interval=0)
+                cpu_user = round(_times.user + getattr(_times, 'nice', 0), 1)
+                cpu_system = round(_times.system + getattr(_times, 'irq', 0) + getattr(_times, 'softirq', 0), 1)
+            except Exception:
+                cpu_user = 0
+                cpu_system = 0
             current_time = time.time()
             state_key = 'cpu_usage'
             self.state_history[state_key].append({
                 'value': cpu_percent,
+                'user': cpu_user,
+                'system': cpu_system,
                 'time': current_time
             })
             # Prune entries older than 6 minutes
@@ -608,6 +617,71 @@ class HealthMonitor:
         
         return self.cached_results[cache_key]
     
+    def _apply_dismiss_aware_status(self, check_block: Dict[str, Any]) -> None:
+        """In-place demote a check block's `status` to OK when every
+        underlying error is already user-acknowledged.
+
+        Two flavours, matching how categories actually structure their
+        output:
+
+        * Categories that aggregate inner checks (a `checks` dict whose
+          values each hold an individual `error_key`) — every non-OK
+          inner check must be acknowledged for the block to demote.
+          This is how `_check_lxc_mount_capacity`, the storage block,
+          the disk SMART block, etc. shape their results.
+        * Categories with a single error_key at the top level (CPU
+          hysteresis, certificates, the simpler updates rows) — that
+          one error_key has to be acknowledged.
+
+        When the block demotes, we set ``status='OK'`` and stamp
+        ``all_dismissed=True`` so the front-end (`fetchHealthInfoCount`
+        and the Health modal) can still surface the row as INFO if it
+        wants — the data flow that used to derive "X categories with
+        dismissed items" from `dismissed[]` keeps working unchanged.
+
+        No-op for blocks whose status is already OK / INFO / UNKNOWN —
+        UNKNOWN intentionally never gets dismissed away because the
+        user didn't ack a failing check, the check failed to run.
+        """
+        if not isinstance(check_block, dict):
+            return
+        status = check_block.get('status', 'OK')
+        if status not in ('WARNING', 'CRITICAL'):
+            return
+
+        try:
+            inner_checks = check_block.get('checks')
+            if isinstance(inner_checks, dict) and inner_checks:
+                any_unack = False
+                for inner in inner_checks.values():
+                    if not isinstance(inner, dict):
+                        continue
+                    inner_status = inner.get('status', 'OK')
+                    if inner_status not in ('WARNING', 'CRITICAL'):
+                        continue
+                    ek = inner.get('error_key')
+                    if ek and health_persistence.is_error_acknowledged(ek):
+                        inner['dismissed'] = True
+                        if health_persistence.is_error_permanently_acknowledged(ek):
+                            inner['permanent'] = True
+                    else:
+                        any_unack = True
+                if not any_unack:
+                    check_block['status'] = 'OK'
+                    check_block['all_dismissed'] = True
+                return
+
+            ek = check_block.get('error_key')
+            if ek and health_persistence.is_error_acknowledged(ek):
+                check_block['dismissed'] = True
+                if health_persistence.is_error_permanently_acknowledged(ek):
+                    check_block['permanent'] = True
+                check_block['status'] = 'OK'
+                check_block['all_dismissed'] = True
+        except Exception as e:
+            # Dismiss check should never crash the health pipeline.
+            print(f"[HealthMonitor] _apply_dismiss_aware_status failed: {e}")
+
     def get_overall_status(self) -> Dict[str, Any]:
         """Get overall health status summary with minimal overhead"""
         details = self.get_detailed_status()
@@ -993,7 +1067,42 @@ class HealthMonitor:
                         pass
             else:
                 self._unknown_counts[cat_key] = 0
-        
+
+        # --- Dismiss-aware re-derivation of issue lists (root fix for #228) ---
+        # Each `_check_*` above already populated `details[<category>]` with
+        # its raw status and pushed an entry into critical_issues /
+        # warning_issues / info_issues. That raw status doesn't know which
+        # error_keys the user has acknowledged, so a category whose only
+        # remaining problems are all dismissed (e.g. nine permanently-
+        # silenced LXC mount alerts) was still pushing the global `overall`
+        # to CRITICAL. The popup's frontend rollup had to compensate for
+        # this server-side gap, which is how the badge ("Critical" in the
+        # header) and the panel ("0 Critical" inside) ended up disagreeing.
+        #
+        # Apply the existing per-block dismiss filter (`_annotate_dismissed`
+        # downstream is the visual-merge cousin of this) to every
+        # category, then rebuild the issue lists from the post-filter
+        # statuses. The pre-existing inline appends are discarded — they
+        # represented the pre-fix view.
+        critical_issues = []
+        warning_issues = []
+        info_issues = []
+        for cat_key in list(details.keys()):
+            block = details.get(cat_key)
+            if not isinstance(block, dict):
+                continue
+            self._apply_dismiss_aware_status(block)
+            status = block.get('status', 'OK')
+            reason = (block.get('reason') or '').strip()
+            label = cat_key.replace('_', ' ').capitalize()
+            entry = f"{label}: {reason}" if reason else label
+            if status == 'CRITICAL':
+                critical_issues.append(entry)
+            elif status == 'WARNING':
+                warning_issues.append(entry)
+            elif status == 'INFO':
+                info_issues.append(entry)
+
         # --- Determine Overall Status ---
         # Severity: CRITICAL > WARNING > UNKNOWN (capped at WARNING) > INFO > OK
         if critical_issues:

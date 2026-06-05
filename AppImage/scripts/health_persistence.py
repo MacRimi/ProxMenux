@@ -1367,6 +1367,8 @@ class HealthPersistence:
         _zfs_pools_cache = None
         _mount_points_cache = None
         _pve_services_cache = None
+        _pvesm_storages_cache = None
+        _remote_mount_targets_cache = None
         
         def check_vm_ct_cached(vmid):
             if vmid not in _vm_ct_exists_cache:
@@ -1445,7 +1447,68 @@ class HealthPersistence:
                 except Exception:
                     _mount_points_cache = set()
             return _mount_points_cache
-        
+
+        def get_pvesm_storages():
+            """Return the set of pvesm storage IDs currently configured.
+
+            Used to auto-resolve `storage_unavailable_*` and
+            `pve_storage_full_*` errors after the user removes the
+            corresponding entry from `pvesm`/Datacenter > Storage. The
+            check function would otherwise keep firing on a path that
+            no longer has any business existing.
+            """
+            nonlocal _pvesm_storages_cache
+            if _pvesm_storages_cache is None:
+                _pvesm_storages_cache = set()
+                try:
+                    result = subprocess.run(
+                        ['pvesm', 'status'],
+                        capture_output=True, text=True, timeout=5
+                    )
+                    if result.returncode == 0:
+                        for line in result.stdout.strip().split('\n')[1:]:
+                            parts = line.split()
+                            if parts:
+                                _pvesm_storages_cache.add(parts[0])
+                except Exception:
+                    # On failure leave the cache as an empty set rather
+                    # than `None` — that prevents us from re-trying every
+                    # row in the active_errors loop, and the empty set
+                    # means we won't auto-resolve anything (safer than
+                    # falsely resolving when pvesm is momentarily down).
+                    _pvesm_storages_cache = set()
+                    return _pvesm_storages_cache
+            return _pvesm_storages_cache
+
+        def get_remote_mount_targets():
+            """Return the set of mount targets currently in /proc/mounts
+            for remote filesystems (NFS/CIFS/SMB).
+
+            Lets us tell apart a `mount_stale_<target>` whose underlying
+            mount the user has umount'd (so the alert is now stale data
+            that should self-clear) from one the user genuinely needs
+            attention on (the mount is still active but the share is
+            unreachable). Without this distinction the alert pinned
+            forever once the user removed the PVE storage and lazy-
+            umount'd it, which is the case @UBLI-WLAN reported.
+            """
+            nonlocal _remote_mount_targets_cache
+            if _remote_mount_targets_cache is None:
+                _remote_mount_targets_cache = set()
+                try:
+                    with open('/proc/mounts', 'r', encoding='utf-8', errors='replace') as f:
+                        for line in f:
+                            parts = line.strip().split()
+                            if len(parts) < 3:
+                                continue
+                            fstype = parts[2]
+                            # Match the same fstypes mount_monitor watches.
+                            if fstype in ('nfs', 'nfs4', 'cifs', 'smb', 'smbfs') or fstype.startswith(('nfs', 'cifs', 'smb')):
+                                _remote_mount_targets_cache.add(parts[1])
+                except OSError:
+                    pass
+            return _remote_mount_targets_cache
+
         def get_pve_services_status():
             nonlocal _pve_services_cache
             if _pve_services_cache is None:
@@ -1617,9 +1680,72 @@ class HealthPersistence:
                     should_resolve = True
                     resolution_reason = 'No longer in cluster'
             
+            # === PVE STORAGE REMOVED ===
+            # Errors that name a PVE storage (storage_unavailable_<id>,
+            # pve_storage_full_<id>) outlive the storage itself when the
+            # user removes it from pvesm. Until this hook landed, the
+            # check function kept stat'ing /mnt/pve/<id> after every
+            # iteration, found the path missing, and persisted a fresh
+            # CRITICAL — reported by @UBLI-WLAN on June 4 2026.
+            if not should_resolve and error_key:
+                storage_match = None
+                if error_key.startswith('storage_unavailable_'):
+                    storage_match = error_key[len('storage_unavailable_'):]
+                elif error_key.startswith('pve_storage_full_'):
+                    storage_match = error_key[len('pve_storage_full_'):]
+                if storage_match:
+                    pvesm_set = get_pvesm_storages()
+                    # Only treat as removed when `pvesm status` ran AND
+                    # returned a non-empty list. An empty set could mean
+                    # pvesm timed out, in which case it's safer not to
+                    # resolve anything.
+                    if pvesm_set and storage_match not in pvesm_set:
+                        should_resolve = True
+                        resolution_reason = f'Storage {storage_match} removed from pvesm'
+
+            # === LXC MOUNT FOR DELETED CT ===
+            # `_check_lxc_mount_capacity` records
+            # `lxc_mount_<vmid>_<mount>`, which the VM/CT block above
+            # misses because the prefix isn't one of `vm_/ct_/vmct_`.
+            # When the CT is gone the disk-fill alert is meaningless.
+            if not should_resolve and error_key and error_key.startswith('lxc_mount_'):
+                # `lxc_mount_<vmid>_<mount-path-tokens>` — VMID is the
+                # first integer block after the prefix.
+                m = re.match(r'^lxc_mount_(\d+)_', error_key)
+                if m:
+                    lxc_vmid = m.group(1)
+                    if not check_vm_ct_cached(lxc_vmid):
+                        should_resolve = True
+                        resolution_reason = f'CT {lxc_vmid} no longer exists'
+
+            # === ORPHAN REMOTE MOUNT ===
+            # `_check_remote_mounts` records `mount_<status>_<target>`
+            # for every NFS/CIFS/SMB target that's in /proc/mounts but
+            # fails to stat. When the user removes the PVE storage,
+            # PVE often does a lazy umount: the kernel mount entry is
+            # gone (or the /mnt/pve/<id> target was deleted on top), so
+            # subsequent scans never see the mount again — but the
+            # already-persisted error has no auto-resolve path.
+            # Resolve the error when the target is no longer in
+            # /proc/mounts as a remote mount.
+            if not should_resolve and error_key and error_key.startswith('mount_'):
+                # `mount_stale_<target>` or `mount_readonly_<target>`
+                # — possibly LXC-scoped as `mount_<status>_ct<id>:<target>`.
+                stripped = error_key.split('_', 2)
+                if len(stripped) == 3:
+                    key_target = stripped[2]
+                    # LXC-scoped entries (`ct123:/mnt/foo`) are left for
+                    # the VM/CT cleanup path; the host-side reconciler
+                    # only owns host-level targets.
+                    if not key_target.startswith('ct'):
+                        targets = get_remote_mount_targets()
+                        if key_target not in targets:
+                            should_resolve = True
+                            resolution_reason = 'Remote mount no longer present (orphan auto-cleared)'
+
             # === TEMPERATURE ERRORS ===
             # Temperature errors - check if sensor still exists (unlikely to change, resolve after 24h of no activity)
-            elif category == 'temperature':
+            if not should_resolve and category == 'temperature':
                 if last_seen_hours > 24:
                     should_resolve = True
                     resolution_reason = 'Temperature error stale (>24h no activity)'

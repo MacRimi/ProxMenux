@@ -21,9 +21,12 @@ interface TempDataPoint {
 
 interface SystemData {
   cpu_usage: number
+  cpu_user?: number  // preview restyle
+  cpu_system?: number  // preview restyle
   memory_usage: number
   memory_total: number
   memory_used: number
+  memory_cached?: number  // preview restyle
   temperature: number
   temperature_sparkline?: TempDataPoint[]
   uptime: string
@@ -395,64 +398,121 @@ export function SystemOverview() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
+        {/* ── CPU Usage (preview restyle v2: tamaño igual a System Info, bars más anchas) ── */}
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">CPU Usage</CardTitle>
             <Cpu className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl lg:text-2xl font-bold text-foreground">{systemData.cpu_usage}%</div>
-            <Progress value={systemData.cpu_usage} className="mt-2 [&>div]:bg-blue-500" />
-            <p className="text-xs text-muted-foreground mt-2">Real-time usage</p>
+            <div className="flex items-center gap-4">
+              <svg viewBox="0 0 36 36" className="w-[72px] h-[72px] flex-shrink-0">
+                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="rgba(99,102,241,0.15)" strokeWidth="3"/>
+                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#3b82f6" strokeWidth="3"
+                        strokeDasharray={`${systemData.cpu_usage} 100`} strokeLinecap="round"
+                        style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}/>
+                <text x="18" y="19.5" textAnchor="middle" fontSize="10" fontWeight="700" fill="currentColor">{Math.round(systemData.cpu_usage)}%</text>
+              </svg>
+              <div className="flex-1 space-y-2 min-w-0">
+                <div>
+                  <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">User</span>
+                  <span className="font-medium font-mono whitespace-nowrap">{systemData.cpu_user !== undefined ? `${Math.round(systemData.cpu_user)}%` : '—'}</span>
+                  </div>
+                  <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${systemData.cpu_user ?? 0}%` }}/>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">System</span>
+                  <span className="font-medium font-mono whitespace-nowrap">{systemData.cpu_system !== undefined ? `${Math.round(systemData.cpu_system)}%` : '—'}</span>
+                  </div>
+                  <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${systemData.cpu_system ?? 0}%`, background: 'rgba(99,102,241,0.55)' }}/>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Cores</span>
+                  <span className="font-medium font-mono whitespace-nowrap">{systemData.cpu_cores ?? '—'}{systemData.cpu_threads ? `/${systemData.cpu_threads}` : ''}</span>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
+        {/* ── Memory (preview restyle v2: tamaño igual a System Info, bars más anchas) ── */}
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Memory Usage</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Memory</CardTitle>
             <MemoryStick className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl lg:text-2xl font-bold text-foreground">{systemData.memory_used.toFixed(1)} GB</div>
-            <Progress value={systemData.memory_usage} className="mt-2 [&>div]:bg-blue-500" />
-            <p className="text-xs text-muted-foreground mt-2">
-              <span className="text-green-500 font-medium">{systemData.memory_usage.toFixed(1)}%</span> of{" "}
-              {systemData.memory_total} GB
-            </p>
+            <div className="flex items-center gap-4">
+              <svg viewBox="0 0 36 36" className="w-[72px] h-[72px] flex-shrink-0">
+                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="rgba(99,102,241,0.15)" strokeWidth="3"/>
+                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#3b82f6" strokeWidth="3"
+                        strokeDasharray={`${systemData.memory_usage} 100`} strokeLinecap="round"
+                        style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}/>
+                <text x="18" y="19.5" textAnchor="middle" fontSize="10" fontWeight="700" fill="currentColor">{Math.round(systemData.memory_usage)}%</text>
+              </svg>
+              <div className="flex-1 space-y-2 min-w-0">
+                <div>
+                  <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Used</span>
+                  <span className="font-medium font-mono whitespace-nowrap">{systemData.memory_used.toFixed(1)}</span>
+                  </div>
+                  <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${systemData.memory_usage}%` }}/>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Cached</span>
+                  <span className="font-medium font-mono whitespace-nowrap">{systemData.memory_cached !== undefined ? systemData.memory_cached.toFixed(1) : '—'}</span>
+                  </div>
+                  <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${systemData.memory_cached !== undefined && systemData.memory_total > 0 ? (systemData.memory_cached / systemData.memory_total) * 100 : 0}%`, background: 'rgba(99,102,241,0.55)' }}/>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Total</span>
+                  <span className="font-medium font-mono whitespace-nowrap">{systemData.memory_total.toFixed(0)} GB</span>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
+        {/* ── Active VM & LXC (preview restyle v2: pills mismo tamaño que "X running") ── */}
         <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle className="text-foreground flex items-center">
-              <Server className="h-5 w-5 mr-2" />
-              Active VM & LXC
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active VM &amp; LXC</CardTitle>
+            <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             {loadingStates.vms ? (
               <div className="space-y-2 animate-pulse">
-                <div className="h-8 bg-muted rounded w-12"></div>
-                <div className="h-5 bg-muted rounded w-24"></div>
-                <div className="h-4 bg-muted rounded w-32"></div>
+                <div className="h-10 bg-muted rounded w-20"></div>
+                <div className="h-5 bg-muted rounded w-32"></div>
               </div>
             ) : (
               <>
-                <div className="text-xl lg:text-2xl font-bold text-foreground">{vmStats.running}</div>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                    {vmStats.running} Running
-                  </Badge>
+                <div className="flex items-end justify-between">
+                  <div>
+                    <span className="text-4xl font-bold leading-none text-foreground">{vmStats.running}</span>
+                    <span className="text-lg font-medium ml-1 text-muted-foreground">/ {vmStats.vms + vmStats.lxc}</span>
+                  </div>
+                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">{vmStats.running} running</Badge>
+                </div>
+                <div className="mt-3 flex gap-1 flex-wrap">
+                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">{vmStats.vms} VMs</Badge>
+                  <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">{vmStats.lxc} LXC</Badge>
                   {vmStats.stopped > 0 && (
-                    <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">
-                      {vmStats.stopped} Stopped
-                    </Badge>
+                    <Badge variant="outline" className="bg-muted text-muted-foreground border-border">{vmStats.stopped} stopped</Badge>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Total: {vmStats.vms} VMs, {vmStats.lxc} LXC
-                </p>
               </>
             )}
           </CardContent>
@@ -471,7 +531,7 @@ export function SystemOverview() {
               <span className="text-xl lg:text-2xl font-bold text-foreground">
                 {systemData.temperature === 0 ? "N/A" : `${Math.round(systemData.temperature * 10) / 10}°C`}
               </span>
-              <Badge variant="outline" className={tempStatus.color}>
+              <Badge variant="outline" className={`${tempStatus.color}`}>
                 {tempStatus.status}
               </Badge>
             </div>

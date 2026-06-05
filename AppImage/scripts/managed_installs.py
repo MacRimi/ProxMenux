@@ -170,19 +170,46 @@ def _detect_nvidia_xfree86() -> Optional[dict]:
 def _detect_coral_host() -> list[dict]:
     out: list[dict] = []
 
-    # PCIe / M.2 — gasket-dkms package version, falling back to the
-    # registered DKMS version if the package was force-removed but the
-    # built modules still exist.
+    # PCIe / M.2 — version detection has three sources, tried in this
+    # order of trust:
+    #
+    #   1. The marker file `/var/lib/proxmenux/coral_gasket_version`
+    #      written by `install_coral.sh` after a successful DKMS
+    #      install — contains the feranick release tag actually
+    #      installed (e.g. `1.0-18.4`). This is the only source that
+    #      knows the fork's patch level.
+    #   2. `dpkg-query gasket-dkms` — the Debian package version, only
+    #      present when the user installed via .deb rather than the
+    #      ProxMenux script.
+    #   3. `dkms status` — the upstream module version registered with
+    #      DKMS, which is always the bare `1.0`. Useful as a "modules
+    #      are present" indicator but doesn't reveal the fork patch
+    #      level, so the update-availability check would always fire a
+    #      false positive against feranick's `1.0-N` tags. Reported on
+    #      .50 after a successful re-install kept showing the update
+    #      notification.
     pcie_version: Optional[str] = None
     try:
-        r = subprocess.run(
-            ["dpkg-query", "-W", "-f=${Status}|${Version}", "gasket-dkms"],
-            capture_output=True, text=True, timeout=3,
-        )
-        if r.returncode == 0 and "ok installed" in r.stdout:
-            pcie_version = r.stdout.split("|", 1)[1].strip()
-    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+        with open("/var/lib/proxmenux/coral_gasket_version",
+                  "r", encoding="utf-8", errors="replace") as fh:
+            marker = fh.read().strip()
+            # Sanity check: the file should hold something that looks
+            # like a version tag, not an error message or empty line.
+            if marker and re.match(r"^[A-Za-z0-9._+-]+$", marker):
+                pcie_version = marker
+    except OSError:
         pass
+
+    if not pcie_version:
+        try:
+            r = subprocess.run(
+                ["dpkg-query", "-W", "-f=${Status}|${Version}", "gasket-dkms"],
+                capture_output=True, text=True, timeout=3,
+            )
+            if r.returncode == 0 and "ok installed" in r.stdout:
+                pcie_version = r.stdout.split("|", 1)[1].strip()
+        except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+            pass
     if not pcie_version:
         try:
             r = subprocess.run(

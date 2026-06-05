@@ -363,6 +363,35 @@ EOF
   fi
   msg_ok "$(translate 'Drivers compiled and installed via DKMS.') (source: ${GASKET_SOURCE_USED})"
 
+  # Track which feranick release was just installed. Without this, the
+  # Monitor's update-notification path (managed_installs._check_coral_host)
+  # only has dkms status to read, which always reports the bare upstream
+  # version `1.0` regardless of feranick patch level — so any new
+  # `1.0-N` tag from the fork triggered a false-positive "update
+  # available" notification even right after a fresh install.
+  #
+  # Resolve the latest tag from GitHub at install time and persist it
+  # alongside ProxMenux state. Best-effort: a curl failure or rate-limit
+  # leaves the marker absent and the detector falls back to the old
+  # behaviour, which is fine for clean re-installs.
+  if [[ "$GASKET_SOURCE_USED" == "feranick" ]]; then
+    local CORAL_MARKER_DIR="/var/lib/proxmenux"
+    local CORAL_MARKER_FILE="${CORAL_MARKER_DIR}/coral_gasket_version"
+    local FERANICK_LATEST
+    FERANICK_LATEST=$(curl -fsSL --max-time 5 \
+      "https://api.github.com/repos/feranick/gasket-driver/releases/latest" 2>>"$LOG_FILE" \
+      | grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]+"' \
+      | head -1 \
+      | sed -E 's/.*"([^"]+)"$/\1/')
+    if [[ -n "$FERANICK_LATEST" ]]; then
+      mkdir -p "$CORAL_MARKER_DIR" >>"$LOG_FILE" 2>&1 || true
+      echo "$FERANICK_LATEST" > "$CORAL_MARKER_FILE" 2>>"$LOG_FILE" || true
+      echo "[install_coral] Recorded installed gasket-dkms version: $FERANICK_LATEST" >>"$LOG_FILE" 2>&1
+    else
+      echo "[install_coral] Could not resolve feranick latest tag — marker not written." >>"$LOG_FILE" 2>&1
+    fi
+  fi
+
   ensure_apex_group_and_udev
 
   msg_info "$(translate 'Loading modules...')"
@@ -594,6 +623,11 @@ complete_coral_uninstall() {
         /usr/share/keyrings/coral-edgetpu-archive-keyring.gpg \
         /etc/apt/trusted.gpg.d/coral-edgetpu-archive-keyring.gpg \
         2>/dev/null || true
+
+  # Drop the gasket-dkms version marker written by the install path.
+  # Leaving it around after a full uninstall would let the Monitor
+  # claim a fictional driver version on the next reboot.
+  rm -f /var/lib/proxmenux/coral_gasket_version 2>/dev/null || true
 
   # Update component status if utils.sh exposes the helper (older
   # ProxMenux releases didn't have it; uninstall must still work).
