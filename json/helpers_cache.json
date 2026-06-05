@@ -1539,11 +1539,11 @@
       "Authentication & Security"
     ],
     "notes": [
-      "You will get a Not Found error if initial setup URL doesn't include the trailing forward slash /. Make sure you use the complete url (http://<your server's IP or hostname>:9000/if/flow/initial-setup/) including the trailing forward slash.",
+      "Main config /etc/authentik/config.yml",
       "If you want automatic GeoIP updates, create a free account at https://www.maxmind.com/en/geolite2/signup, then edit the /usr/local/etc/GeoIP.conf file with your credentials and remove the # in front of the geoipupdate line in the crontab."
     ],
     "warnings": [],
-    "port": 9000,
+    "port": 9443,
     "website": "https://goauthentik.io/",
     "documentation": "https://docs.goauthentik.io/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/authentik.webp",
@@ -2095,39 +2095,6 @@
     ],
     "config_path": "`/opt/bitmagnet/config.yml` or `/opt/bitmagnet/.env`",
     "os": "alpine"
-  },
-  {
-    "name": "Blinko",
-    "slug": "blinko",
-    "desc": "Blinko is an AI-powered card note-taking tool designed for capturing and organizing fleeting thoughts with natural language search powered by RAG technology.",
-    "script": "ct/blinko.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/blinko.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/blinko.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00012"
-    ],
-    "category_names": [
-      "Documents & Notes"
-    ],
-    "notes": [
-      "Create your account on first access via the web interface."
-    ],
-    "warnings": [],
-    "port": 1111,
-    "website": "https://blinko.space/",
-    "documentation": "https://docs.blinko.space/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/blinko.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
-    "execute_in": [
-      "lxc"
-    ],
-    "config_path": "",
-    "os": "debian"
   },
   {
     "name": "Blocky",
