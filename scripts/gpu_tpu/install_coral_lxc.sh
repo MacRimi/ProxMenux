@@ -402,6 +402,30 @@ configure_lxc_hardware() {
 # INSTALL CORAL TPU DRIVER INSIDE CONTAINER
 # ==========================================================
 
+# Detect the package family inside the container. The PVE passthrough
+# config (above) works on any distro, but Google only ships an official
+# libedgetpu APT repo for Debian/Ubuntu. For other distros we configure
+# the device and skip the runtime install with a clear message.
+detect_container_distro() {
+    local id_like id
+    id=$(pct exec "$CONTAINER_ID" -- sh -c 'awk -F= "/^ID=/{gsub(/\"/, \"\", \$2); print \$2}" /etc/os-release 2>/dev/null' 2>/dev/null | tr -d '\r' | tr '[:upper:]' '[:lower:]')
+    id_like=$(pct exec "$CONTAINER_ID" -- sh -c 'awk -F= "/^ID_LIKE=/{gsub(/\"/, \"\", \$2); print \$2}" /etc/os-release 2>/dev/null' 2>/dev/null | tr -d '\r' | tr '[:upper:]' '[:lower:]')
+    case "$id" in
+        debian|ubuntu|raspbian|linuxmint|pop|kali|devuan) echo "debian"; return ;;
+        alpine) echo "alpine"; return ;;
+        arch|manjaro|endeavouros|garuda|cachyos) echo "arch"; return ;;
+        rhel|centos|rocky|almalinux|fedora|amzn|ol) echo "rhel"; return ;;
+        opensuse*|sles|suse) echo "suse"; return ;;
+    esac
+    case "$id_like" in
+        *debian*|*ubuntu*) echo "debian"; return ;;
+        *arch*) echo "arch"; return ;;
+        *rhel*|*fedora*|*centos*) echo "rhel"; return ;;
+        *suse*) echo "suse"; return ;;
+    esac
+    echo "unknown"
+}
+
 install_coral_in_container() {
     msg_info "$(translate 'Installing Coral TPU driver inside the container...')"
     tput sc
@@ -420,12 +444,48 @@ install_coral_in_container() {
 
     stop_spinner
 
-    # Pre-flight: refuse to run on non-Debian-family containers. The
-    # apt-get block below would crash with cryptic errors and leave the
-    # container half-configured.
-    if ! pct exec "$CONTAINER_ID" -- bash -c 'command -v apt-get' &>/dev/null; then
-        msg_error "$(translate 'Container does not have apt-get available. Coral driver installation only supports Debian/Ubuntu containers.')"
-        return 1
+    # Detect the container distro. Passthrough config (already written to
+    # /etc/pve/lxc/<id>.conf above) works on any distro — only the libedgetpu
+    # runtime install path is distro-specific, and Google's official APT repo
+    # only covers Debian/Ubuntu. For other distros offer an opt-in
+    # passthrough-only mode (skip the apt-get install, leave the device
+    # visible inside the CT so app-level runtimes can use it, e.g. the
+    # Frigate Docker image bundles libedgetpu). If the user declines,
+    # behave exactly like the pre-detection version: error out and abort.
+    local CT_FAMILY
+    CT_FAMILY=$(detect_container_distro)
+
+    if [[ "$CT_FAMILY" != "debian" ]]; then
+        rm -f "$LOG_FILE"
+        local distro_label
+        case "$CT_FAMILY" in
+            alpine) distro_label="Alpine" ;;
+            arch)   distro_label="Arch / Manjaro" ;;
+            rhel)   distro_label="RHEL / Rocky / AlmaLinux / Fedora" ;;
+            suse)   distro_label="openSUSE / SLES" ;;
+            *)      distro_label="$(translate 'this distribution')" ;;
+        esac
+
+        # whiptail (not dialog) — prompt sits in the middle of the install
+        # flow. Default is "No" so a user who just presses Enter / Esc lands
+        # on the same abort path as the legacy behaviour.
+        if ! whiptail --title "$(translate 'Non-Debian container detected')" --defaultno \
+            --yesno "$(translate 'Detected:') $distro_label
+
+$(translate 'Google only ships an official libedgetpu APT repository for Debian/Ubuntu. Hardware passthrough is already written to')  /etc/pve/lxc/${CONTAINER_ID}.conf  $(translate '— that part works on any distro and is harmless.')
+
+$(translate 'Would you like to continue in passthrough-only mode? The libedgetpu APT install will be skipped, the Coral device will still be visible inside the container (e.g. /dev/apex_0), and you can install the runtime yourself or use an app container that bundles it (e.g. the Frigate Docker image).')
+
+$(translate 'Choose No to abort and roll back to the legacy refuse behaviour.')" 22 78 \
+            3>&1 1>&2 2>&3; then
+            msg_error "$(translate 'Container does not have apt-get available. Coral driver installation only supports Debian/Ubuntu containers.')"
+            return 1
+        fi
+
+        msg_warn "$(translate 'Container distro') ($distro_label) $(translate 'is not supported by the official Google libedgetpu APT repository.')"
+        msg_ok "$(translate 'Hardware passthrough is already configured — the Coral device is visible inside the container as /dev/apex_0 (M.2) and/or /dev/bus/usb (USB).')"
+        msg_info2 "$(translate 'To use Coral from a regular app, install the libedgetpu runtime via the usual method for your distro (community package or build from source). The simplest path is to run an app container that bundles the runtime — e.g. the Frigate Docker image — passing the device through with')  --device /dev/apex_0:/dev/apex_0"
+        return 0
     fi
 
     # Determine driver package for Coral M.2 (USB always uses -std).

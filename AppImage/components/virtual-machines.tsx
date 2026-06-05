@@ -1129,7 +1129,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       .reduce((sum, vm) => sum + (vm.maxmem || 0), 0) / 1024 ** 3).toFixed(1)
   }, [safeVMData])
 
-  const { data: systemData } = useSWR<{ memory_total: number; memory_used: number; memory_usage: number }>(
+  const { data: systemData } = useSWR<{ memory_total: number; memory_used: number; memory_usage: number; cpu_cores?: number; cpu_threads?: number }>(
     "/api/system",
     fetcher,
     {
@@ -1346,6 +1346,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           const inUseVCPU = safeVMData
             .filter((vm) => vm.status === "running")
             .reduce((sum, vm) => sum + (vm.maxcpu || 0), 0)
+          const hostThreads = systemData?.cpu_threads ?? systemData?.cpu_cores ?? 0
           const stroke = allocPct >= 90 ? '#ef4444' : allocPct >= 75 ? '#f59e0b' : '#3b82f6'
           return (
             <Card className="bg-card border-border">
@@ -1374,11 +1375,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Configured</span>
-                      <span className="font-medium font-mono whitespace-nowrap">{configuredVCPU || '—'} vCPU</span>
+                      <span className="font-medium font-mono whitespace-nowrap">{configuredVCPU || '—'}{hostThreads ? ` / ${hostThreads}` : ''} vCPU</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">In use</span>
-                      <span className="font-medium font-mono whitespace-nowrap">{inUseVCPU || '—'} vCPU</span>
+                      <span className="font-medium font-mono whitespace-nowrap">{inUseVCPU || '—'}{hostThreads ? ` / ${hostThreads}` : ''} vCPU</span>
                     </div>
                   </div>
                 </div>

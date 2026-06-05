@@ -53,6 +53,32 @@
     "sparklineTitle": "El sparkline es significativo",
     "sparklineBody": "La tarjeta de temperatura dibuja una traza de 5 minutos bajo el valor, con la línea y el degradado siguiendo el mismo par Warning/Critical documentado arriba. Es la forma más rápida de ver si el host está en escalada térmica sin abrir la modal de detalle."
   },
+  "processes": {
+    "heading": "Acceso directo: top procesos por CPU / Memoria",
+    "intro": "Las tarjetas CPU Usage y Memory son clicables. Al pulsar cualquiera de ellas se abre una lista ordenable con los 25 procesos top — la tarjeta de CPU ordena por <code>%CPU</code>, la de Memory ordena por memoria residente (RSS). Ambas tiran de <code>/api/processes?sort=cpu|mem&limit=25</code>, que ejecuta un único <code>ps -eo pid,user,pcpu,pmem,rss,comm</code> por refresco.",
+    "listTitle": "La modal con la lista",
+    "listItems": [
+      "<strong>Auto-refresco</strong> — la lista vuelve a obtener datos cada 5 s mientras el diálogo está abierto. Al cerrar el diálogo se detiene todo el polling.",
+      "<strong>Caja de filtro</strong> — busca por command, user o PID sin volver a pedir datos al servidor.",
+      "<strong>Barra de progreso en línea</strong> — la columna de la métrica primaria dibuja una barra escalada al mayor valor de la lista filtrada, para que el orden visual se mantenga aunque ningún proceso esté cerca del 100 %.",
+      "<strong>Layout móvil</strong> — por debajo de 640 px las columnas PID y User desaparecen para que Command, CPU % y Memory sigan cabiendo sin scroll horizontal."
+    ],
+    "captureListAlt": "Modal Top processes by Memory — tabla con columnas PID, USER, COMMAND, CPU %, Memory ordenada por RSS",
+    "captureListCaption": "La tarjeta Memory abre la lista ordenada por RSS (acento índigo). La tarjeta CPU abre la misma lista ordenada por %CPU (acento azul).",
+    "detailTitle": "Detalle por proceso",
+    "detailIntro": "Al pulsar cualquier fila de la lista se abre una segunda modal con la foto en vivo completa de ese proceso, servida desde <code>/api/processes/&lt;pid&gt;</code>. Cuatro secciones:",
+    "detailItems": [
+      "<strong>Overview</strong> — estado (<code>R</code>/<code>S</code>/<code>D</code>/<code>Z</code>/…), proceso padre (<code>PPid</code> + <code>comm</code> del padre), número de hilos, FDs abiertos, usuario y grupo.",
+      "<strong>Resources</strong> — CPU %, Memoria %, Resident (RSS), Virtual size, Swap, bytes de I/O de lectura y escritura.",
+      "<strong>Command</strong> — nombre corto (<code>comm</code>), línea de comandos completa, ruta del ejecutable y directorio de trabajo.",
+      "<strong>Lifetime</strong> — timestamp de arranque y tiempo transcurrido en ejecución."
+    ],
+    "detailRefresh": "La modal de detalle se refresca cada 3 s mientras está abierta. Si el proceso termina con la modal abierta, el siguiente refresco muestra <em>Process exited</em> en vez de datos obsoletos — esperable para procesos efímeros como <code>pct exec</code> o subprocesos de backup.",
+    "captureDetailAlt": "Modal de detalle de proceso — secciones Overview, Resources, Command y Lifetime para un único PID",
+    "captureDetailCaption": "Modal de detalle por proceso abierta desde una fila de la lista. El color de acento sigue al de la tarjeta que la abrió (azul para CPU, índigo para Memory).",
+    "sourceTitle": "De dónde salen los datos",
+    "sourceBody": "<code>/api/processes/&lt;pid&gt;</code> lee directamente <code>/proc/&lt;pid&gt;/cmdline</code>, <code>/exe</code>, <code>/cwd</code>, <code>/status</code>, <code>/io</code> y <code>/fd</code>, y llama a <code>ps -o lstart=,etime=,pcpu=,pmem= -p &lt;pid&gt;</code> para los campos en vivo que el kernel no expone en <code>/proc</code>. UID y GID se resuelven a nombre de usuario / grupo con los módulos <code>pwd</code> / <code>grp</code> de Python. Ambos endpoints son handlers HTTP puros bajo demanda — sin daemon, sin sampling en background. No corre nada en el servidor mientras la modal esté cerrada."
+  },
   "middle": {
     "heading": "Medio: gráficas de métricas del nodo",
     "body1": "Bajo la fila superior se encuentra el componente <code>NodeMetricsCharts</code> — gráficas históricas de CPU, memoria y E/S de disco tomadas del propio almacén RRD de Proxmox vía <code>/api/node/metrics</code>. Un selector de timeframe alterna entre <em>1 hora / 24 horas / 7 días / 30 días / 1 año</em>; la resolución de los datos baja a medida que crece la ventana para que la gráfica se mantenga fluida.",

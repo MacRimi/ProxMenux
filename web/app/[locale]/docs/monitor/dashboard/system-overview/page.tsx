@@ -31,6 +31,7 @@ export default async function SystemOverviewTabPage({
   const messages = (await getMessages({ locale })) as unknown as {
     docs: { monitor: { dashboard: { systemOverview: {
       topRow: { rows: TopRow[]; thresholdsItems: string[] }
+      processes: { listItems: string[]; detailItems: string[] }
       bottom: { storageItems: string[] }
       refresh: { items: string[] }
       dataCollected: { rows: DataRow[] }
@@ -40,6 +41,8 @@ export default async function SystemOverviewTabPage({
   const so = messages.docs.monitor.dashboard.systemOverview
   const topRows = so.topRow.rows
   const thresholdsItems = so.topRow.thresholdsItems
+  const processListItems = so.processes.listItems
+  const processDetailItems = so.processes.detailItems
   const storageItems = so.bottom.storageItems
   const refreshItems = so.refresh.items
   const dataRows = so.dataCollected.rows
@@ -134,6 +137,58 @@ export default async function SystemOverviewTabPage({
       <Callout variant="tip" title={t("topRow.sparklineTitle")}>
         {t("topRow.sparklineBody")}
       </Callout>
+
+      <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("processes.heading")}</h2>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("processes.intro", { code })}
+      </p>
+
+      <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("processes.listTitle")}</h3>
+      <ul className="list-disc pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
+        {processListItems.map((_, idx) => (
+          <li key={idx}>{t.rich(`processes.listItems.${idx}`, { strong })}</li>
+        ))}
+      </ul>
+
+      <figure className="my-6">
+        <img
+          src="/monitor/system-overview-top-processes.png"
+          alt={t("processes.captureListAlt")}
+          className="rounded-lg border border-gray-200 shadow-sm w-full"
+        />
+        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
+          {t("processes.captureListCaption")}
+        </figcaption>
+      </figure>
+
+      <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("processes.detailTitle")}</h3>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("processes.detailIntro", { code })}
+      </p>
+      <ul className="list-disc pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
+        {processDetailItems.map((_, idx) => (
+          <li key={idx}>{t.rich(`processes.detailItems.${idx}`, { strong, code })}</li>
+        ))}
+      </ul>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("processes.detailRefresh", { em, code })}
+      </p>
+
+      <figure className="my-6">
+        <img
+          src="/monitor/system-overview-process-detail.png"
+          alt={t("processes.captureDetailAlt")}
+          className="rounded-lg border border-gray-200 shadow-sm w-full"
+        />
+        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
+          {t("processes.captureDetailCaption")}
+        </figcaption>
+      </figure>
+
+      <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("processes.sourceTitle")}</h3>
+      <p className="mb-6 text-gray-800 leading-relaxed">
+        {t.rich("processes.sourceBody", { code, em })}
+      </p>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("middle.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">

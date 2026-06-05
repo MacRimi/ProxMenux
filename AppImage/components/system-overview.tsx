@@ -4,10 +4,11 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Progress } from "./ui/progress"
 import { Badge } from "./ui/badge"
-import { Cpu, MemoryStick, Thermometer, Server, Zap, AlertCircle, HardDrive, Network } from "lucide-react"
+import { Cpu, MemoryStick, Thermometer, Server, Zap, AlertCircle, HardDrive, Network, ChevronRight } from "lucide-react"
 import { NodeMetricsCharts } from "./node-metrics-charts"
 import { NetworkTrafficChart } from "./network-traffic-chart"
 import { TemperatureDetailModal } from "./temperature-detail-modal"
+import { ProcessDetailModal } from "./process-detail-modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { fetchApi } from "../lib/api-config"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
@@ -187,6 +188,8 @@ export function SystemOverview() {
   const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
   const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes") // Added networkUnit state
   const [tempModalOpen, setTempModalOpen] = useState(false)
+  const [cpuProcModalOpen, setCpuProcModalOpen] = useState(false)
+  const [memProcModalOpen, setMemProcModalOpen] = useState(false)
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -400,10 +403,17 @@ export function SystemOverview() {
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
         {/* ── CPU Usage (preview restyle v2: tamaño igual a System Info, bars más anchas) ── */}
-        <Card className="bg-card border-border">
+        <Card
+          className="bg-card border-border cursor-pointer hover:bg-white/5 transition-colors"
+          onClick={() => setCpuProcModalOpen(true)}
+          title="View top processes by CPU"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">CPU Usage</CardTitle>
-            <Cpu className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Cpu className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4 opacity-60" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4">
@@ -443,10 +453,17 @@ export function SystemOverview() {
         </Card>
 
         {/* ── Memory (preview restyle v2: tamaño igual a System Info, bars más anchas) ── */}
-        <Card className="bg-card border-border">
+        <Card
+          className="bg-card border-border cursor-pointer hover:bg-white/5 transition-colors"
+          onClick={() => setMemProcModalOpen(true)}
+          title="View top processes by memory"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Memory</CardTitle>
-            <MemoryStick className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <MemoryStick className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4 opacity-60" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4">
@@ -566,10 +583,22 @@ export function SystemOverview() {
         </Card>
       </div>
 
-      <TemperatureDetailModal 
-        open={tempModalOpen} 
+      <TemperatureDetailModal
+        open={tempModalOpen}
         onOpenChange={setTempModalOpen}
         liveTemperature={systemData.temperature}
+      />
+
+      <ProcessDetailModal
+        open={cpuProcModalOpen}
+        onOpenChange={setCpuProcModalOpen}
+        sort="cpu"
+      />
+
+      <ProcessDetailModal
+        open={memProcModalOpen}
+        onOpenChange={setMemProcModalOpen}
+        sort="mem"
       />
 
       <NodeMetricsCharts />

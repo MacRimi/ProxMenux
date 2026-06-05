@@ -7715,6 +7715,221 @@ def api_system():
         pass
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/processes', methods=['GET'])
+@require_auth
+def api_processes():
+    """Top processes by CPU or memory using `ps` (pre-installed everywhere,
+    no daemon, no extra dependency). Called from the CPU Usage and Memory
+    "more info" modals on the Overview page — fetched only when the modal
+    opens (and on its in-modal refresh tick), so no continuous load on
+    the host even on a 5 s refresh schedule.
+
+    Query: sort=cpu|mem, limit=1..100 (default 20).
+    """
+    try:
+        sort = request.args.get('sort', 'cpu')
+        if sort not in ('cpu', 'mem'):
+            sort = 'cpu'
+        try:
+            limit = max(1, min(int(request.args.get('limit', 20)), 100))
+        except (TypeError, ValueError):
+            limit = 20
+
+        sort_field = '-pcpu' if sort == 'cpu' else '-pmem'
+        result = subprocess.run(
+            ['ps', '-eo', 'pid,user,pcpu,pmem,rss,comm',
+             '--sort', sort_field, '--no-headers'],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode != 0:
+            return jsonify({'error': result.stderr or 'ps failed'}), 500
+
+        processes = []
+        for line in result.stdout.splitlines()[:limit]:
+            # Split into at most 6 fields so the command can contain spaces.
+            parts = line.strip().split(None, 5)
+            if len(parts) < 6:
+                continue
+            try:
+                processes.append({
+                    'pid': int(parts[0]),
+                    'user': parts[1],
+                    'cpu': float(parts[2]),
+                    'mem': float(parts[3]),
+                    'rss_kb': int(parts[4]),
+                    'command': parts[5],
+                })
+            except (ValueError, TypeError):
+                continue
+
+        return jsonify({
+            'processes': processes,
+            'sort': sort,
+            'captured_at': int(time.time()),
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'ps timed out'}), 504
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/processes/<int:pid>', methods=['GET'])
+@require_auth
+def api_process_detail(pid):
+    """Detailed info for a single process read from /proc/<pid>/.
+
+    Called from the Top-process row-click → detail modal. Lazy: only
+    hit when the user explicitly clicks a row, then refreshed inside
+    the modal every few seconds while it's open.
+    """
+    import pwd, grp
+    try:
+        proc_path = f'/proc/{pid}'
+        if not os.path.isdir(proc_path):
+            return jsonify({'error': 'Process not found', 'pid': pid}), 404
+
+        info = {'pid': pid}
+
+        # Short name + full argv
+        try:
+            with open(f'{proc_path}/comm') as f:
+                info['comm'] = f.read().strip()
+        except Exception:
+            info['comm'] = None
+        try:
+            with open(f'{proc_path}/cmdline', 'rb') as f:
+                raw = f.read()
+            # argv null-byte separated; drop trailing null
+            info['cmdline'] = raw.replace(b'\0', b' ').strip().decode('utf-8', 'replace')
+        except Exception:
+            info['cmdline'] = None
+
+        # Symlinks (may EACCES for kernel threads / other namespaces)
+        try:
+            info['exe'] = os.readlink(f'{proc_path}/exe')
+        except (OSError, PermissionError):
+            info['exe'] = None
+        try:
+            info['cwd'] = os.readlink(f'{proc_path}/cwd')
+        except (OSError, PermissionError):
+            info['cwd'] = None
+
+        # /proc/<pid>/status (Vm* sizes, State, PPid, Threads, Uid, Gid)
+        status = {}
+        try:
+            with open(f'{proc_path}/status') as f:
+                for line in f:
+                    if ':' in line:
+                        k, v = line.split(':', 1)
+                        status[k.strip()] = v.strip()
+        except Exception:
+            pass
+
+        info['state'] = status.get('State', '')
+        try:
+            info['ppid'] = int(status.get('PPid', '0'))
+        except (ValueError, TypeError):
+            info['ppid'] = 0
+        try:
+            info['threads'] = int(status.get('Threads', '0'))
+        except (ValueError, TypeError):
+            info['threads'] = 0
+
+        def _kb(field):
+            try:
+                return int(status.get(field, '0').split()[0])
+            except (ValueError, IndexError, AttributeError):
+                return 0
+        info['vm_rss_kb'] = _kb('VmRSS')
+        info['vm_size_kb'] = _kb('VmSize')
+        info['vm_swap_kb'] = _kb('VmSwap')
+
+        # Uid → user name; Gid → group name
+        try:
+            uid = int(status.get('Uid', '0').split()[0])
+            info['uid'] = uid
+            try:
+                info['user'] = pwd.getpwuid(uid).pw_name
+            except KeyError:
+                info['user'] = str(uid)
+        except Exception:
+            info['uid'] = None
+            info['user'] = None
+        try:
+            gid = int(status.get('Gid', '0').split()[0])
+            info['gid'] = gid
+            try:
+                info['group'] = grp.getgrgid(gid).gr_name
+            except KeyError:
+                info['group'] = str(gid)
+        except Exception:
+            info['gid'] = None
+            info['group'] = None
+
+        # Parent process short name (for the "started by" line)
+        info['parent_name'] = None
+        if info['ppid']:
+            try:
+                with open(f'/proc/{info["ppid"]}/comm') as f:
+                    info['parent_name'] = f.read().strip()
+            except Exception:
+                pass
+
+        # Live ps fields the kernel doesn't expose in /proc directly
+        try:
+            ps_out = subprocess.run(
+                ['ps', '-o', 'lstart=,etime=,pcpu=,pmem=', '-p', str(pid)],
+                capture_output=True, text=True, timeout=2
+            )
+            if ps_out.returncode == 0:
+                line = ps_out.stdout.strip()
+                if line:
+                    # lstart is 5 whitespace-separated tokens (`Wed Jun 4 17:12:23 2026`),
+                    # so we split off the trailing 3 fixed fields from the right.
+                    parts = line.rsplit(None, 3)
+                    if len(parts) == 4:
+                        info['start_time'] = parts[0]
+                        info['elapsed'] = parts[1]
+                        try:
+                            info['cpu'] = float(parts[2])
+                        except ValueError:
+                            info['cpu'] = 0.0
+                        try:
+                            info['mem'] = float(parts[3])
+                        except ValueError:
+                            info['mem'] = 0.0
+        except Exception:
+            pass
+
+        # I/O accounting (kernel requires CONFIG_TASK_IO_ACCOUNTING; also EACCES for non-self)
+        try:
+            io = {}
+            with open(f'{proc_path}/io') as f:
+                for line in f:
+                    if ':' in line:
+                        k, v = line.split(':', 1)
+                        try:
+                            io[k.strip()] = int(v.strip())
+                        except ValueError:
+                            pass
+            info['io_read_bytes'] = io.get('read_bytes')
+            info['io_write_bytes'] = io.get('write_bytes')
+        except (OSError, PermissionError):
+            info['io_read_bytes'] = None
+            info['io_write_bytes'] = None
+
+        # Open FDs
+        try:
+            info['fd_count'] = len(os.listdir(f'{proc_path}/fd'))
+        except (OSError, PermissionError):
+            info['fd_count'] = None
+
+        info['captured_at'] = int(time.time())
+        return jsonify(info)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/temperature/history', methods=['GET'])
 @require_auth
 def api_temperature_history():
