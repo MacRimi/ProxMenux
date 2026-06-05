@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
 import { ScrollArea } from "./ui/scroll-area"
-import { Activity, FileText, HardDrive, Clock } from "lucide-react"
+import { Activity, FileText, HardDrive, Clock, Info } from "lucide-react"
 import { fetchApi } from "@/lib/api-config"
 
 interface ProcessDetail {
@@ -78,7 +78,16 @@ export function ProcessInfoModal({ pid, accent, onClose }: ProcessInfoModalProps
   const [data, setData] = useState<ProcessDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [exited, setExited] = useState(false)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const open = pid != null
+
+  const stopPolling = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+  }
 
   const fetchDetail = async (silent = false) => {
     if (pid == null) return
@@ -88,11 +97,16 @@ export function ProcessInfoModal({ pid, accent, onClose }: ProcessInfoModalProps
       const res = await fetchApi<ProcessDetail>(`/api/processes/${pid}`)
       setData(res)
     } catch (e: any) {
-      // 404 means the process exited while the modal was open — surface a
-      // clear message instead of stale data, but don't auto-close (user may
-      // want to read the last snapshot).
-      setError(e?.message?.includes("404") ? "Process exited" : (e?.message || "Failed to fetch process"))
-      if (e?.message?.includes("404")) setData(null)
+      // 404 = the process exited while the modal was open. Expected for
+      // short-lived helpers (pct exec, backup subprocesses, the `ps` snapshot
+      // itself). Keep the last good snapshot on screen, stop polling, and
+      // surface an info banner — NOT an error — so it doesn't look like a bug.
+      if (e?.message?.includes("404")) {
+        setExited(true)
+        stopPolling()
+      } else {
+        setError(e?.message || "Failed to fetch process")
+      }
     } finally {
       if (!silent) setLoading(false)
     }
@@ -102,11 +116,14 @@ export function ProcessInfoModal({ pid, accent, onClose }: ProcessInfoModalProps
     if (pid == null) {
       setData(null)
       setError(null)
+      setExited(false)
+      stopPolling()
       return
     }
+    setExited(false)
     fetchDetail()
-    const id = setInterval(() => fetchDetail(true), REFRESH_MS)
-    return () => clearInterval(id)
+    intervalRef.current = setInterval(() => fetchDetail(true), REFRESH_MS)
+    return () => stopPolling()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pid])
 
@@ -123,9 +140,27 @@ export function ProcessInfoModal({ pid, accent, onClose }: ProcessInfoModalProps
             <span className="text-xs text-muted-foreground font-mono flex-shrink-0">PID {pid}</span>
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Live snapshot from <span className="font-mono">/proc/{pid}</span>. Auto-refreshes every {REFRESH_MS / 1000} s while open.
+            {exited ? (
+              <>Last snapshot from <span className="font-mono">/proc/{pid}</span> before the process finished.</>
+            ) : (
+              <>Live snapshot from <span className="font-mono">/proc/{pid}</span>. Auto-refreshes every {REFRESH_MS / 1000} s while open.</>
+            )}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Info banner when the process has finished. Amber, not red — this is
+            expected behavior for short-lived processes, not an error. */}
+        {exited && (
+          <div className="flex items-start gap-2 px-3 py-2 rounded-md border border-amber-500/30 bg-amber-500/10 text-xs text-amber-300">
+            <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+            <div>
+              <div className="font-medium text-amber-200">This process has finished</div>
+              <div className="text-amber-300/80 mt-0.5">
+                It was likely a short-lived helper (a script, a <span className="font-mono">pct exec</span>, or a one-shot command) that completed while the modal was open. The data below is the last snapshot captured before it exited — not a stale or broken read.
+              </div>
+            </div>
+          </div>
+        )}
 
         {error && !data ? (
           <div className="text-sm text-red-500 py-4">{error}</div>
@@ -134,11 +169,11 @@ export function ProcessInfoModal({ pid, accent, onClose }: ProcessInfoModalProps
             {loading ? "Loading…" : "—"}
           </div>
         ) : (
-          <ScrollArea className="max-h-[480px] pr-2">
+          <ScrollArea className={`max-h-[480px] pr-2 ${exited ? "opacity-75" : ""}`}>
             <div className="space-y-4">
               {/* Overview */}
               <Section icon={<Activity className="h-4 w-4 text-blue-400" />} title="Overview">
-                <Row label="State" value={stateLabel(data.state)} />
+                <Row label="State" value={exited ? "Exited" : stateLabel(data.state)} />
                 <Row label="Parent" value={data.parent_name ? `${data.parent_name} (PID ${data.ppid})` : `PID ${data.ppid}`} mono />
                 <Row label="Threads" value={String(data.threads)} mono />
                 <Row label="Open FDs" value={data.fd_count != null ? String(data.fd_count) : "—"} mono />
@@ -176,7 +211,7 @@ export function ProcessInfoModal({ pid, accent, onClose }: ProcessInfoModalProps
 
         {data?.captured_at && (
           <div className="text-[10px] text-muted-foreground text-right mt-1">
-            Captured {new Date(data.captured_at * 1000).toLocaleTimeString()}
+            {exited ? "Last seen" : "Captured"} {new Date(data.captured_at * 1000).toLocaleTimeString()}
             {error ? ` · ${error}` : ""}
           </div>
         )}

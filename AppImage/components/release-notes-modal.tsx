@@ -217,16 +217,36 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 
 const CURRENT_VERSION_FEATURES = [
   {
+    icon: <Sliders className="h-5 w-5" />,
+    text: "Dashboard header restyle - The Overview, Storage, Network and VMs & LXCs tabs now lead with a unified card design: circular gauges paired with mini progress bars, and a clearer headline-plus-pill layout for counts. CPU Usage and Memory cards also expose a User / System and Used / Cached breakdown under the gauge",
+  },
+  {
     icon: <Activity className="h-5 w-5" />,
-    text: "Header Critical badge now respects dismissals (#228) - Permanently silencing every critical alert in a category used to leave the badge stuck on Critical even though the popup correctly reported 0 critical. The rollup that drives /api/system-info now runs a dismiss-aware pass over every category, so the badge, the popup and any API consumer all see the same view",
+    text: "Top processes drill-down - Click the CPU Usage or Memory cards on the Overview tab to open a sortable top-25 list of processes by %CPU or RSS, then click any row for a live per-process detail modal with state, command line, resource usage and lifetime",
+  },
+  {
+    icon: <HardDrive className="h-5 w-5" />,
+    text: "Storage and Network refinements - Storage Used now leads the Storage tab card, Network Status cells stack label-over-value so long hostnames and IPv6 DNS no longer truncate, and the 24 h CPU and Network charts smooth into 5-minute buckets",
+  },
+  {
+    icon: <Cpu className="h-5 w-5" />,
+    text: "Coral on non-Debian LXCs - The Coral LXC installer now detects Alpine / Arch / RHEL / SUSE containers and offers an opt-in passthrough-only mode, so Frigate Docker and other apps bundling their own libedgetpu runtime can wire the device through without aborting",
+  },
+  {
+    icon: <Wrench className="h-5 w-5" />,
+    text: "Coral PCIe driver false-positive update fix - The installer now records the upstream feranick release tag on disk, so the update detector compares like-for-like and stops firing a phantom 'driver update available' notification right after a fresh install",
   },
   {
     icon: <RefreshCw className="h-5 w-5" />,
-    text: "Auto-reconcile of stale alerts - Errors for resources that no longer exist now auto-clear within the regular cleanup cycle. New cases: a PVE storage removed via pvesm, an NFS/CIFS share whose mount target is no longer in /proc/mounts (the lazy-umount case reported in the field), and LXC mount-capacity alerts whose CT has been deleted",
+    text: "Auto-reconcile of stale alerts - Errors for resources that no longer exist auto-clear within the regular cleanup cycle. New cases: a PVE storage removed via pvesm, an NFS/CIFS share whose mount target is gone from /proc/mounts, and LXC mount-capacity alerts for a deleted CT",
+  },
+  {
+    icon: <Shield className="h-5 w-5" />,
+    text: "Header Critical badge respects dismissals (#228) - Permanently silencing every critical alert in a category now also clears the top-right badge, so the header pill and the bottom popup always agree on the count",
   },
   {
     icon: <Bell className="h-5 w-5" />,
-    text: "Notification Send Test buttons unified (#226) - All five channel Send Test buttons (Telegram, Gotify, Discord, Email, Apprise) now sit on the left side and carry their channel's brand colour with white text, instead of Apprise being the right-aligned cyan outlier",
+    text: "Notification Send Test buttons unified (#226) - All five channel Send Test buttons (Telegram, Gotify, Discord, Email, Apprise) now sit on the left and carry their channel's brand colour, instead of Apprise being the right-aligned cyan outlier",
   },
 ]
 

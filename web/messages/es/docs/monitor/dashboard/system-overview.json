@@ -73,7 +73,7 @@
       "<strong>Command</strong> — nombre corto (<code>comm</code>), línea de comandos completa, ruta del ejecutable y directorio de trabajo.",
       "<strong>Lifetime</strong> — timestamp de arranque y tiempo transcurrido en ejecución."
     ],
-    "detailRefresh": "La modal de detalle se refresca cada 3 s mientras está abierta. Si el proceso termina con la modal abierta, el siguiente refresco muestra <em>Process exited</em> en vez de datos obsoletos — esperable para procesos efímeros como <code>pct exec</code> o subprocesos de backup.",
+    "detailRefresh": "La modal de detalle se refresca cada 3 s mientras está abierta. Si el proceso termina con la modal abierta, el polling se detiene, aparece un banner ámbar <em>This process has finished</em> y el último snapshot capturado se queda en pantalla (atenuado) para que sigas viendo qué estaba pasando justo antes de que terminara — esperable para procesos efímeros como <code>pct exec</code>, subprocesos de backup o el propio <code>ps</code> que alimenta la lista.",
     "captureDetailAlt": "Modal de detalle de proceso — secciones Overview, Resources, Command y Lifetime para un único PID",
     "captureDetailCaption": "Modal de detalle por proceso abierta desde una fila de la lista. El color de acento sigue al de la tarjeta que la abrió (azul para CPU, índigo para Memory).",
     "sourceTitle": "De dónde salen los datos",

@@ -73,7 +73,7 @@
       "<strong>Command</strong> — short name (<code>comm</code>), full command line, executable path and working directory.",
       "<strong>Lifetime</strong> — start timestamp and elapsed runtime."
     ],
-    "detailRefresh": "The detail modal refreshes every 3 s while open. If the process exits mid-modal the next refresh surfaces <em>Process exited</em> instead of stale data — expected for short-lived helpers like <code>pct exec</code> or backup subprocesses.",
+    "detailRefresh": "The detail modal refreshes every 3 s while open. If the process exits mid-modal the polling stops, an amber <em>This process has finished</em> banner appears, and the last captured snapshot stays on screen (dimmed) so you can still read what was happening just before it exited — expected for short-lived helpers like <code>pct exec</code>, backup subprocesses or the underlying <code>ps</code> snapshot itself.",
     "captureDetailAlt": "Process detail modal — Overview, Resources, Command and Lifetime sections for a single PID",
     "captureDetailCaption": "Per-process detail modal opened from a list row. The accent colour matches the card that opened it (blue for CPU, indigo for Memory).",
     "sourceTitle": "Where the data comes from",
