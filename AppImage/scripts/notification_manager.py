@@ -932,23 +932,57 @@ class NotificationManager:
     
     def start(self):
         """Start the notification service in server mode.
-        
-        Launches watchers and dispatch loop as daemon threads.
+
+        Detection (the polling collector + watchers) ALWAYS runs because
+        the managed_installs registry — NVIDIA, ProxMenux, Coral, OCI
+        updates — drives the dashboard's "update available" UI even when
+        notifications are off. Caught on .89 in June 2026: the user had
+        disabled notifications back in May and the NVIDIA card was stuck
+        on a stale "v580.159.03 available" because the polling collector
+        was gated behind `self._enabled` here and never ran again.
+
+        Notification *delivery* (channel setup, cooldown reset, PVE
+        webhook, dispatch loop emitting events) stays conditional on
+        `self._enabled` — the dispatch loop itself bails early when
+        disabled, so events from the watchers queue up briefly and get
+        dropped without ever being sent.
+
         Called by flask_server.py on startup.
         """
         if self._running:
             return
-        
+
         self._load_config()
         self._load_cooldowns_from_db()
-        
-        if not self._enabled:
-            print("[NotificationManager] Service is disabled. Skipping start.")
-            return
-        
+
         self._running = True
         self._stats['started_at'] = datetime.now().isoformat()
 
+        # ── Detection (always on) ────────────────────────────────
+        # Even when notifications are disabled, these watchers and the
+        # polling collector keep the managed_installs registry, the
+        # error history, and the task state up to date.
+        self._journal_watcher = JournalWatcher(self._event_queue)
+        self._task_watcher = TaskWatcher(self._event_queue)
+        self._polling_collector = PollingCollector(self._event_queue)
+
+        self._journal_watcher.start()
+        self._task_watcher.start()
+        self._polling_collector.start()
+
+        # Dispatch loop runs unconditionally too; its internal
+        # `if not self._enabled` guards drop events when disabled.
+        # Without it the event queue would grow forever.
+        self._dispatch_thread = threading.Thread(
+            target=self._dispatch_loop, daemon=True, name='notification-dispatch'
+        )
+        self._dispatch_thread.start()
+
+        if not self._enabled:
+            print("[NotificationManager] Notifications disabled — detection on, delivery off.")
+            return
+
+        # ── Delivery setup (only when enabled) ────────────────────
         # Reset cooldowns for the curated event-type set so the user gets
         # a fresh status report (update_summary, …) and a fresh security
         # signal (auth_fail) after every Monitor deploy/restart. The 24h
@@ -971,22 +1005,7 @@ class NotificationManager:
             pass  # flask_notification_routes not loaded yet (early startup)
         except Exception as e:
             print(f"[NotificationManager] PVE webhook setup error: {e}")
-        
-        # Start event watchers
-        self._journal_watcher = JournalWatcher(self._event_queue)
-        self._task_watcher = TaskWatcher(self._event_queue)
-        self._polling_collector = PollingCollector(self._event_queue)
-        
-        self._journal_watcher.start()
-        self._task_watcher.start()
-        self._polling_collector.start()
-        
-        # Start dispatch loop
-        self._dispatch_thread = threading.Thread(
-            target=self._dispatch_loop, daemon=True, name='notification-dispatch'
-        )
-        self._dispatch_thread.start()
-        
+
         print(f"[NotificationManager] Started with channels: {list(self._channels.keys())}")
     
     def stop(self):
