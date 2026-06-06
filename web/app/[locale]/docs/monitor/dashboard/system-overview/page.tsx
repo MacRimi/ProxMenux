@@ -185,11 +185,6 @@ export default async function SystemOverviewTabPage({
         </figcaption>
       </figure>
 
-      <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("processes.sourceTitle")}</h3>
-      <p className="mb-6 text-gray-800 leading-relaxed">
-        {t.rich("processes.sourceBody", { code, em })}
-      </p>
-
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("middle.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">
         {t.rich("middle.body1", { code, em })}

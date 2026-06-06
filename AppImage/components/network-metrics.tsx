@@ -291,6 +291,25 @@ export function NetworkMetrics() {
     }
   }
 
+  // Compact form for inline header use. The full "24 Hours" gets noisy
+  // next to the title; "Past 24 h" keeps the same meaning in less space.
+  const getTimeframeShortLabel = () => {
+    switch (timeframe) {
+      case "hour":
+        return "Past 1 h"
+      case "day":
+        return "Past 24 h"
+      case "week":
+        return "Past 7 d"
+      case "month":
+        return "Past 30 d"
+      case "year":
+        return "Past 1 y"
+      default:
+        return "Past 24 h"
+    }
+  }
+
   const hostname = networkData.hostname || "N/A"
   const domain = networkData.domain || "N/A"
   const dnsServers = networkData.dns_servers || []
@@ -311,8 +330,11 @@ export function NetworkMetrics() {
           return (
             <Card className="bg-card border-border">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Network Traffic</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Network Traffic</CardTitle>
+                  <span className="text-[10px] text-muted-foreground/70 font-normal">{getTimeframeShortLabel()}</span>
+                </div>
+                <Activity className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-3 mb-3">

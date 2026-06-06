@@ -7718,11 +7718,16 @@ def api_system():
 @app.route('/api/processes', methods=['GET'])
 @require_auth
 def api_processes():
-    """Top processes by CPU or memory using `ps` (pre-installed everywhere,
-    no daemon, no extra dependency). Called from the CPU Usage and Memory
-    "more info" modals on the Overview page — fetched only when the modal
-    opens (and on its in-modal refresh tick), so no continuous load on
-    the host even on a 5 s refresh schedule.
+    """Top processes for the CPU Usage / Memory "more info" modals.
+
+    Reads /proc/<pid>/stat (and friends) directly with two passes 1 s
+    apart for CPU delta. Per-process aggregation (one row per process —
+    a multi-vCPU VM shows the sum of its kvm threads under one PID).
+
+    Skipping the psutil object layer cuts the endpoint's own CPU cost
+    roughly 5×, so when the monitor process appears in the list it
+    reports a much more honest reading of its real impact instead of
+    the inflated value the heavier psutil iteration was producing.
 
     Query: sort=cpu|mem, limit=1..100 (default 20).
     """
@@ -7731,44 +7736,188 @@ def api_processes():
         if sort not in ('cpu', 'mem'):
             sort = 'cpu'
         try:
-            limit = max(1, min(int(request.args.get('limit', 20)), 100))
+            # Cap raised to 500 so the modal can over-fetch and let the
+            # client-side filter find processes that aren't in the top-N
+            # by metric (e.g., searching "proxmenux" in the Memory modal
+            # finds it even though its RSS is far from the top).
+            limit = max(1, min(int(request.args.get('limit', 20)), 500))
         except (TypeError, ValueError):
             limit = 20
 
-        sort_field = '-pcpu' if sort == 'cpu' else '-pmem'
-        result = subprocess.run(
-            ['ps', '-eo', 'pid,user,pcpu,pmem,rss,comm',
-             '--sort', sort_field, '--no-headers'],
-            capture_output=True, text=True, timeout=5
-        )
-        if result.returncode != 0:
-            return jsonify({'error': result.stderr or 'ps failed'}), 500
+        import pwd
 
-        processes = []
-        for line in result.stdout.splitlines()[:limit]:
-            # Split into at most 6 fields so the command can contain spaces.
-            parts = line.strip().split(None, 5)
-            if len(parts) < 6:
-                continue
+        SC_CLK_TCK = os.sysconf('SC_CLK_TCK') or 100
+        try:
+            PAGE_SIZE_KB = os.sysconf('SC_PAGE_SIZE') // 1024 or 4
+        except (ValueError, OSError):
+            PAGE_SIZE_KB = 4
+        # We normalize CPU% to the host total (matches the CPU Usage card
+        # on the dashboard, so users can compare the two directly without
+        # thinking about per-core vs whole-system scales).
+        NCPU = os.cpu_count() or 1
+
+        # Total memory (kB) — denominator for mem_pct
+        total_kb = 0
+        try:
+            with open('/proc/meminfo') as f:
+                for line in f:
+                    if line.startswith('MemTotal:'):
+                        total_kb = int(line.split()[1])
+                        break
+        except OSError:
+            pass
+
+        user_cache = {}
+        def _user_name(uid):
+            if uid in user_cache:
+                return user_cache[uid]
             try:
-                processes.append({
-                    'pid': int(parts[0]),
-                    'user': parts[1],
-                    'cpu': float(parts[2]),
-                    'mem': float(parts[3]),
-                    'rss_kb': int(parts[4]),
-                    'command': parts[5],
+                name = pwd.getpwuid(uid).pw_name
+            except KeyError:
+                name = str(uid)
+            user_cache[uid] = name
+            return name
+
+        def _list_pids():
+            try:
+                for entry in os.listdir('/proc'):
+                    if entry.isdigit():
+                        yield int(entry)
+            except OSError:
+                return
+
+        def _read_cpu_time(pid):
+            """Just utime+stime in clock ticks. Cheapest possible read."""
+            try:
+                with open(f'/proc/{pid}/stat', 'rb') as f:
+                    line = f.read()
+            except (OSError, FileNotFoundError):
+                return None
+            rpar = line.rfind(b')')
+            if rpar < 0:
+                return None
+            rest = line[rpar + 2:].split()
+            try:
+                return int(rest[11]) + int(rest[12])
+            except (IndexError, ValueError):
+                return None
+
+        def _read_meta(pid):
+            """Returns (comm, ppid, num_threads, rss_kb, uid, cmdline) or None."""
+            try:
+                with open(f'/proc/{pid}/stat', 'rb') as f:
+                    line = f.read()
+            except (OSError, FileNotFoundError):
+                return None
+            lpar = line.find(b'(')
+            rpar = line.rfind(b')')
+            if lpar < 0 or rpar < 0:
+                return None
+            comm = line[lpar + 1:rpar].decode('utf-8', 'replace')
+            rest = line[rpar + 2:].split()
+            try:
+                ppid = int(rest[1])
+            except (IndexError, ValueError):
+                ppid = 0
+
+            rss_kb = 0
+            try:
+                with open(f'/proc/{pid}/statm') as f:
+                    rss_kb = int(f.read().split()[1]) * PAGE_SIZE_KB
+            except (OSError, FileNotFoundError, IndexError, ValueError):
+                pass
+
+            uid = 0
+            try:
+                with open(f'/proc/{pid}/status') as f:
+                    for ln in f:
+                        if ln.startswith('Uid:'):
+                            uid = int(ln.split()[1])
+                            break
+            except (OSError, FileNotFoundError, IndexError, ValueError):
+                pass
+
+            cmdline = ''
+            try:
+                with open(f'/proc/{pid}/cmdline', 'rb') as f:
+                    raw = f.read()
+                if raw:
+                    cmdline = raw.replace(b'\x00', b' ').strip().decode('utf-8', 'replace')
+            except (OSError, FileNotFoundError):
+                pass
+
+            return (comm, ppid, rss_kb, uid, cmdline)
+
+        if sort == 'cpu':
+            # Pass 1: snapshot CPU time for every running PID.
+            snap1 = {pid: _read_cpu_time(pid) for pid in _list_pids()}
+            snap1 = {k: v for k, v in snap1.items() if v is not None}
+
+            time.sleep(1.0)
+
+            # Pass 2: re-read CPU time, compute delta, plus metadata.
+            results = []
+            for pid in _list_pids():
+                now = _read_cpu_time(pid)
+                if now is None:
+                    continue
+                prior = snap1.get(pid)
+                if prior is None:
+                    # Process started during the sample window — skip
+                    # (no baseline to delta against).
+                    continue
+                meta = _read_meta(pid)
+                if meta is None:
+                    continue
+                comm, _ppid, rss_kb, uid, cmdline = meta
+                delta_jiffies = max(0, now - prior)
+                # delta_jiffies / clock_tps = CPU seconds used in the 1 s
+                # window. Dividing by NCPU expresses it as a fraction of
+                # the whole host (so values line up with the CPU Usage
+                # card — 1 % in the modal == 1 % of the host total).
+                cpu_pct = round((delta_jiffies / SC_CLK_TCK) * 100 / NCPU, 1)
+                mem_pct = round((rss_kb / total_kb * 100) if total_kb else 0.0, 1)
+                results.append({
+                    'pid': pid,
+                    'parent_pid': pid,
+                    'user': _user_name(uid),
+                    'cpu': cpu_pct,
+                    'mem': mem_pct,
+                    'rss_kb': rss_kb,
+                    'command': comm,
+                    'cmdline': cmdline or comm,
                 })
-            except (ValueError, TypeError):
-                continue
+
+            results.sort(key=lambda r: r['cpu'], reverse=True)
+            processes = results[:limit]
+
+        else:
+            # Memory sort: single pass, no delta needed.
+            results = []
+            for pid in _list_pids():
+                meta = _read_meta(pid)
+                if meta is None:
+                    continue
+                comm, _ppid, rss_kb, uid, cmdline = meta
+                mem_pct = round((rss_kb / total_kb * 100) if total_kb else 0.0, 1)
+                results.append({
+                    'pid': pid,
+                    'parent_pid': pid,
+                    'user': _user_name(uid),
+                    'cpu': 0.0,
+                    'mem': mem_pct,
+                    'rss_kb': rss_kb,
+                    'command': comm,
+                    'cmdline': cmdline or comm,
+                })
+            results.sort(key=lambda r: r['mem'], reverse=True)
+            processes = results[:limit]
 
         return jsonify({
             'processes': processes,
             'sort': sort,
             'captured_at': int(time.time()),
         })
-    except subprocess.TimeoutExpired:
-        return jsonify({'error': 'ps timed out'}), 504
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -7875,30 +8024,41 @@ def api_process_detail(pid):
             except Exception:
                 pass
 
-        # Live ps fields the kernel doesn't expose in /proc directly
+        # Start time + elapsed runtime from `ps` — /proc/<pid>/stat exposes
+        # raw clock ticks; `ps` formats them as the human-friendly strings
+        # we want (lstart: "Wed Jun 4 17:12:23 2026"; etime: "2h59m").
         try:
             ps_out = subprocess.run(
-                ['ps', '-o', 'lstart=,etime=,pcpu=,pmem=', '-p', str(pid)],
+                ['ps', '-o', 'lstart=,etime=', '-p', str(pid)],
                 capture_output=True, text=True, timeout=2
             )
             if ps_out.returncode == 0:
                 line = ps_out.stdout.strip()
                 if line:
-                    # lstart is 5 whitespace-separated tokens (`Wed Jun 4 17:12:23 2026`),
-                    # so we split off the trailing 3 fixed fields from the right.
-                    parts = line.rsplit(None, 3)
-                    if len(parts) == 4:
+                    # lstart is 5 whitespace-separated tokens, etime is 1
+                    # token after, so we split off the trailing field from
+                    # the right.
+                    parts = line.rsplit(None, 1)
+                    if len(parts) == 2:
                         info['start_time'] = parts[0]
                         info['elapsed'] = parts[1]
-                        try:
-                            info['cpu'] = float(parts[2])
-                        except ValueError:
-                            info['cpu'] = 0.0
-                        try:
-                            info['mem'] = float(parts[3])
-                        except ValueError:
-                            info['mem'] = 0.0
         except Exception:
+            pass
+
+        # CPU% / MEM% from psutil with delta sampling. CPU is normalized
+        # to the host total (divided by cpu_count) so values match what
+        # the parent list and the CPU Usage card show.
+        info['cpu'] = 0.0
+        info['mem'] = 0.0
+        try:
+            p_proc = psutil.Process(pid)
+            ncpu = os.cpu_count() or 1
+            info['cpu'] = round(p_proc.cpu_percent(interval=1.0) / ncpu, 1)
+            try:
+                info['mem'] = round(p_proc.memory_percent(), 1)
+            except psutil.NoSuchProcess:
+                pass
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
 
         # I/O accounting (kernel requires CONFIG_TASK_IO_ACCOUNTING; also EACCES for non-self)

@@ -54,30 +54,28 @@
     "sparklineBody": "The temperature card draws a 5-minute trace under the value, with the line and gradient colour following the same Warning/Critical pair documented above. It's the fastest way to see whether the host is in a thermal climb without opening the detail modal."
   },
   "processes": {
-    "heading": "Click-through: top processes by CPU / Memory",
-    "intro": "The CPU Usage and Memory cards are clickable. Clicking either opens a sortable list of the top 25 processes — the CPU card sorts by <code>%CPU</code>, the Memory card sorts by resident memory (RSS). Both pull from <code>/api/processes?sort=cpu|mem&limit=25</code>, which runs a single <code>ps -eo pid,user,pcpu,pmem,rss,comm</code> per refresh.",
-    "listTitle": "The list modal",
+    "heading": "Top processes by CPU / Memory",
+    "intro": "The CPU Usage and Memory cards on the Overview tab are clickable. Clicking either opens a sortable list of the top 25 processes — ordered by CPU usage when opened from the CPU card, by resident memory when opened from the Memory card.",
+    "listTitle": "The list dialog",
     "listItems": [
-      "<strong>Auto-refresh</strong> — the list re-fetches every 5 s while the dialog is open. Closing the dialog stops all polling.",
-      "<strong>Filter box</strong> — matches against command, user or PID without re-fetching from the server.",
-      "<strong>Inline progress bar</strong> — the primary metric column draws a bar scaled to the largest value in the filtered list, so visual ranking is preserved even when no process is near 100 %.",
-      "<strong>Mobile layout</strong> — under 640 px the PID and User columns drop out so Command, CPU % and Memory still fit without horizontal scroll."
+      "<strong>Auto-refresh</strong> — the list updates every 5 seconds while the dialog is open and stops polling as soon as it closes.",
+      "<strong>Filter</strong> — the search box narrows the list by command, user or PID.",
+      "<strong>Inline bar</strong> — the primary metric column draws a small bar scaled to the highest value in the filtered list, so ranking stays visible even when no process is near 100 %.",
+      "<strong>Mobile layout</strong> — under 640 px the PID and User columns hide so Command, CPU % and Memory still fit on a phone screen without horizontal scroll."
     ],
     "captureListAlt": "Top processes by Memory modal — table with PID, USER, COMMAND, CPU %, Memory columns sorted by RSS",
-    "captureListCaption": "The Memory card opens the list sorted by RSS (indigo accent). The CPU card opens the same list sorted by %CPU (blue accent).",
+    "captureListCaption": "The Memory card opens the list sorted by RSS (indigo accent). The CPU card opens the same list sorted by CPU usage (blue accent).",
     "detailTitle": "Per-process detail",
-    "detailIntro": "Clicking any row in the list opens a second modal with the full live picture of that one process, served from <code>/api/processes/&lt;pid&gt;</code>. Four sections:",
+    "detailIntro": "Clicking any row in the list opens a second dialog with the live picture of that one process, organised in four sections:",
     "detailItems": [
-      "<strong>Overview</strong> — state (<code>R</code>/<code>S</code>/<code>D</code>/<code>Z</code>/…), parent (<code>PPid</code> + parent <code>comm</code>), thread count, open FD count, user and group.",
-      "<strong>Resources</strong> — CPU %, Memory %, Resident (RSS), Virtual size, Swap, I/O read and write bytes.",
-      "<strong>Command</strong> — short name (<code>comm</code>), full command line, executable path and working directory.",
+      "<strong>Overview</strong> — state, parent process, thread count, open file descriptors, user and group.",
+      "<strong>Resources</strong> — CPU %, Memory %, Resident (RSS), Virtual size, Swap, I/O read and write totals.",
+      "<strong>Command</strong> — short name, full command line, executable path and working directory.",
       "<strong>Lifetime</strong> — start timestamp and elapsed runtime."
     ],
-    "detailRefresh": "The detail modal refreshes every 3 s while open. If the process exits mid-modal the polling stops, an amber <em>This process has finished</em> banner appears, and the last captured snapshot stays on screen (dimmed) so you can still read what was happening just before it exited — expected for short-lived helpers like <code>pct exec</code>, backup subprocesses or the underlying <code>ps</code> snapshot itself.",
+    "detailRefresh": "The detail dialog refreshes every 3 seconds while open. If the process finishes mid-dialog, polling stops, an amber <em>This process has finished</em> banner appears, and the last captured snapshot stays on screen (dimmed) so you can still see what was happening just before it ended.",
     "captureDetailAlt": "Process detail modal — Overview, Resources, Command and Lifetime sections for a single PID",
-    "captureDetailCaption": "Per-process detail modal opened from a list row. The accent colour matches the card that opened it (blue for CPU, indigo for Memory).",
-    "sourceTitle": "Where the data comes from",
-    "sourceBody": "<code>/api/processes/&lt;pid&gt;</code> reads <code>/proc/&lt;pid&gt;/cmdline</code>, <code>/exe</code>, <code>/cwd</code>, <code>/status</code>, <code>/io</code> and <code>/fd</code> directly, and calls <code>ps -o lstart=,etime=,pcpu=,pmem= -p &lt;pid&gt;</code> for the live fields the kernel doesn't expose in <code>/proc</code>. UID and GID are resolved to user / group names through Python's <code>pwd</code> / <code>grp</code> modules. Both endpoints are pure on-demand HTTP handlers — no daemon, no background sampling. Nothing runs on the server when the modal is closed."
+    "captureDetailCaption": "Per-process detail dialog opened from a list row. The accent colour matches the card that opened it (blue for CPU, indigo for Memory)."
   },
   "middle": {
     "heading": "Middle: node metrics charts",
