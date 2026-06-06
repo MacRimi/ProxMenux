@@ -8254,7 +8254,7 @@
       "pve"
     ],
     "config_path": "/etc/jellyfin/",
-    "os": "debian"
+    "os": "ubuntu"
   },
   {
     "name": "Jellystat",
