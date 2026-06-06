@@ -727,7 +727,7 @@
   {
     "name": "Alpine-Nextcloud",
     "slug": "alpine-nextcloud",
-    "desc": "NextCloudPi is a popular self-hosted solution for file collaboration and data storage. It is built on the NextCloud software, which is an open-source platform for data management.",
+    "desc": "<p>NextCloud for Alpine is a popular self-hosted solution for file collaboration and data storage.</p>",
     "script": "ct/alpine-nextcloud.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/alpine-nextcloud.sh",
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/alpine-nextcloud.sh",
@@ -743,9 +743,9 @@
     "warnings": [
       "Only Alpine: To get the username and password, run the script again inside the LXC shell."
     ],
-    "port": 4443,
-    "website": "https://github.com/nextcloud/nextcloudpi",
-    "documentation": "https://docs.nextcloudpi.com/",
+    "port": 443,
+    "website": "https://github.com/nextcloud/server",
+    "documentation": "https://docs.nextcloud.com/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextcloud.webp",
     "updateable": true,
     "privileged": false,
@@ -755,6 +755,10 @@
       "pve"
     ],
     "config_path": "",
+    "default_credentials": {
+      "username": "ncAdmin",
+      "password": ""
+    },
     "os": "alpine"
   },
   {
@@ -11626,7 +11630,7 @@
     "warnings": [
       "WARNING: Installation sources scripts outside of Community Scripts repo. Please check the source before installing."
     ],
-    "port": 4443,
+    "port": 443,
     "website": "https://github.com/nextcloud/nextcloudpi",
     "documentation": "https://docs.nextcloudpi.com/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextcloud.webp",
