@@ -1543,7 +1543,7 @@
       "Authentication & Security"
     ],
     "notes": [
-      "Main config /etc/authentik/config.yml",
+      "Main config /etc/authentik/config.yml. The configuration files for individual services such as server, worker, outposts are located in the /etc/default/ directory and their names start with 'authentik-*'",
       "If you want automatic GeoIP updates, create a free account at https://www.maxmind.com/en/geolite2/signup, then edit the /usr/local/etc/GeoIP.conf file with your credentials and remove the # in front of the geoipupdate line in the crontab."
     ],
     "warnings": [],
