@@ -135,7 +135,14 @@ export function ProcessDetailModal({ open, onOpenChange, sort }: ProcessDetailMo
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent
+          className="max-w-3xl"
+          /* Prevent Radix from focusing the search Input on open — the
+             auto-focus pops the on-screen keyboard on touch devices and
+             covers half the modal. The user can still tap the field to
+             start filtering. */
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Icon className={`h-5 w-5 ${accent.text}`} />

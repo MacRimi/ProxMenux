@@ -1301,7 +1301,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
         }
       `}</style>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
         {/* ── Total VMs & LXCs (preview restyle: B-headline + pills, matching Overview) ── */}
         {(() => {
           const running = safeVMData.filter((vm) => vm.status === "running").length

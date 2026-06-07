@@ -401,7 +401,7 @@ export function SystemOverview() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 xl:gap-6">
         {/* ── CPU Usage (preview restyle v2: tamaño igual a System Info, bars más anchas) ── */}
         <Card
           className="bg-card border-border cursor-pointer hover:bg-white/5 transition-colors"

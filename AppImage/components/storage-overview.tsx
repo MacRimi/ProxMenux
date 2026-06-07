@@ -690,7 +690,7 @@ export function StorageOverview() {
   return (
     <div className="space-y-6">
       {/* Storage Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 xl:gap-6">
         {/* ── Total Storage (preview restyle: headline + stacked bar Local·Remote·Free) ── */}
         {(() => {
           const totalGB = (totalLocalCapacity || 0) + (totalRemoteCapacity || 0)

@@ -319,7 +319,7 @@ export function NetworkMetrics() {
   return (
     <div className="space-y-6">
       {/* Network Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 xl:gap-6">
         {/* ── Network Traffic (preview restyle: Down/Up dual headline + stacked bar) ── */}
         {(() => {
           const downBytes = networkData.traffic.bytes_recv || 0
