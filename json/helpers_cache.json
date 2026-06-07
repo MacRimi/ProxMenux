@@ -1399,11 +1399,11 @@
     "name": "ARR-Stack",
     "slug": "arr-stack",
     "desc": "Proxmox VE Helper Scripts for setting up a stack of applications for use with Prowlarr, Sonarr, Radarr, Lidarr, Seerr, and qBittorrent.",
-    "script": "tools/pve/arr-stack.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/arr-stack.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/pve/arr-stack.sh",
-    "type": "pve",
-    "type_id": "1uyjfno0fpf5buh",
+    "script": "tools/addon/arr-stack.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/arr-stack.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/addon/arr-stack.sh",
+    "type": "addon",
+    "type_id": "88xtxy57q80v38v",
     "categories": [
       "scriptcat00012"
     ],
@@ -17216,7 +17216,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -18531,7 +18531,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
