@@ -94,7 +94,7 @@ show_menu() {
         dialog --clear \
             --backtitle "ProxMenux" \
             --title "$(translate "$menu_title")" \
-            --menu "\n$(translate "Select an option:")" 20 70 11 \
+            --menu "\n$(translate "Select an option:")" 21 70 12 \
             1 "$(translate "Settings post-install Proxmox")" \
             2 "$(translate "Hardware: GPUs and Coral-TPU")" \
             3 "$(translate "Create VM from template or script")" \
@@ -104,6 +104,7 @@ show_menu() {
             7 "$(translate "Network Management")" \
             8 "$(translate "Security")" \
             9 "$(translate "Utilities and Tools")" \
+            b "$(translate "Host Backup & Restore")" \
             h "$(translate "Help and Info Commands")" \
             s "$(translate "Settings")" \
             0 "$(translate "Exit")" 2>"$TEMP_FILE"
@@ -129,6 +130,7 @@ show_menu() {
             7) exec bash "$LOCAL_SCRIPTS/menus/network_menu.sh" ;;
             8) exec bash "$LOCAL_SCRIPTS/menus/security_menu.sh" ;;
             9) exec bash "$LOCAL_SCRIPTS/menus/utilities_menu.sh" ;;
+            b) bash "$LOCAL_SCRIPTS/backup_restore/backup_host.sh" ;;
             h) bash "$LOCAL_SCRIPTS/help_info_menu.sh" ;;
             s) exec bash "$LOCAL_SCRIPTS/menus/config_menu.sh" ;;
             0) clear; msg_ok "$(translate "Thank you for using ProxMenux. Goodbye!")"; rm -f "$TEMP_FILE"; exit 0 ;;

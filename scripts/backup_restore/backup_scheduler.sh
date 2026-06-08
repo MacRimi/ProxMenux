@@ -278,10 +278,19 @@ _pick_job() {
     return 1
   fi
 
+  # Build the menu rows. The loop variable is INTENTIONALLY named
+  # `_iter_id` (not `id`) — every caller passes "id" as $__out_var so
+  # the nameref below should point at the caller's local. A loop
+  # variable named `id` here would shadow it, and the nameref would
+  # silently write into _pick_job's own scope instead, leaving the
+  # caller with an empty string. That manifested as:
+  #   ✓ Job timer enabled: (empty)
+  #   run_scheduled_backup.sh: Usage: ... <job_id>
+  # Both reported on 2026-06-07.
   local -a menu=()
-  local i=1 id
-  for id in "${ids[@]}"; do
-    menu+=("$i" "$id [$(_show_job_status "$id")]")
+  local i=1 _iter_id
+  for _iter_id in "${ids[@]}"; do
+    menu+=("$i" "$_iter_id [$(_show_job_status "$_iter_id")]")
     ((i++))
   done
   local sel
@@ -295,12 +304,98 @@ _pick_job() {
   return 0
 }
 
+# Common screen reset for any post-dialog action result. The
+# `dialog` calls in this script leave their box drawn on screen
+# even after the user has confirmed; without this reset, the
+# subsequent msg_ok / msg_warn / "Press Enter" output renders
+# in the bottom-left corner UNDER the leftover dialog box.
+# show_proxmenux_logo already runs `clear` internally, so we
+# don't add another one — the convention used across proxmenux
+# (create_vm_menu.sh, config_menu.sh, menu_post_install.sh) is:
+#     show_proxmenux_logo → msg_title → result message
+# Reported 2026-06-07 when the operator hit "Run job now" and
+# saw "Job executed successfully" floating over the picker.
+_render_action_screen() {
+  show_proxmenux_logo
+  msg_title "$1"
+}
+
 _job_run_now() {
   local id=""
   _pick_job "$(translate "Run job now")" id || return 1
+  # Defensive guard against a future regression of the nameref-shadowing
+  # bug that left $id empty here on 2026-06-07. Without this, the runner
+  # gets called with no argument and emits "Usage: ... <job_id>".
+  if [[ -z "$id" ]]; then
+    _render_action_screen "$(translate "Run job now")"
+    msg_error "$(translate "Job selection returned empty id — aborting.")"
+    msg_success "$(translate "Press Enter to continue...")"
+    read -r
+    return 1
+  fi
+
   local runner="$LOCAL_SCRIPTS/backup_restore/run_scheduled_backup.sh"
   [[ ! -f "$runner" ]] && runner="$SCRIPT_DIR/run_scheduled_backup.sh"
-  if "$runner" "$id"; then
+
+  # ── Visible execution ───────────────────────────────────
+  # Clear the leftover dialog frame and announce what's about
+  # to happen, so the operator stops looking at a frozen
+  # picker. We then tail the runner's log file in the
+  # background so progress (or errors) are visible as they
+  # happen, instead of the user staring at a black screen.
+  # No msg_info banner between the title and the streaming
+  # log — the title already says we're running, the streamed
+  # `=== Scheduled backup job X started ===` is the better
+  # progress cue.
+  _render_action_screen "$(translate "Running backup job:") $id"
+  echo
+
+  # Snapshot existing log files so we can identify the new one the
+  # runner is about to create (filename pattern is `${id}-${ts}.log`).
+  local existing_logs new_log=""
+  existing_logs="$(ls -1 "${LOG_DIR}/${id}-"*.log 2>/dev/null || true)"
+
+  # Launch the runner in the background so we can tail its log
+  # while it's still writing.
+  "$runner" "$id" &
+  local runner_pid=$!
+
+  # Wait up to ~10s for the new log file to appear, then start tail.
+  # On a small config-only backup the job may finish before we even
+  # find the log; that's fine, we just skip tailing.
+  local tail_pid=""
+  local _i
+  for _i in $(seq 1 20); do
+    local f
+    for f in "${LOG_DIR}/${id}-"*.log; do
+      [[ -f "$f" ]] || continue
+      if ! grep -qFx "$f" <<<"$existing_logs" 2>/dev/null; then
+        new_log="$f"
+        break 2
+      fi
+    done
+    # Stop probing if the runner already exited.
+    kill -0 "$runner_pid" 2>/dev/null || break
+    sleep 0.5
+  done
+
+  if [[ -n "$new_log" ]]; then
+    tail -f "$new_log" &
+    tail_pid=$!
+  fi
+
+  wait "$runner_pid"
+  local runner_exit=$?
+
+  if [[ -n "$tail_pid" ]]; then
+    # Give tail a beat to flush the last buffered lines, then close it.
+    sleep 0.5
+    kill "$tail_pid" 2>/dev/null || true
+    wait "$tail_pid" 2>/dev/null || true
+  fi
+
+  echo
+  if [[ "$runner_exit" == "0" ]]; then
     msg_ok "$(translate "Job executed successfully.")"
   else
     msg_warn "$(translate "Job execution finished with errors. Check logs.")"
@@ -312,11 +407,29 @@ _job_run_now() {
 _job_toggle() {
   local id=""
   _pick_job "$(translate "Enable/Disable job")" id || return 1
+  if [[ -z "$id" ]]; then
+    _render_action_screen "$(translate "Enable/Disable job")"
+    msg_error "$(translate "Job selection returned empty id — aborting.")"
+    msg_success "$(translate "Press Enter to continue...")"
+    read -r
+    return 1
+  fi
+
+  # Decide the action label up front so the title reflects what we
+  # actually just did (enable vs disable).
+  local action_label
   if systemctl is-enabled --quiet "proxmenux-backup-${id}.timer" >/dev/null 2>&1; then
     systemctl disable --now "proxmenux-backup-${id}.timer" >/dev/null 2>&1 || true
-    msg_warn "$(translate "Job timer disabled:") $id"
+    action_label="disabled"
   else
     systemctl enable --now "proxmenux-backup-${id}.timer" >/dev/null 2>&1 || true
+    action_label="enabled"
+  fi
+
+  _render_action_screen "$(translate "Enable/Disable job")"
+  if [[ "$action_label" == "disabled" ]]; then
+    msg_warn "$(translate "Job timer disabled:") $id"
+  else
     msg_ok "$(translate "Job timer enabled:") $id"
   fi
   msg_success "$(translate "Press Enter to continue...")"
@@ -326,6 +439,17 @@ _job_toggle() {
 _job_delete() {
   local id=""
   _pick_job "$(translate "Delete job")" id || return 1
+  # An empty id here would build malformed unit paths like
+  # /etc/systemd/system/proxmenux-backup-.timer, and the subsequent
+  # rm -f would silently no-op against bogus paths — making it LOOK
+  # like a successful delete while the real job stays untouched.
+  if [[ -z "$id" ]]; then
+    _render_action_screen "$(translate "Delete job")"
+    msg_error "$(translate "Job selection returned empty id — aborting.")"
+    msg_success "$(translate "Press Enter to continue...")"
+    read -r
+    return 1
+  fi
   if ! whiptail --title "$(translate "Confirm delete")" \
     --yesno "$(translate "Delete scheduled backup job?")"$'\n\n'"ID: ${id}" 10 66; then
     return 1
@@ -333,6 +457,8 @@ _job_delete() {
   systemctl disable --now "proxmenux-backup-${id}.timer" >/dev/null 2>&1 || true
   rm -f "$(_service_file "$id")" "$(_timer_file "$id")" "$(_job_file "$id")" "$(_job_paths_file "$id")"
   systemctl daemon-reload >/dev/null 2>&1 || true
+
+  _render_action_screen "$(translate "Delete job")"
   msg_ok "$(translate "Job deleted:") $id"
   msg_success "$(translate "Press Enter to continue...")"
   read -r

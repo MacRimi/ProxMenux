@@ -106,9 +106,19 @@ _bk_pbs() {
     epoch=$(date +%s)
     t_start=$SECONDS
 
+    # We back up the WHOLE staging_root (rootfs/ + metadata/) into
+    # the .pxar — earlier versions used `$staging_root/rootfs` as
+    # the source, which left metadata/ (hostname, pveversion,
+    # selected paths, etc.) out of the archive. The compat check
+    # in restore then had nothing to read and degraded to
+    # cross-host warnings even on same-host restores. Old PBS
+    # snapshots created with the rootfs-only source still restore
+    # correctly via case 3 in _rs_check_layout (which wraps a flat
+    # etc/var/root/usr layout into rootfs/ and creates an empty
+    # metadata/), so this change is backward-compatible.
     local -a cmd=(
         proxmox-backup-client backup
-        "hostcfg.pxar:$staging_root/rootfs"
+        "hostcfg.pxar:$staging_root"
         --repository "$HB_PBS_REPOSITORY"
         --backup-type host
         --backup-id  "$backup_id"
@@ -121,7 +131,19 @@ _bk_pbs() {
     if env \
         PBS_PASSWORD="$HB_PBS_SECRET" \
         PBS_ENCRYPTION_PASSWORD="${HB_PBS_ENC_PASS:-}" \
+        PBS_FINGERPRINT="${HB_PBS_FINGERPRINT:-}" \
         "${cmd[@]}" 2>&1 | tee -a "$log_file"; then
+
+        # Main backup OK — also upload the keyfile recovery blob if
+        # one was configured. This runs as a SEPARATE backup group
+        # (`host/proxmenux-keyrecovery-<host>`) with NO --keyfile,
+        # so PBS stores it as a plain (non-PBS-encrypted) blob that
+        # can be retrieved during fresh-install recovery. The blob
+        # is still passphrase-protected by openssl.
+        if [[ -f "$HB_STATE_DIR/pbs-key.recovery.enc" ]]; then
+            hb_pbs_upload_recovery_blob "$epoch" \
+                || msg_warn "$(translate "Recovery blob upload failed — main backup is OK, but keyfile recovery from PBS will not be available for this snapshot.")"
+        fi
 
         elapsed=$((SECONDS - t_start))
         local snap_time
@@ -135,7 +157,11 @@ _bk_pbs() {
         echo -e "${TAB}${BGN}$(translate "Data size:")${CL}   ${BL}${staged_size}${CL}"
         echo -e "${TAB}${BGN}$(translate "Duration:")${CL}    ${BL}$(hb_human_elapsed "$elapsed")${CL}"
         echo -e "${TAB}${BGN}$(translate "Encryption:")${CL}  ${BL}${_pbs_enc_label}${CL}"
-        echo -e "${TAB}${BGN}$(translate "Log:")${CL}         ${BL}${log_file}${CL}"
+        # Only point at the log if it actually has output. On a clean
+        # success the underlying tool is silent and surfacing an empty
+        # file path just confuses the operator into thinking they need
+        # to look at it.
+        [[ -s "$log_file" ]] && echo -e "${TAB}${BGN}$(translate "Log:")${CL}         ${BL}${log_file}${CL}"
         echo -e ""
         msg_ok "$(translate "Backup completed successfully.")"
     else
@@ -219,7 +245,7 @@ _bk_borg() {
         echo -e "${TAB}${BGN}$(translate "Compressed size:")${CL} ${BL}${borg_compressed}${CL}"
         echo -e "${TAB}${BGN}$(translate "Duration:")${CL}        ${BL}$(hb_human_elapsed "$elapsed")${CL}"
         echo -e "${TAB}${BGN}$(translate "Encryption:")${CL}      ${BL}${_borg_enc_label}${CL}"
-        echo -e "${TAB}${BGN}$(translate "Log:")${CL}             ${BL}${log_file}${CL}"
+        [[ -s "$log_file" ]] && echo -e "${TAB}${BGN}$(translate "Log:")${CL}             ${BL}${log_file}${CL}"
         echo -e ""
         msg_ok "$(translate "Backup completed successfully.")"
     else
@@ -306,6 +332,11 @@ _bk_local() {
     elapsed=$((SECONDS - t_start))
 
     if [[ $tar_ok -eq 1 && -f "$archive" ]]; then
+        # Drop a sidecar JSON next to the archive so the Monitor
+        # (and any future tooling) can identify this as a
+        # ProxMenux host backup regardless of any future rename.
+        hb_write_archive_sidecar "$archive" "manual" "" "$profile_mode" || true
+
         archive_size=$(hb_file_size "$archive")
         echo -e ""
         echo -e "${TAB}${BOLD}$(translate "Backup completed:")${CL}"
@@ -314,7 +345,7 @@ _bk_local() {
         echo -e "${TAB}${BGN}$(translate "Data size:")${CL}       ${BL}${staged_size}${CL}"
         echo -e "${TAB}${BGN}$(translate "Archive size:")${CL}    ${BL}${archive_size}${CL}"
         echo -e "${TAB}${BGN}$(translate "Duration:")${CL}        ${BL}$(hb_human_elapsed "$elapsed")${CL}"
-        echo -e "${TAB}${BGN}$(translate "Log:")${CL}             ${BL}${log_file}${CL}"
+        [[ -s "$log_file" ]] && echo -e "${TAB}${BGN}$(translate "Log:")${CL}             ${BL}${log_file}${CL}"
         echo -e ""
         msg_ok "$(translate "Backup completed successfully.")"
     else
@@ -397,18 +428,60 @@ _rs_extract_pbs() {
     hb_require_cmd proxmox-backup-client proxmox-backup-client || return 1
     hb_select_pbs_repository || return 1
 
-    msg_info "$(translate "Listing snapshots from PBS...")"
+    # If we're restoring on a fresh host (or one where the keyfile
+    # was wiped) the encrypted snapshots are unreadable until we
+    # restore the keyfile. Look for a recovery blob in PBS and let
+    # the operator decrypt it with their passphrase. We try this
+    # silently up-front so subsequent steps (snapshot list, files,
+    # restore) Just Work whether or not the snapshots happen to be
+    # encrypted. Failure here is non-fatal: a missing recovery
+    # blob plus an unencrypted snapshot is a perfectly valid case
+    # and the rest of the flow handles it.
+    if [[ ! -f "$HB_STATE_DIR/pbs-key.conf" ]]; then
+        hb_pbs_try_keyfile_recovery "$HB_STATE_DIR/pbs-key.conf" || true
+    fi
+
+    # Current proxmox-backup-client prints both `snapshot list` and
+    # `snapshot files` as a Unicode box-drawing table even when piped
+    # — the old awk-by-whitespace parser captures the `│` column
+    # separators instead of the data and ends up with an empty array.
+    # We now request --output-format json and parse with jq, then
+    # convert the epoch returned by `snapshot list` to the UTC ISO
+    # form (`YYYY-MM-DDTHH:MM:SSZ`) that `snapshot files` and
+    # `restore` actually accept as the snapshot path.
+    #
+    # Use dialog --infobox (not msg_info/msg_ok) so the "Listing…"
+    # placeholder lives inside the dialog system and disappears the
+    # moment the next dialog draws — no terminal text leaks between
+    # menus.
+    dialog --backtitle "ProxMenux" \
+        --title "$(translate "Listing snapshots from PBS")" \
+        --infobox "\n$(translate "Querying repository:") $HB_PBS_REPOSITORY" 7 78
     mapfile -t snapshots < <(
         PBS_PASSWORD="$HB_PBS_SECRET" \
+        PBS_FINGERPRINT="${HB_PBS_FINGERPRINT:-}" \
         proxmox-backup-client snapshot list \
-            --repository "$HB_PBS_REPOSITORY" 2>/dev/null \
-        | awk '$2 ~ /^host\// {print $2}' \
+            --repository "$HB_PBS_REPOSITORY" \
+            --output-format json 2>/dev/null \
+        | jq -r '.[] | select(."backup-type" == "host" and ((."backup-id" | startswith("proxmenux-keyrecovery-")) | not)) | "\(."backup-type")|\(."backup-id")|\(."backup-time")"' 2>/dev/null \
+        | while IFS='|' read -r _type _id _epoch; do
+            local _iso
+            _iso=$(date -u -d "@${_epoch}" '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null \
+                || date -u -r "${_epoch}" '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null \
+                || echo "${_epoch}")
+            echo "${_type}/${_id}/${_iso}"
+        done \
         | sort -r | awk '!seen[$0]++'
     )
-    msg_ok "$(translate "Snapshot list retrieved.")"
 
     if [[ ${#snapshots[@]} -eq 0 ]]; then
-        msg_error "$(translate "No host snapshots found in this PBS repository.")"
+        # Surface error as a blocking dialog so the operator can read
+        # it. msg_error alone gets erased the moment we `return 1`
+        # because the restore_menu loop redraws the source picker
+        # immediately afterward.
+        dialog --backtitle "ProxMenux" --title "$(translate "No snapshots")" \
+            --msgbox "$(translate "No host snapshots were found in this PBS repository:")"$'\n\n'"$HB_PBS_REPOSITORY" \
+            10 78
         return 1
     fi
 
@@ -421,14 +494,23 @@ _rs_extract_pbs() {
         "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${menu[@]}" 3>&1 1>&2 2>&3) || return 1
     snapshot="${snapshots[$((sel-1))]}"
 
+    # `snapshot files` filenames carry a `.didx` (chunk index) or
+    # `.blob` suffix that doesn't match the bare `.pxar` name that
+    # `restore` expects. Strip it before filtering.
     mapfile -t archives < <(
         PBS_PASSWORD="$HB_PBS_SECRET" \
+        PBS_FINGERPRINT="${HB_PBS_FINGERPRINT:-}" \
         proxmox-backup-client snapshot files "$snapshot" \
-            --repository "$HB_PBS_REPOSITORY" 2>/dev/null \
-        | awk '{print $1}' | grep '\.pxar$' || true
+            --repository "$HB_PBS_REPOSITORY" \
+            --output-format json 2>/dev/null \
+        | jq -r '.[].filename' 2>/dev/null \
+        | sed -e 's/\.didx$//' -e 's/\.blob$//' \
+        | grep '\.pxar$' || true
     )
     if [[ ${#archives[@]} -eq 0 ]]; then
-        msg_error "$(translate "No .pxar archives found in selected snapshot.")"
+        dialog --backtitle "ProxMenux" --title "$(translate "No archives")" \
+            --msgbox "$(translate "No .pxar archives were found in this snapshot:")"$'\n\n'"$snapshot" \
+            10 78
         return 1
     fi
 
@@ -462,23 +544,51 @@ _rs_extract_pbs() {
         enc_pass="$(<"$HB_STATE_DIR/pbs-encryption-pass.txt")"
 
     : > "$log_file"
+    # PIPESTATUS check: `... | tee` masks the binary's exit code
+    # with tee's (always 0). Without this, a failed decrypt or
+    # missing keyfile would silently "succeed" — the staging
+    # would be empty/garbage and _rs_check_layout would then say
+    # "Incompatible archive", which is misleading. We capture the
+    # client's actual exit code separately.
+    local pbs_rc
     # shellcheck disable=SC2086
-    if env \
+    env \
         PBS_PASSWORD="$HB_PBS_SECRET" \
         PBS_ENCRYPTION_PASSWORD="${enc_pass}" \
+        PBS_FINGERPRINT="${HB_PBS_FINGERPRINT:-}" \
         proxmox-backup-client restore \
             "$snapshot" "$archive" "$staging_root" \
             --repository "$HB_PBS_REPOSITORY" \
             --allow-existing-dirs true \
             $key_opt \
-        2>&1 | tee -a "$log_file"; then
+        2>&1 | tee -a "$log_file"
+    pbs_rc=${PIPESTATUS[0]}
+
+    if [[ $pbs_rc -eq 0 ]]; then
         msg_ok "$(translate "Extraction completed.")"
         return 0
-    else
-        msg_error "$(translate "PBS extraction failed.")"
-        hb_show_log "$log_file" "$(translate "PBS restore error log")"
-        return 1
     fi
+
+    # Decide whether this is the "encrypted snapshot without
+    # keyfile" pattern. proxmox-backup-client emits messages like
+    # `unable to load encryption key` / `no key found` / `Failed
+    # to decrypt` when that's the cause. If so, surface a helpful
+    # error rather than the raw log.
+    local extra_hint=""
+    if grep -qiE 'encryption key|unable to (load|read) key|no key (file|found)|decrypt|failed to decrypt' "$log_file" 2>/dev/null; then
+        extra_hint=$'\n\n'"$(translate "This snapshot is encrypted but no keyfile is available on this host.")"
+        if [[ -f "$HB_STATE_DIR/pbs-key.conf" ]]; then
+            extra_hint+=$'\n\n'"$(translate "A keyfile is present but doesn't match the one used to create the snapshot. Make sure you have the correct keyfile from the source host.")"
+        else
+            extra_hint+=$'\n\n'"$(translate "No keyfile recovery copy was found in PBS for this snapshot — it was created before the recovery feature existed. The encrypted content cannot be recovered.")"
+        fi
+    fi
+
+    dialog --backtitle "ProxMenux" --title "$(translate "PBS extraction failed")" \
+        --msgbox "$(translate "Could not extract from PBS.")"$'\n\n'"$(translate "Snapshot:") $snapshot"$'\n'"$(translate "Archive:") $archive$extra_hint" \
+        16 78
+    hb_show_log "$log_file" "$(translate "PBS restore error log")"
+    return 1
 }
 
 _rs_extract_borg() {
@@ -544,41 +654,81 @@ _rs_extract_borg() {
 
 _rs_extract_local() {
     local staging_root="$1"
-    local log_file
-    log_file="/tmp/proxmenux-local-restore-$(date +%Y%m%d_%H%M%S).log"
-    local source_dir archive
+    local log_file source_dir archive
 
     hb_require_cmd tar tar || return 1
     source_dir=$(hb_prompt_restore_source_dir) || return 1
-    archive=$(hb_prompt_local_archive "$source_dir" \
-        "$(translate "Select backup archive to restore")") || return 1
 
-    show_proxmenux_logo
-    msg_title "$(translate "Restore from local archive  →  staging")"
-    echo -e ""
-    echo -e "${TAB}${BGN}$(translate "Archive:")${CL}          ${BL}${archive}${CL}"
-    echo -e "${TAB}${BGN}$(translate "Archive size:")${CL}     ${BL}$(hb_file_size "$archive")${CL}"
-    echo -e "${TAB}${BGN}$(translate "Staging directory:")${CL} ${BL}${staging_root}${CL}"
-    echo -e ""
-    msg_info "$(translate "Extracting archive...")"
-    stop_spinner
+    # Loop the picker on every recoverable failure so a corrupt
+    # archive doesn't dump the operator back to the top-level
+    # restore menu (which they then read as "the script never
+    # offered me a restore mode"). They stay in the same dir,
+    # pick another archive, or explicitly cancel out.
+    while true; do
+        archive=$(hb_prompt_local_archive "$source_dir" \
+            "$(translate "Select backup archive to restore")") || return 1
 
-    : > "$log_file"
-    if [[ "$archive" == *.zst ]]; then
-        tar --zstd -xf "$archive" -C "$staging_root" >>"$log_file" 2>&1
-    else
-        tar -xf "$archive" -C "$staging_root" >>"$log_file" 2>&1
-    fi
-    local rc=$?
+        log_file="/tmp/proxmenux-local-restore-$(date +%Y%m%d_%H%M%S).log"
 
-    if [[ $rc -eq 0 ]]; then
-        msg_ok "$(translate "Extraction completed.")"
-        return 0
-    else
+        show_proxmenux_logo
+        msg_title "$(translate "Restore from local archive  →  staging")"
+        echo -e ""
+        echo -e "${TAB}${BGN}$(translate "Archive:")${CL}          ${BL}${archive}${CL}"
+        echo -e "${TAB}${BGN}$(translate "Archive size:")${CL}     ${BL}$(hb_file_size "$archive")${CL}"
+        echo -e "${TAB}${BGN}$(translate "Staging directory:")${CL} ${BL}${staging_root}${CL}"
+        echo -e ""
+        msg_info "$(translate "Extracting archive...")"
+        stop_spinner
+
+        : > "$log_file"
+        # Wipe staging from a previous failed attempt so we don't
+        # mix partial extractions across retries.
+        find "$staging_root" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null
+
+        if [[ "$archive" == *.zst ]]; then
+            tar --zstd -xf "$archive" -C "$staging_root" >>"$log_file" 2>&1
+        else
+            tar -xf "$archive" -C "$staging_root" >>"$log_file" 2>&1
+        fi
+        local rc=$?
+
+        if [[ $rc -eq 0 ]]; then
+            msg_ok "$(translate "Extraction completed.")"
+            return 0
+        fi
+
         msg_error "$(translate "Extraction failed.")"
         hb_show_log "$log_file" "$(translate "Local restore error log")"
-        return 1
-    fi
+
+        # Recoverable: most often a corrupted archive (interrupted
+        # mid-write, bad disk sector, partial copy). Give the user
+        # a clear next step instead of silently bouncing back.
+        local recover_msg recover_choice
+        recover_msg="$(translate "The archive could not be extracted.")"$'\n\n'
+        recover_msg+="$(translate "Most common cause: the archive is corrupted (interrupted write, partial copy, or storage issue).")"$'\n\n'
+        recover_msg+="$(translate "Archive:") $archive"
+        recover_choice=$(dialog --backtitle "ProxMenux" \
+            --title "$(translate "Restore failed")" \
+            --menu "$recover_msg" 16 80 4 \
+            1 "$(translate "Try another archive")" \
+            2 "$(translate "Delete this corrupt archive and pick another")" \
+            0 "$(translate "Cancel restore")" \
+            3>&1 1>&2 2>&3) || return 1
+
+        case "$recover_choice" in
+            1) continue ;;  # back to the picker
+            2)
+                if whiptail --title "$(translate "Delete archive")" \
+                    --yesno "$(translate "Permanently delete this archive and its sidecar?")"$'\n\n'"$archive" \
+                    11 78; then
+                    rm -f "$archive" "${archive}.proxmenux.json"
+                    msg_ok "$(translate "Archive deleted.")"
+                fi
+                continue
+                ;;
+            0|*) return 1 ;;
+        esac
+    done
 }
 
 # Ensure staging has rootfs/ layout (Borg may nest)
@@ -714,10 +864,12 @@ _rs_preview_diff() {
 
 _rs_export_to_file() {
     local staging_root="$1"
-    local dest_dir archive archive_size t_start elapsed
+    local dest_dir archive archive_size t_start elapsed log_file
+    local stage_bytes pipefail_state tar_ok
 
     dest_dir=$(hb_prompt_dest_dir) || return 1
     archive="$dest_dir/hostcfg-export-$(hostname)-$(date +%Y%m%d_%H%M%S).tar.gz"
+    log_file="/tmp/proxmenux-export-$(date +%Y%m%d_%H%M%S).log"
 
     show_proxmenux_logo
     msg_title "$(translate "Export backup data to file")"
@@ -727,11 +879,40 @@ _rs_export_to_file() {
     echo -e ""
     echo -e "${TAB}$(translate "No changes will be made to the running system.")"
     echo -e ""
-    msg_info "$(translate "Creating export archive...")"
     stop_spinner
 
     t_start=$SECONDS
-    if tar -czf "$archive" -C "$staging_root" . 2>/dev/null; then
+    tar_ok=0
+    : > "$log_file"
+
+    if command -v pv >/dev/null 2>&1; then
+        # Stream tar through pv so the operator sees a live progress
+        # bar instead of staring at a frozen title for minutes. We
+        # mirror the same pattern used by the local backup path
+        # (_bk_local) so the experience is consistent across
+        # create-archive and export-archive flows.
+        stage_bytes=$(du -sb "$staging_root" 2>/dev/null | awk '{print $1}')
+        pipefail_state=$(set -o | awk '$1=="pipefail" {print $2}')
+        set -o pipefail
+        echo -e "${TAB}$(translate "Compressing")  $(numfmt --to=iec-i --suffix=B "$stage_bytes" 2>/dev/null || printf '%s bytes' "$stage_bytes")  →  $archive"
+        echo
+        if tar -cf - -C "$staging_root" . 2>>"$log_file" \
+            | pv -s "$stage_bytes" | gzip > "$archive" 2>>"$log_file"; then
+            tar_ok=1
+        fi
+        [[ "$pipefail_state" == "off" ]] && set +o pipefail
+    else
+        # pv isn't installed — at least tell the operator something
+        # is happening and hint at the package they can install for
+        # a better experience next time.
+        msg_info "$(translate "Creating export archive (install 'pv' for a live progress bar)...")"
+        stop_spinner
+        if tar -czf "$archive" -C "$staging_root" . >>"$log_file" 2>&1; then
+            tar_ok=1
+        fi
+    fi
+
+    if [[ $tar_ok -eq 1 && -f "$archive" ]]; then
         elapsed=$((SECONDS - t_start))
         archive_size=$(hb_file_size "$archive")
         echo -e ""
@@ -741,8 +922,16 @@ _rs_export_to_file() {
         echo -e "${TAB}${BGN}$(translate "Duration:")${CL}     ${BL}$(hb_human_elapsed "$elapsed")${CL}"
         echo -e ""
         msg_ok "$(translate "Export completed. The running system has not been modified.")"
+        echo -e ""
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
+        return 0
     else
         msg_error "$(translate "Export failed.")"
+        hb_show_log "$log_file" "$(translate "Export error log")"
+        echo -e ""
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
         return 1
     fi
 }
@@ -842,7 +1031,10 @@ _rs_apply() {
     fi
 
     local backup_root
-    backup_root="/root/proxmenux-pre-restore/$(date +%Y%m%d_%H%M%S)"
+    # Pre-restore safety snapshot lives outside /root for the same
+    # reason as the cluster recovery dir — restoring /root with
+    # `rsync --delete` would otherwise wipe it mid-flow.
+    backup_root="/var/lib/proxmenux/pre-restore/$(date +%Y%m%d_%H%M%S)"
     mkdir -p "$backup_root"
 
     local applied=0 skipped=0 t_start elapsed
@@ -857,9 +1049,16 @@ _rs_apply() {
 
         # Never restore cluster virtual filesystem data live.
         # Extract it for manual recovery in maintenance mode.
+        # Path note: this used to live under /root/proxmenux-recovery/,
+        # but a later iteration of the same loop applies /root from
+        # the backup with `rsync --delete`, which wipes anything
+        # under /root that isn't in the backup — including our
+        # freshly-extracted recovery dir. We now stage it under
+        # /var/lib/proxmenux/recovery/, which sits next to
+        # restore-pending/ and isn't touched by any path apply.
         if [[ "$rel" == etc/pve* ]] || [[ "$rel" == var/lib/pve-cluster* ]]; then
             if [[ -z "$cluster_recovery_root" ]]; then
-                cluster_recovery_root="/root/proxmenux-recovery/$(date +%Y%m%d_%H%M%S)"
+                cluster_recovery_root="/var/lib/proxmenux/recovery/$(date +%Y%m%d_%H%M%S)"
                 mkdir -p "$cluster_recovery_root"
             fi
             mkdir -p "$cluster_recovery_root/$(dirname "$rel")"
@@ -1012,11 +1211,33 @@ _rs_prompt_zfs_opt_in() {
         return 0
     fi
 
-    local zfs_confirm_msg
-    zfs_confirm_msg="$(translate "This backup includes /etc/zfs. Include it in restore?")"$'\n\n'"$(translate "Only enable this if the target host and ZFS pool names match exactly.")"
+    # /etc/zfs/ on a Proxmox host ALWAYS contains package defaults
+    # (zfs-functions, zpool.d/, zed.d/) — they're shipped by the
+    # zfsutils-linux package and identical across PVE installs.
+    # Only zpool.cache (and the keys/ subdir) carry host-specific
+    # state, because zpool.cache references the source host's
+    # physical disks by GUID. Anything else is safe to restore.
+    local cache="$staging_root/rootfs/etc/zfs/zpool.cache"
+    if [[ ! -f "$cache" ]]; then
+        # No host-specific bits — restore defaults silently.
+        export HB_RESTORE_INCLUDE_ZFS=1
+        return 0
+    fi
+
+    # zpool.cache IS present. Two cases:
+    #  - Same host restore (recovery on the source machine) → quietly
+    #    include; the cache is correct for this host by definition.
+    #  - Cross-host restore → loud warning: pool GUIDs in the cache
+    #    won't match the target's disks, and Proxmox would try to
+    #    import non-existent pools at next boot.
+    local msg
+    if [[ "${HB_COMPAT_SAME_HOST:-0}" == "1" ]]; then
+        msg="$(translate "Backup includes /etc/zfs/zpool.cache. Restore it (same host detected)?")"
+    else
+        msg="$(translate "This backup includes /etc/zfs/zpool.cache (host-specific ZFS state).")"$'\n\n'"$(translate "Restore it ONLY if the target host has the same pools and disks as the source. Otherwise Proxmox may try to import non-existent pools at next boot.")"
+    fi
     if whiptail --title "$(translate "ZFS configuration")" \
-        --yesno "$zfs_confirm_msg" \
-        11 76; then
+        --yesno "$msg" 12 78; then
         export HB_RESTORE_INCLUDE_ZFS=1
     fi
 }
@@ -1056,21 +1277,39 @@ _rs_install_pending_service_unit() {
     local onboot_script="$1"
     local unit_file="/etc/systemd/system/proxmenux-restore-onboot.service"
 
+    # `network-pre.target` is a passive target activated by
+    # systemd-networkd. On Proxmox the networking stack is
+    # `networking.service` from ifupdown2, NOT systemd-networkd,
+    # so network-pre.target is never reached — the original unit
+    # had `ConditionResult=no` at boot and the pending restore
+    # silently sat in `pending` state forever.
+    #
+    # The correct anchor on PVE is `networking.service`: we run
+    # before it (so we can rewrite /etc/network in time for
+    # ifupdown2 to read the new config) and we pull ourselves in
+    # via `multi-user.target` which IS always activated at boot.
     cat > "$unit_file" <<EOF
 [Unit]
 Description=ProxMenux Pending Restore (on boot)
 DefaultDependencies=no
 After=local-fs.target
-Before=network-pre.target
+Before=networking.service
 Wants=local-fs.target
 
 [Service]
 Type=oneshot
 ExecStart=${onboot_script}
-TimeoutStartSec=0
+# 5-min cap. Original version had TimeoutStartSec=0 (unlimited)
+# combined with update-initramfs -u -k all + update-grub +
+# systemctl start pve-cluster in the script — and a single boot
+# could hang for 15+ minutes with no recourse. With this cap, if
+# the pending apply ever wedges, systemd kills it and the rest of
+# boot continues. The pending state gets marked failed and the
+# operator can re-run it manually from the menu after boot.
+TimeoutStartSec=300
 
 [Install]
-WantedBy=network-pre.target
+WantedBy=multi-user.target
 EOF
 }
 
@@ -1214,6 +1453,10 @@ _rs_run_complete_guided() {
             if [[ "$RS_PLAN_DANGEROUS" -gt 0 ]]; then
                 msg_warn "$(translate "Risky live paths were skipped in guided mode. Use Custom restore if you need to apply them.")"
             fi
+            # Strategy 1 = "Apply safe + reboot, skip risky": the
+            # operator explicitly opted out of touching pmxcfs
+            # (/etc/pve). Run package install but NOT guest configs.
+            _rs_run_complete_extras "$staging_root" 0
             _rs_finish_flow
             return 0
             ;;
@@ -1235,6 +1478,9 @@ _rs_run_complete_guided() {
             show_proxmenux_logo
             msg_title "$(translate "Applying full restore")"
             _rs_apply "$staging_root" all
+            # Strategy 2 = "Full": include guest configs so VMIDs
+            # become visible in PVE.
+            _rs_run_complete_extras "$staging_root" 1
             _rs_finish_flow
             return 0
             ;;
@@ -1255,6 +1501,10 @@ _rs_run_complete_guided() {
             if _rs_prepare_pending_restore "$staging_root" "${pending_paths[@]}"; then
                 msg_warn "$(translate "Reboot is required to complete the pending restore.")"
             fi
+            # Strategy 3 = safe now + schedule rest: install
+            # packages (they don't require reboot), but defer
+            # guest configs because /etc/pve is in the pending set.
+            _rs_run_complete_extras "$staging_root" 0
             _rs_finish_flow
             return 0
             ;;
@@ -1576,6 +1826,135 @@ _rs_run_custom_restore() {
     done
 }
 
+# Extras the Complete restore runs INLINE after applying file
+# paths. The operator picked "Complete restore" — they implicitly
+# asked for everything restorable from the backup. We don't ask
+# them again about packages or guest configs, we just do it.
+#
+# Behaviour by strategy:
+#   include_guests=1 → also copy LXC/QEMU .conf files (full mode)
+#   include_guests=0 → skip them (safe / schedule-remaining modes
+#                     where the operator opted out of risky paths)
+# Packages are always installed when they're listed in the backup
+# and missing on this host, regardless of strategy — installing
+# user-installed packages is a prerequisite for the restored
+# systemd units and config files to actually do anything.
+_rs_run_complete_extras() {
+    local staging_root="$1"
+    local include_guests="${2:-1}"
+
+    # ─ Packages — silent run when there's anything to do ──────
+    local pkglist="$staging_root/metadata/packages.manual.list"
+    if [[ -f "$pkglist" ]] \
+        && command -v apt-mark >/dev/null 2>&1 \
+        && command -v apt-get >/dev/null 2>&1; then
+        local cur_pkgs_file
+        cur_pkgs_file=$(mktemp)
+        apt-mark showmanual 2>/dev/null | sort -u > "$cur_pkgs_file"
+        local -a missing=()
+        mapfile -t missing < <(comm -23 <(sort -u "$pkglist") "$cur_pkgs_file")
+        rm -f "$cur_pkgs_file"
+        if [[ ${#missing[@]} -gt 0 ]]; then
+            echo
+            msg_info "$(translate "Installing") ${#missing[@]} $(translate "user-installed packages from backup...")"
+            stop_spinner
+            apt-get update -qq 2>&1 | sed -e 's/^/    /' | tail -2
+
+            # Pre-filter to packages apt actually knows about —
+            # otherwise a single typo or repo-renamed pkg in
+            # packages.manual.list (e.g. `lifnet-subnet-perl` from
+            # a hand-typo'd apt-mark) makes `apt-get install` exit
+            # with E_UNRESOLVABLE and the entire batch is skipped.
+            # We do this in two passes: first split into installable
+            # vs unknown, then run install on the installable set.
+            local -a installable=() unknown=()
+            local pkg
+            for pkg in "${missing[@]}"; do
+                if apt-cache show "$pkg" >/dev/null 2>&1; then
+                    installable+=("$pkg")
+                else
+                    unknown+=("$pkg")
+                fi
+            done
+
+            if (( ${#installable[@]} > 0 )); then
+                # DEBIAN_FRONTEND=noninteractive + --force-conf prevents
+                # apt from blocking on `*** log2ram.conf (Y/I/N/O/D/Z) ?`
+                # type prompts (which would leave the package in
+                # half-installed `iU` state and ultimately produce the
+                # same boot-hang problem we're trying to FIX with this
+                # restore). Confnew/confold both work; we pick confold
+                # so the keepers from the BACKUP's restored configs win,
+                # matching what the operator implicitly asked for.
+                DEBIAN_FRONTEND=noninteractive \
+                    apt-get install -y \
+                        -o Dpkg::Options::="--force-confdef" \
+                        -o Dpkg::Options::="--force-confold" \
+                        "${installable[@]}" 2>&1 | sed -e 's/^/    /' | tail -10
+                # PIPESTATUS[0] is the real exit code from apt-get;
+                # without this, the pipeline always reports tee's
+                # 0 and we'd lie about success.
+                local apt_rc=${PIPESTATUS[0]}
+                if (( apt_rc == 0 )); then
+                    msg_ok "$(translate "Installed:") ${#installable[@]} $(translate "packages")"
+                else
+                    msg_warn "$(translate "apt-get exited") ${apt_rc} — $(translate "some packages may have failed; see output above")"
+                fi
+            fi
+            if (( ${#unknown[@]} > 0 )); then
+                msg_warn "$(translate "Skipped, not in apt cache:") ${unknown[*]:0:6}$([[ ${#unknown[@]} -gt 6 ]] && echo " … (+ $((${#unknown[@]} - 6)) more)")"
+                echo -e "${TAB}${BL}$(translate "These were marked manual on the source host but apt-cache cannot resolve them now (typo, removed pkg, third-party repo not configured yet).")${CL}"
+            fi
+        fi
+    fi
+
+    # ─ Guest configs — only in full strategies ────────────────
+    if [[ "$include_guests" == "1" ]]; then
+        local nodes_root="$staging_root/rootfs/etc/pve/nodes"
+        if [[ -d "$nodes_root" ]]; then
+            local src_node_dir
+            src_node_dir=$(find "$nodes_root" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -1)
+            if [[ -n "$src_node_dir" ]]; then
+                local -a lxc_confs=() qm_confs=()
+                [[ -d "$src_node_dir/lxc"         ]] && mapfile -t lxc_confs < <(find "$src_node_dir/lxc"         -maxdepth 1 -type f -name '*.conf' 2>/dev/null | sort)
+                [[ -d "$src_node_dir/qemu-server" ]] && mapfile -t qm_confs  < <(find "$src_node_dir/qemu-server" -maxdepth 1 -type f -name '*.conf' 2>/dev/null | sort)
+                if [[ ${#lxc_confs[@]} -gt 0 || ${#qm_confs[@]} -gt 0 ]]; then
+                    local cur_node target_lxc target_qm
+                    cur_node=$(hostname)
+                    target_lxc="/etc/pve/nodes/$cur_node/lxc"
+                    target_qm="/etc/pve/nodes/$cur_node/qemu-server"
+                    mkdir -p "$target_lxc" "$target_qm" 2>/dev/null
+                    echo
+                    msg_info "$(translate "Restoring guest configs (LXC + QEMU)...")"
+                    stop_spinner
+                    local copied=0 skipped=0 f vmid
+                    for f in "${lxc_confs[@]}"; do
+                        vmid=$(basename "$f" .conf)
+                        if [[ -e "$target_lxc/$vmid.conf" ]]; then
+                            ((skipped++))
+                        elif cp "$f" "$target_lxc/$vmid.conf" 2>/dev/null; then
+                            ((copied++))
+                        fi
+                    done
+                    for f in "${qm_confs[@]}"; do
+                        vmid=$(basename "$f" .conf)
+                        if [[ -e "$target_qm/$vmid.conf" ]]; then
+                            ((skipped++))
+                        elif cp "$f" "$target_qm/$vmid.conf" 2>/dev/null; then
+                            ((copied++))
+                        fi
+                    done
+                    msg_ok "$(translate "Guest configs restored:") LXC+QEMU=$copied, $(translate "skipped (already exist)"):$skipped"
+                    if (( copied > 0 )); then
+                        echo -e "${TAB}${BL}$(translate "Use 'pct restore' / 'qmrestore' to recover their disks from your VM backups.")${CL}"
+                    fi
+                fi
+            fi
+        fi
+    fi
+}
+
+
 _rs_apply_menu() {
     local staging_root="$1"
 
@@ -1608,8 +1987,11 @@ _rs_apply_menu() {
                 _rs_run_custom_restore "$staging_root" && return 0
                 ;;
             3)
+                # _rs_export_to_file owns its own end-of-flow
+                # (showing result + "Press Enter to return to menu")
+                # so we don't call _rs_finish_flow here — doing so
+                # would queue a second identical prompt.
                 if _rs_export_to_file "$staging_root"; then
-                    _rs_finish_flow
                     return 0
                 fi
                 ;;
@@ -1652,9 +2034,18 @@ restore_menu() {
         esac
 
         if [[ $ok -eq 1 ]] && _rs_check_layout "$staging_root"; then
-            if _rs_apply_menu "$staging_root"; then
-                rm -rf "$staging_root"
-                return 0
+            # Run the compatibility check BEFORE the apply menu so
+            # the operator sees PVE-version / hostname / network /
+            # storage drift up front. This also sets
+            # HB_COMPAT_SAME_HOST, which downstream prompts
+            # (_rs_prompt_zfs_opt_in) read to choose between the
+            # silent same-host path and the loud cross-host path.
+            hb_compat_check "$staging_root"
+            if hb_show_compat_report; then
+                if _rs_apply_menu "$staging_root"; then
+                    rm -rf "$staging_root"
+                    return 0
+                fi
             fi
         fi
 

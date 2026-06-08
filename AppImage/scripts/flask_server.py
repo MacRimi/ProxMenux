@@ -12128,6 +12128,440 @@ def stream_script_logs(session_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# ── Host Backup (Sprint 13D, 1.3.0 preview) ──────────────────
+# These endpoints surface the host-backup pipeline implemented in
+# scripts/backup_restore/ (collectors + restore tooling). They:
+#   - list configured scheduled jobs (from /var/lib/proxmenux/backup-jobs/)
+#   - list backup archives present on disk for local_tar destinations
+#   - extract the manifest from an archive (uses parse_manifest.sh)
+#   - run the dry-run preflight report (uses run_restore.sh)
+# Mutating actions (run-now, create-job, --apply restore) stay on CLI for
+# now — UI surface for those lands later in the 1.3.x cycle.
+
+_PROXMENUX_SCRIPTS_DIR = '/usr/local/share/proxmenux/scripts'
+_BACKUP_JOBS_DIR = '/var/lib/proxmenux/backup-jobs'
+_BACKUP_LOG_DIR = '/var/log/proxmenux/backup-jobs'
+# Always scan PVE's default dump directory in addition to per-job
+# DEST_DIRs — manual backups from backup_host.sh (options 1-6) land
+# there without ever creating a job env file.
+_BACKUP_DEFAULT_DUMP_DIRS = ('/var/lib/vz/dump',)
+# Filenames produced by ProxMenux host backups:
+#   manual  (backup_host.sh line 253):  hostcfg-<HOSTNAME>-YYYYMMDD_HHMMSS.tar.zst
+#   scheduled (run_scheduled_backup.sh): <JOB_ID>-YYYYMMDD_HHMMSS.<ext>
+# This regex matches both; we then cross-check against the known job_ids
+# (everything else, like PVE's vzdump-lxc-*, gets dropped).
+_BACKUP_FILENAME_RE = re.compile(r'^([A-Za-z0-9._-]+)-(\d{8}_\d{6})\.tar(\.zst|\.gz)?$')
+
+
+def _parse_job_env(file_path: str) -> dict:
+    """Parse a /var/lib/proxmenux/backup-jobs/*.env file (shell KEY=value
+    format with optional quoting) into a Python dict. Returns {} on any
+    I/O or parse error so callers can just .get() with defaults."""
+    out: dict = {}
+    try:
+        with open(file_path) as f:
+            for raw in f:
+                line = raw.strip()
+                if not line or line.startswith('#') or '=' not in line:
+                    continue
+                key, val = line.split('=', 1)
+                key = key.strip()
+                val = val.strip()
+                # Strip shell quoting if balanced
+                if len(val) >= 2 and val[0] == val[-1] and val[0] in ('"', "'"):
+                    val = val[1:-1]
+                out[key] = val
+    except OSError:
+        pass
+    return out
+
+
+def _collect_backup_scan_dirs():
+    """Build the de-duplicated list of directories we scan for host
+    backup archives: the PVE default(s) plus every local_tar job's
+    DEST_DIR. Returns directories that actually exist on disk."""
+    import glob
+    dirs = []
+    seen = set()
+    def _add(d):
+        if d and d not in seen and os.path.isdir(d):
+            seen.add(d)
+            dirs.append(d)
+    for d in _BACKUP_DEFAULT_DUMP_DIRS:
+        _add(d)
+    try:
+        env_files = sorted(glob.glob(f'{_BACKUP_JOBS_DIR}/*.env'))
+    except OSError:
+        env_files = []
+    for env_file in env_files:
+        job = _parse_job_env(env_file)
+        if job.get('METHOD') != 'local_tar':
+            continue
+        _add(job.get('DEST_DIR') or job.get('DEST'))
+    return dirs
+
+
+def _known_job_ids():
+    """Set of job_ids that have a .env file on disk — used to associate
+    a scheduled archive (<job_id>-<ts>.tar*) with its job."""
+    import glob
+    try:
+        env_files = glob.glob(f'{_BACKUP_JOBS_DIR}/*.env')
+    except OSError:
+        return set()
+    return {os.path.basename(p)[:-len('.env')] for p in env_files}
+
+
+# In-process cache for the tar-peek fallback so we don't re-decompress
+# every archive on every Monitor refresh. Keyed by absolute archive
+# path; the cached tuple is (size, mtime, is_proxmenux_backup_bool).
+# Invalidated automatically whenever size or mtime changes.
+_BACKUP_PEEK_CACHE: dict = {}
+
+
+def _read_archive_sidecar(archive_path):
+    """Read and parse the <archive>.proxmenux.json sidecar if present.
+    Returns the parsed dict on success, or None if the sidecar is
+    missing or unreadable. A corrupted sidecar drops back to the next
+    detection path (peek) rather than masking the archive entirely."""
+    sidecar = archive_path + '.proxmenux.json'
+    if not os.path.isfile(sidecar):
+        return None
+    try:
+        with open(sidecar) as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _peek_host_backup_marker(archive_path, st):
+    """Check whether the archive contains 'metadata/run_info.env' — the
+    in-tar marker that every ProxMenux host backup ships with. Used as
+    a fallback when no sidecar is present (legacy archives, or archives
+    copied in from elsewhere). Result is cached by (size, mtime) so a
+    second call within the same process is free.
+
+    Implementation: stream `tar -atf` (auto-detect compression by
+    extension; GNU tar 1.30+) line by line and short-circuit as soon as
+    we hit the marker. The marker lives in the first ~10-20 entries of
+    every ProxMenux archive, so we cap the scan at 500 entries — well
+    above the real archive's TOC depth but bounded enough that a
+    pathological archive can't keep the worker tied up.
+    """
+    cached = _BACKUP_PEEK_CACHE.get(archive_path)
+    if cached and cached[0] == st.st_size and cached[1] == int(st.st_mtime):
+        return cached[2]
+
+    is_pmx = False
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            ['tar', '-atf', archive_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        assert proc.stdout is not None
+        for i, line in enumerate(proc.stdout):
+            if i > 500:
+                break
+            entry = line.strip()
+            if entry.startswith('./'):
+                entry = entry[2:]
+            entry = entry.rstrip('/')
+            if entry == 'metadata/run_info.env':
+                is_pmx = True
+                break
+    except OSError:
+        is_pmx = False
+    finally:
+        if proc is not None:
+            try:
+                proc.kill()
+            except OSError:
+                pass
+            try:
+                proc.wait(timeout=2)
+            except (subprocess.TimeoutExpired, OSError):
+                pass
+
+    _BACKUP_PEEK_CACHE[archive_path] = (st.st_size, int(st.st_mtime), is_pmx)
+    return is_pmx
+
+
+def _identify_host_backup(archive_path, st, hostname, job_ids):
+    """Return a dict of {kind, job_id, profile, source_hostname,
+    detected_via} if this archive is a ProxMenux host backup, or None
+    if it isn't (or we can't tell).
+
+    Order of confidence (best → worst):
+      1. <archive>.proxmenux.json sidecar — definitive, written by the
+         backup script when the archive completes.
+      2. Filename matches a known scheduled job_id (.env still on disk).
+      3. Filename starts with 'hostcfg-' — the convention for manual
+         and the recommended convention for scheduled jobs.
+      4. Tar-peek for metadata/run_info.env — the universal marker that
+         every ProxMenux backup carries inside. Caches by mtime/size so
+         repeat calls are free.
+    """
+    sc = _read_archive_sidecar(archive_path)
+    if sc is not None:
+        return {
+            'kind': sc.get('kind') or 'manual',
+            'job_id': sc.get('job_id'),
+            'profile': sc.get('profile'),
+            'source_hostname': sc.get('hostname'),
+            'detected_via': 'sidecar',
+        }
+
+    name = os.path.basename(archive_path)
+    m = _BACKUP_FILENAME_RE.match(name)
+    stem = m.group(1) if m else None
+
+    if stem and stem in job_ids:
+        return {
+            'kind': 'scheduled', 'job_id': stem,
+            'profile': None, 'source_hostname': None,
+            'detected_via': 'job_id_match',
+        }
+
+    if stem == f'hostcfg-{hostname}':
+        return {
+            'kind': 'manual', 'job_id': None,
+            'profile': None, 'source_hostname': hostname,
+            'detected_via': 'hostcfg_prefix',
+        }
+
+    if stem and stem.startswith('hostcfg-'):
+        return {
+            'kind': 'manual', 'job_id': None,
+            'profile': None, 'source_hostname': None,
+            'detected_via': 'hostcfg_prefix',
+        }
+
+    if _peek_host_backup_marker(archive_path, st):
+        return {
+            'kind': 'legacy', 'job_id': None,
+            'profile': None, 'source_hostname': None,
+            'detected_via': 'tar_peek',
+        }
+    return None
+
+
+def _find_backup_archive_path(archive_id):
+    """Resolve an archive_id (basename) to an absolute path by checking
+    every directory we scan for backups (PVE default + per-job DEST_DIRs).
+    Returns None if the file isn't found anywhere we know about, or if
+    the resolved file isn't identifiable as a ProxMenux backup. This is
+    a deliberate allow-list: callers can't request arbitrary host paths
+    via the API even if they hit the inspect/preflight URLs directly."""
+    if '/' in archive_id or archive_id in ('.', '..') or archive_id.startswith('.'):
+        return None  # don't let basename traversal sneak through
+    if not archive_id.endswith(_BACKUP_TAR_SUFFIXES):
+        return None  # we only handle the tar family
+    hostname = socket.gethostname()
+    job_ids = _known_job_ids()
+    for d in _collect_backup_scan_dirs():
+        candidate = os.path.join(d, archive_id)
+        if not os.path.isfile(candidate):
+            continue
+        try:
+            st = os.stat(candidate)
+        except OSError:
+            continue
+        if _identify_host_backup(candidate, st, hostname, job_ids) is None:
+            continue  # exists but isn't a ProxMenux backup — reject
+        return candidate
+    return None
+
+
+@app.route('/api/host-backups/jobs', methods=['GET'])
+@require_auth
+def api_host_backups_jobs():
+    """List scheduled host-backup jobs created via the backup_scheduler
+    CLI. Each job has a .env file + systemd timer. We report on both,
+    plus the last-run status when available."""
+    import glob
+    jobs: list = []
+    try:
+        env_files = sorted(glob.glob(f'{_BACKUP_JOBS_DIR}/*.env'))
+    except OSError:
+        env_files = []
+
+    for env_file in env_files:
+        job_id = os.path.basename(env_file)[:-len('.env')]
+        job = _parse_job_env(env_file)
+
+        timer_unit = f'proxmenux-backup-{job_id}.timer'
+        timer_enabled = subprocess.run(
+            ['systemctl', 'is-enabled', '--quiet', timer_unit],
+            capture_output=True
+        ).returncode == 0
+
+        last_status = None
+        last_status_file = f'{_BACKUP_LOG_DIR}/{job_id}-last.status'
+        if os.path.exists(last_status_file):
+            try:
+                with open(last_status_file) as f:
+                    last_status = f.read().strip()
+            except OSError:
+                pass
+
+        # Next scheduled run from systemctl list-timers
+        next_run = None
+        try:
+            r = subprocess.run(
+                ['systemctl', 'list-timers', '--no-pager', '--output=json', timer_unit],
+                capture_output=True, text=True, timeout=5
+            )
+            if r.returncode == 0 and r.stdout.strip():
+                rows = json.loads(r.stdout)
+                if rows and isinstance(rows, list):
+                    next_run = rows[0].get('next')
+        except (subprocess.TimeoutExpired, json.JSONDecodeError, ValueError, OSError):
+            pass
+
+        jobs.append({
+            'id': job_id,
+            'destination': (job.get('DEST_DIR') or job.get('DEST')
+                            or job.get('PBS_REPO') or job.get('BORG_REPO') or ''),
+            'method': job.get('METHOD') or 'unknown',
+            'on_calendar': job.get('ON_CALENDAR') or 'manual',
+            'retention': job.get('RETENTION') or '',
+            'timer_enabled': timer_enabled,
+            'last_status': last_status,
+            'next_run': next_run,
+        })
+    return jsonify({'jobs': jobs})
+
+
+_BACKUP_TAR_SUFFIXES = ('.tar', '.tar.zst', '.tar.gz')
+
+
+@app.route('/api/host-backups/archives', methods=['GET'])
+@require_auth
+def api_host_backups_archives():
+    """List ProxMenux host-backup archives found on disk.
+
+    Scans /var/lib/vz/dump (PVE default — covers manual backups from
+    backup_host.sh options 1-6) plus every DEST_DIR registered by a
+    local_tar scheduled job. For each archive, _identify_host_backup()
+    decides whether it's really a ProxMenux backup using, in order of
+    confidence: (a) the .proxmenux.json sidecar dropped by the backup
+    scripts at completion (definitive — survives any future rename of
+    the .tar); (b) the filename conventions (`hostcfg-<host>-<ts>` for
+    manual, `<job_id>-<ts>` for scheduled with the job env still on
+    disk); (c) a tar-peek for the in-archive `metadata/run_info.env`
+    marker that every ProxMenux backup ships with (catches legacy
+    archives and ones copied in from another host).
+    PBS and Borg backups aren't surfaced in the UI yet."""
+    archives: list = []
+    seen: set = set()
+    hostname = socket.gethostname()
+    job_ids = _known_job_ids()
+
+    for d in _collect_backup_scan_dirs():
+        try:
+            entries = os.listdir(d)
+        except OSError:
+            continue
+        for name in entries:
+            if not name.endswith(_BACKUP_TAR_SUFFIXES):
+                continue
+            tar_path = os.path.join(d, name)
+            if tar_path in seen:
+                continue
+            seen.add(tar_path)
+            try:
+                st = os.stat(tar_path)
+            except OSError:
+                continue
+            info = _identify_host_backup(tar_path, st, hostname, job_ids)
+            if info is None:
+                continue
+            archives.append({
+                'id': name,
+                'path': tar_path,
+                'size_bytes': st.st_size,
+                'mtime': int(st.st_mtime),
+                **info,
+            })
+
+    archives.sort(key=lambda a: a['mtime'], reverse=True)
+    return jsonify({'archives': archives})
+
+
+@app.route('/api/host-backups/archives/<path:archive_id>/manifest', methods=['GET'])
+@require_auth
+def api_host_backups_archive_manifest(archive_id):
+    """Extract the manifest.json embedded inside a backup archive,
+    using scripts/backup_restore/restore/parse_manifest.sh. Returns the
+    unwrapped manifest (i.e. without the proxmenux_backup_manifest key)."""
+    archive_path = _find_backup_archive_path(archive_id)
+    if not archive_path:
+        return jsonify({'error': 'archive not found'}), 404
+
+    parse_script = f'{_PROXMENUX_SCRIPTS_DIR}/backup_restore/restore/parse_manifest.sh'
+    if not os.path.exists(parse_script):
+        return jsonify({'error': 'restore tooling not installed on this host',
+                        'install_hint': 'Run the ProxMenux installer to deploy scripts/backup_restore/'}), 503
+
+    try:
+        r = subprocess.run(['bash', parse_script, archive_path],
+                           capture_output=True, text=True, timeout=30)
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return jsonify({'error': f'parser invocation failed: {e}'}), 500
+
+    if r.returncode != 0:
+        return jsonify({'error': r.stderr.strip() or 'parse_manifest exited non-zero'}), 422
+
+    try:
+        return jsonify(json.loads(r.stdout))
+    except json.JSONDecodeError:
+        return jsonify({'error': 'parser output was not valid JSON'}), 500
+
+
+@app.route('/api/host-backups/archives/<path:archive_id>/preflight', methods=['POST'])
+@require_auth
+def api_host_backups_archive_preflight(archive_id):
+    """Run the dry-run preflight + storage + network + driver-plan report
+    for this archive against the current host. Body: {"mode": "<mode>"}.
+    Modes match restore_modes.sh: full, storage_only, network_only, base,
+    custom. Returns the combined run_restore.sh JSON report."""
+    archive_path = _find_backup_archive_path(archive_id)
+    if not archive_path:
+        return jsonify({'error': 'archive not found'}), 404
+
+    body = request.get_json(silent=True) or {}
+    mode = body.get('mode', 'full')
+    if mode not in ('full', 'storage_only', 'network_only', 'base', 'custom'):
+        return jsonify({'error': f'unknown mode "{mode}"'}), 400
+
+    run_script = f'{_PROXMENUX_SCRIPTS_DIR}/backup_restore/restore/run_restore.sh'
+    if not os.path.exists(run_script):
+        return jsonify({'error': 'restore tooling not installed on this host',
+                        'install_hint': 'Run the ProxMenux installer to deploy scripts/backup_restore/'}), 503
+
+    try:
+        r = subprocess.run(
+            ['bash', run_script, archive_path, '--mode', mode, '--json'],
+            capture_output=True, text=True, timeout=120
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return jsonify({'error': f'preflight invocation failed: {e}'}), 500
+
+    # run_restore.sh exits non-zero when preflight has fails; we still
+    # want to surface the report so the UI can show what failed.
+    if not r.stdout.strip():
+        return jsonify({'error': r.stderr.strip() or 'no report emitted'}), 500
+    try:
+        return jsonify(json.loads(r.stdout))
+    except json.JSONDecodeError:
+        return jsonify({'error': 'run_restore output was not valid JSON',
+                        'raw_stderr': r.stderr[:2000]}), 500
+
+
 if __name__ == '__main__':
     import sys
     import logging

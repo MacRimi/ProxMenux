@@ -1,0 +1,305 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proxmenux.dev/schemas/host-backup-manifest/v1.json",
+  "title": "ProxMenux Host Backup Manifest",
+  "description": "Recipe-style manifest embedded inside every ProxMenux host backup. Generated at backup time and consumed by the restore wizard for compatibility checks, driver reinstallation via ProxMenux installers, and hardware/storage validation before applying any file. Schema designed against the .55 fixture (AMD homelab, LVM, vfio passthrough, NFS+CIFS) and the .89 production target (NVIDIA Quadro + ZFS).",
+  "type": "object",
+  "required": ["proxmenux_backup_manifest"],
+  "additionalProperties": false,
+  "properties": {
+    "proxmenux_backup_manifest": {
+      "type": "object",
+      "required": ["schema_version", "created_at", "source_host"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Manifest schema version. Bumped on breaking field changes."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO8601 timestamp of backup creation."
+        },
+        "created_by": {
+          "type": "string",
+          "description": "Tool + version, e.g. 'proxmenux-host-backup/1.3.0'."
+        },
+        "source_host":                   { "$ref": "#/$defs/source_host" },
+        "hardware_inventory":            { "$ref": "#/$defs/hardware_inventory" },
+        "storage_inventory":             { "$ref": "#/$defs/storage_inventory" },
+        "proxmenux_installed_components": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/installed_component" }
+        },
+        "kernel_params":                 { "$ref": "#/$defs/kernel_params" },
+        "vms_lxcs_at_backup":            { "$ref": "#/$defs/guests_inventory" },
+        "backup_metadata":               { "$ref": "#/$defs/backup_metadata" }
+      }
+    }
+  },
+
+  "$defs": {
+    "source_host": {
+      "type": "object",
+      "required": ["hostname", "kernel", "roles", "boot_mode", "cpu_arch", "memory_kb"],
+      "additionalProperties": false,
+      "properties": {
+        "hostname":            { "type": "string", "minLength": 1 },
+        "pve_version":         { "type": ["string", "null"], "description": "Short version like 9.2.2." },
+        "pve_version_full":    { "type": ["string", "null"], "description": "Full pveversion line." },
+        "pbs_version":         { "type": ["string", "null"], "description": "Present only if proxmox-backup-server is installed." },
+        "roles": {
+          "type": "array",
+          "items": { "enum": ["pve", "pbs"] },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "Domain roles present on the host. Drives recipe selection at restore."
+        },
+        "kernel":              { "type": "string" },
+        "boot_mode":           { "enum": ["efi", "bios"] },
+        "root_fs":             { "enum": ["ext4", "xfs", "btrfs", "zfs"] },
+        "cpu_model":           { "type": "string" },
+        "cpu_arch":            { "enum": ["x86_64", "aarch64"] },
+        "memory_kb":           { "type": "integer", "minimum": 0 },
+        "subscription_status": { "type": ["string", "null"] }
+      }
+    },
+
+    "hardware_inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "gpu":      { "type": "array", "items": { "$ref": "#/$defs/gpu" } },
+        "tpu":      { "type": "array", "items": { "$ref": "#/$defs/tpu" } },
+        "nic":      { "type": "array", "items": { "$ref": "#/$defs/nic" } },
+        "wireless": { "type": "array", "items": { "$ref": "#/$defs/wireless" } }
+      }
+    },
+
+    "gpu": {
+      "type": "object",
+      "required": ["vendor", "pci_address", "pci_id"],
+      "additionalProperties": false,
+      "properties": {
+        "vendor":                   { "enum": ["AMD", "NVIDIA", "Intel", "Other"] },
+        "model":                    { "type": "string" },
+        "pci_address":              { "type": "string", "pattern": "^[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\\.[0-9a-f]$" },
+        "pci_id":                   { "type": "string", "pattern": "^[0-9a-f]{4}:[0-9a-f]{4}$" },
+        "kernel_driver":            { "type": ["string", "null"] },
+        "passthrough_eligible":     { "type": "boolean" },
+        "proxmenux_installer":      { "type": ["string", "null"], "description": "Relative path to the installer script, e.g. 'scripts/gpu_tpu/nvidia_installer.sh'. Null if no installer is applicable (AMD iGPU, etc.)." },
+        "installed_driver_version": { "type": ["string", "null"] }
+      }
+    },
+
+    "tpu": {
+      "type": "object",
+      "required": ["vendor"],
+      "additionalProperties": false,
+      "properties": {
+        "vendor":              { "enum": ["Google", "Other"] },
+        "model":               { "type": "string" },
+        "bus":                 { "enum": ["PCIe", "USB"] },
+        "pci_address":         { "type": ["string", "null"] },
+        "proxmenux_installer": { "type": ["string", "null"] },
+        "installed_version":   { "type": ["string", "null"] }
+      }
+    },
+
+    "nic": {
+      "type": "object",
+      "required": ["ifname", "mac"],
+      "additionalProperties": false,
+      "properties": {
+        "ifname":        { "type": "string" },
+        "mac":           { "type": "string", "pattern": "^[0-9a-f:]{17}$" },
+        "kernel_driver": { "type": ["string", "null"] },
+        "in_bridges":    { "type": "array", "items": { "type": "string" } },
+        "operstate":     { "enum": ["UP", "DOWN", "UNKNOWN"] }
+      }
+    },
+
+    "wireless": {
+      "type": "object",
+      "required": ["ifname", "mac"],
+      "additionalProperties": false,
+      "properties": {
+        "ifname": { "type": "string" },
+        "mac":    { "type": "string" }
+      }
+    },
+
+    "storage_inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "zfs_pools":       { "type": "array", "items": { "$ref": "#/$defs/zfs_pool" } },
+        "lvm":             { "$ref": "#/$defs/lvm_state" },
+        "physical_disks":  { "type": "array", "items": { "$ref": "#/$defs/physical_disk" } },
+        "pve_storage_cfg": { "type": "array", "items": { "$ref": "#/$defs/storage_entry" } },
+        "mounts":          { "type": "array", "items": { "$ref": "#/$defs/mount" } }
+      }
+    },
+
+    "zfs_pool": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name":           { "type": "string" },
+        "type":           { "enum": ["mirror", "raidz1", "raidz2", "raidz3", "stripe", "single"] },
+        "devices_by_id":  { "type": "array", "items": { "type": "string" }, "description": "Disks referenced by stable /dev/disk/by-id paths. Restore validates these exist before importing." },
+        "mountpoint":     { "type": "string" },
+        "compression":    { "type": "string" },
+        "size_bytes":     { "type": "integer" },
+        "health":         { "enum": ["ONLINE", "DEGRADED", "FAULTED", "OFFLINE", "UNAVAIL", "REMOVED"] }
+      }
+    },
+
+    "lvm_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "vgs": { "type": "array", "items": { "$ref": "#/$defs/lvm_vg" } }
+      }
+    },
+
+    "lvm_vg": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name":       { "type": "string" },
+        "size_bytes": { "type": "integer" },
+        "thin_pools": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "lv_name":    { "type": "string" },
+              "size_bytes": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+
+    "physical_disk": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name":       { "type": "string" },
+        "model":      { "type": ["string", "null"] },
+        "size_bytes": { "type": "integer" },
+        "by_id":      { "type": ["string", "null"], "description": "Stable /dev/disk/by-id symlink target if available. Used to detect the same disk on different controller layouts." }
+      }
+    },
+
+    "storage_entry": {
+      "type": "object",
+      "required": ["id", "type"],
+      "description": "additionalProperties is intentionally TRUE here. PVE's storage.cfg accepts driver-specific options (sparse, krbd, fingerprint, datacenter, fs-name, nodes, prune-backups, …) that vary across releases and we don't want to play whack-a-mole on the schema every time someone uses a flag we haven't seen.",
+      "properties": {
+        "id":       { "type": "string" },
+        "type":    { "enum": ["dir", "lvm", "lvmthin", "zfs", "zfspool", "btrfs", "nfs", "cifs", "iscsi", "rbd", "cephfs", "pbs", "esxi"] },
+        "path":     { "type": ["string", "null"] },
+        "server":   { "type": ["string", "null"] },
+        "export":   { "type": ["string", "null"] },
+        "share":    { "type": ["string", "null"] },
+        "thinpool": { "type": ["string", "null"] },
+        "vgname":   { "type": ["string", "null"] },
+        "pool":     { "type": ["string", "null"] },
+        "content":  { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "mount": {
+      "type": "object",
+      "required": ["target", "source", "fstype"],
+      "additionalProperties": false,
+      "properties": {
+        "target":  { "type": "string" },
+        "source":  { "type": "string" },
+        "fstype":  { "type": "string" },
+        "options": { "type": ["string", "null"] }
+      }
+    },
+
+    "installed_component": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id":                  { "type": "string", "description": "Stable identifier matching ProxMenux managed_installs registry." },
+        "type":                { "type": "string", "description": "Type from registry, e.g. nvidia_xfree86, coral, oci_app, tailscale." },
+        "version_at_backup":   { "type": ["string", "null"] },
+        "proxmenux_installer": { "type": ["string", "null"], "description": "Installer script relative to scripts/, called with --auto-from-manifest at restore." },
+        "applied_settings":    { "type": "array", "items": { "type": "string" }, "description": "Named tweaks applied (log2ram, memory_settings, etc.). Reapplied via post-install scripts at restore." }
+      }
+    },
+
+    "kernel_params": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cmdline_extra":          { "type": "array", "items": { "type": "string" }, "description": "Extra entries in /proc/cmdline beyond the default PVE set (BOOT_IMAGE, root, ro). Used to detect iommu, hugepages, custom GRUB tunings." },
+        "modules_loaded_at_boot": { "type": "array", "items": { "type": "string" }, "description": "Contents of /etc/modules." },
+        "modprobe_d_files":       { "type": "array", "items": { "type": "string" }, "description": "Paths under /etc/modprobe.d/ that contain user-defined options/blacklists." }
+      }
+    },
+
+    "guests_inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "vms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["vmid", "name"],
+            "additionalProperties": false,
+            "properties": {
+              "vmid":         { "type": "integer", "minimum": 100, "maximum": 999999999 },
+              "name":         { "type": "string" },
+              "memory_mb":    { "type": "integer" },
+              "bootdisk_gb":  { "type": "number" },
+              "status":       { "enum": ["running", "stopped", "paused"] },
+              "config_file":  { "type": ["string", "null"], "description": "Relative path inside the backup archive where the .conf was captured." }
+            }
+          }
+        },
+        "lxcs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["vmid", "name"],
+            "additionalProperties": false,
+            "properties": {
+              "vmid":        { "type": "integer", "minimum": 100, "maximum": 999999999 },
+              "name":        { "type": "string" },
+              "status":      { "enum": ["running", "stopped"] },
+              "config_file": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+
+    "backup_metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "encrypted":          { "type": "boolean" },
+        "encryption_format":  { "type": ["string", "null"], "enum": [null, "age", "gpg"] },
+        "compression":        { "enum": ["none", "gzip", "zstd"] },
+        "paths_archived":     { "type": ["array", "null"], "items": { "type": "string" }, "description": "Snapshot of every host path that ended up inside the archive. Used by restore to drive selective category extraction." },
+        "sha256_archive":     { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "size_bytes":         { "type": ["integer", "null"] }
+      }
+    }
+  }
+}

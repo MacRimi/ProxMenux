@@ -623,7 +623,11 @@ install_beta() {
     mkdir -p "$BASE_DIR/oci"
 
     cp "./scripts/utils.sh" "$UTILS_FILE"
-    cp "./menu" "$INSTALL_DIR/$MENU_SCRIPT"
+    # Atomic install of /usr/local/bin/menu — see install_proxmenux.sh
+    # for the rationale (prevents partial-file reads during mid-update
+    # parsing).
+    cp "./menu" "$INSTALL_DIR/${MENU_SCRIPT}.new"
+    mv -f "$INSTALL_DIR/${MENU_SCRIPT}.new" "$INSTALL_DIR/$MENU_SCRIPT"
     cp "./version.txt" "$LOCAL_VERSION_FILE" 2>/dev/null || true
 
     # Store beta version marker
@@ -698,6 +702,14 @@ check_stable_available() {
 }
 
 # ── Entry point ────────────────────────────────────────────
+# Parse --update before any work so the welcome banner can be skipped
+# and the relaunch hand-off can fire at the end. The flag arrives from
+# `menu`'s check_updates_beta() → `exec bash $INSTALL_SCRIPT --update`.
+UPDATE_MODE=0
+if [[ "${1:-}" == "--update" ]]; then
+    UPDATE_MODE=1
+fi
+
 if [ "$(id -u)" -ne 0 ]; then
     echo -e "${RD}[ERROR] This script must be run as root.${CL}"
     exit 1
@@ -705,9 +717,13 @@ fi
 
 cleanup_corrupted_files
 show_proxmenux_logo
-show_beta_welcome
 
-msg_title "Installing ProxMenux Beta — branch: develop"
+if [[ "$UPDATE_MODE" == "1" ]]; then
+    msg_title "Updating ProxMenux Beta — branch: develop"
+else
+    show_beta_welcome
+    msg_title "Installing ProxMenux Beta — branch: develop"
+fi
 install_beta
 
 # Load utils if available
@@ -721,6 +737,14 @@ install_beta
 # Idempotent: does nothing on hosts that never had the legacy hook.
 if [ -x "$BASE_DIR/scripts/global/cleanup_gpu_hookscripts.sh" ]; then
     bash "$BASE_DIR/scripts/global/cleanup_gpu_hookscripts.sh" || true
+fi
+
+# Update path: hand off to the freshly-installed menu instead of telling
+# the operator to type `menu` again. See install_proxmenux.sh for the
+# full rationale — same fix here for the beta channel.
+if [[ "$UPDATE_MODE" == "1" ]]; then
+    msg_ok "ProxMenux Beta update complete — relaunching menu..."
+    exec "$INSTALL_DIR/$MENU_SCRIPT"
 fi
 
 msg_title "ProxMenux Beta installed successfully"

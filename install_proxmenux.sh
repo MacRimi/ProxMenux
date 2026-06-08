@@ -921,7 +921,13 @@ install_normal_version() {
     show_progress $current_step $total_steps "Copying necessary files"
     
     cp "./scripts/utils.sh" "$UTILS_FILE"
-    cp "./menu" "$INSTALL_DIR/$MENU_SCRIPT"
+    # Atomic install of /usr/local/bin/menu: stage to .new on the same
+    # filesystem then mv. This protects any reader that happens to open
+    # the file mid-install from seeing a partial/half-written script
+    # (the suspected root cause of the post-1.2.2-update reports:
+    #   "menu: line 138 syntax error near unexpected token `$REMOTE_VERSION`")
+    cp "./menu" "$INSTALL_DIR/${MENU_SCRIPT}.new"
+    mv -f "$INSTALL_DIR/${MENU_SCRIPT}.new" "$INSTALL_DIR/$MENU_SCRIPT"
     cp "./version.txt" "$LOCAL_VERSION_FILE"
     cp "./install_proxmenux.sh" "$BASE_DIR/install_proxmenux.sh"
 
@@ -1078,7 +1084,13 @@ install_translation_version() {
     msg_ok "Cache file copied with translations."
     
     cp "./scripts/utils.sh" "$UTILS_FILE"
-    cp "./menu" "$INSTALL_DIR/$MENU_SCRIPT"
+    # Atomic install of /usr/local/bin/menu: stage to .new on the same
+    # filesystem then mv. This protects any reader that happens to open
+    # the file mid-install from seeing a partial/half-written script
+    # (the suspected root cause of the post-1.2.2-update reports:
+    #   "menu: line 138 syntax error near unexpected token `$REMOTE_VERSION`")
+    cp "./menu" "$INSTALL_DIR/${MENU_SCRIPT}.new"
+    mv -f "$INSTALL_DIR/${MENU_SCRIPT}.new" "$INSTALL_DIR/$MENU_SCRIPT"
     cp "./version.txt" "$LOCAL_VERSION_FILE"
     cp "./install_proxmenux.sh" "$BASE_DIR/install_proxmenux.sh"
 
@@ -1177,24 +1189,47 @@ show_installation_options() {
 }
 
 install_proxmenux() {
-    show_installation_options
-    
-    case "$INSTALL_TYPE" in
-        "1")
+    if [[ "${UPDATE_MODE:-0}" == "1" ]]; then
+        # Update path: the user already accepted "Update now?" in the
+        # menu. We skip the install-type chooser (their choice is
+        # preserved — Translation installs leave /opt/googletrans-env
+        # behind, Normal installs don't) and label the run as an
+        # "Update" instead of an "Install" so the operator can tell
+        # which flow they're in. The continuous hand-off back to the
+        # new menu at the end of this function (exec, see below)
+        # closes the entire class of bugs of shape
+        #   "menu: line N syntax error" post-update
+        # because no shell ever returns to a half-written
+        # /usr/local/bin/menu — the new copy is the only thing parsed.
+        if [[ -d "$VENV_PATH" && -f "$VENV_PATH/bin/activate" ]]; then
             show_proxmenux_logo
-            msg_title "Installing ProxMenux - Normal Version"
-            install_normal_version
-            ;;
-        "2")
-            show_proxmenux_logo
-            msg_title "Installing ProxMenux - Translation Version"
+            msg_title "Updating ProxMenux - Translation Version"
             install_translation_version
-            ;;
-        *)
-            msg_error "Invalid option selected."
-            exit 1
-            ;;
-    esac
+        else
+            show_proxmenux_logo
+            msg_title "Updating ProxMenux - Normal Version"
+            install_normal_version
+        fi
+    else
+        show_installation_options
+
+        case "$INSTALL_TYPE" in
+            "1")
+                show_proxmenux_logo
+                msg_title "Installing ProxMenux - Normal Version"
+                install_normal_version
+                ;;
+            "2")
+                show_proxmenux_logo
+                msg_title "Installing ProxMenux - Translation Version"
+                install_translation_version
+                ;;
+            *)
+                msg_error "Invalid option selected."
+                exit 1
+                ;;
+        esac
+    fi
 
     if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
@@ -1210,14 +1245,24 @@ install_proxmenux() {
         bash "$LOCAL_SCRIPTS/global/cleanup_gpu_hookscripts.sh" || true
     fi
 
+    if [[ "${UPDATE_MODE:-0}" == "1" ]]; then
+        msg_ok "ProxMenux update complete — relaunching menu..."
+        # Hand off to the freshly-installed menu binary. `exec` replaces
+        # this shell so nothing tries to keep parsing the install script
+        # afterwards, and there is zero time window where any process
+        # could read a half-rewritten /usr/local/bin/menu (already
+        # protected by the atomic mv above; this is belt-and-suspenders).
+        exec "$INSTALL_DIR/$MENU_SCRIPT"
+    fi
+
     msg_title "ProxMenux has been installed successfully"
-    
+
     if systemctl is-active --quiet proxmenux-monitor.service; then
         local server_ip=$(get_server_ip)
         echo -e "${GN}🌐  ProxMenux Monitor activated${CL}: ${BL}http://${server_ip}:${MONITOR_PORT}${CL}"
         echo
     fi
-    
+
     echo -ne "${GN}"
     type_text "To run ProxMenux, simply execute this command in the console or terminal:"
     echo -e "${YWB}    menu${CL}"
@@ -1225,6 +1270,12 @@ install_proxmenux() {
     # -------
     exit 0
 }
+
+# Parse CLI flags before anything else so install_proxmenux() can
+# branch on UPDATE_MODE without re-reading "$@".
+if [[ "${1:-}" == "--update" ]]; then
+    UPDATE_MODE=1
+fi
 
 if [ "$(id -u)" -ne 0 ]; then
     msg_error "This script must be run as root."

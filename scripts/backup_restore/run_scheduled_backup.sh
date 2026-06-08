@@ -57,7 +57,10 @@ _sb_prune_local() {
     for f in "${files[@]}"; do
       idx=$((idx+1))
       (( idx <= keep_last )) && continue
-      rm -f "$f" || true
+      # Remove the archive AND its sidecar in one shot — if we
+      # leave .proxmenux.json files behind, the Monitor would
+      # show them as broken entries pointing at deleted archives.
+      rm -f "$f" "${f}.proxmenux.json" || true
     done
   fi
 }
@@ -79,6 +82,11 @@ _sb_run_local() {
     tar -czf "$archive" -C "$stage_root" . >/dev/null 2>&1 || return 1
     archive_ext="tar.gz"
   fi
+
+  # Drop a sidecar JSON next to the archive — explicit marker the
+  # Monitor can use to identify this as a scheduled host backup,
+  # independent of any future rename of the archive.
+  hb_write_archive_sidecar "$archive" "scheduled" "$job_id" "${PROFILE:-}" || true
 
   _sb_prune_local "$job_id" "$dest_dir" "$archive_ext"
   echo "LOCAL_ARCHIVE=$archive"
