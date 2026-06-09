@@ -244,6 +244,67 @@ fi
 # Clean up the maintenance marker now that we're done.
 rm -f "$MAINT_MARKER"
 
+# ── Component auto-reinstall (driven by components_status.json) ──
+# The host-config restore brings back ProxMenux state (including
+# components_status.json) but NOT the binary artifacts those
+# components installed outside of apt — driver modules under
+# /lib/modules/<kernel>/, binaries in /usr/bin/<tool>, downloaded
+# .deb files, DKMS source trees, etc. For each component the
+# restore state says was installed, we kick off its native
+# installer in `--auto-reinstall` mode so it replays the install
+# without dialogs. The installer's own logic handles "already
+# present → no-op", so this is idempotent.
+#
+# Apt-only components are still handled by the
+# packages.manual.list pass done earlier in the restore flow
+# (they're in `apt-mark showmanual`). Running the installer here
+# for them is harmless overhead (the installer just sees the
+# package is present and exits 0), so we don't try to filter.
+#
+# To register a NEW component for auto-reinstall: add it to the
+# COMPONENT_INSTALLERS array below as "component_key:relative
+# script path". The script must accept `--auto-reinstall` and
+# read its own state from components_status.json.
+COMPONENTS_STATUS="/usr/local/share/proxmenux/components_status.json"
+COMPONENT_INSTALLERS=(
+    "nvidia_driver:gpu_tpu/nvidia_installer.sh"
+    "amdgpu_top:gpu_tpu/amd_gpu_tools.sh"
+    "intel_gpu_tools:gpu_tpu/intel_gpu_tools.sh"
+    "coral_driver:gpu_tpu/install_coral.sh"
+)
+
+if command -v jq >/dev/null 2>&1 && [[ -f "$COMPONENTS_STATUS" ]]; then
+    echo ""
+    echo "── Component auto-reinstall ──"
+    SCRIPTS_BASE="/usr/local/share/proxmenux/scripts"
+    for entry in "${COMPONENT_INSTALLERS[@]}"; do
+        comp="${entry%%:*}"
+        installer="$SCRIPTS_BASE/${entry#*:}"
+
+        comp_status=$(jq -r ".${comp}.status // \"\"" "$COMPONENTS_STATUS" 2>/dev/null)
+        if [[ "$comp_status" != "installed" ]]; then
+            continue   # Was never installed on the source, or was uninstalled — skip.
+        fi
+
+        if [[ ! -f "$installer" ]]; then
+            echo "  ✗ $comp: installer missing at $installer — skipping"
+            continue
+        fi
+
+        echo ""
+        echo "  → $comp (running $installer --auto-reinstall)"
+        # Run with limited output capture. The installer logs in full to
+        # its own log file; we only echo a tail here for the operator.
+        bash "$installer" --auto-reinstall 2>&1 | sed -e 's/^/    /' | tail -15
+        rc=${PIPESTATUS[0]}
+        if (( rc == 0 )); then
+            echo "  ✓ $comp ok"
+        else
+            echo "  ✗ $comp installer exited $rc — see its own log"
+        fi
+    done
+fi
+
 echo ""
 echo "=== Apply finished at $(date -Iseconds) ==="
 echo "Log: $LOG_FILE"

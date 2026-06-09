@@ -1565,6 +1565,98 @@ main() {
   esac
 }
 
+# ==========================================================
+# Non-interactive auto-reinstall entry point
+# ==========================================================
+# Invoked after a host-config restore by apply_cluster_postboot.sh
+# when components_status.json reports nvidia_driver as installed
+# but the kernel module isn't loaded on the live system (i.e. the
+# restore brought back the configs but not the binary driver from
+# /lib/modules/<kernel>/). Replays the install path the user
+# originally ran via `menu → 2`, using the recorded version, with
+# no dialogs.
+#
+# Exit codes:
+#   0  installed (or no-op — GPU absent / driver already present)
+#   1  state file unreadable or no nvidia_driver entry
+#   2  install failed
+auto_reinstall_from_state() {
+  : >"$LOG_FILE"
+  echo "=== auto_reinstall_from_state started $(date -Iseconds) ===" >>"$LOG_FILE"
+
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "jq not available — cannot read components_status.json" | tee -a "$LOG_FILE"
+    return 1
+  fi
+  if [[ ! -f "$COMPONENTS_STATUS_FILE" ]]; then
+    echo "No components_status.json at $COMPONENTS_STATUS_FILE" | tee -a "$LOG_FILE"
+    return 1
+  fi
+
+  local recorded_status recorded_version
+  recorded_status=$(jq -r '.nvidia_driver.status // ""'  "$COMPONENTS_STATUS_FILE" 2>/dev/null)
+  recorded_version=$(jq -r '.nvidia_driver.version // ""' "$COMPONENTS_STATUS_FILE" 2>/dev/null)
+
+  if [[ "$recorded_status" != "installed" ]]; then
+    echo "nvidia_driver not marked installed in state ($recorded_status) — nothing to do" | tee -a "$LOG_FILE"
+    return 0
+  fi
+  if [[ -z "$recorded_version" || "$recorded_version" == "null" ]]; then
+    echo "nvidia_driver marked installed but no version recorded — aborting" | tee -a "$LOG_FILE"
+    return 1
+  fi
+  echo "Recorded driver: $recorded_version" >>"$LOG_FILE"
+
+  detect_nvidia_gpus
+  if ! $NVIDIA_GPU_PRESENT; then
+    echo "No NVIDIA GPU detected on this host — skipping reinstall" | tee -a "$LOG_FILE"
+    return 0
+  fi
+  detect_driver_status
+  if $CURRENT_DRIVER_INSTALLED && [[ "$CURRENT_DRIVER_VERSION" == "$recorded_version" ]]; then
+    echo "Driver $recorded_version already installed and matches state — no-op" | tee -a "$LOG_FILE"
+    return 0
+  fi
+
+  DRIVER_VERSION="$recorded_version"
+
+  # Same install path as the interactive main() flow, minus all
+  # dialogs and confirmations.
+  echo "Reinstalling NVIDIA driver $DRIVER_VERSION non-interactively..." | tee -a "$LOG_FILE"
+  ensure_workdir
+  ensure_repos_and_headers          >>"$LOG_FILE" 2>&1
+  blacklist_nouveau                 >>"$LOG_FILE" 2>&1
+  ensure_modules_config             >>"$LOG_FILE" 2>&1
+
+  if $CURRENT_DRIVER_INSTALLED; then
+    echo "Different version currently installed; cleaning up first..." | tee -a "$LOG_FILE"
+    complete_nvidia_uninstall       >>"$LOG_FILE" 2>&1
+  fi
+
+  if ! download_nvidia_installer    >>"$LOG_FILE" 2>&1; then
+    echo "Download failed — see $LOG_FILE" | tee -a "$LOG_FILE"
+    return 2
+  fi
+  if ! run_nvidia_installer         >>"$LOG_FILE" 2>&1; then
+    echo "Install failed — see $LOG_FILE" | tee -a "$LOG_FILE"
+    return 2
+  fi
+  install_udev_rules_and_persistenced >>"$LOG_FILE" 2>&1
+
+  # Record success — overwrites whatever the restore put there
+  # (same version key, fresh timestamp).
+  if declare -F update_component_status >/dev/null 2>&1; then
+    update_component_status "nvidia_driver" "installed" "$DRIVER_VERSION" "gpu" '{"patched":false}' >>"$LOG_FILE" 2>&1
+  fi
+
+  echo "✓ NVIDIA driver $DRIVER_VERSION reinstalled" | tee -a "$LOG_FILE"
+  return 0
+}
+
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  if [[ "${1:-}" == "--auto-reinstall" ]]; then
+    auto_reinstall_from_state
+    exit $?
+  fi
   main
 fi
