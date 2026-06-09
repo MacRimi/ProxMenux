@@ -270,11 +270,14 @@ hb_prepare_staging() {
                     --exclude "scripts/"
                     --exclude "web/"
                     --exclude "monitor-app/"
+                    --exclude "monitor-app.*/"
                     --exclude "AppImage/"
                     --exclude "images/"
                     --exclude "json/"
                     --exclude "utils.sh"
                     --exclude "helpers_cache.json"
+                    --exclude "ProxMenux-Monitor.AppImage*"
+                    --exclude "install_proxmenux*.sh"
                 )
             fi
 
