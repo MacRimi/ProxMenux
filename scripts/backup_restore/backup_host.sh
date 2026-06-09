@@ -1089,7 +1089,31 @@ _rs_apply() {
         # Apply
         if [[ -d "$src" ]]; then
             mkdir -p "$dst"
-            rsync -aAXH --delete "$src/" "$dst/" 2>/dev/null && ((applied++)) || ((skipped++))
+            # /usr/local/share/proxmenux/: symmetric to the backup-time excludes
+            # in lib_host_backup_common.sh. We keep the destination's freshly-
+            # installed code (scripts/, web/, AppImage/, monitor-app/, utils.sh)
+            # and only restore the user's state (components_status.json, dbs,
+            # configs). Without these excludes --delete would wipe the entire
+            # /scripts/ tree on the target and the pending-restore boot service
+            # would fail to find its own entry point.
+            local -a rsync_extra=()
+            if [[ "$rel" == "usr/local/share/proxmenux" ]]; then
+                rsync_extra+=(
+                    --exclude "scripts/"
+                    --exclude "web/"
+                    --exclude "monitor-app/"
+                    --exclude "monitor-app.*/"
+                    --exclude "AppImage/"
+                    --exclude "images/"
+                    --exclude "json/"
+                    --exclude "utils.sh"
+                    --exclude "helpers_cache.json"
+                    --exclude "ProxMenux-Monitor.AppImage*"
+                    --exclude "install_proxmenux*.sh"
+                    --exclude "restore-pending/"
+                )
+            fi
+            rsync -aAXH --delete "${rsync_extra[@]}" "$src/" "$dst/" 2>/dev/null && ((applied++)) || ((skipped++))
         else
             mkdir -p "$(dirname "$dst")"
             cp -a "$src" "$dst" 2>/dev/null && ((applied++)) || ((skipped++))
