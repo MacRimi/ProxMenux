@@ -1633,11 +1633,14 @@ auto_reinstall_from_state() {
     complete_nvidia_uninstall       >>"$LOG_FILE" 2>&1
   fi
 
-  if ! download_nvidia_installer    >>"$LOG_FILE" 2>&1; then
+  local installer
+  installer=$(download_nvidia_installer "$DRIVER_VERSION" 2>>"$LOG_FILE")
+  if [[ -z "$installer" || ! -f "$installer" ]]; then
     echo "Download failed — see $LOG_FILE" | tee -a "$LOG_FILE"
     return 2
   fi
-  if ! run_nvidia_installer         >>"$LOG_FILE" 2>&1; then
+  echo "Installer ready: $installer" >>"$LOG_FILE"
+  if ! run_nvidia_installer "$installer" >>"$LOG_FILE" 2>&1; then
     echo "Install failed — see $LOG_FILE" | tee -a "$LOG_FILE"
     return 2
   fi

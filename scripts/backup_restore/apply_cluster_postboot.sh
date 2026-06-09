@@ -180,6 +180,68 @@ else
     echo "  (no source node dir to copy from)"
 fi
 
+# ── LXC bind-mount stub directories ───────────────────────
+# LXC containers with `mp<n>: /path,mp=...` bind-mount entries fail the
+# pre-start hook (status 2) if `/path` doesn't exist on the host. After a
+# cross-host restore the source's bind-mount paths (custom NAS mounts, second
+# disk paths, etc.) generally don't exist on the target's fresh install yet.
+# We create empty stubs so `onboot: 1` containers start; the operator wires
+# the real data source afterwards. PVE-managed storages (`/mnt/pve/*`) and
+# /dev/* are skipped — PVE handles the first, kernel handles the second.
+echo ""
+echo "── LXC bind-mount stubs ──"
+stub_created=0
+stub_skipped=0
+if compgen -G "/etc/pve/nodes/$CUR_NODE/lxc/*.conf" >/dev/null 2>&1; then
+    for conf in /etc/pve/nodes/"$CUR_NODE"/lxc/*.conf; do
+        [[ -f "$conf" ]] || continue
+        while IFS= read -r line; do
+            if [[ "$line" =~ ^mp[0-9]+:[[:space:]]*(/[^,]+), ]]; then
+                src="${BASH_REMATCH[1]}"
+                [[ "$src" == /mnt/pve/* ]] && continue
+                [[ "$src" == /dev/* ]]    && continue
+                if [[ -e "$src" ]]; then
+                    ((stub_skipped++))
+                    continue
+                fi
+                if mkdir -p "$src" 2>/dev/null; then
+                    echo "  + stub $src  (from $(basename "$conf"))"
+                    ((stub_created++))
+                fi
+            fi
+        done < "$conf"
+    done
+fi
+echo "Stubs: created=$stub_created, already-present=$stub_skipped"
+
+# ── Stale node-dir cleanup ────────────────────────────────
+# Fresh PVE install creates /etc/pve/nodes/<install-hostname>/. After our
+# restore changes the hostname back to the source's, pve-cluster boots into
+# the source's node dir but leaves the install-hostname dir orphaned. The
+# web UI then shows a phantom offline node. Only remove dirs whose lxc/
+# qemu-server/ are empty — never trample a real second cluster member.
+echo ""
+echo "── Stale node-dir cleanup ──"
+removed_nodes=0
+for nodedir in /etc/pve/nodes/*/; do
+    n=$(basename "$nodedir")
+    [[ "$n" == "$CUR_NODE" ]] && continue
+    lxc_empty=1; qemu_empty=1
+    [[ -d "$nodedir/lxc" ]] && [[ -n "$(ls -A "$nodedir/lxc"        2>/dev/null)" ]] && lxc_empty=0
+    [[ -d "$nodedir/qemu-server" ]] && [[ -n "$(ls -A "$nodedir/qemu-server" 2>/dev/null)" ]] && qemu_empty=0
+    if (( lxc_empty && qemu_empty )); then
+        if rm -rf "$nodedir" 2>/dev/null; then
+            echo "  ✓ removed stale node dir: $n"
+            ((removed_nodes++))
+        else
+            echo "  ✗ rm failed for $n (pmxcfs may have it busy)"
+        fi
+    else
+        echo "  ⚠ kept $n (has guest configs — looks like a real cluster member)"
+    fi
+done
+echo "Stale node dirs removed: $removed_nodes"
+
 # ── Done with cluster config apply ─────────────────────────
 echo ""
 echo "Cluster summary: globals=$copied_global, subdirs=$copied_subdirs, guests=$copied_guests, guest-clashes-skipped=$skipped_guests"

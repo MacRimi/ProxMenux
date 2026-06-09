@@ -257,10 +257,24 @@ hb_prepare_staging() {
                 )
             fi
 
-            # Runtime pending-restore data belongs in /var/lib/proxmenux, never in app code tree.
+            # /usr/local/share/proxmenux: ship USER STATE only (components_status.json,
+            # user prefs, post-install cache). NEVER ship code (scripts/, utils.sh, web/,
+            # AppImage/, monitor-app/) — destination has its own installed proxmenux which
+            # may be newer than the backup. Hot-applying the backup's old /scripts/ over
+            # the destination's fresh install silently regresses the apply_cluster_postboot
+            # dispatcher and the *_installer.sh --auto-reinstall hooks, breaking the
+            # "user reinstalls nothing" promise.
             if [[ "$rel" == "usr/local/share/proxmenux" || "$rel" == "usr/local/share/proxmenux/"* ]]; then
                 rsync_opts+=(
                     --exclude "restore-pending/"
+                    --exclude "scripts/"
+                    --exclude "web/"
+                    --exclude "monitor-app/"
+                    --exclude "AppImage/"
+                    --exclude "images/"
+                    --exclude "json/"
+                    --exclude "utils.sh"
+                    --exclude "helpers_cache.json"
                 )
             fi
 
