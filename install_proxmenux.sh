@@ -355,7 +355,7 @@ select_language() {
     fi
     
     LANGUAGE=$(whiptail --title "Select Language" --menu "Choose a language for the menu:" 20 60 12 \
-        "en" "English (Recommended)" \
+        "en" "English" \
         "es" "Spanish" \
         "fr" "French" \
         "de" "German" \
