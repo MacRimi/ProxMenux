@@ -103,7 +103,13 @@ _sb_run_borg() {
   passphrase="${BORG_PASSPHRASE:-}"
   [[ -z "$repo" || -z "$passphrase" ]] && return 1
 
+  # Re-export the credentials so child processes (borg, ssh) inherit
+  # them. `source <job.env>` only assigns to the current shell — without
+  # an explicit re-export, child `borg` calls drop back to ssh defaults
+  # and a remote repo silently auth-fails with no log trail (since the
+  # call is also `>/dev/null 2>&1`).
   export BORG_PASSPHRASE="$passphrase"
+  [[ -n "${BORG_RSH:-}" ]] && export BORG_RSH
 
   if ! hb_borg_init_if_needed "$borg_bin" "$repo" "${BORG_ENCRYPT_MODE:-none}" >/dev/null 2>&1; then
     return 1
