@@ -15,6 +15,9 @@ on:
     branches: [develop]
     paths:
       - 'scripts/**/*.sh'
+      - 'menu'
+      - 'install_proxmenux.sh'
+      - 'install_proxmenux_beta.sh'
       - '.github/scripts/build_translation_cache.py'
       - '.github/workflows/build-translation-cache.yml'
   workflow_dispatch:
@@ -69,8 +72,13 @@ jobs:
           if [[ "${{ github.event.inputs.refresh }}" == "true" ]]; then
             REFRESH_FLAG="--refresh"
           fi
+          # Extra files outside scripts/ that also contain translate "..."
+          # calls. Keep this list in sync with the `paths` trigger above.
           python .github/scripts/build_translation_cache.py \
             --scripts-dir scripts \
+            --extra-file menu \
+            --extra-file install_proxmenux.sh \
+            --extra-file install_proxmenux_beta.sh \
             --output-dir lang \
             --provider googletrans \
             $REFRESH_FLAG

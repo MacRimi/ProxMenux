@@ -35,11 +35,15 @@
 INSTALL_DIR="/usr/local/bin"
 BASE_DIR="/usr/local/share/proxmenux"
 CONFIG_FILE="$BASE_DIR/config.json"
-CACHE_FILE="$BASE_DIR/cache.json"
 UTILS_FILE="$BASE_DIR/utils.sh"
 LOCAL_VERSION_FILE="$BASE_DIR/version.txt"
 BETA_VERSION_FILE="$BASE_DIR/beta_version.txt"
 MENU_SCRIPT="menu"
+
+# Legacy path that existed during the Python+googletrans era. Purged on
+# install if present — the current translate flow uses pre-built JSON
+# files in lang/ and has no runtime venv dependency.
+LEGACY_VENV_PATH="/opt/googletrans-env"
 
 MONITOR_INSTALL_DIR="$BASE_DIR"
 MONITOR_RUNTIME_DIR="$BASE_DIR/monitor-app"
@@ -304,9 +308,6 @@ cleanup_corrupted_files() {
     if [ -f "$CONFIG_FILE" ] && ! jq empty "$CONFIG_FILE" >/dev/null 2>&1; then
         rm -f "$CONFIG_FILE"
     fi
-    if [ -f "$CACHE_FILE" ] && ! jq empty "$CACHE_FILE" >/dev/null 2>&1; then
-        rm -f "$CACHE_FILE"
-    fi
 }
 
 detect_latest_appimage() {
@@ -541,11 +542,70 @@ EOF
 }
 
 # ── Main install ───────────────────────────────────────────
+select_language() {
+    if [ -f "$CONFIG_FILE" ] && jq empty "$CONFIG_FILE" >/dev/null 2>&1; then
+        local existing_language=$(jq -r '.language // empty' "$CONFIG_FILE" 2>/dev/null)
+        if [[ -n "$existing_language" && "$existing_language" != "null" && "$existing_language" != "empty" ]]; then
+            LANGUAGE="$existing_language"
+            msg_ok "Using existing language configuration: $LANGUAGE"
+            return 0
+        fi
+    fi
+
+    LANGUAGE=$(whiptail --title "Select Language" --menu "Choose a language for the menu:" 20 60 12 \
+        "en" "English (Recommended)" \
+        "es" "Spanish" \
+        "fr" "French" \
+        "de" "German" \
+        "it" "Italian" \
+        "pt" "Portuguese" 3>&1 1>&2 2>&3)
+
+    if [ -z "$LANGUAGE" ]; then
+        msg_error "No language selected. Exiting."
+        exit 1
+    fi
+
+    mkdir -p "$(dirname "$CONFIG_FILE")"
+
+    if [ ! -f "$CONFIG_FILE" ] || ! jq empty "$CONFIG_FILE" >/dev/null 2>&1; then
+        echo '{}' > "$CONFIG_FILE"
+    fi
+
+    local tmp_file
+    tmp_file=$(mktemp)
+    if jq --arg lang "$LANGUAGE" '. + {language: $lang}' "$CONFIG_FILE" > "$tmp_file" 2>/dev/null; then
+        mv "$tmp_file" "$CONFIG_FILE"
+    else
+        echo "{\"language\": \"$LANGUAGE\"}" > "$CONFIG_FILE"
+    fi
+
+    [ -f "$tmp_file" ] && rm -f "$tmp_file"
+
+    msg_ok "Language set to: $LANGUAGE"
+}
+
 install_beta() {
-    local total_steps=4
+    local total_steps=5
     local current_step=1
 
-    # ── Step 1: Dependencies ──────────────────────────────
+    # ── Step 1: Language selection ────────────────────────
+    # Pre-built translations in lang/<locale>.json make every beta install
+    # multilingual-capable. Ask the operator once up front; subsequent
+    # update runs reuse the saved choice without re-prompting.
+    show_progress $current_step $total_steps "Language selection"
+    select_language
+    ((current_step++))
+
+    # Purge the legacy googletrans virtualenv if a previous install left it
+    # behind. Runtime translation is now a static JSON lookup — the venv
+    # is dead weight on disk now.
+    if [[ -d "$LEGACY_VENV_PATH" ]]; then
+        msg_info "Removing legacy translation virtualenv at $LEGACY_VENV_PATH..."
+        rm -rf "$LEGACY_VENV_PATH"
+        msg_ok "Legacy translation virtualenv removed."
+    fi
+
+    # ── Step 2: Dependencies ──────────────────────────────
     show_progress $current_step $total_steps "Installing system dependencies"
 
     if ! command -v jq > /dev/null 2>&1; then
@@ -593,7 +653,7 @@ install_beta() {
 
     msg_ok "Dependencies installed: jq, dialog, curl, git."
 
-    # ── Step 2: Clone develop branch ─────────────────────
+    # ── Step 3: Clone develop branch ─────────────────────
     ((current_step++))
     show_progress $current_step $total_steps "Cloning ProxMenux develop branch"
 
@@ -612,7 +672,7 @@ install_beta() {
 
     cd "$TEMP_DIR"
 
-    # ── Step 3: Files ─────────────────────────────────────
+    # ── Step 4: Files ─────────────────────────────────────
     ((current_step++))
     show_progress $current_step $total_steps "Creating directories and copying files"
 
@@ -640,11 +700,23 @@ install_beta() {
     cp "./install_proxmenux.sh" "$BASE_DIR/install_proxmenux.sh" 2>/dev/null || true
     cp "./install_proxmenux_beta.sh" "$BASE_DIR/install_proxmenux_beta.sh" 2>/dev/null || true
 
+    # Pre-built translation cache. The runtime translate() in utils.sh
+    # reads $BASE_DIR/lang/<lang>.json — these files ship with the repo
+    # (one per supported language) so every beta install is multilingual
+    # without any runtime download or Python dependency. Refresh the
+    # whole dir on every install so a language that was renamed or
+    # dropped upstream disappears here too.
+    if [ -d "./lang" ]; then
+        rm -rf "$BASE_DIR/lang"
+        mkdir -p "$BASE_DIR/lang"
+        cp -r "./lang/"* "$BASE_DIR/lang/" 2>/dev/null || true
+    fi
+
     # Wipe the scripts tree before copying so any file removed upstream
     # (renamed, consolidated, deprecated) disappears from the user install.
-    # Only $BASE_DIR/scripts/ is cleared; config.json, cache.json,
-    # components_status.json, version.txt, beta_version.txt, monitor.db,
-    # smart/, oci/ and the AppImage live outside this path and are preserved.
+    # Only $BASE_DIR/scripts/ is cleared; config.json, components_status.json,
+    # version.txt, beta_version.txt, monitor.db, smart/, oci/ and the
+    # AppImage live outside this path and are preserved.
     rm -rf "$BASE_DIR/scripts"
     mkdir -p "$BASE_DIR/scripts"
     cp -r "./scripts/"* "$BASE_DIR/scripts/"
@@ -667,7 +739,7 @@ install_beta() {
 
     msg_ok "Files installed. Beta version: ${beta_version}."
 
-    # ── Step 4: Monitor ───────────────────────────────────
+    # ── Step 5: Monitor ───────────────────────────────────
     ((current_step++))
     show_progress $current_step $total_steps "Installing ProxMenux Monitor (beta)"
 

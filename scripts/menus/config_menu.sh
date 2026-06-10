@@ -111,13 +111,6 @@ uninstall_proxmenux_monitor() {
     
 }
 
-detect_installation_type() {
-    # The Translation/Normal split is gone after the googletrans removal.
-    # All installs are multilingual via pre-built lang/*.json. Keeping the
-    # function name + a fixed value so callers don't have to change.
-    echo "normal"
-}
-
 check_monitor_status() {
     if systemctl list-unit-files | grep -q "$MONITOR_SERVICE"; then
         if systemctl is-active --quiet "$MONITOR_SERVICE"; then
@@ -528,9 +521,6 @@ show_monitor_status() {
 
 # ==========================================================
 show_config_menu() {
-    local install_type
-    install_type=$(detect_installation_type)
-    
     while true; do
         local menu_options=()
         local option_actions=()
@@ -561,35 +551,22 @@ show_config_menu() {
         option_actions[$option_num]="change_release_channel"
         ((option_num++))
 
-        # Build menu based on installation type
-        if [ "$install_type" = "translation" ]; then
-            menu_options+=("$option_num" "$(translate "Change Language")")
-            option_actions[$option_num]="change_language"
-            ((option_num++))
-            
-            menu_options+=("$option_num" "$(translate "Show Version Information")")
-            option_actions[$option_num]="show_version_info"
-            ((option_num++))
-            
-            menu_options+=("$option_num" "$(translate "Uninstall ProxMenux")")
-            option_actions[$option_num]="uninstall_proxmenu"
-            ((option_num++))
-            
-            menu_options+=("$option_num" "$(translate "Return to Main Menu")")
-            option_actions[$option_num]="return_main"
-        else
-            # Normal version (English only)
-            menu_options+=("$option_num" "Show Version Information")
-            option_actions[$option_num]="show_version_info"
-            ((option_num++))
-            
-            menu_options+=("$option_num" "Uninstall ProxMenux")
-            option_actions[$option_num]="uninstall_proxmenu"
-            ((option_num++))
-            
-            menu_options+=("$option_num" "Return to Main Menu")
-            option_actions[$option_num]="return_main"
-        fi
+        # Translation/Normal split is gone — single menu now. Change Language
+        # is always available since every install ships the lang/*.json cache.
+        menu_options+=("$option_num" "$(translate "Change Language")")
+        option_actions[$option_num]="change_language"
+        ((option_num++))
+
+        menu_options+=("$option_num" "$(translate "Show Version Information")")
+        option_actions[$option_num]="show_version_info"
+        ((option_num++))
+
+        menu_options+=("$option_num" "$(translate "Uninstall ProxMenux")")
+        option_actions[$option_num]="uninstall_proxmenu"
+        ((option_num++))
+
+        menu_options+=("$option_num" "$(translate "Return to Main Menu")")
+        option_actions[$option_num]="return_main"
         
         # Show menu
         OPTION=$(dialog --clear --backtitle "ProxMenux Configuration" \
@@ -665,8 +642,7 @@ change_language() {
 
 # ==========================================================
 show_version_info() {
-    local version info_message install_type release_channel beta_version
-    install_type=$(detect_installation_type)
+    local version info_message release_channel beta_version
     release_channel=$(get_release_channel)
     
     if [ -f "$LOCAL_VERSION_FILE" ]; then
@@ -683,15 +659,8 @@ show_version_info() {
     fi
     info_message+="\n"
     
-    # Show installation type
-    info_message+="$(translate "Installation type:")\n"
-    if [ "$install_type" = "translation" ]; then
-        info_message+="✓ $(translate "Translation Version (Multi-language support)")\n"
-    else
-        info_message+="✓ $(translate "Normal Version (English only - Lightweight)")\n"
-    fi
-    info_message+="\n"
-    
+    # Translation/Normal split is gone — single install path now.
+    # Translation support is always present via the lang/*.json cache.
     info_message+="$(translate "Installed components:")\n"
     if [ -f "$CONFIG_FILE" ]; then
         while IFS=': ' read -r component value; do
@@ -749,9 +718,6 @@ show_version_info() {
 
 # ==========================================================
 uninstall_proxmenu() {
-    local install_type
-    install_type=$(detect_installation_type)
-    
     if ! dialog --clear --backtitle "ProxMenux Configuration" \
                 --title "Uninstall ProxMenux" \
                 --yesno "\n$(translate "Are you sure you want to uninstall ProxMenux?")" 8 60; then

@@ -1889,6 +1889,18 @@ hb_require_cmd() {
     command -v "$cmd" >/dev/null 2>&1
 }
 
+# Silent best-effort install of `pv` so callers can pipe tar through it
+# for a live progress bar. Returns 0 if pv ends up available, 1 if not.
+# Never speaks — pv is purely an UX improvement, asking the operator to
+# install it themselves would be backwards (we have apt; they shouldn't).
+hb_ensure_pv() {
+    command -v pv >/dev/null 2>&1 && return 0
+    if command -v apt-get >/dev/null 2>&1; then
+        DEBIAN_FRONTEND=noninteractive apt-get install -y -qq pv >/dev/null 2>&1
+    fi
+    command -v pv >/dev/null 2>&1
+}
+
 # ==========================================================
 # Compatibility check — compares backup metadata against the
 # current host and surfaces hostname / PVE version / kernel /

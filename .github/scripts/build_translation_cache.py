@@ -36,7 +36,10 @@ TRANSLATE_CALL_RE = re.compile(
 )
 
 
-def iter_script_files(scripts_dir: Path) -> Iterable[Path]:
+def iter_script_files(
+    scripts_dir: Path, extra_files: Iterable[Path] = ()
+) -> Iterable[Path]:
+    # Walk the main scripts tree.
     for path in sorted(scripts_dir.rglob("*")):
         if not path.is_file():
             continue
@@ -45,6 +48,14 @@ def iter_script_files(scripts_dir: Path) -> Iterable[Path]:
         if path.suffix not in {".sh", ".func"}:
             continue
         yield path
+    # Yield additional files passed explicitly (e.g. the root-level `menu`
+    # entry point or install_proxmenux*.sh). These live outside scripts/
+    # but still contain translate "..." calls we want in the cache.
+    # No extension filter and no utils.sh skip — the caller decided
+    # they belong, we just check the file actually exists.
+    for extra in extra_files:
+        if extra.is_file():
+            yield extra
 
 
 def decode_shell_string(raw: str, quote_char: str) -> str:
@@ -56,9 +67,11 @@ def decode_shell_string(raw: str, quote_char: str) -> str:
         return raw.replace(r"\"", '"').replace(r"\\", "\\")
 
 
-def extract_translate_texts(scripts_dir: Path) -> list[str]:
+def extract_translate_texts(
+    scripts_dir: Path, extra_files: Iterable[Path] = ()
+) -> list[str]:
     found: dict[str, None] = {}
-    for path in iter_script_files(scripts_dir):
+    for path in iter_script_files(scripts_dir, extra_files):
         try:
             content = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
@@ -220,6 +233,19 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--scripts-dir", default="scripts", type=Path)
     parser.add_argument(
+        "--extra-file",
+        action="append",
+        default=[],
+        type=Path,
+        metavar="PATH",
+        help=(
+            "Extra individual files to scan for translate calls in addition "
+            "to --scripts-dir. Useful for the root-level `menu` entry point "
+            "and install_proxmenux*.sh, which sit outside scripts/. "
+            "Pass multiple times to add more than one file."
+        ),
+    )
+    parser.add_argument(
         "--output-dir",
         default=Path("lang"),
         type=Path,
@@ -292,7 +318,7 @@ def main() -> int:
         print("No destination languages selected.", file=sys.stderr)
         return 1
 
-    texts = extract_translate_texts(scripts_dir)
+    texts = extract_translate_texts(scripts_dir, args.extra_file)
     if args.limit > 0:
         texts = texts[: args.limit]
     existing_by_lang = {

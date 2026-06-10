@@ -343,7 +343,7 @@ _bk_local() {
         # Fallback: gzip (rename archive)
         archive="${archive%.zst}"
         archive="${archive%.tar}.tar.gz"
-        if command -v pv >/dev/null 2>&1; then
+        if hb_ensure_pv; then
             local stage_bytes
             local pipefail_state
             stage_bytes=$(du -sb "$staging_root" 2>/dev/null | awk '{print $1}')
@@ -1115,7 +1115,7 @@ _rs_export_to_file() {
     tar_ok=0
     : > "$log_file"
 
-    if command -v pv >/dev/null 2>&1; then
+    if hb_ensure_pv; then
         # Stream tar through pv so the operator sees a live progress
         # bar instead of staring at a frozen title for minutes. We
         # mirror the same pattern used by the local backup path
@@ -1132,10 +1132,11 @@ _rs_export_to_file() {
         fi
         [[ "$pipefail_state" == "off" ]] && set +o pipefail
     else
-        # pv isn't installed — at least tell the operator something
-        # is happening and hint at the package they can install for
-        # a better experience next time.
-        msg_info "$(translate "Creating export archive (install 'pv' for a live progress bar)...")"
+        # Offline / apt unavailable — silently fall back to a plain
+        # tar so we still produce the archive. No "install pv" message:
+        # if we couldn't install it ourselves, sending the operator off
+        # to apt is just shifting our problem onto them.
+        msg_info "$(translate "Creating export archive...")"
         stop_spinner
         if tar -czf "$archive" -C "$staging_root" . >>"$log_file" 2>&1; then
             tar_ok=1
