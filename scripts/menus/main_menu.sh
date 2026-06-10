@@ -14,7 +14,6 @@
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
-VENV_PATH="/opt/googletrans-env"
 
 
 if ! command -v dialog &>/dev/null; then
@@ -23,47 +22,11 @@ if ! command -v dialog &>/dev/null; then
 fi
 
 
-check_pve9_translation_compatibility() {
-    local pve_version
-    
-    if command -v pveversion &>/dev/null; then
-        pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
-    else
-        return 0
-    fi
-    
-    if [[ -n "$pve_version" ]] && [[ "$pve_version" -ge 9 ]] && [[ -d "$VENV_PATH" ]]; then
-        
-        local has_googletrans=false
-        local has_cache=false
-        
-        if [[ -f "$VENV_PATH/bin/pip" ]]; then
-            if "$VENV_PATH/bin/pip" list 2>/dev/null | grep -q "googletrans"; then
-                has_googletrans=true
-            fi
-        fi
-        
-        if [[ -f "$BASE_DIR/cache.json" ]]; then
-            has_cache=true
-        fi
-        
-        if [[ "$has_googletrans" = true ]] || [[ "$has_cache" = true ]]; then
-            
-            dialog --clear \
-                --backtitle "ProxMenux - Compatibility Required" \
-                --title "Translation Environment Incompatible with PVE $pve_version" \
-                --msgbox "NOTICE: You are running Proxmox VE $pve_version with translation components installed.\n\nTranslations are NOT supported in PVE 9+. This causes:\n• Menu loading errors\n• Translation failures\n• System instability\n\nREQUIRED ACTION:\nProxMenux will now automatically reinstall the Normal Version.\n\nThis process will:\n• Remove incompatible translation components\n• Install PVE 9+ compatible version\n• Preserve all your settings and preferences\n\nPress OK to continue with automatic reinstallation..." 20 75
-            
-            bash "$BASE_DIR/install_proxmenux.sh"
-
-        fi
-        exit 0 
-    fi
-}
-
-check_pve9_translation_compatibility
-
 # ==========================================================
+# The legacy "PVE9 + googletrans incompatible" gate that used to live
+# here has been removed along with the googletrans runtime. Translations
+# are now a static lookup against $BASE_DIR/lang/<lang>.json — there is
+# no runtime venv to be incompatible with any PVE version.
 
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"

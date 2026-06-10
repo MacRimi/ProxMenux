@@ -276,6 +276,38 @@ _bk_local() {
     dest_dir=$(hb_prompt_dest_dir) || return 1
     hb_select_profile_paths "$profile_mode" paths || return 1
 
+    # Safety check: if the destination directory is INSIDE any selected
+    # backup path, creating the archive would copy the backup into
+    # itself — recursion → corrupted archive or unbounded growth that
+    # fills the disk. Common footgun when an operator adds a custom
+    # path like /var/lib/vz and then picks /var/lib/vz/dump as
+    # destination, or the default profile's /root and a destination
+    # under /root/.
+    local dest_real conflict=""
+    dest_real=$(readlink -m "$dest_dir" 2>/dev/null || echo "$dest_dir")
+    local p_real p
+    for p in "${paths[@]}"; do
+        p_real=$(readlink -m "$p" 2>/dev/null || echo "$p")
+        if [[ "$dest_real" == "$p_real" || "$dest_real" == "$p_real"/* ]]; then
+            conflict="$p"
+            break
+        fi
+    done
+    if [[ -n "$conflict" ]]; then
+        local body
+        body="$(translate "The archive destination directory is INSIDE one of the paths you are about to back up. Writing the archive there would copy the backup into itself — producing a corrupted archive, or growing without limit until the disk fills up.")"$'\n\n'
+        body+="\Zb$(translate "Destination:")\ZB  \Z4${dest_dir}\Zn"$'\n'
+        body+="\Zb$(translate "Conflicting path included in backup:")\ZB  \Z1${conflict}\Zn"$'\n\n'
+        body+="$(translate "To fix this, do ONE of the following:")"$'\n'
+        body+="  • $(translate "Choose a destination directory OUTSIDE of") ${conflict}"$'\n'
+        body+="  • $(translate "Go to \"Manage custom paths\" and remove your custom entry that includes the destination")"$'\n'
+        body+="  • $(translate "Use Custom backup and uncheck the conflicting path from the list")"
+        dialog --backtitle "ProxMenux" --colors \
+            --title "$(translate "Backup destination is inside the backup")" \
+            --msgbox "$body" 20 88
+        return 1
+    fi
+
     archive="$dest_dir/hostcfg-$(hostname)-$(date +%Y%m%d_%H%M%S).tar.zst"
     log_file="/tmp/proxmenux-local-backup-$(date +%Y%m%d_%H%M%S).log"
     staging_root=$(mktemp -d /tmp/proxmenux-local-stage.XXXXXX)
@@ -382,6 +414,194 @@ _bk_scheduler() {
     bash "$scheduler"
 }
 
+_bk_manage_local_destinations() {
+    while true; do
+        # Snapshot all currently mounted USB backup partitions with size info
+        local -a usb_mp=()
+        local -a usb_desc=()
+        local state path_or_dev label size fstype uuid
+        while IFS=$'\t' read -r state path_or_dev label size fstype uuid; do
+            [[ "$state" != "mounted" ]] && continue
+            local dfline
+            dfline=$(df -h "$path_or_dev" 2>/dev/null | tail -1)
+            local used="?" avail="?" pct="?"
+            if [[ -n "$dfline" ]]; then
+                used=$(awk '{print $3}'  <<<"$dfline")
+                avail=$(awk '{print $4}' <<<"$dfline")
+                pct=$(awk '{print $5}'   <<<"$dfline")
+            fi
+            usb_mp+=("$path_or_dev")
+            usb_desc+=("${label:-?}  [${fstype}]  $size  →  $path_or_dev  ($used $(translate "used"), $avail $(translate "free"), $pct)")
+        done < <(hb_list_usb_partitions)
+
+        local body=""
+        if (( ${#usb_desc[@]} == 0 )); then
+            body+="$(translate "No USB drives are currently mounted by ProxMenux.")"
+        else
+            body+="\Zb$(translate "Mounted USB drives:")\ZB"$'\n'
+            local d
+            for d in "${usb_desc[@]}"; do
+                body+="  • ${d}"$'\n'
+            done
+        fi
+        body+=$'\n'"$(translate "Local destinations are file paths — they are NOT registered as Proxmox storage.")"
+
+        local -a menu_args=()
+        menu_args+=("mount"   "+ $(translate "Mount a USB drive now")")
+        if (( ${#usb_mp[@]} > 0 )); then
+            menu_args+=("unmount" "− $(translate "Unmount a USB drive")")
+        fi
+        menu_args+=("back"    "$(translate "← Return")")
+
+        local choice
+        choice=$(dialog --backtitle "ProxMenux" --colors \
+            --title "$(translate "Local archive destinations")" \
+            --menu "\n${body}\n" \
+            "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${menu_args[@]}" \
+            3>&1 1>&2 2>&3) || break
+
+        case "$choice" in
+            mount)
+                # Reuse the runtime USB picker; result is discarded.
+                hb_prompt_mounted_path "/mnt/backup" >/dev/null || true
+                ;;
+            unmount)
+                if (( ${#usb_mp[@]} == 0 )); then
+                    continue
+                fi
+                local unmenu=() j=1 mp
+                for mp in "${usb_mp[@]}"; do
+                    unmenu+=("$j" "$mp"); ((j++))
+                done
+                local pick
+                pick=$(dialog --backtitle "ProxMenux" \
+                    --title "$(translate "Unmount USB drive")" \
+                    --menu "\n$(translate "Pick a drive to unmount:")" \
+                    "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${unmenu[@]}" \
+                    3>&1 1>&2 2>&3) || continue
+                local victim="${usb_mp[$((pick-1))]}"
+                if umount "$victim" 2>/tmp/proxmenux-umount.log; then
+                    rmdir "$victim" 2>/dev/null || true
+                    dialog --backtitle "ProxMenux" --colors \
+                        --msgbox "$(translate "Unmounted") \Z4${victim}\Zn" 8 70
+                else
+                    local err
+                    err=$(cat /tmp/proxmenux-umount.log 2>/dev/null)
+                    dialog --backtitle "ProxMenux" --colors \
+                        --title "$(translate "Unmount failed")" \
+                        --msgbox "$(translate "Could not unmount") \Z1${victim}\Zn.\n\n${err}" 12 78
+                fi
+                ;;
+            back) break ;;
+        esac
+    done
+}
+
+_bk_manage_destinations() {
+    while true; do
+        local choice
+        choice=$(dialog --backtitle "ProxMenux" \
+            --title "$(translate "Configure backup destinations")" \
+            --menu "\n$(translate "Pre-configure destinations so you don't have to enter them every time you back up.")" \
+            "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
+            1   "$(translate "Proxmox Backup Server (PBS) destinations")" \
+            2   "$(translate "Borg repositories")" \
+            3   "$(translate "Local archive destinations (mounted USBs, mount, unmount)")" \
+            0   "$(translate "Return")" \
+            3>&1 1>&2 2>&3) || break
+
+        case "$choice" in
+            1)
+                hb_select_pbs_repository || true
+                ;;
+            2)
+                local _discard=""
+                hb_select_borg_repo _discard || true
+                ;;
+            3)
+                _bk_manage_local_destinations
+                ;;
+            0) break ;;
+        esac
+    done
+}
+
+_bk_manage_extra_paths() {
+    while true; do
+        local -a paths=()
+        mapfile -t paths < <(hb_load_extra_paths)
+        local count=${#paths[@]}
+
+        # Descriptive header for the manage menu. We avoid listing the actual
+        # paths here — a user with dozens of entries would blow the dialog
+        # box height and force scrolling. The count is enough; "− Remove a
+        # path" shows the full list when the user actually needs to see it.
+        local preview=""
+        if (( count == 0 )); then
+            preview="$(hb_translate "You haven't added any custom paths yet.")"
+        else
+            preview="$(hb_translate "Currently"): \Zb\Z4${count}\Zn $(hb_translate "custom path(s) saved.")"
+        fi
+        preview+=$'\n\n'"$(hb_translate "Custom paths are included in BOTH default and custom backup profiles.")"
+
+        local choice
+        choice=$(dialog --backtitle "ProxMenux" --colors \
+            --title "$(translate "Manage custom backup paths")" \
+            --menu "\n${preview}\n" \
+            "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
+            "add"  "$(translate "+ Add a path")" \
+            "del"  "$(translate "− Remove a path")" \
+            "back" "$(translate "← Return")" \
+            3>&1 1>&2 2>&3) || break
+
+        case "$choice" in
+            add)
+                local new_path
+                new_path=$(dialog --backtitle "ProxMenux" \
+                    --title "$(translate "Add custom path")" \
+                    --inputbox "$(translate "Absolute path to a file or directory you want backed up:")" \
+                    "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "/root/" 3>&1 1>&2 2>&3) || continue
+                new_path="${new_path%/}"
+                [[ -z "$new_path" ]] && continue
+                if [[ ! -e "$new_path" ]]; then
+                    dialog --backtitle "ProxMenux" --colors \
+                        --title "$(translate "Path not found")" \
+                        --msgbox "\Z1${new_path}\Zn\n\n$(translate "does not exist on this host. Path not added.")" 10 70
+                    continue
+                fi
+                hb_add_extra_path "$new_path"
+                ;;
+            del)
+                if (( count == 0 )); then
+                    dialog --backtitle "ProxMenux" --msgbox \
+                        "$(translate "You haven't added any custom paths yet.")" 8 60
+                    continue
+                fi
+                local del_options=() j=1 p
+                for p in "${paths[@]}"; do
+                    del_options+=("$j" "$p" "off"); ((j++))
+                done
+                local del_selected
+                del_selected=$(dialog --backtitle "ProxMenux" \
+                    --title "$(translate "Remove custom paths")" \
+                    --default-button ok \
+                    --separate-output --checklist \
+                    "\n$(translate "Tick the paths to remove (they will not be deleted from disk — only from this list):")" \
+                    "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${del_options[@]}" \
+                    3>&1 1>&2 2>&3) || continue
+                # Empty selection → nothing to do
+                [[ -z "$del_selected" ]] && continue
+                local sel
+                while read -r sel; do
+                    [[ -z "$sel" ]] && continue
+                    hb_del_extra_path "${paths[$((sel-1))]}"
+                done <<< "$del_selected"
+                ;;
+            back) break ;;
+        esac
+    done
+}
+
 backup_menu() {
     while true; do
         local choice
@@ -397,8 +617,6 @@ backup_menu() {
             4   "$(translate "Custom backup to PBS")" \
             5   "$(translate "Custom backup to Borg")" \
             6   "$(translate "Custom backup to local archive")" \
-            ""  "$(translate "─── Automation ─────────────────────────────────────")" \
-            7   "$(translate "Scheduled backups and retention policies")" \
             0   "$(translate "Return")" \
             3>&1 1>&2 2>&3) || return 0
 
@@ -409,7 +627,6 @@ backup_menu() {
             4) _bk_pbs   custom  ;;
             5) _bk_borg  custom  ;;
             6) _bk_local custom  ;;
-            7) _bk_scheduler      ;;
             0) break ;;
         esac
     done
@@ -600,32 +817,45 @@ _rs_extract_borg() {
 
     borg_bin=$(hb_ensure_borg) || return 1
     hb_select_borg_repo repo || return 1
+    # Same persistence path as backup: per-target pw file
+    # ($HB_STATE_DIR/borg-pass-<name>.txt), legacy global pw, or
+    # prompt-once-and-save fallback. Bug fix: the old code only
+    # honored the legacy global file and re-prompted otherwise,
+    # defeating the saved-target UX.
+    hb_prepare_borg_passphrase || return 1
 
-    local pass_file="$HB_STATE_DIR/borg-pass.txt"
-    if [[ -f "$pass_file" ]]; then
-        BORG_PASSPHRASE="$(<"$pass_file")"
-        export BORG_PASSPHRASE
-    else
-        BORG_PASSPHRASE=$(dialog --backtitle "ProxMenux" --insecure --passwordbox \
-            "$(hb_translate "Borg passphrase (leave empty if not encrypted):")" \
-            "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
-        export BORG_PASSPHRASE
-    fi
-
-    mapfile -t archives < <(
-        "$borg_bin" list "$repo" --format '{archive}{NL}' 2>/dev/null | sort -r
+    # Pull NAME|START in one shot — borg supports strftime via :%fmt
+    # in --format. Sort newest-first by the ISO timestamp so the most
+    # recent backup is always on top regardless of archive naming.
+    local -a archive_lines=()
+    mapfile -t archive_lines < <(
+        "$borg_bin" list "$repo" \
+            --format '{start:%Y-%m-%d %H:%M:%S}|{archive}{NL}' 2>/dev/null \
+            | sort -r
     )
-    if [[ ${#archives[@]} -eq 0 ]]; then
+    if [[ ${#archive_lines[@]} -eq 0 ]]; then
         msg_error "$(translate "No archives found in this Borg repository.")"
         return 1
     fi
+    archives=()
+    local -a archive_labels=()
+    local _start _name
+    for line in "${archive_lines[@]}"; do
+        _start="${line%%|*}"
+        _name="${line#*|}"
+        archives+=("$_name")
+        # Menu label: ISO datetime first (sortable, fixed width),
+        # then archive name. Easier to scan when several backups
+        # ran the same day.
+        archive_labels+=("${_start}  ·  ${_name}")
+    done
 
     local menu=() i=1
-    for archive in "${archives[@]}"; do menu+=("$i" "$archive"); ((i++)); done
+    for archive in "${archive_labels[@]}"; do menu+=("$i" "$archive"); ((i++)); done
     local sel
     sel=$(dialog --backtitle "ProxMenux" \
         --title "$(translate "Select archive to restore")" \
-        --menu "\n$(translate "Available Borg archives:")" \
+        --menu "\n$(translate "Available Borg archives (newest first):")" \
         "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
         "${menu[@]}" 3>&1 1>&2 2>&3) || return 1
     archive="${archives[$((sel-1))]}"
@@ -1182,49 +1412,51 @@ _rs_collect_plan_stats() {
 _rs_show_plan_summary() {
     local staging_root="$1"
     local meta="$staging_root/metadata"
-    local tmp
-    tmp=$(mktemp) || return 1
 
-    {
-        echo "═══ $(translate "Restore plan summary") ═══"
-        echo ""
-        if [[ -f "$meta/run_info.env" ]]; then
-            echo "$(translate "Backup origin metadata:")"
-            while IFS='=' read -r k v; do
-                [[ -n "$k" ]] && printf "  %-20s %s\n" "${k}:" "$v"
-            done < "$meta/run_info.env"
-            echo ""
-        fi
+    # dialog --colors only fires inside --msgbox / --yesno / --infobox, not
+    # --textbox, so we build the body as a string. Color codes match the
+    # complete-restore confirm dialog for visual consistency.
+    local body
+    body="\Zb═══ $(translate "Restore plan summary") ═══\ZB"$'\n\n'
 
-        echo "$(translate "Detected paths in this backup:") ${RS_PLAN_TOTAL}"
-        echo "  • $(translate "Safe to apply now"): ${RS_PLAN_HOT}"
-        echo "  • $(translate "Require reboot"): ${RS_PLAN_REBOOT}"
-        echo "  • $(translate "Risky on running system"): ${RS_PLAN_DANGEROUS}"
-        echo ""
+    if [[ -f "$meta/run_info.env" ]]; then
+        body+="\Zb$(translate "Backup origin metadata:")\ZB"$'\n'
+        while IFS='=' read -r k v; do
+            [[ -z "$k" ]] && continue
+            body+="$(printf '  %-20s \Z4%s\Zn' "${k}:" "$v")"$'\n'
+        done < "$meta/run_info.env"
+        body+=$'\n'
+    fi
 
-        if [[ "$RS_PLAN_HAS_NETWORK" -eq 1 ]]; then
-            echo "  • $(translate "Includes /etc/network (may drop SSH immediately)")"
-        fi
-        if [[ "$RS_PLAN_HAS_CLUSTER" -eq 1 ]]; then
-            echo "  • $(translate "Includes cluster data (/etc/pve, /var/lib/pve-cluster)")"
-            echo "    $(translate "These paths will not be restored live and will be extracted for manual recovery.")"
-        fi
-        if [[ "$RS_PLAN_HAS_ZFS" -eq 1 ]]; then
-            if [[ "${HB_RESTORE_INCLUDE_ZFS:-0}" == "1" ]]; then
-                echo "  • $(translate "Includes /etc/zfs: ENABLED for restore")"
-            else
-                echo "  • $(translate "Includes /etc/zfs: DISABLED unless you enable it")"
-            fi
-        fi
-        echo ""
-        echo "$(translate "Recommendation: start with Complete restore (guided — recommended).")"
-    } > "$tmp"
+    # Reboot-required and live-unsafe both go to the pending set and
+    # are applied by the post-boot dispatcher — to the operator they're
+    # the same bucket "things that complete after reboot".
+    local _reboot_total=$(( RS_PLAN_REBOOT + RS_PLAN_DANGEROUS ))
+    body+="\Zb$(translate "Detected paths in this backup:")\ZB \Zb\Z4${RS_PLAN_TOTAL}\Zn"$'\n'
+    body+="  • $(translate "Safe to apply now"): \Zb\Z4${RS_PLAN_HOT}\Zn"$'\n'
+    body+="  • $(translate "Require reboot"): \Zb\Z4${_reboot_total}\Zn"$'\n'
+    body+=$'\n'
 
-    dialog --backtitle "ProxMenux" \
+    if [[ "$RS_PLAN_HAS_NETWORK" -eq 1 ]]; then
+        body+="  • $(translate "Includes /etc/network (may drop SSH immediately)")"$'\n'
+    fi
+    if [[ "$RS_PLAN_HAS_CLUSTER" -eq 1 ]]; then
+        body+="  • \Z4$(translate "Includes cluster data (/etc/pve, /var/lib/pve-cluster)")\Zn"$'\n'
+        body+="    $(translate "These paths will not be restored live and will be extracted for manual recovery.")"$'\n'
+    fi
+    if [[ "$RS_PLAN_HAS_ZFS" -eq 1 ]]; then
+        if [[ "${HB_RESTORE_INCLUDE_ZFS:-0}" == "1" ]]; then
+            body+="  • $(translate "Includes /etc/zfs"): \Zb$(translate "ENABLED for restore")\ZB"$'\n'
+        else
+            body+="  • $(translate "Includes /etc/zfs"): \Zb$(translate "DISABLED unless you enable it")\ZB"$'\n'
+        fi
+    fi
+    body+=$'\n'
+    body+="\Zb$(translate "Recommendation: start with Complete restore.")\ZB"
+
+    dialog --backtitle "ProxMenux" --colors \
         --title "$(translate "Restore plan")" \
-        --exit-label "OK" \
-        --textbox "$tmp" 24 94 || true
-    rm -f "$tmp"
+        --msgbox "$body" 24 94 || true
 }
 
 _rs_prompt_zfs_opt_in() {
@@ -1270,6 +1502,72 @@ _rs_finish_flow() {
     echo -e ""
     msg_success "$(translate "Press Enter to return to menu...")"
     read -r
+}
+
+# Lists components that the post-boot dispatcher will reinstall in background
+# after reboot, by reading the backup's components_status.json. Mirrors the
+# COMPONENT_INSTALLERS array in apply_cluster_postboot.sh — keep both in sync.
+# Echoes "<key>|<label>|<eta>" one per line for installed components.
+_rs_list_pending_reinstalls() {
+    local staging_root="$1"
+    local state_file="$staging_root/rootfs/usr/local/share/proxmenux/components_status.json"
+    [[ -f "$state_file" ]] || return 0
+    command -v jq >/dev/null 2>&1 || return 0
+
+    local -a known=(
+        "nvidia_driver|NVIDIA driver (DKMS kernel compile)|~5-10 min"
+        "amdgpu_top|amdgpu_top (GitHub .deb download)|~1 min"
+        "intel_gpu_tools|intel-gpu-tools (apt)|~1 min"
+        "coral_driver|Coral TPU driver (DKMS compile)|~3-5 min"
+    )
+    local entry key label eta status
+    for entry in "${known[@]}"; do
+        key="${entry%%|*}"
+        label="${entry#*|}";  label="${label%%|*}"
+        eta="${entry##*|}"
+        status=$(jq -r ".${key}.status // \"\"" "$state_file" 2>/dev/null)
+        [[ "$status" == "installed" ]] && printf '%s|%s|%s\n' "$key" "$label" "$eta"
+    done
+}
+
+# Offers an immediate reboot after the pending restore is prepared, following
+# the same UX pattern as the post-install script. Lists what will keep running
+# in background after reboot so the operator isn't surprised when nvidia-smi
+# or similar tools are missing for the first few minutes.
+_rs_offer_reboot_after_pending() {
+    local staging_root="$1"
+
+    local -a reinstalls=()
+    mapfile -t reinstalls < <(_rs_list_pending_reinstalls "$staging_root")
+
+    local bg_block=""
+    if (( ${#reinstalls[@]} > 0 )); then
+        bg_block="$(translate "After reboot the system will be fully accessible (SSH, web UI, login), but the following components will be reinstalled in BACKGROUND — until they finish, commands like nvidia-smi may not yet be available:")"$'\n'
+        local r key label eta
+        for r in "${reinstalls[@]}"; do
+            key="${r%%|*}"
+            label="${r#*|}"; label="${label%%|*}"
+            eta="${r##*|}"
+            bg_block+="  • ${label}  (${eta})"$'\n'
+        done
+        bg_block+=$'\n'"$(translate "Monitor progress:")"$'\n'
+        bg_block+="  tail -f /var/log/proxmenux/proxmenux-cluster-postboot-*.log"$'\n'
+        bg_block+="  systemctl status proxmenux-apply-cluster-postboot.service"$'\n\n'
+        bg_block+="$(translate "If notifications are enabled (Telegram/Discord/ntfy/...), you will receive a \"Host restore finished\" message when all background tasks complete.")"$'\n\n'
+    fi
+
+    local prompt="$(translate "Pending restore prepared. A reboot is required to complete it.")"$'\n\n'"${bg_block}$(translate "Reboot now?")"
+
+    if whiptail --title "$(translate "Reboot Required")" \
+            --yesno "$prompt" 22 90; then
+        msg_warn "$(translate "Rebooting the system...")"
+        sleep 1
+        reboot
+    else
+        msg_info2 "$(translate "You can reboot later manually with: reboot")"
+        msg_success "$(translate "Press Enter to continue...")"
+        read -r
+    fi
 }
 
 _rs_collect_pending_paths() {
@@ -1446,113 +1744,78 @@ _rs_run_complete_guided() {
     local -a all_paths=()
     hb_load_restore_paths "$staging_root" all_paths
 
-    local choice
-    choice=$(dialog --backtitle "ProxMenux" \
-        --title "$(translate "Complete restore (guided)")" \
-        --menu "\n$(translate "Choose strategy:")" \
-        "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
-        1 "$(translate "Apply safe + reboot-required now (skip risky live paths)")" \
-        2 "$(translate "Full now: apply all paths (advanced — may drop SSH)")" \
-        3 "$(translate "Apply safe now + schedule remaining for next boot (recommended for SSH)")" \
-        4 "$(translate "Schedule full restore for next boot (no live apply now)")" \
-        0 "$(translate "Return")" \
-        3>&1 1>&2 2>&3) || return 1
+    # Build the rich confirmation body. Replaces the previous 4-strategy
+    # menu — by design a Proxmox host restore always requires a reboot
+    # for predictable end state (pmxcfs live writes + initramfs + driver
+    # reinstall via the post-boot dispatcher all need it). Forcing the
+    # strategy to "apply safe hot + pending for boot" gives the user the
+    # full restore + zero-manual NVIDIA/Intel/Coral reinstall path with
+    # one consistent UX, no footguns.
+    local hot_count="${RS_PLAN_HOT:-0}"
+    local pending_count=$(( ${RS_PLAN_REBOOT:-0} + ${RS_PLAN_DANGEROUS:-0} ))
 
-    case "$choice" in
-        1)
-            if ! whiptail --title "$(translate "Confirm guided restore")" \
-                --yesno "$(translate "Apply safe + reboot-required restore now?")"$'\n\n'"$(translate "Risky live paths (for example /etc/network) will NOT be applied in this mode.")" \
-                11 78; then
-                return 1
-            fi
+    # Surface which components the post-boot dispatcher will reinstall
+    # (read from the backup's components_status.json — same logic as
+    # _rs_offer_reboot_after_pending).
+    local -a reinstalls=()
+    mapfile -t reinstalls < <(_rs_list_pending_reinstalls "$staging_root")
+    local comp_line=""
+    if (( ${#reinstalls[@]} > 0 )); then
+        local r label
+        comp_line=$'\n'"$(translate "After reboot, these components will reinstall in background:")"$'\n'
+        for r in "${reinstalls[@]}"; do
+            label="${r#*|}"; label="${label%%|*}"
+            local eta="${r##*|}"
+            comp_line+="  • ${label}  (${eta})"$'\n'
+        done
+    fi
 
-            show_proxmenux_logo
-            msg_title "$(translate "Applying guided complete restore")"
-            if [[ "$RS_PLAN_HOT" -gt 0 ]]; then
-                _rs_apply "$staging_root" hot
-            fi
-            if [[ "$RS_PLAN_REBOOT" -gt 0 ]]; then
-                _rs_apply "$staging_root" reboot
-            fi
-            if [[ "$RS_PLAN_DANGEROUS" -gt 0 ]]; then
-                msg_warn "$(translate "Risky live paths were skipped in guided mode. Use Custom restore if you need to apply them.")"
-            fi
-            # Strategy 1 = "Apply safe + reboot, skip risky": the
-            # operator explicitly opted out of touching pmxcfs
-            # (/etc/pve). Run package install but NOT guest configs.
-            _rs_run_complete_extras "$staging_root" 0
-            _rs_finish_flow
-            return 0
-            ;;
+    # dialog --colors lets us highlight the counts, the warning, and
+    # the reinstall list. Inline escape codes:
+    #   \Zb bold   \ZB unbold   \Zn reset all
+    #   \Z2 green  \Z3 yellow   \Z4 blue   \Z1 red
+    local body
+    body="\Zb$(translate "A complete restore will:")\ZB"$'\n\n'
+    body+="  • $(translate "Apply") \Zb\Z4${hot_count}\Zn $(translate "safe paths now (configs, packages, /etc, /root, ...)")"$'\n'
+    body+="  • $(translate "Schedule") \Zb\Z4${pending_count}\Zn $(translate "paths for next boot (/etc/pve, guests, drivers, ...)")"$'\n'
+    if (( ${#reinstalls[@]} > 0 )); then
+        body+=$'\n'"\Zb$(translate "After reboot, these components will reinstall in background:")\ZB"$'\n'
+        local r label eta
+        for r in "${reinstalls[@]}"; do
+            label="${r#*|}"; label="${label%%|*}"
+            eta="${r##*|}"
+            body+="  • \Zb${label}\ZB  (${eta})"$'\n'
+        done
+    fi
+    body+=$'\n'"\Zb\Z4$(translate "A reboot is required to finish the restore.")\Zn"$'\n\n'
+    body+="$(translate "If notifications are enabled (Telegram/Discord/ntfy/...), you will receive a \"Host restore finished\" message when all background tasks complete.")"$'\n\n'
+    body+="\Zb$(translate "Continue?")\ZB"
 
-        2)
-            local ssh_network_rc
-            _rs_handle_ssh_network_risk "$staging_root" "${all_paths[@]}"
-            ssh_network_rc=$?
-            [[ $ssh_network_rc -eq 2 ]] && return 0
-            [[ $ssh_network_rc -ne 0 ]] && return 1
+    if ! dialog --backtitle "ProxMenux" --colors \
+            --title "$(translate "Confirm complete restore")" \
+            --yesno "$body" 22 88; then
+        return 1
+    fi
 
-            _rs_warn_dangerous "$staging_root"
-            if ! whiptail --title "$(translate "Final confirmation")" \
-                --yesno "$(translate "You are about to apply ALL changes, including risky paths.")"$'\n\n'"$(translate "This may interrupt SSH immediately and a reboot is recommended.")"$'\n\n'"$(translate "Continue?")" \
-                12 80; then
-                return 1
-            fi
+    show_proxmenux_logo
+    msg_title "$(translate "Applying safe paths and preparing pending restore")"
+    [[ "$hot_count" -gt 0 ]] && _rs_apply "$staging_root" hot
 
-            show_proxmenux_logo
-            msg_title "$(translate "Applying full restore")"
-            _rs_apply "$staging_root" all
-            # Strategy 2 = "Full": include guest configs so VMIDs
-            # become visible in PVE.
-            _rs_run_complete_extras "$staging_root" 1
-            _rs_finish_flow
-            return 0
-            ;;
-
-        3)
-            if ! whiptail --title "$(translate "Confirm")" \
-                --yesno "$(translate "Apply safe paths now and schedule remaining paths for next boot?")"$'\n\n'"$(translate "This is recommended when connected by SSH.")" \
-                11 80; then
-                return 1
-            fi
-
-            show_proxmenux_logo
-            msg_title "$(translate "Applying safe paths and preparing pending restore")"
-            [[ "$RS_PLAN_HOT" -gt 0 ]] && _rs_apply "$staging_root" hot
-
-            local -a pending_paths=()
-            mapfile -t pending_paths < <(_rs_collect_pending_paths remaining_after_hot "${all_paths[@]}")
-            if _rs_prepare_pending_restore "$staging_root" "${pending_paths[@]}"; then
-                msg_warn "$(translate "Reboot is required to complete the pending restore.")"
-            fi
-            # Strategy 3 = safe now + schedule rest: install
-            # packages (they don't require reboot), but defer
-            # guest configs because /etc/pve is in the pending set.
-            _rs_run_complete_extras "$staging_root" 0
-            _rs_finish_flow
-            return 0
-            ;;
-
-        4)
-            if ! whiptail --title "$(translate "Confirm")" \
-                --yesno "$(translate "Schedule full restore for next boot without applying live changes now?")" \
-                10 80; then
-                return 1
-            fi
-
-            local -a pending_paths=()
-            mapfile -t pending_paths < <(_rs_collect_pending_paths all_selected "${all_paths[@]}")
-            show_proxmenux_logo
-            msg_title "$(translate "Preparing full pending restore")"
-            if _rs_prepare_pending_restore "$staging_root" "${pending_paths[@]}"; then
-                msg_warn "$(translate "Reboot is required to apply the scheduled restore.")"
-            fi
-            _rs_finish_flow
-            return 0
-            ;;
-    esac
-
-    return 1
+    local -a pending_paths=()
+    mapfile -t pending_paths < <(_rs_collect_pending_paths remaining_after_hot "${all_paths[@]}")
+    local pending_ok=0
+    if _rs_prepare_pending_restore "$staging_root" "${pending_paths[@]}"; then
+        pending_ok=1
+    fi
+    # /etc/pve is in the pending set → defer guest configs to the
+    # post-boot dispatcher (same as the old Strategy 3).
+    _rs_run_complete_extras "$staging_root" 0
+    if (( pending_ok )); then
+        _rs_offer_reboot_after_pending "$staging_root"
+    else
+        _rs_finish_flow
+    fi
+    return 0
 }
 
 _rs_component_paths() {
@@ -1984,7 +2247,10 @@ _rs_apply_menu() {
 
     _rs_collect_plan_stats "$staging_root"
     _rs_prompt_zfs_opt_in "$staging_root"
-    _rs_show_plan_summary "$staging_root"
+    # _rs_show_plan_summary intentionally NOT called here — the
+    # essential plan info now appears inside the Complete restore
+    # confirmation dialog (option 1). It's still reachable on demand
+    # from option 6 of this menu.
 
     while true; do
         local choice
@@ -1992,7 +2258,7 @@ _rs_apply_menu() {
             --title "$(translate "Restore actions")" \
             --menu "\n$(translate "Choose how to continue:")" \
             "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
-            1 "$(translate "Complete restore (guided — recommended)")" \
+            1 "$(translate "Complete restore")" \
             2 "$(translate "Custom restore by components")" \
             3 "$(translate "Export to file (no system changes)")" \
             4 "$(translate "Preview changes (diff)")" \
@@ -2088,14 +2354,21 @@ main_menu() {
             --title "$(translate "Host Config Backup / Restore")" \
             --menu "\n$(translate "Select operation:")" \
             "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
-            1  "$(translate "Backup host configuration")" \
-            2  "$(translate "Restore host configuration")" \
-            0  "$(translate "Return")" \
+            1   "$(translate "Backup host configuration")" \
+            2   "$(translate "Restore host configuration")" \
+            ""  "$(translate "─── Backup settings ────────────────────────────────")" \
+            3   "$(translate "Manage custom paths (add / remove your folders)")" \
+            4   "$(translate "Scheduled backups and retention policies")" \
+            5   "$(translate "Configure backup destinations (PBS, Borg, local)")" \
+            0   "$(translate "Return")" \
             3>&1 1>&2 2>&3) || break
 
         case "$choice" in
             1) backup_menu  ;;
             2) restore_menu ;;
+            3) _bk_manage_extra_paths ;;
+            4) _bk_scheduler ;;
+            5) _bk_manage_destinations ;;
             0) break ;;
         esac
     done

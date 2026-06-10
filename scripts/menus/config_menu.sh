@@ -40,13 +40,11 @@
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 CONFIG_FILE="$BASE_DIR/config.json"
-CACHE_FILE="$BASE_DIR/cache.json"
 UTILS_FILE="$BASE_DIR/utils.sh"
 LOCAL_VERSION_FILE="$BASE_DIR/version.txt"
 BETA_VERSION_FILE="$BASE_DIR/beta_version.txt"
 INSTALL_DIR="/usr/local/bin"
 MENU_SCRIPT="menu"
-VENV_PATH="/opt/googletrans-env"
 BACKTITLE="ProxMenux Configuration"
 
 REPO_MAIN="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
@@ -114,27 +112,10 @@ uninstall_proxmenux_monitor() {
 }
 
 detect_installation_type() {
-    local has_venv=false
-    local has_language=false
-    
-    # Check if virtual environment exists
-    if [ -d "$VENV_PATH" ] && [ -f "$VENV_PATH/bin/activate" ]; then
-        has_venv=true
-    fi
-    
-    # Check if language is configured
-    if [ -f "$CONFIG_FILE" ]; then
-        local current_language=$(jq -r '.language // empty' "$CONFIG_FILE" 2>/dev/null)
-        if [[ -n "$current_language" && "$current_language" != "null" && "$current_language" != "empty" ]]; then
-            has_language=true
-        fi
-    fi
-    
-    if [ "$has_venv" = true ] && [ "$has_language" = true ]; then
-        echo "translation"
-    else
-        echo "normal"
-    fi
+    # The Translation/Normal split is gone after the googletrans removal.
+    # All installs are multilingual via pre-built lang/*.json. Keeping the
+    # function name + a fixed value so callers don't have to change.
+    echo "normal"
 }
 
 check_monitor_status() {
@@ -745,23 +726,16 @@ show_version_info() {
     [ -f "$CONFIG_FILE" ] && info_message+="✓ config.json → $CONFIG_FILE\n" || info_message+="✗ config.json\n"
     [ -f "$LOCAL_VERSION_FILE" ] && info_message+="✓ version.txt → $LOCAL_VERSION_FILE\n" || info_message+="✗ version.txt\n"
     
-    # Show translation-specific files
-    if [ "$install_type" = "translation" ]; then
-        [ -f "$CACHE_FILE" ] && info_message+="✓ cache.json → $CACHE_FILE\n" || info_message+="✗ cache.json\n"
-        
-        info_message+="\n$(translate "Virtual Environment:")\n"
-        if [ -d "$VENV_PATH" ] && [ -f "$VENV_PATH/bin/activate" ]; then
-            info_message+="✓ $(translate "Installed") → $VENV_PATH\n"
-            [ -f "$VENV_PATH/bin/pip" ] && info_message+="✓ pip: $(translate "Installed") → $VENV_PATH/bin/pip\n" || info_message+="✗ pip: $(translate "Not installed")\n"
-        else
-            info_message+="✗ $(translate "Virtual Environment"): $(translate "Not installed")\n"
-            info_message+="✗ pip: $(translate "Not installed")\n"
-        fi
-        
-        current_language=$(jq -r '.language // "en"' "$CONFIG_FILE")
-        info_message+="\n$(translate "Current language:")\n$current_language\n"
+    # Language section: always present now that translations are static
+    # JSON lookups. Show the configured language and the lang/ directory
+    # so the operator can verify the cache is in place.
+    current_language=$(jq -r '.language // "en"' "$CONFIG_FILE" 2>/dev/null)
+    [[ -z "$current_language" || "$current_language" == "null" ]] && current_language="en"
+    info_message+="\n$(translate "Current language:")\n${current_language}\n"
+    if [ -d "$BASE_DIR/lang" ]; then
+        info_message+="✓ $(translate "Translation files:") $BASE_DIR/lang/\n"
     else
-        info_message+="\n$(translate "Language:")\nEnglish (Fixed)\n"
+        info_message+="✗ $(translate "Translation files:") $(translate "missing")\n"
     fi
     
     # Display information in a scrollable text box
@@ -785,40 +759,26 @@ uninstall_proxmenu() {
     fi
     
     local deps_to_remove=""
-    
-    # Show different dependency options based on installation type
-    if [ "$install_type" = "translation" ]; then
-        deps_to_remove=$(dialog --clear --backtitle "ProxMenux Configuration" \
-                               --title "Remove Dependencies" \
-                               --checklist "Select dependencies to remove:" 15 60 4 \
-                               "python3-venv" "Python virtual environment" OFF \
-                               "python3-pip" "Python package installer" OFF \
-                               "python3" "Python interpreter" OFF \
-                               "jq" "JSON processor" OFF \
-                               3>&1 1>&2 2>&3)
-    else
-        deps_to_remove=$(dialog --clear --backtitle "ProxMenux Configuration" \
-                               --title "Remove Dependencies" \
-                               --checklist "Select dependencies to remove:" 12 60 2 \
-                               "dialog" "Interactive dialog boxes" OFF \
-                               "jq" "JSON processor" OFF \
-                               3>&1 1>&2 2>&3)
-    fi
-    
+
+    deps_to_remove=$(dialog --clear --backtitle "ProxMenux Configuration" \
+                           --title "Remove Dependencies" \
+                           --checklist "Select dependencies to remove:" 12 60 2 \
+                           "dialog" "Interactive dialog boxes" OFF \
+                           "jq" "JSON processor" OFF \
+                           3>&1 1>&2 2>&3)
+
     # Perform uninstallation with progress bar
     (
         echo "10" ; echo "Removing ProxMenu files..."
         sleep 1
-        
-        # Remove googletrans and virtual environment if exists
-        if [ -f "$VENV_PATH/bin/activate" ]; then
-            echo "30" ; echo "Removing googletrans and virtual environment..."
-            source "$VENV_PATH/bin/activate"
-            pip uninstall -y googletrans >/dev/null 2>&1
-            deactivate
-            rm -rf "$VENV_PATH"
+
+        # Purge the legacy googletrans virtualenv if it was left over from
+        # a pre-static-translations install. Cheap idempotent check.
+        if [ -d "/opt/googletrans-env" ]; then
+            echo "30" ; echo "Removing legacy googletrans virtualenv..."
+            rm -rf "/opt/googletrans-env"
         fi
-        
+
         echo "50" ; echo "Removing ProxMenu files..."
         rm -f "$INSTALL_DIR/$MENU_SCRIPT"
         rm -rf "$BASE_DIR"

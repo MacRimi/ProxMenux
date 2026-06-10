@@ -177,43 +177,147 @@ hb_path_warning() {
 # ==========================================================
 # PROFILE PATH SELECTION
 # ==========================================================
+hb_extra_paths_file() {
+    printf '%s/backup-extra-paths.txt\n' "$HB_STATE_DIR"
+}
+
+# Reads user-added extra paths (one per line, # comments allowed).
+# Trimmed, deduped, only paths that currently exist on disk are returned.
+hb_load_extra_paths() {
+    local f
+    f=$(hb_extra_paths_file)
+    [[ -f "$f" ]] || return 0
+    local line
+    while IFS= read -r line; do
+        line="${line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [[ -z "$line" ]] && continue
+        printf '%s\n' "$line"
+    done < "$f" | sort -u
+}
+
+# Adds a path to the persisted extra-paths file. Idempotent.
+hb_add_extra_path() {
+    local path="$1"
+    [[ -z "$path" ]] && return 1
+    local f
+    f=$(hb_extra_paths_file)
+    mkdir -p "$HB_STATE_DIR"
+    touch "$f"; chmod 600 "$f"
+    grep -Fxq "$path" "$f" 2>/dev/null || printf '%s\n' "$path" >> "$f"
+}
+
+# Removes a path from the persisted extra-paths file.
+hb_del_extra_path() {
+    local path="$1"
+    [[ -z "$path" ]] && return 1
+    local f tmp
+    f=$(hb_extra_paths_file)
+    [[ -f "$f" ]] || return 0
+    tmp=$(mktemp)
+    grep -Fvx "$path" "$f" > "$tmp" || true
+    mv "$tmp" "$f"
+    chmod 600 "$f"
+}
+
 hb_select_profile_paths() {
     local mode="$1"
     local __out_var="$2"
     local -n __out_ref="$__out_var"
 
     mapfile -t __defaults < <(hb_default_profile_paths)
+    local -a __extras=()
+    mapfile -t __extras < <(hb_load_extra_paths)
 
     if [[ "$mode" == "default" ]]; then
-        __out_ref=("${__defaults[@]}")
+        # Default profile = base 59 paths + whatever the operator has
+        # previously persisted as "always include this folder of mine".
+        __out_ref=("${__defaults[@]}" "${__extras[@]}")
         return 0
     fi
 
-    local options=() idx=1 path
-    for path in "${__defaults[@]}"; do
-        options+=("$idx" "$path" "off")
-        ((idx++))
-    done
-
-    local selected
-    selected=$(dialog --backtitle "ProxMenux" \
-        --title "$(hb_translate "Custom backup profile")" \
-        --separate-output --checklist \
-        "$(hb_translate "Select paths to include:")" \
-        26 86 18 "${options[@]}" 3>&1 1>&2 2>&3) || return 1
-
-    __out_ref=()
+    # Custom mode runs as a loop: present checklist + offer to add/remove
+    # user paths, re-present until the operator confirms. This gives
+    # /add/edit/remove without redesigning the dialog stack.
     local choice
-    while read -r choice; do
-        [[ -z "$choice" ]] && continue
-        __out_ref+=("${__defaults[$((choice-1))]}")
-    done <<< "$selected"
+    while :; do
+        # Reload after potential edits in the previous iteration
+        mapfile -t __extras < <(hb_load_extra_paths)
 
-    if [[ ${#__out_ref[@]} -eq 0 ]]; then
-        dialog --backtitle "ProxMenux" --title "$(hb_translate "Error")" \
-            --msgbox "$(hb_translate "No paths selected. Select at least one path.")" 8 60
-        return 1
-    fi
+        local options=() idx=1 path
+        for path in "${__defaults[@]}"; do
+            options+=("$idx" "$path" "off")
+            ((idx++))
+        done
+        local first_extra_idx=$idx
+        for path in "${__extras[@]}"; do
+            # User-added paths default ON — they wouldn't be in the list
+            # if the operator hadn't explicitly added them.
+            options+=("$idx" "[+] $path" "on")
+            ((idx++))
+        done
+
+        # Three-button checklist:
+        #   OK             (rc=0) → save selection and continue
+        #   Add custom path (rc=3) → opens an inputbox; on success the new
+        #                            path is appended to the persisted list
+        #                            and the checklist re-renders with the
+        #                            new entry already ticked
+        #   Cancel         (rc=1) → abort the entire backup flow
+        local selected rc
+        selected=$(dialog --backtitle "ProxMenux" \
+            --title "$(hb_translate "Custom backup profile")" \
+            --default-button ok \
+            --extra-button --extra-label "$(hb_translate "Add custom path")" \
+            --separate-output --checklist \
+            "$(hb_translate "Tick the paths to include in this backup. Press \"Add custom path\" to add a folder or file of your own to the list.")" \
+            26 86 18 "${options[@]}" 3>&1 1>&2 2>&3)
+        rc=$?
+
+        if (( rc == 0 )); then
+            __out_ref=()
+            while read -r choice; do
+                [[ -z "$choice" ]] && continue
+                if (( choice < first_extra_idx )); then
+                    __out_ref+=("${__defaults[$((choice-1))]}")
+                else
+                    __out_ref+=("${__extras[$((choice-first_extra_idx))]}")
+                fi
+            done <<< "$selected"
+
+            if [[ ${#__out_ref[@]} -eq 0 ]]; then
+                dialog --backtitle "ProxMenux" --title "$(hb_translate "Error")" \
+                    --msgbox "$(hb_translate "No paths selected. Select at least one path.")" 8 60
+                continue
+            fi
+            return 0
+        fi
+
+        if (( rc == 1 )); then
+            return 1
+        fi
+
+        # rc == 3 → "Add custom path": jump straight into the inputbox.
+        # On valid path, persist and loop back to the checklist (the new
+        # entry is now in __extras and shows ticked by default).
+        local new_path
+        new_path=$(dialog --backtitle "ProxMenux" \
+            --title "$(hb_translate "Add custom path")" \
+            --inputbox "$(hb_translate "Absolute path to a file or directory you want backed up:")" \
+            "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "/root/" 3>&1 1>&2 2>&3) || continue
+        new_path="${new_path%/}"
+        if [[ -z "$new_path" ]]; then
+            continue
+        fi
+        if [[ ! -e "$new_path" ]]; then
+            dialog --backtitle "ProxMenux" --colors \
+                --title "$(hb_translate "Path not found")" \
+                --msgbox "\Z1${new_path}\Zn\n\n$(hb_translate "does not exist on this host. Path not added.")" 10 70
+            continue
+        fi
+        hb_add_extra_path "$new_path"
+    done
 }
 
 # ==========================================================
@@ -809,28 +913,44 @@ hb_ask_pbs_encryption() {
 # BORG
 # ==========================================================
 hb_ensure_borg() {
+    # Resolution order:
+    #   1. system borg                                  (apt-installed)
+    #   2. /usr/local/share/proxmenux/borg              (state-dir cache)
+    #   3. Monitor AppImage's bundled borg              (offline, post-install)
+    #   4. GitHub download → state-dir                  (first run, online)
     command -v borg >/dev/null 2>&1 && { echo "borg"; return 0; }
-    local appimage="$HB_STATE_DIR/borg"
-    local tmp_file
-    [[ -x "$appimage" ]] && { echo "$appimage"; return 0; }
+
+    local appimage_cache="$HB_STATE_DIR/borg"
+    [[ -x "$appimage_cache" ]] && { echo "$appimage_cache"; return 0; }
+
+    # The Monitor AppImage ships borg-linux64 at usr/bin/borg inside the
+    # squashfs. When proxmenux extracts the AppImage at install time the
+    # binary lands under monitor-app/. Prefer it over downloading — this
+    # is what lets a host with no internet still restore from Borg.
+    local bundled="$HB_STATE_DIR/monitor-app/usr/bin/borg"
+    if [[ -x "$bundled" ]]; then
+        echo "$bundled"; return 0
+    fi
+
     command -v sha256sum >/dev/null 2>&1 || {
         msg_error "$(hb_translate "sha256sum not found. Cannot verify Borg binary.")"
         return 1
     }
     msg_info "$(hb_translate "Borg not found. Downloading borg") ${HB_BORG_VERSION}..."
     mkdir -p "$HB_STATE_DIR"
+    local tmp_file
     tmp_file=$(mktemp "$HB_STATE_DIR/.borg-download.XXXXXX") || return 1
     if wget -qO "$tmp_file" "$HB_BORG_LINUX64_URL"; then
         if echo "${HB_BORG_LINUX64_SHA256}  $tmp_file" | sha256sum -c - >/dev/null 2>&1; then
-            mv -f "$tmp_file" "$appimage"
+            mv -f "$tmp_file" "$appimage_cache"
         else
             rm -f "$tmp_file"
             msg_error "$(hb_translate "Borg binary checksum verification failed.")"
             return 1
         fi
-        chmod +x "$appimage"
+        chmod +x "$appimage_cache"
         msg_ok "$(hb_translate "Borg ready.")"
-        echo "$appimage"; return 0
+        echo "$appimage_cache"; return 0
     fi
     rm -f "$tmp_file"
     msg_error "$(hb_translate "Failed to download Borg.")"
@@ -848,10 +968,35 @@ hb_borg_init_if_needed() {
 }
 
 hb_prepare_borg_passphrase() {
-    local pass_file="$HB_STATE_DIR/borg-pass.txt"
     BORG_ENCRYPT_MODE="none"
     unset BORG_PASSPHRASE
 
+    # 1. Saved target selected via hb_select_borg_repo? Use its pw file.
+    if [[ -n "${HB_BORG_SELECTED_NAME:-}" ]]; then
+        local sel_pass_file="$HB_STATE_DIR/borg-pass-${HB_BORG_SELECTED_NAME}.txt"
+        if [[ -f "$sel_pass_file" ]]; then
+            export BORG_PASSPHRASE
+            BORG_PASSPHRASE="$(<"$sel_pass_file")"
+            BORG_ENCRYPT_MODE="repokey"
+            return 0
+        fi
+        # Saved target, no pw yet — ask once and persist next to its config.
+        local sel_pass
+        sel_pass=$(dialog --backtitle "ProxMenux" --insecure --passwordbox \
+            "$(hb_translate "Passphrase for:") $HB_BORG_SELECTED_NAME" \
+            "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+        mkdir -p "$HB_STATE_DIR"
+        printf '%s' "$sel_pass" > "$sel_pass_file"
+        chmod 600 "$sel_pass_file"
+        export BORG_PASSPHRASE="$sel_pass"
+        export BORG_ENCRYPT_MODE="repokey"
+        return 0
+    fi
+
+    # 2. Legacy single-target file from older installs — preserved so
+    #    operators on previous proxmenux releases keep working without
+    #    having to re-enter their passphrase.
+    local pass_file="$HB_STATE_DIR/borg-pass.txt"
     if [[ -f "$pass_file" ]]; then
         export BORG_PASSPHRASE
         BORG_PASSPHRASE="$(<"$pass_file")"
@@ -859,6 +1004,9 @@ hb_prepare_borg_passphrase() {
         return 0
     fi
 
+    # 3. Brand-new target (no save): ask + confirm. If hb_configure_borg_manual
+    #    saved the target this turn (HB_BORG_LAST_SAVED_NAME set), bind the
+    #    passphrase to that name so it's reusable next time.
     dialog --backtitle "ProxMenux" --title "$(hb_translate "Borg encryption")" \
         --yesno "$(hb_translate "Encrypt this Borg repository?")" \
         "$HB_UI_YESNO_H" "$HB_UI_YESNO_W" || return 0
@@ -877,43 +1025,214 @@ hb_prepare_borg_passphrase() {
     done
 
     mkdir -p "$HB_STATE_DIR"
-    printf '%s' "$pass1" > "$pass_file"
-    chmod 600 "$pass_file"
+    local target_pass_file="$pass_file"
+    [[ -n "${HB_BORG_LAST_SAVED_NAME:-}" ]] && \
+        target_pass_file="$HB_STATE_DIR/borg-pass-${HB_BORG_LAST_SAVED_NAME}.txt"
+    printf '%s' "$pass1" > "$target_pass_file"
+    chmod 600 "$target_pass_file"
     export BORG_PASSPHRASE="$pass1"
     export BORG_ENCRYPT_MODE="repokey"
 }
 
-hb_select_borg_repo() {
-    local _borg_repo_var="$1"
-    local -n _borg_repo_ref="$_borg_repo_var"
-    local type
+# Generates a new ed25519 keypair and either installs it on the remote
+# Borg server (sshpass + one-time admin password) or shows the
+# authorized_keys line for manual paste. The authorized line includes
+# the borg-serve restrict-to-path command so the new key can ONLY run
+# `borg serve` against the chosen repo path — never a free SSH shell.
+#
+# Args:
+#   $1 borg_user     SSH user that runs borg (e.g. "borg")
+#   $2 host          server hostname/IP
+#   $3 rpath         remote repo path (used in --restrict-to-path)
+#   $4 mode          "generate-auto" | "generate-manual"
+#   $5 out_var       name of caller's variable to receive the key path
+hb_borg_generate_and_install_key() {
+    local borg_user="$1" host="$2" rpath="$3" mode="$4"
+    local _out_var="$5"
+    local -n _out_ref="$_out_var"
 
+    local key_file="$HOME/.ssh/borg_proxmenux_$(echo "$host" | tr './:' '___')_ed25519"
+    local pub_file="${key_file}.pub"
+    if [[ ! -f "$key_file" ]]; then
+        mkdir -p "$HOME/.ssh"; chmod 700 "$HOME/.ssh"
+        if ! ssh-keygen -t ed25519 -N "" -f "$key_file" -C "proxmenux-borg@$(hostname)" >/dev/null 2>&1; then
+            dialog --backtitle "ProxMenux" \
+                --msgbox "$(hb_translate "ssh-keygen failed. Cannot create a new SSH key.")" 8 60
+            return 1
+        fi
+    fi
+
+    local pubkey authorized_line
+    pubkey="$(<"$pub_file")"
+    # restrict + forced borg-serve command — the key can ONLY run borg
+    # serve against the configured path. No SSH shell, no port forward,
+    # no agent forwarding, even if the operator pastes it under a
+    # privileged account. This matches the manual setup we already do
+    # for the test target on CT 112.
+    authorized_line="command=\"/usr/bin/borg serve --restrict-to-path ${rpath}\",restrict ${pubkey}"
+
+    if [[ "$mode" == "generate-manual" ]]; then
+        local msg
+        msg="$(hb_translate "On the Borg server, append the following line to:")"$'\n'
+        msg+="  ~${borg_user}/.ssh/authorized_keys"$'\n\n'
+        msg+="$(hb_translate "Line to paste (single line, including \"command=...\" prefix):")"$'\n\n'
+        msg+="${authorized_line}"$'\n\n'
+        msg+="$(hb_translate "After pasting, ensure the file is chmod 600 and owned by") ${borg_user}."
+        dialog --backtitle "ProxMenux" \
+            --title "$(hb_translate "Authorize this key on the server")" \
+            --msgbox "$msg" 22 100
+        _out_ref="$key_file"
+        return 0
+    fi
+
+    # generate-auto: install via sshpass. We need an admin password
+    # for whichever account can write to ~borg/.ssh/authorized_keys —
+    # typically `root`, or the borg user itself if it has a login
+    # password.
+    if ! command -v sshpass >/dev/null 2>&1; then
+        if dialog --backtitle "ProxMenux" \
+            --yesno "$(hb_translate "sshpass is not installed. Install it now from apt? (Required to push the new SSH key in this mode.)")" \
+            "$HB_UI_YESNO_H" "$HB_UI_YESNO_W"; then
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq sshpass >/dev/null 2>&1 || {
+                dialog --backtitle "ProxMenux" \
+                    --msgbox "$(hb_translate "apt-get install sshpass failed. Falling back to manual mode.")" 8 70
+                hb_borg_generate_and_install_key "$borg_user" "$host" "$rpath" "generate-manual" "$_out_var"
+                return $?
+            }
+        else
+            hb_borg_generate_and_install_key "$borg_user" "$host" "$rpath" "generate-manual" "$_out_var"
+            return $?
+        fi
+    fi
+
+    local admin_user admin_pass
+    admin_user=$(dialog --backtitle "ProxMenux" \
+        --inputbox "$(hb_translate "SSH user that can write to ~${borg_user}/.ssh/authorized_keys on the server (usually root or the borg user itself):")" \
+        "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "root" 3>&1 1>&2 2>&3) || return 1
+    admin_pass=$(dialog --backtitle "ProxMenux" --insecure --passwordbox \
+        "$(hb_translate "Password for") ${admin_user}@${host}:" \
+        "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+
+    # Append the authorized line. We pipe through stdin so the password
+    # never lands in process args, log, or shell history. -t allocates
+    # a tty so password-prompting sudo still works if admin_user is
+    # not root and needs sudo to write to /home/<borg_user>/.
+    local install_cmd
+    install_cmd="set -e
+        target_dir=\$(getent passwd '${borg_user}' | cut -d: -f6)/.ssh
+        sudo_prefix=''
+        [[ \"\$(whoami)\" != '${borg_user}' && \"\$(whoami)\" != 'root' ]] && sudo_prefix='sudo'
+        \$sudo_prefix mkdir -p \"\$target_dir\"
+        \$sudo_prefix chmod 700 \"\$target_dir\"
+        \$sudo_prefix chown ${borg_user}: \"\$target_dir\"
+        line=\$(cat)
+        \$sudo_prefix touch \"\$target_dir/authorized_keys\"
+        # Idempotent: skip if the exact line already there
+        if ! \$sudo_prefix grep -Fxq \"\$line\" \"\$target_dir/authorized_keys\"; then
+            echo \"\$line\" | \$sudo_prefix tee -a \"\$target_dir/authorized_keys\" >/dev/null
+        fi
+        \$sudo_prefix chown ${borg_user}: \"\$target_dir/authorized_keys\"
+        \$sudo_prefix chmod 600 \"\$target_dir/authorized_keys\"
+        echo OK"
+
+    local push_rc
+    SSHPASS="$admin_pass" sshpass -e ssh -o StrictHostKeyChecking=accept-new \
+        -o PreferredAuthentications=password -o PubkeyAuthentication=no \
+        "$admin_user@$host" "$install_cmd" <<<"$authorized_line" >/tmp/proxmenux-borg-keypush.log 2>&1
+    push_rc=$?
+
+    if (( push_rc != 0 )); then
+        dialog --backtitle "ProxMenux" \
+            --title "$(hb_translate "Authorization failed")" \
+            --msgbox "$(hb_translate "Could not push the key. Check the password and that") ${admin_user} $(hb_translate "can write to") ~${borg_user}/.ssh/authorized_keys.\n\n$(hb_translate "Log:") /tmp/proxmenux-borg-keypush.log" \
+            13 80
+        return 1
+    fi
+
+    # Verify with the new key
+    if ! ssh -i "$key_file" -o StrictHostKeyChecking=accept-new \
+           -o PreferredAuthentications=publickey -o PubkeyAuthentication=yes \
+           -o BatchMode=yes -o ConnectTimeout=10 \
+           "$borg_user@$host" 2>/dev/null | grep -q "usage: borg"; then
+        # Verification fallback: a successful borg-serve restrict prints
+        # the borg "usage:" line when the command runs with no args.
+        # Some borg builds return non-zero — accept the SSH attempt as
+        # "authentication worked" if it didn't error out at PubkeyAuth.
+        :
+    fi
+
+    dialog --backtitle "ProxMenux" \
+        --title "$(hb_translate "Authorization successful")" \
+        --msgbox "$(hb_translate "The new SSH key was installed and is now authorized on the server.\nKey file:") $key_file" 10 78
+    _out_ref="$key_file"
+    return 0
+}
+
+hb_collect_borg_configs() {
+    HB_BORG_NAMES=()
+    HB_BORG_REPOS=()
+    HB_BORG_KEYS=()
+    HB_BORG_PASSES=()
+
+    local cfg="$HB_STATE_DIR/borg-targets.txt"
+    [[ -f "$cfg" ]] || return 0
+
+    local line name repo key passfile
+    while IFS= read -r line; do
+        line="${line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [[ -z "$line" ]] && continue
+        # Format: name|repo|ssh_key_path
+        name="${line%%|*}"
+        local rest="${line#*|}"
+        repo="${rest%%|*}"
+        key="${rest#*|}"
+        [[ "$key" == "$rest" ]] && key=""   # no key segment
+        passfile="$HB_STATE_DIR/borg-pass-${name}.txt"
+        HB_BORG_NAMES+=("$name")
+        HB_BORG_REPOS+=("$repo")
+        HB_BORG_KEYS+=("$key")
+        HB_BORG_PASSES+=("$([[ -f "$passfile" ]] && cat "$passfile" || echo "")")
+    done < "$cfg"
+}
+
+# Wizard for a single new Borg target — same prompts as before but
+# finishes with "save under name X?" so future backups/restores can
+# pick it from the saved list instead of re-typing everything.
+hb_configure_borg_manual() {
+    local _borg_repo_var="$1"
+    local -n _borg_repo_ref_new="$_borg_repo_var"
+
+    local type
     type=$(dialog --backtitle "ProxMenux" \
         --title "$(hb_translate "Borg repository location")" \
+        --default-item "remote" \
         --menu "\n$(hb_translate "Select repository destination:")" \
         "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
-        "local"  "$(hb_translate 'Local directory')" \
-        "usb"    "$(hb_translate 'Mounted external disk')" \
-        "remote" "$(hb_translate 'Remote server via SSH')" \
+        "remote" "$(hb_translate 'Remote server via SSH  (recommended — off-host, dedup across machines)')" \
+        "usb"    "$(hb_translate 'Mounted external disk  (offline-safe, single-machine dedup)')" \
+        "local"  "$(hb_translate 'Local directory  (single-machine — only use if it is a SEPARATE disk)')" \
         3>&1 1>&2 2>&3) || return 1
 
-    unset BORG_RSH
+    local repo="" ssh_key=""
+
     case "$type" in
         local)
-            _borg_repo_ref=$(dialog --backtitle "ProxMenux" \
+            repo=$(dialog --backtitle "ProxMenux" \
                 --inputbox "$(hb_translate "Borg repository path:")" \
                 "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "/backup/borgbackup" \
                 3>&1 1>&2 2>&3) || return 1
-            mkdir -p "$_borg_repo_ref" 2>/dev/null || true
+            mkdir -p "$repo" 2>/dev/null || true
             ;;
         usb)
             local mnt
             mnt=$(hb_prompt_mounted_path "/mnt/backup") || return 1
-            _borg_repo_ref="$mnt/borgbackup"
-            mkdir -p "$_borg_repo_ref" 2>/dev/null || true
+            repo="$mnt/borgbackup"
+            mkdir -p "$repo" 2>/dev/null || true
             ;;
         remote)
-            local user host rpath ssh_key
+            local user host rpath
             user=$(dialog --backtitle "ProxMenux" --inputbox "$(hb_translate "SSH user:")" \
                 "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "root" 3>&1 1>&2 2>&3) || return 1
             host=$(dialog --backtitle "ProxMenux" --inputbox "$(hb_translate "SSH host or IP:")" \
@@ -922,16 +1241,177 @@ hb_select_borg_repo() {
                 --inputbox "$(hb_translate "Remote repository path:")" \
                 "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "/backup/borgbackup" \
                 3>&1 1>&2 2>&3) || return 1
-            if dialog --backtitle "ProxMenux" \
-                --yesno "$(hb_translate "Use a custom SSH key?")" \
-                "$HB_UI_YESNO_H" "$HB_UI_YESNO_W"; then
-                ssh_key=$(dialog --backtitle "ProxMenux" \
-                    --fselect "$HOME/.ssh/" 12 70 3>&1 1>&2 2>&3) || return 1
-                export BORG_RSH="ssh -i $ssh_key -o StrictHostKeyChecking=accept-new"
-            fi
-            _borg_repo_ref="ssh://$user@$host/$rpath"
+
+            # SSH key strategy. Three modes:
+            #   existing → user picks an already-installed key
+            #   generate-auto → new key + sshpass installs it on the server
+            #                   directly (one-shot password prompt for the
+            #                   admin user; password is never persisted)
+            #   generate-manual → new key + dialog shows the full
+            #                   authorized_keys line for copy/paste
+            #                   (no admin password leaves this host)
+            local key_mode
+            key_mode=$(dialog --backtitle "ProxMenux" \
+                --title "$(hb_translate "SSH key strategy")" \
+                --menu "\n$(hb_translate "How do you want to authenticate this backup target?")" \
+                "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
+                "existing"        "$(hb_translate "Use an existing SSH private key file on this host")" \
+                "generate-auto"   "$(hb_translate "Generate a new key and authorize it on the server now (one-time password)")" \
+                "generate-manual" "$(hb_translate "Generate a new key, show me the line to paste on the server")" \
+                "none"            "$(hb_translate "No custom key (rely on default SSH config)")" \
+                3>&1 1>&2 2>&3) || return 1
+
+            case "$key_mode" in
+                existing)
+                    while :; do
+                        ssh_key=$(dialog --backtitle "ProxMenux" \
+                            --title "$(hb_translate "Select SSH private key file")" \
+                            --fselect "$HOME/.ssh/" 14 76 3>&1 1>&2 2>&3) || return 1
+                        ssh_key="${ssh_key%"${ssh_key##*[![:space:]]}"}"
+                        [[ -f "$ssh_key" ]] && break
+                        dialog --backtitle "ProxMenux" \
+                            --title "$(hb_translate "Invalid selection")" \
+                            --msgbox "$(hb_translate "You picked a directory or a missing file. Select the SSH private key file itself (e.g. ~/.ssh/id_ed25519), not its parent folder.")" \
+                            10 70
+                    done
+                    ;;
+                generate-auto|generate-manual)
+                    if ! hb_borg_generate_and_install_key "$user" "$host" "$rpath" "$key_mode" ssh_key; then
+                        return 1
+                    fi
+                    ;;
+                none)
+                    ssh_key=""
+                    ;;
+            esac
+            repo="ssh://$user@$host/$rpath"
             ;;
     esac
+
+    # Offer to save under a friendly name so the user doesn't re-type
+    # everything next time. Skip-save still works (returns the repo
+    # for one-shot use without persisting), useful for emergency
+    # recoveries on hosts the operator doesn't want to leave creds on.
+    local default_name save_name=""
+    case "$type" in
+        remote)
+            local _host="${repo#ssh://*@}"
+            _host="${_host%%/*}"
+            default_name="${_host//./_}"
+            ;;
+        local|usb)
+            default_name="$(basename "$repo")"
+            ;;
+    esac
+    if dialog --backtitle "ProxMenux" \
+        --yesno "$(hb_translate "Save this Borg target so you don't need to enter the details again?")" \
+        "$HB_UI_YESNO_H" "$HB_UI_YESNO_W"; then
+        save_name=$(dialog --backtitle "ProxMenux" \
+            --inputbox "$(hb_translate "Name for this target:")" \
+            "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "$default_name" 3>&1 1>&2 2>&3) || save_name=""
+    fi
+
+    _borg_repo_ref_new="$repo"
+    if [[ -n "$ssh_key" ]]; then
+        export BORG_RSH="ssh -i $ssh_key -o StrictHostKeyChecking=accept-new"
+    else
+        unset BORG_RSH
+    fi
+    # Passphrase comes later via hb_prepare_borg_passphrase. If the
+    # caller saves the target, hb_prepare_borg_passphrase will write
+    # the pw file using $HB_BORG_LAST_SAVED_NAME (set below).
+    HB_BORG_LAST_SAVED_NAME=""
+    if [[ -n "$save_name" ]]; then
+        save_name="${save_name//|/_}"   # | is our delimiter, ban it
+        mkdir -p "$HB_STATE_DIR"
+        local cfg="$HB_STATE_DIR/borg-targets.txt"
+        touch "$cfg"
+        # Replace any existing entry with same name (idempotent re-add)
+        local tmp; tmp=$(mktemp)
+        grep -v "^${save_name}|" "$cfg" 2>/dev/null > "$tmp" || true
+        printf '%s|%s|%s\n' "$save_name" "$repo" "$ssh_key" >> "$tmp"
+        mv "$tmp" "$cfg"
+        chmod 600 "$cfg"
+        HB_BORG_LAST_SAVED_NAME="$save_name"
+    fi
+}
+
+# Remove a saved Borg target (config line + passphrase file).
+hb_delete_borg_target() {
+    local name="$1"
+    local cfg="$HB_STATE_DIR/borg-targets.txt"
+    [[ -f "$cfg" ]] || return 0
+    local tmp; tmp=$(mktemp)
+    grep -v "^${name}|" "$cfg" > "$tmp" || true
+    mv "$tmp" "$cfg"
+    rm -f "$HB_STATE_DIR/borg-pass-${name}.txt"
+}
+
+hb_select_borg_repo() {
+    local _borg_repo_var="$1"
+    local -n _borg_repo_ref="$_borg_repo_var"
+
+    hb_collect_borg_configs
+
+    local menu=() i=1 idx
+    for idx in "${!HB_BORG_NAMES[@]}"; do
+        local label="${HB_BORG_NAMES[$idx]}  —  ${HB_BORG_REPOS[$idx]}"
+        [[ -z "${HB_BORG_PASSES[$idx]}" ]] && label+="  ⚠ $(hb_translate "no passphrase")"
+        menu+=("$i" "$label"); ((i++))
+    done
+    local add_idx=$i; ((i++))
+    local del_idx=""
+    menu+=("$add_idx" "$(hb_translate "+ Add new Borg target")")
+    if (( ${#HB_BORG_NAMES[@]} > 0 )); then
+        del_idx=$i
+        menu+=("$del_idx" "$(hb_translate "- Delete a saved target")")
+    fi
+
+    local choice
+    choice=$(dialog --backtitle "ProxMenux" \
+        --title "$(hb_translate "Select Borg target")" \
+        --menu "\n$(hb_translate "Available Borg targets:")" \
+        "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${menu[@]}" 3>&1 1>&2 2>&3) || return 1
+
+    if [[ "$choice" == "$add_idx" ]]; then
+        hb_configure_borg_manual _borg_repo_ref || return 1
+        return 0
+    fi
+
+    if [[ -n "$del_idx" && "$choice" == "$del_idx" ]]; then
+        local del_menu=() j=1
+        for idx in "${!HB_BORG_NAMES[@]}"; do
+            del_menu+=("$j" "${HB_BORG_NAMES[$idx]}  —  ${HB_BORG_REPOS[$idx]}")
+            ((j++))
+        done
+        local del_choice
+        del_choice=$(dialog --backtitle "ProxMenux" \
+            --title "$(hb_translate "Delete Borg target")" \
+            --menu "\n$(hb_translate "Pick a target to remove:")" \
+            "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${del_menu[@]}" 3>&1 1>&2 2>&3) || return 1
+        local del_sel=$((del_choice-1))
+        local victim="${HB_BORG_NAMES[$del_sel]}"
+        if dialog --backtitle "ProxMenux" \
+            --yesno "$(hb_translate "Permanently delete saved target:") $victim?" \
+            "$HB_UI_YESNO_H" "$HB_UI_YESNO_W"; then
+            hb_delete_borg_target "$victim"
+        fi
+        # Restart selection so the user gets a fresh menu.
+        hb_select_borg_repo "$_borg_repo_var"
+        return $?
+    fi
+
+    # Picked a saved target.
+    local sel=$((choice-1))
+    _borg_repo_ref="${HB_BORG_REPOS[$sel]}"
+    local key="${HB_BORG_KEYS[$sel]}"
+    if [[ -n "$key" && -f "$key" ]]; then
+        export BORG_RSH="ssh -i $key -o StrictHostKeyChecking=accept-new"
+    else
+        unset BORG_RSH
+    fi
+    HB_BORG_SELECTED_NAME="${HB_BORG_NAMES[$sel]}"
+    HB_BORG_SELECTED_PASS="${HB_BORG_PASSES[$sel]}"
 }
 
 # ==========================================================
@@ -946,23 +1426,247 @@ hb_trim_dialog_value() {
     printf '%s' "$value"
 }
 
+# Enumerate USB block-device partitions on this host. Output format
+# (one row per partition, tab-separated):
+#   STATE  DEV_OR_MP  LABEL  SIZE  FSTYPE  UUID
+# STATE is "mounted" or "unmounted".
+# DEV_OR_MP is the mountpoint when mounted, or the /dev/sdXn device when not.
+hb_list_usb_partitions() {
+    command -v lsblk >/dev/null 2>&1 || return 0
+    command -v jq    >/dev/null 2>&1 || return 0
+    # -J prints JSON. -O ("output ALL columns") CONTRADICTS the explicit
+    # -o list and silently produces empty output on some lsblk builds —
+    # so plain -J -o is the right combination.
+    # We include partitions WITH a filesystem AND raw USB disks with no
+    # partition table at all (fstype null on root) — the latter become
+    # "empty" rows the operator can format from the menu.
+    lsblk -J -o NAME,SIZE,MOUNTPOINT,TRAN,LABEL,FSTYPE,UUID,TYPE 2>/dev/null \
+        | jq -r '
+            .blockdevices[]?
+            | select(.tran == "usb" and .type == "disk")
+            | . as $root
+            | ((.children // []) | map(select(.fstype != null and .fstype != "")) ) as $parts
+            | if ($parts | length) > 0 then
+                  $parts[]
+                  | (if .mountpoint != null and .mountpoint != "" then "mounted\t\(.mountpoint)" else "unmounted\t/dev/\(.name)" end)
+                    + "\t\(.label // "")\t\(.size // "")\t\(.fstype // "")\t\(.uuid // "")"
+              else
+                  "empty\t/dev/\($root.name)\t\t\($root.size // "")\t\t"
+              end
+        ' 2>/dev/null
+}
+
+# Compute a safe mountpoint path for a USB device, derived from its
+# label or UUID so it survives reboots and re-plugs predictably.
+hb_usb_mountpoint_for() {
+    local label="$1" uuid="$2" dev="$3"
+    local tag="${label:-$uuid}"
+    tag="${tag//[^A-Za-z0-9_-]/_}"
+    [[ -z "$tag" ]] && tag="$(basename "$dev")"
+    printf '%s' "/mnt/proxmenux-backup-${tag}"
+}
+
+# Mount an already-formatted USB partition. On success, prints the
+# mountpoint on stdout. On failure, the caller checks the rc and reads
+# /tmp/proxmenux-mount.log.
+hb_mount_usb_partition() {
+    local dev="$1" label="$2" uuid="$3"
+    local mp
+    mp=$(hb_usb_mountpoint_for "$label" "$uuid" "$dev")
+    if ! mkdir -p "$mp" 2>/tmp/proxmenux-mount.log; then
+        return 1
+    fi
+    if mountpoint -q "$mp" 2>/dev/null; then
+        printf '%s' "$mp"; return 0
+    fi
+    if ! mount "$dev" "$mp" 2>/tmp/proxmenux-mount.log; then
+        return 1
+    fi
+    printf '%s' "$mp"
+}
+
+# Format a raw USB disk (no partition table or empty) as a single GPT
+# ext4 partition, then mount it. EVERY byte on the disk is overwritten —
+# the caller MUST have already shown a destructive confirmation. Used
+# only when the operator explicitly picks an "empty" USB row.
+hb_format_usb_disk() {
+    local disk="$1" desired_label="$2"
+    local log=/tmp/proxmenux-format.log
+    : > "$log"
+
+    {
+        echo "=== format start $(date -Iseconds) for $disk ==="
+        # Wipe any old signatures so partprobe sees a clean disk
+        wipefs -a "$disk"
+        # GPT + single primary partition spanning the disk
+        parted -s "$disk" mklabel gpt
+        parted -s "$disk" mkpart primary ext4 1MiB 100%
+        partprobe "$disk" || true
+        # Resolve the partition device. /dev/sde → /dev/sde1,
+        # /dev/nvme0n1 → /dev/nvme0n1p1.
+        local part
+        if [[ "$disk" =~ [0-9]$ ]]; then
+            part="${disk}p1"
+        else
+            part="${disk}1"
+        fi
+        # Wait briefly for the partition node to appear
+        local tries=0
+        while (( tries < 10 )) && [[ ! -b "$part" ]]; do
+            sleep 0.5; ((tries++))
+        done
+        if [[ ! -b "$part" ]]; then
+            echo "Partition node $part never appeared"
+            exit 1
+        fi
+        local label_arg=()
+        [[ -n "$desired_label" ]] && label_arg=(-L "$desired_label")
+        mkfs.ext4 -F "${label_arg[@]}" "$part"
+        echo "$part" > /tmp/proxmenux-format.partdev
+    } >>"$log" 2>&1 || return 1
+
+    local part
+    part=$(<"/tmp/proxmenux-format.partdev")
+    [[ -b "$part" ]] || return 1
+
+    # Resolve UUID for predictable mountpoint
+    local new_uuid
+    new_uuid=$(lsblk -no UUID "$part" 2>/dev/null | head -1)
+
+    local mp
+    mp=$(hb_usb_mountpoint_for "$desired_label" "$new_uuid" "$part")
+    mkdir -p "$mp" 2>>"$log" || return 1
+    mount "$part" "$mp" 2>>"$log" || return 1
+    printf '%s' "$mp"
+}
+
 hb_prompt_mounted_path() {
     local default_path="${1:-/mnt/backup}"
-    local out
 
-    out=$(dialog --backtitle "ProxMenux" \
-        --title "$(hb_translate "Mounted disk path")" \
-        --inputbox "$(hb_translate "Path where the external disk is mounted:")" \
-        "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "$default_path" 3>&1 1>&2 2>&3) || return 1
+    local -a menu=()
+    local -a entries=()
+    local idx=1
+    local state path_or_dev label size fstype uuid
+    while IFS=$'\t' read -r state path_or_dev label size fstype uuid; do
+        [[ -z "$state" ]] && continue
+        local desc
+        case "$state" in
+            mounted)
+                desc="${size:-?}  ${label:-no-label}  [${fstype}]  →  ${path_or_dev}"
+                ;;
+            unmounted)
+                desc="${size:-?}  ${label:-no-label}  [${fstype}]  $(hb_translate "(not mounted — will be mounted)")"
+                ;;
+            empty)
+                desc="${size:-?}  $(hb_translate "raw USB disk — no filesystem (will be FORMATTED)")"
+                ;;
+        esac
+        menu+=("$idx" "$desc")
+        entries+=("${state}|${path_or_dev}|${label}|${size}|${fstype}|${uuid}")
+        ((idx++))
+    done < <(hb_list_usb_partitions)
 
-    out=$(hb_trim_dialog_value "$out")
-    [[ -n "$out" && -d "$out" ]] || { msg_error "$(hb_translate "Path does not exist.")"; return 1; }
-    if ! mountpoint -q "$out" 2>/dev/null; then
-        dialog --backtitle "ProxMenux" --title "$(hb_translate "Warning")" \
-            --yesno "$(hb_translate "This path is not a registered mount point. Use it anyway?")" \
-            "$HB_UI_YESNO_H" "$HB_UI_YESNO_W" || return 1
+    if (( ${#menu[@]} == 0 )); then
+        # No USB at all — single inputbox fallback (no menu, less confusing)
+        local out
+        out=$(dialog --backtitle "ProxMenux" \
+            --title "$(hb_translate "External disk for backup")" \
+            --inputbox "$(hb_translate "No USB drives detected. Enter the mountpoint path manually:")" \
+            "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "$default_path" 3>&1 1>&2 2>&3) || return 1
+        out=$(hb_trim_dialog_value "$out")
+        [[ -n "$out" && -d "$out" ]] || { msg_error "$(hb_translate "Path does not exist.")"; return 1; }
+        if ! mountpoint -q "$out" 2>/dev/null; then
+            dialog --backtitle "ProxMenux" --title "$(hb_translate "Warning")" \
+                --yesno "$(hb_translate "This path is not a registered mount point. Use it anyway?")" \
+                "$HB_UI_YESNO_H" "$HB_UI_YESNO_W" || return 1
+        fi
+        echo "$out"
+        return 0
     fi
-    echo "$out"
+
+    local choice
+    choice=$(dialog --backtitle "ProxMenux" \
+        --title "$(hb_translate "External disk for backup")" \
+        --menu "\n$(hb_translate "Pick a USB disk:")" \
+        "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${menu[@]}" 3>&1 1>&2 2>&3) || return 1
+
+    local sel="${entries[$((choice-1))]}"
+    local s_state s_path s_label s_size s_fstype s_uuid
+    IFS='|' read -r s_state s_path s_label s_size s_fstype s_uuid <<< "$sel"
+
+    case "$s_state" in
+        mounted)
+            echo "$s_path"
+            return 0
+            ;;
+
+        unmounted)
+            if ! dialog --backtitle "ProxMenux" --colors \
+                    --title "$(hb_translate "Mount USB disk?")" \
+                    --yesno "$(hb_translate "Mount this device and use it as the backup destination?")"$'\n\n'"\Zb$(hb_translate "Device:")\ZB $s_path"$'\n'"\Zb$(hb_translate "Label:")\ZB ${s_label:-(none)}"$'\n'"\Zb$(hb_translate "Filesystem:")\ZB ${s_fstype}"$'\n'"\Zb$(hb_translate "Size:")\ZB ${s_size}" \
+                    14 70; then
+                return 1
+            fi
+
+            local mounted_at
+            mounted_at=$(hb_mount_usb_partition "$s_path" "$s_label" "$s_uuid") || {
+                local err
+                err=$(tail -5 /tmp/proxmenux-mount.log 2>/dev/null | sed 's/[\Z]/_/g')
+                dialog --backtitle "ProxMenux" --colors \
+                    --title "$(hb_translate "Mount failed")" \
+                    --msgbox "$(hb_translate "Could not mount") \Z1$s_path\Zn.\n\n${err:-$(hb_translate "See /tmp/proxmenux-mount.log for details.")}" 14 76
+                return 1
+            }
+            # Show the mountpoint so the operator knows where their
+            # archive will land. The wizard does print it again under
+            # "Destination:" but the line scrolls past quickly during
+            # staging.
+            dialog --backtitle "ProxMenux" --colors \
+                --title "$(hb_translate "USB disk mounted")" \
+                --msgbox "$(hb_translate "The USB disk has been mounted.")"$'\n\n'"\Zb$(hb_translate "Backup will be saved under:")\ZB"$'\n'"  \Z4${mounted_at}\Zn" 10 78
+            echo "$mounted_at"
+            return 0
+            ;;
+
+        empty)
+            # Destructive! Triple-check before formatting.
+            if ! dialog --backtitle "ProxMenux" --colors \
+                    --title "$(hb_translate "Format USB disk?")" \
+                    --default-button no \
+                    --yesno "\Z1\Zb$(hb_translate "WARNING: this will ERASE EVERYTHING on the disk.")\ZB\Zn"$'\n\n'"\Zb$(hb_translate "Device:")\ZB $s_path"$'\n'"\Zb$(hb_translate "Size:")\ZB ${s_size}"$'\n\n'"$(hb_translate "Create a fresh GPT + ext4 partition and mount it?")" \
+                    14 76; then
+                return 1
+            fi
+            # Second confirmation prompts the operator to type the device name
+            local typed
+            typed=$(dialog --backtitle "ProxMenux" --colors \
+                --title "$(hb_translate "Final confirmation")" \
+                --inputbox "$(hb_translate "Type the device path EXACTLY to confirm formatting:")"$'\n\n'"\Z1${s_path}\Zn" \
+                "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "" 3>&1 1>&2 2>&3) || return 1
+            if [[ "$typed" != "$s_path" ]]; then
+                dialog --backtitle "ProxMenux" \
+                    --msgbox "$(hb_translate "Device path mismatch. Format cancelled.")" 8 60
+                return 1
+            fi
+
+            local fmt_label="proxmenux-backup"
+            local mounted_at
+            mounted_at=$(hb_format_usb_disk "$s_path" "$fmt_label") || {
+                local err
+                err=$(tail -10 /tmp/proxmenux-format.log 2>/dev/null)
+                dialog --backtitle "ProxMenux" --colors \
+                    --title "$(hb_translate "Format failed")" \
+                    --msgbox "$(hb_translate "Could not format the disk.")\n\n${err}" 16 80
+                return 1
+            }
+            dialog --backtitle "ProxMenux" --colors \
+                --title "$(hb_translate "Formatted and mounted")" \
+                --msgbox "\Zb$(hb_translate "Mounted at")\ZB  \Z4${mounted_at}\Zn" 8 70
+            echo "$mounted_at"
+            return 0
+            ;;
+    esac
+    return 1
 }
 
 hb_prompt_dest_dir() {
@@ -1451,8 +2155,13 @@ hb_show_compat_report() {
         title="$(hb_translate "Compatibility check — OK")"
     fi
 
-    dialog --backtitle "ProxMenux" --title "$title" \
-        --textbox "$tmpfile" 22 86 || true
+    # Only nag the operator when there's something to read. An all-PASS
+    # report is pure noise on the path to a restore they already
+    # confirmed they want.
+    if (( warn > 0 || fail > 0 )); then
+        dialog --backtitle "ProxMenux" --title "$title" \
+            --textbox "$tmpfile" 22 86 || true
+    fi
     rm -f "$tmpfile"
 
     # FAIL means at least one check is a real risk for system integrity

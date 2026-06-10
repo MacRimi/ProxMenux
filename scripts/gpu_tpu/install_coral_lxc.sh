@@ -46,7 +46,6 @@
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
-VENV_PATH="/opt/googletrans-env"
 
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"

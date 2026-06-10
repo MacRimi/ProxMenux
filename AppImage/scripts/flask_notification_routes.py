@@ -1407,3 +1407,49 @@ def internal_shutdown_event():
         return jsonify({'success': True, 'event_type': event_type}), 200
     except Exception as e:
         return jsonify({'error': 'internal_error', 'detail': str(e)}), 500
+
+
+# ─── Internal Restore Event Endpoint ─────────────────────────────
+
+@notification_bp.route('/api/internal/restore-event', methods=['POST'])
+def internal_restore_event():
+    """
+    Internal endpoint called by apply_cluster_postboot.sh when the post-boot
+    dispatcher finishes. Tells the user the backgrounded restore tasks
+    (DKMS compile, apt installs, cluster apply, ...) are done so commands
+    like nvidia-smi now work.
+
+    Only accepts requests from localhost (127.0.0.1) for security.
+    """
+    remote_addr = request.remote_addr
+    if remote_addr not in ('127.0.0.1', '::1', 'localhost'):
+        return jsonify({'error': 'forbidden', 'detail': 'localhost only'}), 403
+
+    try:
+        data = request.get_json(silent=True) or {}
+        hostname = data.get('hostname', 'unknown')
+        guests = data.get('guests', '0')
+        stubs = data.get('stubs', '0')
+        stale_nodes = data.get('stale_nodes', '0')
+        components = data.get('components', 'none')
+        duration = data.get('duration', 'unknown')
+
+        notification_manager.emit_event(
+            event_type='system_restore_completed',
+            severity='INFO',
+            data={
+                'hostname': hostname,
+                'guests': guests,
+                'stubs': stubs,
+                'stale_nodes': stale_nodes,
+                'components': components,
+                'duration': duration,
+            },
+            source='proxmenux',
+            entity='node',
+            entity_id='',
+        )
+
+        return jsonify({'success': True, 'event_type': 'system_restore_completed'}), 200
+    except Exception as e:
+        return jsonify({'error': 'internal_error', 'detail': str(e)}), 500

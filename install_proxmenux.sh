@@ -44,11 +44,15 @@ LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 INSTALL_DIR="/usr/local/bin"
 BASE_DIR="/usr/local/share/proxmenux"
 CONFIG_FILE="$BASE_DIR/config.json"
-CACHE_FILE="$BASE_DIR/cache.json"
 UTILS_FILE="$BASE_DIR/utils.sh"
 LOCAL_VERSION_FILE="$BASE_DIR/version.txt"
 MENU_SCRIPT="menu"
-VENV_PATH="/opt/googletrans-env"
+
+# Legacy path that existed during the Python+googletrans era. The current
+# translate flow uses pre-generated JSON files in lang/ — no virtualenv,
+# no online translation at runtime — so this path is purged on install
+# if present. Kept as a literal here so the cleanup is grep-able.
+LEGACY_VENV_PATH="/opt/googletrans-env"
 
 MONITOR_INSTALL_DIR="$BASE_DIR"
 MONITOR_RUNTIME_DIR="$BASE_DIR/monitor-app"
@@ -272,10 +276,6 @@ cleanup_corrupted_files() {
         echo "Cleaning up corrupted configuration file..."
         rm -f "$CONFIG_FILE"
     fi
-    if [ -f "$CACHE_FILE" ] && ! jq empty "$CACHE_FILE" >/dev/null 2>&1; then
-        echo "Cleaning up corrupted cache file..."
-        rm -f "$CACHE_FILE"
-    fi
 }
 
 # Cleanup function
@@ -291,149 +291,19 @@ trap cleanup EXIT
 
 # ==========================================================
 check_existing_installation() {
-    local has_venv=false
-    local has_config=false
-    local has_language=false
-    local has_menu=false
-    
+    # After the googletrans removal there is only one install variant.
+    # The function still distinguishes "installed" vs "not installed" so
+    # show_installation_options can pick the right banner.
     if [ -f "$INSTALL_DIR/$MENU_SCRIPT" ]; then
-        has_menu=true
-    fi
-    
-    if [ -d "$VENV_PATH" ] && [ -f "$VENV_PATH/bin/activate" ]; then
-        has_venv=true
-    fi
-    
-    if [ -f "$CONFIG_FILE" ]; then
-        if jq empty "$CONFIG_FILE" >/dev/null 2>&1; then
-            has_config=true
-            local current_language=$(jq -r '.language // empty' "$CONFIG_FILE" 2>/dev/null)
-            if [[ -n "$current_language" && "$current_language" != "null" && "$current_language" != "empty" ]]; then
-                has_language=true
-            fi
-        else
-            echo "Warning: Corrupted config file detected, removing..."
+        # Quietly fix a corrupted config so the install can proceed.
+        if [ -f "$CONFIG_FILE" ] && ! jq empty "$CONFIG_FILE" >/dev/null 2>&1; then
+            echo "Warning: Corrupted config file detected, removing..." >&2
             rm -f "$CONFIG_FILE"
         fi
-    fi
-    
-    if [ "$has_venv" = true ] && [ "$has_language" = true ]; then
-        echo "translation"
-    elif [ "$has_menu" = true ] && [ "$has_venv" = false ]; then
-        echo "normal"
-    elif [ "$has_menu" = true ]; then
-        echo "unknown"
+        echo "installed"
     else
         echo "none"
     fi
-}
-
-uninstall_proxmenux() {
-    local install_type="$1"
-    local force_clean="$2"
-    
-    if [ "$force_clean" != "force" ]; then
-        if ! whiptail --title "Uninstall ProxMenux" --yesno "Are you sure you want to uninstall ProxMenux?" 10 60; then
-            return 1
-        fi
-    fi
-    
-    echo "Uninstalling ProxMenux..."
-    
-    if systemctl is-active --quiet proxmenux-monitor.service; then
-        echo "Stopping ProxMenux Monitor service..."
-        systemctl stop proxmenux-monitor.service
-    fi
-    
-    if systemctl is-enabled --quiet proxmenux-monitor.service 2>/dev/null; then
-        echo "Disabling ProxMenux Monitor service..."
-        systemctl disable proxmenux-monitor.service
-    fi
-    
-    if [ -f "$MONITOR_SERVICE_FILE" ]; then
-        echo "Removing ProxMenux Monitor service file..."
-        rm -f "$MONITOR_SERVICE_FILE"
-        systemctl daemon-reload
-    fi
-    
-    if [ -d "$MONITOR_INSTALL_DIR" ]; then
-        echo "Removing ProxMenux Monitor directory..."
-        rm -rf "$MONITOR_INSTALL_DIR"
-    fi
-    
-    if [ -f "$VENV_PATH/bin/activate" ]; then
-        echo "Removing googletrans and virtual environment..."
-        source "$VENV_PATH/bin/activate"
-        pip uninstall -y googletrans >/dev/null 2>&1
-        deactivate
-        rm -rf "$VENV_PATH"
-    fi
-    
-    if [ "$install_type" = "translation" ] && [ "$force_clean" != "force" ]; then
-        DEPS_TO_REMOVE=$(whiptail --title "Remove Translation Dependencies" --checklist \
-            "Select translation-specific dependencies to remove:" 15 60 3 \
-            "python3-venv" "Python virtual environment" OFF \
-            "python3-pip" "Python package installer" OFF \
-            "python3" "Python interpreter" OFF \
-            3>&1 1>&2 2>&3)
-        
-        if [ -n "$DEPS_TO_REMOVE" ]; then
-            echo "Removing selected dependencies..."
-            read -r -a DEPS_ARRAY <<< "$(echo "$DEPS_TO_REMOVE" | tr -d '"')"
-            for dep in "${DEPS_ARRAY[@]}"; do
-                echo "Removing $dep..."
-                apt-mark auto "$dep" >/dev/null 2>&1
-                apt-get -y --purge autoremove "$dep" >/dev/null 2>&1
-            done
-            apt-get autoremove -y --purge >/dev/null 2>&1
-        fi
-    fi
-    
-    rm -f "$INSTALL_DIR/$MENU_SCRIPT"
-    rm -rf "$BASE_DIR"
-    
-    [ -f /root/.bashrc.bak ] && mv /root/.bashrc.bak /root/.bashrc
-    if [ -f /etc/motd.bak ]; then
-        mv /etc/motd.bak /etc/motd
-    else
-        sed -i '/This system is optimised by: ProxMenux/d' /etc/motd
-    fi
-    
-    echo "ProxMenux has been uninstalled."
-    return 0
-}
-
-handle_installation_change() {
-    local current_type="$1"
-    local new_type="$2"
-    
-    if [ "$current_type" = "$new_type" ]; then
-        return 0
-    fi
-    
-    case "$current_type-$new_type" in
-        "translation-1"|"translation-normal")
-            if whiptail --title "Installation Type Change" \
-                --yesno "Switch from Translation to Normal Version?\n\nThis will remove translation components." 10 60; then
-                echo "Preparing for installation type change..."
-                uninstall_proxmenux "translation" "force" >/dev/null 2>&1
-                return 0
-            else
-                return 1
-            fi
-            ;;
-        "normal-2"|"normal-translation")
-            if whiptail --title "Installation Type Change" \
-                --yesno "Switch from Normal to Translation Version?\n\nThis will add translation components." 10 60; then
-                return 0
-            else
-                return 1
-            fi
-            ;;
-        *)
-            return 0
-            ;;
-    esac
 }
 
 update_config() {
@@ -441,7 +311,7 @@ update_config() {
     local status="$2"
     local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     
-    local tracked_components=("dialog" "curl" "jq" "git" "python3" "python3-venv" "python3-pip" "virtual_environment" "pip" "googletrans" "proxmenux_monitor")
+    local tracked_components=("dialog" "curl" "jq" "git" "python3" "python3-pip" "proxmenux_monitor")
     
     if [[ " ${tracked_components[@]} " =~ " ${component} " ]]; then
         mkdir -p "$(dirname "$CONFIG_FILE")"
@@ -517,26 +387,12 @@ select_language() {
 
 # Show installation confirmation for new installations
 show_installation_confirmation() {
-    local install_type="$1"
-    
-    case "$install_type" in
-        "1")
-            if whiptail --title "ProxMenux - Normal Version Installation" \
-                --yesno "ProxMenux Normal Version will install:\n\n• dialog  (interactive menus) - Official Debian package\n• curl       (file downloads) - Official Debian package\n• jq        (JSON processing) - Official Debian package\n• ProxMenux core files     (/usr/local/share/proxmenux)\n• ProxMenux Monitor        (Web dashboard on port 8008)\n\nThis is a lightweight installation with minimal dependencies.\n\nProceed with installation?" 20 70; then
-                return 0
-            else
-                return 1
-            fi
-            ;;
-        "2")
-            if whiptail --title "ProxMenux - Translation Version Installation" \
-                --yesno "ProxMenux Translation Version will install:\n\n• dialog (interactive menus)\n• curl (file downloads)\n• jq (JSON processing)\n• python3 + python3-venv + python3-pip\n• Google Translate library (googletrans)\n• Virtual environment (/opt/googletrans-env)\n• Translation cache system\n• ProxMenux core files\n• ProxMenux Monitor        (Web dashboard on port 8008)\n\nThis version requires more dependencies for translation support.\n\nProceed with installation?" 20 70; then
-                return 0
-            else
-                return 1
-            fi
-            ;;
-    esac
+    if whiptail --title "ProxMenux Installation" \
+        --yesno "ProxMenux will install:\n\n• dialog       (interactive menus) - Official Debian package\n• curl         (file downloads) - Official Debian package\n• jq           (JSON processing) - Official Debian package\n• ProxMenux core files     (/usr/local/share/proxmenux)\n• ProxMenux Monitor        (Web dashboard on port 8008)\n• Pre-built translation files (English, Spanish, French, German, Italian, Portuguese)\n\nProceed with installation?" 20 70; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 get_server_ip() {
@@ -800,9 +656,25 @@ EOF
 }
 
 install_normal_version() {
-    local total_steps=5
+    local total_steps=6
     local current_step=1
-    
+
+    # Translations now live as pre-generated JSON files under lang/, so
+    # asking the language up front is the right place — every install is
+    # multilingual-capable and the user picks once.
+    show_progress $current_step $total_steps "Language selection"
+    select_language
+    ((current_step++))
+
+    # Purge the legacy googletrans virtualenv if a previous install left it
+    # behind. The new translate flow has no runtime Python/googletrans
+    # dependency — the venv is dead weight on disk now.
+    if [[ -d "$LEGACY_VENV_PATH" ]]; then
+        msg_info "Removing legacy translation virtualenv at $LEGACY_VENV_PATH..."
+        rm -rf "$LEGACY_VENV_PATH"
+        msg_ok "Legacy translation virtualenv removed."
+    fi
+
     show_progress $current_step $total_steps "Installing basic dependencies."
     
     if ! command -v jq > /dev/null 2>&1; then
@@ -842,7 +714,11 @@ install_normal_version() {
     fi
 
     for pkg in "${BASIC_DEPS[@]}"; do
-        # Strict per-package check — see comment in install_translation_version().
+        # `dpkg -l | grep -qw "$pkg"` treats `-` as a word boundary, so a
+        # query for `python3` would falsely match `python3-pip` and skip
+        # the real `python3` install. `dpkg-query -W -f='${Status}'` asks
+        # for the EXACT package and reports "install ok installed" only
+        # when truly present. Issue #205 traced back here.
         if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed"; then
             if apt-get install -y "$pkg" > /dev/null 2>&1; then
                 update_config "$pkg" "installed"
@@ -931,6 +807,18 @@ install_normal_version() {
     cp "./version.txt" "$LOCAL_VERSION_FILE"
     cp "./install_proxmenux.sh" "$BASE_DIR/install_proxmenux.sh"
 
+    # Pre-built translation cache. The runtime translate() in utils.sh
+    # reads $BASE_DIR/lang/<lang>.json — these files ship with the repo
+    # (one per supported language) so the install ends up multilingual
+    # without any runtime download or Python dependency. Refresh the
+    # whole dir on every install so a language that was renamed or
+    # dropped upstream disappears here too.
+    if [ -d "./lang" ]; then
+        rm -rf "$BASE_DIR/lang"
+        mkdir -p "$BASE_DIR/lang"
+        cp -r "./lang/"* "$BASE_DIR/lang/" 2>/dev/null || true
+    fi
+
     # A user that previously rode the beta train and then switched back
     # to stable would still have a leftover beta_version.txt under
     # $BASE_DIR, which makes the `menu` update check (check_updates_beta)
@@ -942,7 +830,7 @@ install_normal_version() {
 
     # Wipe the scripts tree before copying so any file removed upstream
     # (renamed, consolidated, deprecated) disappears from the user install.
-    # Only $BASE_DIR/scripts/ is cleared; config.json, cache.json,
+    # Only $BASE_DIR/scripts/ is cleared; config.json,
     # components_status.json, version.txt, monitor.db, smart/, oci/ and
     # the AppImage live outside this path and are preserved.
     rm -rf "$BASE_DIR/scripts"
@@ -969,210 +857,16 @@ install_normal_version() {
     msg_ok "ProxMenux Normal Version installation completed successfully."
 }
 
-install_translation_version() {
-    local total_steps=5
-    local current_step=1
-    
-    show_progress $current_step $total_steps "Language selection"
-    select_language
-    ((current_step++))
-    
-    show_progress $current_step $total_steps "Installing system dependencies"
-    
-    if ! command -v jq > /dev/null 2>&1; then
-        apt-get update > /dev/null 2>&1
-        
-        if apt-get install -y jq > /dev/null 2>&1 && command -v jq > /dev/null 2>&1; then
-            update_config "jq" "installed"
-        else
-            local jq_url="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64"
-            if wget -q -O /usr/local/bin/jq "$jq_url" 2>/dev/null && chmod +x /usr/local/bin/jq; then
-                if command -v jq > /dev/null 2>&1; then
-                    update_config "jq" "installed_from_github"
-                else
-                    msg_error "Failed to install jq. Please install it manually."
-                    update_config "jq" "failed"
-                    return 1
-                fi
-            else
-                msg_error "Failed to install jq from both APT and GitHub. Please install it manually."
-                update_config "jq" "failed"
-                return 1
-            fi
-        fi
-    else
-        update_config "jq" "already_installed"
-    fi
-    
-    DEPS=("dialog" "curl" "git" "python3" "python3-venv" "python3-pip")
-    for pkg in "${DEPS[@]}"; do
-        # `dpkg -l | grep -qw "$pkg"` treats `-` as a word boundary, so a
-        # query for `python3` would falsely match `python3-pip` and skip
-        # the real `python3` install. `dpkg-query -W -f='${Status}'` asks
-        # for the EXACT package and reports "install ok installed" only
-        # when truly present. Issue #205 traced back here.
-        if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed"; then
-            if apt-get install -y "$pkg" > /dev/null 2>&1; then
-                update_config "$pkg" "installed"
-            else
-                msg_error "Failed to install $pkg. Please install it manually."
-                update_config "$pkg" "failed"
-                return 1
-            fi
-        else
-            update_config "$pkg" "already_installed"
-        fi
-    done
-    
-    msg_ok "jq, dialog, curl, git, python3, python3-venv and python3-pip installed successfully."
-    
-    ((current_step++))
-    
-    show_progress $current_step $total_steps "Setting up translation environment"
-    
-    if [ ! -d "$VENV_PATH" ] || [ ! -f "$VENV_PATH/bin/activate" ]; then
-        python3 -m venv --system-site-packages "$VENV_PATH" > /dev/null 2>&1
-        if [ ! -f "$VENV_PATH/bin/activate" ]; then
-            msg_error "Failed to create virtual environment. Please check your Python installation."
-            update_config "virtual_environment" "failed"
-            return 1
-        else
-            update_config "virtual_environment" "created"
-        fi
-    else
-        update_config "virtual_environment" "already_exists"
-    fi
-    
-    source "$VENV_PATH/bin/activate"
-    
-    if pip install --upgrade pip > /dev/null 2>&1; then
-        update_config "pip" "upgraded"
-    else
-        msg_error "Failed to upgrade pip."
-        update_config "pip" "upgrade_failed"
-        return 1
-    fi
-    
-    if pip install --break-system-packages --no-cache-dir googletrans==4.0.0-rc1 > /dev/null 2>&1; then
-        update_config "googletrans" "installed"
-    else
-        msg_error "Failed to install googletrans. Please check your internet connection."
-        update_config "googletrans" "failed"
-        deactivate
-        return 1
-    fi
-    
-    deactivate
-    
-    show_progress $current_step $total_steps "Cloning ProxMenux repository"
-    if ! git clone --depth 1 "$REPO_URL" "$TEMP_DIR" 2>/dev/null; then
-        msg_error "Failed to clone repository from $REPO_URL"
-        exit 1
-    fi
-    msg_ok "Repository cloned successfully."
-    
-    cd "$TEMP_DIR"
-    
-    ((current_step++))
-    
-    show_progress $current_step $total_steps "Copying necessary files"
-    
-    mkdir -p "$BASE_DIR"
-    mkdir -p "$INSTALL_DIR"
-    
-    cp "./json/cache.json" "$CACHE_FILE"
-    msg_ok "Cache file copied with translations."
-    
-    cp "./scripts/utils.sh" "$UTILS_FILE"
-    # Atomic install of /usr/local/bin/menu: stage to .new on the same
-    # filesystem then mv. This protects any reader that happens to open
-    # the file mid-install from seeing a partial/half-written script
-    # (the suspected root cause of the post-1.2.2-update reports:
-    #   "menu: line 138 syntax error near unexpected token `$REMOTE_VERSION`")
-    cp "./menu" "$INSTALL_DIR/${MENU_SCRIPT}.new"
-    mv -f "$INSTALL_DIR/${MENU_SCRIPT}.new" "$INSTALL_DIR/$MENU_SCRIPT"
-    cp "./version.txt" "$LOCAL_VERSION_FILE"
-    cp "./install_proxmenux.sh" "$BASE_DIR/install_proxmenux.sh"
-
-    # Clear any leftover beta_version.txt — see the equivalent block
-    # in the update path above for the rationale (in short: prevents
-    # the menu from offering a phantom "Beta update available" after a
-    # user has switched back to the stable channel).
-    rm -f "$BASE_DIR/beta_version.txt"
-
-    mkdir -p "$BASE_DIR/scripts"
-    cp -r "./scripts/"* "$BASE_DIR/scripts/"
-    chmod -R +x "$BASE_DIR/scripts/"
-    chmod +x "$BASE_DIR/install_proxmenux.sh"
-    msg_ok "Necessary files created."
-
-    chmod +x "$INSTALL_DIR/$MENU_SCRIPT"
-    
-    ((current_step++))
-    show_progress $current_step $total_steps "Installing ProxMenux Monitor"
-    
-    install_proxmenux_monitor
-    local monitor_status=$?
-    
-    if [ $monitor_status -eq 0 ]; then
-        create_monitor_service
-    elif [ $monitor_status -eq 2 ]; then
-        msg_ok "ProxMenux Monitor updated successfully."
-    fi
-    
-    msg_ok "ProxMenux Translation Version installation completed successfully."
-}
-
 show_installation_options() {
     local current_install_type
     current_install_type=$(check_existing_installation)
-    local pve_version
-    pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
-    
-    local menu_title="ProxMenux Installation"
-    local menu_text="Choose installation type:"
-    
-    if [ "$current_install_type" != "none" ]; then
-        case "$current_install_type" in
-            "translation")
-                menu_title="ProxMenux Update - Translation Version Detected"
-                ;;
-            "normal")
-                menu_title="ProxMenux Update - Normal Version Detected"
-                ;;
-            "unknown")
-                menu_title="ProxMenux Update - Existing Installation Detected"
-                ;;
-        esac
-    fi
-    
-    if [[ "$pve_version" -ge 9 ]]; then
-        INSTALL_TYPE=$(whiptail --backtitle "ProxMenux" --title "$menu_title" --menu "\n$menu_text" 14 70 2 \
-            "1" "Normal Version      (English only)" 3>&1 1>&2 2>&3)
-        
-        if [ -z "$INSTALL_TYPE" ]; then
-            show_proxmenux_logo
-            msg_warn "Installation cancelled."
-            exit 1
-        fi
-    else
-        INSTALL_TYPE=$(whiptail --backtitle "ProxMenux" --title "$menu_title" --menu "\n$menu_text" 14 70 2 \
-            "1" "Normal Version      (English only)" \
-            "2" "Translation Version (Multi-language support)" 3>&1 1>&2 2>&3)
-        
-        if [ -z "$INSTALL_TYPE" ]; then
-            show_proxmenux_logo
-            msg_warn "Installation cancelled."
-            exit 1
-        fi
-    fi
-    
-    if [ -z "$INSTALL_TYPE" ]; then
-        show_proxmenux_logo
-        msg_warn "Installation cancelled."
-        exit 1
-    fi
-    
+    # Translation Version is gone — translations now ship as pre-built
+    # JSON files in lang/. There is only one install path, so this
+    # function just shows the confirmation dialog for new installs and
+    # then returns. Existing installs go straight through (they already
+    # consented to update via the menu).
+    INSTALL_TYPE="1"
+
     if [ "$current_install_type" = "none" ]; then
         if ! show_installation_confirmation "$INSTALL_TYPE"; then
             show_proxmenux_logo
@@ -1180,55 +874,22 @@ show_installation_options() {
             exit 1
         fi
     fi
-    
-    if ! handle_installation_change "$current_install_type" "$INSTALL_TYPE"; then
-        show_proxmenux_logo
-        msg_warn "Installation cancelled."
-        exit 1
-    fi
 }
 
 install_proxmenux() {
     if [[ "${UPDATE_MODE:-0}" == "1" ]]; then
         # Update path: the user already accepted "Update now?" in the
-        # menu. We skip the install-type chooser (their choice is
-        # preserved — Translation installs leave /opt/googletrans-env
-        # behind, Normal installs don't) and label the run as an
-        # "Update" instead of an "Install" so the operator can tell
-        # which flow they're in. The continuous hand-off back to the
-        # new menu at the end of this function (exec, see below)
-        # closes the entire class of bugs of shape
-        #   "menu: line N syntax error" post-update
-        # because no shell ever returns to a half-written
+        # menu. Hand off to the freshly-installed menu binary at the end
+        # (exec, see below) so no shell ever returns to a half-written
         # /usr/local/bin/menu — the new copy is the only thing parsed.
-        if [[ -d "$VENV_PATH" && -f "$VENV_PATH/bin/activate" ]]; then
-            show_proxmenux_logo
-            msg_title "Updating ProxMenux - Translation Version"
-            install_translation_version
-        else
-            show_proxmenux_logo
-            msg_title "Updating ProxMenux - Normal Version"
-            install_normal_version
-        fi
+        show_proxmenux_logo
+        msg_title "Updating ProxMenux"
+        install_normal_version
     else
         show_installation_options
-
-        case "$INSTALL_TYPE" in
-            "1")
-                show_proxmenux_logo
-                msg_title "Installing ProxMenux - Normal Version"
-                install_normal_version
-                ;;
-            "2")
-                show_proxmenux_logo
-                msg_title "Installing ProxMenux - Translation Version"
-                install_translation_version
-                ;;
-            *)
-                msg_error "Invalid option selected."
-                exit 1
-                ;;
-        esac
+        show_proxmenux_logo
+        msg_title "Installing ProxMenux"
+        install_normal_version
     fi
 
     if [[ -f "$UTILS_FILE" ]]; then

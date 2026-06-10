@@ -868,6 +868,13 @@ TEMPLATES = {
         'group': 'services',
         'default_enabled': True,
     },
+    'system_restore_completed': {
+        'title': '{hostname}: Host restore finished',
+        'body': 'Post-restore tasks completed in background.\n\nGuests applied: {guests}\nBind-mount stubs: {stubs}\nStale node dirs removed: {stale_nodes}\nComponents reinstalled: {components}\nDuration: {duration}\n\nThe node is now fully ready to use.',
+        'label': 'Host restore completed',
+        'group': 'services',
+        'default_enabled': True,
+    },
     'system_problem': {
         'title': '{hostname}: System problem detected',
         'body': 'A system-level problem has been detected.\nReason: {reason}',
@@ -1604,6 +1611,7 @@ EVENT_EMOJI = {
     'system_startup':       '\U0001F680',         # rocket (startup)
     'system_shutdown':      '\u23FB\uFE0F',       # power symbol (Unicode)
     'system_reboot':        '\U0001F504',
+    'system_restore_completed': '✅',          # check mark
     'system_problem':       '\u26A0\uFE0F',
     'service_fail':         '\u274C',
     'oom_kill':             '\U0001F4A3',         # bomb

@@ -38,15 +38,10 @@ LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 INSTALL_DIR="/usr/local/bin"
 BASE_DIR="/usr/local/share/proxmenux"
 CONFIG_FILE="$BASE_DIR/config.json"
-CACHE_FILE="$BASE_DIR/cache.json"
+LANG_DIR="$BASE_DIR/lang"
 LOCAL_VERSION_FILE="$BASE_DIR/version.txt"
 MENU_SCRIPT="menu"
-VENV_PATH="/opt/googletrans-env"
 COMPONENTS_STATUS_FILE="$BASE_DIR/components_status.json"
-
-
-# Translation context
-TRANSLATION_CONTEXT="Context: Technical message for Proxmox and IT. Translate:"
 
 # Color and style definitions
 NEON_PURPLE_BLUE="\033[38;5;99m"
@@ -216,9 +211,10 @@ msg_error() {
 # Initialize cache
 initialize_cache() {
     if [[ "$LANGUAGE" != "en" ]]; then
-        if [ ! -f "$CACHE_FILE" ]; then
-            mkdir -p "$(dirname "$CACHE_FILE")"
-            echo "{}" > "$CACHE_FILE"
+        mkdir -p "$LANG_DIR"
+        local lang_file="$LANG_DIR/${LANGUAGE}.json"
+        if [ ! -f "$lang_file" ]; then
+            echo "{}" > "$lang_file"
         fi
     fi
 }
@@ -241,78 +237,37 @@ load_language() {
 
 
 translate() {
+    # Pre-generated lookup ONLY. Translations live in
+    #   $LANG_DIR/<dest>.json
+    # built by .github/scripts/build_translation_cache.py during CI on
+    # every push that touches scripts/. There is intentionally no live
+    # fallback: removing the runtime googletrans dependency lets us
+    # ship a smaller AppImage, skip /opt/googletrans-env, and stop
+    # leaking translation traffic from the host at runtime.
+    #
+    # Behavior:
+    #   - dest == "en"  → echo the original text
+    #   - lookup hit    → echo the translation
+    #   - lookup miss   → echo the original text (English fallback)
     local text="$1"
     local dest_lang="$LANGUAGE"
-
 
     if [ "$dest_lang" = "en" ]; then
         echo "$text"
         return
     fi
 
-    if [ ! -s "$CACHE_FILE" ] || ! jq -e . "$CACHE_FILE" > /dev/null 2>&1; then
-        echo "{}" > "$CACHE_FILE"
-    fi
-
-    local cached_translation=$(jq -r --arg text "$text" --arg lang "$dest_lang" '.[$text][$lang] // .[$text]["notranslate"] // empty' "$CACHE_FILE")
-    if [ -n "$cached_translation" ]; then
-        echo "$cached_translation"
-        return
-    fi
-
-    if [ ! -d "$VENV_PATH" ]; then
-        echo "$text"
-        return
-    fi
-
-    source "$VENV_PATH/bin/activate"
-    local translated
-    translated=$(python3 -c "
-from googletrans import Translator
-import sys, json, re
-
-def translate_text(text, dest_lang, context):
-    translator = Translator()
-    try:
-        full_text = context + ' ' + text
-        result = translator.translate(full_text, dest=dest_lang).text
-        translated = re.sub(r'^.*?(Translate:|Traducir:|Traduire:|Übersetzen:|Tradurre:|Traduzir:|翻译:|翻訳:)', '', result, flags=re.IGNORECASE | re.DOTALL).strip()
-        translated = re.sub(r'^.*?(Context:|Contexto:|Contexte:|Kontext:|Contesto:|上下文：|コンテキスト：).*?:', '', translated, flags=re.IGNORECASE | re.DOTALL).strip()
-        print(json.dumps({'success': True, 'text': translated}))
-    except Exception as e:
-        print(json.dumps({'success': False, 'error': str(e)}))
-
-translate_text(
-    json.loads(sys.argv[1]),
-    sys.argv[2],
-    json.loads(sys.argv[3])
-)
-" "$(jq -Rn --arg t "$text" '$t')" "$dest_lang" "$(jq -Rn --arg ctx "$TRANSLATION_CONTEXT" '$ctx')")
-    deactivate
-
-    local translation_result=$(echo "$translated" | jq -r '.')
-    local success=$(echo "$translation_result" | jq -r '.success')
-    
-    if [ "$success" = "true" ]; then
-        translated=$(echo "$translation_result" | jq -r '.text')
-        
-        # Additional cleaning step
-        translated=$(echo "$translated" | sed -E 's/^(Context:|Contexto:|Contexte:|Kontext:|Contesto:|上下文：|コンテキスト：).*?(Translate:|Traducir:|Traduire:|Übersetzen:|Tradurre:|Traduzir:|翻译:|翻訳:)//gI' | sed 's/^ *//; s/ *$//')
-        
-        # Only cache if the language is not English
-        if [ "$dest_lang" != "en" ]; then
-            local temp_cache=$(mktemp)
-            jq --arg text "$text" --arg lang "$dest_lang" --arg translated "$translated" '
-                if .[$text] == null then .[$text] = {} else . end |
-                .[$text][$lang] = $translated
-            ' "$CACHE_FILE" > "$temp_cache" && mv "$temp_cache" "$CACHE_FILE"
+    local lang_file="$LANG_DIR/${dest_lang}.json"
+    if [ -s "$lang_file" ] && command -v jq >/dev/null 2>&1; then
+        local cached
+        cached=$(jq -r --arg text "$text" '.[$text] // empty' "$lang_file" 2>/dev/null)
+        if [ -n "$cached" ]; then
+            echo "$cached"
+            return
         fi
-        
-        echo "$translated"
-    else
-        local error=$(echo "$translation_result" | jq -r '.error')
-        echo "$text"
     fi
+
+    echo "$text"
 }
 
 

@@ -367,6 +367,46 @@ if command -v jq >/dev/null 2>&1 && [[ -f "$COMPONENTS_STATUS" ]]; then
     done
 fi
 
+POSTBOOT_END_EPOCH=$(date +%s)
+POSTBOOT_DURATION=$((POSTBOOT_END_EPOCH - $(stat -c %Y "$LOG_FILE")))
+POSTBOOT_DURATION_FMT=$(printf '%dm%02ds' $((POSTBOOT_DURATION / 60)) $((POSTBOOT_DURATION % 60)))
+
+# ── Notify ProxMenux Monitor that we're done ───────────────────
+# Routes through the user's configured channels (Telegram, Discord,
+# ntfy, etc.). Localhost-only endpoint, no auth needed. We try
+# briefly — if the Monitor isn't running, just log and move on.
+COMPONENTS_REINSTALLED_CSV=""
+if command -v jq >/dev/null 2>&1 && [[ -f "$COMPONENTS_STATUS" ]]; then
+    COMPONENTS_REINSTALLED_CSV=$(
+        for entry in "${COMPONENT_INSTALLERS[@]}"; do
+            comp="${entry%%:*}"
+            s=$(jq -r ".${comp}.status // \"\"" "$COMPONENTS_STATUS" 2>/dev/null)
+            [[ "$s" == "installed" ]] && printf '%s,' "$comp"
+        done | sed 's/,$//'
+    )
+    [[ -z "$COMPONENTS_REINSTALLED_CSV" ]] && COMPONENTS_REINSTALLED_CSV="none"
+fi
+
+if command -v curl >/dev/null 2>&1; then
+    PAYLOAD=$(printf '{"hostname":"%s","guests":"%s","stubs":"%s","stale_nodes":"%s","components":"%s","duration":"%s"}' \
+        "$(hostname)" \
+        "${copied_guests:-0}" \
+        "${stub_created:-0}" \
+        "${removed_nodes:-0}" \
+        "${COMPONENTS_REINSTALLED_CSV:-none}" \
+        "$POSTBOOT_DURATION_FMT")
+    NOTIFY_HTTP=$(curl -s -o /dev/null -w '%{http_code}' \
+        -X POST "http://127.0.0.1:8008/api/internal/restore-event" \
+        -H "Content-Type: application/json" \
+        -d "$PAYLOAD" \
+        --max-time 5 2>/dev/null || echo "000")
+    if [[ "$NOTIFY_HTTP" == "200" ]]; then
+        echo "Notification sent (HTTP 200)"
+    else
+        echo "Notification skipped (Monitor not reachable or disabled — HTTP $NOTIFY_HTTP)"
+    fi
+fi
+
 echo ""
-echo "=== Apply finished at $(date -Iseconds) ==="
+echo "=== Apply finished at $(date -Iseconds) — total ${POSTBOOT_DURATION_FMT} ==="
 echo "Log: $LOG_FILE"
