@@ -4189,7 +4189,6 @@
   "These are the changes that will be made": "Queste sono le modifiche che verranno apportate",
   "These interface configurations will be removed": "Queste configurazioni dell'interfaccia verranno rimosse",
   "These paths will not be restored live and will be extracted for manual recovery.": "Questi percorsi non verranno ripristinati in tempo reale e verranno estratti per il ripristino manuale.",
-  "These were marked manual on the source host but apt-cache cannot resolve them now (typo, removed pkg, third-party repo not configured yet).": "Questi erano contrassegnati come manuali sull'host di origine ma apt-cache non può risolverli ora (errore di battitura, pkg rimosso, repository di terze parti non ancora configurato).",
   "This CIFS share is mounted with restrictive permissions.": "Questa condivisione CIFS è montata con autorizzazioni restrittive.",
   "This GPU is considered incompatible with GPU passthrough to a VM in ProxMenux.": "Questa GPU è considerata incompatibile con il passthrough GPU a una VM in ProxMenux.",
   "This NFS share is fully restricted — even the host root cannot write to it.": "Questa condivisione NFS è completamente limitata: anche l'host root non può scrivervi.",
