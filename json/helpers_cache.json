@@ -2165,6 +2165,40 @@
     "os": "debian"
   },
   {
+    "name": "BookOrbit",
+    "slug": "bookorbit",
+    "desc": "Self-hosted digital library and reading platform for ebooks, PDFs, audiobooks, and comics with metadata enrichment and Kobo/KOReader sync.",
+    "script": "ct/bookorbit.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/bookorbit.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/bookorbit.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Open http://YOUR_IP:3000 and finish the initial setup using SETUP_BOOTSTRAP_TOKEN. The token is shown at the end of /root/bookorbit.creds",
+      "Default data path is /opt/bookorbit-data and default books path is /opt/bookorbit-books."
+    ],
+    "warnings": [],
+    "port": 3000,
+    "website": "https://bookorbit.app/",
+    "documentation": "https://bookorbit.app/installation.html",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bookorbit.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "BookStack",
     "slug": "bookstack",
     "desc": "BookStack is a user-friendly documentation platform that offers a simple and intuitive experience. New users should be able to create content with basic word-processing skills. While the platform provides advanced features, they do not interfere with the core simplicity of the user experience.",
