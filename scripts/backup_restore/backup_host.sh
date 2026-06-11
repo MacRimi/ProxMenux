@@ -1793,6 +1793,21 @@ _rs_run_complete_guided() {
         plan_body="\Zb$(translate "Smart restore plan — hardware compatibility check")\ZB"$'\n\n'
         plan_body+="$(translate "The backup metadata was compared against this host. The following items will be SKIPPED to keep the boot safe:")"$'\n\n'
 
+        # Identifier-based skips (ZFS pool GUID, boot EFI UUID, fstab
+        # UUID) ALWAYS fire on a cross-host restore — those identifiers
+        # are unique per disk/pool. Showing them in the dialog is noise
+        # the operator can't act on. We still apply the skips (that's
+        # what protects against, e.g., restoring zpool.cache pointing at
+        # a ghost pool), just without the dialog when only this noise
+        # would be shown. The signal-bearing skips (component drift —
+        # NVIDIA in backup, no NVIDIA card here) still trigger the dialog
+        # so the operator can decide.
+        local -A _IDENTIFIER_PATHS=(
+            ["/etc/zfs/zpool.cache"]=1
+            ["/etc/kernel/proxmox-boot-uuids"]=1
+            ["/etc/fstab"]=1
+        )
+        local dialog_signal=0
         local line key action reason
         for line in "${drift_lines[@]}"; do
             IFS=$'\t' read -r key action reason <<<"$line"
@@ -1802,20 +1817,32 @@ _rs_run_complete_guided() {
                 skip_components+="${cname} "
                 plan_body+="  \Z1•\Zn $(translate "Component:") \Zb${cname}\ZB"$'\n'
                 plan_body+="    ${reason}"$'\n\n'
+                dialog_signal=1
             else
                 skip_paths+="${key}"$'\n'
+                # Identifier-based paths on cross-host: skip silently
+                # (the path goes into RS_SKIP_PATHS but stays out of
+                # the dialog body, and dialog_signal stays 0 if every
+                # skip is of this kind).
+                if [[ "${HB_COMPAT_SAME_HOST:-1}" == "0" ]] \
+                    && [[ -n "${_IDENTIFIER_PATHS[$key]:-}" ]]; then
+                    continue
+                fi
                 plan_body+="  \Z1•\Zn $(translate "Path:") \Zb${key}\ZB"$'\n'
                 plan_body+="    ${reason}"$'\n\n'
+                dialog_signal=1
             fi
         done
 
-        plan_body+="$(translate "PVE will regenerate these files automatically for the current hardware. The rest of the backup will be applied normally.")"$'\n\n'
-        plan_body+="\Zb$(translate "Continue with safe restore?")\ZB"
+        if (( dialog_signal == 1 )); then
+            plan_body+="$(translate "PVE will regenerate these files automatically for the current hardware. The rest of the backup will be applied normally.")"$'\n\n'
+            plan_body+="\Zb$(translate "Continue with safe restore?")\ZB"
 
-        if ! dialog --backtitle "ProxMenux" --colors \
-                --title "$(translate "Restore plan — compatibility check")" \
-                --yesno "$plan_body" 24 90; then
-            return 1
+            if ! dialog --backtitle "ProxMenux" --colors \
+                    --title "$(translate "Restore plan — compatibility check")" \
+                    --yesno "$plan_body" 24 90; then
+                return 1
+            fi
         fi
 
         # Persist for _rs_apply / _rs_collect_pending_paths to honor.
@@ -2286,7 +2313,6 @@ _rs_run_complete_extras() {
             fi
             if (( ${#unknown[@]} > 0 )); then
                 msg_warn "$(translate "Skipped, not in apt cache:") ${unknown[*]:0:6}$([[ ${#unknown[@]} -gt 6 ]] && echo " … (+ $((${#unknown[@]} - 6)) more)")"
-                echo -e "${TAB}${BL}$(translate "These were marked manual on the source host but apt-cache cannot resolve them now (typo, removed pkg, third-party repo not configured yet).")${CL}"
             fi
         fi
     fi

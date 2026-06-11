@@ -1150,12 +1150,28 @@ EOF
 }
 
 apply_nvidia_patch_if_needed() {
-  if ! hybrid_whiptail_yesno "$(translate 'NVIDIA Patch')" \
-    "\n$(translate 'Do you want to apply the optional NVIDIA patch to remove some GPU limitations?')"; then
-    msg_info2 "$(translate 'NVIDIA patch not applied.')"
-    update_component_status "nvidia_driver" "installed" "$CURRENT_DRIVER_VERSION" "gpu" '{"patched":false}'
-    return 0
-  fi
+  # NVIDIA_PATCH_AUTO lets non-interactive callers (the post-restore
+  # auto-reinstall path in particular) skip the yes/no:
+  #   yes → apply the patch silently (the operator decided "true" was
+  #         the recorded state in the backup we just restored from)
+  #   no  → don't apply, mark as not patched (recorded state was false)
+  #   unset → ask, as before (interactive use from the menu)
+  case "${NVIDIA_PATCH_AUTO:-}" in
+    yes) : ;;
+    no)
+      msg_info2 "$(translate 'NVIDIA patch not applied.')"
+      update_component_status "nvidia_driver" "installed" "$CURRENT_DRIVER_VERSION" "gpu" '{"patched":false}'
+      return 0
+      ;;
+    *)
+      if ! hybrid_whiptail_yesno "$(translate 'NVIDIA Patch')" \
+        "\n$(translate 'Do you want to apply the optional NVIDIA patch to remove some GPU limitations?')"; then
+        msg_info2 "$(translate 'NVIDIA patch not applied.')"
+        update_component_status "nvidia_driver" "installed" "$CURRENT_DRIVER_VERSION" "gpu" '{"patched":false}'
+        return 0
+      fi
+      ;;
+  esac
 
   msg_info "$(translate 'Cloning and applying NVIDIA patch (keylase/nvidia-patch)...')"
   ensure_workdir
@@ -1593,9 +1609,10 @@ auto_reinstall_from_state() {
     return 1
   fi
 
-  local recorded_status recorded_version
-  recorded_status=$(jq -r '.nvidia_driver.status // ""'  "$COMPONENTS_STATUS_FILE" 2>/dev/null)
-  recorded_version=$(jq -r '.nvidia_driver.version // ""' "$COMPONENTS_STATUS_FILE" 2>/dev/null)
+  local recorded_status recorded_version recorded_patched
+  recorded_status=$(jq -r '.nvidia_driver.status // ""'    "$COMPONENTS_STATUS_FILE" 2>/dev/null)
+  recorded_version=$(jq -r '.nvidia_driver.version // ""'  "$COMPONENTS_STATUS_FILE" 2>/dev/null)
+  recorded_patched=$(jq -r '.nvidia_driver.patched // false' "$COMPONENTS_STATUS_FILE" 2>/dev/null)
 
   if [[ "$recorded_status" != "installed" ]]; then
     echo "nvidia_driver not marked installed in state ($recorded_status) — nothing to do" | tee -a "$LOG_FILE"
@@ -1605,7 +1622,7 @@ auto_reinstall_from_state() {
     echo "nvidia_driver marked installed but no version recorded — aborting" | tee -a "$LOG_FILE"
     return 1
   fi
-  echo "Recorded driver: $recorded_version" >>"$LOG_FILE"
+  echo "Recorded driver: $recorded_version (patched=$recorded_patched)" >>"$LOG_FILE"
 
   detect_nvidia_gpus
   if ! $NVIDIA_GPU_PRESENT; then
@@ -1646,10 +1663,21 @@ auto_reinstall_from_state() {
   fi
   install_udev_rules_and_persistenced >>"$LOG_FILE" 2>&1
 
-  # Record success — overwrites whatever the restore put there
-  # (same version key, fresh timestamp).
-  if declare -F update_component_status >/dev/null 2>&1; then
-    update_component_status "nvidia_driver" "installed" "$DRIVER_VERSION" "gpu" '{"patched":false}' >>"$LOG_FILE" 2>&1
+  # If the backup said the driver was patched, re-apply the keylase
+  # patch in non-interactive mode (NVIDIA_PATCH_AUTO=yes bypasses the
+  # yes/no prompt and goes straight to clone+apply). The patch helper
+  # writes its own update_component_status with {"patched":true} on
+  # success, so we don't overwrite it below. If the backup said the
+  # driver was NOT patched, write {"patched":false} explicitly so the
+  # operator's recorded preference doesn't silently flip.
+  CURRENT_DRIVER_VERSION="$DRIVER_VERSION"
+  if [[ "$recorded_patched" == "true" ]]; then
+    echo "Recorded state had patched=true — re-applying NVIDIA patch..." | tee -a "$LOG_FILE"
+    NVIDIA_PATCH_AUTO=yes apply_nvidia_patch_if_needed >>"$LOG_FILE" 2>&1 || true
+  else
+    if declare -F update_component_status >/dev/null 2>&1; then
+      update_component_status "nvidia_driver" "installed" "$DRIVER_VERSION" "gpu" '{"patched":false}' >>"$LOG_FILE" 2>&1
+    fi
   fi
 
   echo "✓ NVIDIA driver $DRIVER_VERSION reinstalled" | tee -a "$LOG_FILE"
