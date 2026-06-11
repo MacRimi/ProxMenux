@@ -1431,11 +1431,8 @@ _rs_show_plan_summary() {
     local staging_root="$1"
     local meta="$staging_root/metadata"
 
-    # dialog --colors only fires inside --msgbox / --yesno / --infobox, not
-    # --textbox, so we build the body as a string. Color codes match the
-    # complete-restore confirm dialog for visual consistency. Leading blank
-    # line matches the convention used in info-style dialogs (compat report,
-    # etc.) — keeps the title from feeling glued to the first text line.
+    # dialog --colors needs --msgbox/--yesno/--infobox (not --textbox),
+    # so we build the body as a string.
     local body
     body=$'\n'"\Zb═══ $(translate "Restore plan summary") ═══\ZB"$'\n\n'
 
@@ -1793,15 +1790,9 @@ _rs_run_complete_guided() {
         plan_body="\Zb$(translate "Smart restore plan — hardware compatibility check")\ZB"$'\n\n'
         plan_body+="$(translate "The backup metadata was compared against this host. The following items will be SKIPPED to keep the boot safe:")"$'\n\n'
 
-        # Identifier-based skips (ZFS pool GUID, boot EFI UUID, fstab
-        # UUID) ALWAYS fire on a cross-host restore — those identifiers
-        # are unique per disk/pool. Showing them in the dialog is noise
-        # the operator can't act on. We still apply the skips (that's
-        # what protects against, e.g., restoring zpool.cache pointing at
-        # a ghost pool), just without the dialog when only this noise
-        # would be shown. The signal-bearing skips (component drift —
-        # NVIDIA in backup, no NVIDIA card here) still trigger the dialog
-        # so the operator can decide.
+        # Identifier-based skips (ZFS pool GUID, boot EFI UUID, fstab UUID)
+        # always fire on cross-host restores. The skip itself still applies
+        # — only the dialog is suppressed when nothing else is signal-bearing.
         local -A _IDENTIFIER_PATHS=(
             ["/etc/zfs/zpool.cache"]=1
             ["/etc/kernel/proxmox-boot-uuids"]=1
@@ -1820,10 +1811,6 @@ _rs_run_complete_guided() {
                 dialog_signal=1
             else
                 skip_paths+="${key}"$'\n'
-                # Identifier-based paths on cross-host: skip silently
-                # (the path goes into RS_SKIP_PATHS but stays out of
-                # the dialog body, and dialog_signal stays 0 if every
-                # skip is of this kind).
                 if [[ "${HB_COMPAT_SAME_HOST:-1}" == "0" ]] \
                     && [[ -n "${_IDENTIFIER_PATHS[$key]:-}" ]]; then
                     continue
@@ -2252,12 +2239,8 @@ _rs_run_complete_extras() {
         rm -f "$cur_pkgs_file"
         if [[ ${#missing[@]} -gt 0 ]]; then
             echo
-            # Pre-filter to packages apt actually knows about — otherwise a
-            # single typo or repo-renamed pkg in packages.manual.list (e.g.
-            # `lifnet-subnet-perl` from a hand-typo'd apt-mark) makes
-            # `apt-get install` exit with E_UNRESOLVABLE and the entire
-            # batch is skipped. Do this BEFORE the "installing N packages"
-            # message so the count is honest about what we'll actually try.
+            # Split into apt-known vs unknown so the install count
+            # announced below matches what apt-get will actually attempt.
             local -a installable=() unknown=()
             local pkg
             for pkg in "${missing[@]}"; do
@@ -2269,9 +2252,6 @@ _rs_run_complete_extras() {
             done
 
             if (( ${#installable[@]} > 0 )); then
-                # Preview so the operator can see (and ^C if surprised by)
-                # what's about to land. First six is enough — anyone needing
-                # the full list goes to the apt log we write below.
                 local _preview="${installable[*]:0:6}"
                 (( ${#installable[@]} > 6 )) && _preview+=" … (+ $((${#installable[@]} - 6)) more)"
                 echo -e "${TAB}${BGN}$(translate "Packages from backup to install:")${CL} ${BL}${_preview}${CL}"
@@ -2285,20 +2265,10 @@ _rs_run_complete_extras() {
                 msg_ok "$(translate "apt cache refreshed.")"
 
                 msg_info "$(translate "Installing") ${#installable[@]} $(translate "packages (this may take a few minutes)...")"
-                # Silent install — full output goes to $apt_log so the
-                # spinner keeps turning and the operator sees ongoing
-                # activity. Without this redirect, dpkg's "Setting up..."
-                # spew would buffer and dump at the very end after a long
-                # silent stall, looking like a hang followed by a wall of
-                # text appearing from nowhere.
-                # DEBIAN_FRONTEND=noninteractive + --force-conf prevents
-                # apt from blocking on `*** log2ram.conf (Y/I/N/O/D/Z) ?`
-                # type prompts (which would leave the package in
-                # half-installed `iU` state and ultimately produce the
-                # same boot-hang problem we're trying to FIX with this
-                # restore). Confnew/confold both work; we pick confold
-                # so the keepers from the BACKUP's restored configs win,
-                # matching what the operator implicitly asked for.
+                # Full output to $apt_log so the spinner keeps turning
+                # instead of stalling silently then dumping at the end.
+                # --force-confold keeps the restored configs over any
+                # ucf prompts that would otherwise block dpkg.
                 DEBIAN_FRONTEND=noninteractive \
                     apt-get install -y \
                         -o Dpkg::Options::="--force-confdef" \

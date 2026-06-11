@@ -228,12 +228,11 @@ ConditionPathExists=/var/lib/proxmenux/cluster-apply-pending
 [Service]
 Type=oneshot
 ExecStart=/usr/local/share/proxmenux/scripts/backup_restore/apply_cluster_postboot.sh
-# 15-min cap to fit update-initramfs -u -k all (5-10 min for
-# 3 kernels) + update-grub (~30s) on top of the (fast) cluster
-# config apply. The unit runs AFTER pve-cluster is up so the
-# user is already at the login prompt and using the system —
-# this just chugs in the background.
-TimeoutStartSec=900
+# Cap sized for the worst case: update-initramfs across all
+# kernels + update-grub + cluster apply + component auto-reinstall
+# (NVIDIA driver download + kernel-module build is the long pole).
+# Service runs after pve-cluster is up, so this is purely background.
+TimeoutStartSec=3600
 
 [Install]
 WantedBy=multi-user.target

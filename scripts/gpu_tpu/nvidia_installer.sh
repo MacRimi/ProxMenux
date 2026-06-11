@@ -1150,12 +1150,8 @@ EOF
 }
 
 apply_nvidia_patch_if_needed() {
-  # NVIDIA_PATCH_AUTO lets non-interactive callers (the post-restore
-  # auto-reinstall path in particular) skip the yes/no:
-  #   yes → apply the patch silently (the operator decided "true" was
-  #         the recorded state in the backup we just restored from)
-  #   no  → don't apply, mark as not patched (recorded state was false)
-  #   unset → ask, as before (interactive use from the menu)
+  # NVIDIA_PATCH_AUTO=yes|no skips the yes/no prompt for non-interactive
+  # callers; unset preserves the interactive menu behavior.
   case "${NVIDIA_PATCH_AUTO:-}" in
     yes) : ;;
     no)
@@ -1663,13 +1659,8 @@ auto_reinstall_from_state() {
   fi
   install_udev_rules_and_persistenced >>"$LOG_FILE" 2>&1
 
-  # If the backup said the driver was patched, re-apply the keylase
-  # patch in non-interactive mode (NVIDIA_PATCH_AUTO=yes bypasses the
-  # yes/no prompt and goes straight to clone+apply). The patch helper
-  # writes its own update_component_status with {"patched":true} on
-  # success, so we don't overwrite it below. If the backup said the
-  # driver was NOT patched, write {"patched":false} explicitly so the
-  # operator's recorded preference doesn't silently flip.
+  # Preserve the recorded patched state across the reinstall. The patch
+  # helper writes its own update_component_status on success.
   CURRENT_DRIVER_VERSION="$DRIVER_VERSION"
   if [[ "$recorded_patched" == "true" ]]; then
     echo "Recorded state had patched=true — re-applying NVIDIA patch..." | tee -a "$LOG_FILE"
