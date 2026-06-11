@@ -1278,6 +1278,23 @@ _rs_apply() {
         dst="/$rel"
         [[ -e "$src" ]] || { ((skipped++)); continue; }
 
+        # Smart-restore hardware-drift skip list (populated by
+        # _rs_run_complete_guided when hb_assess_hardware_drift flags
+        # paths that would break on this host's hardware). Each path
+        # in $RS_SKIP_PATHS is one absolute path per line. Matching is
+        # exact-or-descendant so "/etc/zfs/zpool.cache" listed in the
+        # skip set covers itself when rel == "etc/zfs/zpool.cache".
+        if [[ -n "${RS_SKIP_PATHS:-}" ]]; then
+            local _abs="/$rel" _skip=""
+            while IFS= read -r _skip; do
+                [[ -z "$_skip" ]] && continue
+                if [[ "$_abs" == "$_skip" || "$_abs" == "$_skip"/* ]]; then
+                    ((skipped++))
+                    continue 2
+                fi
+            done <<<"$RS_SKIP_PATHS"
+        fi
+
         # Never restore cluster virtual filesystem data live.
         # Extract it for manual recovery in maintenance mode.
         # Path note: this used to live under /root/proxmenux-recovery/,
@@ -1589,6 +1606,19 @@ _rs_collect_pending_paths() {
                 ;;
         esac
         [[ -z "$rel" || -n "${seen[$rel]}" ]] && continue
+
+        # Drop hardware-drift skips (see RS_SKIP_PATHS comment in _rs_apply).
+        if [[ -n "${RS_SKIP_PATHS:-}" ]]; then
+            local _abs="/$rel" _skip="" _drop=0
+            while IFS= read -r _skip; do
+                [[ -z "$_skip" ]] && continue
+                if [[ "$_abs" == "$_skip" || "$_abs" == "$_skip"/* ]]; then
+                    _drop=1; break
+                fi
+            done <<<"$RS_SKIP_PATHS"
+            (( _drop )) && continue
+        fi
+
         seen["$rel"]=1
         out+=("$rel")
     done
@@ -1744,6 +1774,55 @@ _rs_run_complete_guided() {
     local staging_root="$1"
     local -a all_paths=()
     hb_load_restore_paths "$staging_root" all_paths
+
+    # ── Smart restore plan ──────────────────────────────────
+    # Compare the backup metadata against the live host and surface
+    # anything that would be unsafe to restore as-is (ZFS pool GUID
+    # changed, fstab UUIDs gone, NVIDIA driver state for a host with
+    # no NVIDIA card, ...). Only opens an extra dialog when there's
+    # actually drift — same-hardware/same-host restores skip it.
+    export RS_SKIP_PATHS=""
+    local -a drift_lines=()
+    mapfile -t drift_lines < <(hb_assess_hardware_drift "$staging_root" 2>/dev/null)
+    if (( ${#drift_lines[@]} > 0 )); then
+        local skip_paths=""
+        local skip_components=""
+        local plan_body
+        plan_body="\Zb$(translate "Smart restore plan — hardware compatibility check")\ZB"$'\n\n'
+        plan_body+="$(translate "The backup metadata was compared against this host. The following items will be SKIPPED to keep the boot safe:")"$'\n\n'
+
+        local line key action reason
+        for line in "${drift_lines[@]}"; do
+            IFS=$'\t' read -r key action reason <<<"$line"
+            [[ "$action" != "skip" ]] && continue
+            if [[ "$key" == component:* ]]; then
+                local cname="${key#component:}"
+                skip_components+="${cname} "
+                plan_body+="  \Z1•\Zn $(translate "Component:") \Zb${cname}\ZB"$'\n'
+                plan_body+="    ${reason}"$'\n\n'
+            else
+                skip_paths+="${key}"$'\n'
+                plan_body+="  \Z1•\Zn $(translate "Path:") \Zb${key}\ZB"$'\n'
+                plan_body+="    ${reason}"$'\n\n'
+            fi
+        done
+
+        plan_body+="$(translate "PVE will regenerate these files automatically for the current hardware. The rest of the backup will be applied normally.")"$'\n\n'
+        plan_body+="\Zb$(translate "Continue with safe restore?")\ZB"
+
+        if ! dialog --backtitle "ProxMenux" --colors \
+                --title "$(translate "Restore plan — compatibility check")" \
+                --yesno "$plan_body" 24 90; then
+            return 1
+        fi
+
+        # Persist for _rs_apply / _rs_collect_pending_paths to honor.
+        # We only store paths (not component:* entries) — component
+        # auto-reinstall already self-skips when the GPU/TPU isn't on
+        # this host, so we just surfaced it in the dialog for clarity.
+        RS_SKIP_PATHS="${skip_paths%$'\n'}"
+        export RS_SKIP_PATHS
+    fi
 
     # Build the rich confirmation body. Replaces the previous 4-strategy
     # menu — by design a Proxmox host restore always requires a reboot

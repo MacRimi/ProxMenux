@@ -103,7 +103,10 @@ hb_default_profile_paths() {
 
         # ── Common Proxmox tooling (skipped if not present) ──
         "/etc/systemd/system"  # custom units (including log2ram.service if installed)
+        "/etc/systemd/journald.conf"  # journal retention tuning from post-install
         "/etc/log2ram.conf"
+        "/etc/logrotate.conf"
+        "/etc/logrotate.d"     # post-install drops log2ram + custom logrotate here
         "/etc/lm-sensors"
         "/etc/sensors3.conf"
         "/etc/fail2ban"
@@ -172,6 +175,189 @@ hb_path_warning() {
         etc/network|etc/network/*)
             hb_translate "/etc/network controls active interfaces. Applying may immediately change or drop network connectivity, including active SSH sessions." ;;
     esac
+}
+
+# ==========================================================
+# HARDWARE DRIFT ASSESSMENT (smart restore)
+# ==========================================================
+# Compares the backup metadata captured by hb_prepare_staging
+# against the live target host to detect when applying certain
+# paths would break the boot (orphan ZFS pool GUID, stale fstab
+# UUIDs, ...) or pointlessly reinstall components for hardware
+# that's no longer present (NVIDIA driver on a host with no
+# NVIDIA card).
+#
+# Output format on stdout — one line per assessment, tab-separated:
+#
+#   PATH_OR_KEY \t ACTION \t REASON
+#
+# Where ACTION is one of:
+#   skip → the restore flow should EXCLUDE this from apply
+#   warn → restore but surface the warning in the dialog
+#   ok   → no drift detected (omitted from output)
+#
+# Callers consume this to build the "Restore plan" dialog and to
+# filter the hot/pending path lists. The function never modifies
+# state, never prompts — pure analysis.
+
+# Read the UUIDs referenced by a fstab file. Skips comments and
+# `proc`/`none`/`tmpfs` non-block entries.
+_hb_fstab_uuids() {
+    local fstab="$1"
+    [[ -f "$fstab" ]] || return 0
+    awk '
+        /^[[:space:]]*#/ { next }
+        /^[[:space:]]*$/ { next }
+        {
+            src = $1
+            if (src ~ /^UUID=/) {
+                sub(/^UUID=/, "", src)
+                print src
+            } else if (src ~ /^PARTUUID=/) {
+                sub(/^PARTUUID=/, "", src)
+                print src
+            } else if (src ~ /^\/dev\//) {
+                print src
+            }
+        }
+    ' "$fstab"
+}
+
+# Build a set of live block-device UUIDs. Returns one UUID per line.
+_hb_live_uuids() {
+    command -v blkid >/dev/null 2>&1 || return 0
+    blkid -s UUID -o value 2>/dev/null
+}
+
+# Build a name→guid map of the live ZFS pools.
+_hb_live_zpool_guids() {
+    command -v zpool >/dev/null 2>&1 || return 0
+    zpool list -H -o name,guid 2>/dev/null
+}
+
+hb_assess_hardware_drift() {
+    local staging_root="$1"
+    local meta="$staging_root/metadata"
+    local rootfs="$staging_root/rootfs"
+
+    # ── ZFS pool GUID drift ──────────────────────────────
+    # If the backup had ZFS pools, compare each (name, guid) pair
+    # against what's on this host. A pool with the same NAME but a
+    # different GUID is the "fresh PVE install with same pool name"
+    # case — restoring /etc/zfs/zpool.cache would point ZFS at a
+    # ghost pool and drop boot to emergency.
+    if [[ -f "$meta/zpool.guids" ]] && [[ -s "$meta/zpool.guids" ]]; then
+        local bk_name bk_guid live_map
+        live_map=$(_hb_live_zpool_guids)
+        local pool_mismatch="" pool_missing=""
+        while IFS=$'\t ' read -r bk_name bk_guid; do
+            [[ -z "$bk_name" ]] && continue
+            local live_guid
+            live_guid=$(awk -v n="$bk_name" '$1==n {print $2; exit}' <<<"$live_map")
+            if [[ -z "$live_guid" ]]; then
+                pool_missing+="$bk_name "
+            elif [[ "$live_guid" != "$bk_guid" ]]; then
+                pool_mismatch+="$bk_name(${bk_guid:0:8}…→${live_guid:0:8}…) "
+            fi
+        done < "$meta/zpool.guids"
+        if [[ -n "$pool_missing" ]]; then
+            printf '%s\t%s\t%s\n' "/etc/zfs/zpool.cache" "skip" \
+                "$(hb_translate "Backup pools not present on this host:") ${pool_missing% }"
+        elif [[ -n "$pool_mismatch" ]]; then
+            printf '%s\t%s\t%s\n' "/etc/zfs/zpool.cache" "skip" \
+                "$(hb_translate "Pool name matches but GUID differs (fresh ZFS install):") ${pool_mismatch% }"
+        fi
+    fi
+
+    # ── Boot partition UUID drift ────────────────────────
+    # /etc/kernel/proxmox-boot-uuids lists the EFI vfat UUIDs that
+    # proxmox-boot-tool replicates the bootloader onto. If those
+    # UUIDs don't exist on this host, applying the file makes
+    # subsequent `proxmox-boot-tool refresh` fail.
+    local boot_uuid_file="$rootfs/etc/kernel/proxmox-boot-uuids"
+    if [[ -f "$boot_uuid_file" ]] && [[ -s "$boot_uuid_file" ]]; then
+        local live_uuids
+        live_uuids=$(_hb_live_uuids)
+        local missing_boot="" u
+        while IFS= read -r u; do
+            u="${u// /}"
+            [[ -z "$u" || "$u" == "#"* ]] && continue
+            if ! grep -Fxq "$u" <<<"$live_uuids"; then
+                missing_boot+="$u "
+            fi
+        done < "$boot_uuid_file"
+        if [[ -n "$missing_boot" ]]; then
+            printf '%s\t%s\t%s\n' "/etc/kernel/proxmox-boot-uuids" "skip" \
+                "$(hb_translate "Boot partition UUIDs from backup not found on this host:") ${missing_boot% }"
+        fi
+    fi
+
+    # ── fstab UUID drift ─────────────────────────────────
+    # Skip ONLY if at least one UUID/dev in the backup's fstab can't
+    # be resolved on the live host. A clean PVE+ZFS root install
+    # typically has just `proc /proc proc defaults 0 0`, no UUIDs —
+    # that yields zero referenced UUIDs and the check is a no-op.
+    local fstab="$rootfs/etc/fstab"
+    if [[ -f "$fstab" ]]; then
+        local live_uuids; live_uuids=$(_hb_live_uuids)
+        local missing_fstab="" cnt=0 u
+        while IFS= read -r u; do
+            ((cnt++))
+            if [[ "$u" == /dev/* ]]; then
+                [[ -b "$u" ]] || missing_fstab+="$u "
+            else
+                grep -Fxq "$u" <<<"$live_uuids" || missing_fstab+="$u "
+            fi
+        done < <(_hb_fstab_uuids "$fstab")
+        if (( cnt > 0 )) && [[ -n "$missing_fstab" ]]; then
+            printf '%s\t%s\t%s\n' "/etc/fstab" "skip" \
+                "$(hb_translate "fstab references UUIDs/devices not present on this host:") ${missing_fstab% }"
+        fi
+    fi
+
+    # ── Component reinstall drift (GPU / TPU presence) ───
+    # components_status.json declares what proxmenux installed on
+    # the source (nvidia_driver, amdgpu_top, intel_gpu_tools,
+    # coral_driver). If the target hardware no longer has the
+    # corresponding device, the post-boot dispatcher would try to
+    # reinstall a driver for a card that isn't there. The installer
+    # itself short-circuits in that case (detect_*_gpus), but
+    # surfacing this in the dialog is cleaner than letting the user
+    # discover it from the postboot log.
+    local comp_file="$rootfs/usr/local/share/proxmenux/components_status.json"
+    if [[ -f "$comp_file" ]] && command -v jq >/dev/null 2>&1 && command -v lspci >/dev/null 2>&1; then
+        local live_pci; live_pci=$(lspci -nn 2>/dev/null)
+        local installed_components
+        installed_components=$(jq -r 'to_entries[] | select(.value.status=="installed") | .key' "$comp_file" 2>/dev/null)
+        local comp
+        while IFS= read -r comp; do
+            [[ -z "$comp" ]] && continue
+            local pattern=""
+            case "$comp" in
+                nvidia_driver)    pattern='NVIDIA' ;;
+                amdgpu_top)       pattern='Advanced Micro Devices.*\[AMD/ATI\]' ;;
+                intel_gpu_tools)  pattern='Intel.*(VGA|Display|Graphics)' ;;
+                coral_driver)     pattern='Global Unichip|Google.*Edge TPU' ;;
+                *) continue ;;
+            esac
+            if ! grep -qiE "$pattern" <<<"$live_pci"; then
+                printf 'component:%s\t%s\t%s\n' "$comp" "skip" \
+                    "$(hb_translate "Component was installed on the backup source but no matching hardware was found on this host.")"
+            fi
+        done <<<"$installed_components"
+    fi
+}
+
+# Returns 0 (true) if hb_assess_hardware_drift produced any skip
+# entries — i.e. there is something for the operator to look at in
+# the smart-restore dialog. Returns 1 otherwise. Used by the
+# restore flow to decide whether to show the smart-restore dialog
+# at all (no drift → skip the extra prompt).
+hb_has_hardware_drift() {
+    local staging_root="$1"
+    local out
+    out=$(hb_assess_hardware_drift "$staging_root" 2>/dev/null | grep $'\tskip\t' || true)
+    [[ -n "$out" ]]
 }
 
 # ==========================================================
@@ -404,6 +590,20 @@ hb_prepare_staging() {
     command -v qm       >/dev/null 2>&1 && qm list       > "$meta/qm-list.txt"    2>&1 || true
     command -v pct      >/dev/null 2>&1 && pct list      > "$meta/pct-list.txt"   2>&1 || true
     command -v zpool    >/dev/null 2>&1 && zpool status  > "$meta/zpool.txt"      2>&1 || true
+
+    # Extra hardware fingerprints used by hb_compat_check on restore to
+    # detect drift that would make some paths unsafe to apply:
+    #   * zpool.guids → pool name + GUID. Same pool name on a fresh
+    #     install gets a NEW GUID; restoring /etc/zfs/zpool.cache with
+    #     the old GUID then drops the boot into emergency mode.
+    #   * blkid.txt   → all block-device UUIDs, used to verify
+    #     /etc/fstab and /etc/kernel/proxmox-boot-uuids still resolve.
+    #   * lspci.txt   → presence test for GPUs / TPUs / NICs referenced
+    #     by components_status.json (so we don't try to reinstall an
+    #     NVIDIA driver on a host with no NVIDIA card any more).
+    command -v zpool >/dev/null 2>&1 && zpool list -H -o name,guid > "$meta/zpool.guids" 2>&1 || true
+    command -v blkid >/dev/null 2>&1 && blkid -s UUID -s TYPE     > "$meta/blkid.txt"    2>&1 || true
+    command -v lspci >/dev/null 2>&1 && lspci -nn                  > "$meta/lspci.txt"    2>&1 || true
 
     # Package inventory — captures what's installed on the source
     # host so the restore flow can offer to reinstall missing user
