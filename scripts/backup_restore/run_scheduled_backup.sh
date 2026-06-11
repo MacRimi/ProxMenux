@@ -110,6 +110,8 @@ _sb_run_borg() {
   # call is also `>/dev/null 2>&1`).
   export BORG_PASSPHRASE="$passphrase"
   [[ -n "${BORG_RSH:-}" ]] && export BORG_RSH
+  export BORG_RELOCATED_REPO_ACCESS_IS_OK=yes
+  export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK=yes
 
   if ! hb_borg_init_if_needed "$borg_bin" "$repo" "${BORG_ENCRYPT_MODE:-none}" >/dev/null 2>&1; then
     return 1

@@ -830,7 +830,7 @@ _rs_extract_borg() {
     local -a archive_lines=()
     mapfile -t archive_lines < <(
         "$borg_bin" list "$repo" \
-            --format '{start:%Y-%m-%d %H:%M:%S}|{archive}{NL}' 2>/dev/null \
+            --format '{start:%Y-%m-%d %H:%M:%S}|{archive}{NL}' </dev/null 2>/dev/null \
             | sort -r
     )
     if [[ ${#archive_lines[@]} -eq 0 ]]; then
@@ -1433,9 +1433,11 @@ _rs_show_plan_summary() {
 
     # dialog --colors only fires inside --msgbox / --yesno / --infobox, not
     # --textbox, so we build the body as a string. Color codes match the
-    # complete-restore confirm dialog for visual consistency.
+    # complete-restore confirm dialog for visual consistency. Leading blank
+    # line matches the convention used in info-style dialogs (compat report,
+    # etc.) — keeps the title from feeling glued to the first text line.
     local body
-    body="\Zb═══ $(translate "Restore plan summary") ═══\ZB"$'\n\n'
+    body=$'\n'"\Zb═══ $(translate "Restore plan summary") ═══\ZB"$'\n\n'
 
     if [[ -f "$meta/run_info.env" ]]; then
         body+="\Zb$(translate "Backup origin metadata:")\ZB"$'\n'
@@ -2223,17 +2225,12 @@ _rs_run_complete_extras() {
         rm -f "$cur_pkgs_file"
         if [[ ${#missing[@]} -gt 0 ]]; then
             echo
-            msg_info "$(translate "Installing") ${#missing[@]} $(translate "user-installed packages from backup...")"
-            stop_spinner
-            apt-get update -qq 2>&1 | sed -e 's/^/    /' | tail -2
-
-            # Pre-filter to packages apt actually knows about —
-            # otherwise a single typo or repo-renamed pkg in
-            # packages.manual.list (e.g. `lifnet-subnet-perl` from
-            # a hand-typo'd apt-mark) makes `apt-get install` exit
-            # with E_UNRESOLVABLE and the entire batch is skipped.
-            # We do this in two passes: first split into installable
-            # vs unknown, then run install on the installable set.
+            # Pre-filter to packages apt actually knows about — otherwise a
+            # single typo or repo-renamed pkg in packages.manual.list (e.g.
+            # `lifnet-subnet-perl` from a hand-typo'd apt-mark) makes
+            # `apt-get install` exit with E_UNRESOLVABLE and the entire
+            # batch is skipped. Do this BEFORE the "installing N packages"
+            # message so the count is honest about what we'll actually try.
             local -a installable=() unknown=()
             local pkg
             for pkg in "${missing[@]}"; do
@@ -2245,6 +2242,28 @@ _rs_run_complete_extras() {
             done
 
             if (( ${#installable[@]} > 0 )); then
+                # Preview so the operator can see (and ^C if surprised by)
+                # what's about to land. First six is enough — anyone needing
+                # the full list goes to the apt log we write below.
+                local _preview="${installable[*]:0:6}"
+                (( ${#installable[@]} > 6 )) && _preview+=" … (+ $((${#installable[@]} - 6)) more)"
+                echo -e "${TAB}${BGN}$(translate "Packages from backup to install:")${CL} ${BL}${_preview}${CL}"
+                echo
+
+                local apt_log="/var/log/proxmenux/restore-apt-$(date +%Y%m%d_%H%M%S).log"
+                mkdir -p "$(dirname "$apt_log")" 2>/dev/null
+
+                msg_info "$(translate "Refreshing apt cache...")"
+                apt-get update -qq >"$apt_log" 2>&1 || true
+                msg_ok "$(translate "apt cache refreshed.")"
+
+                msg_info "$(translate "Installing") ${#installable[@]} $(translate "packages (this may take a few minutes)...")"
+                # Silent install — full output goes to $apt_log so the
+                # spinner keeps turning and the operator sees ongoing
+                # activity. Without this redirect, dpkg's "Setting up..."
+                # spew would buffer and dump at the very end after a long
+                # silent stall, looking like a hang followed by a wall of
+                # text appearing from nowhere.
                 # DEBIAN_FRONTEND=noninteractive + --force-conf prevents
                 # apt from blocking on `*** log2ram.conf (Y/I/N/O/D/Z) ?`
                 # type prompts (which would leave the package in
@@ -2257,15 +2276,12 @@ _rs_run_complete_extras() {
                     apt-get install -y \
                         -o Dpkg::Options::="--force-confdef" \
                         -o Dpkg::Options::="--force-confold" \
-                        "${installable[@]}" 2>&1 | sed -e 's/^/    /' | tail -10
-                # PIPESTATUS[0] is the real exit code from apt-get;
-                # without this, the pipeline always reports tee's
-                # 0 and we'd lie about success.
-                local apt_rc=${PIPESTATUS[0]}
+                        "${installable[@]}" >>"$apt_log" 2>&1
+                local apt_rc=$?
                 if (( apt_rc == 0 )); then
-                    msg_ok "$(translate "Installed:") ${#installable[@]} $(translate "packages")"
+                    msg_ok "$(translate "Installed:") ${#installable[@]} $(translate "packages.")"
                 else
-                    msg_warn "$(translate "apt-get exited") ${apt_rc} — $(translate "some packages may have failed; see output above")"
+                    msg_warn "$(translate "apt-get exited") ${apt_rc} — $(translate "see log:") $apt_log"
                 fi
             fi
             if (( ${#unknown[@]} > 0 )); then

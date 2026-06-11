@@ -1165,11 +1165,17 @@ hb_ensure_borg() {
 
 hb_borg_init_if_needed() {
     local borg_bin="$1" repo="$2" encrypt_mode="$3"
-    "$borg_bin" list "$repo" >/dev/null 2>&1 && return 0
-    if "$borg_bin" help repo-create >/dev/null 2>&1; then
-        "$borg_bin" repo-create -e "$encrypt_mode" "$repo"
+    # Borg reads passphrase prompts from /dev/tty even when stdout/stderr
+    # are redirected — so `>/dev/null 2>&1` is not enough to silence it.
+    # Close stdin (`</dev/null`) so any prompt fails fast instead of
+    # hijacking the operator's input under the active dialog window.
+    if "$borg_bin" list "$repo" </dev/null >/dev/null 2>&1; then
+        return 0
+    fi
+    if "$borg_bin" help repo-create </dev/null >/dev/null 2>&1; then
+        "$borg_bin" repo-create -e "$encrypt_mode" "$repo" </dev/null
     else
-        "$borg_bin" init --encryption="$encrypt_mode" "$repo"
+        "$borg_bin" init --encryption="$encrypt_mode" "$repo" </dev/null
     fi
 }
 
@@ -1187,10 +1193,16 @@ hb_prepare_borg_passphrase() {
             return 0
         fi
         # Saved target, no pw yet — ask once and persist next to its config.
+        # The title is explicit about which passphrase: operators were typing
+        # their SSH/server password here, which silently persisted as the
+        # repokey passphrase and made every subsequent `borg list` fail with
+        # "passphrase ... is incorrect", dropping them back to the menu with
+        # only a one-second red flash for feedback.
         local sel_pass
-        sel_pass=$(dialog --backtitle "ProxMenux" --insecure --passwordbox \
-            "$(hb_translate "Passphrase for:") $HB_BORG_SELECTED_NAME" \
-            "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+        sel_pass=$(dialog --backtitle "ProxMenux" --colors --insecure \
+            --title "$(hb_translate "Borg repository passphrase")" \
+            --passwordbox "\n$(hb_translate "Enter the BORG REPOKEY passphrase for target:") \Zb${HB_BORG_SELECTED_NAME}\ZB" \
+            10 78 "" 3>&1 1>&2 2>&3) || return 1
         mkdir -p "$HB_STATE_DIR"
         printf '%s' "$sel_pass" > "$sel_pass_file"
         chmod 600 "$sel_pass_file"
@@ -1790,6 +1802,17 @@ hb_select_borg_repo() {
 
     if [[ "$choice" == "$add_idx" ]]; then
         hb_configure_borg_manual _borg_repo_ref || return 1
+        # The new target is saved under HB_BORG_LAST_SAVED_NAME. Promote
+        # it to SELECTED so hb_prepare_borg_passphrase enters the saved-
+        # target branch (one passphrase prompt, then persist), instead
+        # of the brand-new branch (the "¿Cifrar?" yes/no flow that also
+        # races with borg picking up the repokey prompt on the TTY).
+        if [[ -n "${HB_BORG_LAST_SAVED_NAME:-}" ]]; then
+            HB_BORG_SELECTED_NAME="$HB_BORG_LAST_SAVED_NAME"
+            HB_BORG_SELECTED_PASS=""
+        fi
+        export BORG_RELOCATED_REPO_ACCESS_IS_OK=yes
+        export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK=yes
         return 0
     fi
 
@@ -1825,6 +1848,13 @@ hb_select_borg_repo() {
     else
         unset BORG_RSH
     fi
+    # Saved URL may differ from the repo's recorded location by one
+    # trailing slash (e.g. ssh://host//path vs ssh://host/path). Borg
+    # prompts y/N to confirm — without a TTY the answer is empty and
+    # borg aborts with a red one-liner, dropping the user back to the
+    # menu. Trust the saved target.
+    export BORG_RELOCATED_REPO_ACCESS_IS_OK=yes
+    export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK=yes
     HB_BORG_SELECTED_NAME="${HB_BORG_NAMES[$sel]}"
     HB_BORG_SELECTED_PASS="${HB_BORG_PASSES[$sel]}"
 }
@@ -2567,8 +2597,11 @@ hb_show_compat_report() {
 
     local tmpfile
     tmpfile=$(mktemp)
+    # Leading blank line before the summary — dialog's --textbox draws the
+    # title flush to the top border, and stacking the summary directly under
+    # it looks cramped. One empty line gives the eye a break before the data.
     {
-        printf '%s\n' "$summary"
+        printf '\n%s\n' "$summary"
         printf '%s\n\n' "────────────────────────────────────────────────────────────"
         printf '%s\n' "$report"
     } > "$tmpfile"
