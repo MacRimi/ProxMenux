@@ -1113,11 +1113,17 @@ hb_ask_pbs_encryption() {
 # BORG
 # ==========================================================
 hb_ensure_borg() {
-    # Resolution order:
-    #   1. system borg                                  (apt-installed)
-    #   2. /usr/local/share/proxmenux/borg              (state-dir cache)
-    #   3. Monitor AppImage's bundled borg              (offline, post-install)
-    #   4. GitHub download → state-dir                  (first run, online)
+    # Borg is intentionally NOT a base dep of install_proxmenux.sh —
+    # operators who only ever use PBS or local archives shouldn't carry
+    # ~3 MB of dead weight. The canonical source is the Monitor AppImage
+    # bundle, which is built with a SHA-verified borg-linux64 binary
+    # alongside the dashboard. Resolution order:
+    #
+    #   1. system borg                              (already apt-installed)
+    #   2. /usr/local/share/proxmenux/borg          (state-dir cache from prior run)
+    #   3. Monitor AppImage's bundled borg          (canonical — offline-safe)
+    #   4. GitHub download → state-dir              (last resort for hosts
+    #                                                without the new AppImage)
     command -v borg >/dev/null 2>&1 && { echo "borg"; return 0; }
 
     local appimage_cache="$HB_STATE_DIR/borg"
@@ -1271,16 +1277,126 @@ hb_borg_generate_and_install_key() {
     # for the test target on CT 112.
     authorized_line="command=\"/usr/bin/borg serve --restrict-to-path ${rpath}\",restrict ${pubkey}"
 
+    if [[ "$mode" == "generate-pct" ]]; then
+        # Authorize via `pct exec` from a PVE host. This is the right
+        # fix for the very common "Borg server is an LXC on another
+        # Proxmox node" setup, where the CT typically ships with
+        # PermitRootLogin prohibit-password and SSH password auth into
+        # the CT itself fails. We bypass SSH-to-the-CT entirely and
+        # rely on root@PVE-host being able to run `pct exec <vmid> --`
+        # — that already runs as root inside the CT, so writing into
+        # ~borg/.ssh/authorized_keys is trivial.
+
+        # Silently make sure sshpass is around (same pattern as
+        # generate-auto). If it can't be installed, fall back to
+        # generate-manual.
+        if ! command -v sshpass >/dev/null 2>&1; then
+            if command -v apt-get >/dev/null 2>&1; then
+                DEBIAN_FRONTEND=noninteractive apt-get install -y -qq sshpass >/dev/null 2>&1 || true
+            fi
+            if ! command -v sshpass >/dev/null 2>&1; then
+                hb_borg_generate_and_install_key "$borg_user" "$host" "$rpath" "generate-manual" "$_out_var"
+                return $?
+            fi
+        fi
+
+        local pve_host pve_user pve_pass vmid
+        pve_host=$(dialog --backtitle "ProxMenux" \
+            --title "$(hb_translate "PVE host (where the Borg LXC lives)")" \
+            --inputbox "$(hb_translate "IP or hostname of the PVE node hosting the Borg server LXC:")" \
+            "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "" 3>&1 1>&2 2>&3) || return 1
+        pve_user=$(dialog --backtitle "ProxMenux" \
+            --inputbox "$(hb_translate "Root user on the PVE host (default 'root'):")" \
+            "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "root" 3>&1 1>&2 2>&3) || return 1
+        pve_pass=$(dialog --backtitle "ProxMenux" --insecure --passwordbox \
+            "$(hb_translate "Password for") ${pve_user}@${pve_host}:" \
+            "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+        vmid=$(dialog --backtitle "ProxMenux" \
+            --inputbox "$(hb_translate "VMID of the Borg server LXC on") ${pve_host}:" \
+            "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "" 3>&1 1>&2 2>&3) || return 1
+        if [[ -z "$pve_host" || -z "$vmid" || -z "$pve_pass" ]]; then
+            dialog --backtitle "ProxMenux" --msgbox \
+                "$(hb_translate "PVE host, VMID and password are all required for this mode.")" 8 60
+            return 1
+        fi
+
+        # Build the pct-exec script. The authorized_line is fed through
+        # stdin so quotes in `command="..."` are preserved verbatim
+        # without shell re-expansion. `getent passwd` resolves whatever
+        # the borg user's actual home is, regardless of name.
+        local pct_cmd
+        pct_cmd="set -e
+            pct exec ${vmid} -- bash -c '
+                set -e
+                target_dir=\$(getent passwd ${borg_user} | cut -d: -f6)/.ssh
+                mkdir -p \"\$target_dir\"
+                chmod 700 \"\$target_dir\"
+                chown ${borg_user}: \"\$target_dir\"
+                line=\$(cat)
+                touch \"\$target_dir/authorized_keys\"
+                grep -Fxq \"\$line\" \"\$target_dir/authorized_keys\" 2>/dev/null || \
+                    echo \"\$line\" >> \"\$target_dir/authorized_keys\"
+                chown ${borg_user}: \"\$target_dir/authorized_keys\"
+                chmod 600 \"\$target_dir/authorized_keys\"
+            '
+            echo OK"
+
+        local push_rc
+        SSHPASS="$pve_pass" sshpass -e ssh \
+            -o StrictHostKeyChecking=accept-new \
+            -o PreferredAuthentications=password -o PubkeyAuthentication=no \
+            -o ConnectTimeout=15 \
+            "$pve_user@$pve_host" "$pct_cmd" <<<"$authorized_line" >/tmp/proxmenux-borg-pctpush.log 2>&1
+        push_rc=$?
+
+        if (( push_rc != 0 )); then
+            dialog --backtitle "ProxMenux" --colors \
+                --title "$(hb_translate "pct exec authorization failed")" \
+                --msgbox "$(hb_translate "Could not authorize the key via 'pct exec' on") \Z1${pve_host}\Zn (VMID ${vmid}).\n\n$(hb_translate "See") /tmp/proxmenux-borg-pctpush.log\n\n$(hb_translate "Falling back to manual paste mode.")" 14 78
+            hb_borg_generate_and_install_key "$borg_user" "$host" "$rpath" "generate-manual" "$_out_var"
+            return $?
+        fi
+
+        dialog --backtitle "ProxMenux" --colors \
+            --title "$(hb_translate "Authorized")" \
+            --msgbox "$(hb_translate "The new SSH key was pushed to the LXC via 'pct exec' on") \Z4${pve_host}\Zn (VMID ${vmid})." 10 78
+        _out_ref="$key_file"
+        return 0
+    fi
+
     if [[ "$mode" == "generate-manual" ]]; then
-        local msg
-        msg="$(hb_translate "On the Borg server, append the following line to:")"$'\n'
-        msg+="  ~${borg_user}/.ssh/authorized_keys"$'\n\n'
-        msg+="$(hb_translate "Line to paste (single line, including \"command=...\" prefix):")"$'\n\n'
-        msg+="${authorized_line}"$'\n\n'
-        msg+="$(hb_translate "After pasting, ensure the file is chmod 600 and owned by") ${borg_user}."
-        dialog --backtitle "ProxMenux" \
-            --title "$(hb_translate "Authorize this key on the server")" \
-            --msgbox "$msg" 22 100
+        # Print the line on the raw terminal (NOT inside dialog --msgbox)
+        # so the operator can select & copy it with their terminal client.
+        # ncurses captures all input inside dialog/whiptail, which means
+        # "click + drag to select" silently does nothing — a real footgun
+        # for a paste-this-string-elsewhere flow. Also dump the line to a
+        # file so anyone who can't paste (noVNC console, intermediate
+        # firewall, ...) can `scp` or `cat` it from this host directly.
+        local out_file="/tmp/proxmenux-borg-authkey.txt"
+        printf '%s\n' "$authorized_line" > "$out_file"
+        chmod 600 "$out_file"
+
+        clear
+        type_text "$(hb_translate "Authorize this key on the server")" 2>/dev/null || \
+            echo "  ── $(hb_translate "Authorize this key on the server") ──"
+        echo ""
+        echo -e "${TAB}${BGN}$(hb_translate "On the Borg server, append the following line to:")${CL}"
+        echo -e "${TAB}  ${BL}~${borg_user}/.ssh/authorized_keys${CL}"
+        echo ""
+        echo -e "${TAB}${BGN}$(hb_translate "Line to paste (single line, including \"command=...\" prefix):")${CL}"
+        echo ""
+        # Print the line on its own block so it's easy to triple-click
+        # / shift-click to select in any terminal client. No wrapping —
+        # we use plain echo, not the indented format above.
+        echo "${authorized_line}"
+        echo ""
+        echo -e "${TAB}${BGN}$(hb_translate "Or, if your terminal can't select text, copy it from:")${CL}"
+        echo -e "${TAB}  ${BL}${out_file}${CL}    $(hb_translate "(e.g.") scp root@$(hostname -I 2>/dev/null | awk '{print $1}'):${out_file} .${CL}$(hb_translate ")")"
+        echo ""
+        echo -e "${TAB}${YWB}$(hb_translate "After pasting on the server, ensure the file is chmod 600 and owned by") ${borg_user}.${CL}"
+        echo ""
+        msg_success "$(hb_translate "Press Enter when the line has been pasted on the server...")"
+        read -r
         _out_ref="$key_file"
         return 0
     fi
@@ -1289,17 +1405,17 @@ hb_borg_generate_and_install_key() {
     # for whichever account can write to ~borg/.ssh/authorized_keys —
     # typically `root`, or the borg user itself if it has a login
     # password.
+    # Silent best-effort install — same pattern as hb_ensure_pv. Asking
+    # the operator "install sshpass?" is backwards: we already have apt,
+    # they shouldn't have to confirm a 40 KB install for us. If apt
+    # can't reach the repo, we silently fall back to manual mode.
     if ! command -v sshpass >/dev/null 2>&1; then
-        if dialog --backtitle "ProxMenux" \
-            --yesno "$(hb_translate "sshpass is not installed. Install it now from apt? (Required to push the new SSH key in this mode.)")" \
-            "$HB_UI_YESNO_H" "$HB_UI_YESNO_W"; then
-            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq sshpass >/dev/null 2>&1 || {
-                dialog --backtitle "ProxMenux" \
-                    --msgbox "$(hb_translate "apt-get install sshpass failed. Falling back to manual mode.")" 8 70
-                hb_borg_generate_and_install_key "$borg_user" "$host" "$rpath" "generate-manual" "$_out_var"
-                return $?
-            }
-        else
+        if command -v apt-get >/dev/null 2>&1; then
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq sshpass >/dev/null 2>&1 || true
+        fi
+        if ! command -v sshpass >/dev/null 2>&1; then
+            dialog --backtitle "ProxMenux" --colors \
+                --msgbox "$(hb_translate "Could not install sshpass automatically (no internet?). Falling back to manual paste mode — you'll see the line to copy onto the server next.")" 11 78
             hb_borg_generate_and_install_key "$borg_user" "$host" "$rpath" "generate-manual" "$_out_var"
             return $?
         fi
@@ -1312,6 +1428,47 @@ hb_borg_generate_and_install_key() {
     admin_pass=$(dialog --backtitle "ProxMenux" --insecure --passwordbox \
         "$(hb_translate "Password for") ${admin_user}@${host}:" \
         "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+
+    # Quick probe: many Debian-based servers (including LXC templates)
+    # ship with `PermitRootLogin prohibit-password`, which rejects the
+    # sshpass push BEFORE the password is even checked. Detect that here
+    # and fall back to manual mode with a clear explanation instead of
+    # the generic "could not push the key" error.
+    local _probe
+    _probe=$(SSHPASS="$admin_pass" sshpass -e ssh \
+        -o StrictHostKeyChecking=accept-new \
+        -o PreferredAuthentications=password -o PubkeyAuthentication=no \
+        -o NumberOfPasswordPrompts=1 -o ConnectTimeout=10 \
+        "$admin_user@$host" "true" 2>&1) || true
+    if echo "$_probe" | grep -qiE "permission denied[[:space:]]*\(publickey"; then
+        # SSH password auth refused by the server — common when the Borg
+        # server is a Debian/LXC with PermitRootLogin prohibit-password.
+        # Before falling back to manual paste, offer the pct-exec path,
+        # which is the right automatic alternative for the very common
+        # "Borg server is an LXC on another PVE host" setup.
+        local _alt
+        _alt=$(dialog --backtitle "ProxMenux" --colors \
+            --title "$(hb_translate "SSH password auth refused on server")" \
+            --default-item "pct" \
+            --menu "\n$(hb_translate "The server refused password authentication for") \Z1${admin_user}\Zn $(hb_translate "(common default on Debian/LXC: PermitRootLogin prohibit-password).")"$'\n\n'"$(hb_translate "Pick an alternative way to authorize the new key:")" \
+            "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
+            "pct"    "$(hb_translate "Authorize via 'pct exec' (Borg server is an LXC on a PVE host I can SSH into)")" \
+            "manual" "$(hb_translate "Show me the line to paste manually on the server")" \
+            "cancel" "$(hb_translate "Cancel this setup")" \
+            3>&1 1>&2 2>&3) || return 1
+        case "$_alt" in
+            pct)    hb_borg_generate_and_install_key "$borg_user" "$host" "$rpath" "generate-pct"    "$_out_var"; return $? ;;
+            manual) hb_borg_generate_and_install_key "$borg_user" "$host" "$rpath" "generate-manual" "$_out_var"; return $? ;;
+            *)      return 1 ;;
+        esac
+    fi
+    if echo "$_probe" | grep -qiE "permission denied"; then
+        dialog --backtitle "ProxMenux" --colors \
+            --title "$(hb_translate "SSH login failed")" \
+            --msgbox "$(hb_translate "The server rejected") \Zb${admin_user}\ZB $(hb_translate "with the password you provided.")"$'\n\n'"$(hb_translate "Verify the credentials. Switching to manual paste mode so you can finish the setup without re-typing the password.")" 12 78
+        hb_borg_generate_and_install_key "$borg_user" "$host" "$rpath" "generate-manual" "$_out_var"
+        return $?
+    fi
 
     # Append the authorized line. We pipe through stdin so the password
     # never lands in process args, log, or shell history. -t allocates
@@ -1433,8 +1590,16 @@ hb_configure_borg_manual() {
             ;;
         remote)
             local user host rpath
-            user=$(dialog --backtitle "ProxMenux" --inputbox "$(hb_translate "SSH user:")" \
-                "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "root" 3>&1 1>&2 2>&3) || return 1
+            # Explicit label + default `borg` — this is the user that runs
+            # `borg serve` on the remote host, NOT the admin user we'd log
+            # in as. Calling it just "SSH user" with default root led to
+            # users typing their admin credentials here, which then failed
+            # later when generate-auto looked for ~root/.ssh/ instead of
+            # ~borg/.ssh/ on the server.
+            user=$(dialog --backtitle "ProxMenux" \
+                --title "$(hb_translate "Borg server SSH user")" \
+                --inputbox "$(hb_translate "Username on the Borg server that runs \"borg serve\" (typically \"borg\"). This is NOT the admin/root user of the server — that one is asked later only if you choose \"Generate a new key and authorize it\".")" \
+                12 78 "borg" 3>&1 1>&2 2>&3) || return 1
             host=$(dialog --backtitle "ProxMenux" --inputbox "$(hb_translate "SSH host or IP:")" \
                 "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "" 3>&1 1>&2 2>&3) || return 1
             rpath=$(dialog --backtitle "ProxMenux" \
@@ -1453,29 +1618,79 @@ hb_configure_borg_manual() {
             local key_mode
             key_mode=$(dialog --backtitle "ProxMenux" \
                 --title "$(hb_translate "SSH key strategy")" \
+                --default-item "generate-auto" \
                 --menu "\n$(hb_translate "How do you want to authenticate this backup target?")" \
                 "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
+                "generate-auto"   "$(hb_translate "Generate a new key and authorize it on the server automatically (recommended)")" \
+                "generate-manual" "$(hb_translate "Generate a new key, show me the line to paste manually")" \
                 "existing"        "$(hb_translate "Use an existing SSH private key file on this host")" \
-                "generate-auto"   "$(hb_translate "Generate a new key and authorize it on the server now (one-time password)")" \
-                "generate-manual" "$(hb_translate "Generate a new key, show me the line to paste on the server")" \
                 "none"            "$(hb_translate "No custom key (rely on default SSH config)")" \
                 3>&1 1>&2 2>&3) || return 1
 
             case "$key_mode" in
                 existing)
-                    while :; do
-                        ssh_key=$(dialog --backtitle "ProxMenux" \
-                            --title "$(hb_translate "Select SSH private key file")" \
-                            --fselect "$HOME/.ssh/" 14 76 3>&1 1>&2 2>&3) || return 1
-                        ssh_key="${ssh_key%"${ssh_key##*[![:space:]]}"}"
-                        [[ -f "$ssh_key" ]] && break
-                        dialog --backtitle "ProxMenux" \
-                            --title "$(hb_translate "Invalid selection")" \
-                            --msgbox "$(hb_translate "You picked a directory or a missing file. Select the SSH private key file itself (e.g. ~/.ssh/id_ed25519), not its parent folder.")" \
-                            10 70
+                    # Auto-detect SSH private keys instead of forcing the
+                    # operator through dialog's `--fselect`, which is
+                    # confusing (no extension filter, easy to pick the .pub
+                    # by mistake, hard to navigate paths). Each candidate
+                    # is verified to actually be a parseable private key
+                    # via `ssh-keygen -y -f`.
+                    local -a candidates=()
+                    local _f
+                    for _f in /root/.ssh/* "$HOME/.ssh"/*; do
+                        [[ -f "$_f" ]] || continue
+                        case "$(basename "$_f")" in
+                            *.pub|authorized_keys|known_hosts*|config) continue ;;
+                        esac
+                        if ssh-keygen -y -f "$_f" >/dev/null 2>&1; then
+                            candidates+=("$_f")
+                        fi
                     done
+                    # Dedup (HOME and /root may overlap on root-owned installs).
+                    mapfile -t candidates < <(printf '%s\n' "${candidates[@]}" | sort -u)
+
+                    local -a key_menu=()
+                    local _i=1
+                    for _f in "${candidates[@]}"; do
+                        key_menu+=("$_i" "$_f")
+                        ((_i++))
+                    done
+                    local _browse_idx="$_i"
+                    key_menu+=("$_browse_idx" "$(hb_translate "Browse manually (advanced)...")")
+
+                    local _choice
+                    if (( ${#candidates[@]} == 0 )); then
+                        # Nothing auto-detected → go straight to manual browse.
+                        _choice="$_browse_idx"
+                    else
+                        _choice=$(dialog --backtitle "ProxMenux" \
+                            --title "$(hb_translate "Select SSH private key")" \
+                            --default-item "1" \
+                            --menu "\n$(hb_translate "Pick an SSH private key (auto-detected on this host):")" \
+                            "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${key_menu[@]}" \
+                            3>&1 1>&2 2>&3) || return 1
+                    fi
+
+                    if [[ "$_choice" == "$_browse_idx" ]]; then
+                        # Manual fselect fallback (key in a non-standard path).
+                        while :; do
+                            ssh_key=$(dialog --backtitle "ProxMenux" \
+                                --title "$(hb_translate "Select SSH private key file")" \
+                                --fselect "$HOME/.ssh/" 14 76 3>&1 1>&2 2>&3) || return 1
+                            ssh_key="${ssh_key%"${ssh_key##*[![:space:]]}"}"
+                            if [[ -f "$ssh_key" ]] && ssh-keygen -y -f "$ssh_key" >/dev/null 2>&1; then
+                                break
+                            fi
+                            dialog --backtitle "ProxMenux" \
+                                --title "$(hb_translate "Invalid selection")" \
+                                --msgbox "$(hb_translate "That doesn't look like an SSH private key. Pick the private key file (no .pub extension, parseable by ssh-keygen).")" \
+                                10 72
+                        done
+                    else
+                        ssh_key="${candidates[$((_choice-1))]}"
+                    fi
                     ;;
-                generate-auto|generate-manual)
+                generate-auto|generate-manual|generate-pct)
                     if ! hb_borg_generate_and_install_key "$user" "$host" "$rpath" "$key_mode" ssh_key; then
                         return 1
                     fi
