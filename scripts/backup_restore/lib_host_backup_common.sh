@@ -756,9 +756,18 @@ hb_configure_pbs_manual() {
         "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "" 3>&1 1>&2 2>&3) || return 1
     [[ -z "$datastore" ]] && return 1
 
-    secret=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Add PBS")" \
-        --insecure --passwordbox "$(hb_translate "Password or API token secret:")" \
-        "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+    # Ask for the secret in a loop — an OK click on an empty box used
+    # to persist an empty password file silently, which then made every
+    # subsequent backup fail with an opaque auth error. Cancel still
+    # aborts the whole flow; empty + OK re-prompts.
+    while true; do
+        secret=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Add PBS")" \
+            --insecure --passwordbox "$(hb_translate "Password or API token secret:")" \
+            "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+        [[ -n "$secret" ]] && break
+        dialog --backtitle "ProxMenux" \
+            --msgbox "$(hb_translate "Password cannot be empty.")" 8 50
+    done
 
     repo="${user}@${host}:${datastore}"
     mkdir -p "$HB_STATE_DIR"
@@ -806,10 +815,15 @@ hb_select_pbs_repository() {
         # cross-host restore.
         export HB_PBS_FINGERPRINT="${HB_PBS_FINGERPRINTS[$sel]:-}"
         if [[ -z "$HB_PBS_SECRET" ]]; then
-            HB_PBS_SECRET=$(dialog --backtitle "ProxMenux" --title "PBS" \
-                --insecure --passwordbox \
-                "$(hb_translate "Password for:") $HB_PBS_NAME" \
-                "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+            while true; do
+                HB_PBS_SECRET=$(dialog --backtitle "ProxMenux" --title "PBS" \
+                    --insecure --passwordbox \
+                    "$(hb_translate "Password for:") $HB_PBS_NAME" \
+                    "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+                [[ -n "$HB_PBS_SECRET" ]] && break
+                dialog --backtitle "ProxMenux" \
+                    --msgbox "$(hb_translate "Password cannot be empty.")" 8 50
+            done
             mkdir -p "$HB_STATE_DIR"
             printf '%s' "$HB_PBS_SECRET" > "$HB_STATE_DIR/pbs-pass-${HB_PBS_NAME}.txt"
             chmod 600 "$HB_STATE_DIR/pbs-pass-${HB_PBS_NAME}.txt"
@@ -1061,26 +1075,24 @@ hb_ask_pbs_encryption() {
     # around in xterm-compatible terminals until overwritten).
     printf '\033]0;ProxMenux\007'
 
-    dialog --backtitle "ProxMenux" --title "$(hb_translate "Encryption")" \
-        --yesno "$(hb_translate "Encrypt this backup with a keyfile?")" \
-        "$HB_UI_YESNO_H" "$HB_UI_YESNO_W" || return 0
-
     if [[ -f "$key_file" ]]; then
+        # Already have a keyfile — one confirmation, no double yes/no.
+        dialog --backtitle "ProxMenux" --title "$(hb_translate "Encryption")" \
+            --yesno "$(hb_translate "Encrypt this backup with the existing keyfile?")"$'\n\n'"$(hb_translate "Location:") $key_file" \
+            10 78 || return 0
         export HB_PBS_KEYFILE_OPT="--keyfile $key_file"
         msg_ok "$(hb_translate "Using existing encryption key:") $key_file"
         return 0
     fi
 
-    # No key — create one. We deliberately do NOT prompt for a
-    # passphrase because `proxmox-backup-client key create` does
-    # not accept the passphrase via env var or stdin — it reads it
-    # from a real TTY, which we can't safely provide from a dialog
-    # flow. Instead we generate the keyfile with `--kdf none` (no
-    # passphrase wrapping) and add our own recovery layer on top
-    # via hb_pbs_setup_recovery (see the recovery block above).
-    dialog --backtitle "ProxMenux" --title "$(hb_translate "Create encryption key")" \
-        --yesno "$(hb_translate "Generate a new keyfile?")"$'\n\n'"$(hb_translate "Location:") $key_file"$'\n'"$(hb_translate "Protection: chmod 600 (no passphrase on the keyfile itself)")"$'\n\n'"$(hb_translate "Next step will offer a recovery passphrase so the keyfile can be retrieved from PBS if you lose this host.")" \
-        14 80 || return 0
+    # No key yet — single confirmation merges "encrypt?" + "generate keyfile?"
+    # into one screen. The keyfile is generated with `--kdf none` (no
+    # passphrase on the keyfile itself) because `proxmox-backup-client key
+    # create` doesn't accept the passphrase via env/stdin; the operator
+    # gets a recovery passphrase in the next step instead.
+    dialog --backtitle "ProxMenux" --title "$(hb_translate "Encryption")" \
+        --yesno "$(hb_translate "Encrypt this backup with a keyfile?")"$'\n\n'"$(hb_translate "A new keyfile will be generated automatically.")"$'\n'"$(hb_translate "Location:") $key_file"$'\n'"$(hb_translate "Protection: chmod 600 (no passphrase on the keyfile itself)")"$'\n\n'"$(hb_translate "Next step will offer a recovery passphrase so the keyfile can be retrieved from PBS if you lose this host.")" \
+        16 80 || return 0
 
     msg_info "$(hb_translate "Creating PBS encryption key...")"
     mkdir -p "$HB_STATE_DIR"
@@ -1193,12 +1205,23 @@ hb_prepare_borg_passphrase() {
             BORG_ENCRYPT_MODE="repokey"
             return 0
         fi
-        # Saved target, no pw yet — ask once and persist next to its config.
-        local sel_pass
-        sel_pass=$(dialog --backtitle "ProxMenux" --colors --insecure \
-            --title "$(hb_translate "Borg repository passphrase")" \
-            --passwordbox "\n$(hb_translate "Enter the BORG REPOKEY passphrase for target:") \Zb${HB_BORG_SELECTED_NAME}\ZB" \
-            10 78 "" 3>&1 1>&2 2>&3) || return 1
+        # Saved target, no pw yet — ask + confirm + persist next to its config.
+        # Two prompts on first entry: persisted passphrases are a typo hazard
+        # (a single wrong key locks the operator out of every future restore).
+        local sel_pass sel_pass2
+        while true; do
+            sel_pass=$(dialog --backtitle "ProxMenux" --colors --insecure \
+                --title "$(hb_translate "Borg repository passphrase")" \
+                --passwordbox "\n$(hb_translate "Enter the BORG REPOKEY passphrase for target:") \Zb${HB_BORG_SELECTED_NAME}\ZB" \
+                10 78 "" 3>&1 1>&2 2>&3) || return 1
+            sel_pass2=$(dialog --backtitle "ProxMenux" --colors --insecure \
+                --title "$(hb_translate "Confirm Borg passphrase")" \
+                --passwordbox "\n$(hb_translate "Re-enter the BORG REPOKEY passphrase to confirm:")" \
+                10 78 "" 3>&1 1>&2 2>&3) || return 1
+            [[ "$sel_pass" == "$sel_pass2" ]] && break
+            dialog --backtitle "ProxMenux" \
+                --msgbox "$(hb_translate "Passphrases do not match. Try again.")" 8 60
+        done
         mkdir -p "$HB_STATE_DIR"
         printf '%s' "$sel_pass" > "$sel_pass_file"
         chmod 600 "$sel_pass_file"
@@ -2052,13 +2075,9 @@ hb_prompt_mounted_path() {
                     --msgbox "$(hb_translate "Could not mount") \Z1$s_path\Zn.\n\n${err:-$(hb_translate "See /tmp/proxmenux-mount.log for details.")}" 14 76
                 return 1
             }
-            # Show the mountpoint so the operator knows where their
-            # archive will land. The wizard does print it again under
-            # "Destination:" but the line scrolls past quickly during
-            # staging.
-            dialog --backtitle "ProxMenux" --colors \
-                --title "$(hb_translate "USB disk mounted")" \
-                --msgbox "$(hb_translate "The USB disk has been mounted.")"$'\n\n'"\Zb$(hb_translate "Backup will be saved under:")\ZB"$'\n'"  \Z4${mounted_at}\Zn" 10 78
+            # The wizard prints the destination path right after, so go
+            # straight to the backup flow instead of asking for an extra
+            # confirmation click on a "mounted OK" dialog.
             echo "$mounted_at"
             return 0
             ;;

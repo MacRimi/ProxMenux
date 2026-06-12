@@ -521,10 +521,14 @@ _proxmenux_all_nvidia_in_vfio() {
     (( ${#vfio_nvidia[@]} >= ${#host_nvidia[@]} ))
 }
 
-# Apply or remove the auto-managed nvidia blacklist based on whether
-# every host NVIDIA GPU is in VFIO passthrough. Returns 0 if the
-# blacklist file changed (caller may want to rebuild initramfs).
+# Apply or remove the auto-managed nvidia blacklist + the nvidia-smi
+# udev rule based on whether every host NVIDIA GPU is in VFIO
+# passthrough. Returns 0 if anything changed (caller may want to
+# rebuild initramfs).
 _proxmenux_nvidia_vfio_blacklist_sync() {
+    local nvidia_udev_rule="/etc/udev/rules.d/70-nvidia.rules"
+    local changed=1
+
     if _proxmenux_all_nvidia_in_vfio; then
         if [[ ! -f "$PROXMENUX_NVIDIA_VFIO_BLACKLIST" ]]; then
             cat > "$PROXMENUX_NVIDIA_VFIO_BLACKLIST" <<'EOF'
@@ -537,15 +541,30 @@ blacklist nvidia_drm
 blacklist nvidia_modeset
 blacklist nvidia_uvm
 EOF
-            return 0
+            changed=0
+        fi
+        # nvidia-smi-on-PCI-event udev rule loops infinitely when nvidia
+        # is blacklisted (the RUN+= call fails and re-triggers). Rename
+        # it out of the way; the original is preserved with a .proxmenux-
+        # disabled suffix so it can be restored cleanly.
+        if [[ -f "$nvidia_udev_rule" ]]; then
+            mv "$nvidia_udev_rule" "${nvidia_udev_rule}.proxmenux-disabled" 2>/dev/null
+            udevadm control --reload-rules >/dev/null 2>&1 || true
+            changed=0
         fi
     else
         if [[ -f "$PROXMENUX_NVIDIA_VFIO_BLACKLIST" ]]; then
             rm -f "$PROXMENUX_NVIDIA_VFIO_BLACKLIST"
-            return 0
+            changed=0
+        fi
+        # Some NVIDIA GPU is back on the host — restore the udev rule.
+        if [[ -f "${nvidia_udev_rule}.proxmenux-disabled" ]]; then
+            mv "${nvidia_udev_rule}.proxmenux-disabled" "$nvidia_udev_rule" 2>/dev/null
+            udevadm control --reload-rules >/dev/null 2>&1 || true
+            changed=0
         fi
     fi
-    return 1
+    return $changed
 }
 
 # Returns the BDF of a PCI bridge sharing the IOMMU group of $1, if any.
