@@ -288,6 +288,9 @@ if [[ "$NEEDS_INITRAMFS" == "1" ]] && command -v update-initramfs >/dev/null 2>&
     else
         echo "  ✗ update-initramfs failed (system still boots; re-run manually)"
     fi
+    if command -v proxmox-boot-tool >/dev/null 2>&1; then
+        proxmox-boot-tool refresh 2>&1 | tail -3 || true
+    fi
 else
     echo "Skipping update-initramfs (restore didn't touch modules/initramfs-tools/crypttab)"
 fi

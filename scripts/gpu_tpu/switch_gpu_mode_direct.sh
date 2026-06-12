@@ -1040,6 +1040,7 @@ switch_to_vm_mode() {
   if [[ "$HOST_CONFIG_CHANGED" == "true" ]]; then
     msg_info "$(translate 'Updating initramfs (this may take a minute)...')"
     update-initramfs -u -k all >>"$LOG_FILE" 2>&1
+    proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
     msg_ok "$(translate 'initramfs updated')" | tee -a "$screen_capture"
   fi
 }
@@ -1111,6 +1112,7 @@ switch_to_lxc_mode() {
   if [[ "$HOST_CONFIG_CHANGED" == "true" ]]; then
     msg_info "$(translate 'Updating initramfs (this may take a minute)...')"
     update-initramfs -u -k all >>"$LOG_FILE" 2>&1
+    proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
     msg_ok "$(translate 'initramfs updated')" | tee -a "$screen_capture"
   fi
 }

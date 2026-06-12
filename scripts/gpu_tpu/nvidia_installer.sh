@@ -1070,6 +1070,7 @@ run_nvidia_installer() {
   if [[ "${NOUVEAU_STILL_LOADED:-false}" == "true" ]]; then
     msg_info "$(translate 'Rebuilding initramfs to apply nouveau blacklist before installation...')"
     update-initramfs -u -k all >>"$LOG_FILE" 2>&1 || true
+    proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
     # Try one more time to unload nouveau after initramfs rebuild
     modprobe -r nouveau 2>/dev/null || true
     sleep 1
@@ -1524,6 +1525,7 @@ main() {
 
       msg_info "$(translate 'Updating initramfs for all kernels...')"
       update-initramfs -u -k all >>"$LOG_FILE" 2>&1 || true
+      proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
       msg_ok "$(translate 'initramfs updated.')"
 
       msg_info2 "$(translate 'Checking NVIDIA driver status with nvidia-smi')"
@@ -1566,6 +1568,7 @@ main() {
 
         msg_info "$(translate 'Updating initramfs for all kernels...')"
         update-initramfs -u -k all >>"$LOG_FILE" 2>&1 || true
+        proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
         msg_ok "$(translate 'initramfs updated.')"
 
         restart_prompt
