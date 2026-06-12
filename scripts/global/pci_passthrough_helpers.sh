@@ -479,6 +479,34 @@ _proxmenux_vfio_bind_remove_bdfs() {
     fi
 }
 
+# Returns the BDF of a PCI bridge sharing the IOMMU group of $1, if any.
+# The kernel refuses to bind vfio-pci to root ports, so when a GPU shares
+# its IOMMU group with the upstream root port the VFIO setup silently
+# does nothing — the GPU keeps its native driver and the host can also
+# end up with a stuck boot if other devices behind the bridge were
+# expected to come up under the original driver. Detecting this lets
+# callers warn the operator and bail out before writing host config.
+_proxmenux_vfio_bind_group_bridge() {
+    local target="$1"
+    [[ "$target" != 0000:* ]] && target="0000:${target}"
+    local group_link
+    group_link=$(readlink "/sys/bus/pci/devices/${target}/iommu_group" 2>/dev/null) || return 1
+    local group_num
+    group_num=$(basename "$group_link")
+    local member bdf cls
+    for member in "/sys/kernel/iommu_groups/${group_num}/devices/"*; do
+        bdf=$(basename "$member")
+        [[ "$bdf" == "$target" ]] && continue
+        cls=$(cat "$member/class" 2>/dev/null)
+        # PCI bridge class is 0x0604xx (Normal bridge 0x060400, Subtractive 0x060401).
+        if [[ "$cls" == 0x0604* ]]; then
+            echo "$bdf"
+            return 0
+        fi
+    done
+    return 1
+}
+
 _proxmenux_vfio_bind_purge_vendor() {
     # Removes every BDF from the binder state whose PCI vendor matches $1
     # (hex, e.g. "10de" for NVIDIA, "1002" for AMD, "8086" for Intel).

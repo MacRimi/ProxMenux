@@ -2197,6 +2197,9 @@ _configure_nvidia_kvm_hide() {
 update_initramfs_host() {
     msg_info "$(translate 'Updating initramfs (this may take a minute)...')"
     update-initramfs -u -k all >>"$LOG_FILE" 2>&1
+    # Copy the freshly-built initramfs to the EFI System Partition.
+    # Without this the bootloader keeps using the previous initramfs.
+    proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
     msg_ok "$(translate 'initramfs updated')" | tee -a "$screen_capture"
 }
 
