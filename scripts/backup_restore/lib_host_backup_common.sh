@@ -101,6 +101,9 @@ hb_default_profile_paths() {
         "/etc/cron.deny"
         "/var/spool/cron/crontabs"
 
+        # ── ProxMenux state (source of truth for some host-config) ──
+        "/etc/proxmenux"       # vfio-bind.bdfs state file feeds the per-BDF udev rule
+
         # ── Common Proxmox tooling (skipped if not present) ──
         "/etc/systemd/system"  # custom units (including log2ram.service if installed)
         "/etc/systemd/journald.conf"  # journal retention tuning from post-install
