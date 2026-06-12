@@ -686,7 +686,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -5259,6 +5259,41 @@
     "os": "debian"
   },
   {
+    "name": "Feishin",
+    "slug": "feishin",
+    "desc": "Modern self-hosted music player web client for Navidrome, Jellyfin, and OpenSubsonic-compatible servers.",
+    "script": "ct/feishin.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/feishin.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/feishin.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Feishin is a client only. Configure your music backend URL (SERVER_URL) in /opt/feishin/.env, then restart nginx.",
+      "Default web URL is http://YOUR_IP:9180.",
+      "If you need a subpath deployment, set PUBLIC_PATH in /opt/feishin/.env and restart nginx."
+    ],
+    "warnings": [],
+    "port": 9180,
+    "website": "https://feishin.vercel.app",
+    "documentation": "https://github.com/jeffvli/feishin",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/feishin.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "FHEM",
     "slug": "fhem",
     "desc": "FHEM stands for \"Freundliche Hausautomation und Energie-Messung,\" which translates to \"Friendly Home Automation and Energy Measurement\" in English. The software can interface with a wide range of devices, including lighting systems, thermostats, weather stations, and media devices, among others.",
@@ -5579,6 +5614,39 @@
       "pve"
     ],
     "config_path": "/opt/fladder/assets/config/config.json",
+    "os": "debian"
+  },
+  {
+    "name": "Flame",
+    "slug": "flame",
+    "desc": "Flame is a self-hosted startpage for your server. Easily manage your apps and bookmarks with built-in editors, integrated search, weather widget, and Docker integration.",
+    "script": "ct/flame.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/flame.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/flame.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00010"
+    ],
+    "category_names": [
+      "Dashboards & Frontends"
+    ],
+    "notes": [
+      "Set a password by editing PASSWORD= in /opt/flame/.env and restarting the service."
+    ],
+    "warnings": [],
+    "port": 5005,
+    "website": "https://github.com/pawelmalak/flame",
+    "documentation": "https://github.com/pawelmalak/flame/wiki",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/flame.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -9145,41 +9213,6 @@
       "pve"
     ],
     "config_path": "/opt/kutt/.env",
-    "os": "debian"
-  },
-  {
-    "name": "LabCA",
-    "slug": "labca",
-    "desc": "LabCA is a standalone web GUI for managing ACME certificate authorities like step-ca, providing dashboard, certificate overview, and admin management.",
-    "script": "ct/labca.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/labca.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/labca.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00006"
-    ],
-    "category_names": [
-      "Authentication & Security"
-    ],
-    "notes": [
-      "On first access, you will be prompted to create an admin account and configure the database connection to your step-ca instance."
-    ],
-    "warnings": [
-      "LabCA standalone requires a MySQL-backed step-ca instance to connect to."
-    ],
-    "port": 3000,
-    "website": "https://github.com/hakwerk/labca",
-    "documentation": "https://github.com/hakwerk/labca",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
-    "execute_in": [
-      "lxc"
-    ],
-    "config_path": "/etc/labca/config.json",
     "os": "debian"
   },
   {
@@ -19178,7 +19211,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
