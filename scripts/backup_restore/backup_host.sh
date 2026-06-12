@@ -1390,9 +1390,10 @@ _rs_apply() {
     if [[ -n "$CLUSTER_DATA_EXTRACTED" ]]; then
         export HB_CLUSTER_DATA_EXTRACTED="$CLUSTER_DATA_EXTRACTED"
         _rs_write_cluster_recovery_helper "$CLUSTER_DATA_EXTRACTED"
-        msg_warn "$(translate "Cluster data was extracted for safe manual recovery at:") $CLUSTER_DATA_EXTRACTED"
-        msg_warn "$(translate "Generated helper script:") $CLUSTER_DATA_EXTRACTED/apply-cluster-restore.sh"
-        msg_warn "$(translate "Run it only in a maintenance window.")"
+        msg_info2 "$(translate "Cluster data (/etc/pve, /var/lib/pve-cluster) will be applied automatically at next boot once pve-cluster.service is up.")"
+        msg_info2 "$(translate "A safety copy + manual-apply helper are also available in case you need to re-apply later:")"
+        msg_info2 "  $CLUSTER_DATA_EXTRACTED/apply-cluster-restore.sh"
+        msg_info2 "$(translate "(Optional — only run it during a maintenance window if you need to re-apply the cluster data manually.)")"
     else
         unset HB_CLUSTER_DATA_EXTRACTED
     fi
@@ -1719,6 +1720,15 @@ RESTORE_ID=${restore_id}
 CREATED_AT=${created_at}
 HB_RESTORE_INCLUDE_ZFS=${HB_RESTORE_INCLUDE_ZFS:-0}
 EOF
+    # Persist hardware-drift skips so apply_pending_restore.sh can filter
+    # them at boot. The RS_SKIP_PATHS env var only lives in the restore
+    # menu session; without writing it to disk, paths that would break
+    # the boot (stale EFI UUIDs, foreign zpool.cache, ...) leaked through
+    # to the post-boot apply and ended up corrupting the bootloader.
+    if [[ -n "${RS_SKIP_PATHS:-}" ]]; then
+        printf '%s\n' "$RS_SKIP_PATHS" > "$pending_dir/rs-skip-paths.txt"
+        chmod 600 "$pending_dir/rs-skip-paths.txt"
+    fi
     echo "pending" > "$pending_dir/state"
 
     ln -sfn "$pending_dir" "$pending_base/current"

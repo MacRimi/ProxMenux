@@ -49,6 +49,20 @@ fi
 echo "Pending dir: $PENDING_DIR"
 echo "Apply list:  $APPLY_LIST"
 echo "Include ZFS: $HB_RESTORE_INCLUDE_ZFS"
+
+# Hardware-drift skips persisted by _rs_prepare_pending_restore.
+# Each line is an absolute path; we drop any rel path that matches
+# (exact or descendant) before writing it back to disk. Without this
+# the post-boot apply restored e.g. /etc/kernel/proxmox-boot-uuids
+# from the backup, leaving the new bootloader pointing at a stale
+# EFI UUID.
+RS_SKIP_PATHS=""
+SKIP_PATHS_FILE="$PENDING_DIR/rs-skip-paths.txt"
+if [[ -f "$SKIP_PATHS_FILE" ]]; then
+    RS_SKIP_PATHS=$(cat "$SKIP_PATHS_FILE")
+    echo "Skip paths:  $(wc -l <"$SKIP_PATHS_FILE") entries (drift)"
+fi
+
 echo "running" >"$STATE_FILE"
 
 backup_root="${PRE_BACKUP_BASE}/$(date +%Y%m%d_%H%M%S)-onboot"
@@ -68,6 +82,24 @@ while IFS= read -r rel; do
     if [[ ! -e "$src" ]]; then
         ((skipped++))
         continue
+    fi
+
+    # Hardware-drift skip filter — match exact path or descendant.
+    if [[ -n "$RS_SKIP_PATHS" ]]; then
+        _abs="/$rel"
+        _drop=0
+        while IFS= read -r _skip; do
+            [[ -z "$_skip" ]] && continue
+            if [[ "$_abs" == "$_skip" || "$_abs" == "$_skip"/* ]]; then
+                _drop=1
+                break
+            fi
+        done <<<"$RS_SKIP_PATHS"
+        if (( _drop )); then
+            echo "  drift-skip: $rel"
+            ((skipped++))
+            continue
+        fi
     fi
 
     # Cluster data (/etc/pve, /var/lib/pve-cluster) goes into a
