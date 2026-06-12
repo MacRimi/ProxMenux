@@ -467,8 +467,13 @@ blacklist nouveau
 options nouveau modeset=0
 EOF
 
-  # Attempt to unload nouveau if currently loaded
+  # Attempt to unload nouveau if currently loaded.
+  # Close the spinner from the opening msg_info before going further —
+  # otherwise the second msg_info below leaves the first one spinning
+  # forever (visible on fresh installs where nouveau is loaded; invisible
+  # on reinstalls where this branch is skipped).
   if grep -q "^nouveau " /proc/modules 2>/dev/null; then
+    msg_ok "$(translate 'nouveau driver has been blacklisted.')" | tee -a "$screen_capture"
 
     msg_info "$(translate 'Nouveau module is loaded, attempting to unload...')"
     modprobe -r nouveau 2>/dev/null || true
@@ -1489,10 +1494,6 @@ main() {
       stop_and_disable_nvidia_services
       unload_nvidia_modules
 
-      # No msg_info spinner here — it would clash with wget --show-progress,
-      # which writes its progress bar directly to /dev/tty from inside the
-      # download function. Stderr from the function is allowed through so
-      # warnings/errors reach the user.
       local installer
       installer=$(download_nvidia_installer "$DRIVER_VERSION")
       local download_result=$?
