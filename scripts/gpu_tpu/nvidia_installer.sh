@@ -1625,6 +1625,17 @@ auto_reinstall_from_state() {
     echo "No NVIDIA GPU detected on this host — skipping reinstall" | tee -a "$LOG_FILE"
     return 0
   fi
+  # Skip if the GPU is bound to vfio-pci (reserved for VM passthrough);
+  # installing the host driver would conflict with the passthrough config.
+  local _vfio_dev
+  for _vfio_dev in /sys/bus/pci/devices/*; do
+    [[ "$(cat "$_vfio_dev/vendor" 2>/dev/null)" == "0x10de" ]] || continue
+    if [[ -L "$_vfio_dev/driver" ]] \
+       && [[ "$(basename "$(readlink "$_vfio_dev/driver")")" == "vfio-pci" ]]; then
+      echo "NVIDIA GPU bound to vfio-pci — skipping host driver reinstall" | tee -a "$LOG_FILE"
+      return 0
+    fi
+  done
   detect_driver_status
   if $CURRENT_DRIVER_INSTALLED && [[ "$CURRENT_DRIVER_VERSION" == "$recorded_version" ]]; then
     echo "Driver $recorded_version already installed and matches state — no-op" | tee -a "$LOG_FILE"
