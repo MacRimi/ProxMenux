@@ -84,7 +84,14 @@ while IFS= read -r rel; do
         continue
     fi
 
-    # Hardware-drift skip filter — match exact path or descendant.
+    # Hardware-drift skip filter — three cases:
+    #   1) "$rel" is exactly a skipped path → drop the whole rel
+    #   2) "$rel" is under a skipped path → drop the whole rel
+    #   3) A skipped path is under "$rel" (e.g. rel="etc/kernel" and
+    #      skip="/etc/kernel/proxmox-boot-uuids") → keep applying rel
+    #      but rsync with --exclude for the specific file, and NO
+    #      --delete (so the host's existing file is preserved)
+    RSYNC_EXCLUDES=()
     if [[ -n "$RS_SKIP_PATHS" ]]; then
         _abs="/$rel"
         _drop=0
@@ -93,6 +100,11 @@ while IFS= read -r rel; do
             if [[ "$_abs" == "$_skip" || "$_abs" == "$_skip"/* ]]; then
                 _drop=1
                 break
+            fi
+            # Case 3: skip is under our rel — build a relative exclude
+            if [[ "$_skip" == "$_abs"/* ]]; then
+                _rel_skip="${_skip#"$_abs"/}"
+                RSYNC_EXCLUDES+=(--exclude="$_rel_skip")
             fi
         done <<<"$RS_SKIP_PATHS"
         if (( _drop )); then
@@ -140,10 +152,21 @@ while IFS= read -r rel; do
 
     if [[ -d "$src" ]]; then
         mkdir -p "$dst" >/dev/null 2>&1 || true
-        if rsync -aAXH --delete "$src/" "$dst/" >/dev/null 2>&1; then
-            ((applied++))
+        # When an exclude list is present, drop --delete so the host's
+        # copy of the excluded file isn't removed by rsync after being
+        # skipped from the source side.
+        if [[ ${#RSYNC_EXCLUDES[@]} -gt 0 ]]; then
+            if rsync -aAXH "${RSYNC_EXCLUDES[@]}" "$src/" "$dst/" >/dev/null 2>&1; then
+                ((applied++))
+            else
+                ((failed++))
+            fi
         else
-            ((failed++))
+            if rsync -aAXH --delete "$src/" "$dst/" >/dev/null 2>&1; then
+                ((applied++))
+            else
+                ((failed++))
+            fi
         fi
     else
         mkdir -p "$(dirname "$dst")" >/dev/null 2>&1 || true

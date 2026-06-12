@@ -1390,10 +1390,8 @@ _rs_apply() {
     if [[ -n "$CLUSTER_DATA_EXTRACTED" ]]; then
         export HB_CLUSTER_DATA_EXTRACTED="$CLUSTER_DATA_EXTRACTED"
         _rs_write_cluster_recovery_helper "$CLUSTER_DATA_EXTRACTED"
-        msg_info2 "$(translate "Cluster data (/etc/pve, /var/lib/pve-cluster) will be applied automatically at next boot once pve-cluster.service is up.")"
-        msg_info2 "$(translate "A safety copy + manual-apply helper are also available in case you need to re-apply later:")"
-        msg_info2 "  $CLUSTER_DATA_EXTRACTED/apply-cluster-restore.sh"
-        msg_info2 "$(translate "(Optional — only run it during a maintenance window if you need to re-apply the cluster data manually.)")"
+        msg_info2 "$(translate "Cluster data will be applied automatically at next boot.")"
+        msg_info2 "$(translate "Optional safety helper if you ever need to re-apply manually:") $CLUSTER_DATA_EXTRACTED/apply-cluster-restore.sh"
     else
         unset HB_CLUSTER_DATA_EXTRACTED
     fi
@@ -1831,23 +1829,14 @@ _rs_run_complete_guided() {
             fi
         done
 
-        if (( dialog_signal == 1 )); then
-            plan_body+="$(translate "PVE will regenerate these files automatically for the current hardware. The rest of the backup will be applied normally.")"$'\n\n'
-            plan_body+="\Zb$(translate "Continue with safe restore?")\ZB"
-
-            if ! dialog --backtitle "ProxMenux" --colors \
-                    --title "$(translate "Restore plan — compatibility check")" \
-                    --yesno "$plan_body" 24 90; then
-                return 1
-            fi
-        fi
-
         # Persist for _rs_apply / _rs_collect_pending_paths to honor.
-        # We only store paths (not component:* entries) — component
-        # auto-reinstall already self-skips when the GPU/TPU isn't on
-        # this host, so we just surfaced it in the dialog for clarity.
+        # The drift summary is merged into the single confirmation
+        # dialog below — no extra yes/no popup.
         RS_SKIP_PATHS="${skip_paths%$'\n'}"
         export RS_SKIP_PATHS
+        # Stash the plan_body fragment so the confirm dialog can show it.
+        RS_DRIFT_SUMMARY=""
+        (( dialog_signal == 1 )) && RS_DRIFT_SUMMARY="$plan_body"
     fi
 
     # Build the rich confirmation body. Replaces the previous 4-strategy
@@ -1892,6 +1881,17 @@ _rs_run_complete_guided() {
             eta="${r##*|}"
             body+="  • \Zb${label}\ZB  (${eta})"$'\n'
         done
+    fi
+    # If smart restore flagged drift skips earlier, surface them here
+    # so the operator sees everything in one screen instead of two
+    # consecutive yes/no popups.
+    if [[ -n "${RS_DRIFT_SUMMARY:-}" ]]; then
+        body+=$'\n'"\Zb$(translate "Hardware compatibility — these items will be skipped to keep the boot safe:")\ZB"$'\n'
+        # Trim the original header from the stashed plan_body — we only
+        # want the bullet list.
+        local _drift_bullets
+        _drift_bullets=$(printf '%s\n' "$RS_DRIFT_SUMMARY" | sed -n '/\Z1•\Zn/,$p')
+        body+="$_drift_bullets"$'\n'
     fi
     body+=$'\n'"\Zb\Z4$(translate "A reboot is required to finish the restore.")\Zn"$'\n\n'
     body+="$(translate "If notifications are enabled (Telegram/Discord/ntfy/...), you will receive a \"Host restore finished\" message when all background tasks complete.")"$'\n\n'
