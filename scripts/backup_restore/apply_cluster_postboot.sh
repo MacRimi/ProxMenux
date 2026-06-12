@@ -355,14 +355,18 @@ if command -v jq >/dev/null 2>&1 && [[ -f "$COMPONENTS_STATUS" ]]; then
 
         echo ""
         echo "  → $comp (running $installer --auto-reinstall)"
-        # Run with limited output capture. The installer logs in full to
-        # its own log file; we only echo a tail here for the operator.
-        bash "$installer" --auto-reinstall 2>&1 | sed -e 's/^/    /' | tail -15
-        rc=${PIPESTATUS[0]}
+        # Redirect to a per-component log instead of piping. NVIDIA's
+        # runfile installer forks helpers that inherit stdout, so a
+        # `bash $installer | sed | tail` pipeline never sees EOF after
+        # the parent exits and hangs until systemd kills the unit.
+        comp_log="/var/log/proxmenux/component-${comp}-$(date +%Y%m%d_%H%M%S).log"
+        bash "$installer" --auto-reinstall >"$comp_log" 2>&1
+        rc=$?
+        sed -e 's/^/    /' "$comp_log" | tail -15
         if (( rc == 0 )); then
-            echo "  ✓ $comp ok"
+            echo "  ✓ $comp ok  (full log: $comp_log)"
         else
-            echo "  ✗ $comp installer exited $rc — see its own log"
+            echo "  ✗ $comp installer exited $rc — see $comp_log"
         fi
     done
 fi
