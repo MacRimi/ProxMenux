@@ -1390,7 +1390,7 @@ _rs_apply() {
     if [[ -n "$CLUSTER_DATA_EXTRACTED" ]]; then
         export HB_CLUSTER_DATA_EXTRACTED="$CLUSTER_DATA_EXTRACTED"
         _rs_write_cluster_recovery_helper "$CLUSTER_DATA_EXTRACTED"
-        msg_info2 "$(translate "Cluster data will be applied automatically at next boot.")"
+        msg_ok "$(translate "Cluster data will be applied automatically at next boot.")"
         msg_info2 "$(translate "Optional safety helper if you ever need to re-apply manually:") $CLUSTER_DATA_EXTRACTED/apply-cluster-restore.sh"
     else
         unset HB_CLUSTER_DATA_EXTRACTED
