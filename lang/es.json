@@ -4143,7 +4143,7 @@
   "Testing comprehensive guest access to server": "Probando el acceso integral de invitados al servidor",
   "Testing connectivity to portal...": "Probando la conectividad al portal...",
   "Testing network connectivity...": "Probando la conectividad de la red...",
-  "Thank you for using ProxMenux. Goodbye!": "Gracias por utilizar ProxMenux. ¡Adiós!",
+  "Thank you for using ProxMenux. Goodbye!": "Gracias por utilizar ProxMenux. ¡Hasta pronto!",
   "That VM is currently stopped, so the GPU can be reassigned now.": "Esa VM está actualmente detenida, por lo que la GPU se puede reasignar ahora.",
   "That doesn't look like an SSH private key. Pick the private key file (no .pub extension, parseable by ssh-keygen).": "Eso no parece una clave privada SSH.Elija el archivo de clave privada (sin extensión .pub, analizable mediante ssh-keygen).",
   "The GPU has been moved out of VM": "La GPU se ha sacado de la VM",
