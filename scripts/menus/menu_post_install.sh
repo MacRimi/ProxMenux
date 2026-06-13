@@ -254,6 +254,32 @@ format_menu_item() {
     echo "${description}${spacing}${source}"
 }
 
+post_install_label() {
+    case "$1" in
+        "Automated post-installation script")
+            translate "Automated post-installation script"
+            ;;
+        "Customizable post-installation script")
+            translate "Customizable post-installation script"
+            ;;
+        "Uninstall optimizations")
+            translate "Uninstall optimizations"
+            ;;
+        "Proxmox VE Post Install")
+            echo "Proxmox VE Post Install"
+            ;;
+        "Proxmox VE Microcode")
+            echo "Proxmox VE Microcode"
+            ;;
+        "Community Scripts")
+            translate "Community Scripts"
+            ;;
+        *)
+            translate "$1"
+            ;;
+    esac
+}
+
 # ==========================================================
 show_menu() {
     while true; do
@@ -276,10 +302,8 @@ show_menu() {
             # above "Uninstall optimizations" so it sits next to the
             # related rollback action and not buried in the middle.
             if [[ "$name" == "Uninstall optimizations" && "$update_count" -gt 0 ]]; then
-                local update_label
-                update_label="Apply available updates ($update_count)"
                 local translated_update
-                translated_update="$(translate "$update_label")"
+                translated_update="$(translate "Apply available updates") ($update_count)"
                 local formatted_update
                 formatted_update=$(format_menu_item "$translated_update" "ProxMenux")
                 menu_items+=("$counter" "$formatted_update")
@@ -287,7 +311,8 @@ show_menu() {
                 ((counter++))
             fi
 
-            local translated_name="$(translate "$name")"
+            local translated_name
+            translated_name="$(post_install_label "$name")"
             local formatted_item
             formatted_item=$(format_menu_item "$translated_name" "$source")
             menu_items+=("$counter" "$formatted_item")
@@ -297,13 +322,14 @@ show_menu() {
         
 
         menu_items+=("" "")
-        menu_items+=("-" "───────────────────── Community Scripts ──────────────────────")
+        menu_items+=("-" "───────────────────── $(post_install_label "Community Scripts") ──────────────────────")
         menu_items+=("" "")
         
 
         for script in "${COMMUNITY_SCRIPTS[@]}"; do
             IFS='|' read -r name source command <<< "$script"
-            local translated_name="$(translate "$name")"
+            local translated_name
+            translated_name="$(post_install_label "$name")"
             local formatted_item
             formatted_item=$(format_menu_item "$translated_name" "$source")
             menu_items+=("$counter" "$formatted_item")

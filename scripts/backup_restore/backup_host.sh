@@ -667,13 +667,6 @@ _rs_extract_pbs() {
     # form (`YYYY-MM-DDTHH:MM:SSZ`) that `snapshot files` and
     # `restore` actually accept as the snapshot path.
     #
-    # Use dialog --infobox (not msg_info/msg_ok) so the "Listing…"
-    # placeholder lives inside the dialog system and disappears the
-    # moment the next dialog draws — no terminal text leaks between
-    # menus.
-    dialog --backtitle "ProxMenux" \
-        --title "$(translate "Listing snapshots from PBS")" \
-        --infobox "\n$(translate "Querying repository:") $HB_PBS_REPOSITORY" 7 78
     mapfile -t snapshots < <(
         PBS_PASSWORD="$HB_PBS_SECRET" \
         PBS_FINGERPRINT="${HB_PBS_FINGERPRINT:-}" \
@@ -2450,7 +2443,6 @@ restore_menu() {
 # ==========================================================
 main_menu() {
     while true; do
-        show_proxmenux_logo
         local choice
         choice=$(dialog --backtitle "ProxMenux" \
             --title "$(translate "Host Config Backup / Restore")" \
