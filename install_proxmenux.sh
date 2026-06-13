@@ -676,10 +676,13 @@ install_normal_version() {
     fi
 
     show_progress $current_step $total_steps "Installing basic dependencies."
-    
+
+    msg_info "Refreshing apt cache..."
+    apt-get update -y > /dev/null 2>&1 || true
+    msg_ok "apt cache refreshed."
+
+    msg_info "Installing jq..."
     if ! command -v jq > /dev/null 2>&1; then
-        apt-get update > /dev/null 2>&1
-        
         if apt-get install -y jq > /dev/null 2>&1 && command -v jq > /dev/null 2>&1; then
             update_config "jq" "installed"
         else
@@ -701,24 +704,14 @@ install_normal_version() {
     else
         update_config "jq" "already_installed"
     fi
-    
-
-
-
+    msg_ok "jq ready."
 
     BASIC_DEPS=("dialog" "curl" "git")
 
-    if [ -z "${APT_UPDATED:-}" ]; then
-        apt-get update -y > /dev/null 2>&1 || true
-        APT_UPDATED=1
-    fi
-
     for pkg in "${BASIC_DEPS[@]}"; do
-        # `dpkg -l | grep -qw "$pkg"` treats `-` as a word boundary, so a
-        # query for `python3` would falsely match `python3-pip` and skip
-        # the real `python3` install. `dpkg-query -W -f='${Status}'` asks
-        # for the EXACT package and reports "install ok installed" only
-        # when truly present. Issue #205 traced back here.
+        msg_info "Installing $pkg..."
+        # dpkg-query for the EXACT package — `dpkg -l | grep -qw python3`
+        # falsely matches `python3-pip`. Issue #205.
         if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed"; then
             if apt-get install -y "$pkg" > /dev/null 2>&1; then
                 update_config "$pkg" "installed"
@@ -730,6 +723,7 @@ install_normal_version() {
         else
             update_config "$pkg" "already_installed"
         fi
+        msg_ok "$pkg ready."
     done
 
 

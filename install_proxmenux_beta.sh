@@ -608,8 +608,12 @@ install_beta() {
     # ── Step 2: Dependencies ──────────────────────────────
     show_progress $current_step $total_steps "Installing system dependencies"
 
+    msg_info "Refreshing apt cache..."
+    apt-get update -y > /dev/null 2>&1 || true
+    msg_ok "apt cache refreshed."
+
+    msg_info "Installing jq..."
     if ! command -v jq > /dev/null 2>&1; then
-        apt-get update > /dev/null 2>&1
         if apt-get install -y jq > /dev/null 2>&1 && command -v jq > /dev/null 2>&1; then
             update_config "jq" "installed"
         else
@@ -626,18 +630,13 @@ install_beta() {
     else
         update_config "jq" "already_installed"
     fi
+    msg_ok "jq ready."
 
     local BASIC_DEPS=("dialog" "curl" "git")
-    if [ -z "${APT_UPDATED:-}" ]; then
-        apt-get update -y > /dev/null 2>&1 || true
-        APT_UPDATED=1
-    fi
-
     for pkg in "${BASIC_DEPS[@]}"; do
-        # Strict per-package check — `dpkg -l | grep -qw python3` falsely
-        # matches `python3-pip` (the `-` is a word boundary), so dpkg-query
-        # for the EXACT package name is the only reliable test.
-        # Issue #205.
+        msg_info "Installing $pkg..."
+        # dpkg-query for the EXACT package name — `dpkg -l | grep -qw python3`
+        # falsely matches `python3-pip`. Issue #205.
         if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed"; then
             if apt-get install -y "$pkg" > /dev/null 2>&1; then
                 update_config "$pkg" "installed"
@@ -649,6 +648,7 @@ install_beta() {
         else
             update_config "$pkg" "already_installed"
         fi
+        msg_ok "$pkg ready."
     done
 
     msg_ok "Dependencies installed: jq, dialog, curl, git."
