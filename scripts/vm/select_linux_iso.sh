@@ -230,10 +230,21 @@ function select_linux_cloudinit() {
 
 function select_linux_custom_iso() {
   local volid
+  local name display_name tag storage
+  local selected_tag
+  declare -A ISO_VOLID_BY_TAG=()
   ISO_LIST=()
   while read -r volid; do
     [[ -z "$volid" ]] && continue
-    ISO_LIST+=("$volid" "$(iso_dialog_description "$volid")")
+    name=$(iso_name_from_volid "$volid")
+    display_name=$(iso_display_name "$name" 58)
+    storage=$(iso_storage_from_volid "$volid")
+    tag="$display_name"
+    if [[ -n "${ISO_VOLID_BY_TAG[$tag]:-}" ]]; then
+      tag="$(iso_display_name "$name ($storage)" 58)"
+    fi
+    ISO_VOLID_BY_TAG["$tag"]="$volid"
+    ISO_LIST+=("$tag" "$(iso_dialog_description "$volid")")
   done < <(iso_list_volids "all")
 
   if [[ ${#ISO_LIST[@]} -eq 0 ]]; then
@@ -243,15 +254,16 @@ function select_linux_custom_iso() {
     return 1
   fi
 
-  ISO_VOLID=$(dialog --backtitle "ProxMenux" --title "$(translate "Available ISO Images")" \
-    --menu "$(translate "Select a custom ISO to use:")\n\n$(printf '%-42s │ %-14s │ %s' "$(translate "ISO")" "$(translate "Storage")" "$(translate "Size")")" 22 86 12 \
+  selected_tag=$(dialog --backtitle "ProxMenux" --title "$(translate "Available ISO Images")" \
+    --menu "$(translate "Select a custom ISO to use:")\n\n$(printf '%-58s %-10s %s' "$(translate "ISO")" "$(translate "Storage")" "$(translate "Size")")" 22 86 12 \
     "${ISO_LIST[@]}" 3>&1 1>&2 2>&3)
 
-  if [[ -z "$ISO_VOLID" ]]; then
+  if [[ -z "$selected_tag" ]]; then
     header_info
     msg_warn "$(translate "No ISO selected.")"
     return 1
   fi
+  ISO_VOLID="${ISO_VOLID_BY_TAG[$selected_tag]}"
 
   ISO_FILE=$(iso_name_from_volid "$ISO_VOLID")
   ISO_PATH=$(iso_volid_to_path "$ISO_VOLID")
@@ -313,5 +325,3 @@ whiptail --title "Proxmox VE Helper-Scripts" \
 return 1
 
 }
-
-
