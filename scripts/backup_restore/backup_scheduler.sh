@@ -375,7 +375,7 @@ _create_job() {
   case "$backend" in
     local)
       local dest_dir ext
-      dest_dir=$(hb_prompt_dest_dir) || return 1
+      dest_dir=$(hb_select_local_target) || return 1
       ext=$(dialog --backtitle "ProxMenux" --title "$(translate "Archive format")" \
         --menu "\n$(translate "Select local archive format:")" 12 62 4 \
         "tar.zst" "tar + zstd (preferred)" \

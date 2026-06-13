@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 
-const APP_VERSION = "1.2.2.1-beta" // Sync with AppImage/package.json
+const APP_VERSION = "1.2.2.2-beta" // Sync with AppImage/package.json
 
 interface ReleaseNote {
   date: string

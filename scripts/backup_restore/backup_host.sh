@@ -273,7 +273,7 @@ _bk_local() {
 
     hb_require_cmd rsync rsync || return 1
 
-    dest_dir=$(hb_prompt_dest_dir) || return 1
+    dest_dir=$(hb_select_local_target) || return 1
     hb_select_profile_paths "$profile_mode" paths || return 1
 
     # Safety check: if the destination directory is INSIDE any selected
@@ -416,53 +416,127 @@ _bk_scheduler() {
 
 _bk_manage_local_destinations() {
     while true; do
-        # Snapshot all currently mounted USB backup partitions with size info
-        local -a usb_mp=()
-        local -a usb_desc=()
-        local state path_or_dev label size fstype uuid
-        while IFS=$'\t' read -r state path_or_dev label size fstype uuid; do
-            [[ "$state" != "mounted" ]] && continue
-            local dfline
-            dfline=$(df -h "$path_or_dev" 2>/dev/null | tail -1)
-            local used="?" avail="?" pct="?"
-            if [[ -n "$dfline" ]]; then
-                used=$(awk '{print $3}'  <<<"$dfline")
-                avail=$(awk '{print $4}' <<<"$dfline")
-                pct=$(awk '{print $5}'   <<<"$dfline")
-            fi
-            usb_mp+=("$path_or_dev")
-            usb_desc+=("${label:-?}  [${fstype}]  $size  →  $path_or_dev  ($used $(translate "used"), $avail $(translate "free"), $pct)")
-        done < <(hb_list_usb_partitions)
+        # Single configured target (or none → caller falls back to default)
+        local current=""
+        current=$(hb_get_local_target 2>/dev/null) || current=""
 
         local body=""
-        if (( ${#usb_desc[@]} == 0 )); then
-            body+="$(translate "No USB drives are currently mounted by ProxMenux.")"
+        if [[ -n "$current" ]]; then
+            body+="\Zb$(translate "Currently configured target:")\ZB"$'\n'
+            body+="  \Z4${current}\Zn"
         else
-            body+="\Zb$(translate "Mounted USB drives:")\ZB"$'\n'
-            local d
-            for d in "${usb_desc[@]}"; do
-                body+="  • ${d}"$'\n'
-            done
+            body+="$(translate "No target configured.")"$'\n'
+            body+="$(translate "Default will be used:") \Z4${HB_LOCAL_TARGET_DEFAULT}\Zn"
         fi
-        body+=$'\n'"$(translate "Local destinations are file paths — they are NOT registered as Proxmox storage.")"
 
         local -a menu_args=()
-        menu_args+=("mount"   "+ $(translate "Mount a USB drive now")")
-        if (( ${#usb_mp[@]} > 0 )); then
-            menu_args+=("unmount" "− $(translate "Unmount a USB drive")")
+        menu_args+=("default" "1   $(translate "Use default") (${HB_LOCAL_TARGET_DEFAULT})")
+        menu_args+=("custom"  "2   $(translate "Use a custom path")")
+        menu_args+=("usb"     "3   $(translate "Use a USB disk")")
+        if [[ -n "$current" ]]; then
+            menu_args+=("clear"   "C   $(translate "Clear configured target")")
         fi
         menu_args+=("back"    "$(translate "← Return")")
 
         local choice
         choice=$(dialog --backtitle "ProxMenux" --colors \
-            --title "$(translate "Local archive destinations")" \
+            --title "$(translate "Manage local backup target")" \
             --menu "\n${body}\n" \
             "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${menu_args[@]}" \
             3>&1 1>&2 2>&3) || break
 
         case "$choice" in
+            default)
+                hb_set_local_target "$HB_LOCAL_TARGET_DEFAULT"
+                ;;
+            custom)
+                local new_path
+                new_path=$(dialog --backtitle "ProxMenux" \
+                    --title "$(translate "Custom path")" \
+                    --inputbox "$(translate "Absolute directory path to use as backup target:")" \
+                    "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "/backup" \
+                    3>&1 1>&2 2>&3) || continue
+                new_path=$(hb_trim_dialog_value "$new_path")
+                [[ -z "$new_path" ]] && continue
+                mkdir -p "$new_path" 2>/dev/null || {
+                    dialog --backtitle "ProxMenux" --msgbox \
+                        "$(translate "Cannot create:") $new_path" 8 60
+                    continue
+                }
+                hb_set_local_target "$new_path"
+                ;;
+            usb)
+                _bk_local_target_usb_submenu
+                ;;
+            clear)
+                hb_clear_local_target
+                ;;
+            back) break ;;
+        esac
+    done
+}
+
+# Submenu reached when the user picks "Use a USB disk" in the local
+# target manager. Lists mounted USB partitions so the operator can pick
+# one as the target; mount / unmount are auxiliary actions for preparing
+# a fresh disk or releasing one. Picking a USB sets it as the configured
+# target and returns to the parent menu.
+_bk_local_target_usb_submenu() {
+    while true; do
+        local -a usb_mp=()
+        local -a usb_desc=()
+        local state path_or_dev label size fstype uuid
+        while IFS=$'\t' read -r state path_or_dev label size fstype uuid; do
+            [[ "$state" != "mounted" ]] && continue
+            usb_mp+=("$path_or_dev")
+            usb_desc+=("${label:-?}  [${fstype}]  $size  →  $path_or_dev")
+        done < <(hb_list_usb_partitions)
+
+        local body=""
+        if (( ${#usb_mp[@]} > 0 )); then
+            body+="\Zb$(translate "USB drives mounted now:")\ZB"$'\n'
+            local d
+            for d in "${usb_desc[@]}"; do
+                body+="  • ${d}"$'\n'
+            done
+        else
+            body+="$(translate "No USB drives mounted by ProxMenux yet. Mount one first to use it as a target.")"
+        fi
+
+        local -a menu_args=()
+        if (( ${#usb_mp[@]} > 0 )); then
+            menu_args+=("pick"    "$(translate "Pick a mounted USB as target")")
+        fi
+        menu_args+=("mount"   "⊕ $(translate "Mount a USB drive now")")
+        if (( ${#usb_mp[@]} > 0 )); then
+            menu_args+=("unmount" "⊖ $(translate "Unmount a USB drive")")
+        fi
+        menu_args+=("back"    "$(translate "← Return")")
+
+        local choice
+        choice=$(dialog --backtitle "ProxMenux" --colors \
+            --title "$(translate "USB disk target")" \
+            --menu "\n${body}\n" \
+            "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${menu_args[@]}" \
+            3>&1 1>&2 2>&3) || break
+
+        case "$choice" in
+            pick)
+                local pick_menu=() i=1 idx
+                for idx in "${!usb_mp[@]}"; do
+                    pick_menu+=("$i" "${usb_desc[$idx]}"); ((i++))
+                done
+                local pick
+                pick=$(dialog --backtitle "ProxMenux" \
+                    --title "$(translate "Pick USB target")" \
+                    --menu "\n$(translate "Select the mounted USB to use as backup target:")" \
+                    "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${pick_menu[@]}" \
+                    3>&1 1>&2 2>&3) || continue
+                hb_set_local_target "${usb_mp[$((pick-1))]}"
+                return 0
+                ;;
             mount)
-                # Reuse the runtime USB picker; result is discarded.
+                # Auxiliary: prepare a USB so it can be picked next pass.
                 hb_prompt_mounted_path "/mnt/backup" >/dev/null || true
                 ;;
             unmount)
@@ -506,7 +580,7 @@ _bk_manage_destinations() {
             "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
             1   "$(translate "Proxmox Backup Server (PBS) destinations")" \
             2   "$(translate "Borg repositories")" \
-            3   "$(translate "Local archive destinations (mounted USBs, mount, unmount)")" \
+            3   "$(translate "Local archive targets (paths + USB mount/unmount)")" \
             0   "$(translate "Return")" \
             3>&1 1>&2 2>&3) || break
 

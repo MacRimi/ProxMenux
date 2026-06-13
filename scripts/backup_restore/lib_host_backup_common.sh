@@ -1998,7 +1998,63 @@ hb_format_usb_disk() {
     printf '%s' "$mp"
 }
 
+# ── Local backup target: single configured value (no list) ──
+#
+# Only ONE local target is active at a time. Persisted as a single line in
+# $HB_STATE_DIR/local-target.conf. If the file is absent, callers default
+# to HB_LOCAL_TARGET_DEFAULT (/var/lib/vz/dump).
+
+HB_LOCAL_TARGET_DEFAULT="/var/lib/vz/dump"
+
+# Echoes the configured target path. Returns 1 if none configured (caller
+# may default to HB_LOCAL_TARGET_DEFAULT).
+hb_get_local_target() {
+    local cfg="$HB_STATE_DIR/local-target.conf"
+    [[ -f "$cfg" ]] || return 1
+    local path
+    path=$(head -1 "$cfg" 2>/dev/null | tr -d '\r\n')
+    [[ -z "$path" ]] && return 1
+    echo "$path"
+    return 0
+}
+
+hb_set_local_target() {
+    local path="$1"
+    [[ -z "$path" ]] && return 1
+    path="${path%/}"
+    mkdir -p "$HB_STATE_DIR"
+    local cfg="$HB_STATE_DIR/local-target.conf"
+    printf '%s\n' "$path" > "$cfg"
+    chmod 600 "$cfg"
+    return 0
+}
+
+hb_clear_local_target() {
+    rm -f "$HB_STATE_DIR/local-target.conf"
+}
+
+# Always returns a usable path. If nothing is configured, falls back to
+# the default. Callers do NOT prompt — the user pre-configures the target
+# in "Manage local backup target".
+hb_select_local_target() {
+    local path
+    if path=$(hb_get_local_target); then
+        echo "$path"
+    else
+        echo "$HB_LOCAL_TARGET_DEFAULT"
+    fi
+    return 0
+}
+
 hb_prompt_mounted_path() {
+    # `dialog --yesno` / `dialog --msgbox` write their TUI to stdout by
+    # convention. When this function is called as `mnt=$(hb_prompt_mounted_path)`
+    # the subshell captures every TUI escape into $mnt and corrupts the
+    # caller (saw it as garbage in borg-targets.txt). Stash real stdout in
+    # fd 9, redirect stdout to the TTY for the body, and emit the actual
+    # return value through fd 9.
+    exec 9>&1 >/dev/tty
+
     local default_path="${1:-/mnt/backup}"
 
     local -a menu=()
@@ -2038,7 +2094,7 @@ hb_prompt_mounted_path() {
                 --yesno "$(hb_translate "This path is not a registered mount point. Use it anyway?")" \
                 "$HB_UI_YESNO_H" "$HB_UI_YESNO_W" || return 1
         fi
-        echo "$out"
+        echo "$out" >&9
         return 0
     fi
 
@@ -2054,7 +2110,7 @@ hb_prompt_mounted_path() {
 
     case "$s_state" in
         mounted)
-            echo "$s_path"
+            echo "$s_path" >&9
             return 0
             ;;
 
@@ -2078,7 +2134,7 @@ hb_prompt_mounted_path() {
             # The wizard prints the destination path right after, so go
             # straight to the backup flow instead of asking for an extra
             # confirmation click on a "mounted OK" dialog.
-            echo "$mounted_at"
+            echo "$mounted_at" >&9
             return 0
             ;;
 
@@ -2116,7 +2172,7 @@ hb_prompt_mounted_path() {
             dialog --backtitle "ProxMenux" --colors \
                 --title "$(hb_translate "Formatted and mounted")" \
                 --msgbox "\Zb$(hb_translate "Mounted at")\ZB  \Z4${mounted_at}\Zn" 8 70
-            echo "$mounted_at"
+            echo "$mounted_at" >&9
             return 0
             ;;
     esac
