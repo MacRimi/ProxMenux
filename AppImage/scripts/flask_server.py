@@ -12376,39 +12376,62 @@ def _find_backup_archive_path(archive_id):
     return None
 
 
-@app.route('/api/host-backups/jobs', methods=['GET'])
-@require_auth
-def api_host_backups_jobs():
-    """List scheduled host-backup jobs created via the backup_scheduler
-    CLI. Each job has a .env file + systemd timer. We report on both,
-    plus the last-run status when available."""
-    import glob
-    jobs: list = []
-    try:
-        env_files = sorted(glob.glob(f'{_BACKUP_JOBS_DIR}/*.env'))
-    except OSError:
-        env_files = []
+_JOB_ID_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
+_BACKUP_RUNNER = '/usr/local/share/proxmenux/scripts/backup_restore/run_scheduled_backup.sh'
 
-    for env_file in env_files:
-        job_id = os.path.basename(env_file)[:-len('.env')]
-        job = _parse_job_env(env_file)
 
+def _backup_job_summary(env_file: str) -> dict:
+    """Build the UI summary for one job .env, reading the actual fields
+    produced by the current scheduler (BACKEND, LOCAL_DEST_DIR,
+    PBS_REPOSITORY, BORG_REPO, KEEP_*, PVE_STORAGE, ENABLED)."""
+    job_id = os.path.basename(env_file)[:-len('.env')]
+    job = _parse_job_env(env_file)
+
+    backend = (job.get('BACKEND') or job.get('METHOD') or 'unknown').lower()
+    attached = bool(job.get('PVE_STORAGE'))
+    pve_storage = job.get('PVE_STORAGE') or None
+
+    if backend == 'pbs':
+        destination = job.get('PBS_REPOSITORY') or ''
+        bid = job.get('PBS_BACKUP_ID')
+        if bid:
+            destination = f'{destination} :: host/{bid}'
+    elif backend == 'local':
+        destination = (job.get('LOCAL_DEST_DIR') or job.get('DEST_DIR')
+                       or job.get('DEST') or '')
+    elif backend == 'borg':
+        destination = job.get('BORG_REPO') or ''
+    else:
+        destination = (job.get('DEST_DIR') or job.get('DEST')
+                       or job.get('PBS_REPO') or job.get('BORG_REPO') or '')
+
+    keep_parts = []
+    for k_key, label in (
+        ('KEEP_LAST', 'last'),
+        ('KEEP_HOURLY', 'hourly'),
+        ('KEEP_DAILY', 'daily'),
+        ('KEEP_WEEKLY', 'weekly'),
+        ('KEEP_MONTHLY', 'monthly'),
+        ('KEEP_YEARLY', 'yearly'),
+    ):
+        v = job.get(k_key)
+        if v and v != '0':
+            keep_parts.append(f'{label}={v}')
+    retention = ', '.join(keep_parts) or job.get('RETENTION') or ''
+
+    if attached:
+        enabled = (job.get('ENABLED', '1') == '1')
+        schedule = f'attached → storage:{pve_storage}' if pve_storage else 'attached'
+        timer_enabled = False
+        next_run = None
+    else:
         timer_unit = f'proxmenux-backup-{job_id}.timer'
         timer_enabled = subprocess.run(
             ['systemctl', 'is-enabled', '--quiet', timer_unit],
             capture_output=True
         ).returncode == 0
-
-        last_status = None
-        last_status_file = f'{_BACKUP_LOG_DIR}/{job_id}-last.status'
-        if os.path.exists(last_status_file):
-            try:
-                with open(last_status_file) as f:
-                    last_status = f.read().strip()
-            except OSError:
-                pass
-
-        # Next scheduled run from systemctl list-timers
+        enabled = timer_enabled
+        schedule = job.get('ON_CALENDAR') or 'manual'
         next_run = None
         try:
             r = subprocess.run(
@@ -12422,18 +12445,125 @@ def api_host_backups_jobs():
         except (subprocess.TimeoutExpired, json.JSONDecodeError, ValueError, OSError):
             pass
 
-        jobs.append({
-            'id': job_id,
-            'destination': (job.get('DEST_DIR') or job.get('DEST')
-                            or job.get('PBS_REPO') or job.get('BORG_REPO') or ''),
-            'method': job.get('METHOD') or 'unknown',
-            'on_calendar': job.get('ON_CALENDAR') or 'manual',
-            'retention': job.get('RETENTION') or '',
-            'timer_enabled': timer_enabled,
-            'last_status': last_status,
-            'next_run': next_run,
-        })
-    return jsonify({'jobs': jobs})
+    last_status = None
+    last_status_file = f'{_BACKUP_LOG_DIR}/{job_id}-last.status'
+    if os.path.exists(last_status_file):
+        try:
+            with open(last_status_file) as f:
+                last_status = f.read().strip()
+        except OSError:
+            pass
+
+    return {
+        'id': job_id,
+        'destination': destination,
+        'method': backend,
+        'on_calendar': schedule,
+        'retention': retention,
+        'timer_enabled': timer_enabled,
+        'enabled': enabled,
+        'attached': attached,
+        'pve_storage': pve_storage,
+        'profile_mode': job.get('PROFILE_MODE') or 'default',
+        'last_status': last_status,
+        'next_run': next_run,
+    }
+
+
+@app.route('/api/host-backups/jobs', methods=['GET'])
+@require_auth
+def api_host_backups_jobs():
+    """List scheduled host-backup jobs created via the backup_scheduler
+    CLI. Reports both timer-based and PVE-attached jobs."""
+    import glob
+    try:
+        env_files = sorted(glob.glob(f'{_BACKUP_JOBS_DIR}/*.env'))
+    except OSError:
+        env_files = []
+    return jsonify({'jobs': [_backup_job_summary(f) for f in env_files]})
+
+
+@app.route('/api/host-backups/jobs/<job_id>/run', methods=['POST'])
+@require_auth
+def api_host_backups_job_run(job_id):
+    """Trigger a scheduled host backup job immediately (background).
+    The runner writes its own log + .status file; the UI polls /jobs to
+    pick up the new status."""
+    if not _JOB_ID_RE.match(job_id):
+        return jsonify({'error': 'invalid job id'}), 400
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    if not os.path.exists(env_file):
+        return jsonify({'error': 'job not found'}), 404
+    if not os.path.exists(_BACKUP_RUNNER):
+        return jsonify({'error': 'runner script not installed'}), 500
+    try:
+        subprocess.Popen(
+            ['bash', _BACKUP_RUNNER, job_id],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            close_fds=True,
+            start_new_session=True,
+        )
+    except OSError as e:
+        return jsonify({'error': f'failed to start: {e}'}), 500
+    return jsonify({'status': 'started', 'job_id': job_id}), 202
+
+
+@app.route('/api/host-backups/jobs/<job_id>/toggle', methods=['POST'])
+@require_auth
+def api_host_backups_job_toggle(job_id):
+    """Flip enabled/disabled. Attached jobs are toggled by rewriting
+    ENABLED= in the .env (no timer exists). Timer-based jobs use
+    systemctl --now enable/disable. Body may include {"enabled": bool}
+    to set an explicit target; otherwise the current state is inverted."""
+    if not _JOB_ID_RE.match(job_id):
+        return jsonify({'error': 'invalid job id'}), 400
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    if not os.path.exists(env_file):
+        return jsonify({'error': 'job not found'}), 404
+
+    job = _parse_job_env(env_file)
+    is_attached = bool(job.get('PVE_STORAGE'))
+
+    payload = request.get_json(silent=True) or {}
+    target = payload.get('enabled')
+
+    if is_attached:
+        current = (job.get('ENABLED', '1') == '1')
+        new_state = (not current) if target is None else bool(target)
+        new_val = '1' if new_state else '0'
+        try:
+            with open(env_file, 'r') as f:
+                lines = f.readlines()
+            tmp_path = f'{env_file}.tmp.{os.getpid()}'
+            with open(tmp_path, 'w') as tmp:
+                found = False
+                for line in lines:
+                    if line.startswith('ENABLED='):
+                        tmp.write(f'ENABLED={new_val}\n')
+                        found = True
+                    else:
+                        tmp.write(line)
+                if not found:
+                    tmp.write(f'ENABLED={new_val}\n')
+            os.replace(tmp_path, env_file)
+            os.chmod(env_file, 0o600)
+        except OSError as e:
+            return jsonify({'error': f'could not update .env: {e}'}), 500
+        return jsonify({'status': 'ok', 'enabled': new_state, 'attached': True})
+
+    timer_unit = f'proxmenux-backup-{job_id}.timer'
+    current = subprocess.run(
+        ['systemctl', 'is-enabled', '--quiet', timer_unit],
+        capture_output=True
+    ).returncode == 0
+    new_state = (not current) if target is None else bool(target)
+    cmd = ['systemctl', '--now', 'enable' if new_state else 'disable', timer_unit]
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+    if r.returncode != 0:
+        return jsonify({'error': f'systemctl failed: {r.stderr.strip()}'}), 500
+    return jsonify({'status': 'ok', 'enabled': new_state, 'attached': False})
 
 
 _BACKUP_TAR_SUFFIXES = ('.tar', '.tar.zst', '.tar.gz')

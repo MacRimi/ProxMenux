@@ -29,10 +29,14 @@ import { formatStorage } from "../lib/utils"
 interface BackupJob {
   id: string
   destination: string
-  method: string                 // "local_tar" | "pbs" | "borg" | "unknown"
-  on_calendar: string
-  retention: string
-  timer_enabled: boolean
+  method: string                 // "pbs" | "borg" | "local" | "unknown"
+  on_calendar: string            // "OnCalendar=..." for timer jobs, "attached → storage:X" for attached
+  retention: string              // "last=5, daily=7, ..."
+  timer_enabled: boolean         // legacy — only meaningful for non-attached jobs
+  enabled: boolean               // unified state (timer for non-attached, ENABLED= for attached)
+  attached: boolean              // PVE vzdump-attached: no own timer, trigger from hook
+  pve_storage: string | null     // storage id the attached job listens for
+  profile_mode: string           // "default" | "custom"
   last_status: string | null
   next_run: string | null
 }
@@ -133,11 +137,41 @@ const formatNext = (iso: string | null) => {
 }
 
 export function HostBackup() {
-  const { data: jobsResp, error: jobsErr } = useSWR<{ jobs: BackupJob[] }>(
+  const { data: jobsResp, error: jobsErr, mutate: mutateJobs } = useSWR<{ jobs: BackupJob[] }>(
     "/api/host-backups/jobs",
     fetcher,
     { refreshInterval: 30000 },
   )
+  const [busyJobId, setBusyJobId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  async function runJob(id: string) {
+    setBusyJobId(id)
+    setActionError(null)
+    try {
+      const r = await fetchApi(`/api/host-backups/jobs/${encodeURIComponent(id)}/run`, { method: "POST" })
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      mutateJobs()
+    } catch (e) {
+      setActionError(`Failed to run "${id}": ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setBusyJobId(null)
+    }
+  }
+
+  async function toggleJob(id: string) {
+    setBusyJobId(id)
+    setActionError(null)
+    try {
+      const r = await fetchApi(`/api/host-backups/jobs/${encodeURIComponent(id)}/toggle`, { method: "POST" })
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      mutateJobs()
+    } catch (e) {
+      setActionError(`Failed to toggle "${id}": ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setBusyJobId(null)
+    }
+  }
   const { data: archivesResp, error: archivesErr } = useSWR<{ archives: BackupArchive[] }>(
     "/api/host-backups/archives",
     fetcher,
@@ -181,6 +215,11 @@ export function HostBackup() {
             </div>
           ) : (
             <div className="overflow-x-auto">
+              {actionError && (
+                <div className="mb-2 text-xs text-red-500 px-2 py-1 rounded bg-red-500/10 border border-red-500/20">
+                  {actionError}
+                </div>
+              )}
               <table className="w-full text-sm">
                 <thead className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
                   <tr>
@@ -190,17 +229,27 @@ export function HostBackup() {
                     <th className="text-left px-2 py-2">Schedule</th>
                     <th className="text-left px-2 py-2">Last status</th>
                     <th className="text-left px-2 py-2">Next run</th>
+                    <th className="text-right px-2 py-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40">
-                  {jobsResp.jobs.map((j) => (
+                  {jobsResp.jobs.map((j) => {
+                    const isBusy = busyJobId === j.id
+                    return (
                     <tr key={j.id} className="text-xs">
                       <td className="px-2 py-2 font-mono">{j.id}</td>
                       <td className="px-2 py-2 font-mono truncate max-w-[260px]" title={j.destination}>
                         {j.destination || "—"}
                       </td>
-                      <td className="px-2 py-2">{j.method}</td>
-                      <td className="px-2 py-2 font-mono">{j.on_calendar}</td>
+                      <td className="px-2 py-2 uppercase">{j.method}</td>
+                      <td className="px-2 py-2 font-mono">
+                        {j.on_calendar}
+                        {j.attached && (
+                          <Badge variant="outline" className="ml-2 text-blue-400 border-blue-400/30">
+                            attached
+                          </Badge>
+                        )}
+                      </td>
                       <td className="px-2 py-2">
                         {j.last_status ? (
                           <span className="text-xs">{j.last_status}</span>
@@ -209,15 +258,51 @@ export function HostBackup() {
                         )}
                       </td>
                       <td className="px-2 py-2">
-                        <span className="text-xs">{formatNext(j.next_run)}</span>
-                        {!j.timer_enabled && (
+                        <span className="text-xs">{j.attached ? "—" : formatNext(j.next_run)}</span>
+                        {!j.enabled && (
                           <Badge variant="outline" className="ml-2 text-amber-500 border-amber-500/30">
-                            timer disabled
+                            disabled
                           </Badge>
                         )}
                       </td>
+                      <td className="px-2 py-2">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2"
+                            disabled={isBusy}
+                            onClick={() => runJob(j.id)}
+                            title="Run this backup job now"
+                          >
+                            {isBusy ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <PlayCircle className="h-3.5 w-3.5" />
+                            )}
+                            <span className="ml-1">Run</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2"
+                            disabled={isBusy}
+                            onClick={() => toggleJob(j.id)}
+                            title={j.enabled ? "Disable this job" : "Enable this job"}
+                          >
+                            {isBusy ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : j.enabled ? (
+                              <XCircle className="h-3.5 w-3.5" />
+                            ) : (
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            )}
+                            <span className="ml-1">{j.enabled ? "Disable" : "Enable"}</span>
+                          </Button>
+                        </div>
+                      </td>
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </table>
             </div>
