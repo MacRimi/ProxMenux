@@ -126,6 +126,7 @@
   "Add explicit privileged flag (optional but recommended):": "Ajoutez un indicateur privilégié explicite (facultatif mais recommandé) :",
   "Add export rule:": "Ajouter une règle d'exportation :",
   "Add iSCSI Target as Proxmox Storage": "Ajouter une cible iSCSI comme stockage Proxmox",
+  "Add iSCSI storage in Proxmox Storage": "Ajouter un stockage iSCSI dans Proxmox Storage",
   "Add iSCSI storage in Proxmox:": "Ajoutez du stockage iSCSI dans Proxmox :",
   "Add import disk": "Ajouter un disque d'importation",
   "Add latest Ceph support": "ajouter la dernière prise en charge de Ceph",
