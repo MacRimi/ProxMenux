@@ -2661,6 +2661,143 @@ hb_show_compat_report() {
 # Fail-soft: returns 0 even if jq is missing and we have to fall
 # back to printf-built JSON; never aborts the surrounding backup.
 # ==========================================================
+# ==========================================================
+# PVE vzdump jobs — parsing and attach helpers
+#
+# When the operator already has a vzdump job scheduling backups of
+# their VMs/CTs to PBS or a local datastore, they can "attach" a
+# host-config backup to that same job. The host inherits the job's
+# schedule, target storage, and retention; the trigger is a vzdump
+# hook script that fires on `job-end`.
+# ==========================================================
+
+# Returns the type of a PVE storage as declared in /etc/pve/storage.cfg.
+# Empty if the storage doesn't exist. Common values: pbs, dir, nfs,
+# zfspool, lvmthin, cifs, btrfs.
+hb_pve_storage_type() {
+    local storage_id="$1"
+    [[ -z "$storage_id" || ! -f /etc/pve/storage.cfg ]] && return 1
+    awk -v sid="$storage_id" '
+        /^[a-z]+:[[:space:]]/ {
+            t=$1; sub(":","",t)
+            if ($2 == sid) { print t; exit }
+        }
+    ' /etc/pve/storage.cfg
+}
+
+# Lists every vzdump job in /etc/pve/jobs.cfg, one TSV row per job.
+# Columns: id <TAB> storage <TAB> storage_type <TAB> schedule
+#          <TAB> prune-backups <TAB> enabled
+# Empty cells are kept as "-" so the row keeps 6 columns even when
+# the job omits the field.
+hb_pve_list_vzdump_jobs() {
+    [[ -f /etc/pve/jobs.cfg ]] || return 0
+    awk '
+        function flush() {
+            if (id != "") {
+                printf "%s\t%s\t%s\t%s\t%s\t%s\n", \
+                    id, \
+                    (storage=="" ? "-" : storage), \
+                    "PLACEHOLDER_TYPE", \
+                    (schedule=="" ? "-" : schedule), \
+                    (prune=="" ? "-" : prune), \
+                    (enabled=="" ? "1" : enabled)
+            }
+            id=""; storage=""; schedule=""; prune=""; enabled=""
+        }
+        /^vzdump:/ { flush(); id=$2; next }
+        /^[a-z]+:/ { flush(); next }   # next block of a different type
+        /^[[:space:]]+schedule[[:space:]]/ { sub(/^[[:space:]]+schedule[[:space:]]+/, ""); schedule=$0; next }
+        /^[[:space:]]+storage[[:space:]]/  { sub(/^[[:space:]]+storage[[:space:]]+/,  ""); storage=$0;  next }
+        /^[[:space:]]+prune-backups[[:space:]]/ { sub(/^[[:space:]]+prune-backups[[:space:]]+/, ""); prune=$0; next }
+        /^[[:space:]]+enabled[[:space:]]/  { sub(/^[[:space:]]+enabled[[:space:]]+/,  ""); enabled=$0;  next }
+        END { flush() }
+    ' /etc/pve/jobs.cfg | while IFS=$'\t' read -r id storage type schedule prune enabled; do
+        type=$(hb_pve_storage_type "$storage")
+        [[ -z "$type" ]] && type="-"
+        printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$id" "$storage" "$type" "$schedule" "$prune" "$enabled"
+    done
+}
+
+# Filters hb_pve_list_vzdump_jobs by a backend family.
+# Args: $1 = "pbs" or "local"
+#   pbs   → only storage_type == "pbs"
+#   local → only file/block storage we can write to as a local archive
+hb_pve_list_vzdump_jobs_for_backend() {
+    local backend="$1"
+    hb_pve_list_vzdump_jobs | while IFS=$'\t' read -r id storage type schedule prune enabled; do
+        case "$backend" in
+            pbs)
+                [[ "$type" == "pbs" ]] && printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+                    "$id" "$storage" "$type" "$schedule" "$prune" "$enabled"
+                ;;
+            local)
+                case "$type" in
+                    dir|nfs|cifs|zfspool|lvmthin|btrfs)
+                        printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+                            "$id" "$storage" "$type" "$schedule" "$prune" "$enabled"
+                        ;;
+                esac
+                ;;
+        esac
+    done
+}
+
+# Parses a `prune-backups` value (e.g. "keep-last=7,keep-daily=14")
+# and emits KEY=VAL pairs for sourcing into a scheduler job env file.
+# Maps proxmox' keep-last/hourly/daily/weekly/monthly/yearly to our
+# KEEP_LAST/HOURLY/DAILY/WEEKLY/MONTHLY/YEARLY.
+hb_pve_prune_to_keep_env() {
+    local prune="$1"
+    [[ -z "$prune" || "$prune" == "-" ]] && return 0
+    local kv k v upper
+    while IFS=',' read -ra kv; do
+        for k in "${kv[@]}"; do
+            v="${k#*=}"
+            k="${k%=*}"
+            case "$k" in
+                keep-last)    echo "KEEP_LAST=$v" ;;
+                keep-hourly)  echo "KEEP_HOURLY=$v" ;;
+                keep-daily)   echo "KEEP_DAILY=$v" ;;
+                keep-weekly)  echo "KEEP_WEEKLY=$v" ;;
+                keep-monthly) echo "KEEP_MONTHLY=$v" ;;
+                keep-yearly)  echo "KEEP_YEARLY=$v" ;;
+            esac
+        done
+    done <<<"$prune"
+}
+
+hb_install_vzdump_hook() {
+    local src="/usr/local/share/proxmenux/scripts/backup_restore/vzdump-hook.sh"
+    local dst="/etc/proxmenux/vzdump-hook.sh"
+    local chain="/etc/proxmenux/vzdump-hook-chain.sh"
+    local conf="/etc/vzdump.conf"
+
+    [[ -f "$src" ]] || return 1
+    mkdir -p /etc/proxmenux
+    install -m 0755 "$src" "$dst" || return 1
+
+    [[ -f "$conf" ]] || : >"$conf"
+
+    local current
+    current=$(awk -F'[[:space:]]*:[[:space:]]*' \
+        '/^[[:space:]]*script[[:space:]]*:/ { sub(/[#].*/,"",$2); gsub(/[[:space:]]/,"",$2); print $2; exit }' \
+        "$conf")
+
+    if [[ -z "$current" ]]; then
+        printf 'script: %s\n' "$dst" >>"$conf"
+        return 0
+    fi
+
+    [[ "$current" == "$dst" ]] && return 0
+
+    # Existing third-party hook — preserve it as a chain target.
+    if [[ -x "$current" && ! -e "$chain" ]]; then
+        cp -p "$current" "$chain"
+    fi
+    sed -i "s|^[[:space:]]*script[[:space:]]*:.*|script: ${dst}|" "$conf"
+}
+
 hb_write_archive_sidecar() {
     local archive_path="$1"
     local kind="${2:-}"

@@ -75,13 +75,47 @@ _list_jobs() {
   done | sort
 }
 
+# Returns 0 if the job is attached to a PVE vzdump storage (no systemd
+# timer — the trigger comes from the vzdump hook, matched by PVE_STORAGE
+# against $STOREID set by PVE for every backup phase).
+_job_is_attached() {
+  local id="$1" f
+  f=$(_job_file "$id")
+  [[ -f "$f" ]] || return 1
+  grep -q "^PVE_STORAGE=" "$f"
+}
+
+# Reads a key=val pair from the job .env file (handles `printf %q`
+# quoting that _write_job_env produces).
+_job_env_get() {
+  local id="$1" key="$2" f raw
+  f=$(_job_file "$id")
+  [[ -f "$f" ]] || return 1
+  raw=$(grep -E "^${key}=" "$f" | head -1 | cut -d'=' -f2-)
+  eval "echo $raw" 2>/dev/null || echo "$raw"
+}
+
 _show_job_status() {
   local id="$1"
-  local timer_state="disabled"
-  local service_state="unknown"
+  if _job_is_attached "$id"; then
+    local storage
+    storage=$(_job_env_get "$id" "PVE_STORAGE")
+    local enabled
+    enabled=$(_job_env_get "$id" "ENABLED")
+    [[ "$enabled" == "0" ]] && { echo "attached(disabled) → storage:$storage"; return; }
+    echo "attached → storage:$storage"
+    return
+  fi
+  local timer_state="disabled" service_state
   systemctl is-enabled --quiet "proxmenux-backup-${id}.timer" >/dev/null 2>&1 && timer_state="enabled"
   service_state=$(systemctl is-active "proxmenux-backup-${id}.service" 2>/dev/null || echo "inactive")
-  echo "${timer_state}/${service_state}"
+  if [[ "$service_state" == "active" ]]; then
+    echo "running"
+  elif [[ "$timer_state" == "enabled" ]]; then
+    echo "enabled"
+  else
+    echo "disabled"
+  fi
 }
 
 _write_job_units() {
@@ -155,6 +189,118 @@ _prompt_retention() {
   )
 }
 
+# Builds a "host backup attached to a PVE vzdump job" — no systemd
+# timer is created; the trigger is the vzdump hook that fires when
+# the parent job runs. Schedule and retention come from the parent.
+_create_job_attached() {
+  local id="$1"
+  local backend="$2"
+
+  local -a jobs=()
+  mapfile -t jobs < <(hb_pve_list_vzdump_jobs_for_backend "$backend")
+  if (( ${#jobs[@]} == 0 )); then
+    dialog --backtitle "ProxMenux" --title "$(translate "No compatible PVE jobs")" \
+      --msgbox "$(translate "No PVE vzdump job uses a") $backend $(translate "storage.")" 8 70
+    return 1
+  fi
+
+  local -a menu=()
+  local i=1 row pve_id pve_storage _ pve_schedule _pve_prune pve_enabled
+  for row in "${jobs[@]}"; do
+    IFS=$'\t' read -r pve_id pve_storage _ pve_schedule _pve_prune pve_enabled <<<"$row"
+    local label="${pve_id}  ·  ${pve_storage}  ·  ${pve_schedule}"
+    [[ "$pve_enabled" == "0" ]] && label+="  $(translate "(disabled)")"
+    menu+=("$i" "$label")
+    ((i++))
+  done
+  local sel
+  sel=$(dialog --backtitle "ProxMenux" --title "$(translate "Pick PVE vzdump job")" \
+    --menu "\n$(translate "Select the parent job to attach to:")" \
+    "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${menu[@]}" \
+    3>&1 1>&2 2>&3) || return 1
+
+  local pve_prune
+  IFS=$'\t' read -r pve_id pve_storage _ pve_schedule pve_prune pve_enabled <<<"${jobs[$((sel-1))]}"
+
+  local profile_mode
+  profile_mode=$(dialog --backtitle "ProxMenux" --title "$(translate "Profile")" \
+    --menu "\n$(translate "Select backup profile:")" 12 68 4 \
+    "default" "Default critical paths" \
+    "custom"  "Custom selected paths" \
+    3>&1 1>&2 2>&3) || return 1
+
+  local -a paths=()
+  hb_select_profile_paths "$profile_mode" paths || return 1
+
+  local -a lines=(
+    "JOB_ID=$id"
+    "BACKEND=$backend"
+    "PVE_PARENT_JOB=$pve_id"
+    "PVE_STORAGE=$pve_storage"
+    "PROFILE_MODE=$profile_mode"
+    "ENABLED=1"
+  )
+
+  # Inherit retention from the parent job (one KEEP_* per prune-backups key).
+  local kv
+  while IFS= read -r kv; do
+    [[ -n "$kv" ]] && lines+=("$kv")
+  done < <(hb_pve_prune_to_keep_env "$pve_prune")
+
+  case "$backend" in
+    pbs)
+      hb_select_pbs_repository || return 1
+      local bid
+      bid="hostcfg-$(hostname)"
+      bid=$(dialog --backtitle "ProxMenux" --title "PBS" \
+        --inputbox "$(translate "Backup ID for this job:")" \
+        "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "$bid" 3>&1 1>&2 2>&3) || return 1
+      bid=$(echo "$bid" | tr -cs '[:alnum:]_-' '-' | sed 's/-*$//')
+      lines+=(
+        "PBS_REPOSITORY=${HB_PBS_REPOSITORY}"
+        "PBS_PASSWORD=${HB_PBS_SECRET}"
+        "PBS_BACKUP_ID=${bid}"
+      )
+      ;;
+    local)
+      # Derive the dump directory from the storage entry. PVE stores
+      # vzdump archives under <path>/dump/ when the storage is dir/nfs.
+      local dest_dir="/var/lib/vz/dump"
+      local sp
+      sp=$(awk -v sid="$pve_storage" '
+          /^[a-z]+:[[:space:]]/ { in_block=($2==sid) }
+          in_block && /^[[:space:]]+path[[:space:]]/ { sub(/^[[:space:]]+path[[:space:]]+/,""); print; exit }
+      ' /etc/pve/storage.cfg) || true
+      [[ -n "$sp" ]] && dest_dir="${sp%/}/dump"
+      lines+=("LOCAL_DEST_DIR=$dest_dir" "LOCAL_ARCHIVE_EXT=tar.zst")
+      ;;
+  esac
+
+  _write_job_env "$(_job_file "$id")" "${lines[@]}"
+  : > "$(_job_paths_file "$id")"
+  local p
+  for p in "${paths[@]}"; do
+    echo "$p" >> "$(_job_paths_file "$id")"
+  done
+
+  # No unit / timer — the trigger is the vzdump hook fired by the parent PVE job.
+  hb_install_vzdump_hook >/dev/null 2>&1 || \
+    msg_warn "$(translate "Could not install vzdump hook in /etc/vzdump.conf")"
+
+  show_proxmenux_logo
+  msg_title "$(translate "Host backup attached to PVE job")"
+  echo
+  echo -e "${TAB}${BGN}$(translate "Job ID:")${CL} ${BL}${id}${CL}"
+  echo -e "${TAB}${BGN}$(translate "Attached to PVE job:")${CL} ${BL}${pve_id}${CL}"
+  echo -e "${TAB}${BGN}$(translate "Inherited schedule:")${CL} ${BL}${pve_schedule}${CL}"
+  echo -e "${TAB}${BGN}$(translate "Inherited retention:")${CL} ${BL}${pve_prune}${CL}"
+  echo -e "${TAB}${BGN}$(translate "Backend:")${CL} ${BL}${backend} → ${pve_storage}${CL}"
+  echo
+  msg_success "$(translate "Press Enter to continue...")"
+  read -r
+  return 0
+}
+
 _create_job() {
   local id backend on_calendar profile_mode
   id=$(dialog --backtitle "ProxMenux" --title "$(translate "New backup job")" \
@@ -174,6 +320,31 @@ _create_job() {
     "borg"  "Borg repository" \
     "pbs"   "Proxmox Backup Server" \
     3>&1 1>&2 2>&3) || return 1
+
+  # Offer attach-mode for backends that map to a PVE storage. The
+  # vzdump scheduler in PVE already handles trigger + retention for
+  # VM/CT backups; the host backup can ride alongside it via a hook.
+  # Borg has no PVE-side scheduler, so attach makes no sense there.
+  if [[ "$backend" == "pbs" || "$backend" == "local" ]]; then
+    local creation_mode
+    creation_mode=$(dialog --backtitle "ProxMenux" --title "$(translate "How to schedule")" \
+      --menu "\n$(translate "Choose how this host backup will be triggered:")" 14 78 4 \
+      "new"    "$(translate "New scheduled job (own timer + retention)")" \
+      "attach" "$(translate "Attach to an existing PVE vzdump job (inherit schedule + retention)")" \
+      3>&1 1>&2 2>&3) || return 1
+    if [[ "$creation_mode" == "attach" ]]; then
+      # If no compatible PVE job exists yet, show a helpful pointer
+      # instead of silently dropping back to "new" mode.
+      if [[ -z "$(hb_pve_list_vzdump_jobs_for_backend "$backend" 2>/dev/null | head -1)" ]]; then
+        dialog --backtitle "ProxMenux" --title "$(translate "No compatible PVE jobs")" \
+          --msgbox "$(translate "No PVE vzdump job uses a") $backend $(translate "storage yet.")"$'\n\n'"$(translate "Create one first in Datacenter → Backup, then return here to attach.")" \
+          12 78
+        return 1
+      fi
+      _create_job_attached "$id" "$backend"
+      return $?
+    fi
+  fi
 
   on_calendar=$(dialog --backtitle "ProxMenux" --title "$(translate "Schedule")" \
     --inputbox "$(translate "systemd OnCalendar expression")"$'\n'"$(translate "Example: daily or Mon..Fri 03:00")" \
@@ -337,71 +508,19 @@ _job_run_now() {
   local runner="$LOCAL_SCRIPTS/backup_restore/run_scheduled_backup.sh"
   [[ ! -f "$runner" ]] && runner="$SCRIPT_DIR/run_scheduled_backup.sh"
 
-  # ── Visible execution ───────────────────────────────────
-  # Clear the leftover dialog frame and announce what's about
-  # to happen, so the operator stops looking at a frozen
-  # picker. We then tail the runner's log file in the
-  # background so progress (or errors) are visible as they
-  # happen, instead of the user staring at a black screen.
-  # No msg_info banner between the title and the streaming
-  # log — the title already says we're running, the streamed
-  # `=== Scheduled backup job X started ===` is the better
-  # progress cue.
+  # Foreground execution — the runner detects TTY and prints a
+  # colored progress layout (mirrors _bk_local in backup_host.sh).
+  # Plain-text log file is still written for audit / scheduler runs.
   _render_action_screen "$(translate "Running backup job:") $id"
   echo
-
-  # Snapshot existing log files so we can identify the new one the
-  # runner is about to create (filename pattern is `${id}-${ts}.log`).
-  local existing_logs new_log=""
-  existing_logs="$(ls -1 "${LOG_DIR}/${id}-"*.log 2>/dev/null || true)"
-
-  # Launch the runner in the background so we can tail its log
-  # while it's still writing.
-  "$runner" "$id" &
-  local runner_pid=$!
-
-  # Wait up to ~10s for the new log file to appear, then start tail.
-  # On a small config-only backup the job may finish before we even
-  # find the log; that's fine, we just skip tailing.
-  local tail_pid=""
-  local _i
-  for _i in $(seq 1 20); do
-    local f
-    for f in "${LOG_DIR}/${id}-"*.log; do
-      [[ -f "$f" ]] || continue
-      if ! grep -qFx "$f" <<<"$existing_logs" 2>/dev/null; then
-        new_log="$f"
-        break 2
-      fi
-    done
-    # Stop probing if the runner already exited.
-    kill -0 "$runner_pid" 2>/dev/null || break
-    sleep 0.5
-  done
-
-  if [[ -n "$new_log" ]]; then
-    tail -f "$new_log" &
-    tail_pid=$!
-  fi
-
-  wait "$runner_pid"
-  local runner_exit=$?
-
-  if [[ -n "$tail_pid" ]]; then
-    # Give tail a beat to flush the last buffered lines, then close it.
-    sleep 0.5
-    kill "$tail_pid" 2>/dev/null || true
-    wait "$tail_pid" 2>/dev/null || true
-  fi
+  "$runner" "$id"
+  local runner_exit
+  runner_exit=$?
 
   echo
-  if [[ "$runner_exit" == "0" ]]; then
-    msg_ok "$(translate "Job executed successfully.")"
-  else
-    msg_warn "$(translate "Job execution finished with errors. Check logs.")"
-  fi
   msg_success "$(translate "Press Enter to continue...")"
   read -r
+  return $runner_exit
 }
 
 _job_toggle() {
@@ -415,22 +534,35 @@ _job_toggle() {
     return 1
   fi
 
-  # Decide the action label up front so the title reflects what we
-  # actually just did (enable vs disable).
   local action_label
-  if systemctl is-enabled --quiet "proxmenux-backup-${id}.timer" >/dev/null 2>&1; then
-    systemctl disable --now "proxmenux-backup-${id}.timer" >/dev/null 2>&1 || true
-    action_label="disabled"
+  if _job_is_attached "$id"; then
+    # Attached jobs have no systemd timer — flip the ENABLED flag in
+    # the .env so the vzdump hook respects it on the next parent run.
+    local f current
+    f=$(_job_file "$id")
+    current=$(_job_env_get "$id" "ENABLED")
+    if [[ "$current" == "0" ]]; then
+      sed -i 's/^ENABLED=.*/ENABLED=1/' "$f"
+      action_label="enabled"
+    else
+      sed -i 's/^ENABLED=.*/ENABLED=0/' "$f"
+      action_label="disabled"
+    fi
   else
-    systemctl enable --now "proxmenux-backup-${id}.timer" >/dev/null 2>&1 || true
-    action_label="enabled"
+    if systemctl is-enabled --quiet "proxmenux-backup-${id}.timer" >/dev/null 2>&1; then
+      systemctl disable --now "proxmenux-backup-${id}.timer" >/dev/null 2>&1 || true
+      action_label="disabled"
+    else
+      systemctl enable --now "proxmenux-backup-${id}.timer" >/dev/null 2>&1 || true
+      action_label="enabled"
+    fi
   fi
 
   _render_action_screen "$(translate "Enable/Disable job")"
   if [[ "$action_label" == "disabled" ]]; then
-    msg_warn "$(translate "Job timer disabled:") $id"
+    msg_warn "$(translate "Job disabled:") $id"
   else
-    msg_ok "$(translate "Job timer enabled:") $id"
+    msg_ok "$(translate "Job enabled:") $id"
   fi
   msg_success "$(translate "Press Enter to continue...")"
   read -r
@@ -450,8 +582,16 @@ _job_delete() {
     read -r
     return 1
   fi
+  local confirm_body
+  confirm_body="$(translate "Delete scheduled backup job?")"$'\n\n'"ID: ${id}"
+  if _job_is_attached "$id"; then
+    local storage
+    storage=$(_job_env_get "$id" "PVE_STORAGE")
+    confirm_body+=$'\n'"$(translate "Type: attached to PVE storage") ${storage}"
+    confirm_body+=$'\n\n'"$(translate "Only the host backup hook is removed — PVE vzdump jobs targeting this storage stay intact.")"
+  fi
   if ! whiptail --title "$(translate "Confirm delete")" \
-    --yesno "$(translate "Delete scheduled backup job?")"$'\n\n'"ID: ${id}" 10 66; then
+    --yesno "$confirm_body" 14 70; then
     return 1
   fi
   systemctl disable --now "proxmenux-backup-${id}.timer" >/dev/null 2>&1 || true

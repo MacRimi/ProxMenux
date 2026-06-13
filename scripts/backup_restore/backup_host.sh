@@ -549,12 +549,28 @@ _bk_manage_extra_paths() {
             --title "$(translate "Manage custom backup paths")" \
             --menu "\n${preview}\n" \
             "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
+            "view" "$(translate "View current paths")" \
             "add"  "$(translate "+ Add a path")" \
             "del"  "$(translate "− Remove a path")" \
             "back" "$(translate "← Return")" \
             3>&1 1>&2 2>&3) || break
 
         case "$choice" in
+            view)
+                if (( count == 0 )); then
+                    dialog --backtitle "ProxMenux" --msgbox \
+                        "$(translate "You haven't added any custom paths yet.")" 8 60
+                    continue
+                fi
+                local list_body="" pv
+                for pv in "${paths[@]}"; do
+                    list_body+="• ${pv}"$'\n'
+                done
+                dialog --backtitle "ProxMenux" \
+                    --title "$(translate "Custom backup paths") (${count})" \
+                    --msgbox "\n${list_body}" \
+                    "$HB_UI_MENU_H" "$HB_UI_MENU_W"
+                ;;
             add)
                 local new_path
                 new_path=$(dialog --backtitle "ProxMenux" \
