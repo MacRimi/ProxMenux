@@ -225,7 +225,7 @@ show_disk_host_help() {
 show_iscsi_host_help() {
     clear
     show_proxmenux_logo
-    msg_title "$(translate "Add iSCSI Target as Proxmox Storage")"
+    msg_title "$(translate "Add iSCSI storage in Proxmox Storage")"
 
     msg_info2 "$(translate "Equivalent manual flow of iscsi_host.sh.")"
     echo -e
@@ -501,7 +501,7 @@ show_help_menu() {
             "1" "$(translate "Host NFS/Samba as Proxmox Storage (pvesm)")" \
             "2" "$(translate "Local Shared Directory on Host")" \
             "3" "$(translate "Add Local Disk as Proxmox Storage")" \
-            "4" "$(translate "Add iSCSI Target as Proxmox Storage")" \
+            "4" "$(translate "Add iSCSI storage in Proxmox Storage")" \
             "5" "$(translate "Mount Host Directory to LXC Container")" \
             "6" "$(translate "NFS Client in LXC (privileged)")" \
             "7" "$(translate "Samba Client in LXC (privileged)")" \
