@@ -8941,6 +8941,41 @@
     "os": "debian"
   },
   {
+    "name": "Kiwix",
+    "slug": "kiwix",
+    "desc": "Offline content browser serving Wikipedia, Project Gutenberg, and more from ZIM archives",
+    "script": "ct/kiwix.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/kiwix.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/kiwix.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00000"
+    ],
+    "category_names": [
+      "Miscellaneous"
+    ],
+    "notes": [
+      "Place your .zim files in /data inside the container (local files work out of the box). Optional: you can bind-mount a host directory to /data if you want external storage."
+    ],
+    "warnings": [
+      "Ensure ZIM files are readable by the service user (for host mounts, for example: chmod -R a+rX /your/zims)."
+    ],
+    "port": 8080,
+    "website": "https://www.kiwix.org",
+    "documentation": "https://wiki.kiwix.org",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kiwix.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "ubuntu"
+  },
+  {
     "name": "Koel",
     "slug": "koel",
     "desc": "Koel is a simple web-based personal audio streaming service written in Vue and Laravel. It supports multiple users, audio visualization, smart playlists, YouTube integration, and Last.fm scrobbling.",
@@ -15550,6 +15585,39 @@
       "username": "proxmox",
       "password": "proxmox"
     },
+    "os": "debian"
+  },
+  {
+    "name": "Rackula",
+    "slug": "rackula",
+    "desc": "Rackula is a drag-and-drop rack layout designer for homelabbers. Visualize your server rack with an offline-ready, mobile-friendly interface. Includes persistence API for cross-browser syncing.",
+    "script": "ct/rackula.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/rackula.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/rackula.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00010"
+    ],
+    "category_names": [
+      "Dashboards & Frontends"
+    ],
+    "notes": [
+      "API write token is auto-generated during install. Find it in /opt/rackula/data/.env"
+    ],
+    "warnings": [],
+    "port": 80,
+    "website": "https://count.racku.la",
+    "documentation": "https://github.com/RackulaLives/Rackula",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/rackula.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
