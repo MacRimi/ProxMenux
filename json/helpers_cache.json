@@ -4631,7 +4631,7 @@
     "warnings": [],
     "port": 8080,
     "website": "https://www.drawio.com/",
-    "documentation": "https://www.drawio.com/doc/",
+    "documentation": "https://www.drawio.com/docs/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/draw-io.webp",
     "updateable": true,
     "privileged": false,
