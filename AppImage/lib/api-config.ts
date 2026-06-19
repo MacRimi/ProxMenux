@@ -149,10 +149,15 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
           }
         }
       } catch (parseErr) {
-        if (parseErr instanceof Error && parseErr.message.includes("API request failed")) {
+        // Backend-supplied detail (the explicit `throw new Error(detail)`
+        // above) MUST propagate so the UI shows "path does not exist…"
+        // instead of the generic "API request failed: 400 BAD REQUEST".
+        // Only swallow when the JSON itself failed to parse — that's a
+        // real SyntaxError and falling through to the generic message
+        // is the right behaviour there.
+        if (!(parseErr instanceof SyntaxError)) {
           throw parseErr
         }
-        // JSON parse failed — fall through to the generic message.
       }
       throw new Error(`API request failed: ${response.status} ${response.statusText}`)
     }

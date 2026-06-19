@@ -40,6 +40,7 @@ import os
 import platform
 import re
 import select
+import shlex
 import shutil
 import socket
 import sqlite3
@@ -57,7 +58,7 @@ from pathlib import Path
 
 import jwt
 import psutil
-from flask import Flask, jsonify, request, send_file, send_from_directory, Response
+from flask import Flask, jsonify, request, send_file, send_from_directory, Response, after_this_request
 from flask_cors import CORS
 
 # Ensure local imports work even if working directory changes
@@ -12178,8 +12179,12 @@ def _parse_job_env(file_path: str) -> dict:
 
 def _collect_backup_scan_dirs():
     """Build the de-duplicated list of directories we scan for host
-    backup archives: the PVE default(s) plus every local_tar job's
-    DEST_DIR. Returns directories that actually exist on disk."""
+    backup archives. Sources, in priority order:
+      - PVE default dump dirs (/var/lib/vz/dump et al.)
+      - The configured local target (local-target.conf)
+      - Every job .env that targets a local backend
+      - Every USB partition mounted under our naming convention
+    Returns directories that actually exist on disk."""
     import glob
     dirs = []
     seen = set()
@@ -12189,15 +12194,36 @@ def _collect_backup_scan_dirs():
             dirs.append(d)
     for d in _BACKUP_DEFAULT_DUMP_DIRS:
         _add(d)
+
+    # Configured local target
+    try:
+        _add(_get_local_target().get('configured'))
+    except Exception:
+        pass
+
+    # Per-job local destinations — handle both the legacy field names
+    # (METHOD, DEST_DIR, DEST) and the current ones (BACKEND, LOCAL_DEST_DIR).
     try:
         env_files = sorted(glob.glob(f'{_BACKUP_JOBS_DIR}/*.env'))
     except OSError:
         env_files = []
     for env_file in env_files:
         job = _parse_job_env(env_file)
-        if job.get('METHOD') != 'local_tar':
+        backend = (job.get('BACKEND') or job.get('METHOD') or '').lower()
+        if backend not in ('local', 'local_tar'):
             continue
-        _add(job.get('DEST_DIR') or job.get('DEST'))
+        _add(job.get('LOCAL_DEST_DIR') or job.get('DEST_DIR') or job.get('DEST'))
+
+    # Mounted USB partitions — anything under /mnt/proxmenux-backup-* and
+    # /media/* gets included since those are where hb_mount_usb_partition
+    # parks them. Defensive: only existing mountpoints.
+    try:
+        for mp_glob in ('/mnt/proxmenux-backup-*', '/media/*'):
+            for mp in glob.glob(mp_glob):
+                _add(mp)
+    except OSError:
+        pass
+
     return dirs
 
 
@@ -12441,7 +12467,16 @@ def _backup_job_summary(env_file: str) -> dict:
             if r.returncode == 0 and r.stdout.strip():
                 rows = json.loads(r.stdout)
                 if rows and isinstance(rows, list):
-                    next_run = rows[0].get('next')
+                    # systemd's list-timers --output=json emits `next`
+                    # as MICROSECONDS since the unix epoch (uint64).
+                    # Passing that raw to `new Date(…)` in the browser
+                    # was interpreting it as milliseconds → year 58433.
+                    # Normalize it to an ISO 8601 timestamp here so the
+                    # frontend just calls `new Date(iso).toLocaleString()`.
+                    next_us = rows[0].get('next')
+                    if isinstance(next_us, (int, float)) and next_us > 0:
+                        from datetime import datetime as _dt
+                        next_run = _dt.fromtimestamp(next_us / 1_000_000).isoformat()
         except (subprocess.TimeoutExpired, json.JSONDecodeError, ValueError, OSError):
             pass
 
@@ -12465,6 +12500,7 @@ def _backup_job_summary(env_file: str) -> dict:
         'attached': attached,
         'pve_storage': pve_storage,
         'profile_mode': job.get('PROFILE_MODE') or 'default',
+        'manual': job.get('MANUAL_RUN') == '1',
         'last_status': last_status,
         'next_run': next_run,
     }
@@ -12564,6 +12600,2620 @@ def api_host_backups_job_toggle(job_id):
     if r.returncode != 0:
         return jsonify({'error': f'systemctl failed: {r.stderr.strip()}'}), 500
     return jsonify({'status': 'ok', 'enabled': new_state, 'attached': False})
+
+
+@app.route('/api/host-backups/jobs/<job_id>', methods=['DELETE'])
+@require_auth
+def api_host_backups_job_delete(job_id):
+    """Remove a scheduled host backup job. Mirrors _job_delete in
+    backup_scheduler.sh: for attached jobs we only drop the .env/.paths
+    (the PVE vzdump job stays intact); for timer-based jobs we also
+    stop+disable the timer, remove the unit files and reload systemd."""
+    if not _JOB_ID_RE.match(job_id):
+        return jsonify({'error': 'invalid job id'}), 400
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    if not os.path.exists(env_file):
+        return jsonify({'error': 'job not found'}), 404
+
+    job = _parse_job_env(env_file)
+    is_attached = bool(job.get('PVE_STORAGE'))
+
+    paths_file = f'{_BACKUP_JOBS_DIR}/{job_id}.paths'
+    service_file = f'/etc/systemd/system/proxmenux-backup-{job_id}.service'
+    timer_file = f'/etc/systemd/system/proxmenux-backup-{job_id}.timer'
+
+    if not is_attached:
+        timer_unit = f'proxmenux-backup-{job_id}.timer'
+        subprocess.run(
+            ['systemctl', '--now', 'disable', timer_unit],
+            capture_output=True, timeout=10
+        )
+
+    removed = []
+    for f in (env_file, paths_file, service_file, timer_file):
+        try:
+            if os.path.exists(f):
+                os.remove(f)
+                removed.append(os.path.basename(f))
+        except OSError:
+            pass
+
+    # Drop all runner logs for this job — when the job is gone there's
+    # no archive these logs belong to. Keeps /var/log/proxmenux clean.
+    import glob as _glob
+    log_removed = 0
+    for log_f in _glob.glob(f'{_BACKUP_LOG_DIR}/{job_id}-*.log') + \
+                 _glob.glob(f'{_BACKUP_LOG_DIR}/{job_id}-last.status'):
+        try:
+            os.remove(log_f)
+            log_removed += 1
+        except OSError:
+            pass
+
+    if not is_attached:
+        subprocess.run(['systemctl', 'daemon-reload'], capture_output=True, timeout=10)
+
+    return jsonify({
+        'status': 'ok',
+        'job_id': job_id,
+        'attached': is_attached,
+        'removed': removed,
+        'log_files_removed': log_removed,
+    })
+
+
+_BACKUP_LIB_SH = '/usr/local/share/proxmenux/scripts/backup_restore/lib_host_backup_common.sh'
+_BACKUP_STATE_DIR = '/usr/local/share/proxmenux'
+_PVE_LOCAL_STORAGE_TYPES = ('dir', 'nfs', 'cifs', 'lvm', 'lvmthin', 'btrfs', 'zfs', 'zfspool')
+
+
+def _pve_storage_types_map() -> dict:
+    """Parse /etc/pve/storage.cfg into {storage_id: type}."""
+    result: dict = {}
+    cfg_path = '/etc/pve/storage.cfg'
+    if not os.path.exists(cfg_path):
+        return result
+    try:
+        with open(cfg_path) as f:
+            for raw in f:
+                line = raw.rstrip()
+                if not line or line.startswith('#'):
+                    continue
+                m = re.match(r'^([a-z]+):\s+(\S+)', line)
+                if m:
+                    result[m.group(2)] = m.group(1)
+    except OSError:
+        pass
+    return result
+
+
+def _list_pve_vzdump_jobs() -> list:
+    """Parse /etc/pve/jobs.cfg into a list of dicts. Same fields as
+    hb_pve_list_vzdump_jobs in lib_host_backup_common.sh, plus the
+    storage type resolved from storage.cfg."""
+    cfg_path = '/etc/pve/jobs.cfg'
+    if not os.path.exists(cfg_path):
+        return []
+    storage_types = _pve_storage_types_map()
+    jobs: list = []
+    current: dict | None = None
+    try:
+        with open(cfg_path) as f:
+            for raw in f:
+                line = raw.rstrip('\n')
+                if not line.strip():
+                    continue
+                if line.startswith('vzdump:'):
+                    if current:
+                        jobs.append(current)
+                    current = {
+                        'id': line.split(':', 1)[1].strip(),
+                        'storage': None,
+                        'storage_type': None,
+                        'schedule': None,
+                        'prune': None,
+                        'enabled': True,
+                    }
+                    continue
+                if re.match(r'^[a-z]+:', line) and current is not None:
+                    # Different block type encountered → close current
+                    jobs.append(current)
+                    current = None
+                    continue
+                if current is None:
+                    continue
+                m = re.match(r'^\s+(\S+)\s+(.*)$', line)
+                if not m:
+                    continue
+                key, val = m.group(1), m.group(2).strip()
+                if key == 'storage':
+                    current['storage'] = val
+                    current['storage_type'] = storage_types.get(val)
+                elif key == 'schedule':
+                    current['schedule'] = val
+                elif key == 'prune-backups':
+                    current['prune'] = val
+                elif key == 'enabled':
+                    current['enabled'] = (val == '1')
+        if current:
+            jobs.append(current)
+    except OSError:
+        pass
+    return jobs
+
+
+@app.route('/api/host-backups/pve-vzdump-jobs', methods=['GET'])
+@require_auth
+def api_host_backups_pve_vzdump_jobs():
+    """List PVE vzdump jobs the operator can attach a host backup to.
+    Optional ?backend=pbs|local filters by storage family."""
+    backend = (request.args.get('backend') or '').strip().lower()
+    jobs = _list_pve_vzdump_jobs()
+    if backend == 'pbs':
+        jobs = [j for j in jobs if j.get('storage_type') == 'pbs']
+    elif backend == 'local':
+        jobs = [j for j in jobs if j.get('storage_type') in _PVE_LOCAL_STORAGE_TYPES]
+    return jsonify({'jobs': jobs})
+
+
+@app.route('/api/host-backups/default-paths', methods=['GET'])
+@require_auth
+def api_host_backups_default_paths():
+    """Return the default backup profile path list, sourced from
+    lib_host_backup_common.sh so there is one source of truth."""
+    if not os.path.exists(_BACKUP_LIB_SH):
+        return jsonify({'paths': []})
+    try:
+        r = subprocess.run(
+            ['bash', '-c',
+             f'source {_BACKUP_LIB_SH}; declare -a paths=(); '
+             f'hb_select_profile_paths default paths >/dev/null 2>&1; '
+             f'printf "%s\\n" "${{paths[@]}}"'],
+            capture_output=True, text=True, timeout=10
+        )
+        if r.returncode != 0:
+            return jsonify({'paths': [], 'error': r.stderr.strip()}), 500
+        paths = [p for p in r.stdout.splitlines() if p.strip()]
+        return jsonify({'paths': paths})
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return jsonify({'paths': [], 'error': str(e)}), 500
+
+
+def _list_pbs_destinations() -> list:
+    """PBS repos available: from /etc/pve/storage.cfg + the proxmenux
+    manual list ($HB_STATE_DIR/pbs-manual-configs.txt). Same layout
+    hb_collect_pbs_configs uses."""
+    repos: list = []
+    seen: set = set()
+
+    # From PVE storage.cfg
+    cfg_path = '/etc/pve/storage.cfg'
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path) as f:
+                current_name = None
+                current_type = None
+                current_server = None
+                current_datastore = None
+                current_username = None
+                current_fingerprint = None
+                for raw in f:
+                    line = raw.rstrip('\n')
+                    m = re.match(r'^([a-z]+):\s+(\S+)', line)
+                    if m:
+                        if current_type == 'pbs' and current_name:
+                            repo = f"{current_username or 'root@pam'}@{current_server}:{current_datastore}"
+                            if (current_name, repo) not in seen:
+                                repos.append({
+                                    'name': current_name,
+                                    'repository': repo,
+                                    'fingerprint': current_fingerprint,
+                                    'source': 'proxmox',
+                                })
+                                seen.add((current_name, repo))
+                        current_type = m.group(1)
+                        current_name = m.group(2) if current_type == 'pbs' else None
+                        current_server = current_datastore = current_username = current_fingerprint = None
+                        continue
+                    if current_type != 'pbs' or current_name is None:
+                        continue
+                    sm = re.match(r'^\s+(\S+)\s+(.*)$', line)
+                    if not sm:
+                        continue
+                    key, val = sm.group(1), sm.group(2).strip()
+                    if key == 'server':
+                        current_server = val
+                    elif key == 'datastore':
+                        current_datastore = val
+                    elif key == 'username':
+                        current_username = val
+                    elif key == 'fingerprint':
+                        current_fingerprint = val
+                if current_type == 'pbs' and current_name and current_server and current_datastore:
+                    repo = f"{current_username or 'root@pam'}@{current_server}:{current_datastore}"
+                    if (current_name, repo) not in seen:
+                        repos.append({
+                            'name': current_name,
+                            'repository': repo,
+                            'fingerprint': current_fingerprint,
+                            'source': 'proxmox',
+                        })
+                        seen.add((current_name, repo))
+        except OSError:
+            pass
+
+    # From proxmenux manual list
+    manual_path = f'{_BACKUP_STATE_DIR}/pbs-manual-configs.txt'
+    if os.path.exists(manual_path):
+        try:
+            with open(manual_path) as f:
+                for raw in f:
+                    line = raw.strip()
+                    if not line or '|' not in line:
+                        continue
+                    name, repo = line.split('|', 1)
+                    if (name, repo) not in seen:
+                        repos.append({
+                            'name': name,
+                            'repository': repo,
+                            'fingerprint': None,
+                            'source': 'manual',
+                        })
+                        seen.add((name, repo))
+        except OSError:
+            pass
+    return repos
+
+
+def _list_borg_destinations() -> list:
+    """borg-targets.txt has 3 pipe-separated fields per line:
+    name|repo|ssh_key — split on 2 pipes so the SSH key never ends up
+    appended to the repository path."""
+    targets: list = []
+    cfg = f'{_BACKUP_STATE_DIR}/borg-targets.txt'
+    if not os.path.exists(cfg):
+        return targets
+    try:
+        with open(cfg) as f:
+            for raw in f:
+                line = raw.strip()
+                if not line or '|' not in line:
+                    continue
+                parts = line.split('|', 2)
+                name = parts[0]
+                repo = parts[1] if len(parts) > 1 else ''
+                ssh_key = parts[2] if len(parts) > 2 else ''
+                targets.append({'name': name, 'repository': repo, 'ssh_key': ssh_key})
+    except OSError:
+        pass
+    return targets
+
+
+_LOCAL_DEFAULT_PATH = '/var/lib/vz/dump'
+
+
+def _read_local_target_paths() -> list:
+    """Read the operator-configured local backup paths from
+    local-target.conf. The file is one path per line — historically it
+    only ever held one entry, but the new multi-path UI lets the
+    operator stack several. Empty lines and duplicates are dropped."""
+    cfg = f'{_BACKUP_STATE_DIR}/local-target.conf'
+    out: list = []
+    if not os.path.exists(cfg):
+        return out
+    seen: set = set()
+    try:
+        with open(cfg) as f:
+            for raw in f:
+                p = raw.strip()
+                if not p or p.startswith('#'):
+                    continue
+                if p in seen:
+                    continue
+                seen.add(p)
+                out.append(p)
+    except OSError:
+        pass
+    return out
+
+
+def _list_local_targets() -> list:
+    """One entry per local destination the operator can target. The
+    /var/lib/vz/dump default is always present and not removable; any
+    custom path stacked by the operator gets source=custom + removable."""
+    entries: list = [{
+        'path': _LOCAL_DEFAULT_PATH,
+        'source': 'default',
+        'removable': False,
+    }]
+    for p in _read_local_target_paths():
+        if p == _LOCAL_DEFAULT_PATH:
+            # Operator re-added the default — collapse silently.
+            continue
+        entries.append({
+            'path': p,
+            'source': 'custom',
+            'removable': True,
+        })
+    return entries
+
+
+def _get_local_target() -> dict:
+    """Backwards-compatible accessor used by the scheduler runner +
+    the historical single-path UI. `effective` is the first custom
+    path if any, otherwise the default — matching the previous
+    behavior. New code should call _list_local_targets() instead."""
+    customs = _read_local_target_paths()
+    configured = customs[0] if customs else None
+    return {
+        'configured': configured,
+        'default': _LOCAL_DEFAULT_PATH,
+        'effective': configured or _LOCAL_DEFAULT_PATH,
+        'entries': _list_local_targets(),
+    }
+
+
+@app.route('/api/host-backups/destinations', methods=['GET'])
+@require_auth
+def api_host_backups_destinations():
+    """Pre-configured backup destinations the operator picks from when
+    creating a new job: PBS repos, Borg targets, and the local target
+    list (always includes the /var/lib/vz/dump default plus any custom
+    paths the operator stacked on top)."""
+    return jsonify({
+        'pbs': _list_pbs_destinations(),
+        'borg': _list_borg_destinations(),
+        'local': _get_local_target(),
+    })
+
+
+def _is_usb_mount(path: str) -> bool:
+    """Heuristic: true if `path` lives under one of the typical USB
+    mount roots ProxMenux uses for backup media. The naming pattern
+    `/mnt/proxmenux-backup-disk-*` is set by the USB drive section
+    of the host-backup UI; we also detect anything mounted in
+    /media/. Used only to display a `USB` badge — not for any
+    permissions decision."""
+    if not path:
+        return False
+    p = os.path.abspath(path)
+    if p.startswith('/mnt/proxmenux-backup-disk-'):
+        return True
+    if p.startswith('/media/'):
+        return True
+    return False
+
+
+def _capacity_local(path: str) -> dict:
+    """Capacity via statvfs(path). Walks up the path tree until it
+    finds an existing directory so we can answer even for a
+    destination dir that hasn't been created yet."""
+    if not path or not path.startswith('/'):
+        return {'error': 'invalid path'}
+    probe = path
+    while probe and not os.path.exists(probe):
+        parent = os.path.dirname(probe)
+        if parent == probe:
+            break
+        probe = parent
+    if not probe or not os.path.exists(probe):
+        return {'error': 'path not found'}
+    try:
+        st = os.statvfs(probe)
+    except OSError as e:
+        return {'error': str(e)}
+    block = st.f_frsize
+    total = st.f_blocks * block
+    avail = st.f_bavail * block
+    used = total - (st.f_bfree * block)
+    return {
+        'total': total,
+        'available': avail,
+        'used': used,
+        'is_usb': _is_usb_mount(path),
+    }
+
+
+def _capacity_borg_ssh(host: str, user: str, remote_path: str, key_path: str = '') -> dict:
+    """Run `df -B1 --output=size,used,avail` over ssh against the
+    remote borg repo path. Times out fast — failure is just rendered
+    as a missing capacity badge in the UI, not a hard error."""
+    if not host or not user or not remote_path:
+        return {'error': 'incomplete ssh target'}
+    ssh_target = f'{user}@{host}'
+    cmd = ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5',
+           '-o', 'StrictHostKeyChecking=accept-new']
+    if key_path:
+        cmd += ['-i', key_path]
+    cmd += [ssh_target, f'df -B1 --output=size,used,avail {shlex.quote(remote_path)}']
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return {'error': f'ssh timed out: {e}'}
+    if r.returncode != 0:
+        return {'error': (r.stderr.strip().splitlines()[-1] if r.stderr.strip() else 'df failed')[:200]}
+    lines = [ln.strip() for ln in r.stdout.splitlines() if ln.strip()]
+    if len(lines) < 2:
+        return {'error': 'unexpected df output'}
+    cols = lines[-1].split()
+    if len(cols) < 3:
+        return {'error': 'unexpected df output'}
+    try:
+        total = int(cols[0])
+        used = int(cols[1])
+        avail = int(cols[2])
+    except ValueError:
+        return {'error': 'unparseable df output'}
+    return {'total': total, 'used': used, 'available': avail, 'remote': True}
+
+
+def _resolve_pbs_password(repo_name: str) -> str:
+    """Return the PBS password for `repo_name`, looking in both the
+    proxmenux manual sidecar (`pbs-pass-<name>.txt`) and Proxmox's
+    own per-storage password file (`/etc/pve/priv/storage/<name>.pw`).
+
+    Manual configs win because they're explicitly typed by the operator;
+    Proxmox-managed PBS storages fall back to the second location which
+    is where `pvesm` and `pbs-client` write the credential for an
+    auto-discovered repo. Returns "" if neither file exists."""
+    sidecar = f'{_BACKUP_STATE_DIR}/pbs-pass-{repo_name}.txt'
+    if os.path.isfile(sidecar):
+        try:
+            with open(sidecar) as f:
+                pw = f.read().strip()
+                if pw:
+                    return pw
+        except OSError:
+            pass
+    pve_pw = f'/etc/pve/priv/storage/{repo_name}.pw'
+    if os.path.isfile(pve_pw):
+        try:
+            with open(pve_pw) as f:
+                return f.read().strip()
+        except OSError:
+            pass
+    return ''
+
+
+def _resolve_pbs_fingerprint(repo_name: str) -> str:
+    """Return the PBS fingerprint for `repo_name`. Symmetric to
+    _resolve_pbs_password: first the proxmenux manual sidecar
+    (`pbs-fingerprint-<name>.txt`), then the `fingerprint` line in
+    the matching `pbs:` block of /etc/pve/storage.cfg. Without this
+    fallback, `proxmox-backup-client` rejects the TLS handshake for
+    auto-discovered PBS storages with "Certificate fingerprint was
+    not confirmed."""
+    sidecar = f'{_BACKUP_STATE_DIR}/pbs-fingerprint-{repo_name}.txt'
+    if os.path.isfile(sidecar):
+        try:
+            with open(sidecar) as f:
+                fp = f.read().strip()
+                if fp:
+                    return fp
+        except OSError:
+            pass
+    # Walk storage.cfg looking for a `pbs: <repo_name>` block.
+    cfg_path = '/etc/pve/storage.cfg'
+    if not os.path.isfile(cfg_path):
+        return ''
+    try:
+        with open(cfg_path) as f:
+            in_block = False
+            for raw in f:
+                line = raw.rstrip('\n')
+                m = re.match(r'^([a-z]+):\s+(\S+)', line)
+                if m:
+                    in_block = (m.group(1) == 'pbs' and m.group(2) == repo_name)
+                    continue
+                if not in_block:
+                    continue
+                fm = re.match(r'^\s+fingerprint\s+(\S+)', line)
+                if fm:
+                    return fm.group(1).strip()
+    except OSError:
+        pass
+    return ''
+
+
+def _capacity_pbs(repo_name: str, repository: str) -> dict:
+    """`proxmox-backup-client status --output-format json` against the
+    datastore. Password resolution walks both the proxmenux sidecar
+    AND Proxmox's own `/etc/pve/priv/storage/<name>.pw` so PBS storages
+    auto-discovered from the Datacenter work out of the box."""
+    if not repository:
+        return {'error': 'no repository'}
+    env = dict(os.environ)
+    pw = _resolve_pbs_password(repo_name)
+    if pw:
+        env['PBS_PASSWORD'] = pw
+    fp = _resolve_pbs_fingerprint(repo_name)
+    if fp:
+        env['PBS_FINGERPRINT'] = fp
+    try:
+        # 30 s — `proxmox-backup-client status` is consistently fast
+        # against a healthy datastore but can stall on TLS handshake
+        # when the PBS server is under heavy GC / verify load. We'd
+        # rather make the operator wait than report a false "client
+        # error (Connect)" the way a tight 15 s timeout did.
+        r = subprocess.run(
+            ['proxmox-backup-client', 'status',
+             '--repository', repository, '--output-format', 'json'],
+            capture_output=True, text=True, timeout=30, env=env,
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return {'error': f'pbs status: {e}'}
+    if r.returncode != 0:
+        msg = (r.stderr.strip() or r.stdout.strip()).splitlines()
+        return {'error': (msg[-1] if msg else 'pbs status failed')[:200]}
+    try:
+        data = json.loads(r.stdout)
+    except (json.JSONDecodeError, ValueError):
+        return {'error': 'pbs json parse failed'}
+    total = data.get('total')
+    used = data.get('used')
+    avail = data.get('avail')
+    if not isinstance(total, (int, float)):
+        return {'error': 'pbs status missing fields'}
+    return {
+        'total': int(total),
+        'used': int(used) if isinstance(used, (int, float)) else None,
+        'available': int(avail) if isinstance(avail, (int, float)) else None,
+        'remote': True,
+    }
+
+
+@app.route('/api/host-backups/destinations/capacity', methods=['POST'])
+@require_auth
+def api_host_backups_dest_capacity():
+    """Capacity probe for a batch of destinations. Body:
+    {
+      targets: [
+        {id, kind: "local",      path},
+        {id, kind: "borg-local", path},
+        {id, kind: "borg-ssh",   host, user, remote_path, key_path?},
+        {id, kind: "pbs",        name, repository},
+      ]
+    }
+    Returns the same `id` back paired with the capacity payload so the
+    UI doesn't need to figure out which entry maps to which result.
+
+    Failures per-entry are not 500s — the whole call still returns 200
+    with `{error: "..."}` for the entries we couldn't measure."""
+    payload = request.get_json(silent=True) or {}
+    targets = payload.get('targets') or []
+    if not isinstance(targets, list):
+        return jsonify({'error': 'targets must be a list'}), 400
+    results: list = []
+    for t in targets:
+        if not isinstance(t, dict):
+            continue
+        tid = t.get('id')
+        kind = (t.get('kind') or '').strip()
+        cap: dict
+        if kind == 'local' or kind == 'borg-local':
+            cap = _capacity_local((t.get('path') or '').strip())
+        elif kind == 'borg-ssh':
+            cap = _capacity_borg_ssh(
+                (t.get('host') or '').strip(),
+                (t.get('user') or '').strip(),
+                (t.get('remote_path') or '').strip(),
+                (t.get('key_path') or '').strip(),
+            )
+        elif kind == 'pbs':
+            cap = _capacity_pbs(
+                (t.get('name') or '').strip(),
+                (t.get('repository') or '').strip(),
+            )
+        else:
+            cap = {'error': f'unknown kind: {kind}'}
+        results.append({'id': tid, **cap})
+    return jsonify({'results': results})
+
+
+@app.route('/api/host-backups/calendar-preview', methods=['POST'])
+@require_auth
+def api_host_backups_calendar_preview():
+    """Validate a systemd OnCalendar expression and return its
+    normalized form + next elapse, so the operator gets live feedback
+    while building the schedule in the UI."""
+    payload = request.get_json(silent=True) or {}
+    expr = (payload.get('expr') or '').strip()
+    if not expr:
+        return jsonify({'valid': False, 'error': 'empty expression'}), 200
+    try:
+        r = subprocess.run(
+            ['systemd-analyze', 'calendar', '--iterations=1', expr],
+            capture_output=True, text=True, timeout=5
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return jsonify({'valid': False, 'error': str(e)}), 200
+    if r.returncode != 0:
+        return jsonify({
+            'valid': False,
+            'error': (r.stderr.strip() or r.stdout.strip() or 'invalid expression'),
+        }), 200
+    normalized: str | None = None
+    next_elapse: str | None = None
+    from_now: str | None = None
+    for line in r.stdout.splitlines():
+        line = line.strip()
+        if line.startswith('Normalized form:'):
+            normalized = line.split(':', 1)[1].strip()
+        elif line.startswith('Next elapse:'):
+            next_elapse = line.split(':', 1)[1].strip()
+        elif line.startswith('From now:'):
+            from_now = line.split(':', 1)[1].strip()
+    return jsonify({
+        'valid': True,
+        'normalized': normalized,
+        'next_elapse': next_elapse,
+        'from_now': from_now,
+    }), 200
+
+
+_KEEP_FIELD_MAP = {
+    'keep_last': 'KEEP_LAST',
+    'keep_hourly': 'KEEP_HOURLY',
+    'keep_daily': 'KEEP_DAILY',
+    'keep_weekly': 'KEEP_WEEKLY',
+    'keep_monthly': 'KEEP_MONTHLY',
+    'keep_yearly': 'KEEP_YEARLY',
+}
+
+
+def _validate_on_calendar(expr: str) -> str | None:
+    """Validate a systemd OnCalendar expression. Returns None on success
+    or an error message describing why systemd rejected it."""
+    if not expr:
+        return 'on_calendar is required'
+    try:
+        r = subprocess.run(
+            ['systemd-analyze', 'calendar', expr],
+            capture_output=True, text=True, timeout=5
+        )
+        if r.returncode != 0:
+            return r.stderr.strip() or r.stdout.strip() or 'invalid OnCalendar expression'
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return f'systemd-analyze failed: {e}'
+    return None
+
+
+def _write_systemd_units(job_id: str, on_calendar: str) -> tuple[bool, str]:
+    """Write the .service + .timer units exactly as _write_job_units in
+    backup_scheduler.sh does, then daemon-reload. Returns (ok, error)."""
+    service_path = f'/etc/systemd/system/proxmenux-backup-{job_id}.service'
+    timer_path = f'/etc/systemd/system/proxmenux-backup-{job_id}.timer'
+    try:
+        with open(service_path, 'w') as f:
+            f.write(
+                f'[Unit]\n'
+                f'Description=ProxMenux Scheduled Backup Job ({job_id})\n'
+                f'After=network-online.target\n'
+                f'Wants=network-online.target\n'
+                f'\n'
+                f'[Service]\n'
+                f'Type=oneshot\n'
+                f'ExecStart={_BACKUP_RUNNER} {job_id}\n'
+                f'Nice=10\n'
+                f'IOSchedulingClass=best-effort\n'
+                f'IOSchedulingPriority=7\n'
+            )
+        with open(timer_path, 'w') as f:
+            f.write(
+                f'[Unit]\n'
+                f'Description=ProxMenux Scheduled Backup Timer ({job_id})\n'
+                f'\n'
+                f'[Timer]\n'
+                f'OnCalendar={on_calendar}\n'
+                f'Persistent=true\n'
+                f'RandomizedDelaySec=120\n'
+                f'Unit=proxmenux-backup-{job_id}.service\n'
+                f'\n'
+                f'[Install]\n'
+                f'WantedBy=timers.target\n'
+            )
+        subprocess.run(['systemctl', 'daemon-reload'], capture_output=True, timeout=10)
+        return True, ''
+    except OSError as e:
+        return False, str(e)
+
+
+@app.route('/api/host-backups/jobs', methods=['POST'])
+@require_auth
+def api_host_backups_job_create():
+    """Create a new host backup job. Supports both modes that
+    backup_scheduler.sh exposes:
+      - attached=true → inherits schedule + retention from a PVE
+        vzdump parent, no own timer (the vzdump hook fires it).
+      - attached=false → standalone systemd timer with the operator's
+        own OnCalendar + retention, runs via the same runner script."""
+    payload = request.get_json(silent=True) or {}
+
+    job_id = (payload.get('id') or '').strip()
+    backend = (payload.get('backend') or '').strip().lower()
+    attached = bool(payload.get('attached'))
+    profile_mode = (payload.get('profile_mode') or 'default').strip().lower()
+    paths = payload.get('paths') or []
+    enabled = payload.get('enabled')
+    if enabled is None:
+        enabled = True
+
+    if not _JOB_ID_RE.match(job_id):
+        return jsonify({'error': 'invalid id (use letters, digits, _ or -)'}), 400
+    if backend not in ('pbs', 'local', 'borg'):
+        return jsonify({'error': 'backend must be pbs, local or borg'}), 400
+    if profile_mode not in ('default', 'custom'):
+        return jsonify({'error': 'profile_mode must be default or custom'}), 400
+    if attached and backend == 'borg':
+        return jsonify({'error': 'borg is not a valid backend for attached jobs (PVE vzdump only writes to pbs/local storages)'}), 400
+
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    if os.path.exists(env_file):
+        return jsonify({'error': f'job already exists: {job_id}'}), 409
+
+    # Mode-specific required fields
+    pve_parent = pve_storage = ''
+    on_calendar = ''
+    if attached:
+        pve_parent = (payload.get('pve_parent_job_id') or '').strip()
+        pve_storage = (payload.get('pve_storage') or '').strip()
+        if not pve_parent or not pve_storage:
+            return jsonify({'error': 'pve_parent_job_id and pve_storage are required for attached'}), 400
+    else:
+        on_calendar = (payload.get('on_calendar') or '').strip()
+        calendar_err = _validate_on_calendar(on_calendar)
+        if calendar_err:
+            return jsonify({'error': f'invalid on_calendar: {calendar_err}'}), 400
+
+    parent: dict | None = None
+    if attached:
+        # Verify the PVE job exists and matches the declared storage
+        pve_jobs = _list_pve_vzdump_jobs()
+        parent = next((j for j in pve_jobs if j['id'] == pve_parent), None)
+        if not parent:
+            return jsonify({'error': f'PVE vzdump job not found: {pve_parent}'}), 404
+        if parent.get('storage') != pve_storage:
+            return jsonify({'error': f"PVE job storage mismatch (job uses {parent.get('storage')}, payload says {pve_storage})"}), 400
+
+    # Resolve custom paths if requested, otherwise pull the default list
+    # from the shell so there is one source of truth.
+    if profile_mode == 'custom':
+        if not isinstance(paths, list) or not all(isinstance(p, str) and p.startswith('/') for p in paths):
+            return jsonify({'error': 'paths must be a list of absolute paths'}), 400
+        if not paths:
+            return jsonify({'error': 'custom profile needs at least one path'}), 400
+        resolved_paths = paths
+    else:
+        try:
+            r = subprocess.run(
+                ['bash', '-c',
+                 f'source {_BACKUP_LIB_SH}; declare -a paths=(); '
+                 f'hb_select_profile_paths default paths >/dev/null 2>&1; '
+                 f'printf "%s\\n" "${{paths[@]}}"'],
+                capture_output=True, text=True, timeout=10
+            )
+            resolved_paths = [p for p in r.stdout.splitlines() if p.strip()]
+        except (subprocess.TimeoutExpired, OSError):
+            resolved_paths = []
+        if not resolved_paths:
+            return jsonify({'error': 'could not resolve default profile paths'}), 500
+
+    # Build the canonical .env (same field names as backup_scheduler.sh)
+    lines = [
+        f'JOB_ID={job_id}',
+        f'BACKEND={backend}',
+    ]
+    if attached:
+        lines.append(f'PVE_PARENT_JOB={pve_parent}')
+        lines.append(f'PVE_STORAGE={pve_storage}')
+    else:
+        lines.append(f'ON_CALENDAR={on_calendar}')
+    lines.append(f'PROFILE_MODE={profile_mode}')
+    lines.append(f'ENABLED={"1" if enabled else "0"}')
+
+    # Retention
+    if attached:
+        # Inherited from the parent PVE job's prune-backups string
+        if parent and parent.get('prune'):
+            shell_mapping = {
+                'keep-last': 'KEEP_LAST',
+                'keep-hourly': 'KEEP_HOURLY',
+                'keep-daily': 'KEEP_DAILY',
+                'keep-weekly': 'KEEP_WEEKLY',
+                'keep-monthly': 'KEEP_MONTHLY',
+                'keep-yearly': 'KEEP_YEARLY',
+            }
+            for part in parent['prune'].split(','):
+                part = part.strip()
+                if '=' not in part:
+                    continue
+                k, v = part.split('=', 1)
+                if k in shell_mapping:
+                    lines.append(f'{shell_mapping[k]}={v}')
+    else:
+        # From operator-supplied retention object {keep_last, keep_daily, ...}
+        retention = payload.get('retention') or {}
+        if not isinstance(retention, dict):
+            return jsonify({'error': 'retention must be an object'}), 400
+        for key, env_key in _KEEP_FIELD_MAP.items():
+            v = retention.get(key)
+            if v is None or v == '':
+                continue
+            try:
+                n = int(v)
+            except (TypeError, ValueError):
+                return jsonify({'error': f'retention.{key} must be an integer'}), 400
+            if n < 0:
+                return jsonify({'error': f'retention.{key} must be non-negative'}), 400
+            if n > 0:
+                lines.append(f'{env_key}={n}')
+
+    # Backend-specific fields
+    if backend == 'pbs':
+        pbs_repo = (payload.get('pbs_repository') or '').strip()
+        pbs_pass = payload.get('pbs_password') or ''
+        if not pbs_repo:
+            return jsonify({'error': 'pbs_repository is required'}), 400
+        # When the operator picked an existing PBS destination from the
+        # dropdown the password isn't typed again — auto-resolve it from
+        # the saved configs (proxmenux manual sidecar OR /etc/pve/priv/
+        # storage/<name>.pw for PVE-managed PBS storages). Without this
+        # the runner ends up calling proxmox-backup-client with no
+        # PBS_PASSWORD and dies with "no password input mechanism".
+        if not pbs_pass:
+            for dest in _list_pbs_destinations():
+                if dest.get('repository') == pbs_repo:
+                    pbs_pass = _resolve_pbs_password(dest.get('name') or '')
+                    if pbs_pass:
+                        break
+        pbs_backup_id = (payload.get('pbs_backup_id') or '').strip()
+        if not pbs_backup_id:
+            import socket
+            pbs_backup_id = f'hostcfg-{socket.gethostname()}'
+        pbs_fingerprint = (payload.get('pbs_fingerprint') or '').strip()
+        lines.append(f'PBS_REPOSITORY={pbs_repo}')
+        lines.append(f'PBS_PASSWORD={pbs_pass}')
+        lines.append(f'PBS_BACKUP_ID={pbs_backup_id}')
+        if pbs_fingerprint:
+            lines.append(f'PBS_FINGERPRINT={pbs_fingerprint}')
+    elif backend == 'local':
+        explicit = (payload.get('local_dest_dir') or '').strip()
+        if explicit:
+            dest_dir = explicit.rstrip('/')
+        elif attached:
+            # Derive from the parent PVE storage path
+            dest_dir = None
+            try:
+                with open('/etc/pve/storage.cfg') as f:
+                    in_block = False
+                    for raw in f:
+                        line = raw.rstrip('\n')
+                        if re.match(rf'^[a-z]+:\s+{re.escape(pve_storage)}\s*$', line):
+                            in_block = True
+                            continue
+                        if in_block:
+                            if re.match(r'^[a-z]+:', line):
+                                break
+                            sp = re.match(r'^\s+path\s+(.+)$', line)
+                            if sp:
+                                dest_dir = f'{sp.group(1).rstrip("/")}/dump'
+                                break
+            except OSError:
+                pass
+            if not dest_dir:
+                dest_dir = '/var/lib/vz/dump'
+        else:
+            # Standalone: use the configured single local target
+            dest_dir = _get_local_target()['effective']
+        archive_ext = (payload.get('local_archive_ext') or 'tar.zst').strip()
+        lines.append(f'LOCAL_DEST_DIR={dest_dir}')
+        lines.append(f'LOCAL_ARCHIVE_EXT={archive_ext}')
+    elif backend == 'borg':
+        # Borg is timer-only — the attached check earlier rejected this combo.
+        borg_repo = (payload.get('borg_repo') or '').strip()
+        borg_pass = payload.get('borg_passphrase') or ''
+        borg_encrypt = (payload.get('borg_encrypt_mode') or 'none').strip().lower()
+        if not borg_repo:
+            return jsonify({'error': 'borg_repo is required'}), 400
+        if borg_encrypt not in ('none', 'repokey', 'keyfile', 'authenticated'):
+            return jsonify({'error': 'borg_encrypt_mode must be one of: none, repokey, keyfile, authenticated'}), 400
+        if borg_encrypt != 'none' and not borg_pass:
+            return jsonify({'error': 'borg_passphrase is required when encryption is enabled'}), 400
+        lines.append(f'BORG_REPO={borg_repo}')
+        lines.append(f'BORG_PASSPHRASE={borg_pass}')
+        lines.append(f'BORG_ENCRYPT_MODE={borg_encrypt}')
+
+    # Persist .env (rwx --- ---) and .paths
+    try:
+        os.makedirs(_BACKUP_JOBS_DIR, exist_ok=True)
+        with open(env_file, 'w') as f:
+            for ln in lines:
+                f.write(ln + '\n')
+        os.chmod(env_file, 0o600)
+        with open(f'{_BACKUP_JOBS_DIR}/{job_id}.paths', 'w') as f:
+            for p in resolved_paths:
+                f.write(p + '\n')
+        os.chmod(f'{_BACKUP_JOBS_DIR}/{job_id}.paths', 0o644)
+    except OSError as e:
+        return jsonify({'error': f'failed to write job files: {e}'}), 500
+
+    if attached:
+        # Idempotent hook install — preserves any pre-existing third-party hook.
+        if os.path.exists(_BACKUP_LIB_SH):
+            try:
+                subprocess.run(
+                    ['bash', '-c',
+                     f'source {_BACKUP_LIB_SH}; hb_install_vzdump_hook'],
+                    capture_output=True, timeout=10
+                )
+            except (subprocess.TimeoutExpired, OSError):
+                pass
+    else:
+        # Standalone timer: write units, daemon-reload, and enable the timer
+        # if the operator asked for it.
+        ok, err = _write_systemd_units(job_id, on_calendar)
+        if not ok:
+            try:
+                os.remove(env_file)
+                os.remove(f'{_BACKUP_JOBS_DIR}/{job_id}.paths')
+            except OSError:
+                pass
+            return jsonify({'error': f'failed to write systemd units: {err}'}), 500
+        if enabled:
+            r = subprocess.run(
+                ['systemctl', '--now', 'enable', f'proxmenux-backup-{job_id}.timer'],
+                capture_output=True, text=True, timeout=10
+            )
+            if r.returncode != 0:
+                return jsonify({
+                    'status': 'created-but-not-enabled',
+                    'job': _backup_job_summary(env_file),
+                    'warning': f'systemctl enable failed: {r.stderr.strip()}',
+                }), 201
+
+    return jsonify({
+        'status': 'ok',
+        'job': _backup_job_summary(env_file),
+    }), 201
+
+
+_BACKUP_SENSITIVE_FIELDS = ('PBS_PASSWORD', 'BORG_PASSPHRASE')
+
+
+def _backup_job_detail(env_file: str) -> dict:
+    """Full job info for the Edit dialog. Returns everything in the
+    .env (passwords censored as `has_password: bool`) plus the paths
+    listed in the matching .paths file. Mirrors what the CreateJob
+    wizard needs to pre-populate every field."""
+    summary = _backup_job_summary(env_file)
+    raw = _parse_job_env(env_file)
+    job_id = summary['id']
+
+    paths_file = f'{_BACKUP_JOBS_DIR}/{job_id}.paths'
+    paths: list = []
+    if os.path.exists(paths_file):
+        try:
+            with open(paths_file) as f:
+                paths = [ln.strip() for ln in f if ln.strip()]
+        except OSError:
+            pass
+
+    retention = {
+        'keep_last': raw.get('KEEP_LAST'),
+        'keep_hourly': raw.get('KEEP_HOURLY'),
+        'keep_daily': raw.get('KEEP_DAILY'),
+        'keep_weekly': raw.get('KEEP_WEEKLY'),
+        'keep_monthly': raw.get('KEEP_MONTHLY'),
+        'keep_yearly': raw.get('KEEP_YEARLY'),
+    }
+    # Find the most recent log for this job + a short tail. The runner
+    # writes per-run logs as `<job_id>-<ts>.log`. The Job detail modal
+    # needs the tail so the operator can see *why* a run failed without
+    # having to ssh into the host.
+    import glob as _glob
+    last_log_path: str | None = None
+    last_log_tail: list = []
+    last_log_size: int = 0
+    try:
+        candidates = sorted(
+            _glob.glob(f'{_BACKUP_LOG_DIR}/{job_id}-*.log'),
+            key=os.path.getmtime, reverse=True,
+        )
+        if candidates:
+            last_log_path = candidates[0]
+            last_log_size = os.path.getsize(last_log_path)
+            with open(last_log_path, 'r', errors='replace') as f:
+                lines = f.read().splitlines()
+            last_log_tail = lines[-80:]
+    except OSError:
+        pass
+
+    # Pull the canonical RESULT / RUN_AT out of the .status sidecar so
+    # the UI doesn't have to parse `last_status` itself just to show a
+    # green/red dot.
+    last_result: str | None = None
+    last_run_at: str | None = None
+    if summary.get('last_status'):
+        for ln in (summary['last_status'] or '').splitlines():
+            if ln.startswith('RESULT='):
+                last_result = ln.split('=', 1)[1].strip() or None
+            elif ln.startswith('RUN_AT='):
+                last_run_at = ln.split('=', 1)[1].strip() or None
+
+    detail = {
+        **summary,
+        'paths': paths,
+        'on_calendar_raw': raw.get('ON_CALENDAR') or None,
+        'pve_parent_job_id': raw.get('PVE_PARENT_JOB') or None,
+        'retention': {k: v for k, v in retention.items() if v is not None},
+        'pbs_repository': raw.get('PBS_REPOSITORY') or None,
+        'pbs_backup_id': raw.get('PBS_BACKUP_ID') or None,
+        'pbs_fingerprint': raw.get('PBS_FINGERPRINT') or None,
+        'has_pbs_password': bool(raw.get('PBS_PASSWORD')),
+        'local_dest_dir': raw.get('LOCAL_DEST_DIR') or None,
+        'local_archive_ext': raw.get('LOCAL_ARCHIVE_EXT') or None,
+        'borg_repo': raw.get('BORG_REPO') or None,
+        'borg_encrypt_mode': raw.get('BORG_ENCRYPT_MODE') or 'none',
+        'has_borg_passphrase': bool(raw.get('BORG_PASSPHRASE')),
+        'last_result': last_result,
+        'last_run_at': last_run_at,
+        'last_log_path': last_log_path,
+        'last_log_size': last_log_size,
+        'last_log_tail': last_log_tail,
+    }
+    return detail
+
+
+@app.route('/api/host-backups/jobs/<job_id>', methods=['GET'])
+@require_auth
+def api_host_backups_job_get(job_id):
+    """Fetch one job with all fields needed by the Edit dialog (paths,
+    full retention, backend-specific config). Passwords are NOT
+    returned; the UI only sees `has_pbs_password` / `has_borg_passphrase`
+    flags so the operator can choose to keep or replace them."""
+    if not _JOB_ID_RE.match(job_id):
+        return jsonify({'error': 'invalid job id'}), 400
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    if not os.path.exists(env_file):
+        return jsonify({'error': 'job not found'}), 404
+    return jsonify(_backup_job_detail(env_file))
+
+
+@app.route('/api/host-backups/jobs/<job_id>/log', methods=['GET'])
+@require_auth
+def api_host_backups_job_log(job_id):
+    """Return the full log of the most recent run for this job. The
+    detail endpoint already ships an 80-line tail; this one is for the
+    operator who needs the whole thing (debugging a fail). Accepts
+    ?path=<override> to read a non-default log path so the same handler
+    can serve the running-task log polled by the Run flow."""
+    if not _JOB_ID_RE.match(job_id):
+        return jsonify({'error': 'invalid job id'}), 400
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    if not os.path.exists(env_file):
+        return jsonify({'error': 'job not found'}), 404
+
+    override = (request.args.get('path') or '').strip()
+    log_path: str | None = None
+    if override:
+        # Constrain to /var/log/proxmenux to keep this from being an
+        # arbitrary-file-read primitive.
+        abs_o = os.path.abspath(override)
+        if abs_o.startswith('/var/log/proxmenux/') and os.path.isfile(abs_o):
+            log_path = abs_o
+    if not log_path:
+        import glob as _glob
+        cands = sorted(
+            _glob.glob(f'{_BACKUP_LOG_DIR}/{job_id}-*.log'),
+            key=os.path.getmtime, reverse=True,
+        )
+        if cands:
+            log_path = cands[0]
+    if not log_path:
+        return jsonify({'error': 'no log available for this job yet', 'log_path': None, 'content': ''})
+
+    try:
+        with open(log_path, 'r', errors='replace') as f:
+            content = f.read()
+    except OSError as e:
+        return jsonify({'error': str(e)}), 500
+    return jsonify({
+        'log_path': log_path,
+        'size': len(content),
+        'content': content,
+    })
+
+
+@app.route('/api/host-backups/jobs/<job_id>', methods=['PUT'])
+@require_auth
+def api_host_backups_job_update(job_id):
+    """Edit an existing job. The job id and attached/standalone mode
+    are immutable (operator must delete + recreate to change them).
+    Backend-specific passwords are kept if the payload omits them or
+    sends an empty string."""
+    if not _JOB_ID_RE.match(job_id):
+        return jsonify({'error': 'invalid job id'}), 400
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    if not os.path.exists(env_file):
+        return jsonify({'error': 'job not found'}), 404
+
+    payload = request.get_json(silent=True) or {}
+    existing = _parse_job_env(env_file)
+    existing_attached = bool(existing.get('PVE_STORAGE'))
+    existing_backend = (existing.get('BACKEND') or '').lower()
+
+    # The only truly immutable field is the job id — it's the name of
+    # the .env, the systemd unit, and how the operator refers to the
+    # job everywhere. Backend (pbs/local/borg) and mode (attached vs
+    # standalone) can be switched on an existing job; the writer below
+    # builds the .env from scratch and reconciles unit files / hook.
+    if 'id' in payload and payload['id'] != job_id:
+        return jsonify({'error': 'job name cannot be changed (delete + recreate to rename)'}), 400
+
+    requested_backend = (payload.get('backend') or existing_backend).lower()
+    if requested_backend not in ('pbs', 'local', 'borg'):
+        return jsonify({'error': 'backend must be pbs, local or borg'}), 400
+    requested_attached = bool(payload['attached']) if 'attached' in payload else existing_attached
+    if requested_attached and requested_backend == 'borg':
+        return jsonify({'error': 'borg cannot be attached (PVE vzdump only writes to pbs/local storages)'}), 400
+
+    backend = requested_backend
+    attached = requested_attached
+    profile_mode = (payload.get('profile_mode') or existing.get('PROFILE_MODE') or 'default').strip().lower()
+    if profile_mode not in ('default', 'custom'):
+        return jsonify({'error': 'profile_mode must be default or custom'}), 400
+
+    enabled_raw = payload.get('enabled')
+    enabled = bool(enabled_raw) if enabled_raw is not None else (existing.get('ENABLED', '1') == '1')
+
+    on_calendar = ''
+    parent: dict | None = None
+    if attached:
+        pve_parent = (payload.get('pve_parent_job_id') or existing.get('PVE_PARENT_JOB') or '').strip()
+        pve_storage = (payload.get('pve_storage') or existing.get('PVE_STORAGE') or '').strip()
+        if not pve_parent or not pve_storage:
+            return jsonify({'error': 'pve_parent_job_id and pve_storage are required for attached'}), 400
+        pve_jobs = _list_pve_vzdump_jobs()
+        parent = next((j for j in pve_jobs if j['id'] == pve_parent), None)
+        if not parent:
+            return jsonify({'error': f'PVE vzdump job not found: {pve_parent}'}), 404
+        if parent.get('storage') != pve_storage:
+            return jsonify({'error': f"PVE job storage mismatch (job uses {parent.get('storage')}, payload says {pve_storage})"}), 400
+    else:
+        on_calendar = (payload.get('on_calendar') or existing.get('ON_CALENDAR') or '').strip()
+        calendar_err = _validate_on_calendar(on_calendar)
+        if calendar_err:
+            return jsonify({'error': f'invalid on_calendar: {calendar_err}'}), 400
+
+    # Resolve paths (same shape as POST)
+    paths = payload.get('paths')
+    if profile_mode == 'custom':
+        if paths is not None:
+            if not isinstance(paths, list) or not all(isinstance(p, str) and p.startswith('/') for p in paths):
+                return jsonify({'error': 'paths must be a list of absolute paths'}), 400
+            if not paths:
+                return jsonify({'error': 'custom profile needs at least one path'}), 400
+            resolved_paths = paths
+        else:
+            paths_file = f'{_BACKUP_JOBS_DIR}/{job_id}.paths'
+            if os.path.exists(paths_file):
+                try:
+                    with open(paths_file) as f:
+                        resolved_paths = [ln.strip() for ln in f if ln.strip()]
+                except OSError:
+                    resolved_paths = []
+            else:
+                resolved_paths = []
+            if not resolved_paths:
+                return jsonify({'error': 'custom profile needs at least one path'}), 400
+    else:
+        try:
+            r = subprocess.run(
+                ['bash', '-c',
+                 f'source {_BACKUP_LIB_SH}; declare -a paths=(); '
+                 f'hb_select_profile_paths default paths >/dev/null 2>&1; '
+                 f'printf "%s\\n" "${{paths[@]}}"'],
+                capture_output=True, text=True, timeout=10
+            )
+            resolved_paths = [p for p in r.stdout.splitlines() if p.strip()]
+        except (subprocess.TimeoutExpired, OSError):
+            resolved_paths = []
+        if not resolved_paths:
+            return jsonify({'error': 'could not resolve default profile paths'}), 500
+
+    # Build the new .env from scratch using the canonical field order.
+    lines = [
+        f'JOB_ID={job_id}',
+        f'BACKEND={backend}',
+    ]
+    if attached:
+        lines.append(f"PVE_PARENT_JOB={(payload.get('pve_parent_job_id') or existing.get('PVE_PARENT_JOB'))}")
+        lines.append(f"PVE_STORAGE={(payload.get('pve_storage') or existing.get('PVE_STORAGE'))}")
+    else:
+        lines.append(f'ON_CALENDAR={on_calendar}')
+    lines.append(f'PROFILE_MODE={profile_mode}')
+    lines.append(f'ENABLED={"1" if enabled else "0"}')
+
+    # Retention
+    if attached:
+        if parent and parent.get('prune'):
+            shell_mapping = {
+                'keep-last': 'KEEP_LAST',
+                'keep-hourly': 'KEEP_HOURLY',
+                'keep-daily': 'KEEP_DAILY',
+                'keep-weekly': 'KEEP_WEEKLY',
+                'keep-monthly': 'KEEP_MONTHLY',
+                'keep-yearly': 'KEEP_YEARLY',
+            }
+            for part in parent['prune'].split(','):
+                part = part.strip()
+                if '=' not in part:
+                    continue
+                k, v = part.split('=', 1)
+                if k in shell_mapping:
+                    lines.append(f'{shell_mapping[k]}={v}')
+    else:
+        retention = payload.get('retention')
+        if retention is None:
+            # Keep existing retention if the operator didn't touch the form
+            for env_key in _KEEP_FIELD_MAP.values():
+                v = existing.get(env_key)
+                if v and str(v) != '0':
+                    lines.append(f'{env_key}={v}')
+        else:
+            if not isinstance(retention, dict):
+                return jsonify({'error': 'retention must be an object'}), 400
+            for key, env_key in _KEEP_FIELD_MAP.items():
+                v = retention.get(key)
+                if v is None or v == '':
+                    continue
+                try:
+                    n = int(v)
+                except (TypeError, ValueError):
+                    return jsonify({'error': f'retention.{key} must be an integer'}), 400
+                if n < 0:
+                    return jsonify({'error': f'retention.{key} must be non-negative'}), 400
+                if n > 0:
+                    lines.append(f'{env_key}={n}')
+
+    # Backend-specific
+    if backend == 'pbs':
+        pbs_repo = (payload.get('pbs_repository') or existing.get('PBS_REPOSITORY') or '').strip()
+        if not pbs_repo:
+            return jsonify({'error': 'pbs_repository is required'}), 400
+        # Empty-string password means "keep the existing one"; missing
+        # password key also means keep. Replacement only happens when
+        # the operator typed something new. If the stored password is
+        # ALSO empty (e.g. job created against a PVE-managed PBS where
+        # the password lives in /etc/pve/priv/storage/<name>.pw), fall
+        # through to _resolve_pbs_password so the runner doesn't choke.
+        new_pass = payload.get('pbs_password')
+        if new_pass is None or new_pass == '':
+            pbs_pass = existing.get('PBS_PASSWORD', '')
+        else:
+            pbs_pass = new_pass
+        if not pbs_pass:
+            for dest in _list_pbs_destinations():
+                if dest.get('repository') == pbs_repo:
+                    pbs_pass = _resolve_pbs_password(dest.get('name') or '')
+                    if pbs_pass:
+                        break
+        pbs_backup_id = (payload.get('pbs_backup_id') or existing.get('PBS_BACKUP_ID') or '').strip()
+        if not pbs_backup_id:
+            import socket
+            pbs_backup_id = f'hostcfg-{socket.gethostname()}'
+        pbs_fingerprint = (payload.get('pbs_fingerprint') or existing.get('PBS_FINGERPRINT') or '').strip()
+        lines.append(f'PBS_REPOSITORY={pbs_repo}')
+        lines.append(f'PBS_PASSWORD={pbs_pass}')
+        lines.append(f'PBS_BACKUP_ID={pbs_backup_id}')
+        if pbs_fingerprint:
+            lines.append(f'PBS_FINGERPRINT={pbs_fingerprint}')
+    elif backend == 'local':
+        explicit = (payload.get('local_dest_dir') or '').strip()
+        if explicit:
+            dest_dir = explicit.rstrip('/')
+        else:
+            dest_dir = existing.get('LOCAL_DEST_DIR') or _get_local_target()['effective']
+        archive_ext = (payload.get('local_archive_ext') or existing.get('LOCAL_ARCHIVE_EXT') or 'tar.zst').strip()
+        lines.append(f'LOCAL_DEST_DIR={dest_dir}')
+        lines.append(f'LOCAL_ARCHIVE_EXT={archive_ext}')
+    elif backend == 'borg':
+        borg_repo = (payload.get('borg_repo') or existing.get('BORG_REPO') or '').strip()
+        if not borg_repo:
+            return jsonify({'error': 'borg_repo is required'}), 400
+        borg_encrypt = (payload.get('borg_encrypt_mode') or existing.get('BORG_ENCRYPT_MODE') or 'none').strip().lower()
+        if borg_encrypt not in ('none', 'repokey', 'keyfile', 'authenticated'):
+            return jsonify({'error': 'borg_encrypt_mode must be one of: none, repokey, keyfile, authenticated'}), 400
+        new_pass = payload.get('borg_passphrase')
+        if new_pass is None or new_pass == '':
+            borg_pass = existing.get('BORG_PASSPHRASE', '')
+        else:
+            borg_pass = new_pass
+        if borg_encrypt != 'none' and not borg_pass:
+            return jsonify({'error': 'borg_passphrase is required when encryption is enabled'}), 400
+        lines.append(f'BORG_REPO={borg_repo}')
+        lines.append(f'BORG_PASSPHRASE={borg_pass}')
+        lines.append(f'BORG_ENCRYPT_MODE={borg_encrypt}')
+
+    # Atomically rewrite .env (rwx --- ---) and .paths
+    try:
+        tmp_env = f'{env_file}.tmp.{os.getpid()}'
+        with open(tmp_env, 'w') as f:
+            for ln in lines:
+                f.write(ln + '\n')
+        os.chmod(tmp_env, 0o600)
+        os.replace(tmp_env, env_file)
+        paths_file = f'{_BACKUP_JOBS_DIR}/{job_id}.paths'
+        tmp_paths = f'{paths_file}.tmp.{os.getpid()}'
+        with open(tmp_paths, 'w') as f:
+            for p in resolved_paths:
+                f.write(p + '\n')
+        os.chmod(tmp_paths, 0o644)
+        os.replace(tmp_paths, paths_file)
+    except OSError as e:
+        return jsonify({'error': f'failed to write job files: {e}'}), 500
+
+    if attached:
+        # If the job used to be standalone, its .service + .timer are
+        # now obsolete. Disable + remove them before installing the hook
+        # so the operator doesn't have a stale timer firing alongside.
+        if not existing_attached:
+            timer_unit = f'proxmenux-backup-{job_id}.timer'
+            subprocess.run(
+                ['systemctl', '--now', 'disable', timer_unit],
+                capture_output=True, timeout=10
+            )
+            for f in (
+                f'/etc/systemd/system/proxmenux-backup-{job_id}.service',
+                f'/etc/systemd/system/proxmenux-backup-{job_id}.timer',
+            ):
+                try:
+                    if os.path.exists(f):
+                        os.remove(f)
+                except OSError:
+                    pass
+            subprocess.run(['systemctl', 'daemon-reload'], capture_output=True, timeout=10)
+        if os.path.exists(_BACKUP_LIB_SH):
+            try:
+                subprocess.run(
+                    ['bash', '-c', f'source {_BACKUP_LIB_SH}; hb_install_vzdump_hook'],
+                    capture_output=True, timeout=10
+                )
+            except (subprocess.TimeoutExpired, OSError):
+                pass
+    else:
+        # Rewrite the timer (schedule may have changed) and reconcile
+        # the timer state with `enabled`. If the job used to be
+        # attached, no units existed yet — _write_systemd_units creates
+        # both fresh and daemon-reloads.
+        ok, err = _write_systemd_units(job_id, on_calendar)
+        if not ok:
+            return jsonify({'error': f'failed to update systemd units: {err}'}), 500
+        timer_unit = f'proxmenux-backup-{job_id}.timer'
+        action = 'enable' if enabled else 'disable'
+        subprocess.run(
+            ['systemctl', '--now', action, timer_unit],
+            capture_output=True, timeout=10
+        )
+
+    return jsonify({
+        'status': 'ok',
+        'job': _backup_job_summary(env_file),
+    })
+
+
+@app.route('/api/host-backups/manual-run', methods=['POST'])
+@require_auth
+def api_host_backups_manual_run():
+    """Fire a one-shot host backup. Reuses the same .env + runner the
+    scheduler uses — the only difference is the job is born disabled,
+    has no schedule, no retention, and is flagged with MANUAL_RUN=1 so
+    the UI can render it differently. The .env is left on disk so the
+    operator can see the result and decide when to clean it up."""
+    payload = request.get_json(silent=True) or {}
+
+    backend = (payload.get('backend') or '').strip().lower()
+    if backend not in ('pbs', 'local', 'borg'):
+        return jsonify({'error': 'backend must be pbs, local or borg'}), 400
+    profile_mode = (payload.get('profile_mode') or 'default').strip().lower()
+    if profile_mode not in ('default', 'custom'):
+        return jsonify({'error': 'profile_mode must be default or custom'}), 400
+
+    # Resolve paths
+    if profile_mode == 'custom':
+        paths = payload.get('paths') or []
+        if not isinstance(paths, list) or not all(isinstance(p, str) and p.startswith('/') for p in paths):
+            return jsonify({'error': 'paths must be a list of absolute paths'}), 400
+        if not paths:
+            return jsonify({'error': 'custom profile needs at least one path'}), 400
+        resolved_paths = paths
+    else:
+        try:
+            r = subprocess.run(
+                ['bash', '-c',
+                 f'source {_BACKUP_LIB_SH}; declare -a paths=(); '
+                 f'hb_select_profile_paths default paths >/dev/null 2>&1; '
+                 f'printf "%s\\n" "${{paths[@]}}"'],
+                capture_output=True, text=True, timeout=10
+            )
+            resolved_paths = [p for p in r.stdout.splitlines() if p.strip()]
+        except (subprocess.TimeoutExpired, OSError):
+            resolved_paths = []
+        if not resolved_paths:
+            return jsonify({'error': 'could not resolve default profile paths'}), 500
+
+    # Auto-generate a non-colliding job id from the current time.
+    from datetime import datetime
+    base_id = f'manual-{datetime.now().strftime("%Y%m%d-%H%M%S")}'
+    job_id = base_id
+    suffix = 1
+    while os.path.exists(f'{_BACKUP_JOBS_DIR}/{job_id}.env'):
+        suffix += 1
+        job_id = f'{base_id}-{suffix}'
+
+    lines = [
+        f'JOB_ID={job_id}',
+        f'BACKEND={backend}',
+        f'PROFILE_MODE={profile_mode}',
+        'ENABLED=0',
+        'MANUAL_RUN=1',
+    ]
+
+    if backend == 'pbs':
+        pbs_repo = (payload.get('pbs_repository') or '').strip()
+        if not pbs_repo:
+            return jsonify({'error': 'pbs_repository is required'}), 400
+        pbs_pass = payload.get('pbs_password') or ''
+        pbs_backup_id = (payload.get('pbs_backup_id') or '').strip()
+        if not pbs_backup_id:
+            import socket
+            pbs_backup_id = f'hostcfg-{socket.gethostname()}-manual'
+        pbs_fingerprint = (payload.get('pbs_fingerprint') or '').strip()
+        lines.append(f'PBS_REPOSITORY={pbs_repo}')
+        lines.append(f'PBS_PASSWORD={pbs_pass}')
+        lines.append(f'PBS_BACKUP_ID={pbs_backup_id}')
+        if pbs_fingerprint:
+            lines.append(f'PBS_FINGERPRINT={pbs_fingerprint}')
+    elif backend == 'local':
+        explicit = (payload.get('local_dest_dir') or '').strip()
+        dest_dir = explicit.rstrip('/') if explicit else _get_local_target()['effective']
+        archive_ext = (payload.get('local_archive_ext') or 'tar.zst').strip()
+        lines.append(f'LOCAL_DEST_DIR={dest_dir}')
+        lines.append(f'LOCAL_ARCHIVE_EXT={archive_ext}')
+    elif backend == 'borg':
+        borg_repo = (payload.get('borg_repo') or '').strip()
+        if not borg_repo:
+            return jsonify({'error': 'borg_repo is required'}), 400
+        borg_encrypt = (payload.get('borg_encrypt_mode') or 'none').strip().lower()
+        if borg_encrypt not in ('none', 'repokey', 'keyfile', 'authenticated'):
+            return jsonify({'error': 'borg_encrypt_mode must be one of: none, repokey, keyfile, authenticated'}), 400
+        borg_pass = payload.get('borg_passphrase') or ''
+        if borg_encrypt != 'none' and not borg_pass:
+            return jsonify({'error': 'borg_passphrase is required when encryption is enabled'}), 400
+        lines.append(f'BORG_REPO={borg_repo}')
+        lines.append(f'BORG_PASSPHRASE={borg_pass}')
+        lines.append(f'BORG_ENCRYPT_MODE={borg_encrypt}')
+
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    paths_file = f'{_BACKUP_JOBS_DIR}/{job_id}.paths'
+    try:
+        os.makedirs(_BACKUP_JOBS_DIR, exist_ok=True)
+        with open(env_file, 'w') as f:
+            for ln in lines:
+                f.write(ln + '\n')
+        os.chmod(env_file, 0o600)
+        with open(paths_file, 'w') as f:
+            for p in resolved_paths:
+                f.write(p + '\n')
+        os.chmod(paths_file, 0o644)
+    except OSError as e:
+        return jsonify({'error': f'failed to write job files: {e}'}), 500
+
+    if not os.path.exists(_BACKUP_RUNNER):
+        return jsonify({'error': 'runner script not installed'}), 500
+    try:
+        subprocess.Popen(
+            ['bash', _BACKUP_RUNNER, job_id],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            close_fds=True,
+            start_new_session=True,
+        )
+    except OSError as e:
+        return jsonify({'error': f'failed to start: {e}'}), 500
+
+    return jsonify({'status': 'started', 'job_id': job_id}), 202
+
+
+# ── Sprint D: Backup destinations CRUD ─────────────────────────────
+#
+# All three persistence files live in $HB_STATE_DIR and follow the
+# exact format the shell scheduler reads/writes, so anything created
+# from the Monitor is visible to the shell menu and vice versa.
+
+_DEST_NAME_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
+
+
+def _safe_dest_name(s: str) -> str | None:
+    s = (s or '').strip()
+    if not s or not _DEST_NAME_RE.match(s):
+        return None
+    return s
+
+
+@app.route('/api/host-backups/destinations/local', methods=['POST'])
+@require_auth
+def api_host_backups_dest_local_set():
+    """Add a custom local destination path. Body: {path: string}.
+
+    Local destinations are append-only from the API — the new path is
+    stacked onto local-target.conf rather than replacing whatever was
+    there. The /var/lib/vz/dump default is always implicit and isn't
+    written into the file.
+
+    Returns 409 if the same path is already saved (default or custom)
+    so the UI can surface the conflict instead of silently no-op."""
+    payload = request.get_json(silent=True) or {}
+    path = (payload.get('path') or '').strip()
+    if not path:
+        return jsonify({'error': 'path is required'}), 400
+    if not path.startswith('/'):
+        return jsonify({'error': 'path must be absolute'}), 400
+    path = path.rstrip('/') or '/'
+    if path == _LOCAL_DEFAULT_PATH:
+        return jsonify({'error': f'{_LOCAL_DEFAULT_PATH} is the built-in default; no need to add it'}), 409
+    existing = _read_local_target_paths()
+    if path in existing:
+        return jsonify({'error': 'this path is already configured'}), 409
+    existing.append(path)
+    cfg = f'{_BACKUP_STATE_DIR}/local-target.conf'
+    try:
+        os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+        with open(cfg, 'w') as f:
+            for p in existing:
+                f.write(p + '\n')
+        os.chmod(cfg, 0o600)
+    except OSError as e:
+        return jsonify({'error': f'failed to write local-target.conf: {e}'}), 500
+    return jsonify({'status': 'ok', 'path': path, 'count': len(existing) + 1})
+
+
+@app.route('/api/host-backups/destinations/local', methods=['DELETE'])
+@require_auth
+def api_host_backups_dest_local_clear():
+    """Remove a custom local destination. Body or query: {path: string}.
+
+    With a `path`, only that entry is removed (404 if not custom). With
+    no path the file is wiped entirely, leaving only the built-in
+    /var/lib/vz/dump default — kept for backwards compat with the
+    earlier single-path UI."""
+    target = (request.args.get('path') or '').strip()
+    if not target:
+        payload = request.get_json(silent=True) or {}
+        target = (payload.get('path') or '').strip()
+    cfg = f'{_BACKUP_STATE_DIR}/local-target.conf'
+    if not target:
+        try:
+            if os.path.exists(cfg):
+                os.remove(cfg)
+        except OSError as e:
+            return jsonify({'error': str(e)}), 500
+        return jsonify({'status': 'ok', 'cleared_all': True})
+
+    target = target.rstrip('/') or '/'
+    if target == _LOCAL_DEFAULT_PATH:
+        return jsonify({'error': f'{_LOCAL_DEFAULT_PATH} is the built-in default and cannot be removed'}), 400
+    existing = _read_local_target_paths()
+    if target not in existing:
+        return jsonify({'error': 'path not found'}), 404
+    remaining = [p for p in existing if p != target]
+    try:
+        if remaining:
+            with open(cfg, 'w') as f:
+                for p in remaining:
+                    f.write(p + '\n')
+            os.chmod(cfg, 0o600)
+        elif os.path.exists(cfg):
+            os.remove(cfg)
+    except OSError as e:
+        return jsonify({'error': str(e)}), 500
+    return jsonify({'status': 'ok', 'removed': target})
+
+
+@app.route('/api/host-backups/destinations/borg', methods=['POST'])
+@require_auth
+def api_host_backups_dest_borg_add():
+    """Add a Borg target. Body modes:
+      - mode="local": {name, repo}                — repo is an absolute
+        path on this host (covers USB-mounted directories too).
+      - mode="ssh":   {name, ssh_user, ssh_host,
+                       ssh_remote_path, ssh_key_path?} — builds
+        ssh://user@host/path and persists the ssh_key_path on the
+        3rd field of borg-targets.txt.
+    Replaces an existing entry with the same name."""
+    payload = request.get_json(silent=True) or {}
+    name = _safe_dest_name(payload.get('name'))
+    if not name:
+        return jsonify({'error': 'name is required (letters, digits, _ or -)'}), 400
+    mode = (payload.get('mode') or 'local').strip().lower()
+    ssh_key = ''
+    if mode == 'ssh':
+        user = (payload.get('ssh_user') or '').strip()
+        host = (payload.get('ssh_host') or '').strip()
+        rpath = (payload.get('ssh_remote_path') or '').strip().lstrip('/')
+        if not user or not host or not rpath:
+            return jsonify({'error': 'ssh_user, ssh_host and ssh_remote_path are required for ssh mode'}), 400
+        repo = f'ssh://{user}@{host}/{rpath}'
+        ssh_key = (payload.get('ssh_key_path') or '').strip()
+    elif mode == 'local':
+        repo = (payload.get('repo') or '').strip()
+        if not repo:
+            return jsonify({'error': 'repo is required'}), 400
+        ssh_key = (payload.get('ssh_key') or '').strip()
+    else:
+        return jsonify({'error': 'mode must be "local" or "ssh"'}), 400
+
+    cfg = f'{_BACKUP_STATE_DIR}/borg-targets.txt'
+    try:
+        os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+        existing_lines: list = []
+        if os.path.exists(cfg):
+            with open(cfg) as f:
+                for ln in f:
+                    if ln.startswith(f'{name}|'):
+                        continue
+                    existing_lines.append(ln.rstrip('\n'))
+        existing_lines.append(f'{name}|{repo}|{ssh_key}')
+        with open(cfg, 'w') as f:
+            for ln in existing_lines:
+                f.write(ln + '\n')
+        os.chmod(cfg, 0o600)
+    except OSError as e:
+        return jsonify({'error': f'failed to write borg-targets.txt: {e}'}), 500
+    return jsonify({'status': 'ok', 'name': name, 'repo': repo})
+
+
+@app.route('/api/host-backups/destinations/borg/<name>', methods=['DELETE'])
+@require_auth
+def api_host_backups_dest_borg_remove(name):
+    """Remove a Borg target by name. Also drops its passphrase file
+    if present."""
+    safe = _safe_dest_name(name)
+    if not safe:
+        return jsonify({'error': 'invalid name'}), 400
+    cfg = f'{_BACKUP_STATE_DIR}/borg-targets.txt'
+    if os.path.exists(cfg):
+        try:
+            with open(cfg) as f:
+                kept = [ln.rstrip('\n') for ln in f if not ln.startswith(f'{safe}|')]
+            with open(cfg, 'w') as f:
+                for ln in kept:
+                    f.write(ln + '\n')
+            os.chmod(cfg, 0o600)
+        except OSError as e:
+            return jsonify({'error': f'failed to update borg-targets.txt: {e}'}), 500
+    for f in (
+        f'{_BACKUP_STATE_DIR}/borg-pass-{safe}.txt',
+    ):
+        try:
+            if os.path.exists(f):
+                os.remove(f)
+        except OSError:
+            pass
+    return jsonify({'status': 'ok', 'name': safe})
+
+
+@app.route('/api/host-backups/destinations/pbs', methods=['POST'])
+@require_auth
+def api_host_backups_dest_pbs_add():
+    """Add a manual PBS configuration. Body: {name, server, datastore,
+    username, password, fingerprint?}. Writes name|repo to
+    pbs-manual-configs.txt, plus pbs-pass-<name>.txt and (optionally)
+    pbs-fingerprint-<name>.txt — the same layout hb_configure_pbs_manual
+    produces."""
+    payload = request.get_json(silent=True) or {}
+    name = _safe_dest_name(payload.get('name'))
+    if not name:
+        return jsonify({'error': 'name is required (letters, digits, _ or -)'}), 400
+    server = (payload.get('server') or '').strip()
+    datastore = (payload.get('datastore') or '').strip()
+    username = (payload.get('username') or 'root@pam').strip()
+    password = payload.get('password') or ''
+    fingerprint = (payload.get('fingerprint') or '').strip()
+    if not server or not datastore:
+        return jsonify({'error': 'server and datastore are required'}), 400
+    if not password:
+        return jsonify({'error': 'password is required'}), 400
+
+    repo = f'{username}@{server}:{datastore}'
+    cfg_line = f'{name}|{repo}'
+    cfg = f'{_BACKUP_STATE_DIR}/pbs-manual-configs.txt'
+    try:
+        os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+        # Replace any existing entry with the same name
+        existing: list = []
+        if os.path.exists(cfg):
+            with open(cfg) as f:
+                for ln in f:
+                    if ln.startswith(f'{name}|'):
+                        continue
+                    existing.append(ln.rstrip('\n'))
+        existing.append(cfg_line)
+        with open(cfg, 'w') as f:
+            for ln in existing:
+                f.write(ln + '\n')
+        os.chmod(cfg, 0o600)
+        # Password sidecar
+        pass_file = f'{_BACKUP_STATE_DIR}/pbs-pass-{name}.txt'
+        with open(pass_file, 'w') as f:
+            f.write(password)
+        os.chmod(pass_file, 0o600)
+        # Fingerprint sidecar (only if provided)
+        fp_file = f'{_BACKUP_STATE_DIR}/pbs-fingerprint-{name}.txt'
+        if fingerprint:
+            with open(fp_file, 'w') as f:
+                f.write(fingerprint)
+            os.chmod(fp_file, 0o600)
+        else:
+            try:
+                if os.path.exists(fp_file):
+                    os.remove(fp_file)
+            except OSError:
+                pass
+    except OSError as e:
+        return jsonify({'error': f'failed to persist PBS config: {e}'}), 500
+    return jsonify({'status': 'ok', 'name': name, 'repository': repo})
+
+
+@app.route('/api/host-backups/destinations/pbs/<name>', methods=['DELETE'])
+@require_auth
+def api_host_backups_dest_pbs_remove(name):
+    """Remove a manual PBS config by name. Auto-discovered PBS storages
+    from /etc/pve/storage.cfg are NOT removable from here (PVE owns
+    those — the operator manages them under Datacenter → Storage)."""
+    safe = _safe_dest_name(name)
+    if not safe:
+        return jsonify({'error': 'invalid name'}), 400
+    cfg = f'{_BACKUP_STATE_DIR}/pbs-manual-configs.txt'
+    if not os.path.exists(cfg):
+        return jsonify({'error': 'no manual PBS configs file'}), 404
+    try:
+        with open(cfg) as f:
+            kept = [ln.rstrip('\n') for ln in f if not ln.startswith(f'{safe}|')]
+        with open(cfg, 'w') as f:
+            for ln in kept:
+                f.write(ln + '\n')
+        os.chmod(cfg, 0o600)
+    except OSError as e:
+        return jsonify({'error': f'failed to update pbs-manual-configs.txt: {e}'}), 500
+    for f in (
+        f'{_BACKUP_STATE_DIR}/pbs-pass-{safe}.txt',
+        f'{_BACKUP_STATE_DIR}/pbs-fingerprint-{safe}.txt',
+    ):
+        try:
+            if os.path.exists(f):
+                os.remove(f)
+        except OSError:
+            pass
+    return jsonify({'status': 'ok', 'name': safe})
+
+
+# ── Sprint D.2.c: SSH key generation for Borg remotes ──────────────
+
+
+@app.route('/api/host-backups/ssh-keys/generate', methods=['POST'])
+@require_auth
+def api_host_backups_ssh_key_generate():
+    """Generate (or fetch the public side of) an SSH key the operator
+    can drop into the Borg server's authorized_keys. Defaults: ed25519,
+    no passphrase, stored at /root/.ssh/proxmenux_borg. If the key
+    already exists we don't regenerate — we just hand back the public
+    half + a sensible authorized_keys line."""
+    payload = request.get_json(silent=True) or {}
+    key_path = (payload.get('key_path') or '/root/.ssh/proxmenux_borg').strip()
+    remote_path = (payload.get('remote_path') or '').strip()
+    if not key_path.startswith('/'):
+        return jsonify({'error': 'key_path must be absolute'}), 400
+
+    pub_path = f'{key_path}.pub'
+
+    if not os.path.exists(key_path):
+        try:
+            ssh_dir = os.path.dirname(key_path) or '/'
+            os.makedirs(ssh_dir, exist_ok=True)
+            os.chmod(ssh_dir, 0o700)
+        except OSError as e:
+            return jsonify({'error': f'cannot prepare ssh dir: {e}'}), 500
+        try:
+            import socket
+            comment = f'proxmenux@{socket.gethostname()}'
+            r = subprocess.run(
+                ['ssh-keygen', '-t', 'ed25519', '-f', key_path, '-N', '', '-C', comment],
+                capture_output=True, text=True, timeout=15
+            )
+            if r.returncode != 0:
+                return jsonify({'error': f'ssh-keygen failed: {r.stderr.strip()}'}), 500
+        except (subprocess.TimeoutExpired, OSError) as e:
+            return jsonify({'error': str(e)}), 500
+
+    if not os.path.exists(pub_path):
+        return jsonify({'error': f'public key not found after generation: {pub_path}'}), 500
+
+    try:
+        with open(pub_path) as f:
+            pub_text = f.read().strip()
+    except OSError as e:
+        return jsonify({'error': str(e)}), 500
+
+    # Build a restricted authorized_keys line if we know the remote path.
+    # Mirrors the line `hb_borg_generate_and_install_key` emits in the shell.
+    if remote_path:
+        rp = '/' + remote_path.lstrip('/')
+        authorized_line = f'command="borg serve --restrict-to-path {rp}",restrict {pub_text}'
+    else:
+        authorized_line = pub_text
+
+    return jsonify({
+        'key_path': key_path,
+        'pub_path': pub_path,
+        'public_key': pub_text,
+        'authorized_keys_line': authorized_line,
+    })
+
+
+# ── Sprint D.2.b: USB drives management ────────────────────────────
+#
+# Thin wrappers around hb_list_usb_partitions / hb_mount_usb_partition /
+# hb_format_usb_disk in lib_host_backup_common.sh so the Monitor and
+# the shell scheduler menu agree on what a USB drive looks like and
+# how it gets mounted.
+
+_USB_DEVICE_RE = re.compile(r'^/dev/[a-zA-Z0-9]+$')
+
+
+@app.route('/api/host-backups/usb-drives', methods=['GET'])
+@require_auth
+def api_host_backups_usb_drives():
+    """List USB partitions (mounted + unmounted with a filesystem) and
+    raw USB disks with no partition table. Each entry has a `state` of
+    "mounted", "unmounted" or "empty"."""
+    if not os.path.exists(_BACKUP_LIB_SH):
+        return jsonify({'drives': []})
+    try:
+        r = subprocess.run(
+            ['bash', '-c', f'source {_BACKUP_LIB_SH}; hb_list_usb_partitions'],
+            capture_output=True, text=True, timeout=10
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return jsonify({'error': str(e)}), 500
+    drives: list = []
+    for line in r.stdout.splitlines():
+        parts = line.split('\t')
+        if len(parts) < 2:
+            continue
+        # State + dev_or_mp are always present; the rest may be blank.
+        state = parts[0]
+        dev_or_mp = parts[1]
+        label = parts[2] if len(parts) > 2 else ''
+        size = parts[3] if len(parts) > 3 else ''
+        fstype = parts[4] if len(parts) > 4 else ''
+        uuid = parts[5] if len(parts) > 5 else ''
+        drives.append({
+            'state': state,
+            'path_or_device': dev_or_mp,
+            'label': label,
+            'size': size,
+            'fstype': fstype,
+            'uuid': uuid,
+        })
+    return jsonify({'drives': drives})
+
+
+@app.route('/api/host-backups/usb-drives/mount', methods=['POST'])
+@require_auth
+def api_host_backups_usb_mount():
+    """Mount an unmounted USB partition. Body: {device, label?, uuid?}.
+    Returns the mountpoint chosen by hb_usb_mountpoint_for."""
+    payload = request.get_json(silent=True) or {}
+    device = (payload.get('device') or '').strip()
+    if not _USB_DEVICE_RE.match(device):
+        return jsonify({'error': 'invalid device path'}), 400
+    if not os.path.exists(device):
+        return jsonify({'error': f'device does not exist: {device}'}), 404
+    label = (payload.get('label') or '').strip()
+    uuid = (payload.get('uuid') or '').strip()
+    try:
+        r = subprocess.run(
+            ['bash', '-c',
+             f'source {_BACKUP_LIB_SH}; hb_mount_usb_partition "$1" "$2" "$3"',
+             'mount-wrapper', device, label, uuid],
+            capture_output=True, text=True, timeout=30
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return jsonify({'error': str(e)}), 500
+    if r.returncode != 0:
+        # hb_mount_usb_partition writes mount stderr to /tmp/proxmenux-mount.log
+        err_tail = ''
+        try:
+            with open('/tmp/proxmenux-mount.log') as f:
+                err_tail = f.read().strip().splitlines()[-5:]
+                err_tail = '\n'.join(err_tail)
+        except OSError:
+            pass
+        return jsonify({'error': f'mount failed: {err_tail or r.stderr.strip()}'}), 500
+    mountpoint = r.stdout.strip()
+    return jsonify({'status': 'ok', 'mountpoint': mountpoint})
+
+
+@app.route('/api/host-backups/usb-drives/unmount', methods=['POST'])
+@require_auth
+def api_host_backups_usb_unmount():
+    """Unmount a USB mountpoint and remove the directory if empty."""
+    payload = request.get_json(silent=True) or {}
+    mountpoint = (payload.get('mountpoint') or '').strip()
+    if not mountpoint or not mountpoint.startswith('/'):
+        return jsonify({'error': 'absolute mountpoint required'}), 400
+    if not os.path.ismount(mountpoint):
+        return jsonify({'error': f'not a mountpoint: {mountpoint}'}), 400
+    r = subprocess.run(['umount', mountpoint], capture_output=True, text=True, timeout=15)
+    if r.returncode != 0:
+        return jsonify({'error': f'umount failed: {r.stderr.strip()}'}), 500
+    try:
+        os.rmdir(mountpoint)
+    except OSError:
+        pass
+    return jsonify({'status': 'ok', 'mountpoint': mountpoint})
+
+
+@app.route('/api/host-backups/usb-drives/format', methods=['POST'])
+@require_auth
+def api_host_backups_usb_format():
+    """DESTRUCTIVE — wipes the disk, lays a fresh GPT + ext4 partition,
+    and mounts it. The body MUST include `confirm_device` matching
+    `device` exactly; the UI is expected to ask the operator to type it
+    by hand before sending. Mirrors the double-confirmation the shell
+    flow imposes."""
+    payload = request.get_json(silent=True) or {}
+    device = (payload.get('device') or '').strip()
+    confirm = (payload.get('confirm_device') or '').strip()
+    if not _USB_DEVICE_RE.match(device):
+        return jsonify({'error': 'invalid device path'}), 400
+    if confirm != device:
+        return jsonify({'error': 'confirm_device must match device exactly (typo / safety check)'}), 400
+    if not os.path.exists(device):
+        return jsonify({'error': f'device does not exist: {device}'}), 404
+    label = (payload.get('label') or 'proxmenux-backup').strip()
+    try:
+        r = subprocess.run(
+            ['bash', '-c',
+             f'source {_BACKUP_LIB_SH}; hb_format_usb_disk "$1" "$2"',
+             'format-wrapper', device, label],
+            capture_output=True, text=True, timeout=180
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return jsonify({'error': str(e)}), 500
+    if r.returncode != 0:
+        err_tail = ''
+        try:
+            with open('/tmp/proxmenux-format.log') as f:
+                err_tail = '\n'.join(f.read().strip().splitlines()[-10:])
+        except OSError:
+            pass
+        return jsonify({'error': f'format failed: {err_tail or r.stderr.strip()}'}), 500
+    mountpoint = r.stdout.strip()
+    return jsonify({'status': 'ok', 'mountpoint': mountpoint, 'label': label})
+
+
+# ── Sprint C: Custom backup paths CRUD ─────────────────────────────
+#
+# Paths the operator added on top of the default profile. The runner
+# merges this list into every backup (manual + scheduled). One path
+# per line in backup-extra-paths.txt; # comments allowed.
+
+_BACKUP_EXTRA_PATHS_FILE = f'{_BACKUP_STATE_DIR}/backup-extra-paths.txt'
+
+
+def _read_extra_paths() -> list:
+    if not os.path.exists(_BACKUP_EXTRA_PATHS_FILE):
+        return []
+    try:
+        seen: set = set()
+        out: list = []
+        with open(_BACKUP_EXTRA_PATHS_FILE) as f:
+            for raw in f:
+                line = raw.split('#', 1)[0].strip()
+                if not line:
+                    continue
+                if line in seen:
+                    continue
+                seen.add(line)
+                out.append(line)
+        return sorted(out)
+    except OSError:
+        return []
+
+
+def _write_extra_paths(paths: list) -> tuple[bool, str]:
+    try:
+        os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+        with open(_BACKUP_EXTRA_PATHS_FILE, 'w') as f:
+            for p in paths:
+                f.write(p + '\n')
+        os.chmod(_BACKUP_EXTRA_PATHS_FILE, 0o600)
+        return True, ''
+    except OSError as e:
+        return False, str(e)
+
+
+@app.route('/api/host-backups/extra-paths', methods=['GET'])
+@require_auth
+def api_host_backups_extra_paths_get():
+    """List the user-added paths included in every backup on top of
+    the default profile."""
+    paths = _read_extra_paths()
+    return jsonify({
+        'paths': [
+            {'path': p, 'exists': os.path.exists(p)}
+            for p in paths
+        ]
+    })
+
+
+@app.route('/api/host-backups/extra-paths', methods=['POST'])
+@require_auth
+def api_host_backups_extra_paths_add():
+    """Add a path. Body: {path: string}. Idempotent — duplicates are
+    silently ignored."""
+    payload = request.get_json(silent=True) or {}
+    path = (payload.get('path') or '').strip().rstrip('/')
+    if not path:
+        return jsonify({'error': 'path is required'}), 400
+    if not path.startswith('/'):
+        return jsonify({'error': 'path must be absolute'}), 400
+    if not os.path.exists(path):
+        return jsonify({'error': f'path does not exist on this host: {path}'}), 400
+    existing = _read_extra_paths()
+    if path not in existing:
+        existing.append(path)
+        existing = sorted(set(existing))
+        ok, err = _write_extra_paths(existing)
+        if not ok:
+            return jsonify({'error': f'failed to persist: {err}'}), 500
+    return jsonify({'status': 'ok', 'paths': existing})
+
+
+@app.route('/api/host-backups/extra-paths', methods=['DELETE'])
+@require_auth
+def api_host_backups_extra_paths_remove():
+    """Remove a path. The path is taken from ?path=<urlencoded> so
+    DELETE stays bodyless."""
+    path = (request.args.get('path') or '').strip().rstrip('/')
+    if not path:
+        return jsonify({'error': 'path query parameter is required'}), 400
+    existing = _read_extra_paths()
+    if path not in existing:
+        return jsonify({'status': 'ok', 'paths': existing})
+    existing = [p for p in existing if p != path]
+    ok, err = _write_extra_paths(existing)
+    if not ok:
+        return jsonify({'error': f'failed to persist: {err}'}), 500
+    return jsonify({'status': 'ok', 'paths': existing})
+
+
+# ── Sprint H: Remote backups (PBS / Borg) listed and exported on-demand ──
+#
+# Listing is cheap (snapshot metadata only — milliseconds, no payload
+# download). Export is on-demand: only when the operator clicks Download
+# do we extract the snapshot to a local staging dir and pack it as a
+# .tar.zst, so the PBS / Borg server sees no load while the operator is
+# just browsing.
+
+_REMOTE_EXPORT_DIR = '/var/lib/proxmenux/exports'
+_REMOTE_EXPORT_TTL = 3600  # auto-clean staging directories untouched for > 1h
+_remote_export_tasks: dict = {}
+_remote_export_lock = threading.Lock()
+
+
+def _pbs_secret_for(repo_name: str) -> tuple[str, str]:
+    """Return (password, fingerprint) for the named PBS repo, looking
+    first in the manual sidecars and falling back to /etc/pve/storage.cfg."""
+    pass_text = ''
+    fp_text = ''
+    pass_file = f'{_BACKUP_STATE_DIR}/pbs-pass-{repo_name}.txt'
+    if os.path.exists(pass_file):
+        try:
+            with open(pass_file) as f:
+                pass_text = f.read().strip()
+        except OSError:
+            pass
+    fp_file = f'{_BACKUP_STATE_DIR}/pbs-fingerprint-{repo_name}.txt'
+    if os.path.exists(fp_file):
+        try:
+            with open(fp_file) as f:
+                fp_text = f.read().strip()
+        except OSError:
+            pass
+    # If we don't have a sidecar, the manual config screen could have
+    # left only the storage.cfg entry — pull whatever PVE has.
+    if not pass_text or not fp_text:
+        for r in _list_pbs_destinations():
+            if r.get('name') == repo_name:
+                if not fp_text:
+                    fp_text = r.get('fingerprint') or ''
+                # PVE storage.cfg keeps the password in a separate file
+                # under /etc/pve/priv/storage/<name>.pw — read it if we
+                # have permission.
+                pw_path = f'/etc/pve/priv/storage/{repo_name}.pw'
+                if not pass_text and os.path.exists(pw_path):
+                    try:
+                        with open(pw_path) as f:
+                            pass_text = f.read().strip()
+                    except OSError:
+                        pass
+                break
+    return pass_text, fp_text
+
+
+def _list_pbs_snapshots_for_repo(repo: dict, timeout: int = 15) -> tuple[list, str | None]:
+    """Run proxmox-backup-client snapshot list for one PBS config and
+    return (snapshots, error). Snapshots come back as the raw JSON the
+    client emits, with the source repo name attached for the UI."""
+    pwd, fp = _pbs_secret_for(repo['name'])
+    if not pwd:
+        return [], f"no password available for PBS repo \"{repo['name']}\""
+    env = {**os.environ, 'PBS_PASSWORD': pwd}
+    if fp:
+        env['PBS_FINGERPRINT'] = fp
+    try:
+        r = subprocess.run(
+            ['proxmox-backup-client', 'snapshot', 'list',
+             '--repository', repo['repository'],
+             '--output-format', 'json'],
+            capture_output=True, text=True, timeout=timeout, env=env,
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return [], str(e)
+    if r.returncode != 0:
+        return [], (r.stderr.strip() or r.stdout.strip() or
+                    f'proxmox-backup-client exited {r.returncode}')
+    try:
+        items = json.loads(r.stdout)
+    except json.JSONDecodeError:
+        return [], 'snapshot list output was not valid JSON'
+    out: list = []
+    for it in items:
+        backup_type = it.get('backup-type', '')
+        backup_id = it.get('backup-id', '')
+        backup_time = it.get('backup-time', 0)
+        # The canonical snapshot identifier the client accepts back —
+        # exactly what we'd pass to `proxmox-backup-client restore`.
+        snapshot = f"{backup_type}/{backup_id}/{backup_time}"
+        out.append({
+            'backend': 'pbs',
+            'repo_name': repo['name'],
+            'repo_repository': repo['repository'],
+            'snapshot': snapshot,
+            'backup_type': backup_type,
+            'backup_id': backup_id,
+            'backup_time': backup_time,
+            'size_bytes': it.get('size', 0),
+            'owner': it.get('owner'),
+            'protected': it.get('protected', False),
+            'files': it.get('files', []),
+            'fingerprint': it.get('fingerprint'),
+        })
+    return out, None
+
+
+@app.route('/api/host-backups/remote-archives', methods=['GET'])
+@require_auth
+def api_host_backups_remote_archives():
+    """List backups living on remote backends (PBS, eventually Borg).
+    Optional ?backend=pbs|borg filter; default returns all. Cheap to
+    call: only metadata is fetched from the remote — no payload data
+    moves until the operator clicks Download."""
+    backend_filter = (request.args.get('backend') or '').strip().lower()
+    snapshots: list = []
+    errors: list = []
+
+    if backend_filter in ('', 'pbs'):
+        for repo in _list_pbs_destinations():
+            items, err = _list_pbs_snapshots_for_repo(repo)
+            if err:
+                errors.append({'backend': 'pbs', 'repo_name': repo['name'], 'error': err})
+            snapshots.extend(items)
+
+    if backend_filter in ('', 'borg'):
+        for target in _list_borg_destinations():
+            items, err = _list_borg_archives_for_target(target)
+            if err:
+                errors.append({'backend': 'borg', 'repo_name': target['name'], 'error': err})
+            snapshots.extend(items)
+
+    return jsonify({'snapshots': snapshots, 'errors': errors})
+
+
+# ── Borg helpers (mirrors the PBS pair above) ──────────────────────
+
+
+def _borg_passphrase_for(name: str) -> str:
+    pass_file = f'{_BACKUP_STATE_DIR}/borg-pass-{name}.txt'
+    if not os.path.exists(pass_file):
+        return ''
+    try:
+        with open(pass_file) as f:
+            return f.read().strip()
+    except OSError:
+        return ''
+
+
+def _borg_env_for(target: dict, extra: dict | None = None) -> dict:
+    """Build the env dict for invoking the borg client against `target`.
+    Sets BORG_PASSPHRASE from the saved sidecar, BORG_RSH when an SSH
+    key is configured, and a generous BORG_RELOCATED_REPO_ACCESS_IS_OK
+    so we don't bail when the repo was last touched from a different
+    mountpoint label."""
+    env = {**os.environ}
+    pw = _borg_passphrase_for(target['name'])
+    if pw:
+        env['BORG_PASSPHRASE'] = pw
+    ssh_key = target.get('ssh_key') or ''
+    if ssh_key:
+        env['BORG_RSH'] = f'ssh -i {ssh_key} -o StrictHostKeyChecking=accept-new'
+    # Non-interactive: if borg would prompt about a relocated repo, take
+    # the safe answer instead of hanging the request.
+    env['BORG_RELOCATED_REPO_ACCESS_IS_OK'] = 'yes'
+    env['BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK'] = 'yes'
+    if extra:
+        env.update(extra)
+    return env
+
+
+def _list_borg_archives_for_target(target: dict, timeout: int = 30) -> tuple[list, str | None]:
+    """Run `borg list --json` against one saved Borg target and shape
+    the output the same way PBS snapshots are shaped — same UnifiedArchive
+    contract for the UI."""
+    repo = target.get('repository') or ''
+    if not repo:
+        return [], 'target has no repository path'
+    env = _borg_env_for(target)
+    try:
+        r = subprocess.run(
+            ['borg', 'list', '--json', repo],
+            capture_output=True, text=True, timeout=timeout, env=env,
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return [], str(e)
+    if r.returncode != 0:
+        return [], (r.stderr.strip() or r.stdout.strip() or
+                    f'borg list exited {r.returncode}')
+    try:
+        data = json.loads(r.stdout)
+    except json.JSONDecodeError:
+        return [], 'borg list output was not valid JSON'
+
+    out: list = []
+    for arc in data.get('archives', []):
+        name = arc.get('name') or ''
+        start_iso = arc.get('start') or arc.get('time') or ''
+        # Borg timestamps come as ISO-8601 with microseconds — convert
+        # to unix seconds so the unified UI can sort against the PBS
+        # entries (which use unix seconds natively).
+        backup_time = 0
+        if start_iso:
+            try:
+                from datetime import datetime
+                # Drop microseconds if present
+                cleaned = start_iso.split('.')[0]
+                dt = datetime.strptime(cleaned, '%Y-%m-%dT%H:%M:%S')
+                backup_time = int(dt.timestamp())
+            except (ValueError, OSError):
+                pass
+        out.append({
+            'backend': 'borg',
+            'repo_name': target['name'],
+            'repo_repository': repo,
+            'snapshot': name,                # canonical id used to extract
+            'backup_type': 'archive',
+            'backup_id': name,
+            'backup_time': backup_time,
+            'size_bytes': 0,                 # borg list omits size; info per-archive is expensive
+            'owner': arc.get('username'),
+            'protected': False,
+            'files': [],
+            'fingerprint': None,
+            'borg_id': arc.get('id'),
+            'borg_start_iso': start_iso,
+        })
+    return out, None
+
+
+def _run_borg_export(task_id: str, target: dict, archive_name: str, output_path: str):
+    """Background worker: `borg extract` one archive into a staging
+    directory and pack the result as a .tar.zst. Same shape and
+    progress states as _run_pbs_export so the UI can poll generically."""
+    import shutil, time
+    def _update(**kw):
+        with _remote_export_lock:
+            _remote_export_tasks[task_id].update(kw, updated_at=time.time())
+
+    staging = os.path.join(_REMOTE_EXPORT_DIR, f'staging-{task_id}')
+    try:
+        os.makedirs(staging, exist_ok=True)
+        os.chmod(staging, 0o700)
+        env = _borg_env_for(target)
+
+        # 1) Extract the archive. borg extract writes into cwd, so we
+        #    cd to a fresh subdirectory under staging.
+        target_tree = os.path.join(staging, 'tree')
+        os.makedirs(target_tree, exist_ok=True)
+        _update(state='restoring', message='Extracting from Borg repo')
+        r = subprocess.run(
+            ['borg', 'extract', f'{target["repository"]}::{archive_name}'],
+            capture_output=True, text=True, timeout=3600, env=env,
+            cwd=target_tree,
+        )
+        if r.returncode != 0:
+            _update(state='failed', error=(r.stderr.strip() or 'borg extract failed'))
+            return
+
+        # 2) Pack as .tar.zst.
+        _update(state='packing', message='Compressing as tar.zst')
+        with open(output_path, 'wb') as out:
+            tar_p = subprocess.Popen(
+                ['tar', '-C', target_tree, '-cf', '-', '.'],
+                stdout=subprocess.PIPE,
+            )
+            zstd_p = subprocess.Popen(
+                ['zstd', '-T0', '-19', '-q'],
+                stdin=tar_p.stdout,
+                stdout=out,
+            )
+            if tar_p.stdout:
+                tar_p.stdout.close()
+            zstd_rc = zstd_p.wait(timeout=3600)
+            tar_rc = tar_p.wait(timeout=60)
+        if zstd_rc != 0 or tar_rc != 0:
+            _update(state='failed', error=f'archive packing failed (tar={tar_rc}, zstd={zstd_rc})')
+            return
+
+        size = os.path.getsize(output_path)
+        _update(state='completed', message='Export ready', size_bytes=size, output_path=output_path)
+    except Exception as e:
+        _update(state='failed', error=str(e))
+    finally:
+        try:
+            if os.path.isdir(staging):
+                shutil.rmtree(staging)
+        except OSError:
+            pass
+
+
+def _safe_export_id() -> str:
+    """Generate a collision-free identifier for a single export run."""
+    from datetime import datetime
+    import secrets
+    return f'{datetime.now().strftime("%Y%m%d%H%M%S")}-{secrets.token_hex(3)}'
+
+
+def _cleanup_stale_exports():
+    """Drop staging dirs and finished tar files older than _REMOTE_EXPORT_TTL.
+    Called opportunistically on each new export request — no separate
+    cron is needed."""
+    if not os.path.isdir(_REMOTE_EXPORT_DIR):
+        return
+    import time
+    now = time.time()
+    for name in os.listdir(_REMOTE_EXPORT_DIR):
+        full = os.path.join(_REMOTE_EXPORT_DIR, name)
+        try:
+            st = os.stat(full)
+        except OSError:
+            continue
+        if now - st.st_mtime < _REMOTE_EXPORT_TTL:
+            continue
+        if os.path.isdir(full):
+            try:
+                import shutil
+                shutil.rmtree(full)
+            except OSError:
+                pass
+        else:
+            try:
+                os.remove(full)
+            except OSError:
+                pass
+    # Also forget completed task records older than the TTL so they
+    # don't pile up forever.
+    with _remote_export_lock:
+        for tid in list(_remote_export_tasks):
+            task = _remote_export_tasks[tid]
+            if task['state'] in ('completed', 'failed') and now - task.get('updated_at', 0) > _REMOTE_EXPORT_TTL:
+                _remote_export_tasks.pop(tid, None)
+
+
+def _run_pbs_export(task_id: str, repo: dict, snapshot: str, output_path: str):
+    """Background worker: pull a single PBS snapshot to a local staging
+    dir, then pack it as a .tar.zst at output_path. Updates the shared
+    task record in place so the poll endpoint can report progress."""
+    import shutil, time
+    def _update(**kw):
+        with _remote_export_lock:
+            _remote_export_tasks[task_id].update(kw, updated_at=time.time())
+
+    staging = os.path.join(_REMOTE_EXPORT_DIR, f'staging-{task_id}')
+    try:
+        os.makedirs(staging, exist_ok=True)
+        os.chmod(staging, 0o700)
+
+        pwd, fp = _pbs_secret_for(repo['name'])
+        if not pwd:
+            _update(state='failed', error=f"no password for PBS repo \"{repo['name']}\"")
+            return
+        env = {**os.environ, 'PBS_PASSWORD': pwd}
+        if fp:
+            env['PBS_FINGERPRINT'] = fp
+
+        # 1) Pull the .pxar archive out of the snapshot. PBS stores the
+        # host backup as `hostcfg.pxar.didx`; restoring it as `hostcfg.pxar`
+        # writes the file tree under <target>/hostcfg/.
+        _update(state='restoring', message='Pulling snapshot from PBS')
+        target_tree = os.path.join(staging, 'tree')
+        os.makedirs(target_tree, exist_ok=True)
+        r = subprocess.run(
+            ['proxmox-backup-client', 'restore',
+             '--repository', repo['repository'],
+             snapshot, 'hostcfg.pxar', target_tree],
+            capture_output=True, text=True, timeout=1800, env=env,
+        )
+        if r.returncode != 0:
+            _update(state='failed', error=(r.stderr.strip() or 'pbs restore failed'))
+            return
+
+        # 2) Pack the restored tree as a .tar.zst — same format the
+        # local-backend backups already use, so the rest of the Monitor
+        # treats both shapes uniformly.
+        _update(state='packing', message='Compressing as tar.zst')
+        with open(output_path, 'wb') as out:
+            tar_p = subprocess.Popen(
+                ['tar', '-C', target_tree, '-cf', '-', '.'],
+                stdout=subprocess.PIPE,
+            )
+            zstd_p = subprocess.Popen(
+                ['zstd', '-T0', '-19', '-q'],
+                stdin=tar_p.stdout,
+                stdout=out,
+            )
+            if tar_p.stdout:
+                tar_p.stdout.close()
+            zstd_rc = zstd_p.wait(timeout=1800)
+            tar_rc = tar_p.wait(timeout=60)
+        if zstd_rc != 0 or tar_rc != 0:
+            _update(state='failed', error=f'archive packing failed (tar={tar_rc}, zstd={zstd_rc})')
+            return
+
+        size = os.path.getsize(output_path)
+        _update(state='completed', message='Export ready', size_bytes=size, output_path=output_path)
+    except Exception as e:
+        _update(state='failed', error=str(e))
+    finally:
+        # Drop the staging tree once we're done — only the final tarball
+        # stays around until the operator downloads it.
+        try:
+            if os.path.isdir(staging):
+                shutil.rmtree(staging)
+        except OSError:
+            pass
+
+
+@app.route('/api/host-backups/remote-archives/export', methods=['POST'])
+@require_auth
+def api_host_backups_remote_archive_export():
+    """Kick off an on-demand export. Body:
+      {backend: 'pbs'|'borg', repo_name, snapshot}
+    Returns a task_id the UI polls for progress and uses to fetch the
+    resulting .tar.zst once ready."""
+    import time
+    _cleanup_stale_exports()
+    payload = request.get_json(silent=True) or {}
+    backend = (payload.get('backend') or '').strip().lower()
+    if backend not in ('pbs', 'borg'):
+        return jsonify({'error': 'backend must be pbs or borg'}), 400
+    repo_name = (payload.get('repo_name') or '').strip()
+    snapshot = (payload.get('snapshot') or '').strip()
+    if not repo_name or not snapshot:
+        return jsonify({'error': 'repo_name and snapshot are required'}), 400
+
+    repo: dict | None = None
+    if backend == 'pbs':
+        repo = next((r for r in _list_pbs_destinations() if r['name'] == repo_name), None)
+        if not repo:
+            return jsonify({'error': f'PBS repo not found: {repo_name}'}), 404
+    else:
+        repo = next((r for r in _list_borg_destinations() if r['name'] == repo_name), None)
+        if not repo:
+            return jsonify({'error': f'Borg target not found: {repo_name}'}), 404
+
+    os.makedirs(_REMOTE_EXPORT_DIR, exist_ok=True)
+    task_id = _safe_export_id()
+    safe_snap = snapshot.replace('/', '_')
+    output_path = os.path.join(
+        _REMOTE_EXPORT_DIR, f'{backend}-{repo_name}-{safe_snap}.tar.zst'
+    )
+    with _remote_export_lock:
+        _remote_export_tasks[task_id] = {
+            'task_id': task_id,
+            'backend': backend,
+            'repo_name': repo_name,
+            'snapshot': snapshot,
+            'state': 'queued',
+            'message': 'Queued',
+            'created_at': time.time(),
+            'updated_at': time.time(),
+            'output_path': None,
+            'size_bytes': 0,
+            'error': None,
+        }
+
+    worker = _run_pbs_export if backend == 'pbs' else _run_borg_export
+    t = threading.Thread(
+        target=worker,
+        args=(task_id, repo, snapshot, output_path),
+        daemon=True,
+    )
+    t.start()
+    return jsonify({'task_id': task_id, 'state': 'queued'}), 202
+
+
+@app.route('/api/host-backups/remote-archives/export/<task_id>', methods=['GET'])
+@require_auth
+def api_host_backups_remote_archive_export_status(task_id):
+    """Poll a running export. Returns the live task record; the UI uses
+    `state` to decide what to render (queued → progress, completed →
+    trigger download)."""
+    with _remote_export_lock:
+        task = _remote_export_tasks.get(task_id)
+        if not task:
+            return jsonify({'error': 'task not found or expired'}), 404
+        # Defensive copy — the worker keeps mutating the original.
+        return jsonify({k: v for k, v in task.items()})
+
+
+@app.route('/api/host-backups/remote-archives/export/<task_id>/download', methods=['GET'])
+@require_auth
+def api_host_backups_remote_archive_export_download(task_id):
+    """Stream the packed export to the browser. Same auth + send_file
+    pattern as the local archive download. Cleans up the tarball after
+    the response is dispatched so the staging area doesn't grow."""
+    with _remote_export_lock:
+        task = _remote_export_tasks.get(task_id)
+    if not task:
+        return jsonify({'error': 'task not found or expired'}), 404
+    if task['state'] != 'completed':
+        return jsonify({'error': f'task is in state "{task["state"]}", not completed'}), 409
+    output_path = task.get('output_path')
+    if not output_path or not os.path.isfile(output_path):
+        return jsonify({'error': 'output file missing'}), 500
+    download_name = os.path.basename(output_path)
+
+    @after_this_request
+    def _cleanup(response):
+        try:
+            if os.path.exists(output_path):
+                os.remove(output_path)
+        except OSError:
+            pass
+        with _remote_export_lock:
+            _remote_export_tasks.pop(task_id, None)
+        return response
+
+    return send_file(
+        output_path,
+        as_attachment=True,
+        download_name=download_name,
+        mimetype='application/x-zstd-compressed-tar',
+    )
 
 
 _BACKUP_TAR_SUFFIXES = ('.tar', '.tar.zst', '.tar.gz')
@@ -12690,6 +15340,188 @@ def api_host_backups_archive_preflight(archive_id):
     except json.JSONDecodeError:
         return jsonify({'error': 'run_restore output was not valid JSON',
                         'raw_stderr': r.stderr[:2000]}), 500
+
+
+@app.route('/api/host-backups/archives/<path:archive_id>/prepare-restore', methods=['POST'])
+@require_auth
+def api_host_backups_archive_prepare_restore(archive_id):
+    """Produce the exact shell command the operator needs to run to
+    apply this archive on this host. Sprint G is "preview / preflight
+    in Monitor, apply on the CLI" — the runtime risk of restoring while
+    the Monitor itself is being overwritten is too high to swallow into
+    a single POST. So we hand back a copy-pasteable command plus the
+    menu path inside backup_host.sh."""
+    archive_path = _find_backup_archive_path(archive_id)
+    if not archive_path:
+        return jsonify({'error': 'archive not found'}), 404
+
+    body = request.get_json(silent=True) or {}
+    mode = (body.get('mode') or 'full').lower()
+    if mode not in ('full', 'storage_only', 'network_only', 'base', 'custom'):
+        return jsonify({'error': f'unknown mode "{mode}"'}), 400
+
+    backup_host_sh = '/usr/local/share/proxmenux/scripts/backup_restore/backup_host.sh'
+    archive_basename = os.path.basename(archive_path)
+
+    # Mode → human-readable menu hint inside backup_host.sh
+    mode_label_map = {
+        'full': 'Full restore',
+        'storage_only': 'Storage / hardware only',
+        'network_only': 'Network only',
+        'base': 'Base config only',
+        'custom': 'Custom — pick components',
+    }
+    mode_label = mode_label_map.get(mode, mode)
+
+    # Which restore modes typically need a reboot to take effect.
+    # `full` rewrites /etc/pve, /etc/network, kernel cmdline, etc.
+    # `base` and `network_only` touch host identity / interfaces too.
+    reboot_required = mode in ('full', 'base', 'network_only', 'storage_only')
+
+    menu_path = [
+        'Inside the menu opened by the command above:',
+        f'  1. Pick:  "{archive_basename}"',
+        f'  2. Choose: Restore action  →  {mode_label}',
+        '  3. Confirm when prompted.',
+    ]
+    if reboot_required:
+        menu_path.append(
+            "  4. After the restore finishes, reboot when the menu offers it — "
+            "some changes only land after the post-boot apply runs.",
+        )
+
+    notes: list = []
+    if mode == 'full':
+        notes.append(
+            "Full restore rewrites cluster, network and bootloader state. "
+            "Don't run it remotely without out-of-band access — if the "
+            "network config goes wrong you'll lose SSH.",
+        )
+    if mode == 'custom':
+        notes.append(
+            "Custom mode lets you tick / untick components. The Monitor's "
+            "preflight already shows the per-component plan above.",
+        )
+
+    return jsonify({
+        'archive_id': archive_id,
+        'archive_basename': archive_basename,
+        'mode': mode,
+        'mode_label': mode_label,
+        'shell_command': f'bash {backup_host_sh}',
+        'menu_path': menu_path,
+        'reboot_required': reboot_required,
+        'notes': notes,
+    })
+
+
+@app.route('/api/host-backups/archives/<path:archive_id>/download', methods=['GET'])
+@require_auth
+def api_host_backups_archive_download(archive_id):
+    """Stream the .tar.zst archive back to the operator with a sane
+    Content-Disposition. send_file handles range requests + streaming
+    so the Flask process doesn't hold the whole archive in memory —
+    important since these can be hundreds of MB."""
+    archive_path = _find_backup_archive_path(archive_id)
+    if not archive_path:
+        return jsonify({'error': 'archive not found'}), 404
+    if not os.path.isfile(archive_path):
+        return jsonify({'error': 'archive path is not a regular file'}), 500
+    return send_file(
+        archive_path,
+        as_attachment=True,
+        download_name=os.path.basename(archive_path),
+        mimetype='application/x-zstd-compressed-tar',
+    )
+
+
+@app.route('/api/host-backups/archives/<path:archive_id>', methods=['DELETE'])
+@require_auth
+def api_host_backups_archive_delete(archive_id):
+    """Delete a local archive plus everything tied to it: the
+    `.tar.zst`, its `.proxmenux.json` sidecar, and the matching runner
+    `<stem>.log`. Remote backups (PBS / Borg) are not handled here —
+    those are pruned from their own datastore."""
+    archive_path = _find_backup_archive_path(archive_id)
+    if not archive_path:
+        return jsonify({'error': 'archive not found'}), 404
+    if not os.path.isfile(archive_path):
+        return jsonify({'error': 'archive path is not a regular file'}), 500
+
+    removed = []
+    # Archive itself.
+    try:
+        os.remove(archive_path)
+        removed.append(os.path.basename(archive_path))
+    except OSError as e:
+        return jsonify({'error': f'failed to remove archive: {e}'}), 500
+    # Sidecar JSON (best effort — missing sidecar is OK).
+    sidecar = f'{archive_path}.proxmenux.json'
+    if os.path.exists(sidecar):
+        try:
+            os.remove(sidecar)
+            removed.append(os.path.basename(sidecar))
+        except OSError:
+            pass
+    # Runner log — same stem as the archive.
+    basename = os.path.basename(archive_path)
+    stem = basename
+    for ext in ('.tar.zst', '.tar.gz', '.tar.bz2', '.tar.xz', '.tar'):
+        if stem.endswith(ext):
+            stem = stem[:-len(ext)]
+            break
+    log_path = f'{_BACKUP_LOG_DIR}/{stem}.log'
+    if os.path.exists(log_path):
+        try:
+            os.remove(log_path)
+            removed.append(os.path.basename(log_path))
+        except OSError:
+            pass
+
+    return jsonify({'status': 'ok', 'removed': removed})
+
+
+@app.route('/api/host-backups/archives/<path:archive_id>/log', methods=['GET'])
+@require_auth
+def api_host_backups_archive_log(archive_id):
+    """Return the runner log that produced this specific local archive.
+
+    The runner names both files from the same `<job_id>-<ts>` stem —
+    `<stem>.tar.zst` for the archive, `<stem>.log` for the run log —
+    so we just strip the archive extension and look up the matching
+    .log under `/var/log/proxmenux/backup-jobs/`. Returns 80-line tail
+    + total content; the UI uses both (tail in the inspect modal, full
+    content if the operator clicks "Open full log")."""
+    basename = os.path.basename(archive_id)
+    # Strip the tar.* extension to recover the <job_id>-<ts> stem.
+    stem = basename
+    for ext in ('.tar.zst', '.tar.gz', '.tar.bz2', '.tar.xz', '.tar'):
+        if stem.endswith(ext):
+            stem = stem[:-len(ext)]
+            break
+    log_path = f'{_BACKUP_LOG_DIR}/{stem}.log'
+    if not os.path.isfile(log_path):
+        # Return 200 with empty fields instead of 404 so SWR doesn't
+        # have to special-case the "no log available" branch — the UI
+        # just checks `log_path === null`.
+        return jsonify({
+            'log_path': None,
+            'size': 0,
+            'content': '',
+            'tail': [],
+        })
+    try:
+        with open(log_path, 'r', errors='replace') as f:
+            content = f.read()
+    except OSError as e:
+        return jsonify({'error': str(e)}), 500
+    lines = content.splitlines()
+    return jsonify({
+        'log_path': log_path,
+        'size': len(content),
+        'content': content,
+        'tail': lines[-80:],
+    })
 
 
 if __name__ == '__main__':

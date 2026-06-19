@@ -185,7 +185,23 @@ BORG_URL="https://github.com/borgbackup/borg/releases/download/${BORG_VERSION}/b
 BORG_SHA256="cfa50fb704a93d3a4fa258120966345fddb394f960dca7c47fcb774d0172f40b"
 echo "📦 Downloading borg ${BORG_VERSION} into AppImage..."
 BORG_TARGET="$APP_DIR/usr/bin/borg"
-if wget -qO "$BORG_TARGET" "$BORG_URL"; then
+# GitHub releases serve borg-linux64 via a 302 redirect to a signed
+# release-assets.githubusercontent.com URL. wget -qO silently dropped
+# the redirect once during the 2026-06-15 build, killing the AppImage
+# pipeline. curl -L --retry 3 is more robust and falls back to wget
+# only when curl is missing.
+if command -v curl >/dev/null 2>&1; then
+    DOWNLOAD_OK=0
+    if curl -sSL --retry 3 --retry-delay 2 --max-time 120 -o "$BORG_TARGET" "$BORG_URL"; then
+        DOWNLOAD_OK=1
+    fi
+else
+    DOWNLOAD_OK=0
+    if wget -qO "$BORG_TARGET" "$BORG_URL"; then
+        DOWNLOAD_OK=1
+    fi
+fi
+if [ "$DOWNLOAD_OK" = "1" ]; then
     if echo "${BORG_SHA256}  ${BORG_TARGET}" | sha256sum -c - >/dev/null 2>&1; then
         chmod +x "$BORG_TARGET"
         echo "✅ borg ${BORG_VERSION} bundled (sha256 verified)"

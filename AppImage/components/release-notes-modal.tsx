@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
-import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell } from "lucide-react"
+import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 
 const APP_VERSION = "1.2.2.2-beta" // Sync with AppImage/package.json
@@ -217,36 +217,32 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 
 const CURRENT_VERSION_FEATURES = [
   {
-    icon: <Sliders className="h-5 w-5" />,
-    text: "Dashboard header restyle - The Overview, Storage, Network and VMs & LXCs tabs now lead with a unified card design: circular gauges paired with mini progress bars, and a clearer headline-plus-pill layout for counts. CPU Usage and Memory cards also expose a User / System and Used / Cached breakdown under the gauge",
+    icon: <Calendar className="h-5 w-5" />,
+    text: "Host scheduler can attach to an existing PVE vzdump job - The new \"How to schedule\" picker lets you create a brand-new ProxMenux timer with its own schedule + retention, or attach the host config backup to an existing vzdump job so it inherits both. The vzdump hook only fires on the global job-end of the matching storage. Third-party hooks already present in /etc/vzdump.conf are preserved and chained.",
   },
   {
-    icon: <Activity className="h-5 w-5" />,
-    text: "Top processes drill-down - Click the CPU Usage or Memory cards on the Overview tab to open a sortable top-25 list of processes by %CPU or RSS, then click any row for a live per-process detail modal with state, command line, resource usage and lifetime",
+    icon: <DatabaseBackup className="h-5 w-5" />,
+    text: "Backup tab is no longer read-only - The Scheduled Backup Jobs list now exposes Run and Enable / Disable buttons per row, plus proper recognition of PVE-attached jobs (badge, inherited schedule shown as \"attached → storage:pbs\", state read from ENABLED= in the .env instead of a non-existent timer)",
+  },
+  {
+    icon: <Server className="h-5 w-5" />,
+    text: "PBS scheduled runs no longer fail silently - Two bugs in run_scheduled_backup.sh: PBS_FINGERPRINT was not propagated to proxmox-backup-client, so every push against a self-signed PBS failed with \"certificate validation failed\", and the client's stderr was redirected to /dev/null, hiding the error from the log. The runner now passes the fingerprint and routes the full client output to the per-job log",
   },
   {
     icon: <HardDrive className="h-5 w-5" />,
-    text: "Storage and Network refinements - Storage Used now leads the Storage tab card, Network Status cells stack label-over-value so long hostnames and IPv6 DNS no longer truncate, and the 24 h CPU and Network charts smooth into 5-minute buckets",
+    text: "Local backup target: one configured value instead of a per-run picker - \"Manage local backup target\" simplified to three choices (default /var/lib/vz/dump, custom path, USB disk) plus a Clear option. The scheduler and manual local backups use the configured target directly, without re-asking each time",
   },
   {
     icon: <Cpu className="h-5 w-5" />,
-    text: "Coral on non-Debian LXCs - The Coral LXC installer now detects Alpine / Arch / RHEL / SUSE containers and offers an opt-in passthrough-only mode, so Frigate Docker and other apps bundling their own libedgetpu runtime can wire the device through without aborting",
+    text: "NVIDIA passthrough hardening - Multi-GPU systems get an auto-managed /etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf and the 70-nvidia.rules udev file is disabled only when ALL NVIDIA GPUs are bound to vfio-pci, never when one stays on the host. Six install scripts that ran update-initramfs now also call proxmox-boot-tool refresh so the new initrd actually reaches the ESP on ZFS root + systemd-boot setups",
   },
   {
     icon: <Wrench className="h-5 w-5" />,
-    text: "Coral PCIe driver false-positive update fix - The installer now records the upstream feranick release tag on disk, so the update detector compares like-for-like and stops firing a phantom 'driver update available' notification right after a fresh install",
+    text: "Borg saved-target USB capture no longer corrupts borg-targets.txt - dialog --yesno / --msgbox write their TUI escapes to stdout by convention; the USB mount prompt was capturing them into the returned mountpoint, persisting a multi-kilobyte ANSI blob as the target's repo path. The prompt now stashes real stdout in fd 9 and emits the path through that channel only",
   },
   {
     icon: <RefreshCw className="h-5 w-5" />,
-    text: "Auto-reconcile of stale alerts - Errors for resources that no longer exist auto-clear within the regular cleanup cycle. New cases: a PVE storage removed via pvesm, an NFS/CIFS share whose mount target is gone from /proc/mounts, and LXC mount-capacity alerts for a deleted CT",
-  },
-  {
-    icon: <Shield className="h-5 w-5" />,
-    text: "Header Critical badge respects dismissals (#228) - Permanently silencing every critical alert in a category now also clears the top-right badge, so the header pill and the bottom popup always agree on the count",
-  },
-  {
-    icon: <Bell className="h-5 w-5" />,
-    text: "Notification Send Test buttons unified (#226) - All five channel Send Test buttons (Telegram, Gotify, Discord, Email, Apprise) now sit on the left and carry their channel's brand colour, instead of Apprise being the right-aligned cyan outlier",
+    text: "Smart-restore cross-host: drift dialog stays quiet when checks always fail by design - The plan summary used to surface always-failing host-identifier checks on a cross-host restore (the source and destination hostname will never match), nudging the operator to dismiss the same dialog every time. The summary now filters out the checks that have no meaningful answer outside same-host restores",
   },
 ]
 

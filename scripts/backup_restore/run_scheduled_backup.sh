@@ -60,7 +60,13 @@ _sb_prune_local() {
       # Remove the archive AND its sidecar in one shot — if we
       # leave .proxmenux.json files behind, the Monitor would
       # show them as broken entries pointing at deleted archives.
-      rm -f "$f" "${f}.proxmenux.json" || true
+      # Also drop the matching runner log so retention is symmetric:
+      # one archive ↔ one log, never an orphan log left behind.
+      local stem suffix
+      stem=$(basename "$f")
+      suffix=".${ext}"
+      stem="${stem%"$suffix"}"
+      rm -f "$f" "${f}.proxmenux.json" "${LOG_DIR}/${stem}.log" || true
     done
   fi
 }
@@ -133,6 +139,47 @@ _sb_run_borg() {
   return 0
 }
 
+# Resolve a PBS password for an auto-discovered Datacenter storage by
+# matching the repository string against /etc/pve/storage.cfg and
+# returning the contents of /etc/pve/priv/storage/<name>.pw. Used as a
+# fallback when the job .env carries an empty PBS_PASSWORD — happens
+# when the operator picks a PVE-managed PBS in the wizard (the .pw
+# file is the canonical credential location for those).
+_sb_pbs_resolve_password() {
+  local repo="$1"
+  local cfg=/etc/pve/storage.cfg
+  [[ -f "$cfg" ]] || return 1
+  awk -v target="$repo" '
+    /^[a-z]+:[[:space:]]+/ {
+      if (prev_type == "pbs" && prev_name != "" && server != "" && datastore != "") {
+        u = (username != "" ? username : "root@pam")
+        built = u "@" server ":" datastore
+        if (built == target) { print prev_name; exit 0 }
+      }
+      match($0, /^([a-z]+):[[:space:]]+(.+)$/, m)
+      prev_type = m[1]; prev_name = m[2]
+      server=""; datastore=""; username=""
+      next
+    }
+    /^[[:space:]]+server[[:space:]]+/        { sub(/^[[:space:]]+server[[:space:]]+/, ""); server=$0; next }
+    /^[[:space:]]+datastore[[:space:]]+/     { sub(/^[[:space:]]+datastore[[:space:]]+/, ""); datastore=$0; next }
+    /^[[:space:]]+username[[:space:]]+/      { sub(/^[[:space:]]+username[[:space:]]+/, ""); username=$0; next }
+    END {
+      if (prev_type == "pbs" && prev_name != "" && server != "" && datastore != "") {
+        u = (username != "" ? username : "root@pam")
+        built = u "@" server ":" datastore
+        if (built == target) print prev_name
+      }
+    }
+  ' "$cfg" | head -n1 | {
+    read -r name || true
+    [[ -z "$name" ]] && return 1
+    local pw_file="/etc/pve/priv/storage/${name}.pw"
+    [[ -r "$pw_file" ]] || return 1
+    cat "$pw_file"
+  }
+}
+
 _sb_run_pbs() {
   local stage_root="$1"
   local backup_id="$2"
@@ -145,6 +192,14 @@ _sb_run_pbs() {
     --backup-id "$backup_id"
     --backup-time "$epoch"
   )
+
+  # If the .env was created against a Datacenter-managed PBS storage,
+  # PBS_PASSWORD is intentionally empty there (the credential lives in
+  # /etc/pve/priv/storage/<name>.pw). Resolve it now so the rest of
+  # this function can run unchanged.
+  if [[ -z "${PBS_PASSWORD:-}" && -n "${PBS_REPOSITORY:-}" ]]; then
+    PBS_PASSWORD=$(_sb_pbs_resolve_password "$PBS_REPOSITORY" 2>/dev/null || true)
+  fi
 
   [[ -z "${PBS_REPOSITORY:-}" || -z "${PBS_PASSWORD:-}" ]] && return 1
   if [[ -n "${PBS_KEYFILE:-}" ]]; then
