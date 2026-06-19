@@ -6097,7 +6097,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/garage.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6133,7 +6133,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/garage.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6366,7 +6366,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gitea.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6399,7 +6399,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gitea.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6496,7 +6496,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/glance.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6529,7 +6529,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/glances.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc",
@@ -6656,7 +6656,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/go2rtc.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6720,7 +6720,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gokapi.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6751,7 +6751,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gotify.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7127,7 +7127,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/healthchecks.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7233,7 +7233,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hev.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7297,7 +7297,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/homarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7335,7 +7335,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/home-assistant.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7366,7 +7366,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/homebox.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16618,7 +16618,7 @@
       "username": "admin@community-scripts.org",
       "password": ""
     },
-    "os": "debian"
+    "os": "ubuntu"
   },
   {
     "name": "SFTPGo",
