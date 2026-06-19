@@ -10464,16 +10464,16 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00013"
+      "scriptcat00012"
     ],
     "category_names": [
-      "Media & Streaming"
+      "Documents & Notes"
     ],
     "notes": [],
     "warnings": [],
     "port": 9000,
     "website": "https://mealie.io/",
-    "documentation": "https://mealie.io/",
+    "documentation": "https://docs.mealie.io/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mealie.webp",
     "updateable": true,
     "privileged": false,
