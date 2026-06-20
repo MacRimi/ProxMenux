@@ -12503,6 +12503,14 @@ def _backup_job_summary(env_file: str) -> dict:
         'manual': job.get('MANUAL_RUN') == '1',
         'last_status': last_status,
         'next_run': next_run,
+        # `encrypted` is a per-job flag — for PBS it's "has a keyfile
+        # assigned", for Borg "the destination's encryption is on".
+        # Used by the UI to render the lock badge consistently.
+        'encrypted': (
+            bool(job.get('PBS_KEYFILE')) if backend == 'pbs'
+            else (job.get('BORG_ENCRYPT_MODE') or 'none') != 'none' if backend == 'borg'
+            else False
+        ),
     }
 
 
@@ -12862,13 +12870,22 @@ def _list_pbs_destinations() -> list:
                         seen.add((name, repo))
         except OSError:
             pass
+    # Annotate each repo with the jobs that currently depend on it so
+    # the UI can warn before deleting a destination that's in use.
+    for r in repos:
+        r['jobs_using'] = _jobs_using_pbs(r['repository'])
     return repos
 
 
 def _list_borg_destinations() -> list:
-    """borg-targets.txt has 3 pipe-separated fields per line:
-    name|repo|ssh_key — split on 2 pipes so the SSH key never ends up
-    appended to the repository path."""
+    """borg-targets.txt has 4 pipe-separated fields per line:
+    name|repo|ssh_key|encrypt_mode
+
+    Legacy lines from the shell installer only carry the first three
+    fields — those targets default to `repokey` (what the shell wizard
+    has always written). `has_passphrase` reports whether a sibling
+    `borg-pass-<name>.txt` exists, so the UI can skip the passphrase
+    prompt when the credential is already saved server-side."""
     targets: list = []
     cfg = f'{_BACKUP_STATE_DIR}/borg-targets.txt'
     if not os.path.exists(cfg):
@@ -12879,14 +12896,152 @@ def _list_borg_destinations() -> list:
                 line = raw.strip()
                 if not line or '|' not in line:
                     continue
-                parts = line.split('|', 2)
+                parts = line.split('|', 3)
                 name = parts[0]
                 repo = parts[1] if len(parts) > 1 else ''
                 ssh_key = parts[2] if len(parts) > 2 else ''
-                targets.append({'name': name, 'repository': repo, 'ssh_key': ssh_key})
+                encrypt_mode = (parts[3] if len(parts) > 3 else '').strip() or 'repokey'
+                pass_file = f'{_BACKUP_STATE_DIR}/borg-pass-{name}.txt'
+                has_passphrase = os.path.isfile(pass_file)
+                targets.append({
+                    'name': name,
+                    'repository': repo,
+                    'ssh_key': ssh_key,
+                    'ssh_key_path': ssh_key,
+                    'encrypt_mode': encrypt_mode,
+                    'has_passphrase': has_passphrase,
+                    'jobs_using': _jobs_using_borg(repo),
+                })
     except OSError:
         pass
     return targets
+
+
+def _resolve_borg_passphrase(name: str) -> str:
+    """Return the passphrase saved for borg destination `name`, or ''."""
+    if not name:
+        return ''
+    pf = f'{_BACKUP_STATE_DIR}/borg-pass-{name}.txt'
+    if not os.path.isfile(pf):
+        return ''
+    try:
+        with open(pf) as f:
+            return f.read().strip()
+    except OSError:
+        return ''
+
+
+def _delete_job_internal(job_id: str) -> None:
+    """Tear down a backup job — used both by the individual DELETE
+    endpoint and by the cascade when removing a destination. Drops
+    .env / .paths / systemd unit + timer (with disable + reload),
+    plus all of the job's logs and status sidecar. Idempotent:
+    missing files are silently skipped."""
+    if not _JOB_ID_RE.match(job_id):
+        return
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    if not os.path.exists(env_file):
+        return
+    try:
+        job = _parse_job_env(env_file)
+    except OSError:
+        job = {}
+    is_attached = bool(job.get('PVE_STORAGE'))
+    paths_file = f'{_BACKUP_JOBS_DIR}/{job_id}.paths'
+    service_file = f'/etc/systemd/system/proxmenux-backup-{job_id}.service'
+    timer_file = f'/etc/systemd/system/proxmenux-backup-{job_id}.timer'
+    if not is_attached:
+        try:
+            subprocess.run(
+                ['systemctl', '--now', 'disable', f'proxmenux-backup-{job_id}.timer'],
+                capture_output=True, timeout=10,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            pass
+    for f in (env_file, paths_file, service_file, timer_file):
+        try:
+            if os.path.exists(f):
+                os.remove(f)
+        except OSError:
+            pass
+    if not is_attached:
+        try:
+            subprocess.run(['systemctl', 'daemon-reload'], capture_output=True, timeout=10)
+        except (subprocess.TimeoutExpired, OSError):
+            pass
+    import glob as _glob
+    for log_f in _glob.glob(f'{_BACKUP_LOG_DIR}/{job_id}-*.log') + \
+                 _glob.glob(f'{_BACKUP_LOG_DIR}/{job_id}-last.status'):
+        try:
+            os.remove(log_f)
+        except OSError:
+            pass
+
+
+def _jobs_using_pbs(repo: str) -> list:
+    """Return the list of job_ids whose .env points at this PBS
+    repository. Used by the DELETE-destination confirm flow so the
+    operator sees what gets cascade-removed."""
+    if not repo or not os.path.isdir(_BACKUP_JOBS_DIR):
+        return []
+    out: list = []
+    for fname in os.listdir(_BACKUP_JOBS_DIR):
+        if not fname.endswith('.env'):
+            continue
+        try:
+            env = _parse_job_env(f'{_BACKUP_JOBS_DIR}/{fname}')
+        except OSError:
+            continue
+        if env.get('BACKEND') == 'pbs' and env.get('PBS_REPOSITORY') == repo:
+            out.append(fname[:-4])
+    return out
+
+
+def _jobs_using_borg(repo: str) -> list:
+    """Same as _jobs_using_pbs but for Borg destinations."""
+    if not repo or not os.path.isdir(_BACKUP_JOBS_DIR):
+        return []
+    out: list = []
+    for fname in os.listdir(_BACKUP_JOBS_DIR):
+        if not fname.endswith('.env'):
+            continue
+        try:
+            env = _parse_job_env(f'{_BACKUP_JOBS_DIR}/{fname}')
+        except OSError:
+            continue
+        if env.get('BACKEND') == 'borg' and env.get('BORG_REPO') == repo:
+            out.append(fname[:-4])
+    return out
+
+
+def _jobs_using_local(path: str) -> list:
+    """Jobs whose LOCAL_DEST_DIR is this local destination path."""
+    if not path or not os.path.isdir(_BACKUP_JOBS_DIR):
+        return []
+    out: list = []
+    target = path.rstrip('/')
+    for fname in os.listdir(_BACKUP_JOBS_DIR):
+        if not fname.endswith('.env'):
+            continue
+        try:
+            env = _parse_job_env(f'{_BACKUP_JOBS_DIR}/{fname}')
+        except OSError:
+            continue
+        if env.get('BACKEND') == 'local' and (env.get('LOCAL_DEST_DIR') or '').rstrip('/') == target:
+            out.append(fname[:-4])
+    return out
+
+
+def _resolve_borg_destination_for_repo(repo: str) -> dict | None:
+    """Find the borg destination dict (from _list_borg_destinations)
+    whose `repository` matches. Used to inherit passphrase + encryption
+    from the destination when a job/manual-run doesn't provide them."""
+    if not repo:
+        return None
+    for d in _list_borg_destinations():
+        if d.get('repository') == repo:
+            return d
+    return None
 
 
 _LOCAL_DEFAULT_PATH = '/var/lib/vz/dump'
@@ -12920,11 +13075,13 @@ def _read_local_target_paths() -> list:
 def _list_local_targets() -> list:
     """One entry per local destination the operator can target. The
     /var/lib/vz/dump default is always present and not removable; any
-    custom path stacked by the operator gets source=custom + removable."""
+    custom path stacked by the operator gets source=custom + removable.
+    Each entry carries `jobs_using` so the UI can warn before delete."""
     entries: list = [{
         'path': _LOCAL_DEFAULT_PATH,
         'source': 'default',
         'removable': False,
+        'jobs_using': _jobs_using_local(_LOCAL_DEFAULT_PATH),
     }]
     for p in _read_local_target_paths():
         if p == _LOCAL_DEFAULT_PATH:
@@ -12934,6 +13091,7 @@ def _list_local_targets() -> list:
             'path': p,
             'source': 'custom',
             'removable': True,
+            'jobs_using': _jobs_using_local(p),
         })
     return entries
 
@@ -13045,6 +13203,272 @@ def _capacity_borg_ssh(host: str, user: str, remote_path: str, key_path: str = '
     except ValueError:
         return {'error': 'unparseable df output'}
     return {'total': total, 'used': used, 'available': avail, 'remote': True}
+
+
+# Shared PBS encryption keyfile — mirrors the shell flow's single
+# `$HB_STATE_DIR/pbs-key.conf`. One host-wide keyfile reused across
+# every encrypted PBS backup. chmod 0600 is the protection (no KDF
+# passphrase, matching `proxmox-backup-client key create --kdf none`).
+_PBS_KEYFILE_PATH = f'{_BACKUP_STATE_DIR}/pbs-key.conf'
+# Optional escrow: an openssl-encrypted copy of the keyfile that the
+# runner uploads to every PBS backup. Lets the operator recover the
+# keyfile on a fresh host using just the passphrase. Mirrors the
+# shell's hb_pbs_setup_recovery flow byte-for-byte (AES-256-CBC +
+# PBKDF2 600k iterations).
+_PBS_RECOVERY_ENC_PATH = f'{_BACKUP_STATE_DIR}/pbs-key.recovery.enc'
+
+
+def _pbs_keyfile_get_or_create(create_if_missing: bool = True) -> str:
+    """Return the path to the shared PBS keyfile, generating it on
+    demand if requested. Returns "" when no keyfile exists and the
+    caller didn't ask to create one."""
+    if os.path.isfile(_PBS_KEYFILE_PATH):
+        return _PBS_KEYFILE_PATH
+    if not create_if_missing:
+        return ''
+    try:
+        os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+        r = subprocess.run(
+            ['proxmox-backup-client', 'key', 'create', '--kdf', 'none', _PBS_KEYFILE_PATH],
+            capture_output=True, text=True, timeout=15,
+        )
+        if r.returncode != 0 or not os.path.isfile(_PBS_KEYFILE_PATH):
+            return ''
+        os.chmod(_PBS_KEYFILE_PATH, 0o600)
+        return _PBS_KEYFILE_PATH
+    except (OSError, subprocess.TimeoutExpired):
+        return ''
+
+
+def _pbs_recovery_encrypt(passphrase: str, in_path: str, out_path: str) -> bool:
+    """openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt < passphrase.
+    Mirrors hb_pbs_encrypt_recovery in the shell so a blob produced
+    here can be decrypted by the shell's restore flow, and vice versa."""
+    if not os.path.isfile(in_path) or not passphrase:
+        return False
+    try:
+        r = subprocess.run(
+            ['openssl', 'enc', '-aes-256-cbc', '-pbkdf2', '-iter', '600000',
+             '-salt', '-in', in_path, '-out', out_path, '-pass', 'stdin'],
+            input=passphrase, text=True,
+            capture_output=True, timeout=30,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return False
+    if r.returncode != 0 or not os.path.isfile(out_path):
+        return False
+    try:
+        os.chmod(out_path, 0o600)
+    except OSError:
+        pass
+    return True
+
+
+def _pbs_recovery_decrypt(passphrase: str, in_path: str, out_path: str) -> bool:
+    """Inverse of _pbs_recovery_encrypt. Used by the restore flow when
+    the operator has lost the local keyfile and wants to pull it back
+    from a PBS escrow snapshot."""
+    if not os.path.isfile(in_path) or not passphrase:
+        return False
+    try:
+        r = subprocess.run(
+            ['openssl', 'enc', '-d', '-aes-256-cbc', '-pbkdf2', '-iter', '600000',
+             '-in', in_path, '-out', out_path, '-pass', 'stdin'],
+            input=passphrase, text=True,
+            capture_output=True, timeout=30,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return False
+    if r.returncode != 0 or not os.path.isfile(out_path):
+        return False
+    try:
+        os.chmod(out_path, 0o600)
+    except OSError:
+        pass
+    return True
+
+
+@app.route('/api/host-backups/pbs-recovery/status', methods=['GET'])
+@require_auth
+def api_pbs_recovery_status():
+    """Whether the host has a PBS keyfile + whether an escrow blob is
+    saved alongside it. Used by the wizard to decide whether to show
+    the 'set recovery passphrase' input."""
+    return jsonify({
+        'has_keyfile': os.path.isfile(_PBS_KEYFILE_PATH),
+        'has_recovery': os.path.isfile(_PBS_RECOVERY_ENC_PATH),
+        'keyfile_path': _PBS_KEYFILE_PATH,
+        'recovery_path': _PBS_RECOVERY_ENC_PATH,
+    })
+
+
+@app.route('/api/host-backups/pbs-recovery/setup', methods=['POST'])
+@require_auth
+def api_pbs_recovery_setup():
+    """Create the escrow blob from the host keyfile, encrypted with
+    the operator's recovery passphrase. Body: {passphrase}. Idempotent
+    — re-running it with a new passphrase replaces the escrow.
+
+    The blob is uploaded to PBS by the runner after every successful
+    encrypted backup (see _sb_run_pbs / hb_pbs_upload_recovery_blob),
+    so the operator can rebuild the keyfile from any host with just
+    the passphrase."""
+    payload = request.get_json(silent=True) or {}
+    passphrase = payload.get('passphrase') or ''
+    if not passphrase:
+        return jsonify({'error': 'passphrase is required'}), 400
+    if not os.path.isfile(_PBS_KEYFILE_PATH):
+        return jsonify({'error': 'no PBS keyfile present — enable encryption on a job first'}), 400
+    if not shutil.which('openssl'):
+        return jsonify({'error': 'openssl is not installed; cannot create recovery blob'}), 500
+    if not _pbs_recovery_encrypt(passphrase, _PBS_KEYFILE_PATH, _PBS_RECOVERY_ENC_PATH):
+        return jsonify({'error': 'openssl encryption failed'}), 500
+    return jsonify({'status': 'ok', 'recovery_path': _PBS_RECOVERY_ENC_PATH})
+
+
+@app.route('/api/host-backups/pbs-recovery/available', methods=['GET'])
+@require_auth
+def api_pbs_recovery_available():
+    """List `host/proxmenux-keyrecovery-*` snapshots across every
+    configured PBS repository. The restore flow uses this when the
+    local keyfile is missing — the operator picks a snapshot, types
+    the recovery passphrase, and the keyfile is rebuilt from the
+    decrypted blob. Returns the freshest snapshot per backup-id +
+    repo so multi-host environments don't bury each other."""
+    out: list = []
+    errors: list = []
+    for repo in _list_pbs_destinations():
+        pwd = _resolve_pbs_password(repo['name'])
+        if not pwd:
+            errors.append({'repo_name': repo['name'], 'error': 'no password available'})
+            continue
+        env = dict(os.environ)
+        env['PBS_PASSWORD'] = pwd
+        fp = _resolve_pbs_fingerprint(repo['name'])
+        if fp:
+            env['PBS_FINGERPRINT'] = fp
+        try:
+            r = subprocess.run(
+                ['proxmox-backup-client', 'snapshot', 'list',
+                 '--repository', repo['repository'], '--output-format', 'json'],
+                capture_output=True, text=True, timeout=30, env=env,
+            )
+        except (subprocess.TimeoutExpired, OSError) as e:
+            errors.append({'repo_name': repo['name'], 'error': str(e)})
+            continue
+        if r.returncode != 0:
+            errors.append({'repo_name': repo['name'], 'error': (r.stderr.strip() or r.stdout.strip())[:200]})
+            continue
+        try:
+            items = json.loads(r.stdout)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        # Group by backup-id (per source host) and keep the newest.
+        latest: dict = {}
+        for it in items:
+            if it.get('backup-type') != 'host':
+                continue
+            bid = it.get('backup-id') or ''
+            if not bid.startswith('proxmenux-keyrecovery-'):
+                continue
+            t = it.get('backup-time', 0)
+            if bid not in latest or t > latest[bid]['backup_time']:
+                latest[bid] = {
+                    'repo_name': repo['name'],
+                    'repo_repository': repo['repository'],
+                    'backup_id': bid,
+                    'source_host': bid[len('proxmenux-keyrecovery-'):],
+                    'backup_time': t,
+                    'snapshot': f"host/{bid}/{t}",
+                }
+        out.extend(latest.values())
+    out.sort(key=lambda x: x['backup_time'], reverse=True)
+    return jsonify({'snapshots': out, 'errors': errors})
+
+
+@app.route('/api/host-backups/pbs-recovery/restore', methods=['POST'])
+@require_auth
+def api_pbs_recovery_restore():
+    """Download a keyrecovery blob, decrypt with the operator's
+    passphrase, write the resulting key to /usr/local/share/proxmenux/
+    pbs-key.conf (chmod 0600). Body: {repo_name, snapshot, passphrase}.
+    Symmetric with the shell's hb_pbs_try_keyfile_recovery."""
+    payload = request.get_json(silent=True) or {}
+    repo_name = (payload.get('repo_name') or '').strip()
+    snapshot = (payload.get('snapshot') or '').strip()
+    passphrase = payload.get('passphrase') or ''
+    if not repo_name or not snapshot or not passphrase:
+        return jsonify({'error': 'repo_name, snapshot and passphrase are required'}), 400
+    if not shutil.which('openssl'):
+        return jsonify({'error': 'openssl is not installed'}), 500
+    # Resolve the PBS repository entry
+    repo = None
+    for r in _list_pbs_destinations():
+        if r.get('name') == repo_name:
+            repo = r
+            break
+    if not repo:
+        return jsonify({'error': f'PBS repository "{repo_name}" not found'}), 404
+    pwd = _resolve_pbs_password(repo_name)
+    if not pwd:
+        return jsonify({'error': f'no password available for PBS "{repo_name}"'}), 400
+    env = dict(os.environ)
+    env['PBS_PASSWORD'] = pwd
+    fp = _resolve_pbs_fingerprint(repo_name)
+    if fp:
+        env['PBS_FINGERPRINT'] = fp
+    # Download the blob to a temp file (NOT --keyfile; the blob is
+    # openssl-encrypted, not chunk-encrypted with PBS keyfile).
+    import tempfile
+    tmp_dir = tempfile.mkdtemp(prefix='pmnx_keyrec_')
+    blob_path = os.path.join(tmp_dir, 'keyrecovery.enc')
+    try:
+        r = subprocess.run(
+            ['proxmox-backup-client', 'restore', snapshot,
+             'keyrecovery.conf', blob_path,
+             '--repository', repo['repository']],
+            capture_output=True, text=True, timeout=60, env=env,
+        )
+        if r.returncode != 0:
+            return jsonify({'error': f'PBS restore failed: {(r.stderr.strip() or r.stdout.strip())[:200]}'}), 500
+        if not os.path.isfile(blob_path):
+            return jsonify({'error': 'PBS restore did not produce a blob'}), 500
+        # Decrypt to a temp file first; only rename onto the real
+        # keyfile path once decryption succeeds, so a failed attempt
+        # never overwrites a working keyfile.
+        tmp_key = os.path.join(tmp_dir, 'pbs-key.conf')
+        if not _pbs_recovery_decrypt(passphrase, blob_path, tmp_key):
+            return jsonify({'error': 'decryption failed — wrong passphrase, or the blob is corrupt'}), 400
+        try:
+            os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+            shutil.move(tmp_key, _PBS_KEYFILE_PATH)
+            os.chmod(_PBS_KEYFILE_PATH, 0o600)
+        except OSError as e:
+            return jsonify({'error': f'failed to persist keyfile: {e}'}), 500
+        # Also re-create the local recovery blob so the operator
+        # doesn't immediately end up in the same state if they wipe
+        # this host again — the existing passphrase is reused.
+        _pbs_recovery_encrypt(passphrase, _PBS_KEYFILE_PATH, _PBS_RECOVERY_ENC_PATH)
+        return jsonify({'status': 'ok', 'keyfile_path': _PBS_KEYFILE_PATH})
+    finally:
+        try:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+        except OSError:
+            pass
+
+
+@app.route('/api/host-backups/pbs-recovery/setup', methods=['DELETE'])
+@require_auth
+def api_pbs_recovery_teardown():
+    """Drop the local escrow blob. Doesn't touch the copies already
+    uploaded to PBS — those stay until the operator prunes them on
+    the server side."""
+    if os.path.isfile(_PBS_RECOVERY_ENC_PATH):
+        try:
+            os.remove(_PBS_RECOVERY_ENC_PATH)
+        except OSError as e:
+            return jsonify({'error': str(e)}), 500
+    return jsonify({'status': 'ok'})
 
 
 def _resolve_pbs_password(repo_name: str) -> str:
@@ -13471,11 +13895,21 @@ def api_host_backups_job_create():
             import socket
             pbs_backup_id = f'hostcfg-{socket.gethostname()}'
         pbs_fingerprint = (payload.get('pbs_fingerprint') or '').strip()
+        # Client-side encryption: when the operator toggled "encrypt"
+        # we generate the host-wide keyfile (if missing) and pin it
+        # in the .env. The runner sees PBS_KEYFILE and adds --keyfile
+        # to the backup invocation.
+        pbs_encrypt = bool(payload.get('pbs_encrypt'))
         lines.append(f'PBS_REPOSITORY={pbs_repo}')
         lines.append(f'PBS_PASSWORD={pbs_pass}')
         lines.append(f'PBS_BACKUP_ID={pbs_backup_id}')
         if pbs_fingerprint:
             lines.append(f'PBS_FINGERPRINT={pbs_fingerprint}')
+        if pbs_encrypt:
+            kf = _pbs_keyfile_get_or_create(True)
+            if not kf:
+                return jsonify({'error': 'failed to create PBS encryption keyfile (is proxmox-backup-client installed?)'}), 500
+            lines.append(f'PBS_KEYFILE={kf}')
     elif backend == 'local':
         explicit = (payload.get('local_dest_dir') or '').strip()
         if explicit:
@@ -13510,15 +13944,27 @@ def api_host_backups_job_create():
         lines.append(f'LOCAL_ARCHIVE_EXT={archive_ext}')
     elif backend == 'borg':
         # Borg is timer-only — the attached check earlier rejected this combo.
+        # Passphrase + encrypt_mode now live on the destination: when the
+        # operator picks a saved borg destination, we inherit both from it
+        # instead of asking again per-job. The body can still override
+        # (typed-in passphrase / explicit encrypt_mode) for the case where
+        # the destination doesn't have those saved yet.
         borg_repo = (payload.get('borg_repo') or '').strip()
-        borg_pass = payload.get('borg_passphrase') or ''
-        borg_encrypt = (payload.get('borg_encrypt_mode') or 'none').strip().lower()
         if not borg_repo:
             return jsonify({'error': 'borg_repo is required'}), 400
+        dest = _resolve_borg_destination_for_repo(borg_repo)
+        borg_pass = payload.get('borg_passphrase') or ''
+        if not borg_pass and dest:
+            borg_pass = _resolve_borg_passphrase(dest.get('name') or '')
+        borg_encrypt_raw = payload.get('borg_encrypt_mode')
+        if borg_encrypt_raw is None or borg_encrypt_raw == '':
+            borg_encrypt = (dest.get('encrypt_mode') if dest else None) or 'none'
+        else:
+            borg_encrypt = borg_encrypt_raw.strip().lower()
         if borg_encrypt not in ('none', 'repokey', 'keyfile', 'authenticated'):
             return jsonify({'error': 'borg_encrypt_mode must be one of: none, repokey, keyfile, authenticated'}), 400
         if borg_encrypt != 'none' and not borg_pass:
-            return jsonify({'error': 'borg_passphrase is required when encryption is enabled'}), 400
+            return jsonify({'error': 'borg_passphrase is required when encryption is enabled (save it on the destination or pass one in the request)'}), 400
         lines.append(f'BORG_REPO={borg_repo}')
         lines.append(f'BORG_PASSPHRASE={borg_pass}')
         lines.append(f'BORG_ENCRYPT_MODE={borg_encrypt}')
@@ -13650,6 +14096,7 @@ def _backup_job_detail(env_file: str) -> dict:
         'pbs_backup_id': raw.get('PBS_BACKUP_ID') or None,
         'pbs_fingerprint': raw.get('PBS_FINGERPRINT') or None,
         'has_pbs_password': bool(raw.get('PBS_PASSWORD')),
+        'pbs_encrypt': bool(raw.get('PBS_KEYFILE')),
         'local_dest_dir': raw.get('LOCAL_DEST_DIR') or None,
         'local_archive_ext': raw.get('LOCAL_ARCHIVE_EXT') or None,
         'borg_repo': raw.get('BORG_REPO') or None,
@@ -13903,9 +14350,25 @@ def api_host_backups_job_update(job_id):
             import socket
             pbs_backup_id = f'hostcfg-{socket.gethostname()}'
         pbs_fingerprint = (payload.get('pbs_fingerprint') or existing.get('PBS_FINGERPRINT') or '').strip()
+        # Encryption: payload `pbs_encrypt` is the new state. When the
+        # operator toggles it ON we persist the keyfile path; OFF
+        # simply omits PBS_KEYFILE from the rewritten .env. We never
+        # delete the host-wide keyfile here — other jobs may depend on
+        # it. The `pbs_encrypt` key is required to be passed
+        # explicitly on edit so an absent field is treated as "keep
+        # the current state".
+        if 'pbs_encrypt' in payload:
+            pbs_encrypt = bool(payload.get('pbs_encrypt'))
+        else:
+            pbs_encrypt = bool(existing.get('PBS_KEYFILE'))
         lines.append(f'PBS_REPOSITORY={pbs_repo}')
         lines.append(f'PBS_PASSWORD={pbs_pass}')
         lines.append(f'PBS_BACKUP_ID={pbs_backup_id}')
+        if pbs_encrypt:
+            kf = _pbs_keyfile_get_or_create(True)
+            if not kf:
+                return jsonify({'error': 'failed to create PBS encryption keyfile'}), 500
+            lines.append(f'PBS_KEYFILE={kf}')
         if pbs_fingerprint:
             lines.append(f'PBS_FINGERPRINT={pbs_fingerprint}')
     elif backend == 'local':
@@ -13921,7 +14384,12 @@ def api_host_backups_job_update(job_id):
         borg_repo = (payload.get('borg_repo') or existing.get('BORG_REPO') or '').strip()
         if not borg_repo:
             return jsonify({'error': 'borg_repo is required'}), 400
-        borg_encrypt = (payload.get('borg_encrypt_mode') or existing.get('BORG_ENCRYPT_MODE') or 'none').strip().lower()
+        dest = _resolve_borg_destination_for_repo(borg_repo)
+        # Encryption mode: payload > existing .env > destination > "none".
+        borg_encrypt = (payload.get('borg_encrypt_mode')
+                        or existing.get('BORG_ENCRYPT_MODE')
+                        or (dest.get('encrypt_mode') if dest else None)
+                        or 'none').strip().lower()
         if borg_encrypt not in ('none', 'repokey', 'keyfile', 'authenticated'):
             return jsonify({'error': 'borg_encrypt_mode must be one of: none, repokey, keyfile, authenticated'}), 400
         new_pass = payload.get('borg_passphrase')
@@ -13929,8 +14397,10 @@ def api_host_backups_job_update(job_id):
             borg_pass = existing.get('BORG_PASSPHRASE', '')
         else:
             borg_pass = new_pass
+        if not borg_pass and dest:
+            borg_pass = _resolve_borg_passphrase(dest.get('name') or '')
         if borg_encrypt != 'none' and not borg_pass:
-            return jsonify({'error': 'borg_passphrase is required when encryption is enabled'}), 400
+            return jsonify({'error': 'borg_passphrase is required when encryption is enabled (save it on the destination or pass one in the request)'}), 400
         lines.append(f'BORG_REPO={borg_repo}')
         lines.append(f'BORG_PASSPHRASE={borg_pass}')
         lines.append(f'BORG_ENCRYPT_MODE={borg_encrypt}')
@@ -14069,11 +14539,17 @@ def api_host_backups_manual_run():
             import socket
             pbs_backup_id = f'hostcfg-{socket.gethostname()}-manual'
         pbs_fingerprint = (payload.get('pbs_fingerprint') or '').strip()
+        pbs_encrypt = bool(payload.get('pbs_encrypt'))
         lines.append(f'PBS_REPOSITORY={pbs_repo}')
         lines.append(f'PBS_PASSWORD={pbs_pass}')
         lines.append(f'PBS_BACKUP_ID={pbs_backup_id}')
         if pbs_fingerprint:
             lines.append(f'PBS_FINGERPRINT={pbs_fingerprint}')
+        if pbs_encrypt:
+            kf = _pbs_keyfile_get_or_create(True)
+            if not kf:
+                return jsonify({'error': 'failed to create PBS encryption keyfile'}), 500
+            lines.append(f'PBS_KEYFILE={kf}')
     elif backend == 'local':
         explicit = (payload.get('local_dest_dir') or '').strip()
         dest_dir = explicit.rstrip('/') if explicit else _get_local_target()['effective']
@@ -14084,12 +14560,19 @@ def api_host_backups_manual_run():
         borg_repo = (payload.get('borg_repo') or '').strip()
         if not borg_repo:
             return jsonify({'error': 'borg_repo is required'}), 400
-        borg_encrypt = (payload.get('borg_encrypt_mode') or 'none').strip().lower()
+        dest = _resolve_borg_destination_for_repo(borg_repo)
+        borg_encrypt_raw = payload.get('borg_encrypt_mode')
+        if borg_encrypt_raw is None or borg_encrypt_raw == '':
+            borg_encrypt = (dest.get('encrypt_mode') if dest else None) or 'none'
+        else:
+            borg_encrypt = borg_encrypt_raw.strip().lower()
         if borg_encrypt not in ('none', 'repokey', 'keyfile', 'authenticated'):
             return jsonify({'error': 'borg_encrypt_mode must be one of: none, repokey, keyfile, authenticated'}), 400
         borg_pass = payload.get('borg_passphrase') or ''
+        if not borg_pass and dest:
+            borg_pass = _resolve_borg_passphrase(dest.get('name') or '')
         if borg_encrypt != 'none' and not borg_pass:
-            return jsonify({'error': 'borg_passphrase is required when encryption is enabled'}), 400
+            return jsonify({'error': 'borg_passphrase is required when encryption is enabled (save it on the destination or pass one in the request)'}), 400
         lines.append(f'BORG_REPO={borg_repo}')
         lines.append(f'BORG_PASSPHRASE={borg_pass}')
         lines.append(f'BORG_ENCRYPT_MODE={borg_encrypt}')
@@ -14207,6 +14690,12 @@ def api_host_backups_dest_local_clear():
     existing = _read_local_target_paths()
     if target not in existing:
         return jsonify({'error': 'path not found'}), 404
+    force = (request.args.get('force') or '').lower() in ('1', 'true', 'yes')
+    cascaded: list = []
+    if force:
+        for jid in _jobs_using_local(target):
+            _delete_job_internal(jid)
+            cascaded.append(jid)
     remaining = [p for p in existing if p != target]
     try:
         if remaining:
@@ -14218,7 +14707,7 @@ def api_host_backups_dest_local_clear():
             os.remove(cfg)
     except OSError as e:
         return jsonify({'error': str(e)}), 500
-    return jsonify({'status': 'ok', 'removed': target})
+    return jsonify({'status': 'ok', 'removed': target, 'jobs_removed': cascaded})
 
 
 @app.route('/api/host-backups/destinations/borg', methods=['POST'])
@@ -14254,6 +14743,32 @@ def api_host_backups_dest_borg_add():
     else:
         return jsonify({'error': 'mode must be "local" or "ssh"'}), 400
 
+    # Encryption + passphrase live on the DESTINATION, not on each job.
+    # `encrypt_mode` is one of: none, repokey, keyfile, authenticated
+    # (the UI exposes only `none`/`repokey`; the others stay supported
+    # so existing shell-created configs aren't downgraded). The body
+    # may carry `passphrase`; if set and non-empty we persist it next
+    # to the config in `borg-pass-<name>.txt` (chmod 0600).
+    encrypt_mode = (payload.get('encrypt_mode') or 'repokey').strip().lower()
+    if encrypt_mode not in ('none', 'repokey', 'keyfile', 'authenticated'):
+        return jsonify({'error': 'encrypt_mode must be one of: none, repokey, keyfile, authenticated'}), 400
+    passphrase = payload.get('passphrase') or ''
+    # POST is upsert-by-name: in edit mode we keep the saved passphrase
+    # when the caller doesn't send a new one. Only required when there
+    # is no saved one AND encryption is enabled.
+    existing_pp = ''
+    pass_file_existing = f'{_BACKUP_STATE_DIR}/borg-pass-{name}.txt'
+    if os.path.isfile(pass_file_existing):
+        try:
+            with open(pass_file_existing) as f:
+                existing_pp = f.read().strip()
+        except OSError:
+            pass
+    if encrypt_mode != 'none' and not passphrase and not existing_pp:
+        return jsonify({'error': 'passphrase is required when encryption is enabled'}), 400
+    if encrypt_mode != 'none' and not passphrase:
+        passphrase = existing_pp
+
     cfg = f'{_BACKUP_STATE_DIR}/borg-targets.txt'
     try:
         os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
@@ -14264,14 +14779,26 @@ def api_host_backups_dest_borg_add():
                     if ln.startswith(f'{name}|'):
                         continue
                     existing_lines.append(ln.rstrip('\n'))
-        existing_lines.append(f'{name}|{repo}|{ssh_key}')
+        existing_lines.append(f'{name}|{repo}|{ssh_key}|{encrypt_mode}')
         with open(cfg, 'w') as f:
             for ln in existing_lines:
                 f.write(ln + '\n')
         os.chmod(cfg, 0o600)
+        # Persist or remove the passphrase sidecar, depending on mode.
+        pass_file = f'{_BACKUP_STATE_DIR}/borg-pass-{name}.txt'
+        if encrypt_mode == 'none':
+            if os.path.exists(pass_file):
+                try:
+                    os.remove(pass_file)
+                except OSError:
+                    pass
+        elif passphrase:
+            with open(pass_file, 'w') as f:
+                f.write(passphrase)
+            os.chmod(pass_file, 0o600)
     except OSError as e:
         return jsonify({'error': f'failed to write borg-targets.txt: {e}'}), 500
-    return jsonify({'status': 'ok', 'name': name, 'repo': repo})
+    return jsonify({'status': 'ok', 'name': name, 'repo': repo, 'encrypt_mode': encrypt_mode})
 
 
 @app.route('/api/host-backups/destinations/borg/<name>', methods=['DELETE'])
@@ -14282,6 +14809,15 @@ def api_host_backups_dest_borg_remove(name):
     safe = _safe_dest_name(name)
     if not safe:
         return jsonify({'error': 'invalid name'}), 400
+    force = (request.args.get('force') or '').lower() in ('1', 'true', 'yes')
+    cascaded: list = []
+    if force:
+        for d in _list_borg_destinations():
+            if d.get('name') == safe:
+                for jid in _jobs_using_borg(d.get('repository') or ''):
+                    _delete_job_internal(jid)
+                    cascaded.append(jid)
+                break
     cfg = f'{_BACKUP_STATE_DIR}/borg-targets.txt'
     if os.path.exists(cfg):
         try:
@@ -14301,7 +14837,7 @@ def api_host_backups_dest_borg_remove(name):
                 os.remove(f)
         except OSError:
             pass
-    return jsonify({'status': 'ok', 'name': safe})
+    return jsonify({'status': 'ok', 'name': safe, 'jobs_removed': cascaded})
 
 
 @app.route('/api/host-backups/destinations/pbs', methods=['POST'])
@@ -14323,8 +14859,22 @@ def api_host_backups_dest_pbs_add():
     fingerprint = (payload.get('fingerprint') or '').strip()
     if not server or not datastore:
         return jsonify({'error': 'server and datastore are required'}), 400
-    if not password:
+    # POST is upsert-by-name: if `name` already exists and password
+    # is omitted, keep the saved one (the edit-destination flow uses
+    # this to update server/datastore/fingerprint without forcing
+    # the operator to re-type the password).
+    existing_pw = ''
+    pass_file = f'{_BACKUP_STATE_DIR}/pbs-pass-{name}.txt'
+    if os.path.isfile(pass_file):
+        try:
+            with open(pass_file) as f:
+                existing_pw = f.read()
+        except OSError:
+            pass
+    if not password and not existing_pw:
         return jsonify({'error': 'password is required'}), 400
+    if not password:
+        password = existing_pw
 
     repo = f'{username}@{server}:{datastore}'
     cfg_line = f'{name}|{repo}'
@@ -14371,10 +14921,26 @@ def api_host_backups_dest_pbs_add():
 def api_host_backups_dest_pbs_remove(name):
     """Remove a manual PBS config by name. Auto-discovered PBS storages
     from /etc/pve/storage.cfg are NOT removable from here (PVE owns
-    those — the operator manages them under Datacenter → Storage)."""
+    those — the operator manages them under Datacenter → Storage).
+
+    When `?force=true`, any jobs whose .env points at this PBS
+    repository are removed too (cascade). Backups on the PBS side
+    are NEVER touched — only the local job definitions go."""
     safe = _safe_dest_name(name)
     if not safe:
         return jsonify({'error': 'invalid name'}), 400
+    force = (request.args.get('force') or '').lower() in ('1', 'true', 'yes')
+    cascaded: list = []
+    if force:
+        # Find the repo string for this name first, then look up the
+        # jobs that depend on it. We do this BEFORE deleting the
+        # config so the lookup still works.
+        for d in _list_pbs_destinations():
+            if d.get('name') == safe:
+                for jid in _jobs_using_pbs(d.get('repository') or ''):
+                    _delete_job_internal(jid)
+                    cascaded.append(jid)
+                break
     cfg = f'{_BACKUP_STATE_DIR}/pbs-manual-configs.txt'
     if not os.path.exists(cfg):
         return jsonify({'error': 'no manual PBS configs file'}), 404
@@ -14396,7 +14962,7 @@ def api_host_backups_dest_pbs_remove(name):
                 os.remove(f)
         except OSError:
             pass
-    return jsonify({'status': 'ok', 'name': safe})
+    return jsonify({'status': 'ok', 'name': safe, 'jobs_removed': cascaded})
 
 
 # ── Sprint D.2.c: SSH key generation for Borg remotes ──────────────
@@ -14784,11 +15350,25 @@ def _list_pbs_snapshots_for_repo(repo: dict, timeout: int = 15) -> tuple[list, s
     out: list = []
     for it in items:
         backup_type = it.get('backup-type', '')
+        # The host-backup tab lists ONLY backups taken with the
+        # ProxMenux host-backup flow (`backup-type: host`). PBS
+        # repositories often also carry vzdump-style VM/LXC snapshots
+        # (`vm` / `ct`) — those belong to the Virtual Machines / LXC
+        # views, not here.
+        if backup_type != 'host':
+            continue
         backup_id = it.get('backup-id', '')
         backup_time = it.get('backup-time', 0)
         # The canonical snapshot identifier the client accepts back —
         # exactly what we'd pass to `proxmox-backup-client restore`.
         snapshot = f"{backup_type}/{backup_id}/{backup_time}"
+        # A snapshot is "encrypted" when ANY of its files reports a
+        # crypt-mode other than `none`. Used to render the lock badge.
+        files = it.get('files', []) or []
+        encrypted = any(
+            (f.get('crypt-mode') or 'none') != 'none'
+            for f in files if isinstance(f, dict)
+        )
         out.append({
             'backend': 'pbs',
             'repo_name': repo['name'],
@@ -14800,8 +15380,9 @@ def _list_pbs_snapshots_for_repo(repo: dict, timeout: int = 15) -> tuple[list, s
             'size_bytes': it.get('size', 0),
             'owner': it.get('owner'),
             'protected': it.get('protected', False),
-            'files': it.get('files', []),
+            'files': files,
             'fingerprint': it.get('fingerprint'),
+            'encrypted': encrypted,
         })
     return out, None
 
@@ -14925,6 +15506,11 @@ def _list_borg_archives_for_target(target: dict, timeout: int = 30) -> tuple[lis
             'fingerprint': None,
             'borg_id': arc.get('id'),
             'borg_start_iso': start_iso,
+            # Encrypted iff the destination's repo mode is not "none".
+            # Borg archives inherit the encryption of the repo they
+            # live in (cannot mix per-archive), so the target's flag
+            # is authoritative.
+            'encrypted': (target.get('encrypt_mode') or 'repokey') != 'none',
         })
     return out, None
 

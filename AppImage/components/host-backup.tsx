@@ -35,6 +35,7 @@ import {
   FileText,
   Power,
   RefreshCw,
+  Lock,
 } from "lucide-react"
 import { fetchApi, getApiUrl } from "../lib/api-config"
 import { formatStorage } from "../lib/utils"
@@ -55,6 +56,10 @@ interface BackupJob {
   manual: boolean                // MANUAL_RUN=1 — one-shot, no schedule, won't re-fire
   last_status: string | null
   next_run: string | null
+  // True when this job ships encrypted backups — PBS_KEYFILE set for
+  // PBS, or BORG_ENCRYPT_MODE != "none" for Borg. Drives the lock
+  // badge in the row + the toggle's initial state in Edit.
+  encrypted?: boolean
 }
 
 // Sprint H — remote backups (PBS + Borg). Listing is cheap (metadata
@@ -74,6 +79,10 @@ interface RemoteSnapshot {
   protected: boolean
   files: Array<{ filename: string; size: number }>
   fingerprint: string | null
+  // Whether THIS snapshot is encrypted. For PBS it's derived from
+  // any file having crypt-mode != "none"; for Borg it follows the
+  // target's encrypt_mode.
+  encrypted?: boolean
   borg_id?: string             // Borg-only fields when available
   borg_start_iso?: string
 }
@@ -254,6 +263,17 @@ const humanizeOnCalendar = (raw: string | null | undefined): string => {
   return `${s} (systemd OnCalendar)`
 }
 
+// A job is "running" when its .status file has RUN_AT (runner started)
+// but no RESULT yet (runner hasn't written the verdict). Lets the UI
+// flag in-progress runs both inline (badge in the row) and from the
+// Manual backups card so an operator who closes the dialog can re-open
+// the live stream.
+function isJobRunning(j: BackupJob | null | undefined): boolean {
+  if (!j?.last_status) return false
+  const s = parseJobStatus(j.last_status)
+  return !!(s?.runAt && !s?.result)
+}
+
 // last_status is the raw RUN_AT=..., RESULT=..., LOG_FILE=... blob the
 // scheduler runner persists. We only care about RESULT + RUN_AT for the
 // UI; everything else is noise the operator doesn't need on a list view.
@@ -325,6 +345,7 @@ export function HostBackup() {
   const [creatingJob, setCreatingJob] = useState<boolean>(false)
   const [editingJobId, setEditingJobId] = useState<string | null>(null)
   const [viewingJobId, setViewingJobId] = useState<string | null>(null)
+  const [watchingManualId, setWatchingManualId] = useState<string | null>(null)
   const [runningManual, setRunningManual] = useState<boolean>(false)
 
   async function confirmDeleteJob() {
@@ -431,11 +452,18 @@ export function HostBackup() {
               )}
               {jobsResp.jobs.filter((j) => !j.manual).map((j) => {
                 const status = parseJobStatus(j.last_status)
-                const statusBadge = status?.result === "ok"
-                  ? { label: "ok", cls: "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" }
-                  : status?.result
-                    ? { label: status.result, cls: "bg-red-500/10 border-red-500/40 text-red-400" }
-                    : null
+                const running = isJobRunning(j)
+                // While running we override the ok/failed pill with a
+                // running spinner — same way the modal does. Clicking
+                // the row re-opens JobDetailModal which auto-detects
+                // the in-progress state and resumes streaming.
+                const statusBadge = running
+                  ? { label: "running", cls: "bg-blue-500/10 border-blue-500/40 text-blue-300" }
+                  : status?.result === "ok"
+                    ? { label: "ok", cls: "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" }
+                    : status?.result
+                      ? { label: status.result, cls: "bg-red-500/10 border-red-500/40 text-red-400" }
+                      : null
                 const lastRunWhen = formatRunAt(status?.runAt ?? null)
                 return (
                   <button
@@ -460,6 +488,15 @@ export function HostBackup() {
                         {j.attached && (
                           <Badge variant="outline" className="text-[10px] text-blue-400 border-blue-400/40 bg-blue-500/5">
                             attached
+                          </Badge>
+                        )}
+                        {j.encrypted && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] uppercase tracking-wide border-emerald-500/40 text-emerald-400 bg-emerald-500/5"
+                            title="Encrypted backups (client-side keyfile / borg repokey)"
+                          >
+                            <Lock className="h-3.5 w-3.5" />
                           </Badge>
                         )}
                         {!j.enabled && !j.manual && (
@@ -522,7 +559,8 @@ export function HostBackup() {
                             <Clock className="h-3.5 w-3.5 text-green-500" />
                             <span>last:</span>
                             {statusBadge && (
-                              <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wide border ${statusBadge.cls}`}>
+                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wide border ${statusBadge.cls}`}>
+                                {running && <Loader2 className="h-2.5 w-2.5 animate-spin" />}
                                 {statusBadge.label}
                               </span>
                             )}
@@ -555,25 +593,45 @@ export function HostBackup() {
 
       {/* ── Manual backups (entry point) ──────────────────── */}
       <Card className="bg-card border-border">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <PlayCircle className="h-5 w-5 text-purple-400" />
             <CardTitle className="text-base font-semibold">Manual backups</CardTitle>
           </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Manual backups run once and stop — no schedule.
+          </p>
           <Button
-            size="sm"
-            variant="outline"
-            className="h-8 px-3"
+            className="w-full sm:w-auto bg-purple-500 hover:bg-purple-600 text-white"
             onClick={() => setRunningManual(true)}
           >
-            <PlayCircle className="h-4 w-4 mr-1" />
+            <PlayCircle className="h-4 w-4 mr-2" />
             Run manual backup
           </Button>
-        </CardHeader>
-        <CardContent>
-          <p className="text-xs text-muted-foreground">
-            Manual backups run once and stop — no schedule, no retention. Use this when you want a one-off copy without committing to a recurring job. The resulting archive shows up in <span className="font-medium text-foreground">Available Archives</span> below (for local backends; PBS / Borg manual backups go to their respective storage).
-          </p>
+          {/* In-progress manual jobs. If the operator closed the
+              ManualBackupDialog before the runner finished, this
+              banner is the way back into the live log — clicking
+              opens the JobDetailModal which automatically resumes
+              the streaming view for any in-progress job. */}
+          {jobsResp?.jobs
+            ?.filter((j) => j.manual && isJobRunning(j))
+            .map((j) => (
+              <button
+                key={j.id}
+                type="button"
+                onClick={() => setWatchingManualId(j.id)}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-md border border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 transition-colors text-left"
+                title="Click to re-open the live log"
+              >
+                <Loader2 className="h-4 w-4 animate-spin text-blue-400 shrink-0" />
+                <span className="text-sm min-w-0 flex-1 truncate">
+                  Manual backup in progress — <span className="font-mono">{j.id}</span>
+                </span>
+                <span className="text-xs text-blue-300 shrink-0">View progress</span>
+              </button>
+            ))}
         </CardContent>
       </Card>
 
@@ -640,6 +698,14 @@ export function HostBackup() {
                         <span className={`uppercase tracking-wide text-[10px] px-1.5 py-0.5 rounded border ${sourceBadgeCls}`}>
                           {u.source}
                         </span>
+                        {u.remote?.encrypted && (
+                          <span
+                            className="uppercase tracking-wide text-[10px] px-1.5 py-0.5 rounded border border-emerald-500/40 text-emerald-400 bg-emerald-500/5 inline-flex items-center"
+                            title="Encrypted backup"
+                          >
+                            <Lock className="h-3.5 w-3.5" />
+                          </span>
+                        )}
                         <span className="inline-flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {formatMtime(u.created_at)}
@@ -712,13 +778,23 @@ export function HostBackup() {
       <ManualBackupDialog
         open={runningManual}
         onClose={() => setRunningManual(false)}
-        onLaunched={() => {
+        onLaunched={(jobId) => {
+          // Hand off straight to the live-progress modal so the
+          // operator never has to chase the "View progress" banner
+          // after pressing Run. Mutate jobs first so the new manual
+          // entry is in cache when the watch modal opens.
           setRunningManual(false)
           mutateJobs()
-          // Refresh archives a few seconds after launch so the new
-          // tar.zst (if it's a local backend) appears in the list
-          // without waiting for the next 30s SWR tick.
-          setTimeout(() => mutateArchives(), 5000)
+          setWatchingManualId(jobId)
+          // Refresh BOTH archive lists a few seconds after launch so
+          // the new backup shows up regardless of backend: local
+          // archives are on disk locally, PBS / Borg snapshots are
+          // pulled from `remote-archives`. Without the second mutate
+          // a Borg manual stayed invisible until the next 60s tick.
+          setTimeout(() => {
+            mutateArchives()
+            mutateRemoteArchives()
+          }, 5000)
         }}
       />
 
@@ -737,7 +813,29 @@ export function HostBackup() {
             setJobToDelete(job)
           }
         }}
-        onChanged={() => mutateJobs()}
+        onChanged={() => {
+          mutateJobs()
+          mutateArchives()
+          mutateRemoteArchives()
+        }}
+      />
+
+      {/* Manual jobs use their own modal — no Schedule/Retention/
+          Profile, no Edit/Run/Disable. Only the live log; the modal
+          is closed with the dialog's own X (no extra footer). */}
+      <ManualJobWatchModal
+        jobId={watchingManualId}
+        onClose={() => setWatchingManualId(null)}
+        onChanged={() => {
+          // The watch modal fires onChanged when a tracked run
+          // finishes (last_result transitions from null → ok/failed).
+          // Refresh jobs (status badge), local archives (new tar.zst)
+          // and remote archives (Borg/PBS snapshots) so the operator
+          // sees the new backup without waiting for the next tick.
+          mutateJobs()
+          mutateArchives()
+          mutateRemoteArchives()
+        }}
       />
 
       {/* ── Delete confirmation ────────────────────────────── */}
@@ -1665,23 +1763,36 @@ interface PveVzdumpJob {
   enabled: boolean
 }
 
+// All Destination shapes carry `jobs_using`: list of job_ids that
+// currently depend on the destination. Surfaced in the Delete-
+// destination confirm flow so the operator sees the cascade impact
+// before agreeing.
+
 interface PbsRepo {
   name: string
   repository: string
   fingerprint: string | null
   source: "proxmox" | "manual"
+  jobs_using?: string[]
 }
 
 interface BorgRepo {
   name: string
   repository: string
   ssh_key_path?: string
+  // Encryption + saved-passphrase metadata. Newer backends ship these;
+  // older deployments without the fields default to "repokey" (the
+  // shell installer's historical default) and unknown-passphrase.
+  encrypt_mode?: "none" | "repokey" | "keyfile" | "authenticated"
+  has_passphrase?: boolean
+  jobs_using?: string[]
 }
 
 interface LocalTargetEntry {
   path: string
   source: "default" | "custom"
   removable: boolean
+  jobs_using?: string[]
 }
 
 interface LocalTarget {
@@ -1719,6 +1830,7 @@ interface JobDetail {
   pbs_backup_id: string | null
   pbs_fingerprint: string | null
   has_pbs_password: boolean
+  pbs_encrypt: boolean
   local_dest_dir: string | null
   local_archive_ext: string | null
   borg_repo: string | null
@@ -1771,6 +1883,25 @@ function CreateJobDialog({
   // Backend-specific fields
   const [pbsRepository, setPbsRepository] = useState<string>("")
   const [pbsBackupId, setPbsBackupId] = useState<string>("")
+  // Client-side PBS encryption — sent as `pbs_encrypt` in the payload.
+  // Backend resolves the shared keyfile + injects PBS_KEYFILE into
+  // the job .env so the runner adds `--keyfile` to the backup call.
+  const [pbsEncrypt, setPbsEncrypt] = useState<boolean>(false)
+  // Optional recovery passphrase. When set, the backend encrypts the
+  // keyfile with openssl and the runner uploads that blob to PBS with
+  // every backup so the keyfile can be rebuilt on a fresh host with
+  // only the passphrase. Mirrors hb_pbs_setup_recovery from the shell.
+  const [pbsRecoveryPass, setPbsRecoveryPass] = useState<string>("")
+  const [pbsRecoveryPass2, setPbsRecoveryPass2] = useState<string>("")
+  // Whether the host already has an escrow blob configured. When
+  // present, the passphrase input becomes optional ("leave blank to
+  // keep saved"). Refreshed after a successful setup call.
+  const { data: pbsRecoveryStatus, mutate: mutatePbsRecovery } = useSWR<{
+    has_keyfile: boolean; has_recovery: boolean
+  }>(
+    open && backend === "pbs" ? "/api/host-backups/pbs-recovery/status" : null,
+    fetcher,
+  )
   const [localDestDir, setLocalDestDir] = useState<string>("")
   const [borgRepoSelected, setBorgRepoSelected] = useState<string>("")
   const [borgPassphrase, setBorgPassphrase] = useState<string>("")
@@ -1845,6 +1976,7 @@ function CreateJobDialog({
     if (r.keep_yearly !== undefined) setKeepYearly(String(r.keep_yearly))
     if (jobDetail.pbs_repository) setPbsRepository(jobDetail.pbs_repository)
     if (jobDetail.pbs_backup_id) setPbsBackupId(jobDetail.pbs_backup_id)
+    setPbsEncrypt(!!jobDetail.pbs_encrypt)
     if (jobDetail.local_dest_dir) setLocalDestDir(jobDetail.local_dest_dir)
     if (jobDetail.borg_repo) setBorgRepoSelected(jobDetail.borg_repo)
     if (jobDetail.borg_encrypt_mode) {
@@ -1935,6 +2067,9 @@ function CreateJobDialog({
       setKeepYearly("0")
       setPbsRepository("")
       setPbsBackupId("")
+      setPbsEncrypt(false)
+      setPbsRecoveryPass("")
+      setPbsRecoveryPass2("")
       setLocalDestDir("")
       setBorgRepoSelected("")
       setBorgPassphrase("")
@@ -2019,7 +2154,7 @@ function CreateJobDialog({
       ? !!pbsRepository
       : backend === "local"
         ? true
-        : /* borg */ !!borgRepoSelected && (borgEncryptMode === "none" || !!borgPassphrase)
+        : /* borg */ !!borgRepoSelected
 
   const canSubmit =
     canAdvanceFrom1 && canAdvanceFrom2 && canAdvanceFrom3 && canAdvanceFrom4 && backendValid
@@ -2029,6 +2164,28 @@ function CreateJobDialog({
     if (mode === "attach" && !selectedPveJob) return
     setSubmitting(true)
     setError(null)
+    // Configure the PBS recovery escrow BEFORE creating the job so the
+    // very first backup the runner triggers can already upload the
+    // blob. Only fires when the operator typed a passphrase pair.
+    if (backend === "pbs" && pbsEncrypt && pbsRecoveryPass) {
+      if (pbsRecoveryPass !== pbsRecoveryPass2) {
+        setError("Recovery passphrases don't match.")
+        setSubmitting(false)
+        return
+      }
+      try {
+        await fetchApi("/api/host-backups/pbs-recovery/setup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ passphrase: pbsRecoveryPass }),
+        })
+        mutatePbsRecovery()
+      } catch (e) {
+        setError(`Recovery setup failed: ${e instanceof Error ? e.message : String(e)}`)
+        setSubmitting(false)
+        return
+      }
+    }
     try {
       const body: Record<string, unknown> = {
         id: jobId,
@@ -2059,12 +2216,16 @@ function CreateJobDialog({
         body.pbs_password = ""
         if (pbsBackupId) body.pbs_backup_id = pbsBackupId
         if (selectedPbs?.fingerprint) body.pbs_fingerprint = selectedPbs.fingerprint
+        body.pbs_encrypt = pbsEncrypt
       } else if (backend === "local") {
         if (localDestDir.trim()) body.local_dest_dir = localDestDir.trim()
       } else if (backend === "borg") {
+        // Passphrase + encrypt_mode are inherited from the destination
+        // (the runner reads borg-pass-<name>.txt + the 4th field of
+        // borg-targets.txt). Only send overrides when the operator
+        // really typed a new one in an edit flow.
         body.borg_repo = borgRepoSelected
-        body.borg_passphrase = borgPassphrase
-        body.borg_encrypt_mode = borgEncryptMode
+        if (isEdit && borgPassphrase) body.borg_passphrase = borgPassphrase
       }
       // fetchApi returns the parsed JSON and throws (with the backend's
       // error message in `error.message` when the body was JSON) on any
@@ -2557,9 +2718,6 @@ function CreateJobDialog({
                               <SelectItem key={`${r.name}-${r.repository}`} value={r.repository}>
                                 <span className="font-mono">{r.name}</span>
                                 <span className="text-muted-foreground ml-2">— {r.repository}</span>
-                                {r.source === "proxmox" && (
-                                  <Badge variant="outline" className="ml-2 text-[10px]">proxmox</Badge>
-                                )}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -2605,6 +2763,62 @@ function CreateJobDialog({
                       PBS organises backups into named groups, each with its own retention. Leave blank to use the automatic default for this host (recommended).
                     </p>
                   </div>
+                  {/* PBS client-side encryption — same flow as the
+                      shell wizard. A shared keyfile under /usr/local/
+                      share/proxmenux/pbs-key.conf is generated on
+                      first use and reused by every encrypted job. */}
+                  <div className="pt-2 border-t border-border space-y-3">
+                    <Label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={pbsEncrypt}
+                        onCheckedChange={(v) => setPbsEncrypt(!!v)}
+                      />
+                      <span className="inline-flex items-center gap-1.5">
+                        <Lock className="h-3.5 w-3.5 text-emerald-400" />
+                        Encrypt backups (client-side keyfile)
+                      </span>
+                    </Label>
+                    <p className="text-[11px] text-muted-foreground pl-7">
+                      Adds <code className="font-mono">--keyfile</code> to <code className="font-mono">proxmox-backup-client backup</code>. Encryption happens before upload so chunks land on the PBS server already ciphered. The keyfile lives at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> (chmod 0600) and is shared across every encrypted PBS job on this host.
+                    </p>
+                    {pbsEncrypt && (
+                      <div className="pl-7 space-y-2 rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
+                        <div className="text-[11px] font-medium text-foreground flex items-center gap-1.5">
+                          <AlertTriangle className="h-3.5 w-3.5 text-blue-400" />
+                          Recovery passphrase (strongly recommended)
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          With a recovery passphrase, an encrypted copy of the keyfile is uploaded to PBS with every backup. If you lose this host, you can recover the keyfile on a fresh install with just the passphrase. Without it, losing the local keyfile means the encrypted backups become unrecoverable forever.
+                          {pbsRecoveryStatus?.has_recovery && " A recovery blob is already configured — leave the fields blank to keep it."}
+                        </p>
+                        <div>
+                          <Label htmlFor="pbsRecPass" className="text-[11px]">Passphrase</Label>
+                          <Input
+                            id="pbsRecPass"
+                            type="password"
+                            value={pbsRecoveryPass}
+                            onChange={(e) => setPbsRecoveryPass(e.target.value)}
+                            placeholder={pbsRecoveryStatus?.has_recovery ? "(unchanged — type to replace)" : "Long random string — write it down somewhere safe"}
+                            className="font-mono mt-1 h-8 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="pbsRecPass2" className="text-[11px]">Confirm passphrase</Label>
+                          <Input
+                            id="pbsRecPass2"
+                            type="password"
+                            value={pbsRecoveryPass2}
+                            onChange={(e) => setPbsRecoveryPass2(e.target.value)}
+                            placeholder="Type it again"
+                            className="font-mono mt-1 h-8 text-xs"
+                          />
+                          {pbsRecoveryPass && pbsRecoveryPass2 && pbsRecoveryPass !== pbsRecoveryPass2 && (
+                            <p className="text-[11px] text-red-400 mt-1">Passphrases don't match.</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
               {backend === "local" && (
@@ -2625,6 +2839,39 @@ function CreateJobDialog({
                     </>
                   ) : (
                     <>
+                      {(destResp?.local?.entries?.length ?? 0) > 0 && (
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={localDestDir || (destResp?.local?.effective ?? "")}
+                            onValueChange={(v) => setLocalDestDir(v)}
+                          >
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Pick a configured local destination" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {destResp?.local?.entries?.map((e) => (
+                                <SelectItem key={e.path} value={e.path}>
+                                  <span className="font-mono">{e.path}</span>
+                                  {e.source === "default" && (
+                                    <span className="text-muted-foreground ml-2 text-[10px] uppercase">default</span>
+                                  )}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="shrink-0 bg-blue-500/10 border-blue-500/40 !text-blue-400 hover:bg-blue-500/20 hover:!text-blue-300"
+                            onClick={() => setAddingDestType("local")}
+                            title="Save another local destination"
+                          >
+                            <Plus className="h-3.5 w-3.5 mr-1" />
+                            Add another
+                          </Button>
+                        </div>
+                      )}
                       <Input
                         id="localDest"
                         value={localDestDir}
@@ -2633,12 +2880,7 @@ function CreateJobDialog({
                         className="font-mono"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Where the <code className="font-mono">tar.zst</code> archive is written.
-                        {" "}
-                        Leave blank to use the configured local target
-                        {" "}
-                        (<span className="font-mono">{destResp?.local?.effective || "/var/lib/vz/dump"}</span>
-                        {destResp?.local?.configured ? "" : " — default"}).
+                        Pick a configured destination above, or type a custom directory path. Empty input falls back to <span className="font-mono">{destResp?.local?.effective || "/var/lib/vz/dump"}</span>.
                       </p>
                     </>
                   )}
@@ -2691,43 +2933,19 @@ function CreateJobDialog({
                       </div>
                     )}
                   </div>
-                  <div>
-                    <Label htmlFor="borgEncrypt">Encryption mode</Label>
-                    <Select
-                      value={borgEncryptMode}
-                      onValueChange={(v) => setBorgEncryptMode(v as "none" | "repokey" | "keyfile" | "authenticated")}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="repokey">repokey (recommended)</SelectItem>
-                        <SelectItem value="keyfile">keyfile</SelectItem>
-                        <SelectItem value="authenticated">authenticated (no encryption, just integrity)</SelectItem>
-                        <SelectItem value="none">none (NOT recommended)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {borgEncryptMode !== "none" && (
-                    <div>
-                      <Label htmlFor="borgPass">Passphrase</Label>
-                      <Input
-                        id="borgPass"
-                        type="password"
-                        value={borgPassphrase}
-                        onChange={(e) => setBorgPassphrase(e.target.value)}
-                        className="font-mono mt-1"
-                        placeholder={isEdit && jobDetail?.has_borg_passphrase
-                          ? "(unchanged — type to replace)"
-                          : "Passphrase used to decrypt repo at restore time"}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {isEdit && jobDetail?.has_borg_passphrase
-                          ? "Leave blank to keep the current passphrase."
-                          : "Stored in the .env (mode 0600). If the repo is new it will be initialised with this passphrase."}
+                  {/* Encryption + passphrase aren't asked here — they
+                      live on the borg destination. The runner reads
+                      the saved sidecar at run time. */}
+                  {(() => {
+                    const dest = destResp?.borg?.find((r) => r.repository === borgRepoSelected)
+                    if (!dest) return null
+                    const mode = dest.encrypt_mode || "repokey"
+                    return (
+                      <p className="text-[11px] text-muted-foreground">
+                        Encryption + passphrase are taken from the destination ({mode === "none" ? "no encryption" : mode}). Edit the destination if you need to change them.
                       </p>
-                    </div>
-                  )}
+                    )
+                  })()}
                 </>
               )}
 
@@ -2905,7 +3123,10 @@ function ManualBackupDialog({
 }: {
   open: boolean
   onClose: () => void
-  onLaunched: () => void
+  // The job_id of the just-launched manual run. The caller uses it to
+  // transition straight into the live-progress modal so the operator
+  // never has to chase a banner after pressing Run.
+  onLaunched: (jobId: string) => void
 }) {
   const [step, setStep] = useState<1 | 2>(1)
   const [backend, setBackend] = useState<"pbs" | "local" | "borg">("local")
@@ -2914,6 +3135,18 @@ function ManualBackupDialog({
 
   const [pbsRepository, setPbsRepository] = useState<string>("")
   const [pbsBackupId, setPbsBackupId] = useState<string>("")
+  const [pbsEncrypt, setPbsEncrypt] = useState<boolean>(false)
+  const [pbsRecoveryPass, setPbsRecoveryPass] = useState<string>("")
+  const [pbsRecoveryPass2, setPbsRecoveryPass2] = useState<string>("")
+  // Whether the host already has an escrow blob configured. When
+  // present, the passphrase input becomes optional ("leave blank to
+  // keep saved"). Refreshed after a successful setup call.
+  const { data: pbsRecoveryStatus, mutate: mutatePbsRecovery } = useSWR<{
+    has_keyfile: boolean; has_recovery: boolean
+  }>(
+    open && backend === "pbs" ? "/api/host-backups/pbs-recovery/status" : null,
+    fetcher,
+  )
   const [localDestDir, setLocalDestDir] = useState<string>("")
   const [borgRepoSelected, setBorgRepoSelected] = useState<string>("")
   const [borgPassphrase, setBorgPassphrase] = useState<string>("")
@@ -2960,6 +3193,9 @@ function ManualBackupDialog({
       setCustomPaths(new Set())
       setPbsRepository("")
       setPbsBackupId("")
+      setPbsEncrypt(false)
+      setPbsRecoveryPass("")
+      setPbsRecoveryPass2("")
       setLocalDestDir("")
       setBorgRepoSelected("")
       setBorgPassphrase("")
@@ -2994,13 +3230,37 @@ function ManualBackupDialog({
       ? !!pbsRepository
       : backend === "local"
         ? true
-        : !!borgRepoSelected && (borgEncryptMode === "none" || !!borgPassphrase)
+        // Borg destination carries its own passphrase + encryption.
+        // No need to gate on local state — the wizard no longer asks.
+        : !!borgRepoSelected
   const canSubmit = canAdvanceFrom1 && backendValid
 
   async function handleRun() {
     if (!canSubmit) return
     setSubmitting(true)
     setError(null)
+    // Same pre-step as CreateJob: configure the PBS recovery escrow
+    // before the run so the runner's post-backup upload of the blob
+    // has something to push.
+    if (backend === "pbs" && pbsEncrypt && pbsRecoveryPass) {
+      if (pbsRecoveryPass !== pbsRecoveryPass2) {
+        setError("Recovery passphrases don't match.")
+        setSubmitting(false)
+        return
+      }
+      try {
+        await fetchApi("/api/host-backups/pbs-recovery/setup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ passphrase: pbsRecoveryPass }),
+        })
+        mutatePbsRecovery()
+      } catch (e) {
+        setError(`Recovery setup failed: ${e instanceof Error ? e.message : String(e)}`)
+        setSubmitting(false)
+        return
+      }
+    }
     try {
       const body: Record<string, unknown> = {
         backend,
@@ -3014,19 +3274,23 @@ function ManualBackupDialog({
         body.pbs_password = ""
         if (pbsBackupId) body.pbs_backup_id = pbsBackupId
         if (selectedPbs?.fingerprint) body.pbs_fingerprint = selectedPbs.fingerprint
+        body.pbs_encrypt = pbsEncrypt
       } else if (backend === "local") {
         if (localDestDir.trim()) body.local_dest_dir = localDestDir.trim()
       } else if (backend === "borg") {
+        // Passphrase + encrypt_mode are inherited from the destination
+        // (borg-pass-<name>.txt sidecar + 4th field of borg-targets.txt).
         body.borg_repo = borgRepoSelected
-        body.borg_passphrase = borgPassphrase
-        body.borg_encrypt_mode = borgEncryptMode
       }
-      await fetchApi("/api/host-backups/manual-run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      })
-      onLaunched()
+      const resp = await fetchApi<{ status: string; job_id: string }>(
+        "/api/host-backups/manual-run",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+      )
+      onLaunched(resp.job_id)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -3194,11 +3458,99 @@ function ManualBackupDialog({
                       className="font-mono mt-1"
                     />
                   </div>
+                  <div className="pt-2 border-t border-border space-y-3">
+                    <Label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={pbsEncrypt}
+                        onCheckedChange={(v) => setPbsEncrypt(!!v)}
+                      />
+                      <span className="inline-flex items-center gap-1.5">
+                        <Lock className="h-3.5 w-3.5 text-emerald-400" />
+                        Encrypt this backup (client-side keyfile)
+                      </span>
+                    </Label>
+                    <p className="text-[11px] text-muted-foreground pl-7">
+                      Uses the shared keyfile at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> (auto-generated on first use).
+                    </p>
+                    {pbsEncrypt && (
+                      <div className="pl-7 space-y-2 rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
+                        <div className="text-[11px] font-medium text-foreground flex items-center gap-1.5">
+                          <AlertTriangle className="h-3.5 w-3.5 text-blue-400" />
+                          Recovery passphrase (strongly recommended)
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          With a recovery passphrase an encrypted copy of the keyfile is uploaded to PBS on every backup. Lets you recover it on a fresh host with just the passphrase.
+                          {pbsRecoveryStatus?.has_recovery && " A recovery blob is already configured — leave blank to keep it."}
+                        </p>
+                        <div>
+                          <Label htmlFor="manualPbsRecPass" className="text-[11px]">Passphrase</Label>
+                          <Input
+                            id="manualPbsRecPass"
+                            type="password"
+                            value={pbsRecoveryPass}
+                            onChange={(e) => setPbsRecoveryPass(e.target.value)}
+                            placeholder={pbsRecoveryStatus?.has_recovery ? "(unchanged — type to replace)" : "Long random string — write it down somewhere safe"}
+                            className="font-mono mt-1 h-8 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="manualPbsRecPass2" className="text-[11px]">Confirm passphrase</Label>
+                          <Input
+                            id="manualPbsRecPass2"
+                            type="password"
+                            value={pbsRecoveryPass2}
+                            onChange={(e) => setPbsRecoveryPass2(e.target.value)}
+                            placeholder="Type it again"
+                            className="font-mono mt-1 h-8 text-xs"
+                          />
+                          {pbsRecoveryPass && pbsRecoveryPass2 && pbsRecoveryPass !== pbsRecoveryPass2 && (
+                            <p className="text-[11px] text-red-400 mt-1">Passphrases don't match.</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
               {backend === "local" && (
                 <div className="space-y-2">
-                  <Label htmlFor="manualLocalDest">Destination directory</Label>
+                  <Label>Local destination</Label>
+                  {(destResp?.local?.entries?.length ?? 0) > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={localDestDir || (destResp?.local?.effective ?? "")}
+                        onValueChange={(v) => setLocalDestDir(v)}
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Pick a configured local destination" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {destResp?.local?.entries?.map((e) => (
+                            <SelectItem key={e.path} value={e.path}>
+                              <span className="font-mono">{e.path}</span>
+                              {e.source === "default" && (
+                                <span className="text-muted-foreground ml-2 text-[10px] uppercase">default</span>
+                              )}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0 bg-blue-500/10 border-blue-500/40 !text-blue-400 hover:bg-blue-500/20 hover:!text-blue-300"
+                        onClick={() => setAddingDestType("local")}
+                        title="Save another local destination"
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" />
+                        Add another
+                      </Button>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Pick one of the configured local destinations, or type a custom directory path below. Empty input falls back to the selected destination above.
+                  </p>
                   <Input
                     id="manualLocalDest"
                     value={localDestDir}
@@ -3206,11 +3558,6 @@ function ManualBackupDialog({
                     placeholder={destResp?.local?.effective || "/var/lib/vz/dump"}
                     className="font-mono"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Where the <code className="font-mono">tar.zst</code> archive is written.
-                    {" "}Leave blank to use the configured local target
-                    {" "}(<span className="font-mono">{destResp?.local?.effective || "/var/lib/vz/dump"}</span>).
-                  </p>
                 </div>
               )}
               {backend === "borg" && (
@@ -3260,43 +3607,23 @@ function ManualBackupDialog({
                       </div>
                     )}
                   </div>
-                  <div>
-                    <Label htmlFor="manualBorgEnc">Encryption mode</Label>
-                    <Select
-                      value={borgEncryptMode}
-                      onValueChange={(v) => setBorgEncryptMode(v as "none" | "repokey" | "keyfile" | "authenticated")}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="repokey">repokey (recommended)</SelectItem>
-                        <SelectItem value="keyfile">keyfile</SelectItem>
-                        <SelectItem value="authenticated">authenticated</SelectItem>
-                        <SelectItem value="none">none (NOT recommended)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {borgEncryptMode !== "none" && (
-                    <div>
-                      <Label htmlFor="manualBorgPass">Passphrase</Label>
-                      <Input
-                        id="manualBorgPass"
-                        type="password"
-                        value={borgPassphrase}
-                        onChange={(e) => setBorgPassphrase(e.target.value)}
-                        className="font-mono mt-1"
-                        placeholder="Passphrase used to decrypt repo at restore time"
-                      />
-                    </div>
-                  )}
+                  {(() => {
+                    const dest = destResp?.borg?.find((r) => r.repository === borgRepoSelected)
+                    if (!dest) return null
+                    const mode = dest.encrypt_mode || "repokey"
+                    return (
+                      <p className="text-[11px] text-muted-foreground">
+                        Encryption + passphrase are taken from the destination ({mode === "none" ? "no encryption" : mode}). Edit the destination if you need to change them.
+                      </p>
+                    )
+                  })()}
                 </>
               )}
 
               {/* Summary — mirrors the styling of the JobDetailModal. */}
               <div className="rounded-md border border-border bg-background/40 p-3 space-y-2 text-xs">
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Summary</div>
-                <div className="inline-flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-muted-foreground">Backend:</span>
                   <Badge variant="outline" className={`text-[10px] uppercase tracking-wide ${methodBadgeCls(backend)}`}>
                     {backend}
@@ -3305,7 +3632,7 @@ function ManualBackupDialog({
                     manual / one-shot
                   </Badge>
                 </div>
-                <div className="inline-flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <FileSearch className="h-3 w-3 text-green-500/80" />
                   <span className="text-green-500/90 uppercase tracking-wider text-[10px]">profile:</span>
                   <span className="text-foreground">{profileMode}</span>
@@ -3349,6 +3676,7 @@ function ManualBackupDialog({
               <Button
                 onClick={handleRun}
                 disabled={!canSubmit || submitting}
+                className="bg-purple-500 hover:bg-purple-600 text-white"
               >
                 {submitting ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -3396,15 +3724,23 @@ function ManualBackupDialog({
 // which backend a given destination targets — only the color, the
 // label and the action set.
 type UnifiedDest =
-  | { id: string; kind: "local"; path: string; source: "default" | "custom"; removable: boolean }
+  | { id: string; kind: "local"; path: string; source: "default" | "custom"; removable: boolean; jobsUsing: string[] }
   | {
       id: string; kind: "pbs"; name: string; repository: string;
       source: "proxmox" | "manual"; fingerprint?: string; removable: boolean
+      jobsUsing: string[]
     }
   | {
       id: string; kind: "borg"; name: string; repository: string;
       isSsh: boolean; ssh?: { user: string; host: string; remotePath: string };
-      sshKeyPath?: string; removable: boolean
+      sshKeyPath?: string;
+      // The destination's encryption mode + whether a passphrase is
+      // saved server-side; used to render a Lock / Unlock badge so the
+      // operator sees at a glance which Borg repos are encrypted.
+      encryptMode?: "none" | "repokey" | "keyfile" | "authenticated"
+      hasPassphrase?: boolean
+      removable: boolean
+      jobsUsing: string[]
     }
 
 interface CapacityInfo {
@@ -3433,8 +3769,52 @@ function DestinationsSection({
   onChanged: () => void
 }) {
   const [configuring, setConfiguring] = useState<boolean>(false)
+  const [editingDest, setEditingDest] = useState<EditingDest | null>(null)
+  const [confirmingDest, setConfirmingDest] = useState<UnifiedDest | null>(null)
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // Used by the Delete-destination confirm to tell the operator how
+  // many backups already live on this target (they're kept after the
+  // destination + jobs cascade, so the warning is informational).
+  const { data: localArchivesResp } = useSWR<{ archives: BackupArchive[] }>(
+    "/api/host-backups/archives",
+    fetcher,
+    { refreshInterval: 60_000, revalidateOnFocus: false },
+  )
+  const { data: remoteArchivesResp } = useSWR<RemoteArchivesResp>(
+    "/api/host-backups/remote-archives",
+    fetcher,
+    { refreshInterval: 60_000, revalidateOnFocus: false },
+  )
+  // Recovery state — only needed when at least one PBS destination
+  // exists. Drives the "Recover keyfile" banner.
+  const hasPbs = (destinations?.pbs?.length ?? 0) > 0
+  const { data: pbsRecoveryStatus, mutate: mutatePbsRecovery } = useSWR<{
+    has_keyfile: boolean; has_recovery: boolean
+  }>(hasPbs ? "/api/host-backups/pbs-recovery/status" : null, fetcher)
+  const { data: pbsRecoveryAvailable } = useSWR<{
+    snapshots: Array<{ repo_name: string; repo_repository: string; backup_id: string; source_host: string; backup_time: number; snapshot: string }>
+    errors: Array<{ repo_name: string; error: string }>
+  }>(
+    hasPbs && pbsRecoveryStatus && !pbsRecoveryStatus.has_keyfile
+      ? "/api/host-backups/pbs-recovery/available"
+      : null,
+    fetcher,
+  )
+  const [recoveringKeyfile, setRecoveringKeyfile] = useState<boolean>(false)
+  const backupsCountFor = (it: UnifiedDest): number => {
+    if (it.kind === "local") {
+      const root = it.path.replace(/\/+$/, "") + "/"
+      return (localArchivesResp?.archives || []).filter(
+        (a) => (a.path || "").startsWith(root),
+      ).length
+    }
+    const name = it.kind === "pbs" ? it.name : it.kind === "borg" ? it.name : ""
+    return (remoteArchivesResp?.snapshots || []).filter(
+      (s) => s.backend === it.kind && s.repo_name === name,
+    ).length
+  }
 
   // Flatten PBS + Borg + Local into one list. Order: locals first
   // (default always on top), then PBS, then Borg — matches the
@@ -3449,6 +3829,7 @@ function DestinationsSection({
         path: e.path,
         source: e.source as "default" | "custom",
         removable: e.removable,
+        jobsUsing: e.jobs_using || [],
       })
     }
     for (const r of destinations?.pbs || []) {
@@ -3460,6 +3841,7 @@ function DestinationsSection({
         source: r.source as "proxmox" | "manual",
         fingerprint: r.fingerprint || undefined,
         removable: r.source === "manual",
+        jobsUsing: r.jobs_using || [],
       })
     }
     for (const r of destinations?.borg || []) {
@@ -3472,7 +3854,10 @@ function DestinationsSection({
         isSsh: !!ssh,
         ssh: ssh ?? undefined,
         sshKeyPath: (r as { ssh_key_path?: string }).ssh_key_path,
+        encryptMode: r.encrypt_mode,
+        hasPassphrase: r.has_passphrase,
         removable: true,
+        jobsUsing: r.jobs_using || [],
       })
     }
     return out
@@ -3512,11 +3897,11 @@ function DestinationsSection({
     (capacityResp?.results || []).map((r) => [r.id, r] as const),
   )
 
-  async function removePbs(name: string) {
+  async function removePbs(name: string, force = false) {
     setBusyKey(`pbs:${name}`)
     setError(null)
     try {
-      await fetchApi(`/api/host-backups/destinations/pbs/${encodeURIComponent(name)}`, { method: "DELETE" })
+      await fetchApi(`/api/host-backups/destinations/pbs/${encodeURIComponent(name)}${force ? "?force=true" : ""}`, { method: "DELETE" })
       onChanged()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -3524,11 +3909,11 @@ function DestinationsSection({
       setBusyKey(null)
     }
   }
-  async function removeBorg(name: string) {
+  async function removeBorg(name: string, force = false) {
     setBusyKey(`borg:${name}`)
     setError(null)
     try {
-      await fetchApi(`/api/host-backups/destinations/borg/${encodeURIComponent(name)}`, { method: "DELETE" })
+      await fetchApi(`/api/host-backups/destinations/borg/${encodeURIComponent(name)}${force ? "?force=true" : ""}`, { method: "DELETE" })
       onChanged()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -3536,12 +3921,14 @@ function DestinationsSection({
       setBusyKey(null)
     }
   }
-  async function removeLocal(path: string) {
+  async function removeLocal(path: string, force = false) {
     setBusyKey(`local:${path}`)
     setError(null)
     try {
+      const params = new URLSearchParams({ path })
+      if (force) params.set("force", "true")
       await fetchApi(
-        `/api/host-backups/destinations/local?path=${encodeURIComponent(path)}`,
+        `/api/host-backups/destinations/local?${params.toString()}`,
         { method: "DELETE" },
       )
       onChanged()
@@ -3550,6 +3937,15 @@ function DestinationsSection({
     } finally {
       setBusyKey(null)
     }
+  }
+  async function confirmDeleteDest() {
+    const it = confirmingDest
+    if (!it) return
+    const force = it.jobsUsing.length > 0
+    setConfirmingDest(null)
+    if (it.kind === "pbs") return removePbs(it.name, force)
+    if (it.kind === "borg") return removeBorg(it.name, force)
+    if (it.kind === "local") return removeLocal(it.path, force)
   }
   // Detach a USB drive — only the filesystem is unmounted; the path
   // stays in local-target.conf so re-plugging the same disk picks it
@@ -3573,13 +3969,10 @@ function DestinationsSection({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <p className="text-xs text-muted-foreground">
-          Pre-configure backup destinations so wizards and manual backups can pick from them without re-typing credentials each time. Each entry is colored by backend: PBS purple, Local blue, Borg fuchsia.
-        </p>
+      <div className="flex justify-end">
         <Button
           size="sm"
-          className="h-8 px-3 shrink-0 bg-blue-500 hover:bg-blue-600 text-white"
+          className="h-8 px-3 bg-blue-500 hover:bg-blue-600 text-white"
           onClick={() => setConfiguring(true)}
         >
           <Plus className="h-4 w-4 mr-1" />
@@ -3591,6 +3984,31 @@ function DestinationsSection({
           {error}
         </div>
       )}
+      {/* Recovery banner: only when there's no local keyfile AND at
+          least one escrow blob was found on a configured PBS. Click
+          opens a passphrase dialog and the keyfile is rebuilt from
+          the blob. Equivalent to hb_pbs_try_keyfile_recovery in the
+          shell — what runs after a fresh PVE install when the
+          operator points the new host at the same PBS. */}
+      {hasPbs && pbsRecoveryStatus && !pbsRecoveryStatus.has_keyfile && (pbsRecoveryAvailable?.snapshots?.length ?? 0) > 0 && (
+        <button
+          type="button"
+          onClick={() => setRecoveringKeyfile(true)}
+          className="w-full flex items-start gap-2 px-3 py-2.5 rounded-md border border-emerald-500/40 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors text-left"
+          title="A recovery copy of the PBS keyfile was found on this PBS server"
+        >
+          <Lock className="h-4 w-4 mt-0.5 text-emerald-400 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-medium text-foreground">
+              PBS keyfile is missing — recover it from PBS
+            </div>
+            <div className="text-[11px] text-muted-foreground mt-0.5">
+              An encrypted recovery copy of the keyfile is available ({pbsRecoveryAvailable!.snapshots.length} snapshot{pbsRecoveryAvailable!.snapshots.length === 1 ? "" : "s"}). Click to rebuild the keyfile using your recovery passphrase.
+            </div>
+          </div>
+          <span className="text-xs text-emerald-300 shrink-0 self-center">Recover →</span>
+        </button>
+      )}
       <div className="space-y-2">
         {items.map((it) => {
           const cap = capByEdid.get(it.id)
@@ -3598,7 +4016,16 @@ function DestinationsSection({
             (it.kind === "pbs" && busyKey === `pbs:${it.name}`) ||
             (it.kind === "borg" && busyKey === `borg:${it.name}`) ||
             (it.kind === "local" && busyKey === `local:${it.path}`)
-          const unmountBusy = it.kind === "local" && busyKey === `umount:${it.path}`
+          // Borg local-mode repos sit on top of a path — the same
+          // /mnt/proxmenux-backup-disk-* USB mountpoint a Local target
+          // would use. Expose Unmount for them too so the operator
+          // doesn't have to remember which destination type is on the
+          // disk they want to detach.
+          const borgLocalUsbPath = it.kind === "borg" && !it.isSsh && cap?.is_usb
+            ? it.repository
+            : null
+          const umountTarget = it.kind === "local" ? it.path : borgLocalUsbPath
+          const unmountBusy = !!umountTarget && busyKey === `umount:${umountTarget}`
           return (
             <DestinationRow
               key={it.id}
@@ -3606,15 +4033,44 @@ function DestinationsSection({
               capacity={cap}
               busy={busy}
               unmountBusy={unmountBusy}
-              onDelete={() => {
-                if (it.kind === "pbs") return removePbs(it.name)
-                if (it.kind === "borg") return removeBorg(it.name)
-                if (it.kind === "local") return removeLocal(it.path)
-              }}
+              onDelete={() => setConfirmingDest(it)}
               onUnmount={
-                it.kind === "local" && cap?.is_usb
-                  ? () => unmountUsb(it.path)
+                umountTarget && cap?.is_usb
+                  ? () => unmountUsb(umountTarget)
                   : undefined
+              }
+              onEdit={
+                // Only PBS-manual and Borg are editable from the UI.
+                // PBS-proxmox is managed by Datacenter → Storage and
+                // local destinations have no fields beyond the path.
+                it.kind === "pbs" && it.source === "manual"
+                  ? () => {
+                      const [user, rest] = it.repository.includes("@")
+                        ? [it.repository.split("@").slice(0, -1).join("@"), it.repository.split("@").pop() || ""]
+                        : ["root@pam", it.repository]
+                      const [server, datastore] = rest.includes(":")
+                        ? [rest.split(":").slice(0, -1).join(":"), rest.split(":").pop() || ""]
+                        : [rest, ""]
+                      setEditingDest({
+                        kind: "pbs",
+                        name: it.name,
+                        username: user,
+                        server,
+                        datastore,
+                        fingerprint: it.fingerprint,
+                        has_password: true,
+                      })
+                    }
+                  : it.kind === "borg"
+                    ? () => setEditingDest({
+                        kind: "borg",
+                        name: it.name,
+                        repository: it.repository,
+                        ssh_key_path: it.sshKeyPath,
+                        encrypt_mode: (destinations?.borg?.find((b) => b.name === it.name)?.encrypt_mode) || "repokey",
+                        has_passphrase: !!destinations?.borg?.find((b) => b.name === it.name)?.has_passphrase,
+                      })
+                    : undefined
               }
             />
           )
@@ -3628,6 +4084,96 @@ function DestinationsSection({
           onChanged()
         }}
       />
+      {/* Edit-an-existing-destination dialog. Uses the same form as
+          Add, just hydrated with the saved values and with `name`
+          locked. The POST endpoint is upsert-by-name on the backend
+          so no separate route is needed. */}
+      <AddDestinationDialog
+        type={editingDest?.kind ?? null}
+        editing={editingDest}
+        onClose={() => setEditingDest(null)}
+        onSaved={() => {
+          setEditingDest(null)
+          onChanged()
+        }}
+      />
+      <PbsKeyfileRecoveryDialog
+        open={recoveringKeyfile}
+        snapshots={pbsRecoveryAvailable?.snapshots || []}
+        onClose={() => setRecoveringKeyfile(false)}
+        onRecovered={() => {
+          setRecoveringKeyfile(false)
+          mutatePbsRecovery()
+        }}
+      />
+      {/* Delete-destination confirm. Always opens (uniform UX) but
+          the body adapts: a plain "Remove?" when no jobs/backups
+          depend on the destination, or a warning summarizing the
+          cascade (jobs go, backups stay) when there's something at
+          stake. The destination + its sidecars are removed; backups
+          on disk / on the remote stay untouched so the operator can
+          decide what to do with them later. */}
+      {confirmingDest && (() => {
+        const it = confirmingDest
+        const jobs = it.jobsUsing
+        const backups = backupsCountFor(it)
+        const headline =
+          it.kind === "local" ? it.path
+          : it.kind === "pbs" ? `${it.name} — ${it.repository}`
+          : `${it.name} — ${it.repository}`
+        return (
+          <Dialog open={true} onOpenChange={(v) => { if (!v) setConfirmingDest(null) }}>
+            <DialogContent className="max-w-md bg-card border-border">
+              <DialogHeader>
+                <DialogTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className={`h-5 w-5 ${jobs.length > 0 ? "text-amber-500" : "text-red-500"}`} />
+                  Remove destination
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  {jobs.length === 0 && backups === 0
+                    ? "Removes the destination from the list. Nothing else depends on it."
+                    : "The destination + its saved credentials will be removed. Backups already stored stay where they are — you decide what to do with them later."}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="text-sm font-mono px-3 py-2 rounded-md border border-border bg-background/40 break-all">
+                {headline}
+              </div>
+              {(jobs.length > 0 || backups > 0) && (
+                <div className="text-xs space-y-1.5 text-foreground">
+                  {jobs.length > 0 && (
+                    <div className="px-3 py-2 rounded-md border border-amber-500/40 bg-amber-500/5">
+                      <div className="font-medium text-amber-400">
+                        {jobs.length} job{jobs.length === 1 ? "" : "s"} will be deleted (cascade):
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {jobs.map((j) => (
+                          <span key={j} className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-background/60 border border-border">
+                            {j}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {backups > 0 && (
+                    <div className="px-3 py-2 rounded-md border border-blue-500/40 bg-blue-500/5">
+                      <span className="font-medium text-blue-400">{backups}</span> backup{backups === 1 ? "" : "s"} already at this destination — they are <span className="font-medium">kept</span>.
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setConfirmingDest(null)}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={confirmDeleteDest}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {jobs.length > 0 ? "Remove + delete jobs" : "Remove destination"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )
+      })()}
     </div>
   )
 }
@@ -3644,6 +4190,7 @@ function DestinationRow({
   unmountBusy,
   onDelete,
   onUnmount,
+  onEdit,
 }: {
   item: UnifiedDest
   capacity?: CapacityInfo
@@ -3651,6 +4198,7 @@ function DestinationRow({
   unmountBusy: boolean
   onDelete: () => void
   onUnmount?: () => void
+  onEdit?: () => void
 }) {
   const accent =
     item.kind === "pbs" ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
@@ -3673,7 +4221,10 @@ function DestinationRow({
   const sourceLabel =
     item.kind === "local" ? (item.source === "default" ? "built-in default" : "manually added")
     : item.kind === "pbs" ? (item.source === "proxmox" ? "Datacenter → Storage" : "manually added")
-    : item.isSsh ? "remote (SSH)" : "local path"
+    // Borg targets are always operator-configured (no Datacenter
+    // auto-discovery path), so they all share the "manually added"
+    // wording for visual consistency with the Local custom row.
+    : "manually added"
 
   const pct = capacity?.total && capacity.available !== undefined
     ? Math.min(100, Math.round(((capacity.total - capacity.available) / capacity.total) * 100))
@@ -3681,66 +4232,118 @@ function DestinationRow({
 
   return (
     <div className="rounded-lg border border-white/10 bg-card p-4">
-      {/* Top row: icon + headline + all badges, then actions on the right */}
+      {/* Top row split in two: a wrappable left side (icon + headline +
+          badges) and a fixed right side (Unmount + Remove). The right
+          side never falls to a new line even if `headline` is long,
+          because the outer container is a non-wrapping flex. */}
       <div className="space-y-2 mb-3">
-        <div className="flex items-start gap-2 flex-wrap">
-          <Icon className={`h-5 w-5 flex-shrink-0 ${iconColor} mt-0.5`} />
-          <h3 className="font-mono font-semibold text-sm break-all">{headline}</h3>
-          <Badge variant="outline" className={`text-[10px] uppercase tracking-wide ${accent}`}>
-            {item.kind}
-          </Badge>
-          {item.kind === "pbs" && item.source === "proxmox" && (
-            <Badge variant="outline" className="text-[10px] uppercase tracking-wide border-border text-muted-foreground">
-              proxmox
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1 flex items-start gap-2 flex-wrap">
+            <Icon className={`h-5 w-5 flex-shrink-0 ${iconColor} mt-0.5`} />
+            <h3 className="font-mono font-semibold text-sm break-all">{headline}</h3>
+            <Badge variant="outline" className={`text-[10px] uppercase tracking-wide ${accent}`}>
+              {item.kind}
             </Badge>
-          )}
           {item.kind === "local" && item.source === "default" && (
             <Badge variant="outline" className="text-[10px] uppercase tracking-wide border-border text-muted-foreground">
               default
             </Badge>
           )}
-          {item.kind === "borg" && (
-            <Badge variant="outline" className={`text-[10px] uppercase tracking-wide ${item.isSsh ? "border-cyan-500/40 text-cyan-400 bg-cyan-500/5" : "border-amber-500/40 text-amber-400 bg-amber-500/5"}`}>
-              {item.isSsh ? "ssh" : "local"}
-            </Badge>
-          )}
-          {isUsb && (
+          {item.kind === "borg" ? (
+            // For Borg the sub-type is one of three (mutually exclusive):
+            //   ssh    → remote repo
+            //   usb    → local repo whose path lives on a USB mount
+            //   local  → local repo on an internal disk / regular dir
+            // Previously we showed BORG + LOCAL + USB which read like
+            // three orthogonal facets and confused the badge with the
+            // Local destination kind. Collapsing to a single sub-type
+            // badge avoids the overlap.
+            <>
+              {item.isSsh ? (
+                <Badge variant="outline" className="text-[10px] uppercase tracking-wide border-cyan-500/40 text-cyan-400 bg-cyan-500/5">
+                  ssh
+                </Badge>
+              ) : isUsb ? (
+                <Badge variant="outline" className="text-[10px] uppercase tracking-wide border-orange-500/40 text-orange-400 bg-orange-500/5 gap-1">
+                  <HardDrive className="h-2.5 w-2.5" />
+                  USB
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] uppercase tracking-wide border-amber-500/40 text-amber-400 bg-amber-500/5">
+                  local
+                </Badge>
+              )}
+              {/* Encryption indicator — icon-only chip for encrypted
+                  repos. Plaintext repos get no chip (visually quiet
+                  for the common case). The tooltip carries the mode +
+                  saved-passphrase state for hover detail. */}
+              {item.encryptMode && item.encryptMode !== "none" && (
+                <Badge
+                  variant="outline"
+                  className="text-[10px] uppercase tracking-wide border-emerald-500/40 text-emerald-400 bg-emerald-500/5"
+                  title={`Encrypted (${item.encryptMode})${item.hasPassphrase ? " · passphrase saved" : " · passphrase NOT saved"}`}
+                >
+                  {/* Icon sized to roughly the text-[10px] line-box of
+                      the neighbouring text badges (BORG, USB, …) so the
+                      pill itself ends up the same height — matching
+                      visual weight without adding a label. */}
+                  <Lock className="h-3.5 w-3.5" />
+                </Badge>
+              )}
+            </>
+          ) : isUsb && (
+            // PBS / Local destinations: USB badge is additive (the kind
+            // badge alone doesn't say where the path lives).
             <Badge variant="outline" className="text-[10px] uppercase tracking-wide border-orange-500/40 text-orange-400 bg-orange-500/5 gap-1">
               <HardDrive className="h-2.5 w-2.5" />
               USB
             </Badge>
           )}
-          {/* Spacer pushes actions to the right end of the row */}
-          <div className="flex-1 min-w-0" />
-          {onUnmount && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 px-2 text-amber-500 hover:text-amber-400 hover:bg-amber-500/10"
-              disabled={unmountBusy || busy}
-              onClick={onUnmount}
-              title="Detach the USB filesystem (config stays so re-plugging re-discovers it)"
-            >
-              {unmountBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Power className="h-3.5 w-3.5" />}
-              <span className="ml-1 text-xs">Unmount</span>
-            </Button>
-          )}
-          {item.removable ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 px-2 text-red-500 hover:text-red-400 hover:bg-red-500/10"
-              disabled={busy || unmountBusy}
-              onClick={onDelete}
-            >
-              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-              <span className="ml-1 text-xs">Remove</span>
-            </Button>
-          ) : (
-            <span className="text-[10px] text-muted-foreground italic self-center px-2">
-              {item.kind === "local" ? "built-in" : "managed by PVE"}
-            </span>
-          )}
+          </div>
+          {/* Action chips — always pinned to the right, never wrap.
+              The outer flex container has no flex-wrap so even a very
+              long headline keeps these two buttons in place. Chip
+              style (square border + tinted bg) makes them read as
+              actionable rather than decorative icons. */}
+          <div className="shrink-0 flex items-start gap-1.5">
+            {onEdit && (
+              <button
+                type="button"
+                disabled={busy || unmountBusy}
+                onClick={onEdit}
+                title="Edit destination — update credentials, encryption, repository path"
+                className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {onUnmount && (
+              <button
+                type="button"
+                disabled={unmountBusy || busy}
+                onClick={onUnmount}
+                title="Unmount — detach the USB filesystem only. The destination stays in the list so re-plugging the disk picks it up again."
+                className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {unmountBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Power className="h-3.5 w-3.5" />}
+              </button>
+            )}
+            {item.removable ? (
+              <button
+                type="button"
+                disabled={busy || unmountBusy}
+                onClick={onDelete}
+                title="Remove from the destinations list — the filesystem on disk is left untouched"
+                className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              </button>
+            ) : (
+              <span className="text-[10px] text-muted-foreground italic self-center px-2 whitespace-nowrap">
+                {item.kind === "local" ? "built-in" : "managed by PVE"}
+              </span>
+            )}
+          </div>
         </div>
         {subline && (
           <p className="text-xs font-mono text-muted-foreground break-all pl-7" title={subline}>
@@ -3877,12 +4480,34 @@ function ConfigureDestinationWizard({
 
 // One dialog handles all three Add flows — the form is small enough
 // that branching by type keeps it cleaner than three separate components.
+// Pre-fill payload for editing an existing destination. `name` stays
+// fixed (it's the key the sidecar / state files are scoped to);
+// everything else can be re-typed. PBS password and Borg passphrase
+// can be left blank to keep the saved one.
+interface EditingDest {
+  kind: "pbs" | "borg"
+  name: string
+  // PBS fields
+  server?: string
+  datastore?: string
+  username?: string
+  fingerprint?: string
+  has_password?: boolean
+  // Borg fields
+  repository?: string
+  ssh_key_path?: string
+  encrypt_mode?: "none" | "repokey" | "keyfile" | "authenticated"
+  has_passphrase?: boolean
+}
+
 function AddDestinationDialog({
   type,
+  editing,
   onClose,
   onSaved,
 }: {
   type: "pbs" | "borg" | "local" | null
+  editing?: EditingDest | null
   onClose: () => void
   // The repository string of the just-saved destination, so callers
   // can auto-select it in a dropdown (the wizard does this when an
@@ -3907,42 +4532,119 @@ function AddDestinationDialog({
   const [borgSshKeyPath, setBorgSshKeyPath] = useState("/root/.ssh/proxmenux_borg")
   const [generatedKey, setGeneratedKey] = useState<{ public_key: string; authorized_keys_line: string } | null>(null)
   const [generatingKey, setGeneratingKey] = useState(false)
+  // Borg encryption + passphrase live on the destination, not on each
+  // job. Two-mode UI: encrypted (repokey, the default) or none. Other
+  // borg modes (keyfile / authenticated) stay supported by the backend
+  // for legacy shell-created configs.
+  const [borgEncryptionEnabled, setBorgEncryptionEnabled] = useState(true)
+  const [borgPassphrase, setBorgPassphraseLocal] = useState("")
+  const [borgPassphrase2, setBorgPassphrase2] = useState("")
   // Local field
   const [localPath, setLocalPath] = useState("")
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (type === null) {
-      setName("")
-      setServer("")
-      setDatastore("")
-      setUsername("root@pam")
-      setPassword("")
-      setFingerprint("")
-      setBorgRepo("")
-      setBorgMode("local")
-      setBorgSshUser("borg")
-      setBorgSshHost("")
-      setBorgSshRemotePath("")
-      setBorgSshKeyPath("/root/.ssh/proxmenux_borg")
-      setGeneratedKey(null)
-      setGeneratingKey(false)
-      setLocalPath("")
-      setError(null)
-      setSubmitting(false)
+  // Read the current destinations so the UsbPicker can hide any USB
+  // mountpoint already in use as a Local or Borg-local destination —
+  // no point offering the same disk twice.
+  const { data: existingDest } = useSWR<DestinationsResp>(
+    type !== null ? "/api/host-backups/destinations" : null,
+    fetcher,
+  )
+  const usedPaths: string[] = (() => {
+    const out: string[] = []
+    for (const e of existingDest?.local?.entries || []) {
+      if (e.source === "custom") out.push(e.path)
     }
-  }, [type])
+    for (const r of existingDest?.borg || []) {
+      // Borg local-mode: the `repository` IS the path. SSH repos
+      // start with `ssh://` and are excluded automatically.
+      if (!r.repository.startsWith("ssh://")) out.push(r.repository)
+    }
+    return out
+  })()
 
+  // Reset every time the dialog OPENS — not just on close. If we're
+  // opening in edit mode, hydrate the form from the saved destination
+  // so the operator only has to change what they want. Name stays
+  // read-only in edit mode (it's the key for sidecars / state files).
+  useEffect(() => {
+    setError(null)
+    setSubmitting(false)
+    setGeneratedKey(null)
+    setGeneratingKey(false)
+    setPassword("")
+    setBorgPassphraseLocal("")
+    setBorgPassphrase2("")
+    if (editing && editing.kind === "pbs") {
+      setName(editing.name)
+      setServer(editing.server || "")
+      setDatastore(editing.datastore || "")
+      setUsername(editing.username || "root@pam")
+      setFingerprint(editing.fingerprint || "")
+      setBorgRepo(""); setBorgMode("local"); setBorgSshUser("borg")
+      setBorgSshHost(""); setBorgSshRemotePath("")
+      setBorgSshKeyPath("/root/.ssh/proxmenux_borg")
+      setBorgEncryptionEnabled(true); setLocalPath("")
+      return
+    }
+    if (editing && editing.kind === "borg") {
+      const repo = editing.repository || ""
+      const ssh = repo.match(/^ssh:\/\/([^@]+)@([^/]+)\/(.+)$/)
+      setName(editing.name)
+      if (ssh) {
+        setBorgMode("ssh")
+        setBorgSshUser(ssh[1])
+        setBorgSshHost(ssh[2])
+        setBorgSshRemotePath(`/${ssh[3]}`)
+        setBorgSshKeyPath(editing.ssh_key_path || "/root/.ssh/proxmenux_borg")
+        setBorgRepo("")
+      } else {
+        setBorgMode("local")
+        setBorgRepo(repo)
+        setBorgSshUser("borg"); setBorgSshHost(""); setBorgSshRemotePath("")
+        setBorgSshKeyPath("/root/.ssh/proxmenux_borg")
+      }
+      const mode = editing.encrypt_mode || "repokey"
+      setBorgEncryptionEnabled(mode !== "none")
+      setServer(""); setDatastore(""); setUsername("root@pam"); setFingerprint("")
+      setLocalPath("")
+      return
+    }
+    // Add-new path: full reset.
+    setName("")
+    setServer("")
+    setDatastore("")
+    setUsername("root@pam")
+    setFingerprint("")
+    setBorgRepo("")
+    setBorgMode("local")
+    setBorgSshUser("borg")
+    setBorgSshHost("")
+    setBorgSshRemotePath("")
+    setBorgSshKeyPath("/root/.ssh/proxmenux_borg")
+    setBorgEncryptionEnabled(true)
+    setLocalPath("")
+  }, [type, editing])
+
+  const isEditing = !!editing
   const nameValid = /^[a-zA-Z0-9_-]+$/.test(name)
-  const borgValid =
+  const borgPathValid =
     borgMode === "local"
       ? !!borgRepo.trim()
       : !!(borgSshUser.trim() && borgSshHost.trim() && borgSshRemotePath.trim())
+  // In edit mode the saved passphrase / password is reused when the
+  // operator leaves the inputs blank, so validation relaxes.
+  const borgPassphraseValid =
+    !borgEncryptionEnabled
+    || (isEditing && !borgPassphrase && editing?.has_passphrase)
+    || (borgPassphrase.length > 0 && borgPassphrase === borgPassphrase2)
+  const borgValid = borgPathValid && borgPassphraseValid
   const canSubmit =
     type === "pbs"
-      ? nameValid && server.trim() && datastore.trim() && password
+      ? nameValid && server.trim() && datastore.trim() &&
+          (!!password || (isEditing && !!editing?.has_password))
       : type === "borg"
         ? nameValid && borgValid
         : type === "local"
@@ -3993,7 +4695,14 @@ function AddDestinationDialog({
         })
         savedRepo = resp?.repository
       } else if (type === "borg") {
-        const body: Record<string, unknown> = { name, mode: borgMode }
+        const body: Record<string, unknown> = {
+          name,
+          mode: borgMode,
+          encrypt_mode: borgEncryptionEnabled ? "repokey" : "none",
+        }
+        if (borgEncryptionEnabled) {
+          body.passphrase = borgPassphrase
+        }
         if (borgMode === "local") {
           body.repo = borgRepo.trim()
         } else {
@@ -4028,8 +4737,12 @@ function AddDestinationDialog({
       <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5 text-blue-500" />
-            Add {type === "pbs" ? "PBS" : type === "borg" ? "Borg" : "local"} destination
+            {isEditing ? (
+              <Pencil className="h-5 w-5 text-emerald-400" />
+            ) : (
+              <Plus className="h-5 w-5 text-blue-500" />
+            )}
+            {isEditing ? "Edit" : "Add"} {type === "pbs" ? "PBS" : type === "borg" ? "Borg" : "local"} destination
           </DialogTitle>
         </DialogHeader>
         <div className="overflow-y-auto -mr-2 pr-2 space-y-3">
@@ -4037,8 +4750,10 @@ function AddDestinationDialog({
             <>
               <div>
                 <Label htmlFor="pbsName">Name</Label>
-                <Input id="pbsName" value={name} onChange={(e) => setName(e.target.value)} className="font-mono mt-1" placeholder="my-pbs" />
-                <p className="text-xs text-muted-foreground mt-1">A short identifier. Letters, digits, _ or -.</p>
+                <Input id="pbsName" value={name} onChange={(e) => setName(e.target.value)} className="font-mono mt-1" placeholder="my-pbs" disabled={isEditing} />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {isEditing ? "Name is the key for saved credentials and can't be changed." : "A short identifier. Letters, digits, _ or -."}
+                </p>
               </div>
               <div>
                 <Label htmlFor="pbsServer">Server (host or IP)</Label>
@@ -4055,7 +4770,17 @@ function AddDestinationDialog({
               </div>
               <div>
                 <Label htmlFor="pbsPass">Password</Label>
-                <Input id="pbsPass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="font-mono mt-1" />
+                <Input
+                  id="pbsPass"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="font-mono mt-1"
+                  placeholder={isEditing && editing?.has_password ? "(unchanged — type to replace)" : ""}
+                />
+                {isEditing && editing?.has_password && (
+                  <p className="text-xs text-muted-foreground mt-1">Leave blank to keep the saved password.</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="pbsFp">Fingerprint (optional)</Label>
@@ -4068,7 +4793,10 @@ function AddDestinationDialog({
             <>
               <div>
                 <Label htmlFor="borgName">Name</Label>
-                <Input id="borgName" value={name} onChange={(e) => setName(e.target.value)} className="font-mono mt-1" placeholder="usb-borg or remote-borg" />
+                <Input id="borgName" value={name} onChange={(e) => setName(e.target.value)} className="font-mono mt-1" placeholder="usb-borg or remote-borg" disabled={isEditing} />
+                {isEditing && (
+                  <p className="text-xs text-muted-foreground mt-1">Name is the key for the saved passphrase and can't be changed.</p>
+                )}
               </div>
 
               <div>
@@ -4102,7 +4830,7 @@ function AddDestinationDialog({
                       Absolute path on this host. Pick a USB drive below to auto-fill, or type the path manually.
                     </p>
                   </div>
-                  <UsbPicker onPick={(p) => setBorgRepo(p)} />
+                  <UsbPicker onPick={(p) => setBorgRepo(p)} excludePaths={usedPaths} />
                 </div>
               ) : (
                 <>
@@ -4165,6 +4893,71 @@ function AddDestinationDialog({
                   </div>
                 </>
               )}
+
+              {/* Encryption + passphrase live on the destination, not on
+                  each job. Two-mode UI: encrypted (repokey, the borg
+                  recommended default) or none. The other borg modes
+                  (keyfile, authenticated) are still honored by the
+                  backend for legacy shell-created configs but not
+                  exposed here. */}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <Label>Encryption</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBorgEncryptionEnabled(true)}
+                    className={`text-left p-2.5 rounded-md border text-sm transition-colors ${borgEncryptionEnabled ? "border-fuchsia-500 bg-fuchsia-500/5" : "border-border bg-background/40 hover:bg-white/5"}`}
+                  >
+                    <div className="font-medium">Encrypted (repokey)</div>
+                    <div className="text-[11px] text-muted-foreground">AES-256 + HMAC. Passphrase required to read the repo.</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBorgEncryptionEnabled(false)}
+                    className={`text-left p-2.5 rounded-md border text-sm transition-colors ${!borgEncryptionEnabled ? "border-amber-500 bg-amber-500/5" : "border-border bg-background/40 hover:bg-white/5"}`}
+                  >
+                    <div className="font-medium">No encryption</div>
+                    <div className="text-[11px] text-muted-foreground">Faster but data and checksums are in plain.</div>
+                  </button>
+                </div>
+                {borgEncryptionEnabled && (
+                  <div className="space-y-2 pt-1">
+                    <div>
+                      <Label htmlFor="borgPass">Passphrase</Label>
+                      <Input
+                        id="borgPass"
+                        type="password"
+                        value={borgPassphrase}
+                        onChange={(e) => setBorgPassphraseLocal(e.target.value)}
+                        placeholder={isEditing && editing?.has_passphrase
+                          ? "(unchanged — type to replace)"
+                          : "Long random string — store it somewhere safe"}
+                        className="font-mono mt-1"
+                      />
+                      {isEditing && editing?.has_passphrase && (
+                        <p className="text-[11px] text-muted-foreground mt-1">Leave blank to keep the saved passphrase.</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="borgPass2">Confirm passphrase</Label>
+                      <Input
+                        id="borgPass2"
+                        type="password"
+                        value={borgPassphrase2}
+                        onChange={(e) => setBorgPassphrase2(e.target.value)}
+                        placeholder="Type it again"
+                        className="font-mono mt-1"
+                      />
+                      {borgPassphrase && borgPassphrase2 && borgPassphrase !== borgPassphrase2 && (
+                        <p className="text-[11px] text-red-400 mt-1">Passphrases don't match.</p>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-amber-400/90">
+                      ⚠ Without this passphrase the repo cannot be decrypted — losing it means losing every backup. The passphrase is saved server-side at <code className="font-mono">borg-pass-{name || "&lt;name&gt;"}.txt</code> (chmod 0600) so jobs against this destination can use it transparently.
+                    </p>
+                  </div>
+                )}
+              </div>
             </>
           )}
           {type === "local" && (
@@ -4176,7 +4969,7 @@ function AddDestinationDialog({
                   Where scheduled / manual local backups write the <code className="font-mono">tar.zst</code> archive. Pick a USB drive below to auto-fill, or type the path manually.
                 </p>
               </div>
-              <UsbPicker onPick={(p) => setLocalPath(p)} />
+              <UsbPicker onPick={(p) => setLocalPath(p)} excludePaths={usedPaths} />
             </div>
           )}
           {error && (
@@ -4203,13 +4996,30 @@ function AddDestinationDialog({
 // so the operator can mount + format USB media without leaving the
 // "configure destination" flow.
 // ──────────────────────────────────────────────────────────────
-function UsbPicker({ onPick }: { onPick: (path: string) => void }) {
+function UsbPicker({
+  onPick,
+  excludePaths = [],
+}: {
+  onPick: (path: string) => void
+  // Hide a USB drive ONLY when an existing destination already targets
+  // its mountpoint root verbatim. Subdirectory uses don't claim the
+  // whole disk — both Local and Borg can share the same USB by
+  // pointing at different subdirs (`/mnt/usbX/borgbackup` for Borg,
+  // `/mnt/usbX/local-dump` for Local). The previous prefix-based
+  // filter was too greedy and made it impossible to add a second
+  // destination type once any one of them landed on the disk.
+  excludePaths?: string[]
+}) {
   const { data, mutate, isLoading } = useSWR<{ drives: UsbDrive[] }>(
     "/api/host-backups/usb-drives",
     fetcher,
     { refreshInterval: 0 },
   )
-  const drives = data?.drives ?? []
+  const normalized = new Set((excludePaths || []).map((p) => p.replace(/\/+$/, "")))
+  const drives = (data?.drives ?? []).filter((d) => {
+    const mp = (d.path_or_device || "").replace(/\/+$/, "")
+    return !mp || !normalized.has(mp)
+  })
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [formatTarget, setFormatTarget] = useState<UsbDrive | null>(null)
@@ -4549,16 +5359,15 @@ function ExtraPathsSection() {
                     </Badge>
                   )}
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2 text-red-500 hover:text-red-400 hover:bg-red-500/10 shrink-0"
+                <button
+                  type="button"
                   disabled={busyPath === p.path}
                   onClick={() => removePath(p.path)}
                   title="Remove this custom path"
+                  className="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-md border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {busyPath === p.path ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                </Button>
+                </button>
               </div>
             ))}
           </div>
@@ -4939,6 +5748,22 @@ function JobDetailModal({
     }
   }, [detail, running, runBaseline, onChanged])
 
+  // When the modal opens onto a job that's already running (last_run_at
+  // set but last_result still null), jump straight into streaming mode
+  // so the operator can resume watching from anywhere — including the
+  // "Manual backup in progress" banner on the Manual backups card and
+  // a click on a scheduled job row that's currently mid-run.
+  useEffect(() => {
+    if (!open || running || !detail) return
+    if (detail.last_run_at && !detail.last_result) {
+      // Baseline = empty so the exit condition still fires (any
+      // non-empty last_run_at + a non-null last_result will trip it).
+      setRunBaseline("")
+      setRunBaselineLogPath(detail.last_log_path ?? null)
+      setRunning(true)
+    }
+  }, [open, running, detail])
+
   // Reset on close.
   useEffect(() => {
     if (!open) {
@@ -5296,5 +6121,383 @@ function JobDetailModal({
       </Dialog>
 
     </>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────
+// ManualJobWatchModal
+// ──────────────────────────────────────────────────────────────
+// Sibling of JobDetailModal but tailored to manual / one-shot jobs.
+// A manual job has no schedule, no retention, no profile picker — and
+// once it has run it can't be re-run or edited (it's a frozen
+// snapshot of one trigger). So the modal collapses to:
+//   - the live log when the job is in flight
+//   - the destination details (only the fields that matter for the
+//     picked backend)
+//   - Close + Delete actions (Edit / Run / Disable don't apply)
+// ──────────────────────────────────────────────────────────────
+function ManualJobWatchModal({
+  jobId,
+  onClose,
+  onChanged,
+}: {
+  jobId: string | null
+  onClose: () => void
+  onChanged: () => void
+}) {
+  const open = jobId !== null
+  const [running, setRunning] = useState(false)
+  const [runBaselineLogPath, setRunBaselineLogPath] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  const { data: detail, mutate: refetch, isLoading } = useSWR<JobDetail>(
+    open ? `/api/host-backups/jobs/${encodeURIComponent(jobId!)}` : null,
+    fetcher,
+    { refreshInterval: running ? 2000 : 0 },
+  )
+  const { data: liveLog } = useSWR<{ content: string; log_path: string | null; size: number }>(
+    open && running ? `/api/host-backups/jobs/${encodeURIComponent(jobId!)}/log` : null,
+    fetcher,
+    { refreshInterval: 1500 },
+  )
+  const liveLogRef = useRef<HTMLPreElement | null>(null)
+  useEffect(() => {
+    if (running && liveLogRef.current) {
+      liveLogRef.current.scrollTop = liveLogRef.current.scrollHeight
+    }
+  }, [liveLog, running])
+
+  // Auto-detect in-progress runs (RUN_AT set but RESULT not yet
+  // persisted) and enter streaming mode on open.
+  useEffect(() => {
+    if (!open || running || !detail) return
+    if (detail.last_run_at && !detail.last_result) {
+      setRunBaselineLogPath(detail.last_log_path ?? null)
+      setRunning(true)
+    }
+  }, [open, running, detail])
+
+  // Exit streaming when both RUN_AT and RESULT are set.
+  useEffect(() => {
+    if (!running || !detail) return
+    if (detail.last_run_at && detail.last_result) {
+      setRunning(false)
+      setRunBaselineLogPath(null)
+      onChanged()
+    }
+  }, [detail, running, onChanged])
+
+  useEffect(() => {
+    if (!open) {
+      setRunning(false)
+      setRunBaselineLogPath(null)
+      setActionError(null)
+    }
+  }, [open])
+
+  const resultBadge = running
+    ? { label: "running", cls: "bg-blue-500/10 border-blue-500/40 text-blue-300" }
+    : detail?.last_result === "ok"
+      ? { label: "ok", cls: "bg-emerald-500/10 border-emerald-500/40 text-emerald-300" }
+      : detail?.last_result
+        ? { label: detail.last_result, cls: "bg-red-500/10 border-red-500/40 text-red-300" }
+        : null
+  const lastRunWhen = formatRunAt(detail?.last_run_at ?? null)
+  const destAccent =
+    detail?.method === "pbs" ? "text-purple-400"
+    : detail?.method === "borg" ? "text-fuchsia-400"
+    : "text-blue-400"
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
+        <DialogContent className="max-w-3xl bg-card border-border overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 flex-wrap text-base">
+              <PlayCircle className="h-5 w-5 text-purple-400" />
+              <span className="font-mono break-all">{detail?.id ?? jobId}</span>
+              {detail && (
+                <>
+                  <Badge variant="outline" className={`text-[10px] uppercase tracking-wide ${methodBadgeCls(detail.method)}`}>
+                    {detail.method}
+                  </Badge>
+                  <Badge variant="outline" className="text-[10px] text-purple-400 border-purple-400/40 bg-purple-500/5">
+                    manual / one-shot
+                  </Badge>
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              One-shot backup — captured at the time of the trigger. Cannot be re-run or edited.
+            </DialogDescription>
+          </DialogHeader>
+
+          {actionError && (
+            <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
+              {actionError}
+            </div>
+          )}
+
+          {isLoading || !detail ? (
+            <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading job…
+            </div>
+          ) : (
+            <ScrollArea className="max-h-[60vh] pr-2">
+              <div className="space-y-4 text-sm">
+                {/* Last run + live log */}
+                <section className="space-y-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5 text-green-500">
+                    <Clock className="h-3.5 w-3.5" /> Last run
+                  </h4>
+                  <div className="flex items-center gap-2 flex-wrap text-xs">
+                    {resultBadge ? (
+                      <span className={`px-2 py-0.5 rounded text-[10px] uppercase tracking-wide border inline-flex items-center gap-1 ${resultBadge.cls}`}>
+                        {running && <Loader2 className="h-3 w-3 animate-spin" />}
+                        {resultBadge.label}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">never run</span>
+                    )}
+                    {lastRunWhen && <span className="text-muted-foreground">{lastRunWhen}</span>}
+                  </div>
+                  {running ? (
+                    (() => {
+                      const sameOldLog =
+                        !!liveLog?.log_path &&
+                        !!runBaselineLogPath &&
+                        liveLog.log_path === runBaselineLogPath
+                      const showContent = liveLog?.content && !sameOldLog
+                      return (
+                        <div className="rounded-md border border-blue-500/40 bg-blue-500/5 p-2">
+                          <pre
+                            ref={liveLogRef}
+                            className="text-[11px] font-mono whitespace-pre-wrap break-all max-h-64 overflow-auto text-foreground/90"
+                          >
+{showContent ? liveLog!.content : "Waiting for runner to start…"}
+                          </pre>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-[10px] text-blue-300 inline-flex items-center gap-1.5">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              {showContent ? `live · ${formatBytes(liveLog?.size ?? 0)}` : "starting…"}
+                            </span>
+                            {showContent && liveLog?.log_path && (
+                              <span className="text-[10px] text-muted-foreground font-mono break-all">
+                                {liveLog.log_path}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })()
+                  ) : detail.last_log_tail && detail.last_log_tail.length > 0 ? (
+                    <div className="rounded-md border border-border bg-background/60 p-2">
+                      <pre className="text-[11px] font-mono whitespace-pre-wrap break-all max-h-48 overflow-auto text-foreground/90">
+{detail.last_log_tail.join("\n")}
+                      </pre>
+                      <div className="text-[10px] text-muted-foreground mt-2">
+                        tail · {detail.last_log_size > 0 ? formatBytes(detail.last_log_size) : "—"}
+                      </div>
+                    </div>
+                  ) : null}
+                </section>
+
+                {/* Destination — only the fields that apply to the
+                    picked backend. No Schedule/Retention/Profile here
+                    because manual jobs don't carry those. */}
+                <section className="space-y-1">
+                  <h4 className={`text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5 ${destAccent}`}>
+                    <HardDrive className="h-3.5 w-3.5" /> Destination
+                  </h4>
+                  {detail.method === "pbs" && (
+                    <>
+                      {detail.pbs_repository && (
+                        <Field icon={<Server className={`h-3 w-3 ${destAccent} opacity-80`} />} label="repository" value={detail.pbs_repository} mono />
+                      )}
+                      {detail.pbs_backup_id && (
+                        <Field icon={<Archive className={`h-3 w-3 ${destAccent} opacity-80`} />} label="backup-id" value={detail.pbs_backup_id} mono />
+                      )}
+                    </>
+                  )}
+                  {detail.method === "borg" && (
+                    <>
+                      {detail.borg_repo && (
+                        <Field icon={<Server className={`h-3 w-3 ${destAccent} opacity-80`} />} label="repo" value={detail.borg_repo} mono />
+                      )}
+                      <Field icon={<FileSearch className={`h-3 w-3 ${destAccent} opacity-80`} />} label="encryption" value={detail.borg_encrypt_mode} mono />
+                    </>
+                  )}
+                  {detail.method === "local" && detail.local_dest_dir && (
+                    <Field icon={<HardDrive className={`h-3 w-3 ${destAccent} opacity-80`} />} label="dir" value={detail.local_dest_dir} mono />
+                  )}
+                </section>
+              </div>
+            </ScrollArea>
+          )}
+
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────
+// PbsKeyfileRecoveryDialog
+// ──────────────────────────────────────────────────────────────
+// Drops the missing PBS keyfile back onto disk by pulling the escrow
+// blob from a `proxmenux-keyrecovery-<host>` snapshot and decrypting
+// it with the operator's recovery passphrase. Mirrors the shell's
+// hb_pbs_try_keyfile_recovery flow. Triggered from the banner in
+// DestinationsSection when the local keyfile is missing but at least
+// one escrow snapshot is present on a configured PBS.
+// ──────────────────────────────────────────────────────────────
+function PbsKeyfileRecoveryDialog({
+  open,
+  snapshots,
+  onClose,
+  onRecovered,
+}: {
+  open: boolean
+  snapshots: Array<{ repo_name: string; repo_repository: string; backup_id: string; source_host: string; backup_time: number; snapshot: string }>
+  onClose: () => void
+  onRecovered: () => void
+}) {
+  const [selectedKey, setSelectedKey] = useState<string>("")
+  const [passphrase, setPassphrase] = useState<string>("")
+  const [busy, setBusy] = useState<boolean>(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open) {
+      setSelectedKey("")
+      setPassphrase("")
+      setBusy(false)
+      setError(null)
+      return
+    }
+    if (snapshots.length >= 1 && !selectedKey) {
+      setSelectedKey(`${snapshots[0].repo_name}::${snapshots[0].snapshot}`)
+    }
+  }, [open, snapshots])
+
+  const selected = snapshots.find((s) => `${s.repo_name}::${s.snapshot}` === selectedKey) || null
+
+  async function handleRecover() {
+    if (!selected || !passphrase) return
+    setBusy(true)
+    setError(null)
+    try {
+      await fetchApi("/api/host-backups/pbs-recovery/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          repo_name: selected.repo_name,
+          snapshot: selected.snapshot,
+          passphrase,
+        }),
+      })
+      onRecovered()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v && !busy) onClose() }}>
+      <DialogContent className="max-w-lg bg-card border-border">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Lock className="h-5 w-5 text-emerald-400" />
+            Recover PBS keyfile
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            The encrypted keyfile blob is downloaded from PBS and decrypted with your recovery passphrase. The resulting key is written to <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code>.
+          </DialogDescription>
+        </DialogHeader>
+
+        {snapshots.length > 1 && (
+          <div className="space-y-1">
+            <Label className="text-xs">Recovery snapshot</Label>
+            <Select value={selectedKey} onValueChange={setSelectedKey}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {snapshots.map((s) => {
+                  let when: string
+                  try { when = new Date(s.backup_time * 1000).toLocaleString() }
+                  catch { when = String(s.backup_time) }
+                  return (
+                    <SelectItem key={`${s.repo_name}::${s.snapshot}`} value={`${s.repo_name}::${s.snapshot}`}>
+                      <span className="font-mono">{s.source_host}</span>
+                      <span className="text-muted-foreground ml-2">— {s.repo_name} · {when}</span>
+                    </SelectItem>
+                  )
+                })}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Pick the source host whose passphrase you remember — each install uploads its own escrow.
+            </p>
+          </div>
+        )}
+
+        {selected && (
+          <div className="text-xs space-y-1 px-3 py-2 rounded-md border border-border bg-background/40">
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Source host:</span>
+              <span className="font-mono">{selected.source_host}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">PBS:</span>
+              <span className="font-mono break-all">{selected.repo_repository}</span>
+            </div>
+          </div>
+        )}
+
+        <div>
+          <Label htmlFor="recoveryPass" className="text-xs">Recovery passphrase</Label>
+          <Input
+            id="recoveryPass"
+            type="password"
+            value={passphrase}
+            onChange={(e) => setPassphrase(e.target.value)}
+            placeholder="The passphrase set when the keyfile was created"
+            className="font-mono mt-1"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && passphrase && !busy) handleRecover()
+            }}
+          />
+        </div>
+
+        {error && (
+          <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
+            {error}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button
+            className="bg-emerald-500 hover:bg-emerald-600 text-white"
+            disabled={!selected || !passphrase || busy}
+            onClick={handleRecover}
+          >
+            {busy ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Lock className="h-4 w-4 mr-2" />
+            )}
+            Recover keyfile
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

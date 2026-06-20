@@ -99,32 +99,102 @@ _sb_run_local() {
   return 0
 }
 
+# Look up a borg destination's passphrase from the proxmenux state
+# directory. The shell convention is `borg-pass-<name>.txt` next to
+# `borg-targets.txt`; we resolve the `<name>` by scanning targets for
+# the one whose repository matches the runtime BORG_REPO.
+_sb_borg_resolve_password() {
+  local repo="$1"
+  local cfg="${HB_STATE_DIR:-/usr/local/share/proxmenux}/borg-targets.txt"
+  [[ -f "$cfg" && -n "$repo" ]] || return 1
+  local found_name="" line name target_repo
+  while IFS='|' read -r name target_repo _; do
+    [[ -z "$name" || -z "$target_repo" ]] && continue
+    if [[ "$target_repo" == "$repo" ]]; then
+      found_name="$name"
+      break
+    fi
+  done < "$cfg"
+  [[ -z "$found_name" ]] && return 1
+  local pf="${HB_STATE_DIR:-/usr/local/share/proxmenux}/borg-pass-${found_name}.txt"
+  [[ -r "$pf" ]] || return 1
+  cat "$pf"
+}
+
 _sb_run_borg() {
   local stage_root="$1"
   local archive_name="$2"
-  local borg_bin repo passphrase
+  local borg_bin repo passphrase encrypt_mode
 
-  borg_bin=$(hb_ensure_borg) || return 1
+  borg_bin=$(hb_ensure_borg) || { echo "borg binary not available"; return 1; }
   repo="${BORG_REPO:-}"
   passphrase="${BORG_PASSPHRASE:-}"
-  [[ -z "$repo" || -z "$passphrase" ]] && return 1
+  encrypt_mode="${BORG_ENCRYPT_MODE:-none}"
+  if [[ -z "$repo" ]]; then
+    echo "BORG_REPO not configured"
+    return 1
+  fi
+  # Empty passphrase + encrypted mode → look it up from the saved
+  # destination sidecar (the canonical place for borg credentials,
+  # same pattern as PBS). Jobs created against a destination that
+  # has its passphrase stored no longer need to duplicate it in the
+  # job .env.
+  if [[ -z "$passphrase" && "$encrypt_mode" != "none" ]]; then
+    passphrase=$(_sb_borg_resolve_password "$repo" 2>/dev/null || true)
+  fi
+  if [[ "$encrypt_mode" != "none" && -z "$passphrase" ]]; then
+    echo "BORG_PASSPHRASE is required when encryption is enabled (mode=$encrypt_mode)"
+    echo "  → save the passphrase on the destination or set it in the job .env"
+    return 1
+  fi
 
   # Re-export the credentials so child processes (borg, ssh) inherit
   # them. `source <job.env>` only assigns to the current shell — without
   # an explicit re-export, child `borg` calls drop back to ssh defaults
-  # and a remote repo silently auth-fails with no log trail (since the
-  # call is also `>/dev/null 2>&1`).
+  # and a remote repo silently auth-fails with no log trail.
   export BORG_PASSPHRASE="$passphrase"
   [[ -n "${BORG_RSH:-}" ]] && export BORG_RSH
   export BORG_RELOCATED_REPO_ACCESS_IS_OK=yes
   export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK=yes
 
-  if ! hb_borg_init_if_needed "$borg_bin" "$repo" "${BORG_ENCRYPT_MODE:-none}" >/dev/null 2>&1; then
+  # Probe the repo first when working with a local path. Three cases
+  # the operator hits regularly:
+  #   - path is a valid borg repo + creds match  → `borg list` works
+  #   - path is a valid borg repo + creds DON'T match  → explicit
+  #     "credentials don't match" error (a wrong passphrase saved on
+  #     the destination, typically)
+  #   - path exists, has files, but is NOT a borg repo → explicit
+  #     "path is not empty" error so the operator points at a fresh
+  #     subdirectory instead of hitting borg's confusing "There is
+  #     already something at <path>" message
+  if [[ "$repo" != ssh://* && -d "$repo" ]]; then
+    if ! "$borg_bin" list "$repo" </dev/null >/dev/null 2>&1; then
+      local repo_config="$repo/config"
+      if [[ -f "$repo_config" ]] && grep -qE '^\[repository\]' "$repo_config" 2>/dev/null; then
+        echo "Borg repository at ${repo} exists but the configured credentials don't match it."
+        echo "  → the saved passphrase or encryption mode for this destination is wrong."
+        return 1
+      fi
+      # Not a repo. If the directory isn't empty, init will fail with
+      # "There is already something at <path>". Detect and explain.
+      if find "$repo" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null | grep -q .; then
+        echo "Path ${repo} is not a borg repository AND is not empty."
+        echo "  → Borg refuses to initialize a repo where there are other files."
+        echo "  → Point the destination at a fresh empty subdirectory (e.g. ${repo}/borgbackup)."
+        return 1
+      fi
+    fi
+  fi
+
+  # Send stderr to stdout so the caller's `>>$log_file 2>&1` captures
+  # borg's diagnostics. The previous `>/dev/null 2>&1` silenced every
+  # error and made "Job finished with errors" impossible to debug.
+  if ! hb_borg_init_if_needed "$borg_bin" "$repo" "$encrypt_mode" 2>&1; then
     return 1
   fi
 
   (cd "$stage_root" && "$borg_bin" create --stats \
-    "${repo}::${archive_name}" rootfs metadata) >/dev/null 2>&1 || return 1
+    "${repo}::${archive_name}" rootfs metadata) 2>&1 || return 1
 
   "$borg_bin" prune -v --list "$repo" \
     ${KEEP_LAST:+--keep-last "$KEEP_LAST"} \
@@ -133,7 +203,7 @@ _sb_run_borg() {
     ${KEEP_WEEKLY:+--keep-weekly "$KEEP_WEEKLY"} \
     ${KEEP_MONTHLY:+--keep-monthly "$KEEP_MONTHLY"} \
     ${KEEP_YEARLY:+--keep-yearly "$KEEP_YEARLY"} \
-    >/dev/null 2>&1 || true
+    2>&1 || true
 
   echo "BORG_ARCHIVE=${archive_name}"
   return 0
@@ -145,39 +215,56 @@ _sb_run_borg() {
 # fallback when the job .env carries an empty PBS_PASSWORD — happens
 # when the operator picks a PVE-managed PBS in the wizard (the .pw
 # file is the canonical credential location for those).
+#
+# Implemented in pure bash because the previous awk version relied on
+# `match($0, regex, arr)` which is a gawk extension and silently no-ops
+# on mawk / busybox awk — leaving the password unresolved and breaking
+# every manual / scheduled PBS run against a PVE-managed storage.
 _sb_pbs_resolve_password() {
   local repo="$1"
   local cfg=/etc/pve/storage.cfg
-  [[ -f "$cfg" ]] || return 1
-  awk -v target="$repo" '
-    /^[a-z]+:[[:space:]]+/ {
-      if (prev_type == "pbs" && prev_name != "" && server != "" && datastore != "") {
-        u = (username != "" ? username : "root@pam")
-        built = u "@" server ":" datastore
-        if (built == target) { print prev_name; exit 0 }
-      }
-      match($0, /^([a-z]+):[[:space:]]+(.+)$/, m)
-      prev_type = m[1]; prev_name = m[2]
-      server=""; datastore=""; username=""
-      next
-    }
-    /^[[:space:]]+server[[:space:]]+/        { sub(/^[[:space:]]+server[[:space:]]+/, ""); server=$0; next }
-    /^[[:space:]]+datastore[[:space:]]+/     { sub(/^[[:space:]]+datastore[[:space:]]+/, ""); datastore=$0; next }
-    /^[[:space:]]+username[[:space:]]+/      { sub(/^[[:space:]]+username[[:space:]]+/, ""); username=$0; next }
-    END {
-      if (prev_type == "pbs" && prev_name != "" && server != "" && datastore != "") {
-        u = (username != "" ? username : "root@pam")
-        built = u "@" server ":" datastore
-        if (built == target) print prev_name
-      }
-    }
-  ' "$cfg" | head -n1 | {
-    read -r name || true
-    [[ -z "$name" ]] && return 1
-    local pw_file="/etc/pve/priv/storage/${name}.pw"
-    [[ -r "$pw_file" ]] || return 1
-    cat "$pw_file"
+  [[ -f "$cfg" && -n "$repo" ]] || return 1
+
+  local current_type="" current_name="" server="" datastore="" username=""
+  local found_name=""
+
+  _try_match() {
+    [[ "$current_type" == "pbs" && -n "$current_name" && -n "$server" && -n "$datastore" ]] || return
+    local u="${username:-root@pam}"
+    local built="${u}@${server}:${datastore}"
+    if [[ "$built" == "$repo" ]]; then
+      found_name="$current_name"
+    fi
   }
+
+  local line key val
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^([a-z]+):[[:space:]]+(.+)$ ]]; then
+      _try_match
+      [[ -n "$found_name" ]] && break
+      current_type="${BASH_REMATCH[1]}"
+      current_name="${BASH_REMATCH[2]}"
+      server=""; datastore=""; username=""
+      continue
+    fi
+    if [[ "$line" =~ ^[[:space:]]+([a-zA-Z_]+)[[:space:]]+(.+)$ ]]; then
+      key="${BASH_REMATCH[1]}"
+      val="${BASH_REMATCH[2]}"
+      case "$key" in
+        server)    server="$val" ;;
+        datastore) datastore="$val" ;;
+        username)  username="$val" ;;
+      esac
+    fi
+  done < "$cfg"
+  # Final block may not have triggered the start-of-next-block check.
+  [[ -z "$found_name" ]] && _try_match
+  unset -f _try_match 2>/dev/null
+
+  [[ -z "$found_name" ]] && return 1
+  local pw_file="/etc/pve/priv/storage/${found_name}.pw"
+  [[ -r "$pw_file" ]] || return 1
+  cat "$pw_file"
 }
 
 _sb_run_pbs() {
@@ -222,6 +309,28 @@ _sb_run_pbs() {
       ${KEEP_MONTHLY:+--keep-monthly "$KEEP_MONTHLY"} \
       ${KEEP_YEARLY:+--keep-yearly "$KEEP_YEARLY"} \
       2>&1 || true
+
+  # Upload the keyfile recovery blob alongside the main backup so the
+  # operator can rebuild the keyfile on a fresh host. Only fires when:
+  #   - this backup was encrypted (PBS_KEYFILE set), AND
+  #   - the operator configured a recovery passphrase
+  #     (pbs-key.recovery.enc exists, created by the UI's
+  #     /pbs-recovery/setup endpoint or shell hb_pbs_setup_recovery).
+  # The blob is already passphrase-encrypted by openssl, so we do NOT
+  # pass --keyfile here: PBS stores it as a plain blob retrievable
+  # without the keyfile, which is the whole point of the escrow.
+  local recovery_enc="/usr/local/share/proxmenux/pbs-key.recovery.enc"
+  if [[ -n "${PBS_KEYFILE:-}" && -f "$recovery_enc" ]]; then
+    env PBS_PASSWORD="$PBS_PASSWORD" \
+        PBS_FINGERPRINT="${PBS_FINGERPRINT:-}" \
+      proxmox-backup-client backup \
+        "keyrecovery.conf:${recovery_enc}" \
+        --repository "$PBS_REPOSITORY" \
+        --backup-type host \
+        --backup-id "proxmenux-keyrecovery-$(hostname)" \
+        --backup-time "$epoch" \
+        2>&1 || true
+  fi
 
   echo "PBS_SNAPSHOT=host/${backup_id}/${epoch}"
   return 0
