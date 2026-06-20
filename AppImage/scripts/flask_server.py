@@ -13372,6 +13372,13 @@ def api_pbs_recovery_available():
             if not bid.startswith('proxmenux-keyrecovery-'):
                 continue
             t = it.get('backup-time', 0)
+            # ISO timestamp — proxmox-backup-client rejects the
+            # raw epoch with "unable to parse backup snapshot path".
+            from datetime import datetime, timezone
+            try:
+                iso = datetime.fromtimestamp(int(t), tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+            except (ValueError, OSError):
+                iso = str(t)
             if bid not in latest or t > latest[bid]['backup_time']:
                 latest[bid] = {
                     'repo_name': repo['name'],
@@ -13379,7 +13386,7 @@ def api_pbs_recovery_available():
                     'backup_id': bid,
                     'source_host': bid[len('proxmenux-keyrecovery-'):],
                     'backup_time': t,
-                    'snapshot': f"host/{bid}/{t}",
+                    'snapshot': f"host/{bid}/{iso}",
                 }
         out.extend(latest.values())
     out.sort(key=lambda x: x['backup_time'], reverse=True)
@@ -15358,10 +15365,22 @@ def _list_pbs_snapshots_for_repo(repo: dict, timeout: int = 15) -> tuple[list, s
         if backup_type != 'host':
             continue
         backup_id = it.get('backup-id', '')
+        # Hide internal keyrecovery escrow snapshots — they're a
+        # ProxMenux implementation detail, not user-facing backups.
+        # See _PBS_RECOVERY_ENC_PATH and the runner upload step.
+        if backup_id.startswith('proxmenux-keyrecovery-'):
+            continue
         backup_time = it.get('backup-time', 0)
-        # The canonical snapshot identifier the client accepts back —
-        # exactly what we'd pass to `proxmox-backup-client restore`.
-        snapshot = f"{backup_type}/{backup_id}/{backup_time}"
+        # proxmox-backup-client expects the timestamp portion as an
+        # ISO-8601 UTC string ("2026-06-20T20:23:17Z"), NOT the raw
+        # epoch — passing the epoch back makes it reject the path
+        # with "unable to parse backup snapshot path".
+        from datetime import datetime, timezone
+        try:
+            iso = datetime.fromtimestamp(int(backup_time), tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        except (ValueError, OSError):
+            iso = str(backup_time)
+        snapshot = f"{backup_type}/{backup_id}/{iso}"
         # A snapshot is "encrypted" when ANY of its files reports a
         # crypt-mode other than `none`. Used to render the lock badge.
         files = it.get('files', []) or []
@@ -15474,8 +15493,53 @@ def _list_borg_archives_for_target(target: dict, timeout: int = 30) -> tuple[lis
     except json.JSONDecodeError:
         return [], 'borg list output was not valid JSON'
 
+    archives = data.get('archives', []) or []
+
+    # `borg list --json` only carries archive name + start time. Pull
+    # the per-archive size with a parallel batch of `borg info --json
+    # repo::name` calls so the UI can render a real number instead of
+    # "0 MB". 4-way concurrency keeps the wall-clock acceptable on
+    # repos with dozens of archives. Results are returned alongside
+    # the listing so callers don't have to re-issue per-row probes.
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _info_size(name: str) -> int:
+        if not name:
+            return 0
+        try:
+            ri = subprocess.run(
+                ['borg', 'info', '--json', f'{repo}::{name}'],
+                capture_output=True, text=True, timeout=15, env=env,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            return 0
+        if ri.returncode != 0:
+            return 0
+        try:
+            info = json.loads(ri.stdout)
+        except (json.JSONDecodeError, ValueError):
+            return 0
+        arcs = info.get('archives') or []
+        if not arcs:
+            return 0
+        stats = arcs[0].get('stats') or {}
+        # Prefer original (uncompressed, undeduplicated) — matches what
+        # users expect when comparing to PBS source-data size.
+        v = stats.get('original_size') or stats.get('compressed_size') or 0
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return 0
+
+    names = [a.get('name') or '' for a in archives]
+    sizes: dict[str, int] = {}
+    if names:
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            for nm, sz in zip(names, ex.map(_info_size, names)):
+                sizes[nm] = sz
+
     out: list = []
-    for arc in data.get('archives', []):
+    for arc in archives:
         name = arc.get('name') or ''
         start_iso = arc.get('start') or arc.get('time') or ''
         # Borg timestamps come as ISO-8601 with microseconds — convert
@@ -15485,7 +15549,6 @@ def _list_borg_archives_for_target(target: dict, timeout: int = 30) -> tuple[lis
         if start_iso:
             try:
                 from datetime import datetime
-                # Drop microseconds if present
                 cleaned = start_iso.split('.')[0]
                 dt = datetime.strptime(cleaned, '%Y-%m-%dT%H:%M:%S')
                 backup_time = int(dt.timestamp())
@@ -15495,21 +15558,17 @@ def _list_borg_archives_for_target(target: dict, timeout: int = 30) -> tuple[lis
             'backend': 'borg',
             'repo_name': target['name'],
             'repo_repository': repo,
-            'snapshot': name,                # canonical id used to extract
+            'snapshot': name,
             'backup_type': 'archive',
             'backup_id': name,
             'backup_time': backup_time,
-            'size_bytes': 0,                 # borg list omits size; info per-archive is expensive
+            'size_bytes': sizes.get(name, 0),
             'owner': arc.get('username'),
             'protected': False,
             'files': [],
             'fingerprint': None,
             'borg_id': arc.get('id'),
             'borg_start_iso': start_iso,
-            # Encrypted iff the destination's repo mode is not "none".
-            # Borg archives inherit the encryption of the repo they
-            # live in (cannot mix per-archive), so the target's flag
-            # is authoritative.
             'encrypted': (target.get('encrypt_mode') or 'repokey') != 'none',
         })
     return out, None
@@ -15856,6 +15915,286 @@ def api_host_backups_archives():
 
     archives.sort(key=lambda a: a['mtime'], reverse=True)
     return jsonify({'archives': archives})
+
+
+# ──────────────────────────────────────────────────────────────
+# Snapshot inspection — extract + analyze backend
+# ──────────────────────────────────────────────────────────────
+# The "View contents" button in the Available Archives modal needs
+# to read manifest + restore plan + file list out of ANY backup —
+# PBS, Borg, or local. The trick is that PBS and Borg snapshots
+# aren't files: they have to be extracted to a staging directory
+# first. These helpers + endpoint do exactly that, reuse the four
+# restore-side shell scripts (parse_manifest / run_restore), and
+# clean the staging tree before returning.
+# Staging lives under /tmp/pmnx-inspect-XXX and is removed in the
+# `finally` block — there's nothing to leak even if the request
+# fails mid-flight.
+
+def _inspect_extract_to_staging(source: str, repo_dict: dict, snapshot: str, staging: str) -> tuple:
+    """Pull a snapshot into <staging>. Returns (ok, error_message).
+    PBS: pulls the `hostcfg.pxar` archive (the canonical name the
+    ProxMenux backup uses) and lets the client write straight into
+    staging — the pxar already wraps the rootfs/+metadata/ layout.
+    Borg: `borg extract` into staging; if the archive used absolute
+    paths, the wrapped tree is normalized by _inspect_normalize_layout.
+    Local: tar/zst/gz extract into staging."""
+    if source == 'pbs':
+        pwd = _resolve_pbs_password(repo_dict['name'])
+        if not pwd:
+            return False, f"no password for PBS repo \"{repo_dict['name']}\""
+        env = {**os.environ, 'PBS_PASSWORD': pwd}
+        fp = _resolve_pbs_fingerprint(repo_dict['name'])
+        if fp:
+            env['PBS_FINGERPRINT'] = fp
+        cmd = ['proxmox-backup-client', 'restore',
+               '--repository', repo_dict['repository'],
+               snapshot, 'hostcfg.pxar', staging]
+        if os.path.isfile(_PBS_KEYFILE_PATH):
+            cmd.extend(['--keyfile', _PBS_KEYFILE_PATH])
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=900, env=env)
+        except (subprocess.TimeoutExpired, OSError) as e:
+            return False, str(e)
+        if r.returncode != 0:
+            return False, (r.stderr.strip() or r.stdout.strip() or 'pbs restore failed')[:500]
+        return True, None
+
+    if source == 'borg':
+        env = _borg_env_for(repo_dict)
+        cmd = ['borg', 'extract', f"{repo_dict['repository']}::{snapshot}"]
+        try:
+            r = subprocess.run(cmd, cwd=staging, capture_output=True, text=True, timeout=900, env=env)
+        except (subprocess.TimeoutExpired, OSError) as e:
+            return False, str(e)
+        if r.returncode != 0:
+            return False, (r.stderr.strip() or r.stdout.strip() or 'borg extract failed')[:500]
+        return True, None
+
+    if source == 'local':
+        archive_path = repo_dict.get('path') or ''
+        if not os.path.isfile(archive_path):
+            return False, f'local archive not found: {archive_path}'
+        if archive_path.endswith('.tar.zst'):
+            cmd = ['tar', '--zstd', '-xf', archive_path, '-C', staging]
+        elif archive_path.endswith(('.tar.gz', '.tgz')):
+            cmd = ['tar', '-xzf', archive_path, '-C', staging]
+        elif archive_path.endswith('.tar'):
+            cmd = ['tar', '-xf', archive_path, '-C', staging]
+        else:
+            return False, f'unknown archive type: {archive_path}'
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+        except (subprocess.TimeoutExpired, OSError) as e:
+            return False, str(e)
+        if r.returncode != 0:
+            return False, (r.stderr.strip() or 'tar extract failed')[:500]
+        return True, None
+
+    return False, f'unknown source: {source}'
+
+
+def _inspect_normalize_layout(staging: str) -> bool:
+    """Coerce arbitrary backup layouts into the canonical
+    rootfs/+metadata/ structure that parse_manifest.sh / run_restore.sh
+    expect. Mirrors backup_host.sh::_rs_check_layout without the dialogs."""
+    if os.path.isdir(os.path.join(staging, 'rootfs')):
+        return True
+    # Case 2: rootfs/ nested one level deep (Borg with absolute paths).
+    try:
+        for entry in os.listdir(staging):
+            sub = os.path.join(staging, entry)
+            if not os.path.isdir(sub):
+                continue
+            inner_rootfs = os.path.join(sub, 'rootfs')
+            if os.path.isdir(inner_rootfs):
+                shutil.move(inner_rootfs, os.path.join(staging, 'rootfs'))
+                inner_meta = os.path.join(sub, 'metadata')
+                if os.path.isdir(inner_meta):
+                    shutil.move(inner_meta, os.path.join(staging, 'metadata'))
+                return True
+    except OSError:
+        return False
+    # Case 3: flat layout — etc/, var/, root/, usr/ extracted at top.
+    flat_indicators = ('etc', 'var', 'root', 'usr')
+    if any(os.path.isdir(os.path.join(staging, x)) for x in flat_indicators):
+        import tempfile
+        tmp = tempfile.mkdtemp(prefix='.rootfs_wrap.', dir=staging)
+        for entry in os.listdir(staging):
+            src = os.path.join(staging, entry)
+            if src == tmp:
+                continue
+            try:
+                shutil.move(src, os.path.join(tmp, entry))
+            except OSError:
+                pass
+        shutil.move(tmp, os.path.join(staging, 'rootfs'))
+        os.makedirs(os.path.join(staging, 'metadata'), exist_ok=True)
+        return True
+    return False
+
+
+def _inspect_compose_json(staging: str) -> dict:
+    """Run the restore-aware scripts against the normalized staging and
+    merge their JSON outputs into one dict the UI can render. Best-
+    effort: a failure in one section reports an error in that section
+    only, the rest of the report still comes back."""
+    scripts_dir = f'{_PROXMENUX_SCRIPTS_DIR}/backup_restore/restore'
+    out: dict = {}
+
+    # ── Manifest ──
+    # Many in-the-wild backups don't ship a manifest.json (the
+    # collectors that generate it are wired up but not invoked by
+    # the current backup_host.sh / run_scheduled_backup.sh). When
+    # that's the case, set `manifest_missing=True` so the UI shows
+    # a soft informational note instead of a red error — and skip
+    # run_restore.sh entirely since it would only repeat the
+    # "no manifest" message.
+    try:
+        r = subprocess.run(['bash', f'{scripts_dir}/parse_manifest.sh', staging],
+                           capture_output=True, text=True, timeout=30)
+        if r.returncode == 0 and r.stdout.strip():
+            try:
+                out['manifest'] = json.loads(r.stdout)
+            except json.JSONDecodeError:
+                out['manifest_error'] = 'parse_manifest output was not valid JSON'
+        else:
+            err = (r.stderr.strip() or 'parse_manifest failed')[:500]
+            if 'no manifest.json' in err.lower():
+                out['manifest_missing'] = True
+            else:
+                out['manifest_error'] = err
+    except (subprocess.TimeoutExpired, OSError) as e:
+        out['manifest_error'] = str(e)
+
+    # ── Full preflight (storage + network + drivers + plan) ──
+    # Only run when a manifest is actually present — run_restore.sh
+    # uses it as input, and without one the report is just a repeat
+    # of the parse_manifest failure (already surfaced above).
+    if out.get('manifest'):
+        run_script = f'{scripts_dir}/run_restore.sh'
+        try:
+            r = subprocess.run(['bash', run_script, staging, '--mode', 'full', '--json'],
+                               capture_output=True, text=True, timeout=180)
+            if r.stdout.strip():
+                try:
+                    out['plan'] = json.loads(r.stdout)
+                except json.JSONDecodeError:
+                    out['plan_raw_stderr'] = r.stderr[:1000]
+                    out['plan_error'] = 'run_restore output was not valid JSON'
+            else:
+                out['plan_error'] = (r.stderr.strip() or 'no report from run_restore')[:500]
+        except (subprocess.TimeoutExpired, OSError) as e:
+            out['plan_error'] = str(e)
+
+    # ── File listing (capped, for the Files tab) ──
+    rootfs = os.path.join(staging, 'rootfs')
+    metadata = os.path.join(staging, 'metadata')
+    if os.path.isdir(rootfs):
+        files: list = []
+        limit = 5000
+        truncated = False
+        for root, dirs, fnames in os.walk(rootfs):
+            rel_dir = os.path.relpath(root, rootfs)
+            if rel_dir == '.':
+                rel_dir = ''
+            depth = rel_dir.count(os.sep) + (1 if rel_dir else 0)
+            if depth > 6:
+                dirs[:] = []
+                continue
+            for fn in fnames:
+                full = os.path.join(root, fn)
+                try:
+                    sz = os.path.getsize(full)
+                except OSError:
+                    sz = 0
+                files.append({
+                    'path': ('/' + rel_dir + '/' + fn) if rel_dir else ('/' + fn),
+                    'size': sz,
+                })
+                if len(files) >= limit:
+                    truncated = True
+                    break
+            if truncated:
+                break
+        out['files'] = files
+        out['files_truncated'] = truncated
+        out['files_total_count'] = len(files)
+
+    # ── Bundle the loose metadata sidecars for quick reference ──
+    if os.path.isdir(metadata):
+        meta_view: dict = {}
+        for fname in ('run_info.env', 'pveversion.txt', 'selected_paths.txt',
+                      'missing_paths.txt', 'sha256sums.txt'):
+            fp = os.path.join(metadata, fname)
+            if os.path.isfile(fp):
+                try:
+                    with open(fp, encoding='utf-8', errors='replace') as f:
+                        meta_view[fname] = f.read()
+                except OSError:
+                    pass
+        out['metadata_files'] = meta_view
+
+    return out
+
+
+@app.route('/api/host-backups/inspect-archive', methods=['POST'])
+@require_auth
+def api_host_backups_inspect_archive():
+    """One-shot 'View Contents' endpoint for any backend. Extracts the
+    snapshot to a temp staging dir, runs the restore-side tools, then
+    cleans up. Body:
+      {source: "pbs"|"borg"|"local", repo_name?, snapshot?, path?}
+    """
+    payload = request.get_json(silent=True) or {}
+    source = (payload.get('source') or '').strip()
+    if source not in ('pbs', 'borg', 'local'):
+        return jsonify({'error': 'source must be pbs, borg, or local'}), 400
+
+    repo_dict: dict = {}
+    snapshot = ''
+    if source == 'pbs':
+        repo_name = (payload.get('repo_name') or '').strip()
+        snapshot = (payload.get('snapshot') or '').strip()
+        if not repo_name or not snapshot:
+            return jsonify({'error': 'repo_name and snapshot are required for pbs'}), 400
+        for r in _list_pbs_destinations():
+            if r.get('name') == repo_name:
+                repo_dict = r
+                break
+        if not repo_dict:
+            return jsonify({'error': f'PBS repo "{repo_name}" not configured'}), 404
+    elif source == 'borg':
+        repo_name = (payload.get('repo_name') or '').strip()
+        snapshot = (payload.get('snapshot') or '').strip()
+        if not repo_name or not snapshot:
+            return jsonify({'error': 'repo_name and snapshot are required for borg'}), 400
+        for r in _list_borg_destinations():
+            if r.get('name') == repo_name:
+                repo_dict = r
+                break
+        if not repo_dict:
+            return jsonify({'error': f'Borg repo "{repo_name}" not configured'}), 404
+    else:  # local
+        path = (payload.get('path') or '').strip()
+        if not path or not os.path.isfile(path):
+            return jsonify({'error': f'local archive not found: {path}'}), 404
+        repo_dict = {'path': path}
+
+    import tempfile
+    staging = tempfile.mkdtemp(prefix='pmnx-inspect-')
+    try:
+        ok, err = _inspect_extract_to_staging(source, repo_dict, snapshot, staging)
+        if not ok:
+            return jsonify({'error': err}), 500
+        if not _inspect_normalize_layout(staging):
+            return jsonify({'error': 'archive layout not recognized — no rootfs/ found'}), 500
+        return jsonify(_inspect_compose_json(staging))
+    finally:
+        try:
+            shutil.rmtree(staging, ignore_errors=True)
+        except OSError:
+            pass
 
 
 @app.route('/api/host-backups/archives/<path:archive_id>/manifest', methods=['GET'])

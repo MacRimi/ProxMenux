@@ -627,6 +627,33 @@ hb_prepare_staging() {
         find . -type f -print0 | sort -z | xargs -0 sha256sum 2>/dev/null \
             > "$meta/checksums.sha256" || true
     )
+
+    # ── Structured manifest.json (proxmenux_backup_manifest) ──
+    # build_manifest.sh composes the collectors output into the
+    # exact JSON shape parse_manifest.sh + run_restore.sh expect.
+    # Without it, every restore flow degrades to "no manifest found"
+    # and the Monitor's View Contents / restore preview shows nothing.
+    # The collectors live next to this library file.
+    local _hb_lib_dir _hb_collector_dir _hb_build_manifest
+    _hb_lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    _hb_collector_dir="$_hb_lib_dir/collectors"
+    _hb_build_manifest="$_hb_collector_dir/build_manifest.sh"
+    if [[ -x "$_hb_build_manifest" ]]; then
+        local -a _hb_archived=()
+        if [[ -s "$meta/selected_paths.txt" ]]; then
+            mapfile -t _hb_archived < "$meta/selected_paths.txt"
+        fi
+        if (( ${#_hb_archived[@]} > 0 )); then
+            bash "$_hb_build_manifest" --paths-archived "${_hb_archived[@]}" \
+                > "$staging_root/manifest.json" 2>/dev/null || true
+        else
+            bash "$_hb_build_manifest" \
+                > "$staging_root/manifest.json" 2>/dev/null || true
+        fi
+        # Drop the file if the collectors emitted nothing useful so
+        # parse_manifest doesn't read a 0-byte JSON downstream.
+        [[ -s "$staging_root/manifest.json" ]] || rm -f "$staging_root/manifest.json"
+    fi
 }
 
 hb_load_restore_paths() {

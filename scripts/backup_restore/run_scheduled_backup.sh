@@ -193,8 +193,13 @@ _sb_run_borg() {
     return 1
   fi
 
+  # Include manifest.json (top-level) when present. Borg needs the
+  # paths spelled out explicitly — without this, parse_manifest can't
+  # find the schema'd manifest on a restored Borg archive.
+  local -a _borg_paths=(rootfs metadata)
+  [[ -f "$stage_root/manifest.json" ]] && _borg_paths+=(manifest.json)
   (cd "$stage_root" && "$borg_bin" create --stats \
-    "${repo}::${archive_name}" rootfs metadata) 2>&1 || return 1
+    "${repo}::${archive_name}" "${_borg_paths[@]}") 2>&1 || return 1
 
   "$borg_bin" prune -v --list "$repo" \
     ${KEEP_LAST:+--keep-last "$KEEP_LAST"} \
@@ -271,9 +276,14 @@ _sb_run_pbs() {
   local stage_root="$1"
   local backup_id="$2"
   local epoch="$3"
+  # Stage the WHOLE root (rootfs/ + metadata/ + manifest.json), not
+  # just rootfs/. Mirrors backup_host.sh::_bk_pbs (the TUI flow) — and
+  # parse_manifest.sh / run_restore.sh need metadata/ + manifest.json
+  # to compose a meaningful restore plan. With only rootfs/ in the
+  # pxar, View Contents reports "no manifest.json" forever.
   local -a cmd=(
     proxmox-backup-client backup
-    "hostcfg.pxar:${stage_root}/rootfs"
+    "hostcfg.pxar:${stage_root}"
     --repository "$PBS_REPOSITORY"
     --backup-type host
     --backup-id "$backup_id"
@@ -378,7 +388,12 @@ main() {
   if [[ "${PROFILE_MODE:-default}" == "custom" && -f "${JOBS_DIR}/${job_id}.paths" ]]; then
     mapfile -t paths < "${JOBS_DIR}/${job_id}.paths"
   else
-    mapfile -t paths < <(hb_default_profile_paths)
+    # Default profile = base paths + operator-saved extras (the
+    # TUI flow does the same — see hb_resolve_paths_mode in
+    # lib_host_backup_common.sh). Without the extras line, the
+    # `backup-extra-paths.txt` set in Settings was silently
+    # ignored for scheduled / manual runs from the Monitor.
+    mapfile -t paths < <(hb_default_profile_paths; hb_load_extra_paths)
   fi
 
   if [[ ${#paths[@]} -eq 0 ]]; then

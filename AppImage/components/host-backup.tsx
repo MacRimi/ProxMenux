@@ -36,6 +36,13 @@ import {
   Power,
   RefreshCw,
   Lock,
+  Eye,
+  Network,
+  Cpu,
+  Package,
+  ShieldCheck,
+  Info,
+  ListTree,
 } from "lucide-react"
 import { fetchApi, getApiUrl } from "../lib/api-config"
 import { formatStorage } from "../lib/utils"
@@ -676,12 +683,14 @@ export function HostBackup() {
                 const localJobId = u.local?.job_id
                 const localHost = u.local?.source_hostname
                 const localPath = u.local?.path
+                // Same palette as the DestinationRow accents so each
+                // backend reads identically across the two cards.
                 const sourceBadgeCls =
                   u.source === "pbs"
-                    ? "text-purple-300 border-purple-400/40 bg-purple-500/5"
+                    ? "text-purple-400 border-purple-500/20 bg-purple-500/10"
                     : u.source === "borg"
-                      ? "text-cyan-300 border-cyan-400/40 bg-cyan-500/5"
-                      : "text-emerald-300 border-emerald-400/40 bg-emerald-500/5"
+                      ? "text-fuchsia-400 border-fuchsia-500/20 bg-fuchsia-500/10"
+                      : "text-blue-400 border-blue-500/20 bg-blue-500/10"
                 return (
                   <button
                     key={`${u.source}:${u.display_id}`}
@@ -712,7 +721,7 @@ export function HostBackup() {
                         </span>
                         <span className="inline-flex items-center gap-1">
                           <HardDrive className="h-3 w-3" />
-                          {formatStorage(u.size_bytes)}
+                          {formatBytes(u.size_bytes)}
                         </span>
                         <span title={u.source_label}>
                           at: <code className="font-mono">{u.source_label}</code>
@@ -954,6 +963,7 @@ function InspectModal({
   )
   const [showArchiveFullLog, setShowArchiveFullLog] = useState(false)
   const [showDeleteArchiveConfirm, setShowDeleteArchiveConfirm] = useState(false)
+  const [viewingContents, setViewingContents] = useState(false)
   const [deletingArchive, setDeletingArchive] = useState(false)
   const [archiveDeleteResult, setArchiveDeleteResult] = useState<string[] | null>(null)
 
@@ -1199,7 +1209,7 @@ function InspectModal({
                   <code className="font-mono">{remoteArc.backend === "pbs" ? `${remoteArc.backup_type}/${remoteArc.backup_id}` : remoteArc.backup_id}</code>
                 </div>
                 <div><span className="text-muted-foreground">Snapshot time:</span> {formatMtime(remoteArc.backup_time)}</div>
-                {remoteArc.size_bytes > 0 && <div><span className="text-muted-foreground">Size:</span> {formatStorage(remoteArc.size_bytes)}</div>}
+                {remoteArc.size_bytes > 0 && <div><span className="text-muted-foreground">Size:</span> {formatBytes(remoteArc.size_bytes)}</div>}
                 {remoteArc.owner && <div><span className="text-muted-foreground">Owner:</span> <code className="font-mono">{remoteArc.owner}</code></div>}
                 {remoteArc.borg_id && <div className="sm:col-span-2"><span className="text-muted-foreground">Borg id:</span> <code className="font-mono text-[10px] break-all">{remoteArc.borg_id}</code></div>}
               </div>
@@ -1226,14 +1236,24 @@ function InspectModal({
                     The server will {remoteArc.backend === "pbs" ? "restore the snapshot from PBS" : "borg-extract the archive"} and pack it as a <code className="font-mono">.tar.zst</code>, then stream it to your browser. The extraction only starts when you click Download.
                   </p>
                 </div>
-                <Button onClick={downloadArchive} disabled={downloading}>
-                  {downloading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4 mr-2" />
-                  )}
-                  Download
-                </Button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    onClick={() => setViewingContents(true)}
+                    title="Extract this snapshot to a temp dir and show manifest, restore plan, files and metadata as a HTML report"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View contents
+                  </Button>
+                  <Button onClick={downloadArchive} disabled={downloading}>
+                    {downloading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4 mr-2" />
+                    )}
+                    Download
+                  </Button>
+                </div>
               </div>
 
               {exportTask && (
@@ -1247,7 +1267,7 @@ function InspectModal({
                     <div className="text-red-500 mt-1">{exportTask.error}</div>
                   )}
                   {exportTask.state === "completed" && exportTask.size_bytes > 0 && (
-                    <div className="text-emerald-400">Packed size: {formatStorage(exportTask.size_bytes)}</div>
+                    <div className="text-emerald-400">Packed size: {formatBytes(exportTask.size_bytes)}</div>
                   )}
                 </div>
               )}
@@ -1358,6 +1378,14 @@ function InspectModal({
             </Button>
             <Button
               variant="outline"
+              onClick={() => setViewingContents(true)}
+              title="Extract this snapshot to a temp dir and show manifest, restore plan, files and metadata as a HTML report"
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              View contents
+            </Button>
+            <Button
+              variant="outline"
               onClick={runPreflight}
               disabled={running}
               title="Optional: dry-run a preflight check against this host before restoring"
@@ -1458,6 +1486,17 @@ function InspectModal({
         </>)}
       </DialogContent>
     </Dialog>
+
+    {/* ── View contents — extract + parse the snapshot, show HTML ──── */}
+    <ArchiveContentsModal
+      open={viewingContents}
+      onClose={() => setViewingContents(false)}
+      source={(archive?.source as "pbs" | "borg" | "local" | null) ?? null}
+      repo_name={remoteArc?.repo_name}
+      snapshot={remoteArc?.snapshot}
+      path={localArc?.path}
+      display_id={archive?.display_id}
+    />
 
     {/* ── Confirm archive deletion ───────────────────────────── */}
     <Dialog open={showDeleteArchiveConfirm} onOpenChange={setShowDeleteArchiveConfirm}>
@@ -1893,6 +1932,11 @@ function CreateJobDialog({
   // only the passphrase. Mirrors hb_pbs_setup_recovery from the shell.
   const [pbsRecoveryPass, setPbsRecoveryPass] = useState<string>("")
   const [pbsRecoveryPass2, setPbsRecoveryPass2] = useState<string>("")
+  // Operator opted to replace an already-configured recovery escrow.
+  // Default behavior matches the shell: don't prompt for the
+  // passphrase if one is already saved — only show the inputs when
+  // there's no escrow yet OR the operator explicitly asks to change.
+  const [pbsRecoveryChange, setPbsRecoveryChange] = useState<boolean>(false)
   // Whether the host already has an escrow blob configured. When
   // present, the passphrase input becomes optional ("leave blank to
   // keep saved"). Refreshed after a successful setup call.
@@ -2070,6 +2114,7 @@ function CreateJobDialog({
       setPbsEncrypt(false)
       setPbsRecoveryPass("")
       setPbsRecoveryPass2("")
+      setPbsRecoveryChange(false)
       setLocalDestDir("")
       setBorgRepoSelected("")
       setBorgPassphrase("")
@@ -2710,8 +2755,24 @@ function CreateJobDialog({
                     {destResp?.pbs?.length ? (
                       <div className="mt-1 flex items-center gap-2">
                         <Select value={pbsRepository} onValueChange={setPbsRepository}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue />
+                          <SelectTrigger className="flex-1 min-w-0">
+                            {/* Manual render: SelectValue's default mode
+                                duplicates the item children and cuts
+                                them in the middle on mobile. We render
+                                "name — repository" ourselves with a
+                                proper trailing ellipsis. */}
+                            {(() => {
+                              const sel = destResp.pbs.find((r) => r.repository === pbsRepository)
+                              if (!sel) {
+                                return <span className="truncate text-muted-foreground">Pick a PBS repository</span>
+                              }
+                              return (
+                                <span className="truncate font-mono text-left">
+                                  {sel.name}
+                                  <span className="text-muted-foreground"> — {sel.repository}</span>
+                                </span>
+                              )
+                            })()}
                           </SelectTrigger>
                           <SelectContent>
                             {destResp.pbs.map((r) => (
@@ -2787,35 +2848,64 @@ function CreateJobDialog({
                           <AlertTriangle className="h-3.5 w-3.5 text-blue-400" />
                           Recovery passphrase (strongly recommended)
                         </div>
-                        <p className="text-[11px] text-muted-foreground">
-                          With a recovery passphrase, an encrypted copy of the keyfile is uploaded to PBS with every backup. If you lose this host, you can recover the keyfile on a fresh install with just the passphrase. Without it, losing the local keyfile means the encrypted backups become unrecoverable forever.
-                          {pbsRecoveryStatus?.has_recovery && " A recovery blob is already configured — leave the fields blank to keep it."}
-                        </p>
-                        <div>
-                          <Label htmlFor="pbsRecPass" className="text-[11px]">Passphrase</Label>
-                          <Input
-                            id="pbsRecPass"
-                            type="password"
-                            value={pbsRecoveryPass}
-                            onChange={(e) => setPbsRecoveryPass(e.target.value)}
-                            placeholder={pbsRecoveryStatus?.has_recovery ? "(unchanged — type to replace)" : "Long random string — write it down somewhere safe"}
-                            className="font-mono mt-1 h-8 text-xs"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="pbsRecPass2" className="text-[11px]">Confirm passphrase</Label>
-                          <Input
-                            id="pbsRecPass2"
-                            type="password"
-                            value={pbsRecoveryPass2}
-                            onChange={(e) => setPbsRecoveryPass2(e.target.value)}
-                            placeholder="Type it again"
-                            className="font-mono mt-1 h-8 text-xs"
-                          />
-                          {pbsRecoveryPass && pbsRecoveryPass2 && pbsRecoveryPass !== pbsRecoveryPass2 && (
-                            <p className="text-[11px] text-red-400 mt-1">Passphrases don't match.</p>
-                          )}
-                        </div>
+                        {pbsRecoveryStatus?.has_recovery && !pbsRecoveryChange ? (
+                          /* Escrow already saved — mirror the shell: skip
+                             the prompt unless the operator opts to change. */
+                          <div className="flex items-start gap-2 text-[11px]">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
+                            <div className="flex-1">
+                              <div className="text-foreground">Recovery escrow already configured for this host.</div>
+                              <div className="text-muted-foreground mt-0.5">Backups created by this job will reuse the existing passphrase. No need to type it again.</div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setPbsRecoveryChange(true)}
+                              className="text-blue-400 hover:text-blue-300 underline underline-offset-2 shrink-0"
+                            >
+                              Change
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-[11px] text-muted-foreground">
+                              With a recovery passphrase, an encrypted copy of the keyfile is uploaded to PBS with every backup. If you lose this host, you can recover the keyfile on a fresh install with just the passphrase. Without it, losing the local keyfile means the encrypted backups become unrecoverable forever.
+                            </p>
+                            <div>
+                              <Label htmlFor="pbsRecPass" className="text-[11px]">Passphrase</Label>
+                              <Input
+                                id="pbsRecPass"
+                                type="password"
+                                value={pbsRecoveryPass}
+                                onChange={(e) => setPbsRecoveryPass(e.target.value)}
+                                placeholder="Long random string — write it down somewhere safe"
+                                className="font-mono mt-1 h-8 text-xs"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="pbsRecPass2" className="text-[11px]">Confirm passphrase</Label>
+                              <Input
+                                id="pbsRecPass2"
+                                type="password"
+                                value={pbsRecoveryPass2}
+                                onChange={(e) => setPbsRecoveryPass2(e.target.value)}
+                                placeholder="Type it again"
+                                className="font-mono mt-1 h-8 text-xs"
+                              />
+                              {pbsRecoveryPass && pbsRecoveryPass2 && pbsRecoveryPass !== pbsRecoveryPass2 && (
+                                <p className="text-[11px] text-red-400 mt-1">Passphrases don't match.</p>
+                              )}
+                            </div>
+                            {pbsRecoveryStatus?.has_recovery && pbsRecoveryChange && (
+                              <button
+                                type="button"
+                                onClick={() => { setPbsRecoveryChange(false); setPbsRecoveryPass(""); setPbsRecoveryPass2("") }}
+                                className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                              >
+                                Cancel change — keep the saved passphrase
+                              </button>
+                            )}
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2893,8 +2983,19 @@ function CreateJobDialog({
                     {destResp?.borg?.length ? (
                       <div className="mt-1 flex items-center gap-2">
                         <Select value={borgRepoSelected} onValueChange={setBorgRepoSelected}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue />
+                          <SelectTrigger className="flex-1 min-w-0">
+                            {(() => {
+                              const sel = destResp.borg.find((r) => r.repository === borgRepoSelected)
+                              if (!sel) {
+                                return <span className="truncate text-muted-foreground">Pick a Borg repository</span>
+                              }
+                              return (
+                                <span className="truncate font-mono text-left">
+                                  {sel.name}
+                                  <span className="text-muted-foreground"> — {sel.repository}</span>
+                                </span>
+                              )
+                            })()}
                           </SelectTrigger>
                           <SelectContent>
                             {destResp.borg.map((r) => (
@@ -3138,6 +3239,11 @@ function ManualBackupDialog({
   const [pbsEncrypt, setPbsEncrypt] = useState<boolean>(false)
   const [pbsRecoveryPass, setPbsRecoveryPass] = useState<string>("")
   const [pbsRecoveryPass2, setPbsRecoveryPass2] = useState<string>("")
+  // Operator opted to replace an already-configured recovery escrow.
+  // Default behavior matches the shell: don't prompt for the
+  // passphrase if one is already saved — only show the inputs when
+  // there's no escrow yet OR the operator explicitly asks to change.
+  const [pbsRecoveryChange, setPbsRecoveryChange] = useState<boolean>(false)
   // Whether the host already has an escrow blob configured. When
   // present, the passphrase input becomes optional ("leave blank to
   // keep saved"). Refreshed after a successful setup call.
@@ -3196,6 +3302,7 @@ function ManualBackupDialog({
       setPbsEncrypt(false)
       setPbsRecoveryPass("")
       setPbsRecoveryPass2("")
+      setPbsRecoveryChange(false)
       setLocalDestDir("")
       setBorgRepoSelected("")
       setBorgPassphrase("")
@@ -3408,8 +3515,24 @@ function ManualBackupDialog({
                     {destResp?.pbs?.length ? (
                       <div className="mt-1 flex items-center gap-2">
                         <Select value={pbsRepository} onValueChange={setPbsRepository}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue />
+                          <SelectTrigger className="flex-1 min-w-0">
+                            {/* Manual render: SelectValue's default mode
+                                duplicates the item children and cuts
+                                them in the middle on mobile. We render
+                                "name — repository" ourselves with a
+                                proper trailing ellipsis. */}
+                            {(() => {
+                              const sel = destResp.pbs.find((r) => r.repository === pbsRepository)
+                              if (!sel) {
+                                return <span className="truncate text-muted-foreground">Pick a PBS repository</span>
+                              }
+                              return (
+                                <span className="truncate font-mono text-left">
+                                  {sel.name}
+                                  <span className="text-muted-foreground"> — {sel.repository}</span>
+                                </span>
+                              )
+                            })()}
                           </SelectTrigger>
                           <SelectContent>
                             {destResp.pbs.map((r) => (
@@ -3478,35 +3601,62 @@ function ManualBackupDialog({
                           <AlertTriangle className="h-3.5 w-3.5 text-blue-400" />
                           Recovery passphrase (strongly recommended)
                         </div>
-                        <p className="text-[11px] text-muted-foreground">
-                          With a recovery passphrase an encrypted copy of the keyfile is uploaded to PBS on every backup. Lets you recover it on a fresh host with just the passphrase.
-                          {pbsRecoveryStatus?.has_recovery && " A recovery blob is already configured — leave blank to keep it."}
-                        </p>
-                        <div>
-                          <Label htmlFor="manualPbsRecPass" className="text-[11px]">Passphrase</Label>
-                          <Input
-                            id="manualPbsRecPass"
-                            type="password"
-                            value={pbsRecoveryPass}
-                            onChange={(e) => setPbsRecoveryPass(e.target.value)}
-                            placeholder={pbsRecoveryStatus?.has_recovery ? "(unchanged — type to replace)" : "Long random string — write it down somewhere safe"}
-                            className="font-mono mt-1 h-8 text-xs"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="manualPbsRecPass2" className="text-[11px]">Confirm passphrase</Label>
-                          <Input
-                            id="manualPbsRecPass2"
-                            type="password"
-                            value={pbsRecoveryPass2}
-                            onChange={(e) => setPbsRecoveryPass2(e.target.value)}
-                            placeholder="Type it again"
-                            className="font-mono mt-1 h-8 text-xs"
-                          />
-                          {pbsRecoveryPass && pbsRecoveryPass2 && pbsRecoveryPass !== pbsRecoveryPass2 && (
-                            <p className="text-[11px] text-red-400 mt-1">Passphrases don't match.</p>
-                          )}
-                        </div>
+                        {pbsRecoveryStatus?.has_recovery && !pbsRecoveryChange ? (
+                          <div className="flex items-start gap-2 text-[11px]">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
+                            <div className="flex-1">
+                              <div className="text-foreground">Recovery escrow already configured for this host.</div>
+                              <div className="text-muted-foreground mt-0.5">This backup will reuse the existing passphrase. No need to type it again.</div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setPbsRecoveryChange(true)}
+                              className="text-blue-400 hover:text-blue-300 underline underline-offset-2 shrink-0"
+                            >
+                              Change
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-[11px] text-muted-foreground">
+                              With a recovery passphrase an encrypted copy of the keyfile is uploaded to PBS on every backup. Lets you recover it on a fresh host with just the passphrase.
+                            </p>
+                            <div>
+                              <Label htmlFor="manualPbsRecPass" className="text-[11px]">Passphrase</Label>
+                              <Input
+                                id="manualPbsRecPass"
+                                type="password"
+                                value={pbsRecoveryPass}
+                                onChange={(e) => setPbsRecoveryPass(e.target.value)}
+                                placeholder="Long random string — write it down somewhere safe"
+                                className="font-mono mt-1 h-8 text-xs"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="manualPbsRecPass2" className="text-[11px]">Confirm passphrase</Label>
+                              <Input
+                                id="manualPbsRecPass2"
+                                type="password"
+                                value={pbsRecoveryPass2}
+                                onChange={(e) => setPbsRecoveryPass2(e.target.value)}
+                                placeholder="Type it again"
+                                className="font-mono mt-1 h-8 text-xs"
+                              />
+                              {pbsRecoveryPass && pbsRecoveryPass2 && pbsRecoveryPass !== pbsRecoveryPass2 && (
+                                <p className="text-[11px] text-red-400 mt-1">Passphrases don't match.</p>
+                              )}
+                            </div>
+                            {pbsRecoveryStatus?.has_recovery && pbsRecoveryChange && (
+                              <button
+                                type="button"
+                                onClick={() => { setPbsRecoveryChange(false); setPbsRecoveryPass(""); setPbsRecoveryPass2("") }}
+                                className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                              >
+                                Cancel change — keep the saved passphrase
+                              </button>
+                            )}
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -3567,8 +3717,19 @@ function ManualBackupDialog({
                     {destResp?.borg?.length ? (
                       <div className="mt-1 flex items-center gap-2">
                         <Select value={borgRepoSelected} onValueChange={setBorgRepoSelected}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue />
+                          <SelectTrigger className="flex-1 min-w-0">
+                            {(() => {
+                              const sel = destResp.borg.find((r) => r.repository === borgRepoSelected)
+                              if (!sel) {
+                                return <span className="truncate text-muted-foreground">Pick a Borg repository</span>
+                              }
+                              return (
+                                <span className="truncate font-mono text-left">
+                                  {sel.name}
+                                  <span className="text-muted-foreground"> — {sel.repository}</span>
+                                </span>
+                              )
+                            })()}
                           </SelectTrigger>
                           <SelectContent>
                             {destResp.borg.map((r) => (
@@ -6246,10 +6407,12 @@ function ManualJobWatchModal({
           ) : (
             <ScrollArea className="max-h-[60vh] pr-2">
               <div className="space-y-4 text-sm">
-                {/* Last run + live log */}
+                {/* Status + live log — manual one-shot has no concept
+                    of "last run" (the modal IS the run), so we use a
+                    neutral "Status" header here. */}
                 <section className="space-y-2">
                   <h4 className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5 text-green-500">
-                    <Clock className="h-3.5 w-3.5" /> Last run
+                    <Clock className="h-3.5 w-3.5" /> Status
                   </h4>
                   <div className="flex items-center gap-2 flex-wrap text-xs">
                     {resultBadge ? (
@@ -6258,7 +6421,7 @@ function ManualJobWatchModal({
                         {resultBadge.label}
                       </span>
                     ) : (
-                      <span className="text-muted-foreground">never run</span>
+                      <span className="text-muted-foreground">starting…</span>
                     )}
                     {lastRunWhen && <span className="text-muted-foreground">{lastRunWhen}</span>}
                   </div>
@@ -6499,5 +6662,416 @@ function PbsKeyfileRecoveryDialog({
         </div>
       </DialogContent>
     </Dialog>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────
+// ArchiveContentsModal
+// ──────────────────────────────────────────────────────────────
+// "View contents" of any backup snapshot. Calls /inspect-archive
+// (extract to staging + parse_manifest + run_restore dry-run +
+// walk rootfs + cleanup) and renders the JSON as a HTML report.
+// Same shape regardless of backend so the operator gets a
+// consistent view across PBS, Borg and local.
+// ──────────────────────────────────────────────────────────────
+
+interface InspectResponse {
+  manifest?: any
+  manifest_error?: string
+  manifest_missing?: boolean
+  plan?: any
+  plan_error?: string
+  plan_raw_stderr?: string
+  files?: Array<{ path: string; size: number }>
+  files_truncated?: boolean
+  files_total_count?: number
+  metadata_files?: Record<string, string>
+}
+
+function ArchiveContentsModal({
+  open,
+  onClose,
+  source,
+  repo_name,
+  snapshot,
+  path,
+  display_id,
+}: {
+  open: boolean
+  onClose: () => void
+  source: "pbs" | "borg" | "local" | null
+  repo_name?: string
+  snapshot?: string
+  path?: string
+  display_id?: string
+}) {
+  const [data, setData] = useState<InspectResponse | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open || !source) {
+      setData(null)
+      setError(null)
+      setLoading(false)
+      return
+    }
+    const body: Record<string, string> = { source }
+    if (source === "local") {
+      if (!path) { setError("Local archive path missing"); return }
+      body.path = path
+    } else {
+      if (!repo_name || !snapshot) { setError("repo_name and snapshot required"); return }
+      body.repo_name = repo_name
+      body.snapshot = snapshot
+    }
+    setLoading(true)
+    setError(null)
+    fetchApi("/api/host-backups/inspect-archive", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+      .then((r: any) => setData(r))
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setLoading(false))
+  }, [open, source, repo_name, snapshot, path])
+
+  const manifest = data?.manifest
+  const plan = data?.plan
+  const files = data?.files
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
+      <DialogContent className="max-w-4xl bg-card border-border h-[85vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-3 shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Eye className="h-5 w-5 text-blue-400" />
+            Backup contents
+          </DialogTitle>
+          <DialogDescription className="text-xs font-mono break-all">
+            {display_id}
+          </DialogDescription>
+        </DialogHeader>
+
+        {loading && (
+          <div className="flex items-center gap-3 py-12 justify-center text-sm text-muted-foreground px-6">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Extracting snapshot and analyzing — this may take a minute on large backups…
+          </div>
+        )}
+
+        {error && !loading && (
+          <div className="text-sm text-red-400 px-3 py-3 mx-6 rounded-md border border-red-500/30 bg-red-500/10">
+            {error}
+          </div>
+        )}
+
+        {data && !loading && (
+          <ScrollArea className="flex-1 min-h-0 px-6">
+            <div className="space-y-4 pr-2">
+              <ContentsSection icon={Info} title="Manifest" iconColor="text-blue-400">
+                {manifest ? (
+                  <ManifestGrid manifest={manifest} />
+                ) : data.manifest_missing ? (
+                  <div className="text-xs text-muted-foreground italic">
+                    This backup doesn't include a manifest.json. Manifest is generated by the collectors pipeline (not yet wired into the backup runner). The Metadata files below carry the equivalent info: <code className="font-mono">run_info.env</code>, <code className="font-mono">pveversion.txt</code>, <code className="font-mono">selected_paths.txt</code>.
+                  </div>
+                ) : data.manifest_error ? (
+                  <div className="text-xs text-amber-400">{data.manifest_error}</div>
+                ) : (
+                  <div className="text-xs text-muted-foreground italic">No manifest in this archive.</div>
+                )}
+              </ContentsSection>
+
+              {(() => {
+                // Only render plan/storage/network/drivers sections
+                // when they actually carry information — otherwise
+                // they read as "Unknown / No entries reported / No
+                // changes planned" walls of noise.
+                const blockers = plan?.preflight?.blockers || plan?.blockers || []
+                const warnings = plan?.preflight?.warnings || plan?.warnings || []
+                const planStatus = plan?.status || plan?.preflight?.status
+                const planHasInfo = blockers.length > 0 || warnings.length > 0
+                  || (planStatus && planStatus !== "unknown")
+                const storageEntries = (plan?.storage?.entries || plan?.storage?.storages || [])
+                const networkIfaces = (plan?.network?.interfaces || plan?.network?.remap || [])
+                const driverList = (plan?.drivers?.plan || plan?.drivers?.components || plan?.drivers?.entries || [])
+                return (
+                  <>
+                    {planHasInfo && (
+                      <ContentsSection icon={ListTree} title="Restore plan" iconColor="text-emerald-400">
+                        <PlanSummary plan={plan} />
+                      </ContentsSection>
+                    )}
+                    {storageEntries.length > 0 && (
+                      <ContentsSection icon={HardDrive} title="Storage" iconColor="text-amber-400">
+                        <StorageSection storage={plan.storage} />
+                      </ContentsSection>
+                    )}
+                    {networkIfaces.length > 0 && (
+                      <ContentsSection icon={Network} title="Network" iconColor="text-purple-400">
+                        <NetworkSection network={plan.network} />
+                      </ContentsSection>
+                    )}
+                    {driverList.length > 0 && (
+                      <ContentsSection icon={Cpu} title="Drivers to reinstall" iconColor="text-cyan-400">
+                        <DriversSection drivers={plan.drivers} />
+                      </ContentsSection>
+                    )}
+                  </>
+                )
+              })()}
+
+              {files && files.length > 0 && (
+                <ContentsSection
+                  icon={Package}
+                  title={`Files (${data.files_total_count ?? files.length}${data.files_truncated ? "+" : ""})`}
+                  iconColor="text-fuchsia-400"
+                >
+                  <FilesTree files={files} truncated={data.files_truncated} />
+                </ContentsSection>
+              )}
+
+              {data.metadata_files && Object.keys(data.metadata_files).length > 0 && (
+                <ContentsSection icon={FileText} title="Metadata files" iconColor="text-muted-foreground">
+                  <div className="space-y-3">
+                    {Object.entries(data.metadata_files).map(([fname, content]) => (
+                      <div key={fname}>
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-mono">{fname}</div>
+                        <pre className="text-[11px] font-mono whitespace-pre-wrap break-all max-h-40 overflow-auto rounded border border-border bg-background/40 p-2 text-foreground/80">
+                          {content}
+                        </pre>
+                      </div>
+                    ))}
+                  </div>
+                </ContentsSection>
+              )}
+
+              {data.plan_error && !data.manifest_missing && (
+                <div className="text-[11px] text-amber-400 italic">
+                  Restore plan unavailable: {data.plan_error}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        )}
+
+        <div className="flex justify-end px-6 py-3 border-t border-border shrink-0">
+          <Button variant="ghost" onClick={onClose}>Close</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function ContentsSection({
+  icon: Icon,
+  iconColor,
+  title,
+  children,
+}: {
+  icon: any
+  iconColor?: string
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="rounded-md border border-border bg-background/40 p-3 space-y-2">
+      <h3 className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+        <Icon className={`h-3.5 w-3.5 ${iconColor || "text-muted-foreground"}`} />
+        {title}
+      </h3>
+      {children}
+    </section>
+  )
+}
+
+function ManifestGrid({ manifest }: { manifest: any }) {
+  // The manifest follows the proxmenux_backup_manifest schema:
+  //   {source_host: {hostname, pve_version, kernel, boot_mode, cpu_model, memory_kb, roles},
+  //    hardware_inventory: {gpu, tpu, nic, wireless},
+  //    storage_inventory: {zfs_pools, lvm, physical_disks, pve_storage_cfg, mounts},
+  //    proxmenux_installed_components: [...],
+  //    kernel_params: {...},
+  //    vms_lxcs_at_backup: {vms, lxcs},
+  //    backup_metadata: {paths_archived, encrypted, compression, ...},
+  //    created_at, created_by}
+  // So .source_host is an OBJECT — passing it raw to String() gave
+  // the dreaded "[object Object]".
+  const src = manifest.source_host || {}
+  const meta = manifest.backup_metadata || {}
+  const hw = manifest.hardware_inventory || {}
+  const guests = manifest.vms_lxcs_at_backup || {}
+  const rows: Array<[string, any]> = []
+  const push = (k: string, v: any) => {
+    if (v === undefined || v === null || v === "") return
+    rows.push([k, v])
+  }
+  push("Source host", src.hostname || manifest.hostname)
+  push("Created at", manifest.created_at || meta.created_at)
+  push("Kernel", src.kernel || manifest.kernel)
+  push("Proxmox version", src.pve_version || manifest.pve_version)
+  push("Boot mode", src.boot_mode)
+  push("CPU", src.cpu_model)
+  push("Memory", src.memory_kb ? `${(src.memory_kb / 1024 / 1024).toFixed(1)} GB` : undefined)
+  push("Roles", Array.isArray(src.roles) && src.roles.length ? src.roles.join(", ") : undefined)
+  push("GPUs", Array.isArray(hw.gpu) && hw.gpu.length ? `${hw.gpu.length} device(s)` : undefined)
+  push("NICs", Array.isArray(hw.nic) && hw.nic.length ? `${hw.nic.length} interface(s)` : undefined)
+  push("VMs at backup", Array.isArray(guests.vms) ? guests.vms.length : undefined)
+  push("LXCs at backup", Array.isArray(guests.lxcs) ? guests.lxcs.length : undefined)
+  push("Compression", meta.compression)
+  push("Encrypted", meta.encrypted === true ? "yes" : meta.encrypted === false ? "no" : undefined)
+  push("Paths archived", Array.isArray(meta.paths_archived) ? `${meta.paths_archived.length} paths` : undefined)
+  push("Built by", manifest.created_by)
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
+      {rows.map(([k, v]) => (
+        <div key={k}>
+          <span className="text-muted-foreground">{k}:</span>{" "}
+          <code className="font-mono text-foreground/90 break-all">{String(v)}</code>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function PlanSummary({ plan }: { plan: any }) {
+  const status = plan.status || plan.preflight?.status || "unknown"
+  const blockers: any[] = plan.preflight?.blockers || plan.blockers || []
+  const warnings: any[] = plan.preflight?.warnings || plan.warnings || []
+  const StatusIcon = status === "ok" ? CheckCircle2 : status === "warn" ? AlertTriangle : XCircle
+  const statusColor = status === "ok" ? "text-emerald-400" : status === "warn" ? "text-amber-400" : "text-red-400"
+  return (
+    <div className="space-y-2 text-xs">
+      <div className="flex items-center gap-2">
+        <StatusIcon className={`h-4 w-4 ${statusColor}`} />
+        <span className="font-medium capitalize">{status}</span>
+      </div>
+      {blockers.length > 0 && (
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-red-400 mb-1">Blockers</div>
+          <ul className="space-y-0.5 ml-4 list-disc">
+            {blockers.map((b, i) => (
+              <li key={i} className="text-red-400">{typeof b === "string" ? b : (b.message || JSON.stringify(b))}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {warnings.length > 0 && (
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-amber-400 mb-1">Warnings</div>
+          <ul className="space-y-0.5 ml-4 list-disc">
+            {warnings.map((w, i) => (
+              <li key={i} className="text-amber-400">{typeof w === "string" ? w : (w.message || JSON.stringify(w))}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {blockers.length === 0 && warnings.length === 0 && (
+        <div className="text-muted-foreground italic">No blockers or warnings detected.</div>
+      )}
+    </div>
+  )
+}
+
+function StorageSection({ storage }: { storage: any }) {
+  const entries: any[] = storage.entries || storage.storages || []
+  if (entries.length === 0) {
+    return <div className="text-xs text-muted-foreground italic">No storage entries reported.</div>
+  }
+  return (
+    <ul className="space-y-1 text-xs">
+      {entries.map((e: any, i: number) => {
+        const ok = e.status === "ok" || e.matches
+        const Icon = ok ? CheckCircle2 : AlertTriangle
+        const color = ok ? "text-emerald-400" : "text-amber-400"
+        return (
+          <li key={i} className="flex items-start gap-2">
+            <Icon className={`h-3.5 w-3.5 mt-0.5 shrink-0 ${color}`} />
+            <div className="min-w-0 flex-1">
+              <code className="font-mono">{e.name || e.storage || `entry ${i}`}</code>
+              {e.type && <span className="text-muted-foreground ml-2">{e.type}</span>}
+              {e.message && <div className="text-muted-foreground text-[11px]">{e.message}</div>}
+            </div>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function NetworkSection({ network }: { network: any }) {
+  const ifaces: any[] = network.interfaces || network.remap || []
+  if (ifaces.length === 0) {
+    return <div className="text-xs text-muted-foreground italic">No interface changes planned.</div>
+  }
+  return (
+    <ul className="space-y-1 text-xs">
+      {ifaces.map((nic: any, i: number) => (
+        <li key={i} className="flex items-start gap-2">
+          <Network className="h-3.5 w-3.5 mt-0.5 shrink-0 text-purple-400" />
+          <div className="min-w-0 flex-1">
+            <code className="font-mono">{nic.source || nic.from || "?"}</code>
+            <span className="text-muted-foreground mx-2">→</span>
+            <code className="font-mono">{nic.target || nic.to || "?"}</code>
+            {nic.action && <span className="text-[10px] text-muted-foreground ml-2">{nic.action}</span>}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function DriversSection({ drivers }: { drivers: any }) {
+  const list: any[] = drivers.plan || drivers.components || drivers.entries || []
+  if (list.length === 0) {
+    return <div className="text-xs text-muted-foreground italic">No drivers to reinstall.</div>
+  }
+  return (
+    <ul className="space-y-1 text-xs">
+      {list.map((d: any, i: number) => (
+        <li key={i} className="flex items-start gap-2">
+          <Cpu className="h-3.5 w-3.5 mt-0.5 shrink-0 text-cyan-400" />
+          <div className="min-w-0 flex-1">
+            <code className="font-mono">{d.name || d.id || `driver ${i}`}</code>
+            {d.action && <span className="text-muted-foreground ml-2">{d.action}</span>}
+            {d.detail && <div className="text-muted-foreground text-[11px]">{d.detail}</div>}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function FilesTree({ files, truncated }: { files: Array<{ path: string; size: number }>; truncated?: boolean }) {
+  const [query, setQuery] = useState("")
+  const filtered = query
+    ? files.filter((f) => f.path.toLowerCase().includes(query.toLowerCase()))
+    : files
+  return (
+    <div className="space-y-2">
+      <Input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Filter paths…"
+        className="h-8 text-xs"
+      />
+      <div className="max-h-72 overflow-auto rounded border border-border bg-background/40">
+        <ul className="text-[11px] font-mono divide-y divide-border/30">
+          {filtered.slice(0, 2000).map((f) => (
+            <li key={f.path} className="flex items-center justify-between gap-3 px-2 py-1 hover:bg-white/5">
+              <span className="truncate" title={f.path}>{f.path}</span>
+              <span className="text-muted-foreground shrink-0">{formatBytes(f.size)}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="text-[10px] text-muted-foreground flex items-center gap-2">
+        Showing {Math.min(filtered.length, 2000)} of {filtered.length}{query ? " filtered" : ""}{filtered.length !== files.length ? ` (total ${files.length})` : ""}
+        {truncated && <span className="text-amber-400">· list truncated at 5000 — open the snapshot manually to see the rest</span>}
+      </div>
+    </div>
   )
 }

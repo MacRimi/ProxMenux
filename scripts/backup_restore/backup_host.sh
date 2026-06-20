@@ -228,8 +228,12 @@ _bk_borg() {
 
     t_start=$SECONDS
     : > "$log_file"
+    # Include manifest.json (top-level) when present — without it,
+    # parse_manifest.sh can't read the schema'd manifest on restore.
+    local -a _bk_borg_paths=(rootfs metadata)
+    [[ -f "$staging_root/manifest.json" ]] && _bk_borg_paths+=(manifest.json)
     if (cd "$staging_root" && "$borg_bin" create --stats --progress \
-        "$repo::$archive_name" rootfs metadata) 2>&1 | tee -a "$log_file"; then
+        "$repo::$archive_name" "${_bk_borg_paths[@]}") 2>&1 | tee -a "$log_file"; then
 
         elapsed=$((SECONDS - t_start))
         # Extract compressed size from borg stats if available
