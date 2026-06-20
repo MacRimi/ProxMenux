@@ -1186,7 +1186,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/apprise.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -1286,7 +1286,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/archivebox.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7672,7 +7672,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hyperion.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7744,7 +7744,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/immich.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7805,7 +7805,9 @@
     "notes": [
       "After installation, edit `/opt/immichframe/Config/Settings.yml` and set ImmichServerUrl and ApiKey. Then restart the service with `systemctl restart immichframe`."
     ],
-    "warnings": [],
+    "warnings": [
+      "WARNING [ARM64]: Installation sources scripts outside of Community Scripts repo. Please check the source before installing."
+    ],
     "port": 8080,
     "website": "",
     "documentation": "",
@@ -7877,7 +7879,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/influxdb.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7978,7 +7980,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/investbrain.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8281,7 +8283,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jackett.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8356,7 +8358,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jellyfin.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8528,7 +8530,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jotty.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8658,7 +8660,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/karakeep.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8727,7 +8729,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kavita.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8828,7 +8830,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/keycloak.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8899,7 +8901,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kimai.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8934,7 +8936,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kitchenowl.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9110,7 +9112,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kometa.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14249,7 +14251,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
