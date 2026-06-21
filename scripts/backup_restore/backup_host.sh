@@ -1772,6 +1772,74 @@ WantedBy=multi-user.target
 EOF
 }
 
+# Destructive rollback executor. Reads vms_to_remove / lxcs_to_remove
+# from the rollback.json and runs `qm/pct stop + destroy --purge`
+# on each. Component uninstall is not done here yet — the installers
+# don't expose --auto-uninstall — so we just log them as TODO.
+# Idempotent: missing/already-destroyed guests are skipped.
+_rs_execute_rollback() {
+    local rb_file="$1"
+    [[ ! -s "$rb_file" ]] && return 0
+    command -v jq >/dev/null 2>&1 || { msg_warn "$(translate 'jq not available — skipping rollback execution')"; return 0; }
+
+    local vmids lxcids comps
+    vmids=$(jq -r '.vms_to_remove[]?'             "$rb_file" 2>/dev/null)
+    lxcids=$(jq -r '.lxcs_to_remove[]?'           "$rb_file" 2>/dev/null)
+    comps=$(jq  -r '.components_to_uninstall[]?'  "$rb_file" 2>/dev/null)
+
+    if [[ -z "$vmids" && -z "$lxcids" && -z "$comps" ]]; then
+        msg_ok "$(translate 'Rollback: nothing to remove (host matches backup)')"
+        return 0
+    fi
+
+    msg_info2 "$(translate 'Executing destructive rollback (operator confirmed) ...')"
+
+    local id
+    for id in $vmids; do
+        [[ -z "$id" ]] && continue
+        if qm status "$id" >/dev/null 2>&1; then
+            echo "  → qm stop $id (extra VM, created after backup)"
+            qm stop "$id" --timeout 30 >/dev/null 2>&1 || true
+            echo "  → qm destroy $id --purge"
+            if qm destroy "$id" --purge >/dev/null 2>&1; then
+                msg_ok "$(translate 'VM removed:') $id"
+            else
+                msg_error "$(translate 'Failed to destroy VM:') $id"
+            fi
+        else
+            echo "  • VM $id no longer present — skip"
+        fi
+    done
+
+    for id in $lxcids; do
+        [[ -z "$id" ]] && continue
+        if pct status "$id" >/dev/null 2>&1; then
+            echo "  → pct stop $id (extra LXC, created after backup)"
+            pct stop "$id" >/dev/null 2>&1 || true
+            echo "  → pct destroy $id --purge"
+            if pct destroy "$id" --purge >/dev/null 2>&1; then
+                msg_ok "$(translate 'LXC removed:') $id"
+            else
+                msg_error "$(translate 'Failed to destroy LXC:') $id"
+            fi
+        else
+            echo "  • LXC $id no longer present — skip"
+        fi
+    done
+
+    if [[ -n "$comps" ]]; then
+        local comp
+        for comp in $comps; do
+            [[ -z "$comp" ]] && continue
+            # Until each installer ships --auto-uninstall we can only
+            # flag these for the operator. Once nvidia/amd/intel/coral
+            # support it, this branch can shell out the same way the
+            # auto-reinstall path does.
+            msg_warn "$(translate 'Component to uninstall manually (no --auto-uninstall yet):') $comp"
+        done
+    fi
+}
+
 _rs_prepare_pending_restore() {
     local staging_root="$1"
     shift
@@ -1821,12 +1889,17 @@ _rs_prepare_pending_restore() {
 
     [[ -d "$staging_root/metadata" ]] && cp -a "$staging_root/metadata/." "$pending_dir/metadata/" 2>/dev/null || true
 
-    # Persist the rollback plan so apply_cluster_postboot.sh can
-    # surface a clear "what differs vs backup" report after boot.
-    # Read-only here — the script just informs the operator about
-    # VMs/LXCs/components that exist now but not in the backup.
-    # Actual destroy is left manual until --auto-uninstall lands
-    # on every installer.
+    # Persist the rollback plan: VMs/LXCs/components that exist
+    # on the host but not in the backup. apply_cluster_postboot.sh
+    # surfaces a read-only "what differs" report from this file
+    # after the boot. When the operator opted into destructive
+    # rollback (HB_ROLLBACK_EXECUTE=1) we also destroy those
+    # guests RIGHT NOW — before the reboot — so the operator
+    # sees `qm destroy` live in the Monitor terminal AND the
+    # next boot comes up without those guests reserving hardware
+    # (critical for GPU passthrough: a stale VM with hostpci
+    # entries makes Proxmox auto-bind the GPU to vfio-pci before
+    # the nvidia driver can claim it).
     local _rb_script="${SCRIPT_DIR}/restore/compute_rollback_plan.sh"
     [[ ! -x "$_rb_script" ]] && _rb_script="${LOCAL_SCRIPTS:-/usr/local/share/proxmenux/scripts}/backup_restore/restore/compute_rollback_plan.sh"
     if [[ -x "$_rb_script" ]]; then
@@ -1834,10 +1907,16 @@ _rs_prepare_pending_restore() {
         [[ ! -s "$pending_dir/rollback.json" ]] && rm -f "$pending_dir/rollback.json"
     fi
 
+    if [[ "${HB_ROLLBACK_EXECUTE:-0}" == "1" && -s "$pending_dir/rollback.json" ]] \
+       && command -v jq >/dev/null 2>&1; then
+        _rs_execute_rollback "$pending_dir/rollback.json"
+    fi
+
     cat > "$pending_dir/plan.env" <<EOF
 RESTORE_ID=${restore_id}
 CREATED_AT=${created_at}
 HB_RESTORE_INCLUDE_ZFS=${HB_RESTORE_INCLUDE_ZFS:-0}
+HB_ROLLBACK_EXECUTE=${HB_ROLLBACK_EXECUTE:-0}
 EOF
     # Persist hardware-drift skips so apply_pending_restore.sh can filter
     # them at boot. The RS_SKIP_PATHS env var only lives in the restore
@@ -2022,6 +2101,45 @@ _rs_run_complete_guided() {
             --title "$(translate "Confirm complete restore")" \
             --yesno "$body" 22 88; then
         return 1
+    fi
+
+    # ── Destructive rollback opt-in ───────────────────────────
+    # If the host has VMs / LXCs / components that are NOT in
+    # the backup, ask whether we should ALSO destroy them as
+    # part of "rollback to the backup state". Without this the
+    # restore is additive — a stale VM with hostpci entries
+    # will keep reserving the GPU for vfio-pci after the boot
+    # (we hit this in the test). Skip the prompt entirely when
+    # already in HB_MONITOR_FLOW: the web UI raised its own
+    # destructive-ack checkbox and exported HB_ROLLBACK_EXECUTE.
+    if [[ "${HB_MONITOR_FLOW:-0}" != "1" && "${HB_ROLLBACK_EXECUTE:-0}" != "1" ]]; then
+        local _rb_script="${SCRIPT_DIR}/restore/compute_rollback_plan.sh"
+        [[ ! -x "$_rb_script" ]] && _rb_script="${LOCAL_SCRIPTS:-/usr/local/share/proxmenux/scripts}/backup_restore/restore/compute_rollback_plan.sh"
+        if [[ -x "$_rb_script" ]] && command -v jq >/dev/null 2>&1; then
+            local _rb_json
+            _rb_json=$(bash "$_rb_script" "$staging_root" 2>/dev/null || true)
+            if [[ -n "$_rb_json" ]]; then
+                local _rb_vms _rb_lxcs _rb_comps
+                _rb_vms=$(jq  -r '.vms_to_remove           | join(", ")' <<<"$_rb_json" 2>/dev/null)
+                _rb_lxcs=$(jq -r '.lxcs_to_remove          | join(", ")' <<<"$_rb_json" 2>/dev/null)
+                _rb_comps=$(jq -r '.components_to_uninstall| join(", ")' <<<"$_rb_json" 2>/dev/null)
+                if [[ -n "$_rb_vms" || -n "$_rb_lxcs" || -n "$_rb_comps" ]]; then
+                    local rb_body
+                    rb_body="\Zb\Z1$(translate "Destructive rollback")\ZB\Zn"$'\n\n'
+                    rb_body+="$(translate "The following entries exist on the host but were NOT in the backup. To make the host EXACTLY match the backup state, they must be removed:")"$'\n\n'
+                    [[ -n "$_rb_vms"   ]] && rb_body+="  \Z1•\Zn $(translate "VMs to destroy:")  \Zb${_rb_vms}\ZB"$'\n'
+                    [[ -n "$_rb_lxcs"  ]] && rb_body+="  \Z1•\Zn $(translate "LXCs to destroy:") \Zb${_rb_lxcs}\ZB"$'\n'
+                    [[ -n "$_rb_comps" ]] && rb_body+="  \Z1•\Zn $(translate "Components to uninstall (manual for now):") \Zb${_rb_comps}\ZB"$'\n'
+                    rb_body+=$'\n'"\Zb\Z1$(translate "This is IRREVERSIBLE.")\ZB\Zn"$'\n\n'
+                    rb_body+="$(translate "Pick Yes to destroy them now (before reboot). Pick No to keep the additive restore and clean up manually later.")"
+                    if dialog --backtitle "ProxMenux" --colors \
+                            --title "$(translate "Execute destructive rollback?")" \
+                            --defaultno --yesno "$rb_body" 20 88; then
+                        export HB_ROLLBACK_EXECUTE=1
+                    fi
+                fi
+            fi
+        fi
     fi
 
     show_proxmenux_logo

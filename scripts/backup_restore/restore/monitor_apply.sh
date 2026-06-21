@@ -17,6 +17,12 @@
 #             Each must be present in <staging>/metadata/selected_paths.txt
 #             or the wrapper drops it. Omit to let the TUI checklist
 #             pop up so the operator can pick interactively.
+#   ROLLBACK_EXECUTE — "1" to ask _rs_prepare_pending_restore to
+#             run the destructive rollback (qm/pct destroy --purge)
+#             on guests created after the backup. The frontend only
+#             sets this after the operator ticks the "I understand…"
+#             checkbox in the Complete restore confirm dialog. Has
+#             no effect when MODE=custom.
 # ==========================================================
 # Note: NO `set -e` here. backup_host.sh + its sourced utils/lib
 # emit a few non-zero exit codes during load (locale checks,
@@ -28,14 +34,16 @@
 STAGING="${STAGING:-}"
 MODE="${MODE:-full}"
 PATHS="${PATHS:-}"
+ROLLBACK_EXECUTE="${ROLLBACK_EXECUTE:-0}"
 
-# Also accept --staging / --mode / --paths positional args for
-# direct CLI use outside the Monitor (handy for debugging).
+# Also accept --staging / --mode / --paths / --rollback-execute
+# positional args for direct CLI use outside the Monitor.
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --staging) shift; STAGING="${1:-}" ;;
-    --mode)    shift; MODE="${1:-full}" ;;
-    --paths)   shift; PATHS="${1:-}" ;;
+    --staging)          shift; STAGING="${1:-}" ;;
+    --mode)             shift; MODE="${1:-full}" ;;
+    --paths)            shift; PATHS="${1:-}" ;;
+    --rollback-execute) ROLLBACK_EXECUTE=1 ;;
     *) ;;
   esac
   shift
@@ -77,6 +85,12 @@ fi
 #    closes the modal in the web UI and reboots from the host
 #    panel; no need for two consecutive yes/no prompts.
 export HB_MONITOR_FLOW=1
+
+# Propagate the destructive-rollback opt-in to _rs_prepare_pending_restore.
+# Only honored for MODE=full — custom restores never trigger guest destroy.
+if [[ "$MODE" == "full" && "$ROLLBACK_EXECUTE" == "1" ]]; then
+  export HB_ROLLBACK_EXECUTE=1
+fi
 
 case "$MODE" in
   full)

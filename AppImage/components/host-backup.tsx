@@ -984,6 +984,7 @@ function InspectModal({
     stagingPath: string
     mode: "full" | "custom"
     paths: string[]
+    rollbackExecute?: boolean
   } | null>(null)
 
   const beginRestore = async () => {
@@ -1456,11 +1457,11 @@ function InspectModal({
           }).catch(() => undefined)
         }
       }}
-      onLaunch={(mode, paths) => {
+      onLaunch={(mode, paths, rollbackExecute) => {
         if (!restoreOptions) return
         const sp = restoreOptions.stagingPath
         setRestoreOptions(null)
-        setRestoreTerminal({ stagingPath: sp, mode, paths })
+        setRestoreTerminal({ stagingPath: sp, mode, paths, rollbackExecute })
       }}
     />
 
@@ -1509,6 +1510,7 @@ function InspectModal({
           ...(restoreTerminal.mode === "custom" && restoreTerminal.paths.length > 0
             ? { PATHS: restoreTerminal.paths.join(",") }
             : {}),
+          ...(restoreTerminal.rollbackExecute ? { ROLLBACK_EXECUTE: "1" } : {}),
         }}
       />
     )}
@@ -7230,7 +7232,7 @@ function RestoreOptionsModal({
   pathsAvailable: string[]
   rollbackPlan?: RollbackPlan
   display_id?: string
-  onLaunch: (mode: "full" | "custom", paths: string[]) => void
+  onLaunch: (mode: "full" | "custom", paths: string[], rollbackExecute?: boolean) => void
 }) {
   const [step, setStep] = useState<"choose" | "custom">("choose")
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -7286,7 +7288,7 @@ function RestoreOptionsModal({
       return
     }
     setError(null)
-    onLaunch(mode, Array.from(selected))
+    onLaunch(mode, Array.from(selected), mode === "full" && hasDestructive && destructiveAck)
   }
 
   return (
