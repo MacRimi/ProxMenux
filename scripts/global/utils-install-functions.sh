@@ -104,6 +104,11 @@ EOF
     if [[ "$need_update" == true ]] || [[ ! -d /var/lib/apt/lists || -z "$(ls -A /var/lib/apt/lists 2>/dev/null)" ]]; then
         msg_info "$(translate "Updating APT package lists...")"
         apt-get update >/dev/null 2>&1 || apt-get update
+        # Spinner pair: msg_info must be closed before returning.
+        # Without this the next `msg_info` caller spawns a second
+        # spinner on top of ours and the original line never gets
+        # ✓'d — leaving a dangling progress char on screen.
+        msg_ok "$(translate "APT package lists updated")"
     fi
 
     return 0

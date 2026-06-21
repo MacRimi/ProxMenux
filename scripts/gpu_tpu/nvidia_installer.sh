@@ -436,15 +436,13 @@ offer_lxc_updates_if_any() {
 # System preparation (repos, headers, etc.)
 # ==========================================================
 ensure_repos_and_headers() {
-  msg_info "$(translate 'Checking kernel headers and build tools...')"
-
-  # On a fresh Proxmox install the pve-no-subscription / debian
-  # repos aren't configured by default, so `pve-headers-$(uname -r)`
-  # and even `build-essential` come back as "Unable to locate
-  # package" and the NVIDIA install bails out with "no cc found".
-  # Bootstrap the repos through the shared helper (same one the
-  # post-install flow uses); fall back to sourcing the install
-  # utilities file if the function isn't already in scope.
+  # Bootstrap APT repos FIRST. On a fresh Proxmox install the
+  # pve-no-subscription / debian repos aren't configured by default
+  # → `pve-headers-$(uname -r)` and `build-essential` come back as
+  # "Unable to locate package" and the NVIDIA install bails out with
+  # "no cc found". We delegate to the shared helper (same one the
+  # post-install flow uses), which owns its own spinner pair — that's
+  # why this block has to run BEFORE we open our own msg_info.
   if ! declare -F ensure_repositories >/dev/null 2>&1; then
     local _utils_install="$LOCAL_SCRIPTS/global/utils-install-functions.sh"
     [[ ! -f "$_utils_install" ]] && _utils_install="/usr/local/share/proxmenux/scripts/global/utils-install-functions.sh"
@@ -454,6 +452,9 @@ ensure_repos_and_headers() {
   if declare -F ensure_repositories >/dev/null 2>&1; then
     ensure_repositories >>"$LOG_FILE" 2>&1 || true
   fi
+
+  # Now own the spinner for the headers + build-tools check.
+  msg_info "$(translate 'Checking kernel headers and build tools...')"
 
   local kver
   kver=$(uname -r)
