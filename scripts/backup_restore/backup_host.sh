@@ -1838,6 +1838,82 @@ _rs_execute_rollback() {
             msg_warn "$(translate 'Component to uninstall manually (no --auto-uninstall yet):') $comp"
         done
     fi
+
+    # ── VFIO orphan cleanup + initramfs regen (BEFORE the reboot) ──
+    # Restore is additive: if the host has VFIO config files that the
+    # backup doesn't, they survive the apply. The 10-proxmenux-vfio-bind
+    # udev rule, the nvidia hard-blacklist, the vfio-bind.bdfs state file,
+    # the renamed *.proxmenux-disabled-vfio sidecars — all of them keep
+    # the GPU bound to vfio-pci across the next boot. apply_pending_restore.sh
+    # DOES delete them, but it runs AFTER systemd-udevd has already
+    # bound the GPU. We have to clean them up while we're still in the
+    # operator's restore terminal, then regenerate initramfs so the
+    # boot comes up with the host-mode driver stack from the start.
+    local _pending_rootfs
+    _pending_rootfs="$(dirname "$rb_file")/rootfs"
+    [[ -d "$_pending_rootfs" ]] && _rs_cleanup_vfio_orphans "$_pending_rootfs"
+}
+
+# Remove VFIO/passthrough artifacts that exist on the host but not in
+# the backup, and reactivate any host-mode sidecars the backup ships
+# disabled. Idempotent. Called from _rs_execute_rollback when the
+# operator has opted into destructive rollback.
+_rs_cleanup_vfio_orphans() {
+    local backup_root="$1"
+    local changed=0 f active
+
+    # Files that ProxMenux manages and that force vfio-pci binding.
+    # If they're not in the backup, the backup represents a host that
+    # was NOT in VFIO mode → drop them from the host too.
+    local -a vfio_owned=(
+        "/etc/udev/rules.d/10-proxmenux-vfio-bind.rules"
+        "/etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf"
+        "/etc/modprobe.d/proxmenux-nvidia-blacklist.conf"
+        "/etc/modprobe.d/nvidia-blacklist.conf"
+        "/etc/proxmenux/vfio-bind.bdfs"
+    )
+    for f in "${vfio_owned[@]}"; do
+        if [[ -e "$f" && ! -e "${backup_root}${f}" ]]; then
+            rm -f "$f" 2>/dev/null
+            echo "  → removed orphan VFIO file: $f"
+            changed=1
+        fi
+    done
+
+    # Re-enable host-mode sidecars: the switch_gpu_mode flow renames
+    # `nvidia-vfio.conf` → `nvidia-vfio.conf.proxmenux-disabled-vfio`
+    # (and the same for the NVIDIA udev rules) when going LXC-only.
+    # If the backup ships the *disabled* sidecar, swap it back in.
+    local -a sidecars=(
+        "/etc/modules-load.d/nvidia-vfio.conf"
+        "/etc/udev/rules.d/70-nvidia.rules"
+    )
+    for active in "${sidecars[@]}"; do
+        local disabled="${active}.proxmenux-disabled"
+        local disabled_vfio="${active}.proxmenux-disabled-vfio"
+        # Check both possible suffixes the switch_gpu scripts use.
+        for f in "$disabled_vfio" "$disabled"; do
+            if [[ -e "${backup_root}${f}" && ! -e "${backup_root}${active}" ]]; then
+                # Backup expects this sidecar active. If the host has
+                # the live file, leave it (it's still there); if it
+                # has the disabled rename, swap.
+                if [[ ! -e "$active" && -e "$f" ]]; then
+                    mv "$f" "$active" 2>/dev/null
+                    echo "  → reactivated host-mode sidecar: $active"
+                    changed=1
+                fi
+            fi
+        done
+    done
+
+    if (( changed )); then
+        echo "  → regenerating initramfs so the next boot drops the VFIO stack ..."
+        if update-initramfs -u >/dev/null 2>&1; then
+            msg_ok "$(translate 'VFIO orphans cleared and initramfs rebuilt — next boot will free the GPU.')"
+        else
+            msg_warn "$(translate 'VFIO orphans cleared but initramfs rebuild failed; check /var/log/proxmenux logs.')"
+        fi
+    fi
 }
 
 _rs_prepare_pending_restore() {
