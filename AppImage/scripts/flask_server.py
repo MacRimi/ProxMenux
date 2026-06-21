@@ -14544,7 +14544,13 @@ def api_host_backups_manual_run():
         pbs_backup_id = (payload.get('pbs_backup_id') or '').strip()
         if not pbs_backup_id:
             import socket
-            pbs_backup_id = f'hostcfg-{socket.gethostname()}-manual'
+            # Unified naming with scheduled/TUI runs (run_scheduled_backup.sh
+            # and backup_host.sh both default to `hostcfg-<host>`). Keeping
+            # the `-manual` suffix split snapshots into two PBS groups for
+            # the same host, breaking the dedup view and forcing restore to
+            # check both groups. Operators can still override the id in the
+            # form when they need a separate retention bucket.
+            pbs_backup_id = f'hostcfg-{socket.gethostname()}'
         pbs_fingerprint = (payload.get('pbs_fingerprint') or '').strip()
         pbs_encrypt = bool(payload.get('pbs_encrypt'))
         lines.append(f'PBS_REPOSITORY={pbs_repo}')
