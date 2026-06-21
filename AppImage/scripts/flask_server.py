@@ -15440,6 +15440,82 @@ def api_host_backups_remote_archives():
     return jsonify({'snapshots': snapshots, 'errors': errors})
 
 
+@app.route('/api/host-backups/remote-archives', methods=['DELETE'])
+@require_auth
+def api_host_backups_remote_archive_delete():
+    """Forget/delete a single PBS snapshot or Borg archive.
+
+    Body: {"backend": "pbs"|"borg", "repo_name": "...", "snapshot": "..."}
+        - PBS snapshot:   "host/<backup-id>/<iso-ts>"  → invokes
+                          `proxmox-backup-client snapshot forget`.
+        - Borg archive:   "<archive-name>"             → invokes
+                          `borg delete <repo>::<archive>`.
+
+    Local archives have their own DELETE endpoint
+    (`/api/host-backups/archives/<id>`); this one only handles remotes.
+    Protected PBS snapshots and missing remotes surface a clear error.
+    """
+    payload = request.get_json(silent=True) or {}
+    backend  = (payload.get('backend')   or '').strip().lower()
+    repo_nm  = (payload.get('repo_name') or '').strip()
+    snapshot = (payload.get('snapshot')  or '').strip()
+
+    if backend not in ('pbs', 'borg'):
+        return jsonify({'error': "backend must be 'pbs' or 'borg'"}), 400
+    if not repo_nm:
+        return jsonify({'error': 'repo_name is required'}), 400
+    if not snapshot:
+        return jsonify({'error': 'snapshot is required'}), 400
+
+    if backend == 'pbs':
+        repo = next((r for r in _list_pbs_destinations() if r['name'] == repo_nm), None)
+        if not repo:
+            return jsonify({'error': f"PBS destination '{repo_nm}' not found"}), 404
+        pwd, fp = _pbs_secret_for(repo_nm)
+        if not pwd:
+            return jsonify({'error': f"no password available for PBS repo '{repo_nm}'"}), 400
+        env = {**os.environ, 'PBS_PASSWORD': pwd}
+        if fp:
+            env['PBS_FINGERPRINT'] = fp
+        try:
+            r = subprocess.run(
+                ['proxmox-backup-client', 'snapshot', 'forget',
+                 snapshot, '--repository', repo['repository']],
+                capture_output=True, text=True, timeout=30, env=env,
+            )
+        except (subprocess.TimeoutExpired, OSError) as e:
+            return jsonify({'error': str(e)}), 500
+        if r.returncode != 0:
+            msg = (r.stderr.strip() or r.stdout.strip() or
+                   f'proxmox-backup-client exited {r.returncode}')
+            # Surface PBS's own "protected" error as a 409 so the UI
+            # can show a clearer message than the generic 500.
+            status = 409 if 'protected' in msg.lower() else 500
+            return jsonify({'error': msg}), status
+        return jsonify({'status': 'ok', 'removed': snapshot})
+
+    # backend == 'borg'
+    target = next((t for t in _list_borg_destinations() if t['name'] == repo_nm), None)
+    if not target:
+        return jsonify({'error': f"Borg destination '{repo_nm}' not found"}), 404
+    repo = target.get('repository') or ''
+    if not repo:
+        return jsonify({'error': "target has no repository path"}), 400
+    env = _borg_env_for(target)
+    try:
+        r = subprocess.run(
+            ['borg', 'delete', f'{repo}::{snapshot}'],
+            capture_output=True, text=True, timeout=120, env=env,
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return jsonify({'error': str(e)}), 500
+    if r.returncode != 0:
+        msg = (r.stderr.strip() or r.stdout.strip() or
+               f'borg delete exited {r.returncode}')
+        return jsonify({'error': msg}), 500
+    return jsonify({'status': 'ok', 'removed': snapshot})
+
+
 # ── Borg helpers (mirrors the PBS pair above) ──────────────────────
 
 

@@ -762,7 +762,10 @@ export function HostBackup() {
         onClose={() => setInspectingArchive(null)}
         onDeleted={() => {
           setInspectingArchive(null)
+          // Refresh both lists — a deleted item might have been local
+          // or remote (PBS/Borg). Cheap enough to revalidate both.
           mutateArchives()
+          mutateRemoteArchives()
         }}
       />
 
@@ -1129,21 +1132,40 @@ function InspectModal({
     return downloadLocalArchive()
   }
 
-  // Local archive deletion. The backend purges the .tar.zst, the
-  // .proxmenux.json sidecar and the matching <stem>.log so the
-  // /var/log/proxmenux directory stays in sync with the archive list.
-  // Remote archives (PBS / Borg) are not deletable from here — those
-  // belong to their own datastore prune policy.
-  const deleteLocalArchive = async () => {
-    if (!localArc) return
+  // Archive deletion — works for local, PBS and Borg backends.
+  //   • local: DELETE /archives/<id> → removes .tar.zst + sidecar + run log.
+  //   • pbs:   DELETE /remote-archives → `proxmox-backup-client snapshot forget`.
+  //   • borg:  DELETE /remote-archives → `borg delete <repo>::<archive>`.
+  // PBS-protected snapshots come back as 409 with the original message so
+  // the operator can decide whether to lift the protection first.
+  const deleteArchive = async () => {
+    if (!archive) return
     setDeletingArchive(true)
     setError(null)
     try {
-      const resp = await fetchApi<{ status: string; removed: string[] }>(
-        `/api/host-backups/archives/${encodeURIComponent(localArc.id)}`,
-        { method: "DELETE" },
-      )
-      setArchiveDeleteResult(resp.removed || [])
+      let removed: string[] = []
+      if (archive.source === "local" && localArc) {
+        const resp = await fetchApi<{ status: string; removed: string[] }>(
+          `/api/host-backups/archives/${encodeURIComponent(localArc.id)}`,
+          { method: "DELETE" },
+        )
+        removed = resp.removed || []
+      } else if (remoteArc) {
+        const resp = await fetchApi<{ status: string; removed: string }>(
+          `/api/host-backups/remote-archives`,
+          {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              backend: remoteArc.backend,
+              repo_name: remoteArc.repo_name,
+              snapshot: remoteArc.snapshot,
+            }),
+          },
+        )
+        removed = resp.removed ? [resp.removed] : []
+      }
+      setArchiveDeleteResult(removed)
       setShowDeleteArchiveConfirm(false)
       if (onDeleted) onDeleted(); else onClose()
     } catch (e) {
@@ -1387,22 +1409,26 @@ function InspectModal({
               <span className="hidden sm:inline">View contents</span>
             </Button>
           </div>
-          {archive?.source === "local" && (
-            <Button
-              onClick={() => setShowDeleteArchiveConfirm(true)}
-              disabled={deletingArchive}
-              className="bg-red-500/10 border border-red-500/40 text-red-400 hover:bg-red-500/20 hover:text-red-300"
-              variant="outline"
-              title="Permanently delete this archive (.tar.zst + sidecar + log)"
-            >
-              {deletingArchive ? (
-                <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4 sm:mr-2" />
-              )}
-              <span className="hidden sm:inline">Delete</span>
-            </Button>
-          )}
+          <Button
+            onClick={() => setShowDeleteArchiveConfirm(true)}
+            disabled={deletingArchive}
+            className="bg-red-500/10 border border-red-500/40 text-red-400 hover:bg-red-500/20 hover:text-red-300"
+            variant="outline"
+            title={
+              archive?.source === "local"
+                ? "Permanently delete this archive (.tar.zst + sidecar + log)"
+                : archive?.source === "pbs"
+                ? "Permanently forget this PBS snapshot (proxmox-backup-client snapshot forget)"
+                : "Permanently delete this Borg archive (borg delete)"
+            }
+          >
+            {deletingArchive ? (
+              <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4 sm:mr-2" />
+            )}
+            <span className="hidden sm:inline">Delete</span>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -1521,26 +1547,30 @@ function InspectModal({
         <DialogHeader>
           <DialogTitle className="text-base flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-red-500" />
-            Delete archive
+            Delete {backendLabel} backup
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Removes the archive, its sidecar JSON and the matching run log. The action is permanent — restore needs an off-host copy.
+            {archive?.source === "local"
+              ? "Removes the archive, its sidecar JSON and the matching run log. The action is permanent — restore needs an off-host copy."
+              : archive?.source === "pbs"
+              ? `Forgets this snapshot from the PBS repository "${remoteArc?.repo_name ?? ""}". The action is permanent — PBS GC may reclaim the underlying chunks at the next garbage-collection run.`
+              : `Deletes this archive from the Borg repository "${remoteArc?.repo_name ?? ""}". The action is permanent — Borg compacts the freed space at the next prune.`}
           </DialogDescription>
         </DialogHeader>
         <div className="text-sm font-mono px-3 py-2 rounded-md border border-border bg-background/40 break-all">
-          {localArc?.id}
+          {archive?.source === "local" ? localArc?.id : remoteArc?.snapshot}
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={() => setShowDeleteArchiveConfirm(false)} disabled={deletingArchive}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={deleteLocalArchive} disabled={deletingArchive}>
+          <Button variant="destructive" onClick={deleteArchive} disabled={deletingArchive}>
             {deletingArchive ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Trash2 className="h-4 w-4 mr-2" />
             )}
-            Delete archive
+            Delete
           </Button>
         </div>
       </DialogContent>
