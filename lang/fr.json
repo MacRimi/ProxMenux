@@ -4552,6 +4552,8 @@
   "VFIO modules configured.": "Modules VFIO configurés.",
   "VFIO modules in /etc/modules": "Modules VFIO dans /etc/modules",
   "VFIO modules removed from /etc/modules": "Modules VFIO supprimés de /etc/modules",
+  "VFIO orphans cleared and initramfs rebuilt — next boot will free the GPU.": "les orphelins VFIO effacés et initramfs reconstruits — le prochain démarrage libérera le GPU.",
+  "VFIO orphans cleared but initramfs rebuild failed; check /var/log/proxmenux logs.": "les orphelins VFIO ont été effacés mais la reconstruction d'initramfs a échoué ;vérifiez les journaux /var/log/proxmenux.",
   "VLAN": "VLAN",
   "VM": "Machine virtuelle",
   "VM Conflict Policy": "Politique de conflit de VM",

@@ -4552,6 +4552,8 @@
   "VFIO modules configured.": "VFIO-Module konfiguriert.",
   "VFIO modules in /etc/modules": "VFIO-Module in /etc/modules",
   "VFIO modules removed from /etc/modules": "VFIO-Module aus /etc/modules entfernt",
+  "VFIO orphans cleared and initramfs rebuilt — next boot will free the GPU.": "VFIO-Waisen gelöscht und initramfs neu erstellt – beim nächsten Start wird die GPU freigegeben.",
+  "VFIO orphans cleared but initramfs rebuild failed; check /var/log/proxmenux logs.": "VFIO-Waisen gelöscht, aber die Neuerstellung von initramfs ist fehlgeschlagen;Überprüfen Sie die /var/log/proxmenux-Protokolle.",
   "VLAN": "VLAN",
   "VM": "VM",
   "VM Conflict Policy": "VM-Konfliktrichtlinie",
