@@ -12256,7 +12256,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nginx-proxy-manager.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12353,7 +12353,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nx-witness.webp",
     "updateable": true,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12424,7 +12424,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/oauth2-proxy.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12557,7 +12557,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ollama.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12588,7 +12588,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/omada.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12623,7 +12623,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ombi.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12801,7 +12801,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/opencloud.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12836,7 +12836,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/opengist.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -12900,7 +12900,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openobserve.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12973,7 +12973,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp",
     "updateable": true,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -13008,7 +13008,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/open-webui.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13182,7 +13182,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ots.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -13247,7 +13247,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/owncast.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13323,7 +13323,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ownfoil.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -13424,7 +13424,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pangolin.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13459,7 +13459,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/paperclip-ai.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
