@@ -66,6 +66,47 @@ def require_auth(f):
     return decorated_function
 
 
+def require_auth_or_ticket(f):
+    """Like `require_auth` but ALSO accepts a single-use `?ticket=...`
+    query parameter (same tickets `/api/terminal/ticket` issues for
+    WebSockets). Use on endpoints that the browser needs to invoke
+    from an <a download href="..."> tag — anchor tags can't send the
+    Authorization header, so the caller fetches a ticket first and
+    appends it to the URL.
+
+    Use only for streaming downloads where adding `?ticket=...` is
+    the only practical way to authenticate; everything else stays
+    on plain Bearer-token auth."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        config = load_auth_config()
+        if not config.get("enabled", False) or config.get("declined", False):
+            return f(*args, **kwargs)
+
+        # First try the Bearer header (fetch from JS uses this).
+        auth_header = request.headers.get('Authorization')
+        if auth_header:
+            parts = auth_header.split()
+            if len(parts) == 2 and parts[0].lower() == 'bearer':
+                if verify_token(parts[1]):
+                    return f(*args, **kwargs)
+
+        # Fall through to single-use ticket (works for <a download>).
+        try:
+            from flask_terminal_routes import _consume_terminal_ticket
+            if _consume_terminal_ticket(request.args.get('ticket', '')):
+                return f(*args, **kwargs)
+        except ImportError:
+            pass
+
+        return jsonify({
+            "error": "Authentication required",
+            "message": "Provide a Bearer token in the Authorization header or a fresh ?ticket=... from /api/terminal/ticket"
+        }), 401
+
+    return decorated_function
+
+
 def require_admin_scope(f):
     """Like `require_auth` but ALSO requires the token's `scope == full_admin`.
 

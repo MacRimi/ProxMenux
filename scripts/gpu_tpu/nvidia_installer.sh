@@ -1629,8 +1629,28 @@ auto_reinstall_from_state() {
     echo "No NVIDIA GPU detected on this host — skipping reinstall" | tee -a "$LOG_FILE"
     return 0
   fi
-  # Skip if the GPU is bound to vfio-pci (reserved for VM passthrough);
-  # installing the host driver would conflict with the passthrough config.
+  # Skip when the host is configured for VFIO passthrough. Two
+  # signals — config wins over runtime:
+  #
+  #   1. modprobe.d declares the nvidia* modules blacklisted (the
+  #      file ProxMenux drops when switching the GPU to VM mode is
+  #      `proxmenux-nvidia-vfio-blacklist.conf`, but any blacklist
+  #      file counts).
+  #   2. The PCI device is bound to vfio-pci.
+  #
+  # The config check has to come FIRST because right after a host
+  # restore + reboot, the binding may not yet be effective (the
+  # GPU temporarily shows "no driver" while udev/initramfs settle).
+  # Reinstalling NVIDIA in that window forces the module onto a
+  # PCI device vfio-pci has already reserved → "NVRM: Try unloading
+  # the conflicting kernel module" and exit 1.
+  if [[ -f /etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf ]] \
+     || grep -qrhE '^[[:space:]]*blacklist[[:space:]]+nvidia([[:space:]_]|$)' \
+          /etc/modprobe.d/ 2>/dev/null; then
+    echo "NVIDIA blacklisted (host is VFIO-configured) — skipping host driver reinstall" \
+      | tee -a "$LOG_FILE"
+    return 0
+  fi
   local _vfio_dev
   for _vfio_dev in /sys/bus/pci/devices/*; do
     [[ "$(cat "$_vfio_dev/vendor" 2>/dev/null)" == "0x10de" ]] || continue

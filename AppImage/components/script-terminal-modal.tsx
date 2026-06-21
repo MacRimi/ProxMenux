@@ -49,6 +49,12 @@ interface ScriptTerminalModalProps {
   description: string
   scriptName?: string
   params?: Record<string, string>
+  // Optional callback fired when the script's WebSocket closes
+  // (script_runner sends an exit code and then closes). Lets the
+  // parent auto-dismiss the modal — used by host-backup's Restore
+  // flow so "Press Enter to close" in the bash script actually
+  // closes the modal without an extra click. Other callers ignore.
+  onComplete?: () => void
 }
 
 export function ScriptTerminalModal({
@@ -58,6 +64,7 @@ export function ScriptTerminalModal({
   title,
   description,
   params = { EXECUTION_MODE: "web" },
+  onComplete,
 }: ScriptTerminalModalProps) {
   const termRef = useRef<any>(null)
   const wsRef = useRef<WebSocket | null>(null)
@@ -94,6 +101,13 @@ export function ScriptTerminalModal({
   useEffect(() => {
     paramsRef.current = params
   }, [params])
+
+  // Same trick for onComplete — we want the latest callback inside
+  // the ws.onclose handler without re-running the connection effect.
+  const onCompleteRef = useRef<(() => void) | undefined>(undefined)
+  useEffect(() => {
+    onCompleteRef.current = onComplete
+  }, [onComplete])
 
   const attemptReconnect = useCallback(() => {
     if (!isOpen || isComplete || reconnectAttemptsRef.current >= 3) {
@@ -195,6 +209,7 @@ const initMessage = {
             reconnectTimeoutRef.current = setTimeout(attemptReconnect, 2000)
           } else {
             setIsComplete(true)
+            onCompleteRef.current?.()
           }
         }
       }
@@ -382,6 +397,7 @@ const initMessage = {
 
       if (!isComplete) {
         setIsComplete(true)
+        onCompleteRef.current?.()
       }
     }
 

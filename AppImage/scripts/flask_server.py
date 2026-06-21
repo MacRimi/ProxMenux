@@ -78,7 +78,7 @@ from flask_notification_routes import notification_bp  # noqa: E402
 from flask_oci_routes import oci_bp  # noqa: E402
 from notification_manager import notification_manager  # noqa: E402
 import post_install_versions  # noqa: E402  — Sprint 12A: detect post-install function updates
-from jwt_middleware import require_auth  # noqa: E402
+from jwt_middleware import require_auth, require_auth_or_ticket  # noqa: E402
 import auth_manager  # noqa: E402
 
 # -------------------------------------------------------------------
@@ -15826,7 +15826,7 @@ def api_host_backups_remote_archive_export_status(task_id):
 
 
 @app.route('/api/host-backups/remote-archives/export/<task_id>/download', methods=['GET'])
-@require_auth
+@require_auth_or_ticket
 def api_host_backups_remote_archive_export_download(task_id):
     """Stream the packed export to the browser. Same auth + send_file
     pattern as the local archive download. Cleans up the tarball after
@@ -16121,6 +16121,22 @@ def _inspect_compose_json(staging: str) -> dict:
         out['files_truncated'] = truncated
         out['files_total_count'] = len(files)
 
+    # ── Rollback plan ──
+    # Compare backup state vs current host to surface VMs/LXCs that
+    # would be removed and components that would be uninstalled by
+    # a "restore to backup state" operation. Read-only here — the
+    # actual rollback is executed by apply_cluster_postboot.sh after
+    # the operator confirms in the Restore flow.
+    rollback_script = f'{scripts_dir}/compute_rollback_plan.sh'
+    if os.path.isfile(rollback_script):
+        try:
+            r = subprocess.run(['bash', rollback_script, staging],
+                               capture_output=True, text=True, timeout=20)
+            if r.returncode == 0 and r.stdout.strip():
+                out['rollback_plan'] = json.loads(r.stdout)
+        except (subprocess.TimeoutExpired, OSError, json.JSONDecodeError, ValueError):
+            pass
+
     # ── Bundle the loose metadata sidecars for quick reference ──
     if os.path.isdir(metadata):
         meta_view: dict = {}
@@ -16195,6 +16211,166 @@ def api_host_backups_inspect_archive():
             shutil.rmtree(staging, ignore_errors=True)
         except OSError:
             pass
+
+
+# ──────────────────────────────────────────────────────────────
+# Restore prepare/cleanup — Monitor → shell TUI handoff
+# ──────────────────────────────────────────────────────────────
+# The "Restore" button in the Inspect modal goes through TWO steps:
+#   1. POST /restore/prepare → backend extracts the snapshot to a
+#      persistent staging dir under _RESTORE_STAGING_ROOT. Returns
+#      the staging path so the next step can find it.
+#   2. The frontend launches a ScriptTerminalModal pointing at
+#      restore/monitor_apply.sh with that staging path + selected
+#      mode/components. monitor_apply.sh sources backup_host.sh and
+#      calls _rs_run_complete_guided / _rs_run_custom_restore — the
+#      exact same apply path the TUI uses.
+#
+# Staging dirs auto-expire: every new prepare() removes any leftover
+# from previous runs older than _RESTORE_STAGING_TTL_SECONDS so a
+# crashed Monitor session doesn't accumulate gigabytes on /tmp.
+
+_RESTORE_STAGING_ROOT = '/tmp'
+_RESTORE_STAGING_PREFIX = 'pmnx-restore-'
+_RESTORE_STAGING_TTL_SECONDS = 6 * 3600  # 6 hours
+
+def _restore_staging_gc():
+    """Remove stale Monitor restore staging dirs. Best-effort; any
+    OSError silently skips the entry so a permission glitch on one
+    item doesn't block the new prepare."""
+    import time
+    now = time.time()
+    try:
+        entries = os.listdir(_RESTORE_STAGING_ROOT)
+    except OSError:
+        return
+    for entry in entries:
+        if not entry.startswith(_RESTORE_STAGING_PREFIX):
+            continue
+        full = os.path.join(_RESTORE_STAGING_ROOT, entry)
+        try:
+            age = now - os.path.getmtime(full)
+        except OSError:
+            continue
+        if age > _RESTORE_STAGING_TTL_SECONDS:
+            try:
+                shutil.rmtree(full, ignore_errors=True)
+            except OSError:
+                pass
+
+
+@app.route('/api/host-backups/restore/prepare', methods=['POST'])
+@require_auth
+def api_host_backups_restore_prepare():
+    """Extract a snapshot to a persistent staging directory. The
+    frontend follows up by launching monitor_apply.sh against that
+    staging via ScriptTerminalModal. Body is the same shape as
+    /inspect-archive: {source, repo_name?, snapshot?, path?}.
+    Returns: {staging_path}."""
+    payload = request.get_json(silent=True) or {}
+    source = (payload.get('source') or '').strip()
+    if source not in ('pbs', 'borg', 'local'):
+        return jsonify({'error': 'source must be pbs, borg, or local'}), 400
+
+    repo_dict: dict = {}
+    snapshot = ''
+    if source == 'pbs':
+        repo_name = (payload.get('repo_name') or '').strip()
+        snapshot = (payload.get('snapshot') or '').strip()
+        if not repo_name or not snapshot:
+            return jsonify({'error': 'repo_name and snapshot are required for pbs'}), 400
+        for r in _list_pbs_destinations():
+            if r.get('name') == repo_name:
+                repo_dict = r
+                break
+        if not repo_dict:
+            return jsonify({'error': f'PBS repo "{repo_name}" not configured'}), 404
+    elif source == 'borg':
+        repo_name = (payload.get('repo_name') or '').strip()
+        snapshot = (payload.get('snapshot') or '').strip()
+        if not repo_name or not snapshot:
+            return jsonify({'error': 'repo_name and snapshot are required for borg'}), 400
+        for r in _list_borg_destinations():
+            if r.get('name') == repo_name:
+                repo_dict = r
+                break
+        if not repo_dict:
+            return jsonify({'error': f'Borg repo "{repo_name}" not configured'}), 404
+    else:
+        path = (payload.get('path') or '').strip()
+        if not path or not os.path.isfile(path):
+            return jsonify({'error': f'local archive not found: {path}'}), 404
+        repo_dict = {'path': path}
+
+    _restore_staging_gc()
+
+    import tempfile
+    staging = tempfile.mkdtemp(prefix=_RESTORE_STAGING_PREFIX, dir=_RESTORE_STAGING_ROOT)
+    try:
+        ok, err = _inspect_extract_to_staging(source, repo_dict, snapshot, staging)
+        if not ok:
+            shutil.rmtree(staging, ignore_errors=True)
+            return jsonify({'error': err}), 500
+        if not _inspect_normalize_layout(staging):
+            shutil.rmtree(staging, ignore_errors=True)
+            return jsonify({'error': 'archive layout not recognized — no rootfs/ found'}), 500
+        # List the real backup paths so the Custom restore checklist
+        # only offers what's actually present (default profile + the
+        # operator's extras). Mirrors what _rs_select_component_paths
+        # in backup_host.sh now does after the paths-not-components
+        # refactor — perfect backup↔restore parity.
+        paths_available: list = []
+        list_script = f'{_PROXMENUX_SCRIPTS_DIR}/backup_restore/restore/list_paths.sh'
+        if os.path.isfile(list_script):
+            try:
+                r = subprocess.run(['bash', list_script, staging],
+                                   capture_output=True, text=True, timeout=30)
+                if r.returncode == 0 and r.stdout.strip():
+                    paths_available = json.loads(r.stdout.strip())
+            except (subprocess.TimeoutExpired, OSError, json.JSONDecodeError, ValueError):
+                pass
+
+        rollback_plan: dict = {}
+        rollback_script = f'{_PROXMENUX_SCRIPTS_DIR}/backup_restore/restore/compute_rollback_plan.sh'
+        if os.path.isfile(rollback_script):
+            try:
+                r = subprocess.run(['bash', rollback_script, staging],
+                                   capture_output=True, text=True, timeout=20)
+                if r.returncode == 0 and r.stdout.strip():
+                    rollback_plan = json.loads(r.stdout)
+            except (subprocess.TimeoutExpired, OSError, json.JSONDecodeError, ValueError):
+                pass
+
+        return jsonify({
+            'staging_path': staging,
+            'paths_available': paths_available,
+            'rollback_plan': rollback_plan,
+        })
+    except Exception as e:
+        shutil.rmtree(staging, ignore_errors=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/host-backups/restore/cleanup', methods=['POST'])
+@require_auth
+def api_host_backups_restore_cleanup():
+    """Explicit cleanup for a staging dir. Called by the UI after the
+    ScriptTerminalModal closes. Best-effort: the GC in prepare() will
+    catch anything missed here within _RESTORE_STAGING_TTL_SECONDS."""
+    payload = request.get_json(silent=True) or {}
+    staging = (payload.get('staging_path') or '').strip()
+    # Defense in depth: only allow paths under the staging root with
+    # the expected prefix. Anything else could be the operator trying
+    # to coerce the endpoint into rm-ing arbitrary files.
+    if (not staging
+            or not staging.startswith(os.path.join(_RESTORE_STAGING_ROOT, _RESTORE_STAGING_PREFIX))
+            or '..' in staging.split(os.sep)):
+        return jsonify({'error': 'invalid staging_path'}), 400
+    try:
+        shutil.rmtree(staging, ignore_errors=True)
+    except OSError as e:
+        return jsonify({'error': str(e)}), 500
+    return jsonify({'status': 'ok'})
 
 
 @app.route('/api/host-backups/archives/<path:archive_id>/manifest', methods=['GET'])
@@ -16341,7 +16517,7 @@ def api_host_backups_archive_prepare_restore(archive_id):
 
 
 @app.route('/api/host-backups/archives/<path:archive_id>/download', methods=['GET'])
-@require_auth
+@require_auth_or_ticket
 def api_host_backups_archive_download(archive_id):
     """Stream the .tar.zst archive back to the operator with a sane
     Content-Disposition. send_file handles range requests + streaming

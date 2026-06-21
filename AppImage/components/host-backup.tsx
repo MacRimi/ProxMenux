@@ -44,7 +44,9 @@ import {
   Info,
   ListTree,
 } from "lucide-react"
+import { ScriptTerminalModal } from "./script-terminal-modal"
 import { fetchApi, getApiUrl } from "../lib/api-config"
+import { fetchTerminalTicket } from "../lib/terminal-ws"
 import { formatStorage } from "../lib/utils"
 
 // ── Shape contracts with the backend (flask_server.py: api_host_backups_*) ──
@@ -964,37 +966,88 @@ function InspectModal({
   const [showArchiveFullLog, setShowArchiveFullLog] = useState(false)
   const [showDeleteArchiveConfirm, setShowDeleteArchiveConfirm] = useState(false)
   const [viewingContents, setViewingContents] = useState(false)
+  // Restore flow state:
+  //   restorePreparing  — extract running (blocking spinner overlay)
+  //   restoreOptions    — modal open after prepare succeeded
+  //   restoreTerminal   — ScriptTerminalModal open with monitor_apply.sh
+  // The extract happens BEFORE the options modal so the custom
+  // checklist can be filled from `components_available` (what's
+  // actually inside this backup) instead of a hardcoded list.
+  const [restorePreparing, setRestorePreparing] = useState(false)
+  const [restoreError, setRestoreError] = useState<string | null>(null)
+  const [restoreOptions, setRestoreOptions] = useState<{
+    stagingPath: string
+    pathsAvailable: string[]
+    rollbackPlan?: RollbackPlan
+  } | null>(null)
+  const [restoreTerminal, setRestoreTerminal] = useState<{
+    stagingPath: string
+    mode: "full" | "custom"
+    paths: string[]
+  } | null>(null)
+
+  const beginRestore = async () => {
+    if (!archive) return
+    setRestoreError(null)
+    setRestorePreparing(true)
+    const body: Record<string, string> = { source: archive.source }
+    if (archive.source === "local") {
+      if (!localArc?.path) { setRestoreError("Local archive path missing"); setRestorePreparing(false); return }
+      body.path = localArc.path
+    } else if (remoteArc) {
+      body.repo_name = remoteArc.repo_name
+      body.snapshot = remoteArc.snapshot
+    } else {
+      setRestoreError("Snapshot info missing")
+      setRestorePreparing(false)
+      return
+    }
+    try {
+      const r: any = await fetchApi("/api/host-backups/restore/prepare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      if (!r?.staging_path) throw new Error("backend did not return a staging path")
+      setRestoreOptions({
+        stagingPath: r.staging_path,
+        pathsAvailable: Array.isArray(r.paths_available) ? r.paths_available : [],
+        rollbackPlan: r.rollback_plan,
+      })
+    } catch (e) {
+      setRestoreError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setRestorePreparing(false)
+    }
+  }
   const [deletingArchive, setDeletingArchive] = useState(false)
   const [archiveDeleteResult, setArchiveDeleteResult] = useState<string[] | null>(null)
 
-  // Local download — direct file streamed straight from the server.
+  // Local download. Uses a single-use ticket appended to the URL +
+  // `<a download>` instead of fetch+blob — the previous fetch+blob
+  // approach loaded the whole archive into the browser's RAM via
+  // URL.createObjectURL(), which broke around 2 GB on most browsers.
+  // With the ticket-on-URL approach the browser streams the response
+  // straight to disk, so archive size is bounded only by free space.
   const downloadLocalArchive = async () => {
     if (!localArc) return
     setDownloading(true)
     setError(null)
     try {
-      const token = typeof window !== "undefined"
-        ? localStorage.getItem("proxmenux-auth-token") || ""
-        : ""
-      const r = await fetch(
-        getApiUrl(`/api/host-backups/archives/${encodeURIComponent(localArc.id)}/download`),
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        },
-      )
-      if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`)
-      const blob = await r.blob()
-      const url = URL.createObjectURL(blob)
+      const ticket = await fetchTerminalTicket()
+      let url = getApiUrl(`/api/host-backups/archives/${encodeURIComponent(localArc.id)}/download`)
+      if (ticket) url += `?ticket=${encodeURIComponent(ticket)}`
       const a = document.createElement("a")
       a.href = url
       a.download = localArc.id
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch (e) {
       setError(`Download failed: ${e instanceof Error ? e.message : String(e)}`)
     } finally {
+      // The download itself runs in the browser's network stack;
+      // we just initiated it. Clear the spinner immediately.
       setDownloading(false)
     }
   }
@@ -1048,26 +1101,20 @@ function InspectModal({
       if (!task || task.state !== "completed") {
         throw new Error(task?.error || "export did not complete")
       }
-      // Stream the resulting .tar.zst. Server cleans the file up
-      // automatically once the response finishes.
-      const token = typeof window !== "undefined"
-        ? localStorage.getItem("proxmenux-auth-token") || ""
-        : ""
-      const r = await fetch(
-        getApiUrl(`/api/host-backups/remote-archives/export/${encodeURIComponent(started.task_id)}/download`),
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} },
-      )
-      if (!r.ok) throw new Error(`download HTTP ${r.status}`)
-      const blob = await r.blob()
-      const url = URL.createObjectURL(blob)
+      // Stream the resulting .tar.zst with a ticketed URL + <a download>.
+      // Same rationale as downloadLocalArchive: bypass fetch+blob to
+      // avoid the ~2 GB browser-RAM limit; the browser writes
+      // straight to disk.
+      const ticket = await fetchTerminalTicket()
+      let url = getApiUrl(`/api/host-backups/remote-archives/export/${encodeURIComponent(started.task_id)}/download`)
+      if (ticket) url += `?ticket=${encodeURIComponent(ticket)}`
+      const safeSnap = remoteArc.snapshot.replace(/\//g, "_")
       const a = document.createElement("a")
       a.href = url
-      const safeSnap = remoteArc.snapshot.replace(/\//g, "_")
       a.download = `${remoteArc.backend}-${remoteArc.repo_name}-${safeSnap}.tar.zst`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
       setExportTask(null)
     } catch (e) {
       setError(`Download failed: ${e instanceof Error ? e.message : String(e)}`)
@@ -1172,318 +1219,190 @@ function InspectModal({
   return (
     <>
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent key={archiveKey} className="max-w-3xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <DatabaseBackup className="h-5 w-5 text-blue-500" />
-            <span className="font-mono text-sm truncate">{archive?.display_id}</span>
+      <DialogContent key={archiveKey} className="max-w-3xl bg-card border-border p-0 flex flex-col gap-0 max-h-[90vh]">
+        <DialogHeader className="px-4 sm:px-6 pt-4 pb-3 shrink-0 border-b border-border">
+          <DialogTitle className="flex items-center gap-2 flex-wrap text-base">
+            <DatabaseBackup className="h-5 w-5 text-blue-500 shrink-0" />
+            <span className="font-mono text-xs sm:text-sm break-all flex-1 min-w-0">{archive?.display_id}</span>
             {archive && (
-              <Badge variant="outline" className={`text-[10px] uppercase tracking-wide ${
+              <Badge variant="outline" className={`text-[10px] uppercase tracking-wide shrink-0 ${
                 archive.source === "pbs"
-                  ? "text-purple-300 border-purple-400/40"
+                  ? "text-purple-400 border-purple-500/40 bg-purple-500/10"
                   : archive.source === "borg"
-                    ? "text-cyan-300 border-cyan-400/40"
-                    : "text-emerald-300 border-emerald-400/40"
+                    ? "text-fuchsia-400 border-fuchsia-500/40 bg-fuchsia-500/10"
+                    : "text-blue-400 border-blue-500/40 bg-blue-500/10"
               }`}>
                 {archive.source}
               </Badge>
             )}
+            {remoteArc?.encrypted && (
+              <Badge variant="outline" className="text-[10px] text-emerald-400 border-emerald-500/40 bg-emerald-500/10 inline-flex items-center gap-1 shrink-0">
+                <Lock className="h-3 w-3" />
+              </Badge>
+            )}
           </DialogTitle>
-          <DialogDescription className="text-xs">
-            {isRemote
-              ? `Inspect the ${backendLabel} snapshot metadata and download it as a .tar.zst — the server extracts it on demand only when you click Download.`
-              : "Pick a restore mode, optionally run the preflight check, then get the exact shell command to apply the restore. Nothing on this host is changed from here — the apply step happens from a terminal."}
-          </DialogDescription>
         </DialogHeader>
 
-        {/* ── Remote snapshot view (PBS or Borg) — info card + on-demand export-then-download. */}
-        {isRemote && remoteArc && (
-          <div className="space-y-3">
-            <div className="rounded-md border border-border bg-background/40 p-3 space-y-1 text-xs">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{backendLabel} snapshot</div>
+        {/* ── Body: same shape for the 3 backends ─────────────── */}
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="px-4 sm:px-6 py-4 space-y-4">
+            {/* Snapshot info — uniform grid, with backend-specific
+                rows mixed in only when they carry data. */}
+            <section className="rounded-md border border-border bg-background/40 p-3 space-y-1 text-xs">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Snapshot</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
-                <div><span className="text-muted-foreground">Repository:</span> <code className="font-mono">{remoteArc.repo_repository}</code></div>
-                <div><span className="text-muted-foreground">Repo name:</span> <code className="font-mono">{remoteArc.repo_name}</code></div>
-                <div>
-                  <span className="text-muted-foreground">{remoteArc.backend === "pbs" ? "Backup group:" : "Archive name:"}</span>{" "}
-                  <code className="font-mono">{remoteArc.backend === "pbs" ? `${remoteArc.backup_type}/${remoteArc.backup_id}` : remoteArc.backup_id}</code>
-                </div>
-                <div><span className="text-muted-foreground">Snapshot time:</span> {formatMtime(remoteArc.backup_time)}</div>
-                {remoteArc.size_bytes > 0 && <div><span className="text-muted-foreground">Size:</span> {formatBytes(remoteArc.size_bytes)}</div>}
-                {remoteArc.owner && <div><span className="text-muted-foreground">Owner:</span> <code className="font-mono">{remoteArc.owner}</code></div>}
-                {remoteArc.borg_id && <div className="sm:col-span-2"><span className="text-muted-foreground">Borg id:</span> <code className="font-mono text-[10px] break-all">{remoteArc.borg_id}</code></div>}
+                {/* Time + size — present for every backend. */}
+                {archive && (archive.source === "pbs" || archive.source === "borg") && remoteArc ? (
+                  <>
+                    <div><span className="text-muted-foreground">Snapshot time:</span> {formatMtime(remoteArc.backup_time)}</div>
+                    {remoteArc.size_bytes > 0 && <div><span className="text-muted-foreground">Size:</span> {formatBytes(remoteArc.size_bytes)}</div>}
+                    <div><span className="text-muted-foreground">Repository:</span> <code className="font-mono break-all">{remoteArc.repo_repository}</code></div>
+                    <div><span className="text-muted-foreground">Repo name:</span> <code className="font-mono">{remoteArc.repo_name}</code></div>
+                    <div>
+                      <span className="text-muted-foreground">{remoteArc.backend === "pbs" ? "Backup group:" : "Archive name:"}</span>{" "}
+                      <code className="font-mono break-all">{remoteArc.backend === "pbs" ? `${remoteArc.backup_type}/${remoteArc.backup_id}` : remoteArc.backup_id}</code>
+                    </div>
+                    {remoteArc.owner && <div><span className="text-muted-foreground">Owner:</span> <code className="font-mono">{remoteArc.owner}</code></div>}
+                    {remoteArc.borg_id && <div className="sm:col-span-2"><span className="text-muted-foreground">Borg id:</span> <code className="font-mono text-[10px] break-all">{remoteArc.borg_id}</code></div>}
+                  </>
+                ) : localArc ? (
+                  <>
+                    <div><span className="text-muted-foreground">Created:</span> {formatMtime(localArc.mtime)}</div>
+                    <div><span className="text-muted-foreground">Size:</span> {formatBytes(localArc.size_bytes)}</div>
+                    <div className="sm:col-span-2"><span className="text-muted-foreground">Path:</span> <code className="font-mono break-all">{localArc.path}</code></div>
+                    {localArc.job_id && <div><span className="text-muted-foreground">Job id:</span> <code className="font-mono">{localArc.job_id}</code></div>}
+                    {localArc.profile && <div><span className="text-muted-foreground">Profile:</span> <code className="font-mono">{localArc.profile}</code></div>}
+                    {localArc.source_hostname && <div><span className="text-muted-foreground">Source host:</span> <code className="font-mono">{localArc.source_hostname}</code></div>}
+                    <div><span className="text-muted-foreground">Detected via:</span> <code className="font-mono text-[10px]">{localArc.detected_via}</code></div>
+                  </>
+                ) : null}
               </div>
-              {remoteArc.files.length > 0 && (
-                <div className="pt-1 mt-1 border-t border-border/50">
+              {/* PBS pxar files list — only PBS exposes this. */}
+              {remoteArc?.files && remoteArc.files.length > 0 && (
+                <div className="pt-2 mt-2 border-t border-border/50">
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Files in this snapshot</div>
                   <ul className="space-y-0.5">
                     {remoteArc.files.map((f) => (
                       <li key={f.filename} className="font-mono text-[11px] flex items-center justify-between gap-2">
                         <span>{f.filename}</span>
-                        <span className="text-muted-foreground">{formatStorage(f.size)}</span>
+                        <span className="text-muted-foreground">{formatBytes(f.size)}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
               )}
-            </div>
+            </section>
 
-            <div className="rounded-md border border-border bg-background/40 p-3 space-y-2">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div>
-                  <h3 className="text-sm font-medium">Download this snapshot</h3>
-                  <p className="text-[11px] text-muted-foreground">
-                    The server will {remoteArc.backend === "pbs" ? "restore the snapshot from PBS" : "borg-extract the archive"} and pack it as a <code className="font-mono">.tar.zst</code>, then stream it to your browser. The extraction only starts when you click Download.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button
-                    variant="outline"
-                    onClick={() => setViewingContents(true)}
-                    title="Extract this snapshot to a temp dir and show manifest, restore plan, files and metadata as a HTML report"
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View contents
-                  </Button>
-                  <Button onClick={downloadArchive} disabled={downloading}>
-                    {downloading ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Download className="h-4 w-4 mr-2" />
-                    )}
-                    Download
-                  </Button>
-                </div>
-              </div>
-
-              {exportTask && (
-                <div className="text-[11px] space-y-1 pt-2 border-t border-border/50">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className={`h-3.5 w-3.5 ${exportTask.state === "completed" || exportTask.state === "failed" ? "" : "animate-spin"}`} />
-                    <span className="font-medium capitalize">{exportTask.state}</span>
-                    <span className="text-muted-foreground">— {exportTask.message}</span>
-                  </div>
-                  {exportTask.state === "failed" && exportTask.error && (
-                    <div className="text-red-500 mt-1">{exportTask.error}</div>
-                  )}
-                  {exportTask.state === "completed" && exportTask.size_bytes > 0 && (
-                    <div className="text-emerald-400">Packed size: {formatBytes(exportTask.size_bytes)}</div>
-                  )}
-                </div>
-              )}
-
-              {error && (
-                <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
-                  {error}
-                </div>
-              )}
-            </div>
-
-            <p className="text-[11px] text-muted-foreground italic">
-              {remoteArc.backend === "pbs"
-                ? "Restore-to-this-host for PBS snapshots is best done from the PBS side with proxmox-backup-client restore. Use Download to pull the snapshot to your computer for off-host inspection or cross-host transfer."
-                : "Restore-to-this-host for Borg archives is best done with borg extract. Use Download to pull the archive to your computer for off-host inspection or cross-host transfer."}
-            </p>
-          </div>
-        )}
-
-        {/* ── Local archive view — full restore wizard (manifest + preflight + apply instructions). */}
-        {archive?.source === "local" && (<>
-        {/* Manifest summary — optional. If the archive has no manifest
-            (older backup format), we just skip it instead of blocking
-            the operator from continuing with the restore. */}
-        {manifestErr ? (
-          <div className="text-xs text-muted-foreground py-2 italic">
-            This archive doesn't carry a manifest snapshot — you can still pick a restore mode and get the instructions below.
-          </div>
-        ) : !manifest ? (
-          <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Reading manifest...
-          </div>
-        ) : (
-          <ManifestSummary manifest={manifest} />
-        )}
-
-        {/* ── Run log — what the scheduler wrote for THIS archive ── */}
-        {archiveLog && archiveLog.log_path && archiveLog.tail.length > 0 && (
-          <section className="space-y-2">
-            <h4 className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5 text-green-500">
-              <FileText className="h-3.5 w-3.5" /> Run log
-            </h4>
-            <div className="rounded-md border border-border bg-background/60 p-2">
-              <pre className="text-[11px] font-mono whitespace-pre-wrap break-all max-h-48 overflow-auto text-foreground/90">
+            {/* Run log — only Local has a co-located <stem>.log. */}
+            {archive?.source === "local" && archiveLog && archiveLog.log_path && archiveLog.tail.length > 0 && (
+              <section className="space-y-2">
+                <h4 className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5 text-green-500">
+                  <FileText className="h-3.5 w-3.5" /> Run log
+                </h4>
+                <div className="rounded-md border border-border bg-background/60 p-2">
+                  <pre className="text-[11px] font-mono whitespace-pre-wrap break-all max-h-48 overflow-auto text-foreground/90">
 {archiveLog.tail.join("\n")}
-              </pre>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-[10px] text-muted-foreground inline-flex items-center gap-2">
-                  <span>tail · {formatBytes(archiveLog.size)}</span>
-                  <span className="font-mono break-all">{archiveLog.log_path}</span>
-                </span>
-                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setShowArchiveFullLog(true)}>
-                  <FileText className="h-3.5 w-3.5 mr-1" />
-                  Open full log
-                </Button>
-              </div>
-            </div>
-          </section>
-        )}
+                  </pre>
+                  <div className="flex items-center justify-between mt-2 gap-2 flex-wrap">
+                    <span className="text-[10px] text-muted-foreground inline-flex items-center gap-2 min-w-0">
+                      <span>tail · {formatBytes(archiveLog.size)}</span>
+                      <span className="font-mono break-all">{archiveLog.log_path}</span>
+                    </span>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs shrink-0" onClick={() => setShowArchiveFullLog(true)}>
+                      <FileText className="h-3.5 w-3.5 mr-1" />
+                      Open full log
+                    </Button>
+                  </div>
+                </div>
+              </section>
+            )}
 
-        {/* Mode selector + main "Restore" action */}
-        <div className="border-t border-border pt-4 space-y-3">
-          <div className="flex items-end gap-3 flex-wrap">
-            <div className="flex-1 min-w-[200px]">
-              <label className="text-xs text-muted-foreground block mb-1.5">
-                Restore mode
-              </label>
-              <Select value={mode} onValueChange={setMode}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="full">Full — apply everything</SelectItem>
-                  <SelectItem value="base">Base — everything except network</SelectItem>
-                  <SelectItem value="storage_only">Storage only</SelectItem>
-                  <SelectItem value="network_only">Network only</SelectItem>
-                  <SelectItem value="custom">Custom — paths picked manually</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* In-flight export task feedback (Download for PBS/Borg). */}
+            {exportTask && (
+              <div className="text-[11px] space-y-1 px-3 py-2 rounded-md border border-border bg-background/40">
+                <div className="flex items-center gap-2">
+                  <Loader2 className={`h-3.5 w-3.5 ${exportTask.state === "completed" || exportTask.state === "failed" ? "" : "animate-spin"}`} />
+                  <span className="font-medium capitalize">{exportTask.state}</span>
+                  <span className="text-muted-foreground">— {exportTask.message}</span>
+                </div>
+                {exportTask.state === "failed" && exportTask.error && (
+                  <div className="text-red-500 mt-1">{exportTask.error}</div>
+                )}
+                {exportTask.state === "completed" && exportTask.size_bytes > 0 && (
+                  <div className="text-emerald-400">Packed size: {formatBytes(exportTask.size_bytes)}</div>
+                )}
+              </div>
+            )}
+
+            {error && (
+              <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
+                {error}
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+
+        {/* ── Footer: same 4 buttons for the 3 backends ─────────
+            Restore (green) · Download (blue) · View contents (blue)
+            on the left · Delete (red) on the right. On mobile only
+            Restore keeps its label — the others are icon-only to fit
+            the narrower viewport without wrapping. */}
+        <div className="px-4 sm:px-6 py-3 border-t border-border shrink-0 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
-              variant="outline"
+              onClick={beginRestore}
+              disabled={restorePreparing}
+              className="bg-green-600 hover:bg-green-700 text-white"
+              title="Restore this snapshot to the current host (Complete or Custom by paths)"
+            >
+              {restorePreparing ? (
+                <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
+              ) : (
+                <DatabaseBackup className="h-4 w-4 sm:mr-2" />
+              )}
+              <span>Restore</span>
+            </Button>
+            <Button
               onClick={downloadArchive}
               disabled={downloading}
-              title="Download the .tar.zst archive to your computer for off-host storage"
+              className="bg-blue-500/10 border border-blue-500/40 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300"
+              variant="outline"
+              title="Download the snapshot as a .tar.zst"
             >
               {downloading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
               ) : (
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="h-4 w-4 sm:mr-2" />
               )}
-              Download
+              <span className="hidden sm:inline">Download</span>
             </Button>
             <Button
-              variant="outline"
-              className="bg-red-500/10 border-red-500/40 !text-red-400 hover:bg-red-500/20 hover:!text-red-300"
-              onClick={() => setShowDeleteArchiveConfirm(true)}
-              disabled={deletingArchive}
-              title="Permanently delete this archive, its sidecar and its run log"
-            >
-              {deletingArchive ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4 mr-2" />
-              )}
-              Delete
-            </Button>
-            <Button
-              variant="outline"
               onClick={() => setViewingContents(true)}
-              title="Extract this snapshot to a temp dir and show manifest, restore plan, files and metadata as a HTML report"
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              View contents
-            </Button>
-            <Button
+              className="bg-blue-500/10 border border-blue-500/40 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300"
               variant="outline"
-              onClick={runPreflight}
-              disabled={running}
-              title="Optional: dry-run a preflight check against this host before restoring"
+              title="Extract + show manifest, plan, files, metadata as HTML"
             >
-              {running ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <PlayCircle className="h-4 w-4 mr-2" />
-              )}
-              Preflight check
-            </Button>
-            <Button
-              onClick={fetchInstructions}
-              disabled={fetchingInstructions}
-              title="Get the shell command to apply this restore"
-            >
-              {fetchingInstructions ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <DatabaseBackup className="h-4 w-4 mr-2" />
-              )}
-              Restore
+              <Eye className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">View contents</span>
             </Button>
           </div>
-          <p className="text-[11px] text-muted-foreground">
-            The archive downloads as a <code className="font-mono">.tar.zst</code> file. To extract:
-            {" "}<code className="font-mono">tar -I zstd -xf {localArc?.id || "&lt;file&gt;"}</code>
-            {" "}(Linux/macOS with <code className="font-mono">zstd</code> installed). On Windows, 7-Zip 21.0+ opens it natively. Double-click won't work — no OS opens <code className="font-mono">.zst</code> out of the box.
-          </p>
-
-          {error && (
-            <div className="text-sm text-red-500 p-2 rounded-md border border-red-500/30 bg-red-500/10">
-              {error}
-            </div>
-          )}
-
-          {report && <PreflightReportView report={report} />}
-
-          {/* Restore instructions — appear whenever the operator clicks
-              "Restore" (with or without a preflight beforehand). */}
-          {instructions && (
-            <div className="space-y-2 pt-2 border-t border-border">
-              <h3 className="text-sm font-medium">Apply this restore</h3>
-              <div className="space-y-2 rounded-md border border-border bg-background/40 p-3 text-xs">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-mono text-sm font-medium">{instructions.archive_basename}</span>
-                  <Badge variant="outline" className="text-[10px]">{instructions.mode_label}</Badge>
-                  {instructions.reboot_required && (
-                    <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/40">
-                      reboot required after
-                    </Badge>
-                  )}
-                </div>
-
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Run this from a terminal:</div>
-                  <code
-                    className="block font-mono text-xs px-3 py-2 rounded bg-muted border border-border cursor-text select-all"
-                    onClick={(e) => {
-                      const sel = window.getSelection()
-                      if (sel) {
-                        sel.removeAllRanges()
-                        const range = document.createRange()
-                        range.selectNodeContents(e.currentTarget)
-                        sel.addRange(range)
-                      }
-                    }}
-                  >
-                    {instructions.shell_command}
-                  </code>
-                </div>
-
-                {instructions.menu_path.length > 0 && (
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Then:</div>
-                    <ol className="space-y-0.5">
-                      {instructions.menu_path.map((step, i) => (
-                        <li key={i} className="font-mono text-[11px] whitespace-pre">{step}</li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-
-                {instructions.notes.length > 0 && (
-                  <div className="space-y-1 pt-1 border-t border-border/50">
-                    {instructions.notes.map((note, i) => (
-                      <p key={i} className="text-[11px] text-amber-500 flex items-start gap-1.5">
-                        <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
-                        <span>{note}</span>
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+          {archive?.source === "local" && (
+            <Button
+              onClick={() => setShowDeleteArchiveConfirm(true)}
+              disabled={deletingArchive}
+              className="bg-red-500/10 border border-red-500/40 text-red-400 hover:bg-red-500/20 hover:text-red-300"
+              variant="outline"
+              title="Permanently delete this archive (.tar.zst + sidecar + log)"
+            >
+              {deletingArchive ? (
+                <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 sm:mr-2" />
+              )}
+              <span className="hidden sm:inline">Delete</span>
+            </Button>
           )}
         </div>
-        </>)}
       </DialogContent>
     </Dialog>
 
@@ -1497,6 +1416,102 @@ function InspectModal({
       path={localArc?.path}
       display_id={archive?.display_id}
     />
+
+    {/* ── Restore error toast (prepare failed) ─────────────────── */}
+    {restoreError && (
+      <Dialog open={true} onOpenChange={() => setRestoreError(null)}>
+        <DialogContent className="max-w-md bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Restore preparation failed
+            </DialogTitle>
+            <DialogDescription className="text-xs text-red-400 break-all">
+              {restoreError}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button variant="ghost" onClick={() => setRestoreError(null)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )}
+
+    {/* ── Restore options modal: opens only AFTER the prepare step,
+        so the Custom checklist already knows what's inside. ──── */}
+    <RestoreOptionsModal
+      open={restoreOptions !== null}
+      stagingPath={restoreOptions?.stagingPath ?? ""}
+      pathsAvailable={restoreOptions?.pathsAvailable ?? []}
+      rollbackPlan={restoreOptions?.rollbackPlan}
+      display_id={archive?.display_id}
+      onClose={() => {
+        const sp = restoreOptions?.stagingPath
+        setRestoreOptions(null)
+        if (sp) {
+          fetchApi("/api/host-backups/restore/cleanup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ staging_path: sp }),
+          }).catch(() => undefined)
+        }
+      }}
+      onLaunch={(mode, paths) => {
+        if (!restoreOptions) return
+        const sp = restoreOptions.stagingPath
+        setRestoreOptions(null)
+        setRestoreTerminal({ stagingPath: sp, mode, paths })
+      }}
+    />
+
+    {/* ── Restore terminal — uses the canonical ScriptTerminalModal
+        (the same component Hardware/Security/Settings use to run
+        their scripts). Stable `key` per stagingPath so each restore
+        session is a fresh terminal. */}
+    {restoreTerminal && (
+      <ScriptTerminalModal
+        key={restoreTerminal.stagingPath}
+        open={true}
+        onClose={() => {
+          const sp = restoreTerminal.stagingPath
+          fetchApi("/api/host-backups/restore/cleanup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ staging_path: sp }),
+          }).catch(() => undefined)
+          setRestoreTerminal(null)
+        }}
+        // Auto-dismiss when the script's PTY closes (i.e. the bash
+        // wrapper exited cleanly — the operator pressed Enter at the
+        // "Press Enter to close" prompt). Without this the operator
+        // would have to click Close manually after each restore.
+        onComplete={() => {
+          const sp = restoreTerminal.stagingPath
+          fetchApi("/api/host-backups/restore/cleanup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ staging_path: sp }),
+          }).catch(() => undefined)
+          setRestoreTerminal(null)
+        }}
+        scriptPath="/usr/local/share/proxmenux/scripts/backup_restore/restore/monitor_apply.sh"
+        scriptName="monitor_apply"
+        title={`Restore — ${restoreTerminal.mode === "full" ? "Complete" : "Custom by paths"}`}
+        description={
+          restoreTerminal.mode === "custom"
+            ? `${restoreTerminal.paths.length} path(s) selected`
+            : "Complete restore — applies the whole backup"
+        }
+        params={{
+          EXECUTION_MODE: "web",
+          STAGING: restoreTerminal.stagingPath,
+          MODE: restoreTerminal.mode,
+          ...(restoreTerminal.mode === "custom" && restoreTerminal.paths.length > 0
+            ? { PATHS: restoreTerminal.paths.join(",") }
+            : {}),
+        }}
+      />
+    )}
 
     {/* ── Confirm archive deletion ───────────────────────────── */}
     <Dialog open={showDeleteArchiveConfirm} onOpenChange={setShowDeleteArchiveConfirm}>
@@ -6648,7 +6663,7 @@ function PbsKeyfileRecoveryDialog({
             Cancel
           </Button>
           <Button
-            className="bg-emerald-500 hover:bg-emerald-600 text-white"
+            className="bg-green-600 hover:bg-green-700 text-white"
             disabled={!selected || !passphrase || busy}
             onClick={handleRecover}
           >
@@ -6686,6 +6701,21 @@ interface InspectResponse {
   files_truncated?: boolean
   files_total_count?: number
   metadata_files?: Record<string, string>
+  rollback_plan?: RollbackPlan
+}
+
+interface RollbackPlan {
+  backup_time?: string
+  vms_in_backup: number[]
+  vms_in_host: number[]
+  vms_to_remove: number[]
+  vms_to_restore: number[]
+  lxcs_in_backup: number[]
+  lxcs_in_host: number[]
+  lxcs_to_remove: number[]
+  lxcs_to_restore: number[]
+  components_to_uninstall: string[]
+  components_to_reinstall: string[]
 }
 
 function ArchiveContentsModal({
@@ -6822,6 +6852,12 @@ function ArchiveContentsModal({
                   </>
                 )
               })()}
+
+              {data.rollback_plan && (
+                <ContentsSection icon={AlertTriangle} title="Rollback plan" iconColor="text-amber-400">
+                  <RollbackPlanView plan={data.rollback_plan} />
+                </ContentsSection>
+              )}
 
               {files && files.length > 0 && (
                 <ContentsSection
@@ -7073,5 +7109,352 @@ function FilesTree({ files, truncated }: { files: Array<{ path: string; size: nu
         {truncated && <span className="text-amber-400">· list truncated at 5000 — open the snapshot manually to see the rest</span>}
       </div>
     </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────
+// RollbackPlanView
+// ──────────────────────────────────────────────────────────────
+// Visualizes what a "restore to backup state" would do — surfaces
+// the irreversible parts (VMs/LXCs to delete, components to
+// uninstall) in red, the safe re-apply parts in green. Drives the
+// operator confirmation in the Complete restore flow.
+// ──────────────────────────────────────────────────────────────
+function RollbackPlanView({ plan }: { plan: RollbackPlan }) {
+  const hasDestructive = (plan.vms_to_remove?.length || 0) > 0
+    || (plan.lxcs_to_remove?.length || 0) > 0
+    || (plan.components_to_uninstall?.length || 0) > 0
+  const hasRollback = (plan.vms_to_restore?.length || 0) > 0
+    || (plan.lxcs_to_restore?.length || 0) > 0
+    || (plan.components_to_reinstall?.length || 0) > 0
+
+  if (!hasDestructive && !hasRollback) {
+    return (
+      <div className="text-xs text-muted-foreground italic">
+        No host-state differences detected — the backup state matches the current host (or the backup didn't include /etc/pve).
+      </div>
+    )
+  }
+
+  const Pill = ({ children, tone }: { children: any; tone: "red" | "green" }) => (
+    <code className={`font-mono ml-1 px-1.5 py-0.5 rounded border ${
+      tone === "red"
+        ? "bg-red-500/10 border-red-500/30 text-red-300"
+        : "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+    }`}>{children}</code>
+  )
+
+  return (
+    <div className="space-y-3 text-xs">
+      {hasDestructive && (
+        <div className="rounded-md border border-red-500/40 bg-red-500/5 p-3 space-y-2">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-red-400 flex items-center gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5" />
+            Will be removed (created after the backup)
+          </div>
+          {plan.vms_to_remove.length > 0 && (
+            <div>
+              <span className="text-muted-foreground">VMs:</span>
+              {plan.vms_to_remove.map((id) => <Pill key={id} tone="red">{id}</Pill>)}
+            </div>
+          )}
+          {plan.lxcs_to_remove.length > 0 && (
+            <div>
+              <span className="text-muted-foreground">LXCs:</span>
+              {plan.lxcs_to_remove.map((id) => <Pill key={id} tone="red">{id}</Pill>)}
+            </div>
+          )}
+          {plan.components_to_uninstall.length > 0 && (
+            <div>
+              <span className="text-muted-foreground">Components:</span>
+              {plan.components_to_uninstall.map((c) => <Pill key={c} tone="red">{c}</Pill>)}
+            </div>
+          )}
+        </div>
+      )}
+
+      {hasRollback && (
+        <div className="rounded-md border border-emerald-500/40 bg-emerald-500/5 p-3 space-y-2">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+            <DatabaseBackup className="h-3.5 w-3.5" />
+            Will be (re)applied from backup
+          </div>
+          {plan.vms_to_restore.length > 0 && (
+            <div>
+              <span className="text-muted-foreground">VMs:</span>
+              {plan.vms_to_restore.map((id) => <Pill key={id} tone="green">{id}</Pill>)}
+            </div>
+          )}
+          {plan.lxcs_to_restore.length > 0 && (
+            <div>
+              <span className="text-muted-foreground">LXCs:</span>
+              {plan.lxcs_to_restore.map((id) => <Pill key={id} tone="green">{id}</Pill>)}
+            </div>
+          )}
+          {plan.components_to_reinstall.length > 0 && (
+            <div>
+              <span className="text-muted-foreground">Components:</span>
+              {plan.components_to_reinstall.map((c) => <Pill key={c} tone="green">{c}</Pill>)}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────
+// RestoreOptionsModal
+// ──────────────────────────────────────────────────────────────
+// Two-step UI for restoring a snapshot:
+//   Step 1 — pick Complete restore vs Custom by paths.
+//   Step 2 — if Custom, tick the paths to restore.
+// `pathsAvailable` is what the backend's list_paths.sh detected
+// in this specific backup (default profile + operator extras).
+// Perfect parity with the TUI's _rs_select_component_paths after
+// the paths-not-components refactor.
+// ──────────────────────────────────────────────────────────────
+
+function RestoreOptionsModal({
+  open,
+  onClose,
+  stagingPath,
+  pathsAvailable,
+  rollbackPlan,
+  display_id,
+  onLaunch,
+}: {
+  open: boolean
+  onClose: () => void
+  stagingPath: string
+  pathsAvailable: string[]
+  rollbackPlan?: RollbackPlan
+  display_id?: string
+  onLaunch: (mode: "full" | "custom", paths: string[]) => void
+}) {
+  const [step, setStep] = useState<"choose" | "custom">("choose")
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [error, setError] = useState<string | null>(null)
+  const [filter, setFilter] = useState<string>("")
+  const [destructiveAck, setDestructiveAck] = useState<boolean>(false)
+
+  // A Complete restore on a host that has VMs/LXCs/components NOT
+  // present in the backup is destructive (those entries get removed
+  // at next boot by apply_cluster_postboot.sh's rollback step). We
+  // force the operator to tick an explicit "I understand" checkbox
+  // before enabling the launch button.
+  const hasDestructive = !!rollbackPlan && (
+    (rollbackPlan.vms_to_remove?.length || 0) > 0
+    || (rollbackPlan.lxcs_to_remove?.length || 0) > 0
+    || (rollbackPlan.components_to_uninstall?.length || 0) > 0
+  )
+
+  useEffect(() => {
+    if (!open) {
+      setStep("choose")
+      setSelected(new Set())
+      setError(null)
+      setFilter("")
+      setDestructiveAck(false)
+    }
+  }, [open])
+
+  const togglePath = (p: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(p)) next.delete(p)
+      else next.add(p)
+      return next
+    })
+  }
+
+  const toggleAll = () => {
+    if (selected.size === filteredPaths.length) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(filteredPaths))
+    }
+  }
+
+  const filteredPaths = filter
+    ? pathsAvailable.filter((p) => p.toLowerCase().includes(filter.toLowerCase()))
+    : pathsAvailable
+
+  const launch = (mode: "full" | "custom") => {
+    if (mode === "custom" && selected.size === 0) {
+      setError("Pick at least one path to continue.")
+      return
+    }
+    setError(null)
+    onLaunch(mode, Array.from(selected))
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v && step !== "preparing") onClose() }}>
+      <DialogContent className="max-w-2xl bg-card border-border">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <DatabaseBackup className="h-5 w-5 text-emerald-400" />
+            Restore — choose mode
+          </DialogTitle>
+          <DialogDescription className="text-xs font-mono break-all">
+            {display_id}
+          </DialogDescription>
+        </DialogHeader>
+
+        {step === "choose" && (
+          <div className="space-y-3">
+            {/* Surface destructive deltas BEFORE the operator picks
+                Complete. Custom-by-paths can't trigger these
+                (paths-only restore doesn't touch the guest list or
+                components_status.json), so the warning lives here. */}
+            {rollbackPlan && hasDestructive && (
+              <div className="rounded-md border border-red-500/50 bg-red-500/5 p-3 space-y-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-red-400 flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Complete restore will REMOVE the following (created after the backup)
+                </div>
+                <RollbackPlanView plan={rollbackPlan} />
+                <label className="flex items-start gap-2 cursor-pointer text-xs">
+                  <Checkbox
+                    checked={destructiveAck}
+                    onCheckedChange={(v) => setDestructiveAck(!!v)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-foreground">
+                    I understand that Complete restore will <strong className="text-red-400">permanently delete</strong> the VMs, LXCs and components listed above. This is irreversible.
+                  </span>
+                </label>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => launch("full")}
+              disabled={hasDestructive && !destructiveAck}
+              className="w-full text-left p-4 rounded-md border border-emerald-500/40 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium">Complete restore</div>
+                  <div className="text-[11px] text-muted-foreground mt-1">
+                    Replays everything in the backup. Equivalent to picking <em>"Complete restore"</em> in the shell TUI menu. The terminal that opens next will still ask you to confirm safe-only vs safe+reboot vs all-at-once before touching the host.
+                    {hasDestructive && !destructiveAck && (
+                      <span className="block mt-1 text-red-400">Tick the acknowledgement above to enable.</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStep("custom")}
+              disabled={pathsAvailable.length === 0}
+              className="w-full text-left p-4 rounded-md border border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div className="flex items-start gap-3">
+                <ListTree className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium">
+                    Custom restore by paths
+                    {pathsAvailable.length > 0 && (
+                      <span className="ml-2 text-[10px] text-muted-foreground font-normal">
+                        ({pathsAvailable.length} paths in backup)
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-1">
+                    {pathsAvailable.length === 0
+                      ? "This backup carries no restorable paths — only Complete restore is meaningful here."
+                      : "Pick exactly which paths to restore. Lists what's actually in this backup (default profile + your custom paths)."}
+                  </div>
+                </div>
+              </div>
+            </button>
+
+            {error && (
+              <div className="text-xs text-red-400 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
+                {error}
+              </div>
+            )}
+          </div>
+        )}
+
+        {step === "custom" && (
+          <div className="space-y-2">
+            <p className="text-[11px] text-muted-foreground">
+              Pick the paths to restore. Your selection feeds <code className="font-mono">_rs_run_custom_restore</code> via the <code className="font-mono">HB_PRESELECTED_PATHS</code> env var — same downstream code as the TUI. Reboot-required paths (kernel, modules, fstab, …) will be detected by the bash flow and you can schedule them for next boot from there.
+            </p>
+            <div className="flex items-center gap-2">
+              <Input
+                type="search"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder="Filter paths…"
+                className="h-8 text-xs"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={toggleAll}
+                className="h-8 text-xs whitespace-nowrap"
+              >
+                {selected.size === filteredPaths.length && filteredPaths.length > 0 ? "Clear" : "All"}
+              </Button>
+            </div>
+            <div className="rounded-md border border-border bg-background/40 p-1 max-h-72 overflow-auto">
+              <ul className="divide-y divide-border/40">
+                {filteredPaths.map((p) => (
+                  <li key={p}>
+                    <label className="flex items-center gap-2 px-2 py-1 hover:bg-white/5 cursor-pointer">
+                      <Checkbox
+                        checked={selected.has(p)}
+                        onCheckedChange={() => togglePath(p)}
+                      />
+                      <code className="font-mono text-xs break-all flex-1">{p}</code>
+                    </label>
+                  </li>
+                ))}
+                {filteredPaths.length === 0 && (
+                  <li className="text-[11px] text-muted-foreground italic px-2 py-2">No paths match the filter.</li>
+                )}
+              </ul>
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              Selected: {selected.size} / {pathsAvailable.length}{filter && filteredPaths.length !== pathsAvailable.length ? ` (${filteredPaths.length} shown)` : ""}
+            </div>
+            {error && (
+              <div className="text-xs text-red-400 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
+                {error}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 pt-2 border-t border-border">
+          {step === "custom" && (
+            <Button variant="ghost" onClick={() => setStep("choose")}>
+              Back
+            </Button>
+          )}
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          {step === "custom" && (
+            <Button
+              onClick={() => launch("custom")}
+              disabled={selected.size === 0}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <DatabaseBackup className="h-4 w-4 mr-2" />
+              Restore selected
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

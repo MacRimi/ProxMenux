@@ -378,6 +378,40 @@ POSTBOOT_END_EPOCH=$(date +%s)
 POSTBOOT_DURATION=$((POSTBOOT_END_EPOCH - $(stat -c %Y "$LOG_FILE")))
 POSTBOOT_DURATION_FMT=$(printf '%dm%02ds' $((POSTBOOT_DURATION / 60)) $((POSTBOOT_DURATION % 60)))
 
+# ── Rollback delta report (read-only) ──────────────────────────
+# If _rs_prepare_pending_restore left a rollback.json in the
+# pending dir, surface the deltas that a full rollback would
+# touch: VMs/LXCs created after the backup that are still here,
+# extra components not present in the backup. The operator
+# decides what to do with them — we don't destroy guests or
+# uninstall packages automatically (left to a future R2.D fase 2
+# once every installer ships an --auto-uninstall mode).
+ROLLBACK_PLAN_FILE=""
+[[ -n "$PENDING_DIR" && -f "$PENDING_DIR/rollback.json" ]] && \
+    ROLLBACK_PLAN_FILE="$PENDING_DIR/rollback.json"
+if [[ -n "$ROLLBACK_PLAN_FILE" ]] && command -v jq >/dev/null 2>&1; then
+    rb_vm_extras=$(jq -r '.vms_to_remove | join(", ") // ""' "$ROLLBACK_PLAN_FILE" 2>/dev/null)
+    rb_lxc_extras=$(jq -r '.lxcs_to_remove | join(", ") // ""' "$ROLLBACK_PLAN_FILE" 2>/dev/null)
+    rb_comp_extras=$(jq -r '.components_to_uninstall | join(", ") // ""' "$ROLLBACK_PLAN_FILE" 2>/dev/null)
+    if [[ -n "$rb_vm_extras" || -n "$rb_lxc_extras" || -n "$rb_comp_extras" ]]; then
+        echo ""
+        echo "── Rollback delta report ──"
+        echo "These entries exist on the host but were NOT in the restored backup."
+        echo "Review them and remove manually if a clean rollback is desired:"
+        [[ -n "$rb_vm_extras"   ]] && echo "  • VMs   created after the backup: $rb_vm_extras"
+        [[ -n "$rb_lxc_extras"  ]] && echo "  • LXCs  created after the backup: $rb_lxc_extras"
+        [[ -n "$rb_comp_extras" ]] && echo "  • Components installed after the backup: $rb_comp_extras"
+        echo ""
+        echo "Manual cleanup commands (run only if you want to truly roll back):"
+        for _id in $(echo "$rb_vm_extras" | tr ',' ' '); do
+            [[ -n "$_id" ]] && echo "  qm stop $_id 2>/dev/null; qm destroy $_id --purge"
+        done
+        for _id in $(echo "$rb_lxc_extras" | tr ',' ' '); do
+            [[ -n "$_id" ]] && echo "  pct stop $_id 2>/dev/null; pct destroy $_id --purge"
+        done
+    fi
+fi
+
 # ── Notify ProxMenux Monitor that we're done ───────────────────
 # Routes through the user's configured channels (Telegram, Discord,
 # ntfy, etc.). Localhost-only endpoint, no auth needed. We try

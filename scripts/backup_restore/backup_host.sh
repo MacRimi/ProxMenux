@@ -1456,8 +1456,16 @@ _rs_apply() {
     done
 
     elapsed=$((SECONDS - t_start))
-    [[ "$group" == "hot" || "$group" == "all" ]] && \
+    # Skip `systemctl daemon-reload` when invoked from the Monitor
+    # (HB_MONITOR_FLOW=1). The reload itself doesn't restart the
+    # Monitor's unit, but it marks units as "needs restart" and a
+    # later systemctl call against the Monitor would cut the WS
+    # session. The restored unit files are already on disk — they
+    # take effect at the next reboot, which the Monitor flow asks
+    # for explicitly at the end.
+    if [[ "$group" == "hot" || "$group" == "all" ]] && [[ "${HB_MONITOR_FLOW:-0}" != "1" ]]; then
         systemctl daemon-reload >/dev/null 2>&1 || true
+    fi
 
     echo -e ""
     echo -e "${TAB}${BOLD}$(translate "Restore applied:")${CL}"
@@ -1603,6 +1611,15 @@ _rs_prompt_zfs_opt_in() {
 
 _rs_finish_flow() {
     echo -e ""
+    if [[ "${HB_MONITOR_FLOW:-0}" == "1" ]]; then
+        # Same UX as the TUI but the prompt explicitly says "close"
+        # — the Monitor's ScriptTerminalModal sees isComplete=true on
+        # WS close and dismisses (via the onComplete prop) so the
+        # operator doesn't need to click the Close button.
+        msg_success "$(translate "Press Enter to close...")"
+        read -r
+        return 0
+    fi
     msg_success "$(translate "Press Enter to return to menu...")"
     read -r
 }
@@ -1661,6 +1678,10 @@ _rs_offer_reboot_after_pending() {
 
     local prompt="$(translate "Pending restore prepared. A reboot is required to complete it.")"$'\n\n'"${bg_block}$(translate "Reboot now?")"
 
+    # Same dialog for TUI and Monitor — mirrors the post-install
+    # flow (Yes → reboot, No → "You can reboot later manually").
+    # The Monitor's PTY backs whiptail correctly, so the operator
+    # sees the same Yes/No prompt as in the shell.
     if whiptail --title "$(translate "Reboot Required")" \
             --yesno "$prompt" 22 90; then
         msg_warn "$(translate "Rebooting the system...")"
@@ -1799,6 +1820,19 @@ _rs_prepare_pending_restore() {
     fi
 
     [[ -d "$staging_root/metadata" ]] && cp -a "$staging_root/metadata/." "$pending_dir/metadata/" 2>/dev/null || true
+
+    # Persist the rollback plan so apply_cluster_postboot.sh can
+    # surface a clear "what differs vs backup" report after boot.
+    # Read-only here — the script just informs the operator about
+    # VMs/LXCs/components that exist now but not in the backup.
+    # Actual destroy is left manual until --auto-uninstall lands
+    # on every installer.
+    local _rb_script="${SCRIPT_DIR}/restore/compute_rollback_plan.sh"
+    [[ ! -x "$_rb_script" ]] && _rb_script="${LOCAL_SCRIPTS:-/usr/local/share/proxmenux/scripts}/backup_restore/restore/compute_rollback_plan.sh"
+    if [[ -x "$_rb_script" ]]; then
+        bash "$_rb_script" "$staging_root" > "$pending_dir/rollback.json" 2>/dev/null || true
+        [[ ! -s "$pending_dir/rollback.json" ]] && rm -f "$pending_dir/rollback.json"
+    fi
 
     cat > "$pending_dir/plan.env" <<EOF
 RESTORE_ID=${restore_id}
@@ -2061,18 +2095,22 @@ _rs_component_is_available() {
 }
 
 _rs_unique_paths() {
-    local __out_var="$1"
+    # All locals prefixed with `_rup_` so the nameref doesn't bind
+    # to one of OUR locals when a caller passes the same array name
+    # (e.g. `_rs_unique_paths uniq "$@"` — bash would otherwise
+    # resolve `__out_ref → uniq` to our local instead of the caller's).
+    local _rup_out_var="$1"
     shift
-    local -A seen=()
-    local -a uniq=()
-    local p
-    for p in "$@"; do
-        [[ -z "$p" || -n "${seen[$p]}" ]] && continue
-        seen["$p"]=1
-        uniq+=("$p")
+    local -A _rup_seen=()
+    local -a _rup_uniq=()
+    local _rup_p
+    for _rup_p in "$@"; do
+        [[ -z "$_rup_p" || -n "${_rup_seen[$_rup_p]}" ]] && continue
+        _rup_seen["$_rup_p"]=1
+        _rup_uniq+=("$_rup_p")
     done
-    local -n __out_ref="$__out_var"
-    __out_ref=("${uniq[@]}")
+    local -n _rup_out_ref="$_rup_out_var"
+    _rup_out_ref=("${_rup_uniq[@]}")
 }
 
 _rs_collect_stats_for_paths() {
@@ -2125,52 +2163,95 @@ _rs_warn_dangerous_paths() {
 
 _rs_select_component_paths() {
     local staging_root="$1"
-    local __out_var="$2"
-    local -n __out_ref="$__out_var"
+    # IMPORTANT: every local inside this function must use a unique
+    # prefix (`_rsp_`). Bash nameref resolution walks the dynamic
+    # scope outwards and stops at the first matching name — if we
+    # declare `local -a selected_paths=()` while the caller's array
+    # is also called `selected_paths`, _rs_unique_paths's
+    # `local -n __out_ref="selected_paths"` would resolve to OUR
+    # local one and the caller's array silently stays empty (which
+    # surfaced as the "Selected paths produced no entries to apply"
+    # dialog despite a non-empty selection).
+    local _rsp_out_var="$2"
+    local -n _rsp_out_ref="$_rsp_out_var"
 
-    local -a component_ids=(
-        network ssh_access host_identity cron_jobs apt_repos kernel_boot
-        systemd_custom scripts root_config root_ssh zfs_cfg postfix_cfg cluster_cfg
-    )
-    local -a checklist=()
-    local comp_id
-    for comp_id in "${component_ids[@]}"; do
-        _rs_component_is_available "$staging_root" "$comp_id" || continue
-        checklist+=("$comp_id" "$(_rs_component_label "$comp_id")" "off")
-    done
-
-    if [[ ${#checklist[@]} -eq 0 ]]; then
-        dialog --backtitle "ProxMenux" --title "$(translate "No components available")" \
-            --msgbox "$(translate "No restorable components were detected in this backup.")" 8 68
-        return 1
+    # ── Build the list of paths actually present in this backup ──
+    local -a _rsp_backup=()
+    local _rsp_selected_file="$staging_root/metadata/selected_paths.txt"
+    if [[ -f "$_rsp_selected_file" ]]; then
+        local _rsp_rel
+        while IFS= read -r _rsp_rel; do
+            [[ -z "$_rsp_rel" ]] && continue
+            _rsp_rel="${_rsp_rel#/}"
+            [[ -e "$staging_root/rootfs/$_rsp_rel" ]] && _rsp_backup+=("$_rsp_rel")
+        done < "$_rsp_selected_file"
+    else
+        # Pre-metadata backup: walk rootfs/ at depth 1-2.
+        local _rsp_entry
+        while IFS= read -r _rsp_entry; do
+            [[ -z "$_rsp_entry" ]] && continue
+            _rsp_entry="${_rsp_entry#./}"
+            _rsp_backup+=("$_rsp_entry")
+        done < <(cd "$staging_root/rootfs" 2>/dev/null \
+            && find . -mindepth 1 -maxdepth 2 -print 2>/dev/null)
     fi
 
-    local selected
-    selected=$(dialog --backtitle "ProxMenux" --separate-output \
-        --title "$(translate "Custom restore by components")" \
-        --checklist "\n$(translate "Select components to restore:")" \
-        24 94 14 "${checklist[@]}" 3>&1 1>&2 2>&3) || return 1
-
-    if [[ -z "$selected" ]]; then
-        dialog --backtitle "ProxMenux" --title "$(translate "No components selected")" \
-            --msgbox "$(translate "Select at least one component to continue.")" 8 66
-        return 1
-    fi
-
-    local -a selected_paths=()
-    while IFS= read -r comp_id; do
-        [[ -z "$comp_id" ]] && continue
-        local rel
-        while IFS= read -r rel; do
-            [[ -n "$rel" && -e "$staging_root/rootfs/$rel" ]] && selected_paths+=("$rel")
-        done < <(_rs_component_paths "$comp_id")
-    done <<< "$selected"
-
-    _rs_unique_paths "$__out_var" "${selected_paths[@]}"
-
-    if [[ ${#__out_ref[@]} -eq 0 ]]; then
+    if [[ ${#_rsp_backup[@]} -eq 0 ]]; then
         dialog --backtitle "ProxMenux" --title "$(translate "No paths available")" \
-            --msgbox "$(translate "Selected components have no matching paths in this backup.")" 8 72
+            --msgbox "$(translate "This backup does not contain any restorable paths.")" 8 70
+        return 1
+    fi
+
+    # ── Non-interactive bypass for the Monitor ──
+    local _rsp_selected=""
+    if [[ -n "${HB_PRESELECTED_PATHS:-}" ]]; then
+        local IFS=','
+        local _rsp_pp
+        for _rsp_pp in $HB_PRESELECTED_PATHS; do
+            _rsp_pp="${_rsp_pp#"${_rsp_pp%%[![:space:]]*}"}"
+            _rsp_pp="${_rsp_pp%"${_rsp_pp##*[![:space:]]}"}"
+            [[ -z "$_rsp_pp" ]] && continue
+            _rsp_pp="${_rsp_pp#/}"
+            local _rsp_known
+            for _rsp_known in "${_rsp_backup[@]}"; do
+                [[ "$_rsp_pp" == "$_rsp_known" ]] && { _rsp_selected+="${_rsp_pp}"$'\n'; break; }
+            done
+        done
+        unset IFS
+    fi
+
+    # ── Dialog checklist (one entry per real backup path) ──
+    if [[ -z "$_rsp_selected" ]]; then
+        local -a _rsp_checklist=()
+        local _rsp_p
+        for _rsp_p in "${_rsp_backup[@]}"; do
+            _rsp_checklist+=("$_rsp_p" "/$_rsp_p" "off")
+        done
+
+        _rsp_selected=$(dialog --backtitle "ProxMenux" --separate-output \
+            --title "$(translate "Custom restore by paths")" \
+            --checklist "\n$(translate "Select the paths to restore (one per backup entry):")" \
+            24 94 16 "${_rsp_checklist[@]}" 3>&1 1>&2 2>&3) || return 1
+
+        if [[ -z "$_rsp_selected" ]]; then
+            dialog --backtitle "ProxMenux" --title "$(translate "Nothing selected")" \
+                --msgbox "$(translate "Select at least one path to continue.")" 8 66
+            return 1
+        fi
+    fi
+
+    local -a _rsp_picked=()
+    local _rsp_line
+    while IFS= read -r _rsp_line; do
+        [[ -z "$_rsp_line" ]] && continue
+        _rsp_picked+=("$_rsp_line")
+    done <<< "$_rsp_selected"
+
+    _rs_unique_paths "$_rsp_out_var" "${_rsp_picked[@]}"
+
+    if [[ ${#_rsp_out_ref[@]} -eq 0 ]]; then
+        dialog --backtitle "ProxMenux" --title "$(translate "Nothing to restore")" \
+            --msgbox "$(translate "Selected paths produced no entries to apply.")" 8 70
         return 1
     fi
     return 0
@@ -2183,127 +2264,74 @@ _rs_run_custom_restore() {
     _rs_select_component_paths "$staging_root" selected_paths || return 1
     _rs_collect_stats_for_paths "${selected_paths[@]}"
 
-    while true; do
-        local choice
-        choice=$(dialog --backtitle "ProxMenux" \
-            --title "$(translate "Custom restore")" \
-            --menu "\n$(translate "Selected component paths:") ${RS_SEL_TOTAL}" \
-            "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
-            1 "$(translate "Apply safe changes now")  (${RS_SEL_HOT})" \
-            2 "$(translate "Apply safe + reboot-required")  ($((RS_SEL_HOT + RS_SEL_REBOOT)))" \
-            3 "$(translate "Apply all selected now (advanced)")  (${RS_SEL_TOTAL})" \
-            4 "$(translate "Reselect components")" \
-            5 "$(translate "Apply safe now + schedule remaining for next boot")" \
-            6 "$(translate "Schedule selected components for next boot (no live apply)")" \
-            0 "$(translate "Return")" \
-            3>&1 1>&2 2>&3) || return 1
+    # ── Smart auto-strategy (no 6-option menu any more) ──
+    # The classifier already split every selected path into:
+    #   RS_SEL_HOT       — applyable live, no risk
+    #   RS_SEL_REBOOT    — needs reboot to take effect
+    #   RS_SEL_DANGEROUS — applyable live but risky (e.g. network
+    #                      from a SSH session)
+    # The operator doesn't need to know that taxonomy. We just:
+    #   1. Show ONE confirmation summarizing what happens.
+    #   2. Apply hot paths now.
+    #   3. Schedule reboot + dangerous paths for next boot.
+    #   4. Tell the operator a reboot is needed when there's pending.
 
-        case "$choice" in
-            1)
-                if [[ "$RS_SEL_HOT" -eq 0 ]]; then
-                    dialog --backtitle "ProxMenux" --title "$(translate "Nothing to apply")" \
-                        --msgbox "$(translate "No safe-now paths in selected components.")" 8 60
-                    continue
-                fi
-                if ! whiptail --title "$(translate "Confirm")" \
-                    --yesno "$(translate "Apply safe changes from selected components now?")" 9 72; then
-                    continue
-                fi
-                show_proxmenux_logo
-                msg_title "$(translate "Applying selected safe changes")"
-                _rs_apply "$staging_root" hot "${selected_paths[@]}"
-                [[ "$RS_SEL_REBOOT" -gt 0 || "$RS_SEL_DANGEROUS" -gt 0 ]] && \
-                    msg_warn "$(translate "Some selected paths were not applied in safe mode.")"
-                _rs_finish_flow
-                return 0
-                ;;
+    if [[ "$RS_SEL_TOTAL" -eq 0 ]]; then
+        dialog --backtitle "ProxMenux" --title "$(translate "Nothing to restore")" \
+            --msgbox "$(translate "Selected paths produced no entries to apply.")" 8 70
+        return 1
+    fi
 
-            2)
-                if [[ $((RS_SEL_HOT + RS_SEL_REBOOT)) -eq 0 ]]; then
-                    dialog --backtitle "ProxMenux" --title "$(translate "Nothing to apply")" \
-                        --msgbox "$(translate "No safe/reboot paths in selected components.")" 8 64
-                    continue
-                fi
-                if ! whiptail --title "$(translate "Confirm")" \
-                    --yesno "$(translate "Apply safe + reboot-required paths from selected components now?")"$'\n\n'"$(translate "Risky live paths will be skipped.")" \
-                    11 78; then
-                    continue
-                fi
-                show_proxmenux_logo
-                msg_title "$(translate "Applying selected safe + reboot changes")"
-                [[ "$RS_SEL_HOT" -gt 0 ]] && _rs_apply "$staging_root" hot "${selected_paths[@]}"
-                [[ "$RS_SEL_REBOOT" -gt 0 ]] && _rs_apply "$staging_root" reboot "${selected_paths[@]}"
-                [[ "$RS_SEL_DANGEROUS" -gt 0 ]] && \
-                    msg_warn "$(translate "Risky selected paths were skipped in this mode.")"
-                _rs_finish_flow
-                return 0
-                ;;
+    # SSH/network protection — if the operator is on a SSH session
+    # and selected network paths, offer to move EVERYTHING to next
+    # boot (avoids disconnection mid-restore). _rs_handle_ssh_network_risk
+    # returns 2 when it has already scheduled for boot — in that case
+    # we're done.
+    local ssh_network_rc
+    _rs_handle_ssh_network_risk "$staging_root" "${selected_paths[@]}"
+    ssh_network_rc=$?
+    [[ $ssh_network_rc -eq 2 ]] && return 0
+    [[ $ssh_network_rc -ne 0 ]] && return 1
 
-            3)
-                local ssh_network_rc
-                _rs_handle_ssh_network_risk "$staging_root" "${selected_paths[@]}"
-                ssh_network_rc=$?
-                [[ $ssh_network_rc -eq 2 ]] && return 0
-                [[ $ssh_network_rc -ne 0 ]] && continue
+    local hot_count="$RS_SEL_HOT"
+    local pending_count=$(( RS_SEL_REBOOT + RS_SEL_DANGEROUS ))
 
-                [[ "$RS_SEL_DANGEROUS" -gt 0 ]] && _rs_warn_dangerous_paths "${selected_paths[@]}"
-                if ! whiptail --title "$(translate "Final confirmation")" \
-                    --yesno "$(translate "Apply ALL selected component paths now? This can include risky paths.")" \
-                    10 78; then
-                    continue
-                fi
-                show_proxmenux_logo
-                msg_title "$(translate "Applying all selected component paths")"
-                _rs_apply "$staging_root" all "${selected_paths[@]}"
-                _rs_finish_flow
-                return 0
-                ;;
+    local body
+    body="\Zb$(translate "About to restore") ${RS_SEL_TOTAL} $(translate "selected path(s):")\ZB"$'\n\n'
+    if (( hot_count > 0 )); then
+        body+="  • $(translate "Apply") \Zb\Z4${hot_count}\Zn $(translate "now")"$'\n'
+    fi
+    if (( pending_count > 0 )); then
+        body+="  • $(translate "Schedule") \Zb\Z4${pending_count}\Zn $(translate "for next boot (needs reboot to take effect)")"$'\n'
+    fi
+    if (( pending_count > 0 )); then
+        body+=$'\n'"\Zb\Z4$(translate "A reboot will be required to complete the restore.")\Zn"$'\n'
+    fi
+    body+=$'\n'"\Zb$(translate "Continue?")\ZB"
 
-            4)
-                _rs_select_component_paths "$staging_root" selected_paths || continue
-                _rs_collect_stats_for_paths "${selected_paths[@]}"
-                ;;
+    if ! dialog --backtitle "ProxMenux" --colors \
+        --title "$(translate "Confirm custom restore")" \
+        --yesno "$body" 14 82; then
+        return 1
+    fi
 
-            5)
-                if ! whiptail --title "$(translate "Confirm")" \
-                    --yesno "$(translate "Apply safe selected paths now and schedule remaining selected paths for next boot?")" \
-                    10 82; then
-                    continue
-                fi
-                show_proxmenux_logo
-                msg_title "$(translate "Applying safe selected paths and preparing pending restore")"
-                [[ "$RS_SEL_HOT" -gt 0 ]] && _rs_apply "$staging_root" hot "${selected_paths[@]}"
-                local -a pending_paths=()
-                mapfile -t pending_paths < <(_rs_collect_pending_paths remaining_after_hot "${selected_paths[@]}")
-                if _rs_prepare_pending_restore "$staging_root" "${pending_paths[@]}"; then
-                    msg_warn "$(translate "Reboot is required to complete the pending restore.")"
-                fi
-                _rs_finish_flow
-                return 0
-                ;;
+    show_proxmenux_logo
+    msg_title "$(translate "Applying custom restore")"
 
-            6)
-                if ! whiptail --title "$(translate "Confirm")" \
-                    --yesno "$(translate "Schedule selected component paths for next boot without applying live changes now?")" \
-                    10 82; then
-                    continue
-                fi
-                local -a pending_paths=()
-                mapfile -t pending_paths < <(_rs_collect_pending_paths all_selected "${selected_paths[@]}")
-                show_proxmenux_logo
-                msg_title "$(translate "Preparing selected pending restore")"
-                if _rs_prepare_pending_restore "$staging_root" "${pending_paths[@]}"; then
-                    msg_warn "$(translate "Reboot is required to apply the scheduled restore.")"
-                fi
-                _rs_finish_flow
-                return 0
-                ;;
+    if (( hot_count > 0 )); then
+        _rs_apply "$staging_root" hot "${selected_paths[@]}"
+    fi
 
-            0)
-                return 1
-                ;;
-        esac
-    done
+    if (( pending_count > 0 )); then
+        local -a pending_paths=()
+        mapfile -t pending_paths < <(_rs_collect_pending_paths remaining_after_hot "${selected_paths[@]}")
+        if _rs_prepare_pending_restore "$staging_root" "${pending_paths[@]}"; then
+            msg_warn "$(translate "Reboot is required to complete the pending restore.")"
+        fi
+    fi
+
+    _rs_finish_flow
+    return 0
 }
 
 # Extras the Complete restore runs INLINE after applying file
@@ -2562,4 +2590,9 @@ main_menu() {
     done
 }
 
-main_menu
+# Only spawn the TUI when invoked directly. Sourcing the file
+# (e.g. from restore/monitor_apply.sh) imports all the functions
+# without triggering the main menu.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main_menu
+fi
