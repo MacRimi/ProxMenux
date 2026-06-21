@@ -438,6 +438,23 @@ offer_lxc_updates_if_any() {
 ensure_repos_and_headers() {
   msg_info "$(translate 'Checking kernel headers and build tools...')"
 
+  # On a fresh Proxmox install the pve-no-subscription / debian
+  # repos aren't configured by default, so `pve-headers-$(uname -r)`
+  # and even `build-essential` come back as "Unable to locate
+  # package" and the NVIDIA install bails out with "no cc found".
+  # Bootstrap the repos through the shared helper (same one the
+  # post-install flow uses); fall back to sourcing the install
+  # utilities file if the function isn't already in scope.
+  if ! declare -F ensure_repositories >/dev/null 2>&1; then
+    local _utils_install="$LOCAL_SCRIPTS/global/utils-install-functions.sh"
+    [[ ! -f "$_utils_install" ]] && _utils_install="/usr/local/share/proxmenux/scripts/global/utils-install-functions.sh"
+    # shellcheck source=/dev/null
+    [[ -f "$_utils_install" ]] && source "$_utils_install"
+  fi
+  if declare -F ensure_repositories >/dev/null 2>&1; then
+    ensure_repositories >>"$LOG_FILE" 2>&1 || true
+  fi
+
   local kver
   kver=$(uname -r)
 
