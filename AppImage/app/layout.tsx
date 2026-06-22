@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next"
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { ThemeProvider } from "../components/theme-provider"
+import { PwaRegister } from "../components/pwa-register"
 import { Suspense } from "react"
 import "./globals.css"
 
@@ -46,6 +47,7 @@ export default function RootLayout({
             {children}
           </ThemeProvider>
         </Suspense>
+        <PwaRegister />
       </body>
     </html>
   )
