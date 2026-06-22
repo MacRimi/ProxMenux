@@ -714,7 +714,6 @@ backup_menu() {
             3   "$(translate "Backup to local archive  (.tar.zst)")" \
             ""  " " \
             ""  "$(translate "─────── Custom profile (choose paths manually) ───────")" \
-            ""  " " \
             4   "$(translate "Custom backup to PBS")" \
             5   "$(translate "Custom backup to Borg")" \
             6   "$(translate "Custom backup to local archive")" \
