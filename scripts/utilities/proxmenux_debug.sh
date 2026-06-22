@@ -74,6 +74,131 @@ echo " ProxMenux RESTORE Debug Snapshot"
 echo " Generated: $(date -Iseconds 2>/dev/null || date)"
 echo "============================================================"
 
+# ── 0. Quick status (auto-detected) ───────────────────────
+# Runs a handful of well-known restore health checks and emits a
+# colour-coded overall verdict. The point is that whoever pastes the
+# snapshot in the GitHub thread, AND whoever reads it later, can both
+# tell in five seconds whether the restore was clean or whether there
+# is something to investigate — without scrolling through the rest of
+# the report. Every signal here has a corresponding section below
+# where the raw evidence lives.
+declare -a _STATUS_LINES=()
+_ERRORS=0
+_WARNINGS=0
+# Colour codes only when stdout is a real terminal — the operator
+# almost always redirects this script to /tmp/proxmenux-debug.txt
+# and pastes the file in GitHub, where raw `\033[…m` sequences
+# would render as literal `[32m✓[0m` garbage.
+if [ -t 1 ]; then
+  _C_OK=$'\033[32m'; _C_WARN=$'\033[33m'; _C_ERR=$'\033[31m'
+  _C_BOLD_OK=$'\033[1;32m'; _C_BOLD_WARN=$'\033[1;33m'; _C_BOLD_ERR=$'\033[1;31m'
+  _C_RESET=$'\033[0m'
+else
+  _C_OK=''; _C_WARN=''; _C_ERR=''
+  _C_BOLD_OK=''; _C_BOLD_WARN=''; _C_BOLD_ERR=''
+  _C_RESET=''
+fi
+_ok()   { _STATUS_LINES+=("  ${_C_OK}✓${_C_RESET} $1"); }
+_warn() { _STATUS_LINES+=("  ${_C_WARN}⚠${_C_RESET} $1"); _WARNINGS=$((_WARNINGS + 1)); }
+_err()  { _STATUS_LINES+=("  ${_C_ERR}✗${_C_RESET} $1"); _ERRORS=$((_ERRORS + 1)); }
+
+# Check A — NVIDIA GPUs binding state.
+# We've hit several restore bugs where the GPU stayed bound to
+# vfio-pci after a rollback-to-LXC. Flag any NVIDIA BDF stuck on
+# vfio-pci so the operator notices before scrolling to section 2.
+if lspci -d 10de: 2>/dev/null | grep -qiE 'VGA|3D'; then
+  stuck_vfio=0
+  for bdf in $(lspci -D -d 10de: 2>/dev/null | grep -iE 'VGA|3D' | awk '{print $1}'); do
+    drv=$(basename "$(readlink "/sys/bus/pci/devices/$bdf/driver" 2>/dev/null)" 2>/dev/null)
+    [ "$drv" = "vfio-pci" ] && stuck_vfio=$((stuck_vfio + 1))
+  done
+  if (( stuck_vfio > 0 )); then
+    _warn "$stuck_vfio NVIDIA GPU(s) bound to vfio-pci (intended only if you actively use passthrough)"
+  else
+    _ok "NVIDIA GPU(s) bound to the native driver"
+  fi
+fi
+
+# Check B — VFIO-related ProxMenux files lingering on the host.
+# If present after a "rollback to host mode" restore, the next boot
+# will re-bind the GPU to vfio-pci via the udev rule.
+_vfio_present=0
+for f in /etc/udev/rules.d/10-proxmenux-vfio-bind.rules \
+         /etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf \
+         /etc/modprobe.d/nvidia-blacklist.conf \
+         /etc/proxmenux/vfio-bind.bdfs; do
+  [ -e "$f" ] && _vfio_present=$((_vfio_present + 1))
+done
+if (( _vfio_present > 0 )); then
+  _warn "$_vfio_present ProxMenux VFIO file(s) present on host (would re-bind GPU at next boot)"
+else
+  _ok "No ProxMenux VFIO files present on host"
+fi
+
+# Note: cmdline / IOMMU drift was tried here as a check, but it
+# is a system-config finding that's INDEPENDENT of whether the
+# last restore succeeded. Including it in Quick status painted a
+# perfectly clean restore in yellow and made operators think
+# their restore had failed. The raw evidence still lives in
+# section 7 for anyone investigating that specific issue.
+
+# Check C — apply_cluster_postboot.sh actually finished.
+_last_pb=$(ls -t /var/log/proxmenux/proxmenux-cluster-postboot-*.log 2>/dev/null | head -1)
+if [ -n "$_last_pb" ]; then
+  if grep -q '=== Apply finished' "$_last_pb" 2>/dev/null; then
+    _ok "Last apply_cluster_postboot finished successfully"
+  else
+    _err "Last apply_cluster_postboot did NOT finish (crashed mid-apply or still running)"
+  fi
+fi
+
+# Check E — proxmenux-restore-onboot.service status.
+if systemctl list-unit-files proxmenux-restore-onboot.service >/dev/null 2>&1; then
+  if systemctl is-failed --quiet proxmenux-restore-onboot.service 2>/dev/null; then
+    _err "proxmenux-restore-onboot.service is in failed state"
+  fi
+fi
+
+# Check F — rollback consistency: if the operator opted into
+# destructive rollback AND the plan listed VMs to remove, those VMs
+# should be gone now. If any survived, the rollback executor silently
+# skipped them.
+_latest=$(ls -t /var/lib/proxmenux/restore-pending/completed/ 2>/dev/null | head -1)
+if [ -n "$_latest" ] && command -v jq >/dev/null 2>&1; then
+  _base="/var/lib/proxmenux/restore-pending/completed/$_latest"
+  _rb_ack=$(grep -E '^HB_ROLLBACK_EXECUTE=' "$_base/plan.env" 2>/dev/null | cut -d= -f2)
+  if [ "$_rb_ack" = "1" ] && [ -f "$_base/rollback.json" ]; then
+    _to_rm=$(jq -r '.vms_to_remove[]?' "$_base/rollback.json" 2>/dev/null)
+    _still=0
+    for _id in $_to_rm; do
+      [ -z "$_id" ] && continue
+      qm status "$_id" >/dev/null 2>&1 && _still=$((_still + 1))
+    done
+    if (( _still > 0 )); then
+      _err "Rollback was ACK'd but $_still VM(s) marked for removal are still present"
+    elif [ -n "$_to_rm" ]; then
+      _ok "Rollback executed: all VMs listed for removal are gone"
+    fi
+  fi
+fi
+
+# Render the section.
+_header "0. Quick status (auto-detected)"
+for _line in "${_STATUS_LINES[@]}"; do
+  printf '%s\n' "$_line"
+done
+echo
+if (( _ERRORS > 0 )); then
+  printf '  %sOVERALL: 🔴 %d error(s), %d warning(s)%s — see sections below\n' \
+    "$_C_BOLD_ERR" "$_ERRORS" "$_WARNINGS" "$_C_RESET"
+elif (( _WARNINGS > 0 )); then
+  printf '  %sOVERALL: 🟡 %d warning(s)%s — see sections below\n' \
+    "$_C_BOLD_WARN" "$_WARNINGS" "$_C_RESET"
+else
+  printf '  %sOVERALL: 🟢 Restore state looks clean%s\n' \
+    "$_C_BOLD_OK" "$_C_RESET"
+fi
+
 # ── 1. Versions ────────────────────────────────────────────
 _header "1. Versions"
 PMX_VERSION="(unknown)"
