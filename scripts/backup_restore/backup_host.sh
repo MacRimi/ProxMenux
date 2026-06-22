@@ -703,11 +703,13 @@ backup_menu() {
             --title "$(translate "Host Config Backup")" \
             --menu "\n$(translate "Select backup method and profile:")" \
             "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
-            ""  "$(translate "─── Default profile  (all critical paths) ──────────")" \
+            ""  "$(translate "────────────────── Default profile ───────────────────")" \
             1   "$(translate "Backup to Proxmox Backup Server (PBS)")" \
             2   "$(translate "Backup to Borg repository")" \
             3   "$(translate "Backup to local archive  (.tar.zst)")" \
-            ""  "$(translate "─── Custom profile  (choose paths manually) ────────")" \
+            ""  "" \            
+            ""  "$(translate "─────── Custom profile (choose paths manually) ───────")" \        
+            ""  "" \            
             4   "$(translate "Custom backup to PBS")" \
             5   "$(translate "Custom backup to Borg")" \
             6   "$(translate "Custom backup to local archive")" \
@@ -2766,7 +2768,9 @@ main_menu() {
             "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
             1   "$(translate "Backup host configuration")" \
             2   "$(translate "Restore host configuration")" \
-            ""  "$(translate "─── Backup settings ────────────────────────────────")" \
+            ""  "" \
+            ""  "$(translate "─────────────────────── Backup settings ───────────────────────")" \
+            ""  "" \
             3   "$(translate "Manage custom paths (add / remove your folders)")" \
             4   "$(translate "Scheduled backups and retention policies")" \
             5   "$(translate "Configure backup destinations (PBS, Borg, local)")" \
