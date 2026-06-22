@@ -43,6 +43,7 @@ import {
   ShieldCheck,
   Info,
   ListTree,
+  History,
 } from "lucide-react"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { fetchApi, getApiUrl } from "../lib/api-config"
@@ -1244,40 +1245,50 @@ function InspectModal({
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
       <DialogContent key={archiveKey} className="max-w-3xl bg-card border-border p-0 flex flex-col gap-0 max-h-[90vh]">
         <DialogHeader className="px-4 sm:px-6 pt-4 pb-3 shrink-0 border-b border-border">
-          <DialogTitle className="flex items-center gap-2 flex-wrap text-base">
+          <DialogTitle className="flex items-center gap-2 flex-wrap text-base pr-8">
             <DatabaseBackup className="h-5 w-5 text-blue-500 shrink-0" />
             <span className="font-mono text-xs sm:text-sm break-all flex-1 min-w-0">{archive?.display_id}</span>
-            {archive && (
-              <Badge variant="outline" className={`text-[10px] uppercase tracking-wide shrink-0 ${
-                archive.source === "pbs"
-                  ? "text-purple-400 border-purple-500/40 bg-purple-500/10"
-                  : archive.source === "borg"
-                    ? "text-fuchsia-400 border-fuchsia-500/40 bg-fuchsia-500/10"
-                    : "text-blue-400 border-blue-500/40 bg-blue-500/10"
-              }`}>
-                {archive.source}
-              </Badge>
-            )}
-            {remoteArc?.encrypted && (
-              <Badge variant="outline" className="text-[10px] text-emerald-400 border-emerald-500/40 bg-emerald-500/10 inline-flex items-center gap-1 shrink-0">
-                <Lock className="h-3 w-3" />
-              </Badge>
-            )}
           </DialogTitle>
         </DialogHeader>
 
         {/* ── Body: same shape for the 3 backends ─────────────── */}
         <ScrollArea className="flex-1 min-h-0">
           <div className="px-4 sm:px-6 py-4 space-y-4">
-            {/* Snapshot info — uniform grid, with backend-specific
-                rows mixed in only when they carry data. */}
+            {/* Backup info — uniform grid, with backend-specific
+                rows mixed in only when they carry data. Backend +
+                encryption badges live here (instead of the header,
+                where they used to overlap the close button). */}
             <section className="rounded-md border border-border bg-background/40 p-3 space-y-1 text-xs">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Snapshot</div>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Backup</div>
+                <div className="flex items-center gap-1.5">
+                  {archive && (
+                    <Badge variant="outline" className={`text-[10px] uppercase tracking-wide ${
+                      archive.source === "pbs"
+                        ? "text-purple-400 border-purple-500/40 bg-purple-500/10"
+                        : archive.source === "borg"
+                          ? "text-fuchsia-400 border-fuchsia-500/40 bg-fuchsia-500/10"
+                          : "text-blue-400 border-blue-500/40 bg-blue-500/10"
+                    }`}>
+                      {archive.source}
+                    </Badge>
+                  )}
+                  {remoteArc?.encrypted && (
+                    <Badge
+                      variant="outline"
+                      className="text-emerald-400 border-emerald-500/40 bg-emerald-500/10"
+                      title="Encrypted"
+                    >
+                      <Lock className="h-3.5 w-3.5" />
+                    </Badge>
+                  )}
+                </div>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
                 {/* Time + size — present for every backend. */}
                 {archive && (archive.source === "pbs" || archive.source === "borg") && remoteArc ? (
                   <>
-                    <div><span className="text-muted-foreground">Snapshot time:</span> {formatMtime(remoteArc.backup_time)}</div>
+                    <div><span className="text-muted-foreground">Backup time:</span> {formatMtime(remoteArc.backup_time)}</div>
                     {remoteArc.size_bytes > 0 && <div><span className="text-muted-foreground">Size:</span> {formatBytes(remoteArc.size_bytes)}</div>}
                     <div><span className="text-muted-foreground">Repository:</span> <code className="font-mono break-all">{remoteArc.repo_repository}</code></div>
                     <div><span className="text-muted-foreground">Repo name:</span> <code className="font-mono">{remoteArc.repo_name}</code></div>
@@ -1303,7 +1314,7 @@ function InspectModal({
               {/* PBS pxar files list — only PBS exposes this. */}
               {remoteArc?.files && remoteArc.files.length > 0 && (
                 <div className="pt-2 mt-2 border-t border-border/50">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Files in this snapshot</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Files in this backup</div>
                   <ul className="space-y-0.5">
                     {remoteArc.files.map((f) => (
                       <li key={f.filename} className="font-mono text-[11px] flex items-center justify-between gap-2">
@@ -3219,6 +3230,7 @@ function CreateJobDialog({
               <Button
                 onClick={handleCreate}
                 disabled={!canSubmit || submitting}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 {submitting ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -5188,8 +5200,12 @@ function AddDestinationDialog({
         </div>
         <div className="flex justify-end gap-2 pt-3 border-t border-border">
           <Button variant="ghost" onClick={onClose} disabled={submitting}>Cancel</Button>
-          <Button onClick={handleSave} disabled={!canSubmit || submitting}>
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+          <Button
+            onClick={handleSave}
+            disabled={!canSubmit || submitting}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
             Save
           </Button>
         </div>
@@ -6040,7 +6056,7 @@ function JobDetailModal({
             or path string from forcing a horizontal scrollbar. */}
         <DialogContent className="max-w-3xl bg-card border-border overflow-hidden">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 flex-wrap text-base">
+            <DialogTitle className="flex items-center gap-2 flex-wrap text-base pr-8">
               <DatabaseBackup className="h-5 w-5 text-blue-500" />
               <span className="font-mono break-all">{detail?.id ?? jobId}</span>
               {detail && (
@@ -6048,6 +6064,18 @@ function JobDetailModal({
                   <Badge variant="outline" className={`text-[10px] uppercase tracking-wide ${methodBadgeCls(detail.method)}`}>
                     {detail.method}
                   </Badge>
+                  {/* Encryption badge — mirrors the InspectModal one
+                      so the operator sees the lock in both the summary
+                      list and the job detail view. */}
+                  {(detail.pbs_encrypt || (detail.borg_encrypt_mode && detail.borg_encrypt_mode !== "none")) && (
+                    <Badge
+                      variant="outline"
+                      className="text-emerald-400 border-emerald-500/40 bg-emerald-500/10"
+                      title="Encrypted"
+                    >
+                      <Lock className="h-3.5 w-3.5" />
+                    </Badge>
+                  )}
                   {detail.attached && (
                     <Badge variant="outline" className="text-[10px] text-blue-400 border-blue-400/40 bg-blue-500/5">
                       attached
@@ -6228,70 +6256,73 @@ function JobDetailModal({
           )}
 
           {detail && (
-            <div className="border-t border-border pt-3 flex flex-wrap gap-2 justify-end">
-              <Button
-                size="sm"
-                onClick={handleRun}
-                disabled={running || busy !== ""}
-                variant="outline"
-                // Button's outline variant sets `hover:text-accent-foreground`,
-                // which washes the accent color to near-white on hover. The
-                // `!` modifier on `text-*` keeps our accent color across both
-                // states so the buttons read as Run / Disable / Edit / Delete
-                // at a glance instead of four near-white outlines.
-                className="bg-blue-500/10 border-blue-500/40 !text-blue-400 hover:bg-blue-500/20 hover:!text-blue-300"
-                title={detail.attached
-                  ? "Trigger an ad-hoc run now (the PVE timer keeps its own schedule)"
-                  : "Trigger this job now"}
-              >
-                {running ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                ) : (
-                  <PlayCircle className="h-3.5 w-3.5 mr-1" />
-                )}
-                {running ? "Running…" : "Run now"}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={running || busy !== ""}
-                className={detail.enabled
-                  ? "bg-amber-500/10 border-amber-500/40 !text-amber-400 hover:bg-amber-500/20 hover:!text-amber-300"
-                  : "bg-emerald-500/10 border-emerald-500/40 !text-emerald-400 hover:bg-emerald-500/20 hover:!text-emerald-300"}
-                onClick={() => {
-                  if (detail.enabled) setShowDisableConfirm(true)
-                  else handleToggle()
-                }}
-              >
-                {busy === "toggle" ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                ) : detail.enabled ? (
-                  <Power className="h-3.5 w-3.5 mr-1" />
-                ) : (
-                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                )}
-                {detail.enabled ? "Disable" : "Enable"}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={running || busy !== ""}
-                className="bg-emerald-500/10 border-emerald-500/40 !text-emerald-400 hover:bg-emerald-500/20 hover:!text-emerald-300"
-                onClick={() => onEdit(detail.id)}
-              >
-                <Pencil className="h-3.5 w-3.5 mr-1" />
-                Edit
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={running || busy !== ""}
-                className="bg-red-500/10 border-red-500/40 !text-red-400 hover:bg-red-500/20 hover:!text-red-300"
-                onClick={() => onRequestDelete(detail.id)}
-              >
-                <Trash2 className="h-3.5 w-3.5 mr-1" />
-                Delete
-              </Button>
+            // Layout mirrors the InspectModal footer: primary action on
+            // the left in solid green (Run, matches Restore), secondary
+            // Edit next to it in blue outline, then state-changers on
+            // the right (Disable / Delete) — both outlined to read as
+            // less prominent than Run.
+            <div className="border-t border-border pt-3 flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  size="sm"
+                  onClick={handleRun}
+                  disabled={running || busy !== ""}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  title={detail.attached
+                    ? "Trigger an ad-hoc run now (the PVE timer keeps its own schedule)"
+                    : "Trigger this job now"}
+                >
+                  {running ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                  ) : (
+                    <PlayCircle className="h-3.5 w-3.5 mr-1" />
+                  )}
+                  {running ? "Running…" : "Run now"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={running || busy !== ""}
+                  className="bg-blue-500/10 border-blue-500/40 !text-blue-400 hover:bg-blue-500/20 hover:!text-blue-300"
+                  onClick={() => onEdit(detail.id)}
+                >
+                  <Pencil className="h-3.5 w-3.5 mr-1" />
+                  Edit
+                </Button>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={running || busy !== ""}
+                  className={detail.enabled
+                    ? "bg-amber-500/10 border-amber-500/40 !text-amber-400 hover:bg-amber-500/20 hover:!text-amber-300"
+                    : "bg-emerald-500/10 border-emerald-500/40 !text-emerald-400 hover:bg-emerald-500/20 hover:!text-emerald-300"}
+                  onClick={() => {
+                    if (detail.enabled) setShowDisableConfirm(true)
+                    else handleToggle()
+                  }}
+                >
+                  {busy === "toggle" ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                  ) : detail.enabled ? (
+                    <Power className="h-3.5 w-3.5 mr-1" />
+                  ) : (
+                    <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                  )}
+                  {detail.enabled ? "Disable" : "Enable"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={running || busy !== ""}
+                  className="bg-red-500/10 border-red-500/40 !text-red-400 hover:bg-red-500/20 hover:!text-red-300"
+                  onClick={() => onRequestDelete(detail.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                  Delete
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
@@ -6886,7 +6917,7 @@ function ArchiveContentsModal({
               })()}
 
               {data.rollback_plan && (
-                <ContentsSection icon={AlertTriangle} title="Rollback plan" iconColor="text-amber-400">
+                <ContentsSection icon={History} title="Rollback plan" iconColor="text-blue-400">
                   <RollbackPlanView plan={data.rollback_plan} />
                 </ContentsSection>
               )}
@@ -6924,10 +6955,6 @@ function ArchiveContentsModal({
             </div>
           </ScrollArea>
         )}
-
-        <div className="flex justify-end px-6 py-3 border-t border-border shrink-0">
-          <Button variant="ghost" onClick={onClose}>Close</Button>
-        </div>
       </DialogContent>
     </Dialog>
   )
@@ -7180,9 +7207,8 @@ function RollbackPlanView({ plan }: { plan: RollbackPlan }) {
     <div className="space-y-3 text-xs">
       {hasDestructive && (
         <div className="rounded-md border border-red-500/40 bg-red-500/5 p-3 space-y-2">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-red-400 flex items-center gap-1.5">
-            <AlertTriangle className="h-3.5 w-3.5" />
-            Will be removed (created after the backup)
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-red-400">
+            Not in backup — will be deleted on rollback
           </div>
           {plan.vms_to_remove.length > 0 && (
             <div>
@@ -7207,19 +7233,18 @@ function RollbackPlanView({ plan }: { plan: RollbackPlan }) {
 
       {hasRollback && (
         <div className="rounded-md border border-emerald-500/40 bg-emerald-500/5 p-3 space-y-2">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-            <DatabaseBackup className="h-3.5 w-3.5" />
-            Will be (re)applied from backup
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">
+            Configurations included in backup
           </div>
           {plan.vms_to_restore.length > 0 && (
             <div>
-              <span className="text-muted-foreground">VMs:</span>
+              <span className="text-muted-foreground">VM configs:</span>
               {plan.vms_to_restore.map((id) => <Pill key={id} tone="green">{id}</Pill>)}
             </div>
           )}
           {plan.lxcs_to_restore.length > 0 && (
             <div>
-              <span className="text-muted-foreground">LXCs:</span>
+              <span className="text-muted-foreground">LXC configs:</span>
               {plan.lxcs_to_restore.map((id) => <Pill key={id} tone="green">{id}</Pill>)}
             </div>
           )}
@@ -7229,6 +7254,9 @@ function RollbackPlanView({ plan }: { plan: RollbackPlan }) {
               {plan.components_to_reinstall.map((c) => <Pill key={c} tone="green">{c}</Pill>)}
             </div>
           )}
+          <div className="text-[10px] text-muted-foreground pt-1">
+            Only the /etc/pve config is restored — disk images stay where they live.
+          </div>
         </div>
       )}
     </div>

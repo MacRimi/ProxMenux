@@ -1533,7 +1533,22 @@ class NotificationManager:
     def _flush_digest_for_channel(self, ch_name: str, channel: Any,
                                   now: datetime) -> None:
         """Read pending rows for the channel, render a grouped summary,
-        send it, and delete the buffer entries on success."""
+        send it, and delete the buffer entries on success.
+
+        Every path through here records a `digest` entry in the
+        notification history (success or fail, empty buffer or not) and
+        bumps `_stats['total_sent']` / `total_errors` accordingly — the
+        rest of the notification system does this in
+        `_dispatch_to_channels`, and skipping it here was the reason the
+        operator's `/api/notifications/history` and `total_sent` counter
+        showed zero digest entries even when the schedule was firing
+        (issue #233).
+        """
+        host = _hostname(self._config)
+        summary_title = (
+            f"{host}: 24h summary ({now.strftime('%Y-%m-%d %H:%M')})"
+        )
+
         try:
             conn = sqlite3.connect(str(DB_PATH), timeout=10)
             conn.execute('PRAGMA journal_mode=WAL')
@@ -1547,6 +1562,12 @@ class NotificationManager:
             conn.close()
         except Exception as e:
             print(f"[NotificationManager] digest read failed for {ch_name}: {e}")
+            self._record_history(
+                'digest', ch_name, summary_title,
+                f'digest read failed: {e}', 'INFO',
+                False, str(e), 'digest_scheduler',
+            )
+            self._stats['total_errors'] += 1
             return
 
         # Mark `last_at` even if there's nothing to send — otherwise an
@@ -1554,24 +1575,46 @@ class NotificationManager:
         self._save_setting(f'{ch_name}.digest_last_at', now.isoformat())
 
         if not rows:
+            # Empty digest: don't ping the channel (no point in sending
+            # "nothing to report"), but DO log the run in history so the
+            # operator can see the schedule fired. Without this the digest
+            # looked dead silent when in fact it was working — there was
+            # just nothing INFO non-exempt to summarize.
+            self._record_history(
+                'digest', ch_name, summary_title,
+                'No INFO events buffered for this digest window.',
+                'INFO', True, '', 'digest_scheduler',
+            )
             return
 
-        host = _hostname(self._config)
-        summary_title = (
-            f"{host}: 24h summary ({now.strftime('%Y-%m-%d %H:%M')})"
-        )
         summary_body = self._compose_digest_body(rows)
 
+        result: dict = {'success': False, 'error': ''}
         try:
-            channel.send(summary_title, summary_body, severity='INFO',
-                         data={'_digest': True, '_count': len(rows)})
+            result = channel.send(summary_title, summary_body, severity='INFO',
+                                  data={'_digest': True, '_count': len(rows)}) or result
         except Exception as e:
             print(f"[NotificationManager] digest send failed for "
                   f"{ch_name}: {e}")
-            return
+            result = {'success': False, 'error': str(e)}
+
+        if result.get('success'):
+            self._stats['total_sent'] += 1
+            self._stats['last_sent_at'] = datetime.now().isoformat()
+        else:
+            self._stats['total_errors'] += 1
+        self._record_history(
+            'digest', ch_name, summary_title, summary_body, 'INFO',
+            result.get('success', False), result.get('error', '') or '',
+            'digest_scheduler',
+        )
 
         # Delete only after a successful send so a transient failure
-        # doesn't lose the day's data.
+        # doesn't lose the day's data. The pre-fix version deleted
+        # unconditionally as long as `channel.send` didn't raise — a
+        # silent `{'success': False}` would still wipe the buffer.
+        if not result.get('success'):
+            return
         try:
             ids = [r[0] for r in rows]
             conn = sqlite3.connect(str(DB_PATH), timeout=10)

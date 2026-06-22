@@ -1219,6 +1219,16 @@ class HealthMonitor:
             WARNING_MIN_SAMPLES = 25   # ~250s of sustained elevated CPU
             RECOVERY_MIN_SAMPLES = 10  # ~100s of recovery
             
+            # Build the `details` payload the cpu_high notification
+            # template (notification_templates.py) expects: `value`
+            # (already-formatted percent), `cores` (CPU count) and a
+            # human-readable `details` line. The previous payload only
+            # carried `cpu_percent`/`duration`, which left the template
+            # placeholders blank — the user got "High CPU usage — %"
+            # and "CPU usage has reached % on  cores." with no values.
+            cpu_count = os.cpu_count() or 1
+            value_str = f"{cpu_percent:.0f}"
+
             if len(critical_samples) >= CRITICAL_MIN_SAMPLES:
                 # Calculate actual duration from oldest to newest sample
                 oldest = min(s['time'] for s in critical_samples)
@@ -1231,7 +1241,13 @@ class HealthMonitor:
                     category='cpu',
                     severity='CRITICAL',
                     reason=reason,
-                    details={'cpu_percent': cpu_percent, 'duration': actual_duration}
+                    details={
+                        'value': value_str,
+                        'cores': cpu_count,
+                        'details': f'Sustained for {actual_duration}s above {self.CPU_CRITICAL}%.',
+                        'cpu_percent': cpu_percent,
+                        'duration': actual_duration,
+                    },
                 )
             elif len(warning_samples) >= WARNING_MIN_SAMPLES and len(recovery_samples) < RECOVERY_MIN_SAMPLES:
                 oldest = min(s['time'] for s in warning_samples)
@@ -1244,7 +1260,13 @@ class HealthMonitor:
                     category='cpu',
                     severity='WARNING',
                     reason=reason,
-                    details={'cpu_percent': cpu_percent, 'duration': actual_duration}
+                    details={
+                        'value': value_str,
+                        'cores': cpu_count,
+                        'details': f'Sustained for {actual_duration}s above {self.CPU_WARNING}%.',
+                        'cpu_percent': cpu_percent,
+                        'duration': actual_duration,
+                    },
                 )
             else:
                 status = 'OK'

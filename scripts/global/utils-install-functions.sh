@@ -52,6 +52,10 @@ ensure_repositories() {
 
     if (( pve_version >= 9 )); then
         # ===== PVE 9 (Debian 13 - trixie) =====
+        # Force 0644 (world-readable) on every .sources file we drop.
+        # Under the default root umask 0027 the redirect would land at
+        # 0640, which the PVE 9 webgui's repository manager treats as
+        # unparseable and silently hides the source — issue #230.
         if [[ ! -f /etc/apt/sources.list.d/proxmox.sources ]]; then
             cat > /etc/apt/sources.list.d/proxmox.sources <<'EOF'
 Enabled: true
@@ -61,6 +65,7 @@ Suites: trixie
 Components: pve-no-subscription
 Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
 EOF
+            chmod 0644 /etc/apt/sources.list.d/proxmox.sources
             need_update=true
         fi
 
@@ -78,6 +83,7 @@ Suites: trixie-security
 Components: main contrib non-free-firmware
 Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 EOF
+            chmod 0644 /etc/apt/sources.list.d/debian.sources
             need_update=true
         fi
 

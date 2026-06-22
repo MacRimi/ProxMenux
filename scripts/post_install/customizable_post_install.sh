@@ -988,6 +988,7 @@ Suites: ${target_codename}
 Components: no-subscription
 Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
 EOF
+        chmod 0644 /etc/apt/sources.list.d/ceph.sources
         msg_ok "$(translate "Ceph repository configured for PVE 9")"
         
     else

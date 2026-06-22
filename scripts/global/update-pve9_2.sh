@@ -129,6 +129,7 @@ Suites: ${TARGET_CODENAME}
 Components: pve-no-subscription
 Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
 EOF
+    chmod 0644 /etc/apt/sources.list.d/proxmox.sources
     msg_ok "$(translate "Proxmox VE 9.x no-subscription repository created")" | tee -a "$screen_capture"
     changes_made=true
 
@@ -146,6 +147,7 @@ Suites: ${TARGET_CODENAME}-security
 Components: main contrib non-free non-free-firmware
 Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 EOF
+    chmod 0644 /etc/apt/sources.list.d/debian.sources
 
     msg_ok "$(translate "Debian repositories configured for $TARGET_CODENAME")"
 
