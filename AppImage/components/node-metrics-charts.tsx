@@ -66,11 +66,17 @@ const CustomMemoryTooltip = ({ active, payload, label }: any) => {
   return null
 }
 
+interface MetricsError {
+  headline: string
+  details?: string
+  suggestion?: string
+}
+
 export function NodeMetricsCharts() {
   const [timeframe, setTimeframe] = useState("day")
   const [data, setData] = useState<NodeMetricsData[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<MetricsError | null>(null)
   const isMobile = useIsMobile()
 
   const [visibleLines, setVisibleLines] = useState({
@@ -160,9 +166,16 @@ export function NodeMetricsCharts() {
       setData(transformedData)
     } catch (err: any) {
       console.error("Error fetching node metrics:", err)
-      console.error("Error message:", err.message)
-      console.error("Error stack:", err.stack)
-      setError(err.message || "Error loading metrics")
+      // fetchApi attaches the parsed JSON body to err.body. The metrics
+      // endpoint enriches 503 responses with `details` (Proxmox-side
+      // diagnostic) and `suggestion` (how to fix). Pull them through so
+      // the user sees actionable text instead of a bare "503".
+      const body = err?.body
+      setError({
+        headline: body?.error || err?.message || "Error loading metrics",
+        details: body?.details,
+        suggestion: body?.suggestion,
+      })
     } finally {
       setLoading(false)
     }
@@ -231,24 +244,36 @@ export function NodeMetricsCharts() {
   }
 
   if (error) {
+    // Both panels carry the same error — render an identical card on
+    // each side. The headline is the short cause, the details block
+    // explains it's a Proxmox-host issue (not a Monitor bug), and the
+    // suggestion is the exact command the operator should run.
+    const errorCard = (
+      <Card className="bg-card border-border">
+        <CardContent className="p-6">
+          <div className="flex flex-col items-start justify-center h-[300px] gap-2 px-2 overflow-auto">
+            <p className="text-sm font-semibold text-red-400">{error.headline}</p>
+            {error.details && (
+              <p className="text-xs text-muted-foreground leading-relaxed">{error.details}</p>
+            )}
+            {error.suggestion && (
+              <div className="w-full mt-2">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                  Suggested fix on the Proxmox host
+                </p>
+                <code className="block text-xs bg-background/60 border border-border rounded px-2 py-1.5 font-mono break-all">
+                  {error.suggestion}
+                </code>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    )
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-card border-border">
-          <CardContent className="p-6">
-            <div className="flex flex-col items-center justify-center h-[300px] gap-2">
-              <p className="text-muted-foreground text-sm">Metrics data not available yet</p>
-              <p className="text-xs text-red-500">{error}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="p-6">
-            <div className="flex flex-col items-center justify-center h-[300px] gap-2">
-              <p className="text-muted-foreground text-sm">Metrics data not available yet</p>
-              <p className="text-xs text-red-500">{error}</p>
-            </div>
-          </CardContent>
-        </Card>
+        {errorCard}
+        {errorCard}
       </div>
     )
   }

@@ -9415,7 +9415,13 @@ def _update_smart_cron():
         test_type = schedule.get('test_type', 'short')
         retention = schedule.get('retention', 10)
         
-        cmd = f'/usr/local/share/proxmenux/scripts/smart-scheduled-test.sh --schedule-id {schedule_id} --test-type {test_type} --retention {retention}'
+        # The installer keeps the storage helpers under
+        # /usr/local/share/proxmenux/scripts/storage/, mirroring the
+        # repo layout. The previous path (without /storage/) generated
+        # cron lines that pointed at a non-existent file, so the timer
+        # fired, cron logged nothing, and the operator saw "no
+        # scheduled tests in history" with no obvious clue why.
+        cmd = f'/usr/local/share/proxmenux/scripts/storage/smart-scheduled-test.sh --schedule-id {schedule_id} --test-type {test_type} --retention {retention}'
         if disks != ['all']:
             cmd += f" --disks '{','.join(disks)}'"
         
@@ -9999,6 +10005,57 @@ def api_node_metrics():
                                     '--timeframe', timeframe, '--output-format', 'json'],
                                    capture_output=True, text=True, timeout=10)
         
+        # Detect well-known Proxmox-side failures BEFORE trying to parse
+        # the JSON. These are PVE host problems (rrdcached down, RRD file
+        # corrupt, node-name mismatch). None of them are caused by the
+        # Monitor itself — surface a specific message so the operator
+        # doesn't blame ProxMenux for a Proxmox-host data-store issue.
+        if rrd_result.returncode != 0:
+            stderr_str = (rrd_result.stderr or '') + (rrd_result.stdout or '')
+            stderr_lower = stderr_str.lower()
+            if 'mmaping file' in stderr_lower and 'invalid argument' in stderr_lower:
+                # Corrupt RRD file on disk. Operator must recreate it.
+                return jsonify({
+                    'error': 'Proxmox RRD database is corrupt',
+                    'details': (
+                        'The host metrics file Proxmox keeps under '
+                        '/var/lib/rrdcached/db/pve-node-9.0/ failed to '
+                        'memory-map (Invalid argument). This is a Proxmox-side '
+                        'data-store issue, not a Monitor bug.'
+                    ),
+                    'suggestion': (
+                        'Stop pvestatd + pve-cluster + rrdcached, move the '
+                        'broken RRD aside, restart the services. Proxmox will '
+                        'rebuild the RRD from scratch (history is lost).'
+                    ),
+                    'raw': stderr_str.strip()[:500],
+                }), 503
+            if 'no such file' in stderr_lower or 'no such node' in stderr_lower or 'does not exist' in stderr_lower:
+                return jsonify({
+                    'error': 'Proxmox node name mismatch',
+                    'details': (
+                        f"pvesh could not find node '{local_node}'. The "
+                        'usual cause is that the host was renamed after '
+                        'Proxmox was installed, so /etc/pve/nodes/ still '
+                        'carries the old name. This is a Proxmox-side '
+                        'config issue, not a Monitor bug.'
+                    ),
+                    'suggestion': 'Compare `hostname` with `ls /etc/pve/nodes/` — they must match.',
+                    'raw': stderr_str.strip()[:500],
+                }), 503
+            if 'rrd' in stderr_lower or 'empty' in stderr_lower:
+                return jsonify({
+                    'error': 'Proxmox RRD data not available',
+                    'details': 'The RRD database appears empty. Proxmox may not have collected metrics yet (fresh install) or rrdcached was down at boot.',
+                    'suggestion': 'systemctl restart rrdcached pvestatd ; wait ~5 min and reload this page.',
+                    'raw': stderr_str.strip()[:500],
+                }), 503
+            return jsonify({
+                'error': 'Proxmox metrics command failed',
+                'details': 'pvesh exited non-zero. Check Proxmox host status.',
+                'raw': stderr_str.strip()[:500],
+            }), 503
+
         if rrd_result.returncode == 0:
             rrd_data = json.loads(rrd_result.stdout)
 
@@ -10044,26 +10101,19 @@ def api_node_metrics():
             }
             _node_metrics_cache_set(timeframe, payload)
             return jsonify(payload)
-        else:
-            # Check if RRD file is empty or corrupted
-            stderr_lower = rrd_result.stderr.lower() if rrd_result.stderr else ''
-            if 'rrd' in stderr_lower or 'no such file' in stderr_lower or 'empty' in stderr_lower:
-                return jsonify({
-                    'error': 'RRD data not available',
-                    'details': 'The RRD database file may be empty or corrupted. This can happen if rrdcached was not running properly after Proxmox installation.',
-                    'suggestion': 'Try restarting rrdcached: systemctl restart rrdcached'
-                }), 503  # Service Unavailable - more appropriate than 500
-            return jsonify({'error': f'Failed to get RRD data: {rrd_result.stderr}'}), 500
-            
+        # Note: the old `else` branch that handled rrd_result.returncode != 0
+        # was removed — the early-return block above now catches every
+        # non-zero exit BEFORE we ever attempt json.loads(), so reaching
+        # this point with returncode != 0 is impossible.
+
     except json.JSONDecodeError:
         # pvesh returned invalid JSON - likely empty RRD
         return jsonify({
-            'error': 'RRD data not available',
-            'details': 'Unable to parse metrics data. The RRD database may be empty or corrupted.',
-            'suggestion': 'Try restarting rrdcached: systemctl restart rrdcached'
+            'error': 'Proxmox RRD data not available',
+            'details': 'pvesh returned non-JSON output. The RRD database is likely empty (fresh install where pvestatd has not run yet) or the rrdcached daemon is down.',
+            'suggestion': 'systemctl restart rrdcached pvestatd ; wait ~5 min and reload.',
         }), 503
     except Exception as e:
-
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/logs/counts', methods=['GET'])
@@ -16710,6 +16760,17 @@ def api_host_backups_archive_log(archive_id):
 if __name__ == '__main__':
     import sys
     import logging
+
+    # Regenerate /etc/cron.d/proxmenux-smart from the current schedule
+    # config on every Monitor start. Pre-existing installs may carry
+    # a cron file with the broken script path (without /storage/),
+    # left over from before the path-fix in this build. Rewriting it
+    # at startup is idempotent and silently heals those hosts on the
+    # first restart after the upgrade — no operator action needed.
+    try:
+        _update_smart_cron()
+    except Exception as _e:
+        print(f"[startup] smart cron regen failed: {_e}", file=sys.stderr)
     
     # Custom filter to suppress TLS handshake noise when running HTTP
     # (browsers may cache HTTPS and keep sending TLS ClientHello to an HTTP server)
