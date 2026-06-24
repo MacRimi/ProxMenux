@@ -8,8 +8,10 @@ import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { fetchApi } from "../lib/api-config"
+import { formatStorage as sharedFormatStorage } from "../lib/utils"
 import { DiskTemperatureDetailModal } from "./disk-temperature-detail-modal"
 import { DiskTemperatureCard } from "./disk-temperature-card"
+import { getDiskType as resolveDiskType } from "../lib/disk-type"
 import {
   useDiskTempThresholds,
   loadDiskTempThresholds,
@@ -146,17 +148,9 @@ interface RemoteMountsData {
   error?: string
 }
 
-const formatStorage = (sizeInGB: number): string => {
-  if (sizeInGB < 1) {
-    // Less than 1 GB, show in MB
-    return `${(sizeInGB * 1024).toFixed(1)} MB`
-  } else if (sizeInGB > 999) {
-    return `${(sizeInGB / 1024).toFixed(2)} TB`
-  } else {
-    // Between 1 and 999 GB, show in GB
-    return `${sizeInGB.toFixed(2)} GB`
-  }
-}
+// Re-exported under the local name so the rest of this large file
+// stays untouched. Single source of truth lives in lib/utils.ts.
+const formatStorage = sharedFormatStorage
 
 // Translate the short ATA/SCSI error codes that appear inside `{ ... }`
 // in a raw kernel observation (e.g. `error: { IDNF }`) into a one-line
@@ -624,21 +618,12 @@ export function StorageOverview() {
     return `${rpm.toLocaleString()} RPM`
   }
 
-  const getDiskType = (diskName: string, rotationRate: number | undefined): string => {
-    if (diskName.startsWith("nvme")) {
-      return "NVMe"
-    }
-    // rotation_rate = -1 means HDD but RPM is unknown (detected via kernel rotational flag)
-    // rotation_rate = 0 or undefined means SSD
-    // rotation_rate > 0 means HDD with known RPM
-    if (rotationRate === -1) {
-      return "HDD"
-    }
-    if (!rotationRate || rotationRate === 0) {
-      return "SSD"
-    }
-    return "HDD"
-  }
+  // Thin wrapper over the shared classifier so the rest of the file
+  // doesn't need to be touched. The actual rules live in
+  // lib/disk-type.ts (single source of truth across Storage page,
+  // Hardware page, and any future consumer).
+  const getDiskType = (diskName: string, rotationRate: number | undefined): string =>
+    resolveDiskType(diskName, rotationRate)
 
   const getDiskTypeBadge = (diskName: string, rotationRate: number | undefined) => {
     const diskType = getDiskType(diskName, rotationRate)

@@ -138,7 +138,7 @@ journalctl -u proxmenux-monitor -n 50
 
 ## 🔧 Dependencies
 
-The following dependencies are installed automatically during setup:
+The following Debian packages are installed automatically during setup:
 
 | Package | Purpose |
 |---|---|
@@ -146,12 +146,9 @@ The following dependencies are installed automatically during setup:
 | `curl` | Downloads and connectivity checks |
 | `jq` | JSON processing |
 | `git` | Repository cloning and updates |
-| `python3` + `python3-venv` | Translation support *(Translation version only)* |
-| `googletrans` | Google Translate library *(Translation version only)* |
+| `python3` + `python3-pip` | ProxMenux Monitor (Flask web dashboard) |
 
-> **🛡️ Security Note / VirusTotal False Positive**
->
-> If you scan the raw installation URL on VirusTotal, you might see a 1/95 detection by heuristic engines like *Chong Lua Dao*. This is a **known false positive**. Because this script uses the standard `curl | bash` installation pattern and downloads legitimate binaries (like `jq` from its official GitHub release), overly aggressive scanners flag the *behavior*. The script is 100% open source and safe to review. You can read more about this in [Issue #162](https://github.com/MacRimi/ProxMenux/issues/162).
+UI translations ship as pre-built JSON files per language (English, Spanish, French, German, Italian, Portuguese). There is no runtime translation dependency.
 
 ---
 

@@ -48,7 +48,7 @@ import {
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { fetchApi, getApiUrl } from "../lib/api-config"
 import { fetchTerminalTicket } from "../lib/terminal-ws"
-import { formatStorage } from "../lib/utils"
+import { formatStorage, formatBytes } from "../lib/utils"
 
 // ── Shape contracts with the backend (flask_server.py: api_host_backups_*) ──
 
@@ -316,18 +316,6 @@ const methodBadgeCls = (m: string | undefined): string => {
   }
 }
 
-// formatStorage() in lib/utils.ts expects GIGABYTES as input — it's
-// the storage layer's native unit. For raw log file sizes coming from
-// os.path.getsize() we need a byte-aware formatter; passing N bytes to
-// formatStorage() rendered "442 GB" for a 442-byte log. Tiny inline.
-const formatBytes = (n: number): string => {
-  if (!Number.isFinite(n) || n < 0) return "—"
-  if (n < 1024) return `${n} B`
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
-  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`
-  return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`
-}
-
 const formatRunAt = (iso: string | null) => {
   if (!iso) return null
   try {
@@ -509,6 +497,26 @@ export function HostBackup() {
                             <Lock className="h-3.5 w-3.5" />
                           </Badge>
                         )}
+                        {/* Surface the profile mode at row level so the
+                            operator can tell at a glance whether the
+                            job ships the default path set or a custom
+                            list — without having to open the detail
+                            modal. Same wording the modal uses. */}
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] uppercase tracking-wide ${
+                            j.profile_mode === "custom"
+                              ? "border-cyan-500/40 text-cyan-400 bg-cyan-500/5"
+                              : "border-border text-muted-foreground bg-background/40"
+                          }`}
+                          title={
+                            j.profile_mode === "custom"
+                              ? "Custom path list — only the paths the operator picked"
+                              : "Default path list — ProxMenux's recommended host config set"
+                          }
+                        >
+                          {j.profile_mode === "custom" ? "custom" : "default"}
+                        </Badge>
                         {!j.enabled && !j.manual && (
                           <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/40 bg-amber-500/5">
                             disabled
@@ -656,7 +664,7 @@ export function HostBackup() {
         </CardHeader>
         <CardContent>
           <p className="text-[11px] text-muted-foreground mb-3">
-            All backups visible from this host — local <code className="font-mono">.tar.zst</code> files (PVE default dump dir, configured local target, USB mountpoints, scheduled jobs' destinations) and PBS snapshots from every configured datastore. Click an entry to inspect, restore or download it — downloads of PBS snapshots are extracted on-demand only when you request them.
+            All backups visible from this host — local <code className="font-mono">.tar.zst</code> files (PVE default dump dir, configured local target, USB mountpoints, scheduled jobs' destinations) and PBS backups from every configured datastore. Click an entry to inspect, restore or download it — downloads of PBS backups are extracted on-demand only when you request them.
           </p>
           {remoteArchivesResp?.errors && remoteArchivesResp.errors.length > 0 && (
             <div className="text-[11px] text-amber-500 mb-3 px-3 py-2 rounded-md border border-amber-500/30 bg-amber-500/5 space-y-1">
@@ -677,7 +685,7 @@ export function HostBackup() {
             </div>
           ) : unifiedArchives.length === 0 ? (
             <div className="text-sm text-muted-foreground py-4">
-              No backups found yet. Use <span className="font-medium">Run manual backup</span> above, configure a scheduled job, or check that the configured PBS / Borg destinations have snapshots.
+              No backups found yet. Use <span className="font-medium">Run manual backup</span> above, configure a scheduled job, or check that the configured PBS / Borg destinations have backups.
             </div>
           ) : (
             <div className="space-y-2">
@@ -7205,14 +7213,15 @@ function RollbackPlanView({ plan }: { plan: RollbackPlan }) {
       {children}
     </code>
   )
-  // Row uses flex-wrap + min-w-0 + gap so labels and pills flow to
-  // a new line on narrow screens instead of pushing the card wider.
+  // Each pill is a direct flex child of the row (no inner wrapper)
+  // so flex-wrap can break a long list of IDs mid-row on mobile.
+  // The previous nested `<div className="flex flex-wrap">` wouldn't
+  // wrap because its width was capped by the parent's flex layout,
+  // and the whole block would overflow the modal instead.
   const Row = ({ label, items }: { label: string; items: (string | number)[] }) => (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 min-w-0">
+    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1.5">
       <span className="text-muted-foreground shrink-0">{label}</span>
-      <div className="flex flex-wrap gap-1.5 min-w-0">
-        {items.map((id) => <Pill key={id}>{id}</Pill>)}
-      </div>
+      {items.map((id) => <Pill key={id}>{id}</Pill>)}
     </div>
   )
 

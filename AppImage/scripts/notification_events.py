@@ -597,22 +597,50 @@ class JournalWatcher:
             if self._running:
                 time.sleep(5)  # Wait before restart
     
+    # Discard a saved cursor older than this many seconds — resuming
+    # from a stale cursor replays every event journald has produced
+    # since the file was last touched, which surfaces as duplicate
+    # notifications. 15 min comfortably covers graceful shutdowns,
+    # cron-restart loops and brief outages while keeping a multi-day
+    # downtime from spamming the operator. Reported on RimegraVE
+    # (.1.10): the service was last stopped 11 days before a restart;
+    # on respawn the JournalWatcher fired 16 backup_start notifs in
+    # 40 min for vzdump runs that PVE had logged hours-to-days
+    # earlier. source=journal in notification_history proved the
+    # event chain came from this replay path.
+    _CURSOR_STALE_AFTER_SEC = 15 * 60
+
     def _run_journalctl(self):
-        """Run journalctl -f and process output line by line."""
-        # Persist the cursor across watcher restarts so we don't lose events
-        # in the 5s gap between subprocess crash and respawn. journalctl
-        # writes the file with the latest seen cursor and on next start
-        # resumes from there. Falls back to -n 0 (start from now) only on
-        # the very first run when the cursor file doesn't exist yet.
+        """Run journalctl -f and process output line by line.
+
+        The cursor file lets us pick up after a short watcher crash
+        without dropping events, but we drop it before invoking
+        journalctl if it's older than _CURSOR_STALE_AFTER_SEC.
+        That forces journalctl back to `-n 0` (start from now)
+        instead of replaying days of history as if it were live.
+        """
         cursor_file = '/usr/local/share/proxmenux/journal_cursor.txt'
         try:
             Path(cursor_file).parent.mkdir(parents=True, exist_ok=True)
         except Exception:
             pass
+        cursor_path = Path(cursor_file)
+        if cursor_path.exists():
+            try:
+                age = time.time() - cursor_path.stat().st_mtime
+                if age > self._CURSOR_STALE_AFTER_SEC:
+                    cursor_path.unlink(missing_ok=True)
+                    print(
+                        f"[JournalWatcher] Cursor stale "
+                        f"({int(age)}s old) — restarting from now to "
+                        f"avoid replaying historical events"
+                    )
+            except OSError:
+                pass
         cmd = ['journalctl', '-f', '-o', 'json', '--no-pager',
                f'--cursor-file={cursor_file}']
-        if not Path(cursor_file).exists():
-            cmd.extend(['-n', '0'])  # First run: don't replay history
+        if not cursor_path.exists():
+            cmd.extend(['-n', '0'])  # First run (or stale): don't replay history
 
         self._process = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
