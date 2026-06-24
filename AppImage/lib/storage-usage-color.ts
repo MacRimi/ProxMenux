@@ -6,10 +6,12 @@
 // on Storage and in blue on Backups — same datastore, two different
 // signals.
 //
-// Thresholds: < 75 % green, 75–89 % amber, ≥ 90 % red. Matches the
-// existing Storage page palette and the "Free" text colour on the
-// Backups page (which was already amber/red, just disconnected from
-// the bar).
+// Thresholds: < 75 % blue (normal — no alert), 75–89 % amber,
+// ≥ 90 % red. Matches the Storage page palette: the normal state
+// stays on the project's brand blue and only switches to amber/red
+// when the operator should look at it. Green is reserved for OK
+// signals where green has meaning (SMART status, wear level), not
+// for ambient bars.
 
 export type UsageBarColor = {
   /** Inline `background` value for SVG / style={} consumers. */
@@ -21,10 +23,12 @@ export type UsageBarColor = {
   textClass: string
 }
 
-const GREEN: UsageBarColor = {
-  hex: "#22c55e",
-  bgClass: "bg-green-500",
-  textClass: "text-green-500",
+const BLUE: UsageBarColor = {
+  hex: "#3b82f6",
+  bgClass: "bg-blue-500",
+  // No text-blue override for the "Free" counter — at normal usage
+  // the foreground colour reads better than tinted text.
+  textClass: "",
 }
 const AMBER: UsageBarColor = {
   hex: "#f59e0b",
@@ -40,5 +44,5 @@ const RED: UsageBarColor = {
 export function getStorageUsageColor(percent: number): UsageBarColor {
   if (percent >= 90) return RED
   if (percent >= 75) return AMBER
-  return GREEN
+  return BLUE
 }

@@ -3581,6 +3581,15 @@ def _smart_default_payload() -> dict:
         'family': None,
         'sata_version': None,
         'form_factor': None,
+        # Internal flag — True if smartctl confirmed the disk type
+        # (HDD with RPM, or SSD via "Solid State Device" / JSON
+        # rotation_rate=0). Stripped before the dict reaches the API.
+        # Drives the kernel /sys/.../rotational fallback: that path is
+        # only safe when smartctl had NO opinion, because USB-SATA
+        # enclosures (ASM105x etc.) advertise rotational=1 to the
+        # kernel even when the drive behind them is an SSD that
+        # smartctl can correctly identify via SAT passthrough.
+        '_rotation_known': False,
     }
 
 
@@ -3716,6 +3725,7 @@ def _get_smart_data_uncached(disk_name):
                             
                             if 'rotation_rate' in data:
                                 smart_data['rotation_rate'] = data['rotation_rate']
+                                smart_data['_rotation_known'] = True
 
                             
                             # Extract SMART status
@@ -3909,19 +3919,17 @@ def _get_smart_data_uncached(disk_name):
                                 # print(f"[v0] Found serial: {smart_data['serial']}")
                                 pass
                             
-                            elif line.startswith('Rotation Rate:') and smart_data['rotation_rate'] == 0:
+                            elif line.startswith('Rotation Rate:') and not smart_data['_rotation_known']:
                                 rate_str = line.split(':', 1)[1].strip()
                                 if 'rpm' in rate_str.lower():
                                     try:
                                         smart_data['rotation_rate'] = int(rate_str.split()[0])
-                                        # print(f"[v0] Found rotation rate: {smart_data['rotation_rate']} RPM")
-                                        pass
+                                        smart_data['_rotation_known'] = True
                                     except (ValueError, IndexError):
                                         pass
                                 elif 'Solid State Device' in rate_str:
                                     smart_data['rotation_rate'] = 0  # SSD
-                                    # print(f"[v0] Found SSD (no rotation)")
-                                    pass
+                                    smart_data['_rotation_known'] = True
                             
                             # SMART status detection
                             elif 'SMART overall-health self-assessment test result:' in line:
@@ -4132,21 +4140,27 @@ def _get_smart_data_uncached(disk_name):
             elif temp > warn:
                 smart_data['health'] = 'warning'
 
-        # CHANGE: Use -1 to indicate HDD with unknown RPM instead of inventing 7200 RPM
-        # Fallback: Check kernel's rotational flag if smartctl didn't provide rotation_rate
-        # This fixes detection for older disks that don't report RPM via smartctl
-        if smart_data['rotation_rate'] == 0:
+        # Fallback: ask the kernel only when smartctl had no opinion.
+        # USB-SATA enclosures (ASM105x family etc.) advertise
+        # rotational=1 to the kernel even when there's an SSD behind
+        # them, so trusting /sys here without first checking what
+        # smartctl said would flip a correctly-identified SSD back to
+        # HDD. The previous condition (`rotation_rate == 0`) couldn't
+        # tell "smartctl confirmed SSD" from "smartctl never spoke",
+        # which is what bit the OCZ-SOLID2 behind an ASM105x dock on
+        # the lab host (sdd showed as HDD in the UI while smartctl
+        # was reporting it as SSD).
+        if not smart_data['_rotation_known']:
             try:
                 rotational_path = f"/sys/block/{disk_name}/queue/rotational"
                 if os.path.exists(rotational_path):
                     with open(rotational_path, 'r') as f:
                         rotational = int(f.read().strip())
                         if rotational == 1:
-                            # Disk is rotational (HDD), use -1 to indicate "HDD but RPM unknown"
-                            smart_data['rotation_rate'] = -1
-                        # If rotational == 0, it's an SSD, keep rotation_rate as 0
-            except Exception as e:
-                pass  # If we can't read the file, leave rotation_rate as is
+                            smart_data['rotation_rate'] = -1  # HDD, RPM unknown
+            except Exception:
+                pass
+        smart_data.pop('_rotation_known', None)
 
             
     except FileNotFoundError:
