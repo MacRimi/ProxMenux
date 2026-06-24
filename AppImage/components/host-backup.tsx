@@ -49,6 +49,7 @@ import { ScriptTerminalModal } from "./script-terminal-modal"
 import { fetchApi, getApiUrl } from "../lib/api-config"
 import { fetchTerminalTicket } from "../lib/terminal-ws"
 import { formatStorage, formatBytes } from "../lib/utils"
+import { getStorageUsageColor } from "../lib/storage-usage-color"
 
 // ── Shape contracts with the backend (flask_server.py: api_host_backups_*) ──
 
@@ -4581,11 +4582,15 @@ function DestinationRow({
       </div>
 
       {/* Capacity bar — matches the height of the <Progress> component
-          used on the Storage page (h-2). bg-muted track + solid blue
-          fill, no border. */}
+          used on the Storage page (h-2). Bar colour comes from the
+          shared storage palette so a 100% PBS datastore flags red
+          here too, not just on the Storage page. */}
       {capacity?.total && capacity.available !== undefined && (
         <div className="mb-3 h-2 bg-muted rounded-full overflow-hidden">
-          <div className="h-full rounded-full bg-blue-500" style={{ width: `${pct}%` }} />
+          <div
+            className={`h-full rounded-full ${getStorageUsageColor(pct ?? 0).bgClass}`}
+            style={{ width: `${pct}%` }}
+          />
         </div>
       )}
 
@@ -4609,7 +4614,11 @@ function DestinationRow({
         {capacity?.available !== undefined && (
           <div>
             <p className="text-sm text-muted-foreground">Free</p>
-            <p className={`font-medium ${pct !== null && pct > 90 ? "text-red-400" : pct !== null && pct > 75 ? "text-amber-400" : ""}`}>
+            <p
+              className={`font-medium ${
+                pct === null ? "" : getStorageUsageColor(pct).textClass
+              }`}
+            >
               {formatBytes(capacity.available)}
             </p>
           </div>
