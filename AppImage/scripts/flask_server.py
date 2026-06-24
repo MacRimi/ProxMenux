@@ -2989,12 +2989,25 @@ def get_storage_info():
                         is_system_disk = sys_info.get('is_system', False)
                         system_usage = sys_info.get('usage', [])
                         
+                        # `standby` reflects what the temperature poller
+                        # last observed (smartctl -n standby exit code 2).
+                        # Surfaced here so the UI can paint a "Standby"
+                        # badge and tell the operator that a frozen
+                        # temperature graph isn't a monitor bug — the
+                        # disk is parked. See issue #232.
+                        in_standby = False
+                        try:
+                            import disk_temperature_history as _dth
+                            in_standby = _dth.is_disk_in_standby(disk_name)
+                        except Exception:
+                            pass
                         physical_disks[disk_name] = {
                             'name': disk_name,
                             'size': disk_size_kb,  # In KB for formatMemory() in Storage Summary
                             'size_formatted': size_str,  # Added formatted size string for Storage section
                             'size_bytes': disk_size_bytes,
                             'temperature': smart_data.get('temperature', 0),
+                            'standby': in_standby,
                             'health': smart_data.get('health', 'unknown'),
                             'power_on_hours': smart_data.get('power_on_hours', 0),
                             'smart_status': smart_data.get('smart_status', 'unknown'),

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Square, Thermometer, Archive, Info, Clock, Usb, Server, Activity, FileText, Play, Loader2, Download, Plus, Trash2, Settings } from "lucide-react"
+import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Square, Thermometer, Archive, Info, Clock, Usb, Server, Activity, FileText, Play, Loader2, Download, Plus, Trash2, Settings, Power } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -22,6 +22,11 @@ interface DiskInfo {
   size?: number // Changed from string to number (KB) for formatMemory()
   size_formatted?: string // Added formatted size string for display
   temperature: number
+  // True when the temperature poller's last smartctl exited with
+  // "device is in standby". The UI uses this to render a Standby
+  // badge AND to suppress the (stale) temperature value, so the
+  // operator understands the graph is frozen on purpose — issue #232.
+  standby?: boolean
   health: string
   power_on_hours?: number
   smart_status?: string
@@ -277,6 +282,35 @@ export function StorageOverview() {
       default:
         return <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/20">Unknown</Badge>
     }
+  }
+
+  // Renders either the live temperature or a "Standby" badge for a
+  // spun-down drive. Centralised here because the same pattern shows up
+  // in 4 different disk-list views (system / data / pool / other) and we
+  // want them all to behave identically — issue #232 fix.
+  const renderDiskTempOrStandby = (disk: DiskInfo) => {
+    if (disk.standby) {
+      return (
+        <Badge
+          className="bg-blue-500/10 text-blue-300 border-blue-500/30 gap-1"
+          title="Drive is in standby — smartctl skipped to keep it spun down"
+        >
+          <Power className="h-3 w-3" />
+          Standby
+        </Badge>
+      )
+    }
+    if (disk.temperature > 0) {
+      return (
+        <div className="flex items-center gap-1">
+          <Thermometer className={`h-4 w-4 ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`} />
+          <span className={`text-sm font-medium ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`}>
+            {disk.temperature}°C
+          </span>
+        </div>
+      )
+    }
+    return null
   }
 
   const getTempColor = (temp: number, diskName?: string, rotationRate?: number) => {
@@ -1374,18 +1408,7 @@ export function StorageOverview() {
                         <p className="text-sm text-muted-foreground truncate flex-1 min-w-0">{disk.model}</p>
                       )}
                       <div className="flex items-center gap-3 flex-shrink-0">
-                        {disk.temperature > 0 && (
-                          <div className="flex items-center gap-1">
-                            <Thermometer
-                              className={`h-4 w-4 ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`}
-                            />
-                            <span
-                              className={`text-sm font-medium ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`}
-                            >
-                              {disk.temperature}°C
-                            </span>
-                          </div>
-                        )}
+                        {renderDiskTempOrStandby(disk)}
                         {(disk.observations_count ?? 0) > 0 && (
                           <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 gap-1">
                             <Info className="h-3 w-3" />
@@ -1466,18 +1489,7 @@ export function StorageOverview() {
                         <p className="text-sm text-muted-foreground truncate flex-1 min-w-0">{disk.model}</p>
                       )}
                       <div className="flex items-center gap-3 flex-shrink-0">
-                        {disk.temperature > 0 && (
-                          <div className="flex items-center gap-1">
-                            <Thermometer
-                              className={`h-4 w-4 ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`}
-                            />
-                            <span
-                              className={`text-sm font-medium ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`}
-                            >
-                              {disk.temperature}°C
-                            </span>
-                          </div>
-                        )}
+                        {renderDiskTempOrStandby(disk)}
                         {(disk.observations_count ?? 0) > 0 && (
                           <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 gap-1">
                             <Info className="h-3 w-3" />
@@ -1578,14 +1590,7 @@ export function StorageOverview() {
                           <p className="text-sm text-muted-foreground truncate flex-1 min-w-0">{disk.model}</p>
                         )}
                         <div className="flex items-center gap-3 flex-shrink-0">
-                          {disk.temperature > 0 && (
-                            <div className="flex items-center gap-1">
-                              <Thermometer className={`h-4 w-4 ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`} />
-                              <span className={`text-sm font-medium ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`}>
-                                {disk.temperature}°C
-                              </span>
-                            </div>
-                          )}
+                          {renderDiskTempOrStandby(disk)}
                           {(disk.observations_count ?? 0) > 0 && (
                             <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 gap-1">
                               <Info className="h-3 w-3" />
@@ -1632,14 +1637,7 @@ export function StorageOverview() {
                         <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 text-[10px] px-1.5">USB</Badge>
                       </div>
                       <div className="flex items-center gap-3">
-                        {disk.temperature > 0 && (
-                          <div className="flex items-center gap-1">
-                            <Thermometer className={`h-4 w-4 ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`} />
-                            <span className={`text-sm font-medium ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`}>
-                              {disk.temperature}°C
-                            </span>
-                          </div>
-                        )}
+                        {renderDiskTempOrStandby(disk)}
                         {getHealthBadge(disk.health)}
                         {(disk.observations_count ?? 0) > 0 && (
                           <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 gap-1">

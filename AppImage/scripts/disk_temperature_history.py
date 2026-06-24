@@ -238,21 +238,47 @@ def _list_target_disks() -> list[str]:
 
 
 def _smartctl_cmd_for(disk_name: str, probe: str) -> list[str]:
-    """Build the smartctl invocation for a given probe key."""
-    cmd = ["smartctl", "-A", "-j"]
+    """Build the smartctl invocation for a given probe key.
+
+    `-n standby` makes smartctl exit immediately with code 2 (no disk
+    I/O) when the drive is already in standby. Without it, this
+    once-a-minute poller was spinning HDDs back up on every cycle,
+    breaking NAS / SnapRAID setups that rely on hdparm-driven spin-down
+    (issue #232).
+    """
+    cmd = ["smartctl", "-n", "standby", "-A", "-j"]
     if probe != "auto":
         cmd.extend(["-d", probe])
     cmd.append(f"/dev/{disk_name}")
     return cmd
 
 
+# Sentinel returned by `_try_probe` when the drive is in standby. Distinct
+# from `None` (read failure / no temperature attribute), so the caller
+# can keep the last known reading instead of marking the disk as failing.
+_STANDBY = "standby"
+
+
 def _try_probe(disk_name: str, probe: str) -> Optional[float]:
-    """Run a single smartctl invocation and parse the temperature."""
+    """Run a single smartctl invocation and parse the temperature.
+
+    Returns:
+        * a float — current temperature in °C.
+        * the string ``_STANDBY`` — drive is in standby, NOT read.
+        * ``None`` — read failed for any other reason.
+    """
     try:
         proc = subprocess.run(
             _smartctl_cmd_for(disk_name, probe),
             capture_output=True, text=True, timeout=_SMARTCTL_TIMEOUT,
         )
+        # `-n standby` makes smartctl exit with code 2 when the drive is
+        # parked. We must not treat that as a read failure (would trigger
+        # the backoff and stop polling that drive forever) — surface it
+        # as the dedicated _STANDBY sentinel so the caller skips the
+        # update cleanly.
+        if proc.returncode == 2:
+            return _STANDBY  # type: ignore[return-value]
         # smartctl returns non-zero on warnings (bit 0x40 etc.) even when
         # JSON is fully populated. Don't gate on returncode — parse the
         # body regardless.
@@ -264,8 +290,24 @@ def _try_probe(disk_name: str, probe: str) -> Optional[float]:
         return None
 
 
+# Disks that returned "standby" on their last poll. Used by the
+# /api/storage/disks endpoint to render a Standby badge so the operator
+# understands why the temperature graph for that drive is frozen — the
+# disk really is parked, not the monitor that's broken.
+_standby_state: dict[str, float] = {}  # disk_name -> last-seen timestamp
+_STANDBY_TTL = 600  # treat as stale after 10 min of no observation
+
+
+def is_disk_in_standby(disk_name: str) -> bool:
+    """True if our last smartctl poll for this disk hit a standby spindle.
+    Falls back to False when the cached observation is older than the
+    TTL — the drive may have woken up between polls."""
+    ts = _standby_state.get(disk_name)
+    return ts is not None and (time.time() - ts) < _STANDBY_TTL
+
+
 def _read_temperature(disk_name: str) -> Optional[float]:
-    """Pull the current temperature from ``smartctl -A -j``.
+    """Pull the current temperature from ``smartctl -n standby -A -j``.
 
     Caching strategy:
       * If we've previously found a working probe for this disk we go
@@ -275,6 +317,9 @@ def _read_temperature(disk_name: str) -> Optional[float]:
         and update the cache with whatever does work.
       * Disks that never report a temperature get rate-limited via the
         backoff table so we don't smartctl them every minute forever.
+      * Disks in standby return ``None`` but DON'T count toward the
+        failure backoff — they're not broken, they're just parked.
+        The standby state is recorded so the UI can show a badge.
     """
     now = time.time()
 
@@ -285,10 +330,23 @@ def _read_temperature(disk_name: str) -> Optional[float]:
     if retry_at > now:
         return None
 
+    def _handle(result):
+        """Clear failure state + record standby observation. Returns the
+        numeric temperature if the result is one (else None / standby)."""
+        if result == _STANDBY:
+            _standby_state[disk_name] = time.time()
+            return _STANDBY
+        if isinstance(result, (int, float)) and result > 0:
+            _standby_state.pop(disk_name, None)
+            return result
+        return None
+
     # Fast path: cached probe.
     if cached_probe is not None:
-        temp = _try_probe(disk_name, cached_probe)
-        if temp is not None and temp > 0:
+        temp = _handle(_try_probe(disk_name, cached_probe))
+        if temp == _STANDBY:
+            return None  # parked — skip update, don't penalise
+        if temp is not None:
             with _cache_lock:
                 _disk_fail_counts.pop(disk_name, None)
                 _disk_fail_backoff.pop(disk_name, None)
@@ -299,16 +357,18 @@ def _read_temperature(disk_name: str) -> Optional[float]:
     for probe in ("auto", "nvme", "ata", "sat"):
         if probe == cached_probe:
             continue  # already tried above
-        temp = _try_probe(disk_name, probe)
-        if temp is not None and temp > 0:
+        temp = _handle(_try_probe(disk_name, probe))
+        if temp == _STANDBY:
+            return None
+        if temp is not None:
             with _cache_lock:
                 _disk_probe_cache[disk_name] = probe
                 _disk_fail_counts.pop(disk_name, None)
                 _disk_fail_backoff.pop(disk_name, None)
             return temp
 
-    # All probes failed. Bump the failure counter and trip the backoff
-    # if we've crossed the threshold.
+    # All probes failed (none returned a temperature OR standby). Bump
+    # the failure counter and trip the backoff if threshold crossed.
     with _cache_lock:
         n = _disk_fail_counts.get(disk_name, 0) + 1
         _disk_fail_counts[disk_name] = n

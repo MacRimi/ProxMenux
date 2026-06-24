@@ -2424,10 +2424,23 @@ class HealthMonitor:
         
         try:
             dev_path = f'/dev/{disk_name}' if not disk_name.startswith('/') else disk_name
+            # `-n standby` skips the command (exit code 2, no disk I/O)
+            # when the drive is parked, preventing the health poller
+            # from spinning up HDDs that hdparm / hd-idle just put to
+            # sleep — issue #232. The "UNKNOWN" branch below correctly
+            # keeps the previous cached result alive on exit code 2.
             result = subprocess.run(
-                ['smartctl', '--health', '-j', dev_path],
+                ['smartctl', '-n', 'standby', '--health', '-j', dev_path],
                 capture_output=True, text=True, timeout=5
             )
+            if result.returncode == 2:
+                # Drive in standby — reuse the previous health state
+                # if we have one, otherwise report UNKNOWN. Either way,
+                # don't refresh the cache TTL so we retry on the next
+                # cycle (a drive can come out of standby at any time).
+                if cached:
+                    return cached['result']
+                return 'UNKNOWN'
             import json as _json
             data = _json.loads(result.stdout)
             passed = data.get('smart_status', {}).get('passed', None)
