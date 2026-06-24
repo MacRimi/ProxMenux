@@ -284,6 +284,41 @@ export function StorageOverview() {
     }
   }
 
+  // Tiny coloured dot that prefixes status / counter values. Adds
+  // accessibility-friendly redundancy (colour + position) to fields
+  // that today rely on colour alone, so an "all OK" disk reads as
+  // visually quiet and a degraded one as immediately noisy.
+  //
+  // Colour mapping:
+  //   - "ok"    → green (passed / 0 errors)
+  //   - "warn"  → amber (1+ errors but not critical)
+  //   - "fail"  → red (failed / many errors)
+  const StatusDot = ({ tone }: { tone: "ok" | "warn" | "fail" }) => {
+    const cls =
+      tone === "ok" ? "bg-green-500" : tone === "warn" ? "bg-yellow-500" : "bg-red-500"
+    return (
+      <span
+        className={`inline-block h-2 w-2 rounded-full shrink-0 ${cls}`}
+        aria-hidden
+      />
+    )
+  }
+  // Decide the tone for a counter where 0 is healthy. The "warn" /
+  // "fail" cutoffs are conservative — even a single reallocated
+  // sector is worth amber attention, and double digits start hinting
+  // at progressive failure (red).
+  const counterTone = (n: number | null | undefined): "ok" | "warn" | "fail" => {
+    if (!n || n <= 0) return "ok"
+    if (n < 10) return "warn"
+    return "fail"
+  }
+  const smartStatusTone = (s: string | undefined): "ok" | "warn" | "fail" => {
+    const v = (s || "").toLowerCase()
+    if (v === "passed" || v === "ok") return "ok"
+    if (v === "failed") return "fail"
+    return "warn"
+  }
+
   // Renders either the live temperature or a "Standby" badge for a
   // spun-down drive. Centralised here because the same pattern shows up
   // in 4 different disk-list views (system / data / pool / other) and we
@@ -313,6 +348,237 @@ export function StorageOverview() {
     return null
   }
 
+  // ──────────────────────────────────────────────────────────────────
+  // Disk card layout (ghosthvj-style)
+  // ──────────────────────────────────────────────────────────────────
+  // Single card per disk, grid-arranged at the parent level. Two-line
+  // header (identity + status / size + temp), separator, vertical
+  // key→value stat list with WEAR LEVEL bar when available, and a
+  // footer with serial + "Ver detalles →". Replaces the previous
+  // duplicated mobile/desktop full-width rows.
+  const renderDiskCardV2 = (disk: DiskInfo) => {
+    const type = getDiskTypeBadge(disk.name, disk.rotation_rate)
+    // Pick the most relevant wear metric for the device class.
+    // NVMe uses `percentage_used` (0 = fresh, 100 = TBW spent).
+    // SSD may expose `media_wearout_indicator` (decreasing 100→0) or
+    // `ssd_life_left` (decreasing 100→0). Normalise both to a
+    // "percentage spent" so the bar always fills LEFT to RIGHT as the
+    // drive ages — visually consistent across vendors.
+    let wearPct: number | null = null
+    if (typeof disk.percentage_used === "number") wearPct = disk.percentage_used
+    else if (typeof disk.ssd_life_left === "number") wearPct = 100 - disk.ssd_life_left
+    else if (typeof disk.media_wearout_indicator === "number")
+      wearPct = 100 - disk.media_wearout_indicator
+    // Wear bar always uses the same blue as the modal's wear visual,
+    // even when the wear is high — the colour is the SECTION colour,
+    // not a severity signal. The percentage value itself (and the
+    // surrounding stats) already communicate health via the dot
+    // colours, so flipping the bar to amber/red here would just
+    // double-encode the same thing and break visual consistency
+    // with the detail modal.
+    const wearColor = wearPct === null ? "" : "bg-blue-500"
+    const cleanSerial = (disk.serial || "").replace(/\\x[0-9a-fA-F]{2}/g, "")
+
+    return (
+      <div
+        key={disk.name}
+        className="border border-white/10 rounded-lg p-5 cursor-pointer bg-card hover:bg-white/5 transition-colors flex flex-col"
+        onClick={() => handleDiskClick(disk)}
+      >
+        {/* Header line 1: identity + SMART status (right). */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <h3 className="font-mono font-bold text-base break-all">/dev/{disk.name}</h3>
+            <Badge className={type.className}>{type.label}</Badge>
+            {disk.is_system_disk && (
+              <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20 gap-1">
+                <Server className="h-3 w-3" />
+                System
+              </Badge>
+            )}
+            {disk.connection_type === "usb" && (
+              <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 gap-1">
+                <Usb className="h-3 w-3" />
+                USB
+              </Badge>
+            )}
+          </div>
+          {disk.smart_status && disk.smart_status !== "unknown" && (
+            <span
+              className={`flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide shrink-0 ${
+                smartStatusTone(disk.smart_status) === "ok"
+                  ? "text-green-500"
+                  : smartStatusTone(disk.smart_status) === "fail"
+                    ? "text-red-500"
+                    : "text-muted-foreground"
+              }`}
+            >
+              <StatusDot tone={smartStatusTone(disk.smart_status)} />
+              {disk.smart_status}
+            </span>
+          )}
+        </div>
+
+        {/* Header line 2: size + temperature/standby. */}
+        <div className="flex items-center justify-between gap-3 mt-1">
+          <span className="text-sm text-muted-foreground">{disk.size_formatted}</span>
+          {disk.standby ? (
+            <Badge
+              className="bg-blue-500/10 text-blue-300 border-blue-500/30 gap-1"
+              title="Drive is in standby — smartctl skipped to keep it spun down"
+            >
+              <Power className="h-3 w-3" />
+              Standby
+            </Badge>
+          ) : disk.temperature > 0 ? (
+            <span
+              className={`text-base font-semibold ${getTempColor(
+                disk.temperature,
+                disk.name,
+                disk.rotation_rate,
+              )}`}
+            >
+              {disk.temperature}°C
+            </span>
+          ) : null}
+        </div>
+
+        {/* I/O errors banner (preserved from the previous design). */}
+        {disk.io_errors && disk.io_errors.count > 0 && (
+          <div
+            className={`mt-3 flex items-start gap-2 p-2 rounded text-xs ${
+              disk.io_errors.severity === "CRITICAL"
+                ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                : "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20"
+            }`}
+          >
+            <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+            <span>
+              {disk.io_errors.error_type === "filesystem"
+                ? "Filesystem corruption detected"
+                : `${disk.io_errors.count} I/O error${
+                    disk.io_errors.count !== 1 ? "s" : ""
+                  } in 5 min`}
+            </span>
+          </div>
+        )}
+
+        {/* Separator. */}
+        <div className="border-t border-border/60 my-3" />
+
+        {/* Stats: vertical key→value list. Each row matches the
+            "uppercase label left · value right" pattern from ghosthvj. */}
+        <div className="space-y-2 text-sm">
+          {disk.model && disk.model !== "Unknown" && (
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground shrink-0">
+                Model
+              </span>
+              <span className="font-medium text-right truncate font-mono text-xs">{disk.model}</span>
+            </div>
+          )}
+          {wearPct !== null && (
+            <div>
+              <div className="flex items-baseline justify-between gap-3 mb-1">
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  Wear Level
+                </span>
+                <span className="font-medium">{wearPct}%</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                <div
+                  className={`h-full ${wearColor}`}
+                  style={{ width: `${Math.min(100, Math.max(0, wearPct))}%` }}
+                />
+              </div>
+            </div>
+          )}
+          {disk.power_cycles !== undefined && disk.power_cycles > 0 && (
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                Power Cycles
+              </span>
+              <span className="font-medium">{disk.power_cycles.toLocaleString()}</span>
+            </div>
+          )}
+          {disk.power_on_hours !== undefined && disk.power_on_hours > 0 && (
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                Power On
+              </span>
+              <span className="font-medium">{formatHours(disk.power_on_hours)}</span>
+            </div>
+          )}
+          {disk.crc_errors !== undefined && (
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                CRC Errors
+              </span>
+              <span
+                className={`font-medium flex items-center gap-1.5 ${
+                  counterTone(disk.crc_errors) === "ok"
+                    ? "text-green-500"
+                    : counterTone(disk.crc_errors) === "warn"
+                      ? "text-yellow-500"
+                      : "text-red-500"
+                }`}
+              >
+                <StatusDot tone={counterTone(disk.crc_errors)} />
+                {disk.crc_errors}
+              </span>
+            </div>
+          )}
+          {/* Reallocated only meaningful on rotating disks. */}
+          {disk.reallocated_sectors !== undefined && (disk.rotation_rate ?? 0) > 0 && (
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                Realloc. Sectors
+              </span>
+              <span
+                className={`font-medium flex items-center gap-1.5 ${
+                  counterTone(disk.reallocated_sectors) === "ok"
+                    ? "text-green-500"
+                    : counterTone(disk.reallocated_sectors) === "warn"
+                      ? "text-yellow-500"
+                      : "text-red-500"
+                }`}
+              >
+                <StatusDot tone={counterTone(disk.reallocated_sectors)} />
+                {disk.reallocated_sectors}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Footer: serial (left, white mono for legibility) + observations
+            + arrow-only CTA (language-neutral, compact). */}
+        <div className="border-t border-border/60 mt-auto pt-3 flex items-center justify-between gap-3">
+          {cleanSerial && cleanSerial !== "Unknown" ? (
+            <span className="text-[11px] text-foreground font-mono truncate min-w-0">
+              <span className="text-muted-foreground">S/N:</span> {cleanSerial}
+            </span>
+          ) : (
+            <span />
+          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {(disk.observations_count ?? 0) > 0 && (
+              <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 gap-1 text-[10px]">
+                <Info className="h-3 w-3" />
+                {disk.observations_count}
+              </Badge>
+            )}
+            <span
+              className="text-blue-400 hover:text-blue-300 transition-colors text-base leading-none"
+              aria-label="View details"
+            >
+              →
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const getTempColor = (temp: number, diskName?: string, rotationRate?: number) => {
     if (temp === 0) return "text-gray-500"
 
@@ -333,12 +599,24 @@ export function StorageOverview() {
 
   const formatHours = (hours: number) => {
     if (hours === 0) return "N/A"
-    const years = Math.floor(hours / 8760)
-    const days = Math.floor((hours % 8760) / 24)
+    // Render in years + months when ≥1 year (e.g. "2y 6m" instead of
+    // "2y 189d" — months are easier to picture than triple-digit
+    // residual days). Months use 30.44 d/mo average to round cleanly.
+    // <30 days: keep days. 30 d–1 yr: months + residual days when both
+    // values are meaningful.
+    const totalDays = Math.floor(hours / 24)
+    if (totalDays < 30) return `${totalDays}d`
+    const years = Math.floor(totalDays / 365)
+    const remainingAfterYears = totalDays - years * 365
+    const months = Math.floor(remainingAfterYears / 30)
     if (years > 0) {
-      return `${years}y ${days}d`
+      return months > 0 ? `${years}y ${months}m` : `${years}y`
     }
-    return `${days}d`
+    // Sub-year: show months + residual days if both are non-trivial.
+    const residualDays = remainingAfterYears - months * 30
+    if (months > 0 && residualDays > 0) return `${months}m ${residualDays}d`
+    if (months > 0) return `${months}m`
+    return `${totalDays}d`
   }
 
   const formatRotationRate = (rpm: number | undefined) => {
@@ -1379,184 +1657,10 @@ export function StorageOverview() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {storageData.disks.filter(d => d.connection_type !== 'usb').map((disk) => (
-              <div key={disk.name}>
-                <div
-                  className="sm:hidden border border-white/10 rounded-lg p-4 cursor-pointer bg-white/5 transition-colors"
-                  onClick={() => handleDiskClick(disk)}
-                >
-                  <div className="space-y-2 mb-3">
-                    {/* Row 1: Device name and type badge */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <HardDrive className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                      <h3 className="font-semibold">/dev/{disk.name}</h3>
-                      <Badge className={getDiskTypeBadge(disk.name, disk.rotation_rate).className}>
-                        {getDiskTypeBadge(disk.name, disk.rotation_rate).label}
-                      </Badge>
-                      {disk.is_system_disk && (
-                        <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20 gap-1">
-                          <Server className="h-3 w-3" />
-                          System
-                        </Badge>
-                      )}
-                    </div>
-
-                    {/* Row 2: Model, temperature, and health status */}
-                    <div className="flex items-center justify-between gap-3 pl-7">
-                      {disk.model && disk.model !== "Unknown" && (
-                        <p className="text-sm text-muted-foreground truncate flex-1 min-w-0">{disk.model}</p>
-                      )}
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        {renderDiskTempOrStandby(disk)}
-                        {(disk.observations_count ?? 0) > 0 && (
-                          <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 gap-1">
-                            <Info className="h-3 w-3" />
-                            {disk.observations_count} obs.
-                          </Badge>
-                        )}
-                        {getHealthBadge(disk.health)}
-                      </div>
-                    </div>
-                  </div>
-
-                    {disk.io_errors && disk.io_errors.count > 0 && (
-                    <div className={`flex items-start gap-2 p-2 rounded text-xs ${
-                      disk.io_errors.severity === 'CRITICAL'
-                        ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                        : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                    }`}>
-                      <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-                      <span>
-                        {disk.io_errors.error_type === 'filesystem'
-                          ? `Filesystem corruption detected`
-                          : `${disk.io_errors.count} I/O error${disk.io_errors.count !== 1 ? 's' : ''} in 5 min`}
-                      </span>
-                    </div>
-                    )}
-                    
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      {disk.size_formatted && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Size</p>
-                        <p className="font-medium">{disk.size_formatted}</p>
-                      </div>
-                    )}
-                    {disk.smart_status && disk.smart_status !== "unknown" && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">SMART Status</p>
-                        <p className="font-medium capitalize">{disk.smart_status}</p>
-                      </div>
-                    )}
-                    {disk.power_on_hours !== undefined && disk.power_on_hours > 0 && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Power On Time</p>
-                        <p className="font-medium">{formatHours(disk.power_on_hours)}</p>
-                      </div>
-                    )}
-                    {disk.serial && disk.serial !== "Unknown" && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Serial</p>
-                        <p className="font-medium text-xs">{disk.serial}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div
-                  className="hidden sm:block border border-white/10 rounded-lg p-4 cursor-pointer bg-card hover:bg-white/5 transition-colors"
-                  onClick={() => handleDiskClick(disk)}
-                >
-                  <div className="space-y-2 mb-3">
-                    {/* Row 1: Device name and type badge */}
-                    <div className="flex items-center gap-2">
-                      <HardDrive className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                      <h3 className="font-semibold">/dev/{disk.name}</h3>
-                      <Badge className={getDiskTypeBadge(disk.name, disk.rotation_rate).className}>
-                        {getDiskTypeBadge(disk.name, disk.rotation_rate).label}
-                      </Badge>
-                      {disk.is_system_disk && (
-                        <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20 gap-1">
-                          <Server className="h-3 w-3" />
-                          System
-                        </Badge>
-                      )}
-                    </div>
-
-                    {/* Row 2: Model, temperature, and health status */}
-                    <div className="flex items-center justify-between gap-3 pl-7">
-                      {disk.model && disk.model !== "Unknown" && (
-                        <p className="text-sm text-muted-foreground truncate flex-1 min-w-0">{disk.model}</p>
-                      )}
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        {renderDiskTempOrStandby(disk)}
-                        {(disk.observations_count ?? 0) > 0 && (
-                          <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 gap-1">
-                            <Info className="h-3 w-3" />
-                            {disk.observations_count} obs.
-                          </Badge>
-                        )}
-                        {getHealthBadge(disk.health)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {disk.io_errors && disk.io_errors.count > 0 && (
-                    <div className={`flex items-start gap-2 p-2 rounded text-xs ${
-                      disk.io_errors.severity === 'CRITICAL'
-                        ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                        : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                    }`}>
-                      <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-                      <div>
-                        {disk.io_errors.error_type === 'filesystem' ? (
-                          <>
-                            <span className="font-medium">Filesystem corruption detected</span>
-                            {disk.io_errors.reason && (
-                              <p className="mt-0.5 opacity-90 whitespace-pre-line">{disk.io_errors.reason}</p>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            <span className="font-medium">{disk.io_errors.count} I/O error{disk.io_errors.count !== 1 ? 's' : ''} in 5 min</span>
-                            {disk.io_errors.sample && (
-                              <p className="mt-0.5 opacity-80 font-mono truncate max-w-md">{disk.io_errors.sample}</p>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    {disk.size_formatted && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Size</p>
-                        <p className="font-medium">{disk.size_formatted}</p>
-                      </div>
-                    )}
-                    {disk.smart_status && disk.smart_status !== "unknown" && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">SMART Status</p>
-                        <p className="font-medium capitalize">{disk.smart_status}</p>
-                      </div>
-                    )}
-                    {disk.power_on_hours !== undefined && disk.power_on_hours > 0 && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Power On Time</p>
-                        <p className="font-medium">{formatHours(disk.power_on_hours)}</p>
-                      </div>
-                    )}
-                    {disk.serial && disk.serial !== "Unknown" && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Serial</p>
-                        <p className="font-medium text-xs">{disk.serial.replace(/\\x[0-9a-fA-F]{2}/g, '')}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {storageData.disks
+              .filter((d) => d.connection_type !== 'usb')
+              .map((disk) => renderDiskCardV2(disk))}
           </div>
         </CardContent>
       </Card>
@@ -1571,148 +1675,17 @@ export function StorageOverview() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {storageData.disks.filter(d => d.connection_type === 'usb').map((disk) => (
-                <div key={disk.name}>
-                  {/* Mobile card */}
-                  <div
-                    className="sm:hidden border border-white/10 rounded-lg p-4 cursor-pointer bg-white/5 transition-colors"
-                    onClick={() => handleDiskClick(disk)}
-                  >
-                    <div className="space-y-2 mb-3">
-                      <div className="flex items-center gap-2">
-                        <Usb className="h-5 w-5 text-orange-400 flex-shrink-0" />
-                        <h3 className="font-semibold">/dev/{disk.name}</h3>
-                        <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 text-[10px] px-1.5">USB</Badge>
-                      </div>
-                      <div className="flex items-center justify-between gap-3 pl-7">
-                        {disk.model && disk.model !== "Unknown" && (
-                          <p className="text-sm text-muted-foreground truncate flex-1 min-w-0">{disk.model}</p>
-                        )}
-                        <div className="flex items-center gap-3 flex-shrink-0">
-                          {renderDiskTempOrStandby(disk)}
-                          {(disk.observations_count ?? 0) > 0 && (
-                            <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 gap-1">
-                              <Info className="h-3 w-3" />
-                              {disk.observations_count}
-                            </Badge>
-                          )}
-                          {getHealthBadge(disk.health)}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* USB Mobile: Size, SMART, Serial grid */}
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      {disk.size_formatted && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Size</p>
-                          <p className="font-medium">{disk.size_formatted}</p>
-                        </div>
-                      )}
-                      {disk.smart_status && disk.smart_status !== "unknown" && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">SMART Status</p>
-                          <p className="font-medium capitalize">{disk.smart_status}</p>
-                        </div>
-                      )}
-{disk.serial && disk.serial !== "Unknown" && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Serial</p>
-                        <p className="font-medium text-xs">{disk.serial.replace(/\\x[0-9a-fA-F]{2}/g, '')}</p>
-                      </div>
-                    )}
-                    </div>
-                </div>
-
-                {/* Desktop */}
-                <div
-                  className="hidden sm:block border border-white/10 rounded-lg p-4 cursor-pointer hover:bg-white/5 transition-colors"
-                  onClick={() => handleDiskClick(disk)}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Usb className="h-5 w-5 text-orange-400" />
-                        <h3 className="font-semibold">/dev/{disk.name}</h3>
-                        <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 text-[10px] px-1.5">USB</Badge>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {renderDiskTempOrStandby(disk)}
-                        {getHealthBadge(disk.health)}
-                        {(disk.observations_count ?? 0) > 0 && (
-                          <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 gap-1">
-                            <Info className="h-3 w-3" />
-                            {disk.observations_count} obs.
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    {disk.model && disk.model !== "Unknown" && (
-                      <p className="text-sm text-muted-foreground mb-3 ml-7">{disk.model}</p>
-                    )}
-
-                    {disk.io_errors && disk.io_errors.count > 0 && (
-                      <div className={`flex items-start gap-2 p-2 rounded text-xs mb-3 ${
-                        disk.io_errors.severity === 'CRITICAL'
-                          ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                          : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                      }`}>
-                        <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-                        <div>
-                          {disk.io_errors.error_type === 'filesystem' ? (
-                            <>
-                              <span className="font-medium">Filesystem corruption detected</span>
-                              {disk.io_errors.reason && (
-                                <p className="mt-0.5 opacity-90 whitespace-pre-line">{disk.io_errors.reason}</p>
-                              )}
-                            </>
-                          ) : (
-                            <>
-                              <span className="font-medium">{disk.io_errors.count} I/O error{disk.io_errors.count !== 1 ? 's' : ''} in 5 min</span>
-                              {disk.io_errors.sample && (
-                                <p className="mt-0.5 opacity-80 font-mono truncate max-w-md">{disk.io_errors.sample}</p>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      {disk.size_formatted && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Size</p>
-                          <p className="font-medium">{disk.size_formatted}</p>
-                        </div>
-                      )}
-                      {disk.smart_status && disk.smart_status !== "unknown" && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">SMART Status</p>
-                          <p className="font-medium capitalize">{disk.smart_status}</p>
-                        </div>
-                      )}
-                      {disk.power_on_hours !== undefined && disk.power_on_hours > 0 && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Power On Time</p>
-                          <p className="font-medium">{formatHours(disk.power_on_hours)}</p>
-                        </div>
-                      )}
-                      {disk.serial && disk.serial !== "Unknown" && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Serial</p>
-                          <p className="font-medium text-xs">{disk.serial.replace(/\\x[0-9a-fA-F]{2}/g, '')}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {storageData.disks
+                .filter((d) => d.connection_type === 'usb')
+                .map((disk) => renderDiskCardV2(disk))}
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Disk Details Dialog */}
+      {/* Disk Details Dialog — wider on desktop so the SMART chart +
+          tabs have room without the right column hugging the edge. */}
       <Dialog open={detailsOpen} onOpenChange={(open) => {
         setDetailsOpen(open)
         if (!open) {
@@ -1720,7 +1693,7 @@ export function StorageOverview() {
           setSmartJsonData(null)
         }
       }}>
-        <DialogContent className="max-w-2xl max-h-[80vh] sm:max-h-[85vh] overflow-hidden flex flex-col p-0">
+        <DialogContent className="max-w-4xl max-h-[80vh] sm:max-h-[85vh] overflow-hidden flex flex-col p-0">
           <DialogHeader className="px-6 pt-6 pb-0">
             <DialogTitle className="flex items-center gap-2">
               {selectedDisk?.connection_type === 'usb' ? (
@@ -2045,29 +2018,53 @@ export function StorageOverview() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">SMART Status</p>
-                    <p className="font-medium capitalize">{selectedDisk.smart_status}</p>
+                    <p className={`font-medium capitalize flex items-center gap-1.5 ${
+                      smartStatusTone(selectedDisk.smart_status) === "ok"
+                        ? "text-green-500"
+                        : smartStatusTone(selectedDisk.smart_status) === "fail"
+                          ? "text-red-500"
+                          : ""
+                    }`}>
+                      <StatusDot tone={smartStatusTone(selectedDisk.smart_status)} />
+                      {selectedDisk.smart_status}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Reallocated Sectors</p>
-                    <p
-                      className={`font-medium ${selectedDisk.reallocated_sectors && selectedDisk.reallocated_sectors > 0 ? "text-yellow-500" : ""}`}
-                    >
+                    <p className={`font-medium flex items-center gap-1.5 ${
+                      counterTone(selectedDisk.reallocated_sectors) === "ok"
+                        ? "text-green-500"
+                        : counterTone(selectedDisk.reallocated_sectors) === "warn"
+                          ? "text-yellow-500"
+                          : "text-red-500"
+                    }`}>
+                      <StatusDot tone={counterTone(selectedDisk.reallocated_sectors)} />
                       {selectedDisk.reallocated_sectors ?? 0}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Pending Sectors</p>
-                    <p
-                      className={`font-medium ${selectedDisk.pending_sectors && selectedDisk.pending_sectors > 0 ? "text-yellow-500" : ""}`}
-                    >
+                    <p className={`font-medium flex items-center gap-1.5 ${
+                      counterTone(selectedDisk.pending_sectors) === "ok"
+                        ? "text-green-500"
+                        : counterTone(selectedDisk.pending_sectors) === "warn"
+                          ? "text-yellow-500"
+                          : "text-red-500"
+                    }`}>
+                      <StatusDot tone={counterTone(selectedDisk.pending_sectors)} />
                       {selectedDisk.pending_sectors ?? 0}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">CRC Errors</p>
-                    <p
-                      className={`font-medium ${selectedDisk.crc_errors && selectedDisk.crc_errors > 0 ? "text-yellow-500" : ""}`}
-                    >
+                    <p className={`font-medium flex items-center gap-1.5 ${
+                      counterTone(selectedDisk.crc_errors) === "ok"
+                        ? "text-green-500"
+                        : counterTone(selectedDisk.crc_errors) === "warn"
+                          ? "text-yellow-500"
+                          : "text-red-500"
+                    }`}>
+                      <StatusDot tone={counterTone(selectedDisk.crc_errors)} />
                       {selectedDisk.crc_errors ?? 0}
                     </p>
                   </div>

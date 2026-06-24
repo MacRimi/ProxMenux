@@ -64,8 +64,11 @@ export function DiskTemperatureCard({
     const fetchHistory = async () => {
       setLoading(true)
       try {
+        // 24-h timeframe gives a more useful "is this drive trending
+        // up over a day" view; the 1-h window was too short to spot
+        // anything that mattered.
         const result = await fetchApi<{ data: TempPoint[] }>(
-          `/api/disk/${encodeURIComponent(diskName)}/temperature/history?timeframe=hour`,
+          `/api/disk/${encodeURIComponent(diskName)}/temperature/history?timeframe=day`,
         )
         if (cancelled.current) return
         setData(result?.data || [])
