@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Thermometer } from "lucide-react"
 import { Badge } from "./ui/badge"
-import { AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts"
+import { AreaChart, Area, ResponsiveContainer, Tooltip, YAxis } from "recharts"
 import { fetchApi } from "@/lib/api-config"
 import { useDiskTempThresholds } from "@/lib/health-thresholds"
 
@@ -145,6 +145,18 @@ export function DiskTemperatureCard({
                   <stop offset="100%" stopColor={lineColor} stopOpacity={0.02} />
                 </linearGradient>
               </defs>
+              {/* Y domain is computed the same way the detail modal
+                  does — floor(min−3) / ceil(max+3), floor at 0 — so
+                  the line shape here matches the bigger chart instead
+                  of recharts' auto-domain collapsing 24 → 29 °C into
+                  a near-flat line that doesn't look like the modal. */}
+              <YAxis
+                hide
+                domain={[
+                  (dataMin: number) => Math.max(0, Math.floor(dataMin - 3)),
+                  (dataMax: number) => Math.ceil(dataMax + 3),
+                ]}
+              />
               <Tooltip content={<MiniTooltip />} cursor={{ stroke: lineColor, strokeOpacity: 0.3, strokeWidth: 1 }} />
               <Area
                 type="monotone"

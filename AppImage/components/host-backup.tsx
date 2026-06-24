@@ -7180,14 +7180,15 @@ function FilesTree({ files, truncated }: { files: Array<{ path: string; size: nu
 // operator confirmation in the Complete restore flow.
 // ──────────────────────────────────────────────────────────────
 function RollbackPlanView({ plan }: { plan: RollbackPlan }) {
-  const hasDestructive = (plan.vms_to_remove?.length || 0) > 0
-    || (plan.lxcs_to_remove?.length || 0) > 0
-    || (plan.components_to_uninstall?.length || 0) > 0
+  // The destructive "Not in backup — will be deleted on rollback"
+  // block was removed: operators read it as an action ProxMenux
+  // would take silently. We only show the "Configurations included
+  // in backup" section now, which is purely informative.
   const hasRollback = (plan.vms_to_restore?.length || 0) > 0
     || (plan.lxcs_to_restore?.length || 0) > 0
     || (plan.components_to_reinstall?.length || 0) > 0
 
-  if (!hasDestructive && !hasRollback) {
+  if (!hasRollback) {
     return (
       <div className="text-xs text-muted-foreground italic">
         No host-state differences detected — the backup state matches the current host (or the backup didn't include /etc/pve).
@@ -7195,70 +7196,43 @@ function RollbackPlanView({ plan }: { plan: RollbackPlan }) {
     )
   }
 
-  const Pill = ({ children, tone }: { children: any; tone: "red" | "green" }) => (
-    <code className={`font-mono ml-1 px-1.5 py-0.5 rounded border ${
-      tone === "red"
-        ? "bg-red-500/10 border-red-500/30 text-red-300"
-        : "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-    }`}>{children}</code>
+  // Pill renders inline with proper flex wrapping so dozens of VM
+  // IDs don't overflow the modal on mobile (previous version used
+  // raw spaces between pills and any value past the viewport got
+  // clipped).
+  const Pill = ({ children }: { children: any }) => (
+    <code className="font-mono px-1.5 py-0.5 rounded border bg-emerald-500/10 border-emerald-500/30 text-emerald-300 text-[11px]">
+      {children}
+    </code>
+  )
+  // Row uses flex-wrap + min-w-0 + gap so labels and pills flow to
+  // a new line on narrow screens instead of pushing the card wider.
+  const Row = ({ label, items }: { label: string; items: (string | number)[] }) => (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 min-w-0">
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <div className="flex flex-wrap gap-1.5 min-w-0">
+        {items.map((id) => <Pill key={id}>{id}</Pill>)}
+      </div>
+    </div>
   )
 
   return (
-    <div className="space-y-3 text-xs">
-      {hasDestructive && (
-        <div className="rounded-md border border-red-500/40 bg-red-500/5 p-3 space-y-2">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-red-400">
-            Not in backup — will be deleted on rollback
-          </div>
-          {plan.vms_to_remove.length > 0 && (
-            <div>
-              <span className="text-muted-foreground">VMs:</span>
-              {plan.vms_to_remove.map((id) => <Pill key={id} tone="red">{id}</Pill>)}
-            </div>
-          )}
-          {plan.lxcs_to_remove.length > 0 && (
-            <div>
-              <span className="text-muted-foreground">LXCs:</span>
-              {plan.lxcs_to_remove.map((id) => <Pill key={id} tone="red">{id}</Pill>)}
-            </div>
-          )}
-          {plan.components_to_uninstall.length > 0 && (
-            <div>
-              <span className="text-muted-foreground">Components:</span>
-              {plan.components_to_uninstall.map((c) => <Pill key={c} tone="red">{c}</Pill>)}
-            </div>
-          )}
-        </div>
+    <div className="rounded-md border border-emerald-500/40 bg-emerald-500/5 p-3 space-y-2 text-xs">
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">
+        Configurations included in backup
+      </div>
+      {plan.vms_to_restore.length > 0 && (
+        <Row label="VM configs:" items={plan.vms_to_restore} />
       )}
-
-      {hasRollback && (
-        <div className="rounded-md border border-emerald-500/40 bg-emerald-500/5 p-3 space-y-2">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">
-            Configurations included in backup
-          </div>
-          {plan.vms_to_restore.length > 0 && (
-            <div>
-              <span className="text-muted-foreground">VM configs:</span>
-              {plan.vms_to_restore.map((id) => <Pill key={id} tone="green">{id}</Pill>)}
-            </div>
-          )}
-          {plan.lxcs_to_restore.length > 0 && (
-            <div>
-              <span className="text-muted-foreground">LXC configs:</span>
-              {plan.lxcs_to_restore.map((id) => <Pill key={id} tone="green">{id}</Pill>)}
-            </div>
-          )}
-          {plan.components_to_reinstall.length > 0 && (
-            <div>
-              <span className="text-muted-foreground">Components:</span>
-              {plan.components_to_reinstall.map((c) => <Pill key={c} tone="green">{c}</Pill>)}
-            </div>
-          )}
-          <div className="text-[10px] text-muted-foreground pt-1">
-            Only the /etc/pve config is restored — disk images stay where they live.
-          </div>
-        </div>
+      {plan.lxcs_to_restore.length > 0 && (
+        <Row label="LXC configs:" items={plan.lxcs_to_restore} />
       )}
+      {plan.components_to_reinstall.length > 0 && (
+        <Row label="Components:" items={plan.components_to_reinstall} />
+      )}
+      <div className="text-[10px] text-muted-foreground pt-1">
+        Only the /etc/pve config is restored — disk images stay where they live.
+      </div>
     </div>
   )
 }
