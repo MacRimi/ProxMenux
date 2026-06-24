@@ -1225,11 +1225,26 @@ hb_prepare_borg_passphrase() {
 
     # 1. Saved target selected via hb_select_borg_repo? Use its pw file.
     if [[ -n "${HB_BORG_SELECTED_NAME:-}" ]]; then
+        # Look up the saved target's encrypt_mode from borg-targets.txt
+        # (format: name|path|extra|encrypt_mode). When the operator
+        # created the target with "No encryption" (encrypt_mode=none)
+        # we must NOT prompt for a passphrase — the previous version
+        # fell through to the "first time" branch and asked anyway.
+        local _sel_mode=""
+        local _targets_file="$HB_STATE_DIR/borg-targets.txt"
+        if [[ -f "$_targets_file" ]]; then
+            _sel_mode=$(awk -F'|' -v n="$HB_BORG_SELECTED_NAME" '$1==n {print $4; exit}' "$_targets_file")
+        fi
+        if [[ "$_sel_mode" == "none" ]]; then
+            export BORG_ENCRYPT_MODE="none"
+            return 0
+        fi
+
         local sel_pass_file="$HB_STATE_DIR/borg-pass-${HB_BORG_SELECTED_NAME}.txt"
         if [[ -f "$sel_pass_file" ]]; then
             export BORG_PASSPHRASE
             BORG_PASSPHRASE="$(<"$sel_pass_file")"
-            BORG_ENCRYPT_MODE="repokey"
+            BORG_ENCRYPT_MODE="${_sel_mode:-repokey}"
             return 0
         fi
         # Saved target, no pw yet — ask + confirm + persist next to its config.
