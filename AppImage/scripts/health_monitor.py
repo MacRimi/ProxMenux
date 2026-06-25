@@ -1305,7 +1305,9 @@ class HealthMonitor:
                 t_status = temp_status.get('status', 'OK')
                 checks['cpu_temperature'] = {
                     'status': t_status,
-                    'detail': 'Temperature elevated' if t_status != 'OK' else 'Normal'
+                    'detail': 'Temperature elevated' if t_status != 'OK' else 'Normal',
+                    'error_key': 'cpu_temperature',
+                    'dismissable': True,
                 }
             else:
                 checks['cpu_temperature'] = {
@@ -1601,6 +1603,10 @@ class HealthMonitor:
                     error_key = f'disk_space_{mount_point}'
                     if fs_status['status'] != 'OK':
                         issues.append(f"{mount_point}: {fs_status['reason']}")
+                        # Carry error_key into the check dict so
+                        # _apply_dismiss_aware_status can flag this
+                        # row as dismissed once acknowledged.
+                        fs_status['error_key'] = error_key
                         storage_details[mount_point] = fs_status
                         # Record persistent error for notifications
                         usage = psutil.disk_usage(mount_point)
@@ -1632,10 +1638,16 @@ class HealthMonitor:
         if zfs_pool_issues:
             for pool_name, pool_info in zfs_pool_issues.items():
                 issues.append(f'{pool_name}: {pool_info["reason"]}')
-                storage_details[pool_name] = pool_info
-                
-                # Record error for notification system
+                # Carry error_key into pool_info BEFORE pushing into
+                # storage_details, so _apply_dismiss_aware_status can
+                # mark the row as dismissed once acknowledged. real_pool
+                # gets computed twice (here + below) but both paths land
+                # on the same key.
                 real_pool = pool_info.get('pool_name', pool_name)
+                pool_info['error_key'] = f'zfs_pool_{real_pool}'
+                storage_details[pool_name] = pool_info
+
+                # Record error for notification system
                 zfs_error_key = f'zfs_pool_{real_pool}'
                 zfs_reason = f'ZFS pool {real_pool}: {pool_info["reason"]}'
                 try:
@@ -3032,7 +3044,8 @@ class HealthMonitor:
                         interface_details[interface] = {
                             'status': 'CRITICAL',
                             'reason': alert_reason or 'Interface DOWN',
-                            'dismissable': True
+                            'dismissable': True,
+                            'error_key': error_key,
                         }
                 else:
                     active_interfaces.add(interface)
@@ -3063,7 +3076,8 @@ class HealthMonitor:
                     checks[iface] = {
                         'status': detail.get('status', 'OK'),
                         'detail': detail.get('reason', 'DOWN'),
-                        'dismissable': detail.get('dismissable', False)
+                        'dismissable': detail.get('dismissable', True),
+                        'error_key': detail.get('error_key') or iface,
                     }
             checks['connectivity'] = connectivity_check
             
