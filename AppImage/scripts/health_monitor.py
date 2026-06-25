@@ -1400,7 +1400,7 @@ class HealthMonitor:
                         category='temperature',
                         severity='WARNING',
                         reason=reason,
-                        details={'temperature': max_temp, 'duration': actual_duration, 'dismissable': False}
+                        details={'temperature': max_temp, 'duration': actual_duration, 'dismissable': True}
                     )
                 elif len(recovery_samples) >= 3:
                     # Temperature has been ≤80°C for 30 seconds - clear the error
@@ -1618,7 +1618,7 @@ class HealthMonitor:
                                 'mount': mount_point,
                                 'used': str(round(usage.percent, 1)),
                                 'available': avail_str,
-                                'dismissable': False,
+                                'dismissable': True,
                             }
                         )
                     else:
@@ -1649,7 +1649,7 @@ class HealthMonitor:
                                 'pool_name': real_pool,
                                 'health': pool_info.get('health', ''),
                                 'device': f'zpool:{real_pool}',
-                                'dismissable': False,
+                                'dismissable': True,
                             }
                         )
                 except Exception:
@@ -2760,7 +2760,7 @@ class HealthMonitor:
                                 'device': disk,
                                 'error_count': error_count,
                                 'smart_status': smart_health,
-                                'dismissable': False,
+                                'dismissable': True,
                                 'error_key': error_key,
                             }
                         elif smart_ok:
@@ -2779,7 +2779,7 @@ class HealthMonitor:
                                 'device': disk,
                                 'error_count': error_count,
                                 'smart_status': smart_health,
-                                'dismissable': False,
+                                'dismissable': True,
                                 'error_key': error_key,
                             }
                         elif smart_health == 'FAILED':
@@ -2799,7 +2799,7 @@ class HealthMonitor:
                                          'serial': resolved_serial or '',
                                          'error_count': error_count,
                                          'smart_status': smart_health,
-                                         'sample': sample, 'dismissable': False}
+                                         'sample': sample, 'dismissable': True}
                             )
                             disk_results[display] = {
                                 'status': severity,
@@ -2807,7 +2807,7 @@ class HealthMonitor:
                                 'device': disk,
                                 'error_count': error_count,
                                 'smart_status': smart_health,
-                                'dismissable': False,
+                                'dismissable': True,
                                 'error_key': error_key,
                             }
                         else:
@@ -3026,13 +3026,13 @@ class HealthMonitor:
                             category='network',
                             severity='CRITICAL',
                             reason=alert_reason or 'Interface DOWN',
-                            details={'interface': interface, 'dismissable': False}
+                            details={'interface': interface, 'dismissable': True}
                         )
                         
                         interface_details[interface] = {
                             'status': 'CRITICAL',
                             'reason': alert_reason or 'Interface DOWN',
-                            'dismissable': False
+                            'dismissable': True
                         }
                 else:
                     active_interfaces.add(interface)
@@ -4263,7 +4263,7 @@ class HealthMonitor:
                     'log_persistent_errors': {'active': persistent_count > 0, 'severity': 'WARNING',
                         'reason': f'{persistent_count} recurring pattern(s) over 15+ min:\n' + '\n'.join(f'  - {s}' for s in persist_samples) if persistent_count else ''},
                     'log_critical_errors': {'active': unique_critical_count > 0, 'severity': 'CRITICAL',
-                        'reason': f'{unique_critical_count} critical error(s) found', 'dismissable': False},
+                        'reason': f'{unique_critical_count} critical error(s) found', 'dismissable': True},
                 }
                 
                 # Track which sub-checks were dismissed
@@ -4333,7 +4333,7 @@ class HealthMonitor:
                     'log_critical_errors': {
                         'status': _log_check_status('log_critical_errors', unique_critical_count > 0, 'CRITICAL'),
                         'detail': reason if unique_critical_count > 0 else 'No critical errors',
-                        'dismissable': False,
+                        'dismissable': True,
                         'error_key': 'log_critical_errors'
                     }
                 }
@@ -4658,7 +4658,7 @@ class HealthMonitor:
                     health_persistence.record_error(
                         error_key='system_age', category='updates',
                         severity='CRITICAL', reason=reason,
-                        details={'days': last_update_days, 'update_count': update_count, 'dismissable': False}
+                        details={'days': last_update_days, 'update_count': update_count, 'dismissable': True}
                     )
                 elif last_update_days and last_update_days >= 365:
                     status = 'WARNING'
@@ -5592,7 +5592,7 @@ class HealthMonitor:
                             'storage_name': storage_name,
                             'storage_type': storage.get('type', 'unknown'),
                             'status_detail': status_detail,
-                            'dismissable': False
+                            'dismissable': True
                         }
                     )
                 
@@ -5601,7 +5601,7 @@ class HealthMonitor:
                     'reason': reason,
                     'type': storage.get('type', 'unknown'),
                     'status': status_detail,
-                    'dismissable': False
+                    'dismissable': True
                 }
             
             # Build checks from storage_details
@@ -5612,14 +5612,14 @@ class HealthMonitor:
                     checks[st_name] = {
                         'status': 'INFO',
                         'detail': f"[Startup] {st_info.get('reason', 'Unavailable')} (checking...)",
-                        'dismissable': False,
+                        'dismissable': True,
                         'grace_period': True
                     }
                 else:
                     checks[st_name] = {
                         'status': 'CRITICAL',
                         'detail': st_info.get('reason', 'Unavailable'),
-                        'dismissable': False
+                        'dismissable': True
                     }
             
             # Add excluded unavailable storages as INFO (not as errors)
