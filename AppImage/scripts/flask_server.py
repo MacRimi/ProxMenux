@@ -10086,11 +10086,18 @@ def api_node_metrics():
         if rrd_result.returncode == 0:
             rrd_data = json.loads(rrd_result.stdout)
 
-            if zfs_arc_size > 0:
-                for item in rrd_data:
-                    # If zfsarc field is missing or 0, add current value
-                    if 'zfsarc' not in item or item.get('zfsarc', 0) == 0:
-                        item['zfsarc'] = zfs_arc_size
+            # PVE 9.x exposes the actual ARC history as `arcsize` in RRD;
+            # the previous code ignored it and stamped every point with
+            # the live ARC size, producing a flat band at the current
+            # value (issue: ZFS ARC line painted full-bar). Use the real
+            # series when present so the chart matches Proxmox's own
+            # Summary view. On older PVE that doesn't expose `arcsize`,
+            # fall back to the live value as a constant placeholder.
+            for item in rrd_data:
+                if 'arcsize' in item:
+                    item['zfsarc'] = item['arcsize']
+                elif zfs_arc_size > 0 and ('zfsarc' not in item or item.get('zfsarc', 0) == 0):
+                    item['zfsarc'] = zfs_arc_size
 
             # 24h downsampling: RRD returns ~1440 minute-level points which
             # plots as a dense thicket of vertical spikes. Group into 5-min
