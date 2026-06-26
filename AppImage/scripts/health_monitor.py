@@ -1603,10 +1603,17 @@ class HealthMonitor:
                     error_key = f'disk_space_{mount_point}'
                     if fs_status['status'] != 'OK':
                         issues.append(f"{mount_point}: {fs_status['reason']}")
-                        # Carry error_key into the check dict so
-                        # _apply_dismiss_aware_status can flag this
-                        # row as dismissed once acknowledged.
+                        # Carry error_key + dismissable into the check
+                        # dict — the frontend gates the Dismiss dropdown
+                        # on `dismissable === true` strictly, and the
+                        # spread at the consumer (`storage_details →
+                        # checks[key]`) only forwards fields actually
+                        # present on fs_status. Without these two lines,
+                        # /mnt/* fullness rows reach the UI as plain
+                        # CRITICAL/WARNING with no Dismiss button — the
+                        # same gap the operator hit on stable 1.2.2.
                         fs_status['error_key'] = error_key
+                        fs_status['dismissable'] = True
                         storage_details[mount_point] = fs_status
                         # Record persistent error for notifications
                         usage = psutil.disk_usage(mount_point)
@@ -1638,13 +1645,16 @@ class HealthMonitor:
         if zfs_pool_issues:
             for pool_name, pool_info in zfs_pool_issues.items():
                 issues.append(f'{pool_name}: {pool_info["reason"]}')
-                # Carry error_key into pool_info BEFORE pushing into
-                # storage_details, so _apply_dismiss_aware_status can
-                # mark the row as dismissed once acknowledged. real_pool
-                # gets computed twice (here + below) but both paths land
-                # on the same key.
+                # Carry error_key + dismissable BEFORE pushing — same
+                # rationale as the disk_space path above: the frontend
+                # gates the Dismiss button on `dismissable === true`
+                # strictly, and the splat at the consumer only forwards
+                # what pool_info already has. real_pool gets computed
+                # twice (here + below) but both paths land on the same
+                # key.
                 real_pool = pool_info.get('pool_name', pool_name)
                 pool_info['error_key'] = f'zfs_pool_{real_pool}'
+                pool_info['dismissable'] = True
                 storage_details[pool_name] = pool_info
 
                 # Record error for notification system
