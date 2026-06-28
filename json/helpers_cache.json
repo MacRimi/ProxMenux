@@ -4139,6 +4139,37 @@
     "os": "debian"
   },
   {
+    "name": "PVE Disk Health Tool",
+    "slug": "disk-health",
+    "desc": "<p>A PVE host tool that reports drive health for all physical disks. It installs smartmontools and nvme-cli on demand, enumerates physical disks (skipping loop, zram, and device-mapper devices), and prints an overall SMART verdict plus key indicators. Optionally, it can start a non-destructive short SMART self-test on a selected disk.</p>",
+    "script": "tools/pve/disk-health.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/disk-health.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/pve/disk-health.sh",
+    "type": "pve",
+    "type_id": "1uyjfno0fpf5buh",
+    "categories": [
+      "scriptcat00001"
+    ],
+    "category_names": [
+      "Proxmox & Virtualization"
+    ],
+    "notes": [],
+    "warnings": [],
+    "port": 0,
+    "website": "",
+    "documentation": "",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": false,
+    "execute_in": [
+      "pve"
+    ],
+    "config_path": "",
+    "os": ""
+  },
+  {
     "name": "Dispatcharr",
     "slug": "dispatcharr",
     "desc": "Dispatcharr is an open-source powerhouse for managing IPTV streams and EPG data with elegance and control. Born from necessity and built with passion, it started as a personal project by OkinawaBoss and evolved with contributions from legends like dekzter, SergeantPanda and Bucatini.",
