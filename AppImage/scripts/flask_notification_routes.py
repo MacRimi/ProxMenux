@@ -266,6 +266,74 @@ def save_notification_settings():
         return jsonify({'error': f'Internal error ({type(e).__name__})'}), 500
 
 
+@notification_bp.route('/api/notifications/reveal-secret', methods=['POST'])
+@require_auth
+def reveal_notification_secret():
+    """Return one sensitive config value in cleartext.
+
+    Backs the "eye" toggle in the Settings UI. The settings GET masks
+    every entry in SENSITIVE_KEYS with `'************'` so the secret
+    never leaves the server just because someone loaded the page; this
+    endpoint lets an authenticated operator explicitly request the
+    real value for a single key when they need to inspect it.
+
+    Body schema (one of):
+        {"ai_provider": "groq" | "anthropic" | …}
+        {"channel": "telegram", "field": "bot_token"}
+        {"key": "webhook_secret"}
+
+    Returns ``{"value": "<cleartext>"}`` or 404 when nothing is stored.
+    400 on a malformed request, 403 if the requested key isn't on the
+    whitelist (i.e. the UI is asking for something we never agreed to
+    expose — defence against a future bug binding the eye to a
+    non-secret field).
+    """
+    try:
+        from notification_manager import SENSITIVE_KEYS
+        nm = notification_manager  # singleton already imported at module top
+
+        payload = request.get_json(silent=True) or {}
+
+        # Resolve the requested config key from the three accepted
+        # body shapes. Whitelist-checked below before we touch the DB.
+        cfg_key = None
+        provider = (payload.get('ai_provider') or '').strip().lower()
+        channel = (payload.get('channel') or '').strip().lower()
+        field = (payload.get('field') or '').strip().lower()
+        raw_key = (payload.get('key') or '').strip()
+
+        if provider:
+            cfg_key = f'ai_api_key_{provider}'
+        elif channel and field:
+            cfg_key = f'{channel}.{field}'
+        elif raw_key:
+            cfg_key = raw_key
+
+        if not cfg_key:
+            return jsonify({'error': 'missing_target'}), 400
+
+        # Whitelist enforcement — never reveal a value the rest of the
+        # system doesn't recognise as a secret. Stops a hypothetical
+        # future bug where the UI passes a non-secret config key and
+        # we hand back something we shouldn't.
+        if cfg_key not in SENSITIVE_KEYS:
+            return jsonify({'error': 'forbidden_key'}), 403
+
+        # Read the raw value through notification_manager (loads + caches
+        # the config). Mask placeholder is the same string the GET would
+        # return — treat that as "not stored" so we don't echo it back.
+        if not nm._config:
+            nm._load_config()
+        value = nm._config.get(cfg_key, '') or ''
+        if not value or value == '************':
+            return jsonify({'value': ''}), 200
+
+        return jsonify({'value': value}), 200
+    except Exception as e:
+        print(f"[notification_routes] {request.path} failed: {type(e).__name__}: {e}")
+        return jsonify({'error': f'Internal error ({type(e).__name__})'}), 500
+
+
 @notification_bp.route('/api/notifications/test', methods=['POST'])
 @require_auth
 def test_notification():
@@ -721,23 +789,108 @@ _PVE_OUR_HEADERS = {
 }
 
 
-def _pve_webhook_url() -> str:
-    """Return http:// or https:// based on the current SSL config.
+def _ssl_cert_hostname(cert_path: str) -> str:
+    """Pull the most useful hostname out of an x509 cert.
 
-    Hardcoded `http://...` previously broke webhook delivery whenever the
-    user enabled SSL — Flask only listened on HTTPS, so PVE got connection
-    refused and notifications stopped. Issue #194. PVE may still need
-    `update-ca-certificates` if the cert is self-signed; that's a doc
-    step on the user side.
+    Preference order: first DNS SAN → CN. Returns '' on any failure.
+    Used to build a webhook URL that won't fail PVE's TLS verification
+    (issue #239 — PVE has no `--insecure` flag and the user's ACME cert
+    is bound to a hostname, not to `127.0.0.1`).
+    """
+    try:
+        import subprocess
+        out = subprocess.run(
+            ['openssl', 'x509', '-in', cert_path, '-noout',
+             '-ext', 'subjectAltName', '-subject'],
+            capture_output=True, text=True, timeout=5,
+        )
+        if out.returncode != 0:
+            return ''
+        text = out.stdout or ''
+        # SAN line example: "    DNS:pve.example.com, DNS:pve, IP Address:..."
+        import re
+        for line in text.splitlines():
+            m = re.search(r'DNS:([A-Za-z0-9.\-]+)', line)
+            if m:
+                return m.group(1)
+        # CN fallback. "subject= CN = pve.example.com" or "...CN=pve.example.com"
+        m = re.search(r'CN\s*=\s*([A-Za-z0-9.\-]+)', text)
+        if m:
+            return m.group(1)
+    except Exception:
+        pass
+    return ''
+
+
+def _hostname_resolves_locally(hostname: str) -> bool:
+    """True when `hostname` resolves to one of this host's own IPs.
+
+    Anti-misconfig: refuse to build a webhook URL that points
+    elsewhere (a stale DNS entry pointing at the previous host, a CN
+    that names a different node in the cluster, etc.). PVE delivers
+    webhooks from the same node, so the URL has to round-trip to
+    ourselves.
+    """
+    try:
+        import socket
+        import ipaddress
+        target_ips = set()
+        for info in socket.getaddrinfo(hostname, None):
+            ip = info[4][0]
+            target_ips.add(ipaddress.ip_address(ip).compressed)
+        # Collect our own IPs from /proc/net/fib_trie isn't portable; use
+        # psutil if available, otherwise fall back to socket on the
+        # hostname itself.
+        local_ips = {'127.0.0.1', '::1'}
+        try:
+            import psutil
+            for _iface, addrs in psutil.net_if_addrs().items():
+                for a in addrs:
+                    if a.family in (socket.AF_INET, socket.AF_INET6):
+                        local_ips.add(ipaddress.ip_address(a.address.split('%')[0]).compressed)
+        except Exception:
+            pass
+        return bool(target_ips & local_ips)
+    except Exception:
+        return False
+
+
+def _pve_webhook_url() -> str:
+    """Return the URL we register with PVE as our webhook target.
+
+    Three branches:
+      1. SSL off → http://127.0.0.1:8008 (always works, no cert).
+      2. SSL on + cert hostname extractable and resolves locally →
+         https://<cert-hostname>:8008. This is what PVE's TLS layer
+         actually validates against. Without this, PVE rejects the
+         self/ACME cert with "IP address mismatch" (issue #239).
+      3. SSL on but hostname extraction/check failed → fall back to
+         https://127.0.0.1:8008 and accept that the user may still
+         hit the cert-mismatch error. We log so the operator can
+         diagnose. Better than silently emitting a wrong URL.
     """
     try:
         from auth_manager import load_ssl_config
         cfg = load_ssl_config() or {}
-        if cfg.get('enabled'):
-            return 'https://127.0.0.1:8008/api/notifications/webhook'
+        if not cfg.get('enabled'):
+            return 'http://127.0.0.1:8008/api/notifications/webhook'
+
+        cert_path = cfg.get('cert_path') or ''
+        if cert_path:
+            host = _ssl_cert_hostname(cert_path)
+            if host and _hostname_resolves_locally(host):
+                return f'https://{host}:8008/api/notifications/webhook'
+            if host:
+                print(
+                    f"[ProxMenux] webhook URL fallback to 127.0.0.1: "
+                    f"cert hostname '{host}' does not resolve to a local "
+                    f"IP — PVE will likely report a TLS verification "
+                    f"error. Fix by ensuring the FQDN resolves on this "
+                    f"host (e.g. /etc/hosts entry)."
+                )
+        return 'https://127.0.0.1:8008/api/notifications/webhook'
     except Exception:
-        pass
-    return 'http://127.0.0.1:8008/api/notifications/webhook'
+        return 'http://127.0.0.1:8008/api/notifications/webhook'
 
 
 # Backward-compat alias for callers that read this at import time. Most

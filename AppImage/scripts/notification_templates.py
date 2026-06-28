@@ -657,6 +657,37 @@ TEMPLATES = {
         'group': 'backup',
         'default_enabled': True,
     },
+
+    # ── ProxMenux Host Backup events ──
+    # Distinct event types from `backup_*` (which are for vzdump VM/CT
+    # backups). The runner — both `run_scheduled_backup.sh` (timer) and
+    # the manual flow from `backup_host.sh` — POSTs to the local webhook
+    # with these explicit pve_type values, so the operator can toggle
+    # Host Backup notifications separately from VM/CT backup ones.
+    # Backend label (PBS / local / Borg) is highlighted in the title so
+    # the operator can tell at a glance where the data went.
+    'host_backup_start': {
+        'title': '{hostname}: Host backup started → {backend_label}',
+        'body': 'Job: {job_id}\nBackend: {backend_label}\nDestination: {destination}\nProfile: {profile_mode}',
+        'label': 'Host backup started',
+        'group': 'backup',
+        'default_enabled': False,
+    },
+    'host_backup_complete': {
+        'title': '{hostname}: Host backup complete → {backend_label}',
+        'body': 'Job: {job_id}\nBackend: {backend_label}\nDestination: {destination}\nData size: {data_size}\nArchive size: {archive_size}\nDuration: {duration}',
+        'label': 'Host backup complete',
+        'group': 'backup',
+        'default_enabled': True,
+    },
+    'host_backup_fail': {
+        'title': '{hostname}: Host backup FAILED → {backend_label}',
+        'body': 'Job: {job_id}\nBackend: {backend_label}\nDestination: {destination}\nDuration before failure: {duration}\nReason: {reason}\nLog: {log_file}',
+        'label': 'Host backup FAILED',
+        'group': 'backup',
+        'default_enabled': True,
+    },
+
     'snapshot_complete': {
         'title': '{hostname}: Snapshot created — {vmname} ({vmid})',
         'body': 'Snapshot "{snapshot_name}" created for {vmname} (ID: {vmid}).',
@@ -1388,6 +1419,11 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
         'issue_list': '', 'error_key': '',
         'storage_name': '', 'storage_type': '',
         'important_list': 'none',
+        # Host Backup specifics (run_scheduled_backup.sh + backup_host.sh).
+        'job_id': '', 'backend': '', 'backend_label': '',
+        'destination': '', 'profile_mode': '',
+        'data_size': '', 'archive_size': '',
+        'log_file': '',
     }
     variables.update(data)
     
@@ -1574,6 +1610,9 @@ EVENT_EMOJI = {
     'replication_complete': '\u2705',
     # Backups
     'backup_start':         '\U0001F4BE\U0001F680',  # 💾🚀 floppy + rocket
+    'host_backup_start':    '\U0001F5C4️\U0001F680',     # 🗄️🚀 cabinet + rocket
+    'host_backup_complete': '\U0001F5C4️✅',         # 🗄️✅ cabinet + check
+    'host_backup_fail':     '\U0001F5C4️❌',         # 🗄️❌ cabinet + cross
     'backup_complete':      '\U0001F4BE\u2705',       # 💾✅ floppy + check
     'backup_warning':       '\U0001F4BE\u26A0\uFE0F', # 💾⚠️ floppy + warning
     'backup_fail':          '\U0001F4BE\u274C',       # 💾❌ floppy + cross

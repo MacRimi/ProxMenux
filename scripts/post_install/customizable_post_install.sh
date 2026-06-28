@@ -101,6 +101,32 @@ register_tool() {
 
 
 
+setup_proxmox_repositories() {
+    local FUNC_VERSION="1.1"
+    # Description: Configure Proxmox + Debian APT repositories (no-subscription)
+    # and set the correct file permissions.
+
+    msg_info2 "$(translate "Configuring Proxmox APT repositories...")"
+
+    if ! ensure_repositories; then
+        msg_error "$(translate "Failed to configure Proxmox repositories")"
+        register_tool "proxmox_repos" false "$FUNC_VERSION"
+        return 1
+    fi
+
+    local f
+    for f in /etc/apt/sources.list.d/proxmox.sources \
+             /etc/apt/sources.list.d/debian.sources \
+             /etc/apt/sources.list.d/pve-no-subscription.list \
+             /etc/apt/sources.list.d/pve-enterprise.list; do
+        [[ -f "$f" ]] && chmod 0644 "$f" 2>/dev/null
+    done
+
+    register_tool "proxmox_repos" true "$FUNC_VERSION"
+    msg_success "$(translate "Proxmox APT repositories configured")"
+}
+
+
 check_extremeshok_warning() {
     local marker_file="/etc/extremeshok"
 
@@ -2930,6 +2956,7 @@ custom_post_category_label() {
 
 custom_post_description_label() {
   case "$1" in
+    "Configure Proxmox APT repositories") translate "Configure Proxmox APT repositories" ;;
     "Update and upgrade system") translate "Update and upgrade system" ;;
     "Synchronize time automatically") translate "Synchronize time automatically" ;;
     "Skip downloading additional languages") translate "Skip downloading additional languages" ;;
@@ -3049,6 +3076,7 @@ main_menu() {
   )
 
   local options=(
+    "Basic Settings|Configure Proxmox APT repositories|REPOS"
     "Basic Settings|Update and upgrade system|APTUPGRADE"
     "Basic Settings|Synchronize time automatically|TIMESYNC"
     "Basic Settings|Skip downloading additional languages|NOAPTLANG"
@@ -3184,6 +3212,7 @@ done
     IFS='|' read -r _ description function_name <<< "$option"
     if [[ ${selected_functions[$function_name]} -eq 1 ]]; then
       case $function_name in
+        REPOS) setup_proxmox_repositories ;;
         APTUPGRADE) apt_upgrade ;;
         TIMESYNC) configure_time_sync ;;
         NOAPTLANG) skip_apt_languages ;;

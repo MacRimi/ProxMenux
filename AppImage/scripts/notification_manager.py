@@ -69,10 +69,17 @@ SENSITIVE_KEYS = {
     'ai_api_key_anthropic',
     'ai_api_key_openai',
     'ai_api_key_openrouter',
-    'telegram.token',
+    # `telegram.bot_token` — was previously listed as `telegram.token`,
+    # which never matched the real config_key (`bot_token` in
+    # CHANNEL_TYPES). The mismatch silently sent Telegram bot tokens
+    # in cleartext on every GET /api/notifications/settings since the
+    # masking layer was introduced. Fixed alongside the eye-reveal
+    # endpoint so the operator can still inspect the value on demand.
+    'telegram.bot_token',
     'gotify.token',
     'discord.webhook_url',
     'email.password',
+    'apprise.url',
     'webhook_secret',
 }
 

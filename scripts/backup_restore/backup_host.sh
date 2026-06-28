@@ -99,6 +99,17 @@ _bk_pbs() {
     staged_size=$(hb_file_size "$staging_root/rootfs")
     msg_ok "$(translate "Staging ready.") $(translate "Data size:") $staged_size"
 
+    # Notify host_backup_start. Per-channel/per-event toggles in
+    # Settings decide whether the user actually receives it; same
+    # template the scheduled runner uses.
+    export HB_NOTIFY_JOB_ID="manual-pbs-${backup_id}"
+    export HB_NOTIFY_BACKEND="pbs"
+    export HB_NOTIFY_DESTINATION="$HB_PBS_REPOSITORY"
+    export HB_NOTIFY_PROFILE_MODE="$profile_mode"
+    export HB_NOTIFY_LOG_FILE="$log_file"
+    export HB_NOTIFY_DATA_SIZE="$staged_size"
+    hb_notify_lifecycle "start"
+
     echo -e ""
     msg_info "$(translate "Connecting to PBS and starting backup...")"
     stop_spinner
@@ -164,9 +175,19 @@ _bk_pbs() {
         [[ -s "$log_file" ]] && echo -e "${TAB}${BGN}$(translate "Log:")${CL}         ${BL}${log_file}${CL}"
         echo -e ""
         msg_ok "$(translate "Backup completed successfully.")"
+        export HB_NOTIFY_ARCHIVE_SIZE="-"
+        export HB_NOTIFY_DURATION="$(hb_human_elapsed "$elapsed" 2>/dev/null || echo "${elapsed}s")"
+        hb_notify_lifecycle "complete"
     else
         echo -e ""
         msg_error "$(translate "PBS backup failed.")"
+        local _hb_reason
+        _hb_reason=$(grep -iE 'error|fail|fatal|abort' "$log_file" 2>/dev/null | tail -1 | sed 's/^[[:space:]]*//')
+        [[ -z "$_hb_reason" ]] && _hb_reason="proxmox-backup-client returned non-zero"
+        export HB_NOTIFY_ARCHIVE_SIZE="-"
+        export HB_NOTIFY_DURATION="$(hb_human_elapsed "$((SECONDS - t_start))" 2>/dev/null || echo "")"
+        export HB_NOTIFY_REASON="$_hb_reason"
+        hb_notify_lifecycle "fail"
         hb_show_log "$log_file" "$(translate "PBS backup error log")"
         echo -e ""
         msg_success "$(translate "Press Enter to return to menu...")"
@@ -215,6 +236,14 @@ _bk_borg() {
     staged_size=$(hb_file_size "$staging_root/rootfs")
     msg_ok "$(translate "Staging ready.") $(translate "Data size:") $staged_size"
 
+    export HB_NOTIFY_JOB_ID="manual-borg-${archive_name}"
+    export HB_NOTIFY_BACKEND="borg"
+    export HB_NOTIFY_DESTINATION="$repo"
+    export HB_NOTIFY_PROFILE_MODE="$profile_mode"
+    export HB_NOTIFY_LOG_FILE="$log_file"
+    export HB_NOTIFY_DATA_SIZE="$staged_size"
+    hb_notify_lifecycle "start"
+
     msg_info "$(translate "Initializing Borg repository if needed...")"
     if ! hb_borg_init_if_needed "$borg_bin" "$repo" "${BORG_ENCRYPT_MODE:-none}" >/dev/null 2>&1; then
         msg_error "$(translate "Failed to initialize Borg repository at:") $repo"
@@ -252,9 +281,19 @@ _bk_borg() {
         [[ -s "$log_file" ]] && echo -e "${TAB}${BGN}$(translate "Log:")${CL}             ${BL}${log_file}${CL}"
         echo -e ""
         msg_ok "$(translate "Backup completed successfully.")"
+        export HB_NOTIFY_ARCHIVE_SIZE="$borg_compressed"
+        export HB_NOTIFY_DURATION="$(hb_human_elapsed "$elapsed" 2>/dev/null || echo "${elapsed}s")"
+        hb_notify_lifecycle "complete"
     else
         echo -e ""
         msg_error "$(translate "Borg backup failed.")"
+        local _hb_reason
+        _hb_reason=$(grep -iE 'error|fail|fatal|abort' "$log_file" 2>/dev/null | tail -1 | sed 's/^[[:space:]]*//')
+        [[ -z "$_hb_reason" ]] && _hb_reason="borg create returned non-zero"
+        export HB_NOTIFY_ARCHIVE_SIZE="-"
+        export HB_NOTIFY_DURATION="$(hb_human_elapsed "$((SECONDS - t_start))" 2>/dev/null || echo "")"
+        export HB_NOTIFY_REASON="$_hb_reason"
+        hb_notify_lifecycle "fail"
         hb_show_log "$log_file" "$(translate "Borg backup error log")"
         echo -e ""
         msg_success "$(translate "Press Enter to return to menu...")"
@@ -331,6 +370,14 @@ _bk_local() {
     staged_size=$(hb_file_size "$staging_root/rootfs")
     msg_ok "$(translate "Staging ready.") $(translate "Data size:") $staged_size"
 
+    export HB_NOTIFY_JOB_ID="manual-local-$(basename "$archive" .tar.zst)"
+    export HB_NOTIFY_BACKEND="local"
+    export HB_NOTIFY_DESTINATION="$archive"
+    export HB_NOTIFY_PROFILE_MODE="$profile_mode"
+    export HB_NOTIFY_LOG_FILE="$log_file"
+    export HB_NOTIFY_DATA_SIZE="$staged_size"
+    hb_notify_lifecycle "start"
+
     echo -e ""
     msg_info "$(translate "Creating compressed archive...")"
     stop_spinner
@@ -384,9 +431,19 @@ _bk_local() {
         [[ -s "$log_file" ]] && echo -e "${TAB}${BGN}$(translate "Log:")${CL}             ${BL}${log_file}${CL}"
         echo -e ""
         msg_ok "$(translate "Backup completed successfully.")"
+        export HB_NOTIFY_ARCHIVE_SIZE="$archive_size"
+        export HB_NOTIFY_DURATION="$(hb_human_elapsed "$elapsed" 2>/dev/null || echo "${elapsed}s")"
+        hb_notify_lifecycle "complete"
     else
         echo -e ""
         msg_error "$(translate "Local backup failed.")"
+        local _hb_reason
+        _hb_reason=$(grep -iE 'error|fail|fatal|abort' "$log_file" 2>/dev/null | tail -1 | sed 's/^[[:space:]]*//')
+        [[ -z "$_hb_reason" ]] && _hb_reason="tar/zstd returned non-zero"
+        export HB_NOTIFY_ARCHIVE_SIZE="-"
+        export HB_NOTIFY_DURATION="$(hb_human_elapsed "$elapsed" 2>/dev/null || echo "${elapsed}s")"
+        export HB_NOTIFY_REASON="$_hb_reason"
+        hb_notify_lifecycle "fail"
         hb_show_log "$log_file" "$(translate "Local backup error log")"
         echo -e ""
         msg_success "$(translate "Press Enter to return to menu...")"

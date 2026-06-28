@@ -75,7 +75,16 @@ SOURCED_CUSTOM=0
 ensure_flow_loaded() {
     local source_type="$1"
     case "$source_type" in
-        auto)
+        # `detected` is the synthetic source the registry assigns to a
+        # tool when a legacy detector finds it on the host but the
+        # entry was never written to installed_tools.json (e.g.
+        # proxmox_repos on a pre-1.2.2 install). Treat it as `auto`
+        # for the source-loading step — the legacy-tool's wrapper
+        # function lives in auto_post_install.sh, and once the update
+        # runs successfully `register_tool` overwrites the synthetic
+        # entry with source="auto" so subsequent runs don't hit this
+        # branch again.
+        auto|detected)
             if [[ $SOURCED_AUTO -eq 0 ]]; then
                 # shellcheck disable=SC1091
                 source "$LOCAL_SCRIPTS/post_install/auto_post_install.sh"
@@ -90,7 +99,7 @@ ensure_flow_loaded() {
             fi
             ;;
         *)
-            echo "ERROR: invalid source '$source_type' (must be 'auto' or 'custom')"
+            echo "ERROR: invalid source '$source_type' (must be 'auto', 'custom', or 'detected')"
             return 2
             ;;
     esac

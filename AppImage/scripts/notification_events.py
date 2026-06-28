@@ -3855,6 +3855,30 @@ class ProxmoxHookWatcher:
             'title': title or event_type,
             'job_id': pve_job_id,
         }
+
+        # ProxMenux Host Backup: pull the extra fields that the runner
+        # packs into payload.fields so the host_backup_* templates can
+        # render backend, destination, sizes, etc. without falling back
+        # to '{field}' literals or empty placeholders.
+        if pve_type.startswith('proxmenux-host-backup-'):
+            backend = (fields.get('backend') or '').strip().lower()
+            backend_label_map = {
+                'pbs':   'Proxmox Backup Server',
+                'local': 'Local archive',
+                'borg':  'Borg repository',
+            }
+            data['backend']       = backend
+            data['backend_label'] = backend_label_map.get(backend, backend or 'unknown')
+            data['destination']   = fields.get('destination', '') or ''
+            data['profile_mode']  = fields.get('profile_mode', 'default') or 'default'
+            data['data_size']     = fields.get('data_size', '') or '-'
+            data['archive_size']  = fields.get('archive_size', '') or '-'
+            data['duration']      = fields.get('duration', '') or '-'
+            data['log_file']      = fields.get('log_file', '') or ''
+            # `reason` is what the body template substitutes for the
+            # failure case; fall back to the human message the runner
+            # sent so the operator never sees an empty Reason line.
+            data['reason']        = fields.get('reason', message) or message
         
         # ── Extract clean reason for system-mail events ──
         # smartd and other system mail contains verbose boilerplate.
@@ -3951,6 +3975,21 @@ class ProxmoxHookWatcher:
             if severity in ('error', 'err'):
                 return 'backup_fail', 'vm', ''
             return 'backup_complete', 'vm', ''
+
+        # ProxMenux Host Backups run as a standalone systemd timer +
+        # `run_scheduled_backup.sh` (or manually via `backup_host.sh`),
+        # NOT as PVE vzdump tasks. Routed to dedicated event types
+        # (`host_backup_*`) so the operator can toggle them separately
+        # from VM/CT backup events and the body can show host-backup
+        # specifics (backend, destination, data/archive size). Without
+        # this branch the Host Backup ran fine but never produced a
+        # notification — operator-reported.
+        if pve_type == 'proxmenux-host-backup-start':
+            return 'host_backup_start', 'node', ''
+        if pve_type == 'proxmenux-host-backup-complete':
+            return 'host_backup_complete', 'node', ''
+        if pve_type == 'proxmenux-host-backup-fail':
+            return 'host_backup_fail', 'node', ''
         
         if pve_type == 'fencing':
             return 'split_brain', 'node', ''

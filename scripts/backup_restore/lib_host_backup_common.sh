@@ -2424,6 +2424,86 @@ hb_file_size() {
     fi
 }
 
+# POST a Host Backup lifecycle event to the local webhook so the
+# Monitor notification pipeline can route it through the host_backup_*
+# event types (toggle-able per channel in Settings). Used by both the
+# scheduled runner (`run_scheduled_backup.sh`) and the manual flow
+# (`backup_host.sh`).
+#
+# Arg: action (start|complete|fail)
+# Required env: HB_NOTIFY_JOB_ID (or `job_id` shell var)
+# Optional env (per the host_backup_* template fields):
+#   HB_NOTIFY_BACKEND       = pbs|local|borg
+#   HB_NOTIFY_DESTINATION   = path / URI
+#   HB_NOTIFY_PROFILE_MODE  = default|custom
+#   HB_NOTIFY_DATA_SIZE     = staged data (e.g. "12.4 GiB")
+#   HB_NOTIFY_ARCHIVE_SIZE  = output archive size (local) or '-'
+#   HB_NOTIFY_DURATION      = pretty elapsed (e.g. "2m 13s")
+#   HB_NOTIFY_LOG_FILE      = path to job log (rendered in fail body)
+#   HB_NOTIFY_REASON        = short failure reason (last error line)
+#
+# Best-effort: the curl is bounded (--connect-timeout 3 / --max-time 5)
+# and silenced so a Monitor outage never aborts the backup itself.
+hb_notify_lifecycle() {
+    command -v jq >/dev/null 2>&1 || return 0
+    command -v curl >/dev/null 2>&1 || return 0
+
+    local action="$1"
+    local jid="${HB_NOTIFY_JOB_ID:-${job_id:-}}"
+    local severity="info" title="Host backup ${action}: ${jid:-?}"
+    case "$action" in
+        fail)     severity="error"; title="Host backup FAILED: ${jid:-?}" ;;
+        complete) title="Host backup complete: ${jid:-?}" ;;
+        start)    title="Host backup started: ${jid:-?}" ;;
+    esac
+
+    local pve_type="proxmenux-host-backup-${action}"
+    local host
+    host="$(hostname 2>/dev/null || echo unknown)"
+
+    local message="Backend: ${HB_NOTIFY_BACKEND:-}
+Destination: ${HB_NOTIFY_DESTINATION:-}
+Profile: ${HB_NOTIFY_PROFILE_MODE:-default}
+Data size: ${HB_NOTIFY_DATA_SIZE:-}
+Archive size: ${HB_NOTIFY_ARCHIVE_SIZE:-}
+Duration: ${HB_NOTIFY_DURATION:-}"
+    [[ "$action" == "fail" ]] && message+="
+Reason: ${HB_NOTIFY_REASON:-unknown}
+Log: ${HB_NOTIFY_LOG_FILE:-}"
+
+    local payload
+    payload=$(jq -nc \
+        --arg t  "$title" \
+        --arg m  "$message" \
+        --arg s  "$severity" \
+        --arg ts "$(date -Iseconds)" \
+        --arg pty "$pve_type" \
+        --arg host "$host" \
+        --arg jid "${jid:-}" \
+        --arg backend  "${HB_NOTIFY_BACKEND:-}" \
+        --arg dest     "${HB_NOTIFY_DESTINATION:-}" \
+        --arg profile  "${HB_NOTIFY_PROFILE_MODE:-default}" \
+        --arg dsize    "${HB_NOTIFY_DATA_SIZE:-}" \
+        --arg asize    "${HB_NOTIFY_ARCHIVE_SIZE:-}" \
+        --arg dur      "${HB_NOTIFY_DURATION:-}" \
+        --arg log      "${HB_NOTIFY_LOG_FILE:-}" \
+        --arg reason   "${HB_NOTIFY_REASON:-}" \
+        '{title:$t, message:$m, severity:$s, timestamp:$ts,
+          fields:{type:$pty, hostname:$host, "job-id":$jid,
+                  backend:$backend, destination:$dest,
+                  profile_mode:$profile, data_size:$dsize,
+                  archive_size:$asize, duration:$dur,
+                  log_file:$log, reason:$reason}}' \
+        2>/dev/null)
+    [[ -z "$payload" ]] && return 0
+    curl -sk --connect-timeout 3 --max-time 5 \
+        -X POST \
+        -H "Content-Type: application/json" \
+        -d "$payload" \
+        http://127.0.0.1:8008/api/notifications/webhook \
+        >/dev/null 2>&1 || true
+}
+
 hb_show_log() {
     local logfile="$1" title="${2:-$(hb_translate "Operation log")}"
     [[ -f "$logfile" && -s "$logfile" ]] || return 0

@@ -384,6 +384,21 @@ main() {
     echo "Profile: ${PROFILE_MODE:-default}"
   } >"$log_file"
 
+  # Fire the lifecycle "start" event. Per-channel/per-event toggles in
+  # Settings decide whether the user actually receives it
+  # (host_backup_start ships with default_enabled=False).
+  local _hb_dest=""
+  case "${BACKEND:-}" in
+    local) _hb_dest="${LOCAL_DEST_DIR:-/var/lib/vz/dump}" ;;
+    borg)  _hb_dest="${BORG_REPO:-}" ;;
+    pbs)   _hb_dest="${PBS_REPOSITORY:-}" ;;
+  esac
+  export HB_NOTIFY_BACKEND="${BACKEND:-}"
+  export HB_NOTIFY_DESTINATION="$_hb_dest"
+  export HB_NOTIFY_PROFILE_MODE="${PROFILE_MODE:-default}"
+  export HB_NOTIFY_LOG_FILE="$log_file"
+  hb_notify_lifecycle "start"
+
   local -a paths=()
   if [[ "${PROFILE_MODE:-default}" == "custom" && -f "${JOBS_DIR}/${job_id}.paths" ]]; then
     mapfile -t paths < "${JOBS_DIR}/${job_id}.paths"
@@ -466,15 +481,27 @@ main() {
   echo "Cleaning up staging area ..." >>"$log_file"
   rm -rf "$stage_root"
 
+  # Single source of truth for archive_size (was previously computed
+  # only inside the TTY block, which left the notification body with
+  # '-' for headless scheduled runs). Local backends know the actual
+  # output file; PBS / Borg backends manage their own dedupe storage
+  # so we leave '-' meaning "see repository for usage".
+  local archive_size="-"
+  if [[ "${BACKEND:-}" == "local" && -n "$archive_path" && -f "$archive_path" ]]; then
+    archive_size=$(hb_file_size "$archive_path" 2>/dev/null || echo '-')
+  fi
+  local pretty_duration
+  pretty_duration=$(hb_human_elapsed "$elapsed" 2>/dev/null || echo "${elapsed}s")
+
   if [[ $rc -eq 0 ]]; then
     echo "RESULT=ok" >>"$summary_file"
     echo "LOG_FILE=${log_file}" >>"$summary_file"
     echo "=== Job finished OK at $(date -Iseconds) ===" >>"$log_file"
+    export HB_NOTIFY_DATA_SIZE="$staged_size"
+    export HB_NOTIFY_ARCHIVE_SIZE="$archive_size"
+    export HB_NOTIFY_DURATION="$pretty_duration"
+    hb_notify_lifecycle "complete"
     if (( TTY )); then
-      local archive_size="-"
-      case "${BACKEND:-}" in
-        local) [[ -f "$archive_path" ]] && archive_size=$(hb_file_size "$archive_path") ;;
-      esac
       local method_label
       case "${BACKEND:-}" in
         local) method_label="Local archive (tar)" ;;
@@ -499,6 +526,17 @@ main() {
     echo "RESULT=failed" >>"$summary_file"
     echo "LOG_FILE=${log_file}" >>"$summary_file"
     echo "=== Job finished with errors at $(date -Iseconds) ===" >>"$log_file"
+    # Build a one-line reason from the last error-ish line in the log
+    # so the notification body has something actionable rather than a
+    # generic "Reason: unknown". Falls back to the literal exit code.
+    local _hb_reason=""
+    _hb_reason=$(grep -iE 'error|fail|fatal|abort' "$log_file" 2>/dev/null | tail -1 | sed 's/^[[:space:]]*//')
+    [[ -z "$_hb_reason" ]] && _hb_reason="Runner exited with status ${rc}"
+    export HB_NOTIFY_DATA_SIZE="${staged_size:-}"
+    export HB_NOTIFY_ARCHIVE_SIZE="$archive_size"
+    export HB_NOTIFY_DURATION="$pretty_duration"
+    export HB_NOTIFY_REASON="$_hb_reason"
+    hb_notify_lifecycle "fail"
     (( TTY )) && msg_error "$(translate "Backup failed. See log:") $log_file"
     exit 1
   fi

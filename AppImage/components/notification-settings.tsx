@@ -335,6 +335,12 @@ export function NotificationSettings() {
   const [showHistory, setShowHistory] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({})
+  // Cleartext secrets cached only while the eye toggle is "on" for
+  // that field. Settings GET returns "************" for everything in
+  // SENSITIVE_KEYS; clicking eye fetches the real value via
+  // /api/notifications/reveal-secret and stores it here. Cleared when
+  // the user toggles eye off, or on every reload — never persists.
+  const [revealedSecrets, setRevealedSecrets] = useState<Record<string, string>>({})
   const [editMode, setEditMode] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
@@ -1065,8 +1071,86 @@ export function NotificationSettings() {
     }
   }
 
-  const toggleSecret = (key: string) => {
-    setShowSecrets(prev => ({ ...prev, [key]: !prev[key] }))
+  // Maps each eye-button local key to the body shape the backend
+  // expects for /api/notifications/reveal-secret. Centralised here so
+  // the JSX call site stays a one-liner — `toggleSecret(key)`.
+  const SECRET_REVEAL_TARGETS: Record<string, Record<string, string>> = {
+    tg_token:    { channel: "telegram", field: "bot_token" },
+    gt_token:    { channel: "gotify",   field: "token" },
+    dc_hook:     { channel: "discord",  field: "webhook_url" },
+    em_pass:     { channel: "email",    field: "password" },
+    apprise_url: { channel: "apprise",  field: "url" },
+  }
+
+  const toggleSecret = async (key: string) => {
+    // Turning eye OFF — drop the cached cleartext immediately.
+    if (showSecrets[key]) {
+      setShowSecrets(prev => ({ ...prev, [key]: false }))
+      setRevealedSecrets(prev => {
+        const next = { ...prev }
+        delete next[key]
+        return next
+      })
+      return
+    }
+
+    // Turning eye ON — resolve the backend body. ai_key is dynamic
+    // (depends on current provider); the rest are static.
+    let body: Record<string, string> | null = null
+    if (key === "ai_key") {
+      const prov = (config.ai_provider || "").trim()
+      if (prov) body = { ai_provider: prov }
+    } else {
+      body = SECRET_REVEAL_TARGETS[key] || null
+    }
+
+    if (!body) {
+      // Unknown eye-toggle — flip state and let the input render
+      // whatever it already has. Never silently skip the UI feedback.
+      setShowSecrets(prev => ({ ...prev, [key]: true }))
+      return
+    }
+
+    try {
+      // Must go through `fetchApi` (not raw `fetch`) so the JWT
+      // Authorization header gets attached — the endpoint uses
+      // `@require_auth` and would reject a plain fetch with 401, which
+      // is exactly what produced the "still asterisks" behaviour seen
+      // on the first build.
+      const data = await fetchApi<{ value?: string }>("/api/notifications/reveal-secret", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      const value = typeof data?.value === "string" ? data.value : ""
+      setRevealedSecrets(prev => ({ ...prev, [key]: value }))
+    } catch {
+      // Network/auth failure → still flip the eye so the user sees
+      // the underlying input changing (and that it has the masked
+      // placeholder, which signals "not loaded"). Don't crash.
+    }
+    setShowSecrets(prev => ({ ...prev, [key]: true }))
+  }
+
+  // Sentinel the backend sends in place of any populated sensitive
+  // value (see SENSITIVE_PLACEHOLDER in notification_manager.py).
+  const SECRET_PLACEHOLDER = "************"
+
+  // Render value for a secret input:
+  // - if the eye is on AND the stored value is the masked placeholder
+  //   AND we have a revealed cleartext for this key → show cleartext.
+  // - otherwise show whatever the input already has (the placeholder
+  //   while masked, or the value the user is typing in editMode).
+  // This avoids overwriting an in-progress edit when the eye toggles.
+  const secretValue = (key: string, current: string): string => {
+    if (
+      showSecrets[key] &&
+      current === SECRET_PLACEHOLDER &&
+      revealedSecrets[key] !== undefined
+    ) {
+      return revealedSecrets[key]
+    }
+    return current
   }
 
   if (loading) {
@@ -1402,7 +1486,7 @@ export function NotificationSettings() {
                             type={showSecrets["tg_token"] ? "text" : "password"}
                             className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
                             placeholder="7595377878:AAGE6Fb2cy... (with or without 'bot' prefix)"
-                            value={config.channels.telegram?.bot_token || ""}
+                            value={secretValue("tg_token", config.channels.telegram?.bot_token || "")}
                             onChange={e => updateChannel("telegram", "bot_token", e.target.value)}
                             disabled={!editMode}
                           />
@@ -1519,7 +1603,7 @@ export function NotificationSettings() {
                             type={showSecrets["gt_token"] ? "text" : "password"}
                             className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
                             placeholder="A_valid_gotify_token"
-                            value={config.channels.gotify?.token || ""}
+                            value={secretValue("gt_token", config.channels.gotify?.token || "")}
                             onChange={e => updateChannel("gotify", "token", e.target.value)}
                             disabled={!editMode}
                           />
@@ -1597,7 +1681,7 @@ export function NotificationSettings() {
                             type={showSecrets["dc_hook"] ? "text" : "password"}
                             className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
                             placeholder="https://discord.com/api/webhooks/..."
-                            value={config.channels.discord?.webhook_url || ""}
+                            value={secretValue("dc_hook", config.channels.discord?.webhook_url || "")}
                             onChange={e => updateChannel("discord", "webhook_url", e.target.value)}
                             disabled={!editMode}
                           />
@@ -1729,7 +1813,7 @@ export function NotificationSettings() {
                               type={showSecrets["em_pass"] ? "text" : "password"}
                               className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
                               placeholder="App password"
-                              value={config.channels.email?.password || ""}
+                              value={secretValue("em_pass", config.channels.email?.password || "")}
                               onChange={e => updateChannel("email", "password", e.target.value)}
                               disabled={!editMode}
                             />
@@ -1840,14 +1924,14 @@ export function NotificationSettings() {
                             type={showSecrets["apprise_url"] ? "text" : "password"}
                             className={`h-7 text-xs font-mono min-w-0 flex-1 ${!editMode ? "opacity-50" : ""}`}
                             placeholder="tgram://bottoken/ChatID"
-                            value={config.channels.apprise?.url || ""}
+                            value={secretValue("apprise_url", config.channels.apprise?.url || "")}
                             onChange={e => updateChannel("apprise", "url", e.target.value)}
                             disabled={!editMode}
                           />
                           <button
                             type="button"
                             className="h-7 w-7 shrink-0 flex items-center justify-center rounded-md border border-border hover:bg-muted text-muted-foreground"
-                            onClick={() => setShowSecrets(s => ({ ...s, apprise_url: !s.apprise_url }))}
+                            onClick={() => toggleSecret("apprise_url")}
                             title={showSecrets["apprise_url"] ? "Hide URL" : "Show URL"}
                           >
                             {showSecrets["apprise_url"] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
@@ -2122,13 +2206,13 @@ export function NotificationSettings() {
                           type={showSecrets["ai_key"] ? "text" : "password"}
                           className="h-9 text-sm font-mono"
                           placeholder="sk-..."
-                          value={config.ai_api_keys?.[config.ai_provider] || ""}
-                          onChange={e => updateConfig(p => ({ 
-                            ...p, 
-                            ai_api_keys: { 
-                              ...p.ai_api_keys, 
-                              [p.ai_provider]: e.target.value 
-                            } 
+                          value={secretValue("ai_key", config.ai_api_keys?.[config.ai_provider] || "")}
+                          onChange={e => updateConfig(p => ({
+                            ...p,
+                            ai_api_keys: {
+                              ...p.ai_api_keys,
+                              [p.ai_provider]: e.target.value
+                            }
                           }))}
                           disabled={!editMode}
                         />

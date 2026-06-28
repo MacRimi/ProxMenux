@@ -40,6 +40,14 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
+# Pull in ensure_repositories + PROXMENUX_UTILS — customizable already
+# sources this helper; auto did not, so a function that calls
+# `ensure_repositories` (setup_proxmox_repositories below) needs the
+# import here too.
+if [[ -f "$LOCAL_SCRIPTS/global/utils-install-functions.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/utils-install-functions.sh"
+fi
+
 load_language
 initialize_cache
 
@@ -189,6 +197,35 @@ remove_subscription_banner() {
 
 
 
+
+
+setup_proxmox_repositories() {
+    local FUNC_VERSION="1.1"
+# Description: Configure Proxmox + Debian APT repositories (no-subscription)
+# and set the correct file permissions.
+
+    msg_info2 "$(translate "Configuring Proxmox APT repositories...")"
+
+    if ! ensure_repositories; then
+        msg_error "$(translate "Failed to configure Proxmox repositories")"
+        register_tool "proxmox_repos" false "$FUNC_VERSION"
+        return 1
+    fi
+
+    # Defensive re-chmod: if the files already existed with the old 0640
+    # permissions there is nothing for `ensure_repositories` to recreate,
+    # so we still flip the bits explicitly here.
+    local f
+    for f in /etc/apt/sources.list.d/proxmox.sources \
+             /etc/apt/sources.list.d/debian.sources \
+             /etc/apt/sources.list.d/pve-no-subscription.list \
+             /etc/apt/sources.list.d/pve-enterprise.list; do
+        [[ -f "$f" ]] && chmod 0644 "$f" 2>/dev/null
+    done
+
+    register_tool "proxmox_repos" true "$FUNC_VERSION"
+    msg_success "$(translate "Proxmox APT repositories configured")"
+}
 
 
 configure_time_sync() {

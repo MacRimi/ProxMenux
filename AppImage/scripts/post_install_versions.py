@@ -27,7 +27,8 @@ import re
 import threading
 import time
 from pathlib import Path
-from typing import Any
+import os
+from typing import Any, Callable
 
 _BASE = Path("/usr/local/share/proxmenux")
 _POST_INSTALL_DIR = _BASE / "scripts" / "post_install"
@@ -191,7 +192,50 @@ def load_installed_tools(path: Path = _INSTALLED_JSON) -> dict[str, dict[str, An
         else:
             # Unknown shape — treat as not installed rather than crash.
             normalized[key] = {"installed": False, "version": "", "source": ""}
+
+    _apply_legacy_detectors(normalized)
     return normalized
+
+
+# Tool keys that were added later than 1.2.2 and therefore are missing
+# from installed_tools.json on hosts that already had the underlying
+# config in place. For each, declare how to recognise "this host has
+# the thing configured already" so the registry surfaces it as a v1.0
+# legacy install — the per-tool wrapper then bumps it to the current
+# FUNC_VERSION on first apply, and from then on the regular update
+# detector takes over without any special-casing.
+_LEGACY_DETECTORS: dict[str, Callable[[], bool]] = {
+    "proxmox_repos": lambda: any(
+        os.path.exists(p) for p in (
+            "/etc/apt/sources.list.d/proxmox.sources",
+            "/etc/apt/sources.list.d/pve-no-subscription.list",
+            "/etc/apt/sources.list.d/pve-enterprise.list",
+        )
+    ),
+}
+
+
+def _apply_legacy_detectors(normalized: dict[str, dict[str, Any]]) -> None:
+    """Inject synthetic v1.0 entries for tools that the host already
+    has configured but were never recorded in installed_tools.json.
+
+    Skips any tool that already has an entry — once the user applies
+    the update, ``register_tool`` writes the real entry and the
+    detector path becomes a no-op for that key.
+    """
+    for key, probe in _LEGACY_DETECTORS.items():
+        if key in normalized:
+            continue
+        try:
+            if probe():
+                normalized[key] = {
+                    "installed": True,
+                    "version": "1.0",
+                    "source": "detected",
+                }
+        except Exception:
+            # Detectors must never break the registry load.
+            continue
 
 
 # ---------------------------------------------------------------------------
