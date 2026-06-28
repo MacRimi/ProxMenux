@@ -4435,6 +4435,55 @@ def api_storage_observations():
     except Exception as e:
         return jsonify({'observations': [], 'error': str(e)}), 500
 
+# ─── Per-NIC live rate cache ────────────────────────────────────────
+# Module-scope so it survives between requests but disappears on
+# service restart (rate after restart re-bootstraps on the second
+# request — matches operator expectations). Guarded by a lock so
+# concurrent /api/network calls from different tabs don't race each
+# other into a corrupt previous snapshot.
+import threading as _net_threading
+_NET_RATE_CACHE = {'time': 0.0, 'per_nic': {}}
+_NET_RATE_LOCK = _net_threading.Lock()
+# Skip rate computation when the cache is older than this — a paused
+# tab returning after a long sleep would otherwise read a delta over
+# minutes/hours and surface it as "the current rate".
+_NET_RATE_MAX_AGE_S = 60.0
+
+def _compute_per_nic_rates_live(net_io_per_nic):
+    """Return ``{iface: {rx_Bps, tx_Bps}}`` for the window between the
+    previous call and now.
+
+    First call after service start (or after a >60 s gap) returns an
+    empty dict — the next call has a valid delta. Counter wraps (NIC
+    reset) are clamped to 0 instead of surfacing a negative rate.
+    """
+    now = time.time()
+    rates = {}
+    with _NET_RATE_LOCK:
+        prev_time = _NET_RATE_CACHE.get('time', 0.0)
+        prev_data = _NET_RATE_CACHE.get('per_nic', {})
+        elapsed = now - prev_time if prev_time > 0 else 0
+        use_delta = 0 < elapsed <= _NET_RATE_MAX_AGE_S
+        new_data = {}
+        for iface, io in net_io_per_nic.items():
+            new_data[iface] = {
+                'bytes_recv': io.bytes_recv,
+                'bytes_sent': io.bytes_sent,
+            }
+            if not use_delta or iface not in prev_data:
+                continue
+            prev = prev_data[iface]
+            rx_delta = max(0, io.bytes_recv - prev['bytes_recv'])
+            tx_delta = max(0, io.bytes_sent - prev['bytes_sent'])
+            rates[iface] = {
+                'rx_Bps': round(rx_delta / elapsed, 2),
+                'tx_Bps': round(tx_delta / elapsed, 2),
+            }
+        _NET_RATE_CACHE['time'] = now
+        _NET_RATE_CACHE['per_nic'] = new_data
+    return rates
+
+
 def get_interface_type(interface_name):
     """Detect the type of network interface"""
     try:
@@ -4637,6 +4686,14 @@ def get_network_info():
             # print(f"[v0] Error getting per-NIC stats: {e}")
             pass
             net_io_per_nic = {}
+
+        # Per-interface live rate (bytes/sec) computed from delta vs the
+        # previous call to this endpoint. The dashboard polls /api/network
+        # on a fixed cadence, so the delta between two polls is the rate
+        # the user actually wants to see — no extra sleep needed.
+        # Cache lives at module scope; staleness is bounded so a paused
+        # tab + late refresh doesn't return absurd jumps as "rate".
+        per_nic_rates = _compute_per_nic_rates_live(net_io_per_nic)
         
         physical_active_count = 0
         physical_total_count = 0
@@ -4723,6 +4780,20 @@ def get_network_info():
                 interface_info['errors_out'] = io_stats.errout
                 interface_info['drops_in'] = io_stats.dropin
                 interface_info['drops_out'] = io_stats.dropout
+
+                # Live rate (B/s) from delta-since-last-call. Same
+                # vm_lxc-orientation flip as the cumulative bytes
+                # above — the host sees a VM's "send" as the bridge's
+                # "receive", so we invert when surfacing the rate from
+                # the VM's perspective.
+                rate = per_nic_rates.get(interface_name)
+                if rate:
+                    if interface_type == 'vm_lxc':
+                        interface_info['rx_Bps'] = rate['tx_Bps']
+                        interface_info['tx_Bps'] = rate['rx_Bps']
+                    else:
+                        interface_info['rx_Bps'] = rate['rx_Bps']
+                        interface_info['tx_Bps'] = rate['tx_Bps']
             
             if interface_type == 'bond':
                 bond_info = get_bond_info(interface_name)
@@ -7877,6 +7948,18 @@ def api_processes():
             return (comm, ppid, rss_kb, uid, cmdline)
 
         if sort == 'cpu':
+            # System uptime — denominator for cpu_avg (CPU% averaged
+            # over the entire lifetime of the process). Used to
+            # surface long-running idle processes that don't show up
+            # in the 1-s delta (e.g. an orphaned `bash -s` that loops
+            # with `sleep 5` between iterations — averaged it's 4 %
+            # of one core for weeks, instantaneously it samples 0).
+            try:
+                with open('/proc/uptime') as f:
+                    host_uptime_sec = float(f.read().split()[0])
+            except (OSError, ValueError):
+                host_uptime_sec = 0.0
+
             # Pass 1: snapshot CPU time for every running PID.
             snap1 = {pid: _read_cpu_time(pid) for pid in _list_pids()}
             snap1 = {k: v for k, v in snap1.items() if v is not None}
@@ -7904,19 +7987,44 @@ def api_processes():
                 # the whole host (so values line up with the CPU Usage
                 # card — 1 % in the modal == 1 % of the host total).
                 cpu_pct = round((delta_jiffies / SC_CLK_TCK) * 100 / NCPU, 1)
+
+                # cpu_avg — proportion of host CPU this process has
+                # consumed across its entire lifetime. Read the
+                # per-process start time from /proc/<pid>/stat (field
+                # 21, in ticks since boot) and turn it into seconds via
+                # host_uptime - start_seconds. Falls back to 0.0 when
+                # start time isn't readable (kernel threads, perms).
+                cpu_avg = 0.0
+                try:
+                    with open(f'/proc/{pid}/stat', 'rb') as f:
+                        st_line = f.read()
+                    st_rpar = st_line.rfind(b')')
+                    st_rest = st_line[st_rpar + 2:].split()
+                    starttime_ticks = int(st_rest[19])  # field 22 minus the 2 skipped after comm
+                    proc_uptime_sec = max(1.0, host_uptime_sec - (starttime_ticks / SC_CLK_TCK))
+                    cpu_avg = round((now / SC_CLK_TCK) * 100 / NCPU / proc_uptime_sec, 1)
+                except (OSError, FileNotFoundError, IndexError, ValueError):
+                    pass
+
                 mem_pct = round((rss_kb / total_kb * 100) if total_kb else 0.0, 1)
                 results.append({
                     'pid': pid,
                     'parent_pid': pid,
                     'user': _user_name(uid),
                     'cpu': cpu_pct,
+                    'cpu_avg': cpu_avg,
                     'mem': mem_pct,
                     'rss_kb': rss_kb,
                     'command': comm,
                     'cmdline': cmdline or comm,
                 })
 
-            results.sort(key=lambda r: r['cpu'], reverse=True)
+            # Sort by the larger of (now, avg) so a process is
+            # captured whether it's spiking right now OR running an
+            # always-on baseline. Without this an orphan bash loop
+            # never made the top-N and the operator had no UI
+            # surface to find it.
+            results.sort(key=lambda r: max(r['cpu'], r.get('cpu_avg', 0.0)), reverse=True)
             processes = results[:limit]
 
         else:
@@ -10099,6 +10207,83 @@ def api_node_metrics():
                 elif zfs_arc_size > 0 and ('zfsarc' not in item or item.get('zfsarc', 0) == 0):
                     item['zfsarc'] = zfs_arc_size
 
+            # Period stats — computed BEFORE downsampling so the
+            # AVG/MAX/MIN header in the chart reflects real per-minute
+            # extremes instead of averages.
+            #
+            # Three sources depending on the timeframe:
+            #
+            #   - hour/day  → PVE returns 1-min raw points. AVG/MAX/MIN
+            #     of the in-memory list IS the truth.
+            #
+            #   - week/month → PVE already downsamples to 30-min /
+            #     ~1-hour points using consolidation function AVG, so
+            #     the in-memory points are already averages. Taking
+            #     max() of them gives "max of averages", NOT the real
+            #     peak. We issue two extra pvesh calls per request
+            #     (`--cf MAX` and `--cf MIN`) to recover the real
+            #     extremes from PVE's own RRD consolidation. The
+            #     extra calls add ~150 ms — only on week/month and
+            #     only when the chart loads, so the overhead is small.
+            def _values_from(items, field_key, scale=1.0):
+                return [item[field_key] * scale for item in items
+                        if isinstance(item.get(field_key), (int, float))
+                        and not isinstance(item[field_key], bool)
+                        and item[field_key] is not None]
+
+            def _stats_native(field_key, scale=1.0):
+                values = _values_from(rrd_data, field_key, scale)
+                if not values:
+                    return None
+                return {
+                    'avg': sum(values) / len(values),
+                    'max': max(values),
+                    'min': min(values),
+                }
+
+            def _pvesh_rrd(cf):
+                """One extra pvesh call with a non-default CF.
+                Returns the parsed list or None on any failure — caller
+                falls back to the AVG-based numbers."""
+                try:
+                    extra = subprocess.run(
+                        ['pvesh', 'get', f'/nodes/{local_node}/rrddata',
+                         '--timeframe', timeframe, '--cf', cf,
+                         '--output-format', 'json'],
+                        capture_output=True, text=True, timeout=10,
+                    )
+                    if extra.returncode == 0 and extra.stdout:
+                        return json.loads(extra.stdout)
+                except (subprocess.SubprocessError, json.JSONDecodeError, OSError):
+                    pass
+                return None
+
+            def _build_stats(field_key, scale=1.0):
+                native = _stats_native(field_key, scale)
+                if native is None:
+                    return None
+                # On week/month, the points we already have are AVG.
+                # Try to upgrade max/min to the real RRD extremes.
+                if timeframe in ('week', 'month'):
+                    cf_max = _pvesh_rrd('MAX')
+                    if cf_max:
+                        vals = _values_from(cf_max, field_key, scale)
+                        if vals:
+                            native['max'] = max(vals)
+                    cf_min = _pvesh_rrd('MIN')
+                    if cf_min:
+                        vals = _values_from(cf_min, field_key, scale)
+                        if vals:
+                            native['min'] = min(vals)
+                return native
+
+            period_stats = {
+                # cpu: RRD stores fraction 0-1, surface as %.
+                'cpu': _build_stats('cpu', scale=100.0),
+                # memory_used: bytes → GB so units match the chart.
+                'memory_used': _build_stats('memused', scale=1 / (1024 ** 3)),
+            }
+
             # 24h downsampling: RRD returns ~1440 minute-level points which
             # plots as a dense thicket of vertical spikes. Group into 5-min
             # buckets and average each numeric field — same shape that
@@ -10131,7 +10316,11 @@ def api_node_metrics():
             payload = {
                 'node': local_node,
                 'timeframe': timeframe,
-                'data': rrd_data
+                'data': rrd_data,
+                # AVG/MAX/MIN computed over the raw (pre-downsampling)
+                # points so the chart header captures real per-minute
+                # extremes even on multi-day timeframes.
+                'period_stats': period_stats,
             }
             _node_metrics_cache_set(timeframe, payload)
             return jsonify(payload)

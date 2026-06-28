@@ -394,29 +394,13 @@ export function HealthThresholds() {
   }
 
   const renderField = (path: string[], label: string) => {
+    // Kept for single-value leaves that don't have a warn/crit pair
+    // (e.g. Memory's swap_critical). The pair-cases route to
+    // renderThresholdRange below.
     const leaf = getLeaf(tree, path)
     if (!leaf) return null
     const key = pathKey(path)
     const editingValue = pending[key] ?? String(leaf.value)
-    // Visual rules (rebuilt — the original used /40 opacity borders +
-    // a blue ring stacked on top of the colour border, both of which
-    // were nearly invisible in read-only mode and stacked weirdly when
-    // a value was customised):
-    //
-    //   • Read-only mode (editMode=false): keep severity colour on the
-    //     border at a higher opacity (/70 instead of /40) and on the
-    //     background (/10) so the field is clearly readable, and
-    //     restore foreground colour (no `opacity-70` washout). This is
-    //     the default state the user sees most of the time — it must
-    //     match the visual weight of the rest of the Settings page.
-    //   • Edit mode + value matches the recommended default: severity
-    //     border + soft severity bg, same as read-only.
-    //   • Edit mode + value customised: ONE border in blue, replacing
-    //     (not stacking on top of) the severity border. This is the
-    //     single signal that "this value differs from recommended".
-    //
-    // `swap_critical` and any other `*_critical` leaf falls into the
-    // red bucket via the substring check.
     const last = path[path.length - 1] || ""
     const isCritical = last.toLowerCase().includes("critical")
     const isWarning = last.toLowerCase().includes("warning")
@@ -452,6 +436,200 @@ export function HealthThresholds() {
           />
           <span className="text-[11px] text-muted-foreground w-6">{leaf.unit}</span>
         </div>
+      </div>
+    )
+  }
+
+  // Single-handle slider for thresholds that don't have a warn/crit
+  // pair (only Memory's swap_critical today). Same visual language as
+  // the dual-handle: red handle, value above, OK / CRIT zones below
+  // — so the operator doesn't read it as a different control.
+  const renderSingleThresholdSlider = (path: string[], severity: "warning" | "critical" = "critical") => {
+    const leaf = getLeaf(tree, path)
+    if (!leaf) return null
+    const key = pathKey(path)
+    const val = Number(pending[key] ?? leaf.value)
+    const min = leaf.min
+    const max = leaf.max
+    const step = leaf.step || 1
+    const unit = leaf.unit || ""
+    const pct = ((Math.max(min, Math.min(max, val)) - min) / (max - min)) * 100
+    const custom = leaf.customised && !(key in pending)
+    const color = severity === "critical" ? "red" : "amber"
+    const handleClass = severity === "critical"
+      ? "[&::-webkit-slider-thumb]:bg-red-500 [&::-moz-range-thumb]:bg-red-500"
+      : "[&::-webkit-slider-thumb]:bg-amber-500 [&::-moz-range-thumb]:bg-amber-500"
+    const numberColor = custom
+      ? "text-blue-400"
+      : severity === "critical"
+        ? "text-red-500"
+        : "text-amber-500"
+    const fillColor = severity === "critical" ? "bg-red-500/30" : "bg-amber-500/30"
+
+    return (
+      <div className="px-1 py-3">
+        <div className="relative h-5 mb-1 select-none">
+          <span
+            className={`absolute -translate-x-1/2 text-xs font-semibold tabular-nums ${numberColor}`}
+            style={{ left: `${pct}%` }}
+          >
+            {val}{unit}
+          </span>
+        </div>
+        <div className="relative h-6">
+          <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-muted" />
+          <div
+            className={`absolute top-1/2 -translate-y-1/2 h-1.5 rounded-r-full ${fillColor}`}
+            style={{ left: `${pct}%`, right: 0 }}
+          />
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            disabled={!editMode}
+            value={val}
+            onChange={(e) => setPending((p) => ({ ...p, [key]: e.target.value }))}
+            className={`absolute inset-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-moz-range-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-background ${handleClass}`}
+            title={`Recommended: ${leaf.recommended}${unit}`}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2 mt-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+          <span>OK &lt; {val}{unit}</span>
+          <span className="text-right">{severity === "critical" ? "CRIT" : "WARN"} &gt; {val}{unit}</span>
+        </div>
+      </div>
+    )
+  }
+
+  // Dual-handle range slider replacing the two stacked number inputs
+  // for warn/crit pairs. Visual model: a horizontal track split into
+  // three zones — OK (left of warning, muted), WARN→CRIT (between
+  // handles, amber-to-red gradient), and OVER-CRIT (right of critical,
+  // dark red overlay). The handles themselves stay coloured (amber for
+  // warning, red for critical) so the operator reads the same severity
+  // mapping they're used to from the old inputs. Numbers ride above
+  // each handle and double as a click-to-edit affordance — clicking a
+  // number swaps it for a tight `<Input type="number">` so precise
+  // values are still keyboard-friendly. Customised values surface as a
+  // small blue dot on the affected handle (same signal as the old blue
+  // ring, less visual weight).
+  const renderThresholdRange = (
+    basePath: string[],
+    options?: { hideLabels?: boolean }
+  ) => {
+    const wPath = [...basePath, "warning"]
+    const cPath = [...basePath, "critical"]
+    const wLeaf = getLeaf(tree, wPath)
+    const cLeaf = getLeaf(tree, cPath)
+    if (!wLeaf || !cLeaf) return null
+
+    const wKey = pathKey(wPath)
+    const cKey = pathKey(cPath)
+    const wVal = Number(pending[wKey] ?? wLeaf.value)
+    const cVal = Number(pending[cKey] ?? cLeaf.value)
+
+    // Shared min/max from the backend leaf (both handles use the same
+    // range; backend validates warning <= critical on save).
+    const min = Math.min(wLeaf.min, cLeaf.min)
+    const max = Math.max(wLeaf.max, cLeaf.max)
+    const step = Math.max(wLeaf.step, cLeaf.step) || 1
+    const pct = (v: number) => ((Math.max(min, Math.min(max, v)) - min) / (max - min)) * 100
+    const wPct = pct(wVal)
+    const cPct = pct(cVal)
+    const unit = wLeaf.unit || cLeaf.unit || ""
+
+    const wCustom = wLeaf.customised && !(wKey in pending)
+    const cCustom = cLeaf.customised && !(cKey in pending)
+
+    const setVal = (key: string, value: number, peer: number, isWarn: boolean) => {
+      // Clamp on the fly: warning can't cross critical and vice-versa,
+      // matching the backend invariant so the user can't drag into an
+      // invalid state.
+      let v = value
+      if (isWarn && v >= peer) v = peer - step
+      if (!isWarn && v <= peer) v = peer + step
+      setPending((p) => ({ ...p, [key]: String(v) }))
+    }
+
+    return (
+      <div className="px-1 py-3">
+        {/* Numeric labels above each handle, positioned absolutely so
+            they ride above the corresponding thumb regardless of the
+            slider width. Pointer events disabled so they don't steal
+            clicks from the underlying range inputs. */}
+        <div className="relative h-5 mb-1 select-none">
+          <span
+            className={`absolute -translate-x-1/2 text-xs font-semibold tabular-nums ${wCustom ? "text-blue-400" : "text-amber-500"}`}
+            style={{ left: `${wPct}%` }}
+          >
+            {wVal}{unit}
+          </span>
+          <span
+            className={`absolute -translate-x-1/2 text-xs font-semibold tabular-nums ${cCustom ? "text-blue-400" : "text-red-500"}`}
+            style={{ left: `${cPct}%` }}
+          >
+            {cVal}{unit}
+          </span>
+        </div>
+
+        {/* Track + handles. Two real <input type="range"> stacked on
+            top of each other, both pointer-events:none on the bar but
+            pointer-events:auto on the thumbs (CSS in globals if you
+            want sleeker thumbs; here we use the default which already
+            looks decent on every browser). */}
+        <div className="relative h-6">
+          {/* Background track: OK zone (muted) running the full width */}
+          <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-muted" />
+          {/* Warn-to-Crit gradient between the two handles */}
+          <div
+            className="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-full"
+            style={{
+              left: `${wPct}%`,
+              width: `${Math.max(0, cPct - wPct)}%`,
+              background: "linear-gradient(90deg, rgb(245 158 11), rgb(239 68 68))",
+            }}
+          />
+          {/* OVER-CRIT zone (right of critical) — solid red dim */}
+          <div
+            className="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-r-full bg-red-500/30"
+            style={{ left: `${cPct}%`, right: 0 }}
+          />
+          {/* Two superposed range inputs. Pointer-events on the thumb
+              only, so the inert track bar above stays visible. */}
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            disabled={!editMode}
+            value={wVal}
+            onChange={(e) => setVal(wKey, Number(e.target.value), cVal, true)}
+            className="absolute inset-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-moz-range-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-500 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-amber-500 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-background"
+            title={`Warning (recommended: ${wLeaf.recommended}${unit})`}
+          />
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            disabled={!editMode}
+            value={cVal}
+            onChange={(e) => setVal(cKey, Number(e.target.value), wVal, false)}
+            className="absolute inset-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-moz-range-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-red-500 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-red-500 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-background"
+            title={`Critical (recommended: ${cLeaf.recommended}${unit})`}
+          />
+        </div>
+
+        {/* Zone labels — explicit ranges so the operator knows where
+            "warn" starts and ends without having to read the handles. */}
+        {!options?.hideLabels && (
+          <div className="grid grid-cols-3 gap-2 mt-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+            <span>OK &lt; {wVal}{unit}</span>
+            <span className="text-center">WARN {wVal}–{cVal}{unit}</span>
+            <span className="text-right">CRIT &gt; {cVal}{unit}</span>
+          </div>
+        )}
       </div>
     )
   }
@@ -518,9 +696,9 @@ export function HealthThresholds() {
         </div>
         <CardDescription>
           The Health Monitor and notifications fire when these thresholds are crossed.
-          Amber inputs are warning levels, red inputs are critical levels. A blue ring
-          marks a value you've customised away from the recommended default — hover the
-          field to see the recommendation, or use Reset to restore it.
+          Drag the amber handle to set the warning level and the red handle to set the
+          critical level. Values that differ from the recommended default appear in blue —
+          hover a handle to see the recommendation, or use Reset to restore it.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -556,7 +734,7 @@ export function HealthThresholds() {
                       <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <h4 className="text-sm font-medium">{section.title}</h4>
                     </div>
-                    {!editMode && (
+                    {editMode && (
                       <button
                         className="h-6 w-6 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors flex items-center justify-center"
                         onClick={() => handleResetSection(section.id)}
@@ -571,18 +749,51 @@ export function HealthThresholds() {
                       {section.description}
                     </p>
                   )}
-                  <div className="divide-y divide-border/40">
-                    {section.rowGroups
-                      ? section.rowGroups.map((group) => (
-                          <div key={group.subKey} className="py-1.5">
-                            <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-0.5 px-1">
-                              {group.label}
-                            </div>
-                            {renderField([section.id, group.subKey, "warning"], "Warning")}
-                            {renderField([section.id, group.subKey, "critical"], "Critical")}
+                  <div>
+                    {section.rowGroups ? (
+                      // Per-class disk temperature: one slider per row
+                      // (HDD / SSD / NVMe / SAS). Group label sits on
+                      // top of each slider so the operator scans the
+                      // column from top down without losing context.
+                      section.rowGroups.map((group) => (
+                        <div key={group.subKey} className="py-1.5 border-b border-border/40 last:border-b-0">
+                          <div className="text-[11px] uppercase tracking-wider text-muted-foreground px-1">
+                            {group.label}
                           </div>
-                        ))
-                      : section.fields.map((f) => renderField(f.path, f.label))}
+                          {renderThresholdRange([section.id, group.subKey])}
+                        </div>
+                      ))
+                    ) : section.id === "memory" ? (
+                      // Memory & Swap is special: warn/crit pair for
+                      // RAM, plus a single Swap threshold that has no
+                      // companion (it's a "critical only" metric).
+                      // Both use sliders so the section reads as one
+                      // visual language end to end.
+                      <>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground px-1">
+                          RAM
+                        </div>
+                        {renderThresholdRange(["memory"])}
+                        <div className="border-t border-border/40">
+                          <div className="text-[11px] uppercase tracking-wider text-muted-foreground px-1 pt-1.5">
+                            Swap (critical only)
+                          </div>
+                          {renderSingleThresholdSlider(["memory", "swap_critical"], "critical")}
+                        </div>
+                      </>
+                    ) : section.fields.length === 2 &&
+                      section.fields[0].path[section.fields[0].path.length - 1] === "warning" &&
+                      section.fields[1].path[section.fields[1].path.length - 1] === "critical" ? (
+                      // Generic warn+crit pair (CPU, CPU temp, storage
+                      // capacities …) → single slider.
+                      renderThresholdRange([section.id])
+                    ) : (
+                      // Fallback for any future section shape — keep
+                      // the original per-field number inputs.
+                      <div className="divide-y divide-border/40">
+                        {section.fields.map((f) => renderField(f.path, f.label))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )

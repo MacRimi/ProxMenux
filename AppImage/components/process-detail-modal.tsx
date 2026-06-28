@@ -17,6 +17,12 @@ interface ProcessInfo {
   parent_pid?: number
   user: string
   cpu: number
+  /** CPU% averaged over the process's whole lifetime. Surfaces
+   *  long-running idle processes that consume a steady baseline but
+   *  don't spike during the 1-s sample window (an orphan `bash -s`
+   *  in a sleep-loop, a polling daemon, etc.). Only meaningful on
+   *  the CPU sort response. */
+  cpu_avg?: number
   mem: number
   rss_kb: number
   command: string
@@ -213,6 +219,19 @@ export function ProcessDetailModal({ open, onOpenChange, sort }: ProcessDetailMo
                         {sort === "cpu" ? (
                           <div className="flex flex-col items-end gap-1 min-w-0">
                             <span className={`font-mono text-sm font-semibold ${accent.text}`}>{p.cpu.toFixed(1)}</span>
+                            {/* Show lifetime average only when it
+                                materially differs from the live
+                                sample (process consumes a steady
+                                baseline but was idle at sample time
+                                — orphaned bash loop, polling daemon).
+                                The 0.5 / 1.5x thresholds skip cases
+                                where avg and now match within sampler
+                                noise. */}
+                            {typeof p.cpu_avg === "number" && p.cpu_avg >= 0.5 && p.cpu_avg > p.cpu * 1.5 && (
+                              <span className="font-mono text-[10px] text-amber-400" title="Average CPU% across this process's lifetime — useful for finding long-running idle baselines">
+                                avg {p.cpu_avg.toFixed(1)}
+                              </span>
+                            )}
                             <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                               <div className="h-full rounded-full" style={{ width: `${barPct}%`, background: accent.bar }} />
                             </div>

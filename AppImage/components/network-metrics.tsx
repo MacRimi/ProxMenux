@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
-import { Wifi, Activity, Network, Router, AlertCircle, Zap, Timer } from 'lucide-react'
+import { Wifi, Activity, Network, Router, AlertCircle, Zap, Timer, EthernetPort, ArrowDown, ArrowUp, Box } from 'lucide-react'
 import useSWR from "swr"
 import { NetworkTrafficChart } from "./network-traffic-chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
@@ -63,6 +63,12 @@ interface NetworkInterface {
   errors_out?: number
   drops_in?: number
   drops_out?: number
+  // Live rate (bytes/sec) computed by the backend as the delta
+  // between this poll and the previous one. Present from the second
+  // /api/network response onward; absent on the first call after the
+  // service starts or after a long pause.
+  rx_Bps?: number
+  tx_Bps?: number
   bond_mode?: string
   bond_slaves?: string[]
   bond_active_slave?: string | null
@@ -76,6 +82,209 @@ interface NetworkInterface {
   vm_type?: string
   vm_status?: string
 }
+
+// Same dot-prefix tone the Storage cards use, so a "no errors" /
+// "errors present" cue reads identically across pages.
+const NetStatusDot = ({ tone }: { tone: "ok" | "warn" | "fail" }) => {
+  const cls =
+    tone === "ok" ? "bg-green-500" : tone === "warn" ? "bg-yellow-500" : "bg-red-500"
+  return <span className={`inline-block h-2 w-2 rounded-full shrink-0 ${cls}`} aria-hidden />
+}
+const netCounterTone = (n: number | null | undefined): "ok" | "warn" | "fail" => {
+  if (!n || n <= 0) return "ok"
+  if (n < 10) return "warn"
+  return "fail"
+}
+
+// Icon picker — defaults to the actual port type rather than a Wi-Fi
+// glyph for everything. Wireless interfaces (wl*/wifi*) keep the Wi-Fi
+// glyph; wired NICs use EthernetPort; bonds/bridges/vlans get more
+// specific icons so the operator can tell them apart at a glance.
+function getInterfaceIcon(iface: NetworkInterface): React.ComponentType<{ className?: string }> {
+  const name = (iface.name || "").toLowerCase()
+  const type = (iface.type || "").toLowerCase()
+  if (name.startsWith("wl") || name.startsWith("wifi")) return Wifi
+  if (type === "bridge") return Network
+  if (type === "bond") return Router
+  if (type === "vlan") return Activity
+  if (type === "vm_lxc" || type === "virtual") return Box
+  // Physical wired NIC (eth0, enp*, ens*, eno*, nic0, …) → ethernet port.
+  return EthernetPort
+}
+
+// Match the dark blue badge tone the Storage card uses for the disk
+// type chip, but mapped to the actual interface class.
+function getInterfaceTypeChip(type: string) {
+  switch ((type || "").toLowerCase()) {
+    case "physical":
+      return { className: "bg-blue-500/10 text-blue-400 border-blue-500/20", label: "Physical" }
+    case "bridge":
+      return { className: "bg-green-500/10 text-green-400 border-green-500/20", label: "Bridge" }
+    case "bond":
+      return { className: "bg-purple-500/10 text-purple-400 border-purple-500/20", label: "Bond" }
+    case "vlan":
+      return { className: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", label: "VLAN" }
+    case "vm_lxc":
+    case "virtual":
+      return { className: "bg-orange-500/10 text-orange-400 border-orange-500/20", label: "Virtual" }
+    default:
+      return { className: "bg-gray-500/10 text-gray-400 border-gray-500/20", label: type || "Unknown" }
+  }
+}
+
+// Per-interface card matching the Storage page's "Physical Disks"
+// pattern: 2-line header (identity / live state), horizontal divider,
+// vertical key→value stat block, footer with serial + arrow CTA.
+// Replaces the row-style block that was unchanged since 1.0.0.
+function renderPhysicalInterfaceCardV2(
+  iface: NetworkInterface,
+  onOpen: (iface: NetworkInterface) => void,
+) {
+  const Icon = getInterfaceIcon(iface)
+  const chip = getInterfaceTypeChip(iface.type)
+  const isUp = (iface.status || "").toLowerCase() === "up"
+  const firstAddr = iface.addresses?.[0]?.ip || ""
+  const extraAddrs = Math.max(0, (iface.addresses?.length || 0) - 1)
+  const speedStr = formatSpeed(iface.speed)
+  const errIn = iface.errors_in ?? 0
+  const errOut = iface.errors_out ?? 0
+  const dropIn = iface.drops_in ?? 0
+  const dropOut = iface.drops_out ?? 0
+  const totalErrors = errIn + errOut
+  const totalDrops = dropIn + dropOut
+
+  return (
+    <div
+      key={iface.name}
+      className="border border-white/10 rounded-lg p-5 cursor-pointer bg-card hover:bg-white/5 transition-colors flex flex-col"
+      onClick={() => onOpen(iface)}
+    >
+      {/* Header L1: identity (icon + name + type) | status. */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
+          <Icon className="h-5 w-5 text-muted-foreground shrink-0" />
+          <h3 className="font-mono font-bold text-base break-all">{iface.name}</h3>
+          <Badge variant="outline" className={chip.className}>{chip.label}</Badge>
+        </div>
+        <span
+          className={`flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide shrink-0 ${
+            isUp ? "text-green-500" : "text-red-400"
+          }`}
+        >
+          <NetStatusDot tone={isUp ? "ok" : "fail"} />
+          {iface.status || "?"}
+        </span>
+      </div>
+
+      {/* Header L2: speed | duplex (compact, live link info). */}
+      <div className="flex items-center justify-between gap-3 mt-1 text-sm text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <Zap className="h-3.5 w-3.5" />
+          {speedStr}
+        </span>
+        <span className="capitalize">{iface.duplex || "—"}</span>
+      </div>
+
+      {/* Separator. */}
+      <div className="border-t border-border/60 my-3" />
+
+      {/* Stats: key uppercase left · value right. */}
+      <div className="space-y-2 text-sm">
+        {firstAddr && (
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[11px] uppercase tracking-wider text-muted-foreground shrink-0">
+              IP
+            </span>
+            <span className="font-medium text-right truncate font-mono text-xs">
+              {firstAddr}{extraAddrs > 0 ? ` (+${extraAddrs})` : ""}
+            </span>
+          </div>
+        )}
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">MTU</span>
+          <span className="font-medium">{iface.mtu || "—"}</span>
+        </div>
+        {/* Live RX/TX rate. Same wording the Network Traffic chart
+            uses ("Received" / "Sent") and the same canonical colours
+            (green for Received, blue for Sent). Falls back to "—"
+            until the backend has a delta — first poll after start
+            has no previous sample to compute against. */}
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+            <ArrowDown className="h-3 w-3 text-green-500" /> Received
+          </span>
+          <span className="font-medium text-green-500 tabular-nums">
+            {iface.rx_Bps !== undefined ? formatRate(iface.rx_Bps) : "—"}
+          </span>
+        </div>
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+            <ArrowUp className="h-3 w-3 text-blue-400" /> Sent
+          </span>
+          <span className="font-medium text-blue-400 tabular-nums">
+            {iface.tx_Bps !== undefined ? formatRate(iface.tx_Bps) : "—"}
+          </span>
+        </div>
+        {(totalErrors > 0 || totalDrops > 0) && (
+          <>
+            {totalErrors > 0 && (
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Errors</span>
+                <span
+                  className={`font-medium flex items-center gap-1.5 ${
+                    netCounterTone(totalErrors) === "ok"
+                      ? "text-green-500"
+                      : netCounterTone(totalErrors) === "warn"
+                        ? "text-yellow-500"
+                        : "text-red-500"
+                  }`}
+                >
+                  <NetStatusDot tone={netCounterTone(totalErrors)} />
+                  {totalErrors.toLocaleString()}
+                </span>
+              </div>
+            )}
+            {totalDrops > 0 && (
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Drops</span>
+                <span
+                  className={`font-medium flex items-center gap-1.5 ${
+                    netCounterTone(totalDrops) === "ok"
+                      ? "text-green-500"
+                      : netCounterTone(totalDrops) === "warn"
+                        ? "text-yellow-500"
+                        : "text-red-500"
+                  }`}
+                >
+                  <NetStatusDot tone={netCounterTone(totalDrops)} />
+                  {totalDrops.toLocaleString()}
+                </span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Footer: MAC (left, mono) + arrow CTA (right). */}
+      <div className="border-t border-border/60 mt-auto pt-3 flex items-center justify-between gap-3">
+        {iface.mac_address ? (
+          <span className="text-[11px] text-foreground font-mono truncate min-w-0">
+            <span className="text-muted-foreground">MAC:</span> {iface.mac_address}
+          </span>
+        ) : (
+          <span />
+        )}
+        <span
+          className="text-blue-400 hover:text-blue-300 transition-colors text-base leading-none shrink-0"
+          aria-label="View details"
+        >
+          →
+        </span>
+      </div>
+    </div>
+  )
+}
+
 
 const getInterfaceTypeBadge = (type: string) => {
   switch (type) {
@@ -103,6 +312,19 @@ const getVMTypeBadge = (vmType: string | undefined) => {
     return { color: "bg-purple-500/10 text-purple-500 border-purple-500/20", label: "VM" }
   }
   return { color: "bg-gray-500/10 text-gray-500 border-gray-500/20", label: "Unknown" }
+}
+
+// Format bytes/sec into the canonical network unit ladder.
+// Matches the convention used by the Network Traffic chart so the
+// rates on the per-interface cards and the chart read the same way.
+const formatRate = (bps: number | undefined): string => {
+  if (bps === undefined || bps === null || !Number.isFinite(bps)) return "—"
+  if (bps < 1) return "0 B/s"
+  const k = 1024
+  const sizes = ["B/s", "KB/s", "MB/s", "GB/s"]
+  const i = Math.min(sizes.length - 1, Math.floor(Math.log(bps) / Math.log(k)))
+  const v = bps / Math.pow(k, i)
+  return `${v >= 100 ? v.toFixed(0) : v.toFixed(v >= 10 ? 1 : 2)} ${sizes[i]}`
 }
 
 const formatBytes = (bytes: number | undefined): string => {
@@ -534,76 +756,13 @@ export function NetworkMetrics() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {networkData.physical_interfaces.map((interface_, index) => {
-              const typeBadge = getInterfaceTypeBadge(interface_.type)
-
-              return (
-                <div
-                  key={index}
-                  className="flex flex-col gap-3 p-4 rounded-lg border border-white/10 bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer"
-                  onClick={() => setSelectedInterface(interface_)}
-                >
-                  {/* First row: Icon, Name, Type Badge, Status */}
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <Wifi className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                    <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
-                      <div className="font-medium text-foreground">{interface_.name}</div>
-                      <Badge variant="outline" className={typeBadge.color}>
-                        {typeBadge.label}
-                      </Badge>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={
-                        interface_.status === "up"
-                          ? "bg-green-500/10 text-green-500 border-green-500/20"
-                          : "bg-red-500/10 text-red-500 border-red-500/20"
-                      }
-                    >
-                      {interface_.status.toUpperCase()}
-                    </Badge>
-                  </div>
-
-                  {/* Second row: Details - Responsive layout */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <div className="text-muted-foreground text-xs">IP Address</div>
-                      <div className="font-medium text-foreground font-mono text-sm truncate">
-                        {interface_.addresses.length > 0 ? interface_.addresses[0].ip : "N/A"}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-muted-foreground text-xs">Speed</div>
-                      <div className="font-medium text-foreground flex items-center gap-1 text-xs">
-                        <Zap className="h-3 w-3" />
-                        {formatSpeed(interface_.speed)}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-muted-foreground text-xs">Duplex</div>
-                      <div className="font-medium text-foreground text-xs capitalize">{interface_.duplex}</div>
-                    </div>
-
-                    <div>
-                      <div className="text-muted-foreground text-xs">MTU</div>
-                      <div className="font-medium text-foreground text-xs">{interface_.mtu}</div>
-                    </div>
-
-                    {interface_.mac_address && (
-                      <div className="col-span-2 md:col-span-4">
-                        <div className="text-muted-foreground text-xs">MAC</div>
-                        <div className="font-medium text-foreground font-mono text-xs truncate">
-                          {interface_.mac_address}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
+          {/* Same responsive grid as the Storage page: 3 cols desktop,
+              2 cols tablet, 1 col mobile. Cards self-size so a row of
+              long interface names won't push others off-screen. */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {networkData.physical_interfaces.map((iface) =>
+              renderPhysicalInterfaceCardV2(iface, setSelectedInterface),
+            )}
           </div>
         </CardContent>
       </Card>

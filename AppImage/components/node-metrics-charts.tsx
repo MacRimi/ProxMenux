@@ -72,9 +72,60 @@ interface MetricsError {
   suggestion?: string
 }
 
+// AVG / MAX / MIN chip row for the chart card headers. Values come
+// from the backend `period_stats` (calculated over the raw RRD points
+// BEFORE downsampling), not from the displayed chart points — that's
+// what makes a 1-minute CPU spike still appear in the 24h MAX even
+// though the chart shows 5-min bucket averages.
+//
+// Colour choice: all three values render in the same foreground tone.
+// The previous red(max)/green(min) scheme misread as severity (a
+// healthy 10 % CPU max showed in red and looked like an alert).
+//
+// Responsive: on ≥sm the chips sit to the right of the title; on
+// mobile they wrap below in their own row (the parent CardHeader uses
+// `flex-col sm:flex-row`). Smaller text + tabular-nums keeps the
+// chips compact enough that they don't crowd long titles.
+type PeriodStat = { avg: number; max: number; min: number } | null
+function ChartStatsHeader({
+  stats,
+  suffix = "",
+}: {
+  stats: PeriodStat
+  suffix?: string
+}) {
+  if (!stats) return null
+  const fmt = (n: number) => (n >= 100 ? n.toFixed(0) : n.toFixed(1))
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm tabular-nums">
+      <span>
+        <span className="font-semibold text-foreground">{fmt(stats.avg)}{suffix}</span>
+        <span className="ml-1 text-xs uppercase tracking-wide text-muted-foreground">avg</span>
+      </span>
+      <span>
+        <span className="font-semibold text-foreground">{fmt(stats.max)}{suffix}</span>
+        <span className="ml-1 text-xs uppercase tracking-wide text-muted-foreground">max</span>
+      </span>
+      <span>
+        <span className="font-semibold text-foreground">{fmt(stats.min)}{suffix}</span>
+        <span className="ml-1 text-xs uppercase tracking-wide text-muted-foreground">min</span>
+      </span>
+    </div>
+  )
+}
+
+
 export function NodeMetricsCharts() {
   const [timeframe, setTimeframe] = useState("day")
   const [data, setData] = useState<NodeMetricsData[]>([])
+  // period_stats from the backend — computed over the raw RRD points
+  // BEFORE the 5-min downsampling so the chart header's MAX/MIN
+  // captures real per-minute extremes (a 1-min CPU spike still shows
+  // up on the 24h view's MAX).
+  const [periodStats, setPeriodStats] = useState<{
+    cpu?: PeriodStat
+    memory_used?: PeriodStat
+  }>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<MetricsError | null>(null)
   const isMobile = useIsMobile()
@@ -164,6 +215,7 @@ export function NodeMetricsCharts() {
       })
 
       setData(transformedData)
+      setPeriodStats(result.period_stats || {})
     } catch (err: any) {
       console.error("Error fetching node metrics:", err)
       // fetchApi attaches the parsed JSON body to err.body. The metrics
@@ -323,10 +375,13 @@ export function NodeMetricsCharts() {
         {/* CPU Usage + Load Average Chart */}
         <Card className="bg-card border-border">
           <CardHeader className="px-4 md:px-6">
-            <CardTitle className="text-foreground flex items-center">
-              <TrendingUp className="h-5 w-5 mr-2" />
-              CPU Usage & Load Average
-            </CardTitle>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <CardTitle className="text-foreground flex items-center">
+                <TrendingUp className="h-5 w-5 mr-2" />
+                CPU Usage & Load Average
+              </CardTitle>
+              <ChartStatsHeader stats={periodStats.cpu ?? null} suffix="%" />
+            </div>
           </CardHeader>
           <CardContent className="px-0 md:px-6">
             <ResponsiveContainer width="100%" height={300}>
@@ -395,10 +450,13 @@ export function NodeMetricsCharts() {
         {/* Memory Usage Chart */}
         <Card className="bg-card border-border">
           <CardHeader className="px-4 md:px-6">
-            <CardTitle className="text-foreground flex items-center">
-              <MemoryStick className="h-5 w-5 mr-2" />
-              Memory Usage
-            </CardTitle>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <CardTitle className="text-foreground flex items-center">
+                <MemoryStick className="h-5 w-5 mr-2" />
+                Memory Usage
+              </CardTitle>
+              <ChartStatsHeader stats={periodStats.memory_used ?? null} suffix=" GB" />
+            </div>
           </CardHeader>
           <CardContent className="px-0 pr-2 md:px-6">
             <ResponsiveContainer width="100%" height={300}>
