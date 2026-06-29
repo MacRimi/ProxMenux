@@ -8323,6 +8323,39 @@
     "os": "debian"
   },
   {
+    "name": "iVentoy",
+    "slug": "iventoy",
+    "desc": "iVentoy is an upgraded PXE server that allows simultaneous OS booting and installation on multiple machines via network. It is user-friendly, requiring only the placement of ISO files in a designated folder and selecting PXE boot on the client machine. iVentoy supports x86 Legacy BIOS, IA32 UEFI, x86_64 UEFI, and ARM64 UEFI modes. It is compatible with over 110 OS types, including Windows, WinPE, Linux, and VMware.",
+    "script": "ct/iventoy.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/iventoy.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/iventoy.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems"
+    ],
+    "notes": [],
+    "warnings": [
+      "Container must be privileged."
+    ],
+    "port": 26000,
+    "website": "https://www.iventoy.com/",
+    "documentation": "https://www.iventoy.com/en/doc_news.html",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/iventoy.webp",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Jackett",
     "slug": "jackett",
     "desc": "Jackett supports a wide range of trackers, including popular ones like The Pirate Bay, RARBG, and Torrentz2, as well as many private trackers. It can be integrated with several BitTorrent clients, including qBittorrent, Deluge, and uTorrent, among others.",
