@@ -4,9 +4,10 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
-import { Wifi, Activity, Network, Router, AlertCircle, Zap, Timer, EthernetPort, ArrowDown, ArrowUp, Box } from 'lucide-react'
+import { Wifi, Activity, Network, Router, AlertCircle, Zap, Timer, EthernetPort, ArrowDown, ArrowUp, Box, ChevronRight } from 'lucide-react'
 import useSWR from "swr"
 import { NetworkTrafficChart } from "./network-traffic-chart"
+import { NetworkFlow, type NetworkFlowData } from "./network-flow"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { fetchApi } from "../lib/api-config"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
@@ -69,6 +70,14 @@ interface NetworkInterface {
   // service starts or after a long pause.
   rx_Bps?: number
   tx_Bps?: number
+  // Hardware ceiling parsed from ethtool's "Supported link modes".
+  // The card shows "(max N Gbps)" next to the negotiated speed when
+  // the link is auto-negotiated below the NIC's max.
+  max_speed?: number
+  // Bridges that have this physical NIC as their underlying interface
+  // (directly, or as a bond slave). Surfaced in the card so the
+  // operator can see "this NIC → vmbr0" at a glance.
+  used_by_bridges?: string[]
   bond_mode?: string
   bond_slaves?: string[]
   bond_active_slave?: string | null
@@ -146,6 +155,13 @@ function renderPhysicalInterfaceCardV2(
   const firstAddr = iface.addresses?.[0]?.ip || ""
   const extraAddrs = Math.max(0, (iface.addresses?.length || 0) - 1)
   const speedStr = formatSpeed(iface.speed)
+  // Hardware max in Mbps from ethtool. Show only when it's different
+  // from the negotiated speed (avoids "1 Gbps (max 1 Gbps)" noise).
+  const maxSpeedStr =
+    iface.max_speed && iface.max_speed !== iface.speed
+      ? formatSpeed(iface.max_speed)
+      : ""
+  const bridgesUsing = iface.used_by_bridges || []
   const errIn = iface.errors_in ?? 0
   const errOut = iface.errors_out ?? 0
   const dropIn = iface.drops_in ?? 0
@@ -176,11 +192,16 @@ function renderPhysicalInterfaceCardV2(
         </span>
       </div>
 
-      {/* Header L2: speed | duplex (compact, live link info). */}
+      {/* Header L2: speed + max (when negotiated < hw) | duplex. */}
       <div className="flex items-center justify-between gap-3 mt-1 text-sm text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <Zap className="h-3.5 w-3.5" />
           {speedStr}
+          {maxSpeedStr && (
+            <span className="text-[11px] text-muted-foreground/70">
+              · max {maxSpeedStr}
+            </span>
+          )}
         </span>
         <span className="capitalize">{iface.duplex || "—"}</span>
       </div>
@@ -204,6 +225,16 @@ function renderPhysicalInterfaceCardV2(
           <span className="text-[11px] uppercase tracking-wider text-muted-foreground">MTU</span>
           <span className="font-medium">{iface.mtu || "—"}</span>
         </div>
+        {bridgesUsing.length > 0 && (
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[11px] uppercase tracking-wider text-muted-foreground shrink-0">
+              Bridge
+            </span>
+            <span className="font-medium text-right truncate font-mono text-xs text-cyan-400">
+              {bridgesUsing.map((b) => `→ ${b}`).join("  ")}
+            </span>
+          </div>
+        )}
         {/* Live RX/TX rate. Same wording the Network Traffic chart
             uses ("Received" / "Sent") and the same canonical colours
             (green for Received, blue for Sent). Falls back to "—"
@@ -364,7 +395,10 @@ export function NetworkMetrics() {
     error,
     isLoading,
   } = useSWR<NetworkData>("/api/network", fetcher, {
-    refreshInterval: 15000,
+    // Was 15 s — too long for the Network Flow's pulse animation
+    // which needs near-live rates. 3 s gives the dashboard responsive
+    // updates without hammering the backend.
+    refreshInterval: 3000,
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
   })
@@ -653,13 +687,16 @@ export function NetworkMetrics() {
         </Card>
 
         {/* Latency Card with Sparkline */}
-        <Card 
-          className="bg-card border-border cursor-pointer hover:bg-muted/50 transition-colors"
+        <Card
+          className="bg-card border-border cursor-pointer hover:bg-white/5 transition-colors"
           onClick={() => setLatencyModalOpen(true)}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Network Latency</CardTitle>
-            <Timer className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Timer className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4 opacity-60" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between mb-2">
@@ -744,6 +781,87 @@ export function NetworkMetrics() {
         </CardContent>
       </Card>
 
+      {/* Network Flow — proof of concept. Lives next to Network Traffic
+          while the design is validated on a real host. Once approved,
+          this card replaces (or pairs with) the chart above. */}
+      {(() => {
+        const toMBps = (bps?: number) => (bps || 0) / (1024 * 1024)
+        const allIfaces = [
+          ...(networkData.physical_interfaces || []),
+          ...(networkData.bridge_interfaces || []),
+          ...(networkData.vm_lxc_interfaces || []),
+        ]
+        const flowData: NetworkFlowData = {
+          nics: (networkData.physical_interfaces || []).map((p) => ({
+            id: p.name,
+            link: formatSpeed(p.speed),
+            rx: toMBps(p.rx_Bps),
+            tx: toMBps(p.tx_Bps),
+            status: (p.status || "").toLowerCase() === "up" ? "up" : "down",
+          })),
+          bridges: (networkData.bridge_interfaces || []).map((b) => ({
+            id: b.name,
+            parent: b.bridge_physical_interface,
+          })),
+          consumers: [
+            (() => {
+              // PROXMOX node = sum of every running guest's rate.
+              // This stays consistent with each bridge's own label
+              // (which sums the same guest rates), and with the
+              // total trunk flow — no discrepancy between the host's
+              // displayed rate and the sum of its bridges.
+              const runningGuests = (networkData.vm_lxc_interfaces || []).filter(
+                (v) => v.vm_status !== "stopped"
+              )
+              return {
+                id: "host",
+                label: "host",
+                kind: "host" as const,
+                bridge: (networkData.bridge_interfaces?.[0]?.name) || "",
+                rx: runningGuests.reduce((a, v) => a + toMBps(v.rx_Bps), 0),
+                tx: runningGuests.reduce((a, v) => a + toMBps(v.tx_Bps), 0),
+              }
+            })(),
+            ...(networkData.vm_lxc_interfaces || []).map((v) => {
+              // Authoritative bridge from the kernel (read by the
+              // backend from /sys/class/net/<iface>/master). Fallback
+              // to bridge_members scan, then first bridge as last
+              // resort so we never silently drop a guest.
+              const ownerName =
+                (v as any).bridge_owner ||
+                (networkData.bridge_interfaces || []).find((b) =>
+                  (b.bridge_members || []).includes(v.name)
+                )?.name ||
+                (networkData.bridge_interfaces?.[0]?.name || "")
+              return {
+                id: v.name,
+                label: v.vm_name || v.name,
+                kind: (v.vm_type === "vm" ? "vm" : "lxc") as "vm" | "lxc",
+                bridge: ownerName,
+                rx: toMBps(v.rx_Bps),
+                tx: toMBps(v.tx_Bps),
+                offline: v.vm_status === "stopped",
+              }
+            }),
+          ],
+        }
+        return (
+          <NetworkFlow
+            data={flowData}
+            onNodeClick={(name) => {
+              // Map the clicked node back to a NetworkInterface and
+              // open the same details modal the cards below use. The
+              // virtual "host" id never matches a real interface, so
+              // it's a no-op — tapping the PROXMOX circle does nothing
+              // (there's no host-level modal in this view).
+              if (name === "host") return
+              const match = allIfaces.find((iface) => iface.name === name)
+              if (match) setSelectedInterface(match)
+            }}
+          />
+        )
+      })()}
+
       {/* Physical Interfaces section */}
       <Card className="bg-card border-border">
         <CardHeader>
@@ -791,7 +909,7 @@ export function NetworkMetrics() {
                   >
                     {/* First row: Icon, Name, Type Badge, Physical Interface (responsive), Status */}
                     <div className="flex items-center gap-3 flex-wrap">
-                      <Wifi className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                      <Network className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                       <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
                         <div className="font-medium text-foreground">{interface_.name}</div>
                         <Badge variant="outline" className={typeBadge.color}>
@@ -907,14 +1025,14 @@ export function NetworkMetrics() {
                   >
                     {/* First row: Icon, Name, VM/LXC Badge, VM Name, Status */}
                     <div className="flex items-center gap-3 flex-wrap">
-                      <Wifi className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                      <EthernetPort className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                       <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
                         <div className="font-medium text-foreground">{interface_.name}</div>
                         <Badge variant="outline" className={vmTypeBadge.color}>
                           {vmTypeBadge.label}
                         </Badge>
                         {interface_.vm_name && (
-                          <div className="text-sm text-muted-foreground truncate">→ {interface_.vm_name}</div>
+                          <div className="text-sm text-orange-500 truncate">→ {interface_.vm_name}</div>
                         )}
                       </div>
                       <Badge
@@ -973,7 +1091,7 @@ export function NetworkMetrics() {
 
       {/* Interface Details Modal */}
       <Dialog open={!!selectedInterface} onOpenChange={() => setSelectedInterface(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl w-[calc(100vw-1rem)] sm:w-[95vw] max-h-[calc(100dvh-2rem)] sm:max-h-[90vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Router className="h-5 w-5" />

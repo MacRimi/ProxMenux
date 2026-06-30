@@ -541,7 +541,12 @@ export function SystemOverview() {
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Temperature</CardTitle>
-            <Thermometer className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Thermometer className="h-4 w-4" />
+              {systemData.temperature > 0 && (
+                <ChevronRight className="h-4 w-4 opacity-60" />
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">

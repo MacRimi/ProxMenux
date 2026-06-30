@@ -8,7 +8,7 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
 import { Textarea } from "./ui/textarea"
@@ -1980,11 +1980,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 />
                               </div>
 
-                              {/* Disk I/O */}
+                              {/* Disk I/O — cumulative counters from Proxmox
+                                  API: bytes read/written since the VM/LXC
+                                  was last started, not a per-period rate. */}
                               <div>
                                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
                                   <HardDrive className="h-3.5 w-3.5" />
-                                  <span>Disk I/O</span>
+                                  <span>Disk I/O <span className="text-[10px] opacity-70">(since boot)</span></span>
                                 </div>
                                 <div className="space-y-1">
                                   <div className="text-sm text-green-500 flex items-center gap-1">
@@ -1998,11 +2000,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 </div>
                               </div>
 
-                              {/* Network I/O */}
+                              {/* Network I/O — cumulative counters from
+                                  Proxmox API: bytes in/out since the VM/LXC
+                                  was last started. */}
                               <div>
                                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
                                   <Network className="h-3.5 w-3.5" />
-                                  <span>Network I/O</span>
+                                  <span>Network I/O <span className="text-[10px] opacity-70">(since boot)</span></span>
                                 </div>
                                 <div className="space-y-1">
                                   <div className="text-sm text-green-500 flex items-center gap-1">
@@ -2542,19 +2546,86 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       Network
                                     </h4>
                                     <div className="space-y-3">
-                                      {/* Network Interfaces with proper keys */}
+                                      {/* Network Interfaces with proper keys.
+                                          Renders BOTH a human-readable
+                                          breakdown (bridge, IP, gw, MAC,
+                                          host iface) AND the raw config
+                                          string so power users still see
+                                          the underlying Proxmox config. */}
                                       {Object.keys(vmDetails.config)
                                         .filter((key) => key.match(/^net\d+$/))
-                                        .map((netKey) => (
-                                          <div key={`net-${selectedVM.vmid}-${netKey}`}>
-                                            <div className="text-xs text-muted-foreground mb-1">
-                                              Network Interface {netKey.replace("net", "")}
+                                        .map((netKey) => {
+                                          const raw = vmDetails.config[netKey] as string
+                                          // Parse "name=eth0,bridge=vmbr0,gw=1.2.3.4,..."
+                                          const parsed: Record<string, string> = {}
+                                          raw.split(",").forEach((pair) => {
+                                            const eq = pair.indexOf("=")
+                                            if (eq > 0) {
+                                              parsed[pair.slice(0, eq).trim()] =
+                                                pair.slice(eq + 1).trim()
+                                            } else if (pair && !parsed.model) {
+                                              // bare "virtio" / "e1000" → NIC model
+                                              parsed.model = pair.trim()
+                                            }
+                                          })
+                                          const idx = netKey.replace("net", "")
+                                          // For VMs, the host-side iface is
+                                          // tap<vmid>i<idx>; for LXC it's
+                                          // veth<vmid>i<idx>. Surface it so
+                                          // users can correlate with the
+                                          // "VM & LXC Network Interfaces"
+                                          // card on the network page.
+                                          const hostIface = selectedVM.type === "lxc"
+                                            ? `veth${selectedVM.vmid}i${idx}`
+                                            : `tap${selectedVM.vmid}i${idx}`
+                                          const Field = ({ label, value, mono }:
+                                            { label: string; value: string; mono?: boolean }) => (
+                                            <div className="flex flex-col gap-0.5">
+                                              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</span>
+                                              <span className={`text-foreground ${mono ? "font-mono text-xs" : "text-sm"}`}>{value}</span>
                                             </div>
-                                            <div className="font-medium text-green-500 text-sm break-all font-mono bg-muted/50 p-2 rounded">
-                                              {vmDetails.config[netKey]}
+                                          )
+                                          return (
+                                            <div key={`net-${selectedVM.vmid}-${netKey}`}
+                                                 className="bg-muted/30 rounded-md p-3 space-y-3">
+                                              <div className="flex items-center gap-2 flex-wrap">
+                                                <EthernetPort className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                                <span className="text-sm font-semibold text-foreground">
+                                                  Network Interface {idx}
+                                                </span>
+                                                {parsed.name && (
+                                                  <span className="text-xs text-muted-foreground font-mono">
+                                                    ({parsed.name})
+                                                  </span>
+                                                )}
+                                                <span className="text-xs text-orange-500 font-mono">
+                                                  host: {hostIface}
+                                                </span>
+                                              </div>
+                                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
+                                                {parsed.bridge && <Field label="Bridge" value={parsed.bridge} mono />}
+                                                {parsed.ip && <Field label="IP" value={parsed.ip} mono />}
+                                                {parsed.ip6 && <Field label="IPv6" value={parsed.ip6} mono />}
+                                                {parsed.gw && <Field label="Gateway" value={parsed.gw} mono />}
+                                                {parsed.gw6 && <Field label="Gateway v6" value={parsed.gw6} mono />}
+                                                {parsed.hwaddr && <Field label="MAC" value={parsed.hwaddr.toUpperCase()} mono />}
+                                                {parsed.virtio && <Field label="MAC" value={parsed.virtio.toUpperCase()} mono />}
+                                                {parsed.e1000 && <Field label="MAC" value={parsed.e1000.toUpperCase()} mono />}
+                                                {parsed.type && <Field label="Type" value={parsed.type} mono />}
+                                                {parsed.tag && <Field label="VLAN" value={parsed.tag} mono />}
+                                                {parsed.mtu && <Field label="MTU" value={parsed.mtu} mono />}
+                                                {parsed.rate && <Field label="Rate limit" value={`${parsed.rate} MB/s`} mono />}
+                                                {parsed.firewall === "1" && <Field label="Firewall" value="enabled" />}
+                                              </div>
+                                              <details className="text-xs">
+                                                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Raw config</summary>
+                                                <div className="mt-1 font-mono text-green-500 break-all bg-background/50 p-2 rounded">
+                                                  {raw}
+                                                </div>
+                                              </details>
                                             </div>
-                                          </div>
-                                        ))}
+                                          )
+                                        })}
                                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                                         {vmDetails.config.nameserver && (
                                           <div>

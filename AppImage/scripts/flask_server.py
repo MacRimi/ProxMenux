@@ -4435,53 +4435,210 @@ def api_storage_observations():
     except Exception as e:
         return jsonify({'observations': [], 'error': str(e)}), 500
 
-# ─── Per-NIC live rate cache ────────────────────────────────────────
-# Module-scope so it survives between requests but disappears on
-# service restart (rate after restart re-bootstraps on the second
-# request — matches operator expectations). Guarded by a lock so
-# concurrent /api/network calls from different tabs don't race each
-# other into a corrupt previous snapshot.
+# ─── Background sampler ────────────────────────────────────────
+# A daemon thread polls psutil every 2 s and feeds the per-NIC rate
+# cache. This way the very first /api/network HTTP request after a
+# page load already has enough history to return a rate — no more
+# 15-20 s "waiting for data" on the Network Flow card.
+def _net_rate_sampler_loop():
+    # Fast bootstrap: take TWO samples 1 s apart so the very first
+    # /api/network response (which may arrive in under a second of the
+    # service starting) already has a valid delta to derive rates
+    # from. After that, normal 2 s cadence.
+    try:
+        io = psutil.net_io_counters(pernic=True)
+        _compute_per_nic_rates_live(io)
+        time.sleep(1.0)
+        io = psutil.net_io_counters(pernic=True)
+        _compute_per_nic_rates_live(io)
+    except Exception:
+        pass
+    while True:
+        try:
+            io = psutil.net_io_counters(pernic=True)
+            _compute_per_nic_rates_live(io)
+        except Exception:
+            pass
+        time.sleep(2.0)
+
+_NET_RATE_SAMPLER_STARTED = False
+def _ensure_net_rate_sampler():
+    global _NET_RATE_SAMPLER_STARTED
+    if _NET_RATE_SAMPLER_STARTED:
+        return
+    _NET_RATE_SAMPLER_STARTED = True
+    t = _net_threading.Thread(target=_net_rate_sampler_loop, daemon=True)
+    t.start()
+
+
+# Start the sampler immediately at module load — the dashboard can
+# now ask for rates from its very first poll, instead of waiting for
+# its own request to bootstrap the cache.
+try:
+    _ensure_net_rate_sampler()
+except Exception:
+    pass
+
+
+# ─── Per-NIC live rate (moving window) ──────────────────────────
+# Keep the last ~30s of byte counters and derive the rate from the
+# oldest-vs-newest sample. This is robust against bursty traffic
+# (where a single poll may see 0 bytes between packets) — the window
+# spans multiple poll periods so the rate stays above zero as long
+# as traffic flowed at any point inside it.
 import threading as _net_threading
-_NET_RATE_CACHE = {'time': 0.0, 'per_nic': {}}
 _NET_RATE_LOCK = _net_threading.Lock()
-# Skip rate computation when the cache is older than this — a paused
-# tab returning after a long sleep would otherwise read a delta over
-# minutes/hours and surface it as "the current rate".
-_NET_RATE_MAX_AGE_S = 60.0
+_NET_RATE_HISTORY = {}        # iface → list[(t, rx_bytes, tx_bytes)]
+_NET_RATE_WINDOW_TARGET_S = 5.0    # rate is averaged over this many seconds
+                                   # — short window = near-instant feedback
+                                   # so a Network Flow display matches what
+                                   # the guest itself reports in real time.
+_NET_RATE_WINDOW_MAX_S = 60.0      # samples older than this are discarded
+_NET_RATE_MAX_SAMPLES = 60
+_NET_RATE_STICKY = {}              # iface → {rx: last_nonzero_rx, tx, t}
+_NET_RATE_STICKY_TTL_S = 3600.0    # 1 h — effectively keep the last seen
+                                   # non-zero rate visible until the iface
+                                   # disappears (VM stopped) or 1 h passes.
+                                   # The Network Flow card must NEVER show
+                                   # a "live" guest dropping to 0 just
+                                   # because there's a brief silence.
 
 def _compute_per_nic_rates_live(net_io_per_nic):
-    """Return ``{iface: {rx_Bps, tx_Bps}}`` for the window between the
-    previous call and now.
-
-    First call after service start (or after a >60 s gap) returns an
-    empty dict — the next call has a valid delta. Counter wraps (NIC
-    reset) are clamped to 0 instead of surfacing a negative rate.
+    """Return ``{iface: {rx_Bps, tx_Bps}}`` averaged over ~30 s of
+    history. If the calculated rate dips to 0 but we saw nonzero
+    traffic within the last STICKY_TTL seconds, return that recent
+    value instead — bursty NICs (especially the WAN uplink) flicker
+    between bursts and we don't want the diagram blinking to 0.
     """
     now = time.time()
     rates = {}
     with _NET_RATE_LOCK:
-        prev_time = _NET_RATE_CACHE.get('time', 0.0)
-        prev_data = _NET_RATE_CACHE.get('per_nic', {})
-        elapsed = now - prev_time if prev_time > 0 else 0
-        use_delta = 0 < elapsed <= _NET_RATE_MAX_AGE_S
-        new_data = {}
         for iface, io in net_io_per_nic.items():
-            new_data[iface] = {
-                'bytes_recv': io.bytes_recv,
-                'bytes_sent': io.bytes_sent,
-            }
-            if not use_delta or iface not in prev_data:
+            hist = _NET_RATE_HISTORY.setdefault(iface, [])
+            cutoff = now - _NET_RATE_WINDOW_MAX_S
+            hist = [s for s in hist if s[0] >= cutoff]
+            hist.append((now, io.bytes_recv, io.bytes_sent))
+            if len(hist) > _NET_RATE_MAX_SAMPLES:
+                hist = hist[-_NET_RATE_MAX_SAMPLES:]
+            _NET_RATE_HISTORY[iface] = hist
+            if len(hist) < 2:
                 continue
-            prev = prev_data[iface]
-            rx_delta = max(0, io.bytes_recv - prev['bytes_recv'])
-            tx_delta = max(0, io.bytes_sent - prev['bytes_sent'])
+            # Find the first sample that is at least WINDOW_TARGET_S
+            # old. If none exist (e.g. service just restarted, history
+            # is still warming up), fall back to the OLDEST available
+            # sample — gives the widest possible window so the rate is
+            # still computable instead of yielding window=0.
+            #
+            # Bug fix: the previous loop set ``oldest = s`` on EVERY
+            # iteration, so when no sample qualified it ended up
+            # pointing to the newest one — window=0 → continue → no
+            # rate ever published until 30 s of history accumulated.
+            # Result: visible "drops to 0" each time the cache thinned.
+            oldest = hist[0]
+            for s in hist:
+                if now - s[0] >= _NET_RATE_WINDOW_TARGET_S:
+                    oldest = s
+                    break
+            window = now - oldest[0]
+            if window <= 0:
+                continue
+            rx_rate = max(0, io.bytes_recv - oldest[1]) / window
+            tx_rate = max(0, io.bytes_sent - oldest[2]) / window
+            # Sticky last-nonzero values to avoid 0-flicker.
+            sticky = _NET_RATE_STICKY.setdefault(iface, {'rx': 0.0, 'tx': 0.0, 't': 0.0})
+            if rx_rate > 0:
+                sticky['rx'] = rx_rate
+                sticky['t'] = now
+            elif now - sticky['t'] < _NET_RATE_STICKY_TTL_S and sticky['rx'] > 0:
+                rx_rate = sticky['rx']
+            if tx_rate > 0:
+                sticky['tx'] = tx_rate
+                sticky['t'] = now
+            elif now - sticky['t'] < _NET_RATE_STICKY_TTL_S and sticky['tx'] > 0:
+                tx_rate = sticky['tx']
             rates[iface] = {
-                'rx_Bps': round(rx_delta / elapsed, 2),
-                'tx_Bps': round(tx_delta / elapsed, 2),
+                'rx_Bps': round(rx_rate, 2),
+                'tx_Bps': round(tx_rate, 2),
             }
-        _NET_RATE_CACHE['time'] = now
-        _NET_RATE_CACHE['per_nic'] = new_data
     return rates
+
+
+# ─── Resolve the bridge each interface belongs to ─────────────
+# /sys/class/net/<iface>/master is a symlink pointing to the master
+# device (bridge or bond). This is the kernel's authoritative source.
+def _iface_master(iface_name):
+    try:
+        master_path = f'/sys/class/net/{iface_name}/master'
+        if os.path.islink(master_path):
+            return os.path.basename(os.readlink(master_path))
+    except Exception:
+        pass
+    return None
+
+
+# Walks through Proxmox firewall bridges (fwbrXXX) to reach the real
+# vmbr. With firewall on, a VM's veth100i0 lands on fwbr100i0; the
+# real vmbr is reached via the matching fwpr100p0 sitting in vmbr0.
+# Chain: veth/tap → fwbr (intermediate) → fwpr (peer) → vmbr (real).
+def _resolve_bridge_owner(iface_name):
+    import re
+    master = _iface_master(iface_name)
+    if not master:
+        return None
+    if master.startswith('fwbr'):
+        fwpr = re.sub(r'^fwbr', 'fwpr', master)
+        fwpr = re.sub(r'i(\d+)$', r'p\1', fwpr)
+        try:
+            if os.path.exists(f'/sys/class/net/{fwpr}'):
+                real = _iface_master(fwpr)
+                if real:
+                    return real
+        except Exception:
+            pass
+    return master
+
+
+# ─── ethtool: max link speed per NIC ────────────────────────────
+# Parses "Supported link modes:" — the highest baseT value is the
+# hardware ceiling. Cached per-iface because subprocess + parse runs
+# ~150-500 ms per NIC, and Supported link modes essentially never
+# changes for a given NIC at runtime.
+_ETHTOOL_MAX_CACHE = {}
+def _ethtool_max_speed(iface_name):
+    if iface_name in _ETHTOOL_MAX_CACHE:
+        return _ETHTOOL_MAX_CACHE[iface_name]
+    try:
+        import subprocess, re
+        result = subprocess.run(
+            ['ethtool', iface_name],
+            capture_output=True, text=True, timeout=2,
+        )
+        if result.returncode != 0:
+            _ETHTOOL_MAX_CACHE[iface_name] = 0
+            return 0
+        max_speed = 0
+        in_supported = False
+        for line in result.stdout.splitlines():
+            stripped = line.strip()
+            if 'Supported link modes' in stripped:
+                in_supported = True
+                tail = stripped.split(':', 1)[1].strip() if ':' in stripped else ''
+                tokens = tail.split()
+            elif in_supported and line.startswith((' ', '\t')) and ':' not in stripped:
+                tokens = stripped.split()
+            else:
+                in_supported = False
+                tokens = []
+            for tok in tokens:
+                m = re.match(r'(\d+)base', tok)
+                if m:
+                    val = int(m.group(1))
+                    if val > max_speed:
+                        max_speed = val
+        _ETHTOOL_MAX_CACHE[iface_name] = max_speed
+        return max_speed
+    except Exception:
+        return 0
 
 
 def get_interface_type(interface_name):
@@ -4693,6 +4850,7 @@ def get_network_info():
         # the user actually wants to see — no extra sleep needed.
         # Cache lives at module scope; staleness is bounded so a paused
         # tab + late refresh doesn't return absurd jumps as "rate".
+        _ensure_net_rate_sampler()
         per_nic_rates = _compute_per_nic_rates_live(net_io_per_nic)
         
         physical_active_count = 0
@@ -4795,6 +4953,22 @@ def get_network_info():
                         interface_info['rx_Bps'] = rate['rx_Bps']
                         interface_info['tx_Bps'] = rate['tx_Bps']
             
+            if interface_type == 'physical':
+                # Hardware ceiling from ethtool; UI shows it next to the
+                # negotiated speed when the two differ.
+                max_speed = _ethtool_max_speed(interface_name)
+                if max_speed:
+                    interface_info['max_speed'] = max_speed
+
+            # Master device (bridge or bond) — for tap*/veth*/bond
+            # interfaces this is the bridge they're enslaved to.
+            # We walk through any intermediate fwbr to reach the real
+            # vmbr so a guest behind the Proxmox firewall still lands
+            # under its true bridge in the Network Flow diagram.
+            master = _resolve_bridge_owner(interface_name)
+            if master:
+                interface_info['bridge_owner'] = master
+
             if interface_type == 'bond':
                 bond_info = get_bond_info(interface_name)
                 interface_info['bond_mode'] = bond_info['mode']
@@ -4827,6 +5001,24 @@ def get_network_info():
         network_data['bridge_total_count'] = bridge_total_count
         network_data['vm_lxc_active_count'] = vm_lxc_active_count
         network_data['vm_lxc_total_count'] = vm_lxc_total_count
+
+        # Map physical NICs ↔ bridges using them. For a bridge with a
+        # direct NIC parent, that NIC gets the bridge in its list. For
+        # bridges sitting on top of a bond, every bond slave gets the
+        # bridge listed too.
+        bridges_per_nic = {}
+        for bridge in network_data['bridge_interfaces']:
+            phys = bridge.get('bridge_physical_interface') or ''
+            if not phys:
+                continue
+            if phys.startswith('bond'):
+                for slave in bridge.get('bridge_bond_slaves') or []:
+                    bridges_per_nic.setdefault(slave, []).append(bridge['name'])
+            else:
+                bridges_per_nic.setdefault(phys, []).append(bridge['name'])
+        for phy in network_data['physical_interfaces']:
+            if phy['name'] in bridges_per_nic:
+                phy['used_by_bridges'] = bridges_per_nic[phy['name']]
         
         # print(f"[v0] Physical interfaces: {physical_active_count} active out of {physical_total_count} total")
         pass
@@ -17050,29 +17242,32 @@ if __name__ == '__main__':
     # ── Temperature & Latency history collector ──
     # Initialize SQLite DB and start background thread to record CPU temp + latency every 60s
     if init_temperature_db() and init_latency_db():
-        # Record initial readings immediately
-        _record_temperature()
-        _record_latency()
-        # Sprint 14: per-disk temperature history shares the same DB
-        # and the same 60s collector loop — initialize the table and
-        # take a baseline sample so the first chart draw isn't empty.
-        try:
-            import disk_temperature_history
-            if disk_temperature_history.init_disk_temperature_db():
-                disk_temperature_history.record_all_disk_temperatures()
-        except Exception as e:
-            print(f"[ProxMenux] Disk temperature history init failed: {e}")
-
-        # Sprint 14.7: managed-installs registry. Run a detection
-        # sweep at startup so manual NVIDIA/Tailscale installs that
-        # predated this build show up immediately — without waiting
-        # for the first 24h notification cycle to populate the file.
-        try:
-            import managed_installs
-            managed_installs.detect_and_register()
-            print("[ProxMenux] Managed-installs registry initialised")
-        except Exception as e:
-            print(f"[ProxMenux] managed_installs init failed: {e}")
+        # The heavy baseline-collection + detection sweeps below
+        # used to run inline here and added ~9 s of cold-start time
+        # (per-disk SMART scan + Tailscale/NVIDIA subprocess sweeps).
+        # Move them to a daemon thread so app.run() can start
+        # accepting requests immediately. The dashboard endpoints
+        # that read this data simply return empty/cached until the
+        # first cycle finishes a few seconds later.
+        def _deferred_startup_inits():
+            try:
+                _record_temperature()
+                _record_latency()
+            except Exception as e:
+                print(f"[ProxMenux] initial temp/latency record failed: {e}")
+            try:
+                import disk_temperature_history
+                if disk_temperature_history.init_disk_temperature_db():
+                    disk_temperature_history.record_all_disk_temperatures()
+            except Exception as e:
+                print(f"[ProxMenux] Disk temperature history init failed: {e}")
+            try:
+                import managed_installs
+                managed_installs.detect_and_register()
+                print("[ProxMenux] Managed-installs registry initialised")
+            except Exception as e:
+                print(f"[ProxMenux] managed_installs init failed: {e}")
+        threading.Thread(target=_deferred_startup_inits, daemon=True).start()
 
         # Self-healing maintenance run on every startup. Two passes, both
         # idempotent and safe to run repeatedly. They exist because issues
@@ -17303,14 +17498,14 @@ if __name__ == '__main__':
                 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
                 ssl_context.load_cert_chain(ssl_cert, ssl_key)
                 print("[ProxMenux] Starting Flask server with SSL (using flask-sock for WebSockets)...")
-                app.run(host='::', port=8008, debug=False, ssl_context=ssl_context)
+                app.run(host='::', port=8008, debug=False, ssl_context=ssl_context, threaded=True)
         else:
             # HTTP mode - use Flask dev server (simpler, works fine without SSL)
             print("[ProxMenux] Starting Flask server with HTTP...")
-            app.run(host='::', port=8008, debug=False)
+            app.run(host='::', port=8008, debug=False, threaded=True)
     except Exception as e:
         if ssl_ctx and not gevent_available:
             print(f"[ProxMenux] SSL startup failed ({e}), falling back to HTTP")
-            app.run(host='::', port=8008, debug=False)
+            app.run(host='::', port=8008, debug=False, threaded=True)
         else:
             raise e
