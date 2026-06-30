@@ -4153,7 +4153,9 @@
     "category_names": [
       "Proxmox & Virtualization"
     ],
-    "notes": [],
+    "notes": [
+      "Execute within the Proxmox shell"
+    ],
     "warnings": [],
     "port": 0,
     "website": "",
