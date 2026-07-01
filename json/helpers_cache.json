@@ -5834,7 +5834,7 @@
     "port": 8443,
     "website": "https://fmd-foss.org/",
     "documentation": "https://fmd-foss.org/docs/overview",
-    "logo": "requested",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/fmd.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": false,
