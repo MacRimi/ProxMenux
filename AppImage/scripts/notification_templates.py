@@ -1129,7 +1129,7 @@ TEMPLATES = {
         'title': '{hostname}: CT {vmid} rootfs at {usage_percent}%',
         'body': (
             'CT {vmid} ({name}) rootfs is at {usage_percent}% '
-            '({disk_bytes} / {maxdisk_bytes}).\n\n'
+            '({disk_bytes_human} / {maxdisk_bytes_human}).\n\n'
             'A full LXC rootfs prevents the container from booting cleanly. '
             'Either expand the rootfs (pct resize {vmid} rootfs +1G) or free '
             'space inside the container.'
@@ -1376,6 +1376,28 @@ def _get_hostname() -> str:
             return 'proxmox'
 
 
+def _format_bytes_human(n: Any) -> str:
+    """Compact human-readable size (base 1024): '35.3 GiB', '4.8 TiB'.
+
+    Matches what `df -h` and the Proxmox UI show, so operators reading a
+    notification aren't asked to translate a 12-digit byte count.
+    """
+    try:
+        size = float(n)
+    except (TypeError, ValueError):
+        return ''
+    if size <= 0:
+        return '0 B'
+    units = ('B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB')
+    i = 0
+    while size >= 1024.0 and i < len(units) - 1:
+        size /= 1024.0
+        i += 1
+    if i == 0:
+        return f'{int(size)} B'
+    return f'{size:.1f} {units[i]}'
+
+
 def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
     """Render a template into a structured notification object.
     
@@ -1426,7 +1448,14 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
         'log_file': '',
     }
     variables.update(data)
-    
+
+    # Humanise raw-byte fields so templates can render '35.3 GiB' instead
+    # of '37952020480'. Producers keep emitting raw ints (needed by APIs
+    # and the dashboard); the humanised twin is derived on the fly here.
+    for _byte_key in ('disk_bytes', 'maxdisk_bytes'):
+        if _byte_key in data:
+            variables[f'{_byte_key}_human'] = _format_bytes_human(data[_byte_key])
+
     # Ensure important_list is never blank (fallback to 'none')
     if not variables.get('important_list', '').strip():
         variables['important_list'] = 'none'
