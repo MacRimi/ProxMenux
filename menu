@@ -203,6 +203,34 @@ main_menu() {
     exec bash "$MAIN_MENU"
 }
 
+# `menu -v` / `-h` print info and exit without opening the TUI so
+# admins can query the install over SSH (issue #240).
+case "${1:-}" in
+    -v|--version|-V)
+        local_ver="unknown"
+        [[ -f "$LOCAL_VERSION_FILE" ]] && local_ver="$(<"$LOCAL_VERSION_FILE")"
+        printf 'ProxMenux %s\n' "$local_ver"
+        if is_beta && [[ -f "$BETA_VERSION_FILE" ]]; then
+            printf 'Beta build: %s\n' "$(<"$BETA_VERSION_FILE")"
+        fi
+        exit 0
+        ;;
+    -h|--help)
+        cat <<'EOF'
+Usage: menu [OPTION]
+
+Interactive menu for Proxmox VE management.
+
+Options:
+  -v, --version   Print installed ProxMenux version and exit.
+  -h, --help      Show this help and exit.
+
+Run without arguments to launch the interactive menu.
+EOF
+        exit 0
+        ;;
+esac
+
 load_language
 initialize_cache
 auto_repair_monitor_unit

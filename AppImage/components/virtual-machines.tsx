@@ -2473,71 +2473,144 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     </div>
                                   </div>
 
-                                  {/* Storage Section */}
-                                  <div>
-                                    <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                                      <HardDrive className="h-4 w-4" />
-                                      Storage
-                                    </h4>
-                                    <div className="space-y-3">
-                                      {vmDetails.config.rootfs && (
-                                        <div key="rootfs">
-                                          <div className="text-xs text-muted-foreground mb-1">Root Filesystem</div>
-                                          <div className="font-medium text-foreground text-sm break-all font-mono bg-muted/50 p-2 rounded">
-                                            {vmDetails.config.rootfs}
+                                  {/* Storage Section — human-readable breakdown
+                                      per disk plus the raw config string in a
+                                      collapsible details block, mirroring the
+                                      Network section. */}
+                                  {(() => {
+                                    // Parse a Proxmox disk config string into
+                                    //   { storage, volume, path, options }
+                                    // Handles both LVM-style volumes
+                                    // "local-lvm:vm-101-disk-0,size=6G" and
+                                    // passthrough paths "/dev/disk/by-id/...".
+                                    const parseDisk = (raw: string) => {
+                                      const parts = raw.split(",")
+                                      const first = parts[0] || ""
+                                      const options: Record<string, string> = {}
+                                      parts.slice(1).forEach((p) => {
+                                        const eq = p.indexOf("=")
+                                        if (eq > 0) {
+                                          options[p.slice(0, eq).trim()] = p.slice(eq + 1).trim()
+                                        }
+                                      })
+                                      let storage = "", volume = "", path = ""
+                                      if (first.startsWith("/")) {
+                                        path = first
+                                      } else if (first.includes(":")) {
+                                        const [s, v] = first.split(":")
+                                        storage = s
+                                        volume = v
+                                      } else {
+                                        volume = first
+                                      }
+                                      return { storage, volume, path, options }
+                                    }
+                                    // Convert Proxmox size strings ("6G",
+                                    // "3907018584K", "40G", "4M") to a
+                                    // consistent GB/TB display.
+                                    const humanSize = (s: string): string => {
+                                      if (!s) return ""
+                                      const m = s.match(/^(\d+(?:\.\d+)?)([KMGT])?$/i)
+                                      if (!m) return s
+                                      const n = parseFloat(m[1])
+                                      const unit = (m[2] || "").toUpperCase()
+                                      const bytes =
+                                        unit === "K" ? n * 1024 :
+                                        unit === "M" ? n * 1024 ** 2 :
+                                        unit === "G" ? n * 1024 ** 3 :
+                                        unit === "T" ? n * 1024 ** 4 : n
+                                      if (bytes >= 1024 ** 4) return `${(bytes / 1024 ** 4).toFixed(2)} TB`
+                                      if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(bytes < 10 * 1024 ** 3 ? 1 : 0)} GB`
+                                      if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(0)} MB`
+                                      return s
+                                    }
+                                    const DField = ({ label, value, mono, className }:
+                                      { label: string; value: string; mono?: boolean; className?: string }) => (
+                                      <div className="flex flex-col gap-0.5">
+                                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</span>
+                                        <span className={`text-foreground ${mono ? "font-mono text-xs" : "text-sm"} ${className || ""}`}>{value}</span>
+                                      </div>
+                                    )
+                                    const renderDisk = (label: string, raw: string, keyId: string) => {
+                                      const d = parseDisk(raw)
+                                      return (
+                                        <div key={keyId} className="bg-muted/30 rounded-md p-3 space-y-3">
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <HardDrive className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                                            <span className="text-sm font-semibold text-foreground">{label}</span>
+                                            {d.storage && (
+                                              <span className="text-xs text-orange-500 font-mono">
+                                                {d.storage}
+                                              </span>
+                                            )}
+                                            {d.options.size && (
+                                              <span className="text-xs text-cyan-500 font-mono">
+                                                {humanSize(d.options.size)}
+                                              </span>
+                                            )}
                                           </div>
-                                        </div>
-                                      )}
-                                      {vmDetails.config.scsihw && (
-                                        <div key="scsihw">
-                                          <div className="text-xs text-muted-foreground mb-1">SCSI Controller</div>
-                                          <div className="font-medium text-foreground">{vmDetails.config.scsihw}</div>
-                                        </div>
-                                      )}
-                                      {/* Disk Storage with proper keys */}
-                                      {Object.keys(vmDetails.config)
-                                        .filter((key) => key.match(/^(scsi|sata|ide|virtio)\d+$/))
-                                        .map((diskKey) => (
-                                          <div key={`disk-${selectedVM.vmid}-${diskKey}`}>
-                                            <div className="text-xs text-muted-foreground mb-1">
-                                              {diskKey.toUpperCase().replace(/(\d+)/, " $1")}
+                                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
+                                            {d.volume && <DField label="Volume" value={d.volume} mono />}
+                                            {d.path && <DField label="Path" value={d.path} mono className="break-all" />}
+                                            {d.options.ssd === "1" && <DField label="Media" value="SSD" />}
+                                            {d.options.discard && <DField label="Discard" value={d.options.discard} />}
+                                            {d.options.iothread === "1" && <DField label="IOThread" value="on" />}
+                                            {d.options.cache && <DField label="Cache" value={d.options.cache} />}
+                                            {d.options.aio && <DField label="AIO" value={d.options.aio} />}
+                                            {d.options.backup === "0" && <DField label="Backup" value="excluded" className="text-red-500" />}
+                                            {d.options.backup === "1" && <DField label="Backup" value="included" />}
+                                            {d.options.replicate === "0" && <DField label="Replicate" value="off" />}
+                                            {d.options.efitype && <DField label="EFI type" value={d.options.efitype} />}
+                                            {d.options.pre_enrolled_keys && <DField label="Pre-enrolled keys" value={d.options.pre_enrolled_keys} />}
+                                            {d.options.serial && <DField label="Serial" value={d.options.serial} mono />}
+                                            {d.options.mp && <DField label="Mount point" value={d.options.mp} mono />}
+                                            {d.options.acl && <DField label="ACL" value={d.options.acl} />}
+                                          </div>
+                                          <details className="text-xs">
+                                            <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Raw config</summary>
+                                            <div className="mt-1 font-mono text-foreground break-all bg-background/50 p-2 rounded">
+                                              {raw}
                                             </div>
-                                            <div className="font-medium text-foreground text-sm break-all font-mono bg-muted/50 p-2 rounded">
-                                              {vmDetails.config[diskKey]}
-                                            </div>
-                                          </div>
-                                        ))}
-                                      {vmDetails.config.efidisk0 && (
-                                        <div key="efidisk0">
-                                          <div className="text-xs text-muted-foreground mb-1">EFI Disk</div>
-                                          <div className="font-medium text-foreground text-sm break-all font-mono bg-muted/50 p-2 rounded">
-                                            {vmDetails.config.efidisk0}
-                                          </div>
+                                          </details>
                                         </div>
-                                      )}
-                                      {vmDetails.config.tpmstate0 && (
-                                        <div key="tpmstate0">
-                                          <div className="text-xs text-muted-foreground mb-1">TPM State</div>
-                                          <div className="font-medium text-foreground text-sm break-all font-mono bg-muted/50 p-2 rounded">
-                                            {vmDetails.config.tpmstate0}
-                                          </div>
+                                      )
+                                    }
+                                    return (
+                                      <div>
+                                        <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                                          <HardDrive className="h-4 w-4" />
+                                          Storage
+                                        </h4>
+                                        <div className="space-y-3">
+                                          {vmDetails.config.scsihw && (
+                                            <div className="flex items-center gap-2 text-sm">
+                                              <span className="text-xs uppercase tracking-wide text-muted-foreground">SCSI controller:</span>
+                                              <span className="font-mono text-foreground">{vmDetails.config.scsihw}</span>
+                                            </div>
+                                          )}
+                                          {vmDetails.config.rootfs && renderDisk("Root Filesystem", vmDetails.config.rootfs as string, "rootfs")}
+                                          {Object.keys(vmDetails.config)
+                                            .filter((key) => key.match(/^(scsi|sata|ide|virtio)\d+$/))
+                                            .sort()
+                                            .map((diskKey) => renderDisk(
+                                              diskKey.toUpperCase().replace(/(\d+)/, " $1"),
+                                              vmDetails.config[diskKey] as string,
+                                              `disk-${selectedVM.vmid}-${diskKey}`,
+                                            ))}
+                                          {vmDetails.config.efidisk0 && renderDisk("EFI Disk", vmDetails.config.efidisk0 as string, "efidisk0")}
+                                          {vmDetails.config.tpmstate0 && renderDisk("TPM State", vmDetails.config.tpmstate0 as string, "tpmstate0")}
+                                          {Object.keys(vmDetails.config)
+                                            .filter((key) => key.match(/^mp\d+$/))
+                                            .sort()
+                                            .map((mpKey) => renderDisk(
+                                              `Mount Point ${mpKey.replace("mp", "")}`,
+                                              vmDetails.config[mpKey] as string,
+                                              `mp-${selectedVM.vmid}-${mpKey}`,
+                                            ))}
                                         </div>
-                                      )}
-                                      {/* Mount Points with proper keys */}
-                                      {Object.keys(vmDetails.config)
-                                        .filter((key) => key.match(/^mp\d+$/))
-                                        .map((mpKey) => (
-                                          <div key={`mp-${selectedVM.vmid}-${mpKey}`}>
-                                            <div className="text-xs text-muted-foreground mb-1">
-                                              Mount Point {mpKey.replace("mp", "")}
-                                            </div>
-                                            <div className="font-medium text-foreground text-sm break-all font-mono bg-muted/50 p-2 rounded">
-                                              {vmDetails.config[mpKey]}
-                                            </div>
-                                          </div>
-                                        ))}
-                                    </div>
-                                  </div>
+                                      </div>
+                                    )
+                                  })()}
 
                                   {/* Network Section */}
                                   <div>

@@ -39,7 +39,13 @@ initialize_cache
 # ==========================================================
 security_menu() {
   while true; do
-    local menu_text
+    # `local menu_text` alone does NOT reset the variable on the
+    # second iteration of the while loop — bash keeps the value from
+    # the previous round, so `menu_text+=` accumulated a duplicate
+    # "Select an option:" every time the user cancelled a sub-menu
+    # and came back. Assigning "" on declaration guarantees a clean
+    # slate each round.
+    local menu_text=""
     menu_text+="\n$(translate 'Select an option:')"
 
     local OPTION

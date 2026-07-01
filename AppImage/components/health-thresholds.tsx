@@ -250,6 +250,35 @@ function pathKey(path: string[]): string {
   return path.join("/")
 }
 
+// Trim the visible slider range to a window around the saved +
+// recommended values so the track has usable resolution (e.g. CPU
+// 60–100 instead of the backend's 0–100). Derived from stable inputs
+// so the range does NOT shift under an active drag.
+function computeVisualRange(
+  values: number[],
+  backendMin: number,
+  backendMax: number,
+  step: number,
+): { min: number; max: number } {
+  const totalRange = Math.max(1, backendMax - backendMin)
+  // Margin ≈ 25% of total range, clamped to at least 5 steps so tiny
+  // step sizes (e.g. step=1 on 0–100) still get a usable window.
+  const rawMargin = Math.max(step * 5, Math.round(totalRange * 0.25))
+  const lo = Math.min(...values)
+  const hi = Math.max(...values)
+  const snap = (n: number) => Math.round(n / step) * step
+  let visMin = Math.max(backendMin, snap(lo - rawMargin))
+  let visMax = Math.min(backendMax, snap(hi + rawMargin))
+  // Ensure the window is at least 4 steps wide so the slider has
+  // room to move even if all inputs collapse to one value.
+  if (visMax - visMin < step * 4) {
+    const mid = (visMax + visMin) / 2
+    visMin = Math.max(backendMin, snap(mid - step * 2))
+    visMax = Math.min(backendMax, snap(mid + step * 2))
+  }
+  return { min: visMin, max: visMax }
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function HealthThresholds() {
@@ -449,10 +478,14 @@ export function HealthThresholds() {
     if (!leaf) return null
     const key = pathKey(path)
     const val = Number(pending[key] ?? leaf.value)
-    const min = leaf.min
-    const max = leaf.max
     const step = leaf.step || 1
     const unit = leaf.unit || ""
+    const { min, max } = computeVisualRange(
+      [leaf.value, leaf.recommended],
+      leaf.min,
+      leaf.max,
+      step,
+    )
     const pct = ((Math.max(min, Math.min(max, val)) - min) / (max - min)) * 100
     const custom = leaf.customised && !(key in pending)
     const color = severity === "critical" ? "red" : "amber"
@@ -468,7 +501,7 @@ export function HealthThresholds() {
 
     return (
       <div className="px-1 py-3">
-        <div className="relative h-5 mb-1 select-none">
+        <div className="relative h-6 sm:h-5 mb-1 select-none">
           <span
             className={`absolute -translate-x-1/2 text-xs font-semibold tabular-nums ${numberColor}`}
             style={{ left: `${pct}%` }}
@@ -476,7 +509,7 @@ export function HealthThresholds() {
             {val}{unit}
           </span>
         </div>
-        <div className="relative h-6">
+        <div className="relative h-9 sm:h-6">
           <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-muted" />
           <div
             className={`absolute top-1/2 -translate-y-1/2 h-1.5 rounded-r-full ${fillColor}`}
@@ -490,7 +523,7 @@ export function HealthThresholds() {
             disabled={!editMode}
             value={val}
             onChange={(e) => setPending((p) => ({ ...p, [key]: e.target.value }))}
-            className={`absolute inset-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-moz-range-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-background ${handleClass}`}
+            className={`absolute inset-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-moz-range-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-8 [&::-webkit-slider-thumb]:w-8 sm:[&::-webkit-slider-thumb]:h-4 sm:[&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:h-8 [&::-moz-range-thumb]:w-8 sm:[&::-moz-range-thumb]:h-4 sm:[&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-background ${handleClass}`}
             title={`Recommended: ${leaf.recommended}${unit}`}
           />
         </div>
@@ -529,11 +562,16 @@ export function HealthThresholds() {
     const wVal = Number(pending[wKey] ?? wLeaf.value)
     const cVal = Number(pending[cKey] ?? cLeaf.value)
 
-    // Shared min/max from the backend leaf (both handles use the same
-    // range; backend validates warning <= critical on save).
-    const min = Math.min(wLeaf.min, cLeaf.min)
-    const max = Math.max(wLeaf.max, cLeaf.max)
+    // Backend validates warning <= critical on save.
     const step = Math.max(wLeaf.step, cLeaf.step) || 1
+    const backendMin = Math.min(wLeaf.min, cLeaf.min)
+    const backendMax = Math.max(wLeaf.max, cLeaf.max)
+    const { min, max } = computeVisualRange(
+      [wLeaf.value, cLeaf.value, wLeaf.recommended, cLeaf.recommended],
+      backendMin,
+      backendMax,
+      step,
+    )
     const pct = (v: number) => ((Math.max(min, Math.min(max, v)) - min) / (max - min)) * 100
     const wPct = pct(wVal)
     const cPct = pct(cVal)
@@ -558,7 +596,7 @@ export function HealthThresholds() {
             they ride above the corresponding thumb regardless of the
             slider width. Pointer events disabled so they don't steal
             clicks from the underlying range inputs. */}
-        <div className="relative h-5 mb-1 select-none">
+        <div className="relative h-6 sm:h-5 mb-1 select-none">
           <span
             className={`absolute -translate-x-1/2 text-xs font-semibold tabular-nums ${wCustom ? "text-blue-400" : "text-amber-500"}`}
             style={{ left: `${wPct}%` }}
@@ -573,12 +611,9 @@ export function HealthThresholds() {
           </span>
         </div>
 
-        {/* Track + handles. Two real <input type="range"> stacked on
-            top of each other, both pointer-events:none on the bar but
-            pointer-events:auto on the thumbs (CSS in globals if you
-            want sleeker thumbs; here we use the default which already
-            looks decent on every browser). */}
-        <div className="relative h-6">
+        {/* Two range inputs stacked. Mobile track box is taller so the
+            enlarged thumbs (h-7) have room to sit without clipping. */}
+        <div className="relative h-9 sm:h-6">
           {/* Background track: OK zone (muted) running the full width */}
           <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-muted" />
           {/* Warn-to-Crit gradient between the two handles */}
@@ -605,7 +640,7 @@ export function HealthThresholds() {
             disabled={!editMode}
             value={wVal}
             onChange={(e) => setVal(wKey, Number(e.target.value), cVal, true)}
-            className="absolute inset-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-moz-range-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-500 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-amber-500 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-background"
+            className="absolute inset-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-moz-range-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-8 [&::-webkit-slider-thumb]:w-8 sm:[&::-webkit-slider-thumb]:h-4 sm:[&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-500 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:h-8 [&::-moz-range-thumb]:w-8 sm:[&::-moz-range-thumb]:h-4 sm:[&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-amber-500 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-background"
             title={`Warning (recommended: ${wLeaf.recommended}${unit})`}
           />
           <input
@@ -616,7 +651,7 @@ export function HealthThresholds() {
             disabled={!editMode}
             value={cVal}
             onChange={(e) => setVal(cKey, Number(e.target.value), wVal, false)}
-            className="absolute inset-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-moz-range-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-red-500 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-red-500 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-background"
+            className="absolute inset-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-moz-range-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-8 [&::-webkit-slider-thumb]:w-8 sm:[&::-webkit-slider-thumb]:h-4 sm:[&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-red-500 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:h-8 [&::-moz-range-thumb]:w-8 sm:[&::-moz-range-thumb]:h-4 sm:[&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-red-500 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-background"
             title={`Critical (recommended: ${cLeaf.recommended}${unit})`}
           />
         </div>
