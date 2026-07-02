@@ -900,10 +900,10 @@ hb_pbs_setup_recovery() {
     local key_file="$HB_STATE_DIR/pbs-key.conf"
     local recovery_enc="$HB_STATE_DIR/pbs-key.recovery.enc"
 
-    dialog --backtitle "ProxMenux" --title "$(hb_translate "Keyfile recovery setup")" \
-        --yesno "$(hb_translate "Set a recovery passphrase for this keyfile? (Strongly recommended)")"$'\n\n'"$(hb_translate "With a recovery passphrase, an encrypted copy of the keyfile is uploaded to PBS with every backup. If you lose this host, you can recover the keyfile on a fresh install using only the passphrase.")"$'\n\n'"$(hb_translate "Without a recovery passphrase, losing the keyfile means the encrypted backups become unrecoverable forever.")" \
-        17 80 || return 1
-
+    # Choosing "encrypt" already implies wanting to protect the keyfile.
+    # No second yes/no — go straight to the passphrase input. Cancel at
+    # any passphrase prompt propagates up as return 1 so the caller can
+    # drop the operator back to the previous menu.
     if ! command -v openssl >/dev/null 2>&1; then
         dialog --backtitle "ProxMenux" --title "$(hb_translate "Recovery setup failed")" \
             --msgbox "$(hb_translate "openssl is not installed — cannot create recovery copy. Install openssl and retry.")" 9 70
@@ -1131,34 +1131,20 @@ hb_ask_pbs_encryption() {
         msg_ok "$(hb_translate "Encryption key created:") $key_file"
         HB_PBS_KEYFILE_OPT="--keyfile $key_file"
 
-        # Set up automatic PBS-based recovery for the keyfile.
-        # Cancelling the passphrase used to fall through with
-        # `|| true` and leave the backup encrypted with a keyfile
-        # that only lived on this host — one reinstall away from
-        # being unrecoverable. Now we force an explicit choice:
-        # set the passphrase, accept the risk, or cancel encryption.
-        while ! hb_pbs_setup_recovery; do
-            local _rec_choice
-            _rec_choice=$(dialog --backtitle "ProxMenux" \
-                --title "$(hb_translate "Recovery passphrase required")" \
-                --menu "$(hb_translate "You chose to encrypt this backup. A recovery passphrase protects the keyfile: an encrypted copy is uploaded to PBS with every backup, and the restore flow can retrieve it if this host is ever lost.")"$'\n\n'"$(hb_translate "Without a recovery passphrase, the keyfile lives ONLY on this host. Losing it (fresh install, disk failure, ...) makes every encrypted backup UNRECOVERABLE.")"$'\n\n'"$(hb_translate "What do you want to do?")" \
-                20 82 3 \
-                "1" "$(hb_translate "Set a recovery passphrase (recommended)")" \
-                "2" "$(hb_translate "Continue WITHOUT recovery — I accept the risk")" \
-                "3" "$(hb_translate "Cancel encryption — backup will not be encrypted")" \
-                3>&1 1>&2 2>&3)
-            # ESC / empty → treat as "retry passphrase" (safest default)
-            [[ -z "$_rec_choice" ]] && _rec_choice="1"
-            case "$_rec_choice" in
-                1) continue ;;
-                2) msg_warn "$(hb_translate "Encryption without recovery — the keyfile lives only on this host. Export it manually to a safe location.")"
-                   break ;;
-                3) rm -f "$key_file" 2>/dev/null
-                   HB_PBS_KEYFILE_OPT=""
-                   msg_info "$(hb_translate "Encryption cancelled — backup will proceed unencrypted.")"
-                   break ;;
-            esac
-        done
+        # Recovery passphrase is REQUIRED when the operator chose
+        # to encrypt. Encrypting without a recovery escrow lets the
+        # keyfile live only on this host — one reinstall or disk
+        # failure away from every encrypted backup being lost. If
+        # the operator cancels the passphrase dialog: wipe the
+        # freshly-created keyfile (avoid orphans in state-dir),
+        # unset the --keyfile flag, and return 1 so the caller can
+        # bail out and drop the operator back at the previous menu.
+        if ! hb_pbs_setup_recovery; then
+            rm -f "$key_file" 2>/dev/null
+            HB_PBS_KEYFILE_OPT=""
+            msg_warn "$(hb_translate "Encryption cancelled — a recovery passphrase is required to encrypt. Returning to the previous menu.")"
+            return 1
+        fi
     else
         # Surface the actual error from proxmox-backup-client to the
         # operator — silent failures here were the reason the user

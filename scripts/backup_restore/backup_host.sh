@@ -65,7 +65,10 @@ _bk_pbs() {
     local backup_id epoch log_file staging_root t_start elapsed staged_size
 
     hb_select_pbs_repository || return 1
-    hb_ask_pbs_encryption
+    # Return 1 propagates operator cancel from the encryption / passphrase
+    # dialogs so the outer menu shows the source picker again instead of
+    # proceeding with a half-configured backup.
+    hb_ask_pbs_encryption || return 1
 
     hb_select_profile_paths "$profile_mode" paths || return 1
 

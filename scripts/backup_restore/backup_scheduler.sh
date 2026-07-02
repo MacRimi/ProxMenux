@@ -396,7 +396,10 @@ _create_job() {
       ;;
     pbs)
       hb_select_pbs_repository || return 1
-      hb_ask_pbs_encryption
+      # Propagate the operator cancel from the encryption dialog so the
+      # wizard drops back to the previous step instead of saving a job
+      # spec with a half-configured encryption block.
+      hb_ask_pbs_encryption || return 1
       local bid
       bid="hostcfg-$(hostname)"
       bid=$(dialog --backtitle "ProxMenux" --title "PBS" \
