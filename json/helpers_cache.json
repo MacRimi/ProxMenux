@@ -6051,7 +6051,9 @@
     "category_names": [
       "NVR & Cameras"
     ],
-    "notes": [],
+    "notes": [
+      "Frigate is pinned to an tested version, dont create Issues, we are working on a new version, if we have time for this tool"
+    ],
     "warnings": [],
     "port": 5000,
     "website": "https://frigate.video/",
