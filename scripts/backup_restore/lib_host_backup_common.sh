@@ -2724,6 +2724,11 @@ hb_unsafe_paths_cross_version() {
 /etc/iscsi	iSCSI parameters evolve between kernels
 /etc/udev/rules.d	udev rules may bind to nonexistent subsystems
 /etc/zfs	zpool.cache + hostid can lock the pool as foreign
+/etc/systemd/system	unit overrides + .wants tied to older systemd major version — cross-version restore panics init (bench-reproduced)
+/etc/systemd/journald.conf	journald options may not parse on new systemd major
+/etc/systemd/logind.conf	logind options may not parse on new systemd major
+/etc/systemd/system.conf	system.conf keys evolve across systemd major
+/etc/systemd/user.conf	user.conf keys evolve across systemd major
 EOF
 }
 
