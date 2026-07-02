@@ -2539,10 +2539,148 @@ hb_ensure_pv() {
 # storage / network / VMID drift BEFORE the apply menu opens.
 #
 # After running hb_compat_check, the caller can read:
-#   HB_COMPAT_SAME_HOST  → 1 if backup's hostname matches current
-#   HB_COMPAT_ANY_FAIL   → 1 if at least one FAIL was raised
-#   HB_COMPAT_ANY_WARN   → 1 if at least one WARN was raised
-#   HB_COMPAT_RESULTS[]  → array of "STATUS|category|message" entries
+# ==========================================================
+# NIC REMAP PLAN + APPLY
+# ==========================================================
+# Reconciles NICs recorded in the backup manifest against the
+# live host. Covers the "motherboard swap" scenario: same NIC
+# chip lands on a different PCI slot after the swap, so the
+# ifname changes (enp0s31f6 → enp0s25) even though the MAC is
+# the same. Without a remap the restored /etc/network/interfaces
+# references a name that no longer exists → no network at boot.
+#
+# Populates arrays (only when jq + manifest are available):
+#   HB_NIC_REMAP[i]="<old_ifname>|<new_ifname>|<mac>"
+#     — same MAC, different ifname. Rewrites the staging config
+#       so the restored files use <new_ifname>.
+#   HB_NIC_ORPHAN[i]="<old_ifname>|<mac>"
+#     — MAC from the backup not present on target at all.
+#       Real hardware removal, left to hb_compat_check to
+#       report as WARN/FAIL depending on wired-ness.
+#   HB_NIC_MAC_CHANGED[i]="<ifname>|<old_mac>|<new_mac>"
+#     — same ifname on target, but MAC differs. Motherboard
+#       replacement with same PCI layout but different NIC chip.
+#       Boot succeeds; surfaces INFO so the operator can update
+#       any DHCP static reservation that keyed on the old MAC.
+# ==========================================================
+hb_plan_nic_remaps() {
+    local staging_root="$1"
+    HB_NIC_REMAP=()
+    HB_NIC_ORPHAN=()
+    HB_NIC_MAC_CHANGED=()
+
+    local manifest="$staging_root/manifest.json"
+    [[ -f "$manifest" ]] || return 0
+    command -v jq >/dev/null 2>&1 || return 0
+
+    declare -A _dest_mac_by_if=()
+    declare -A _dest_if_by_mac=()
+    local dev_path _if _mac
+    for dev_path in /sys/class/net/*; do
+        _if="$(basename "$dev_path")"
+        case "$_if" in
+            lo|veth*|tap*|fwln*|fwbr*|fwpr*|vmbr*|bond*) continue ;;
+        esac
+        [[ -e "$dev_path/device" ]] || continue
+        _mac="$(cat "$dev_path/address" 2>/dev/null || true)"
+        [[ -z "$_mac" ]] && continue
+        _dest_mac_by_if["$_if"]="$_mac"
+        _dest_if_by_mac["$_mac"]="$_if"
+    done
+
+    local src_if src_mac
+    while IFS=$'\t' read -r src_if src_mac; do
+        [[ -z "$src_if" || -z "$src_mac" ]] && continue
+        # 1) Same ifname on target — compare MAC.
+        if [[ -n "${_dest_mac_by_if[$src_if]:-}" ]]; then
+            local cur_mac="${_dest_mac_by_if[$src_if]}"
+            if [[ "$cur_mac" != "$src_mac" ]]; then
+                HB_NIC_MAC_CHANGED+=("${src_if}|${src_mac}|${cur_mac}")
+            fi
+            continue
+        fi
+        # 2) MAC found on a different ifname — remap.
+        if [[ -n "${_dest_if_by_mac[$src_mac]:-}" ]]; then
+            HB_NIC_REMAP+=("${src_if}|${_dest_if_by_mac[$src_mac]}|${src_mac}")
+            continue
+        fi
+        # 3) Neither ifname nor MAC — real removal.
+        HB_NIC_ORPHAN+=("${src_if}|${src_mac}")
+    done < <(jq -r '.hardware_inventory.nic[]? | "\(.ifname)\t\(.mac)"' "$manifest" 2>/dev/null)
+}
+
+# Rewrites NIC names in the staging_root's network config so the
+# restored /etc/network/interfaces (and interfaces.d/*, and
+# systemd-networkd .link files if present) uses the new names.
+# Only touches the staging copy — nothing on the live host changes
+# until the normal apply step runs. GNU sed word boundaries (\b)
+# keep eth10 safe when renaming eth1.
+hb_apply_nic_remaps() {
+    local staging_root="$1"
+    (( ${#HB_NIC_REMAP[@]} == 0 )) && return 0
+
+    local -a targets=()
+    [[ -f "$staging_root/rootfs/etc/network/interfaces" ]] && \
+        targets+=("$staging_root/rootfs/etc/network/interfaces")
+    if [[ -d "$staging_root/rootfs/etc/network/interfaces.d" ]]; then
+        while IFS= read -r -d '' f; do targets+=("$f"); done \
+            < <(find "$staging_root/rootfs/etc/network/interfaces.d" -type f -print0 2>/dev/null)
+    fi
+    if [[ -d "$staging_root/rootfs/etc/systemd/network" ]]; then
+        while IFS= read -r -d '' f; do targets+=("$f"); done \
+            < <(find "$staging_root/rootfs/etc/systemd/network" -type f -print0 2>/dev/null)
+    fi
+    (( ${#targets[@]} == 0 )) && return 0
+
+    local entry old_if new_if _mac t
+    for entry in "${HB_NIC_REMAP[@]}"; do
+        IFS='|' read -r old_if new_if _mac <<<"$entry"
+        [[ -z "$old_if" || -z "$new_if" ]] && continue
+        for t in "${targets[@]}"; do
+            sed -i "s/\\b${old_if}\\b/${new_if}/g" "$t" 2>/dev/null || true
+        done
+    done
+}
+
+# ==========================================================
+# CROSS-VERSION UNSAFE PATHS
+# ==========================================================
+# Curated list of paths that reliably break the boot when a backup
+# taken on PVE major X or kernel major.minor Y is applied on a
+# different X/Y. Restoring these is what caused the field-reported
+# kernel panic (backup on 9.1.9 / kernel 6.x restored on 9.2.3 /
+# kernel 7.x). We ship a static list rather than a heuristic so
+# behaviour is auditable — the operator can inspect it once and
+# know what "safe restore mode" means.
+#
+# Output: one line per path, tab-separated: <abs_path>\t<reason>
+# The reason is a short label used verbatim in the confirm dialog.
+# ==========================================================
+hb_unsafe_paths_cross_version() {
+    cat <<'EOF'
+/etc/default/grub	GRUB defaults tied to prior kernel order
+/etc/kernel	proxmox-boot-tool state (cmdline, ESP UUIDs, hooks)
+/etc/modules-load.d	autoload list may reference renamed modules
+/etc/modprobe.d	module options may not apply on new kernel
+/etc/apt	source suites may trigger downgrade on next upgrade
+/etc/initramfs-tools	initramfs hooks tied to prior kernel
+/etc/fstab	UUIDs may not exist on this install
+/etc/multipath	multipath drivers change between kernels
+/etc/iscsi	iSCSI parameters evolve between kernels
+/etc/udev/rules.d	udev rules may bind to nonexistent subsystems
+/etc/zfs	zpool.cache + hostid can lock the pool as foreign
+EOF
+}
+
+#   HB_COMPAT_SAME_HOST     → 1 if backup's hostname matches current
+#   HB_COMPAT_ANY_FAIL      → 1 if at least one FAIL was raised
+#   HB_COMPAT_ANY_WARN      → 1 if at least one WARN was raised
+#   HB_COMPAT_CROSS_VERSION → 1 if PVE major OR kernel major.minor differs
+#                             (triggers the safe-restore path filter that
+#                             skips grub/kernel/apt/dkms/... — see
+#                             hb_unsafe_paths_cross_version)
+#   HB_COMPAT_RESULTS[]     → array of "STATUS|category|message" entries
+#                             where STATUS ∈ {PASS, INFO, WARN, FAIL}
 # Use hb_show_compat_report to surface the result and let the user
 # decide whether to continue.
 # ==========================================================
@@ -2552,6 +2690,7 @@ hb_compat_check() {
     HB_COMPAT_SAME_HOST=0
     HB_COMPAT_ANY_FAIL=0
     HB_COMPAT_ANY_WARN=0
+    HB_COMPAT_CROSS_VERSION=0
 
     local meta="$staging_root/metadata"
     local rootfs="$staging_root/rootfs"
@@ -2594,8 +2733,13 @@ hb_compat_check() {
         elif [[ "$bk_major" == "$cur_major" ]]; then
             HB_COMPAT_RESULTS+=("PASS|PVE version|$(hb_translate "Same major series:") $bk_pve → $cur_pve")
         else
-            HB_COMPAT_RESULTS+=("FAIL|PVE version|$(hb_translate "Major version mismatch:") $bk_pve → $cur_pve $(hb_translate "(default paths and packages may have changed)")")
-            HB_COMPAT_ANY_FAIL=1
+            # Major PVE bump — used to hard-FAIL, but the restore now
+            # automatically drops boot/kernel/apt-critical paths in
+            # this case (see hb_unsafe_paths_cross_version). Downgrade
+            # to INFO so the user knows what's happening; the safe
+            # filter does the actual protection.
+            HB_COMPAT_RESULTS+=("INFO|PVE version|$(hb_translate "Major version differs:") $bk_pve → $cur_pve $(hb_translate "— safe restore mode will skip boot/kernel/apt config")")
+            HB_COMPAT_CROSS_VERSION=1
         fi
     fi
 
@@ -2615,8 +2759,10 @@ hb_compat_check() {
             if [[ "$bk_kmaj" == "$cur_kmaj" ]]; then
                 HB_COMPAT_RESULTS+=("PASS|Kernel|$(hb_translate "Same major.minor:") $bk_kernel → $cur_kernel")
             else
-                HB_COMPAT_RESULTS+=("WARN|Kernel|$(hb_translate "Different kernel:") $bk_kernel → $cur_kernel")
-                HB_COMPAT_ANY_WARN=1
+                # Kernel major.minor drift — same reasoning as the
+                # PVE case above. Safe filter handles it.
+                HB_COMPAT_RESULTS+=("INFO|Kernel|$(hb_translate "Different kernel major.minor:") $bk_kernel → $cur_kernel $(hb_translate "— safe restore mode will skip kernel-tied config")")
+                HB_COMPAT_CROSS_VERSION=1
             fi
         fi
     fi
@@ -2676,7 +2822,19 @@ hb_compat_check() {
             fi
         done
         # Classify each missing NIC as wired vs orphan declaration.
+        # A "missing" NIC that hb_plan_nic_remaps already matched by
+        # MAC to a new ifname is NOT missing in any meaningful sense
+        # — the restored config will be rewritten to use the new
+        # name before apply. Skip it here.
+        local -A _remap_old=()
+        local _re_entry _re_old
+        for _re_entry in "${HB_NIC_REMAP[@]:-}"; do
+            [[ -z "$_re_entry" ]] && continue
+            _re_old="${_re_entry%%|*}"
+            [[ -n "$_re_old" ]] && _remap_old["$_re_old"]=1
+        done
         for i in "${missing_ifaces[@]}"; do
+            [[ -n "${_remap_old[$i]:-}" ]] && continue
             # Match: `auto <nic>`, `bridge-ports ... <nic>`, `bridge_ports ... <nic>`,
             #        `bond-slaves ... <nic>`, `bond_slaves ... <nic>`, `slaves ... <nic>`
             if grep -qE "(^auto[[:space:]]+${i}\$|bridge[-_]ports[[:space:]]+.*\b${i}\b|bond[-_]slaves[[:space:]]+.*\b${i}\b|^[[:space:]]*slaves[[:space:]]+.*\b${i}\b)" "$ifaces_file"; then
@@ -2684,6 +2842,25 @@ hb_compat_check() {
             else
                 orphan_missing+=("$i")
             fi
+        done
+
+        # Surface renames + MAC changes as INFO so the panel shows them
+        # if there's something else to see, but doesn't force it open.
+        # Separated `local` declarations because bash `set -u` in caller
+        # scopes gets grumpy about chained `local a=$b c=$a` forms.
+        local _re _o _rest _n
+        for _re in "${HB_NIC_REMAP[@]:-}"; do
+            [[ -z "$_re" ]] && continue
+            _o="${_re%%|*}"
+            _rest="${_re#*|}"
+            _n="${_rest%%|*}"
+            HB_COMPAT_RESULTS+=("INFO|Network|$(hb_translate "Renamed NIC:") ${_o} → ${_n} $(hb_translate "(same MAC — restored config adjusted automatically)")")
+        done
+        local _mc _ifn
+        for _mc in "${HB_NIC_MAC_CHANGED[@]:-}"; do
+            [[ -z "$_mc" ]] && continue
+            _ifn="${_mc%%|*}"
+            HB_COMPAT_RESULTS+=("INFO|Network|$(hb_translate "NIC") ${_ifn} $(hb_translate "has a different MAC than the backup — update any DHCP static reservation")")
         done
 
         if [[ ${#bk_ifaces[@]} -eq 0 ]]; then
@@ -2727,8 +2904,10 @@ hb_compat_check() {
             else
                 list_str="${missing_pkgs[*]:0:6}… (+ $((${#missing_pkgs[@]} - 6)) $(hb_translate "more"))"
             fi
-            HB_COMPAT_RESULTS+=("WARN|Packages|${#missing_pkgs[@]} $(hb_translate "user-installed packages from backup are missing here:") $list_str")
-            HB_COMPAT_ANY_WARN=1
+            # Missing packages are auto-installed by _rs_run_complete_extras
+            # regardless of restore strategy — the user doesn't have to
+            # decide anything, so INFO instead of WARN.
+            HB_COMPAT_RESULTS+=("INFO|Packages|${#missing_pkgs[@]} $(hb_translate "user packages missing — will be installed automatically:") $list_str")
         fi
     fi
 
@@ -2766,13 +2945,14 @@ hb_compat_check() {
 # report and lets the user proceed; an all-PASS report only shows up
 # briefly so the user can see it succeeded.
 hb_show_compat_report() {
-    local pass=0 warn=0 fail=0 line status rest cat msg
+    local pass=0 info=0 warn=0 fail=0 line status rest cat msg
     local report=""
     for line in "${HB_COMPAT_RESULTS[@]}"; do
         status="${line%%|*}"; rest="${line#*|}"
         cat="${rest%%|*}";    msg="${rest#*|}"
         case "$status" in
-            PASS) ((pass++)); report+=$' [OK]  '"${cat}"$'  — '"${msg}"$'\n' ;;
+            PASS) ((pass++)); report+=$' [OK]   '"${cat}"$' — '"${msg}"$'\n' ;;
+            INFO) ((info++)); report+=$' [INFO] '"${cat}"$' — '"${msg}"$'\n' ;;
             WARN) ((warn++)); report+=$' [WARN] '"${cat}"$' — '"${msg}"$'\n' ;;
             FAIL) ((fail++)); report+=$' [FAIL] '"${cat}"$' — '"${msg}"$'\n' ;;
         esac
@@ -2780,7 +2960,7 @@ hb_show_compat_report() {
 
     local summary
     summary="$(hb_translate "Compatibility check"): "
-    summary+="${pass} pass, ${warn} warn, ${fail} fail"
+    summary+="${pass} pass, ${info} info, ${warn} warn, ${fail} fail"
 
     local tmpfile
     tmpfile=$(mktemp)

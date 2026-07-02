@@ -9576,7 +9576,10 @@ def api_smart_run_test(disk_name):
                 capture_output=True, text=True, timeout=10
             )
             if check_proc.returncode != 0:
-                return jsonify({'error': f'Cannot access NVMe device: {check_proc.stderr.strip() or "Device not responding"}'}), 500
+                # Device-level failure, not a server bug — return 400 so
+                # the UI surfaces the real stderr instead of a generic
+                # "500 INTERNAL SERVER ERROR".
+                return jsonify({'error': f'Cannot access NVMe device: {check_proc.stderr.strip() or "Device not responding"}'}), 400
             
             # Check if device supports self-test by looking at OACS field
             # OACS bit 4 (0x10) indicates Device Self-test support
@@ -9616,8 +9619,8 @@ def api_smart_run_test(disk_name):
                 # Check for permission errors
                 if 'permission' in error_msg.lower() or 'operation not permitted' in error_msg.lower():
                     return jsonify({'error': f'Permission denied. Run as root: {error_msg}'}), 403
-                return jsonify({'error': f'Failed to start test: {error_msg}'}), 500
-            
+                return jsonify({'error': f'Failed to start test: {error_msg}'}), 400
+
             # Start background monitor to save JSON when test completes
             # Check 'Current Device Self-Test Operation' field - if > 0, test is running
             sleep_interval = 10 if test_type == 'short' else 60
@@ -9648,7 +9651,21 @@ def api_smart_run_test(disk_name):
             )
             
             if proc.returncode not in (0, 4):  # 4 = test started successfully
-                return jsonify({'error': f'Failed to start test: {proc.stderr}'}), 500
+                # smartctl scribbles the useful diagnostic on stderr for
+                # most failures but some device-level errors (USB SATA
+                # bridges that reject the SMART command, drives whose
+                # ATA passthrough is broken, ...) print the reason on
+                # stdout instead. Concatenate both so the operator sees
+                # the real reason in the toast rather than an opaque
+                # "500 INTERNAL SERVER ERROR". Status is 400: the smartctl
+                # process ran fine, the device is what rejected the test.
+                err_detail = (proc.stderr or '').strip()
+                out_detail = (proc.stdout or '').strip()
+                combined = err_detail
+                if out_detail and out_detail not in err_detail:
+                    combined = f'{err_detail}\n{out_detail}' if err_detail else out_detail
+                combined = combined or f'smartctl exited with code {proc.returncode}'
+                return jsonify({'error': f'Failed to start test: {combined}'}), 400
             
             # Start background monitor to save JSON when test completes
             sleep_interval = 10 if test_type == 'short' else 60

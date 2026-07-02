@@ -1586,10 +1586,18 @@ def internal_restore_event():
         stale_nodes = data.get('stale_nodes', '0')
         components = data.get('components', 'none')
         duration = data.get('duration', 'unknown')
+        # Boot sanity-check warnings surfaced by apply_cluster_postboot.sh.
+        # Empty on a clean restore; populated on the cross-version path
+        # when the sanity check found something the operator should know
+        # about (missing /lib/modules for the default kernel, no ESP
+        # configured, dangling /vmlinuz, ...).
+        warnings = data.get('warnings', '').strip()
+        severity = 'WARNING' if warnings else 'INFO'
+        warnings_block = f'\n⚠️  Boot sanity: {warnings}\n' if warnings else ''
 
         notification_manager.emit_event(
             event_type='system_restore_completed',
-            severity='INFO',
+            severity=severity,
             data={
                 'hostname': hostname,
                 'guests': guests,
@@ -1597,6 +1605,8 @@ def internal_restore_event():
                 'stale_nodes': stale_nodes,
                 'components': components,
                 'duration': duration,
+                'warnings': warnings,
+                'warnings_block': warnings_block,
             },
             source='proxmenux',
             entity='node',

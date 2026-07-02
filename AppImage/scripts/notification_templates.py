@@ -901,7 +901,16 @@ TEMPLATES = {
     },
     'system_restore_completed': {
         'title': '{hostname}: Host restore finished',
-        'body': 'Post-restore tasks completed in background.\n\nGuests applied: {guests}\nBind-mount stubs: {stubs}\nStale node dirs removed: {stale_nodes}\nComponents reinstalled: {components}\nDuration: {duration}\n\nThe node is now fully ready to use.',
+        'body': (
+            'Post-restore tasks completed in background.\n\n'
+            'Guests applied: {guests}\n'
+            'Bind-mount stubs: {stubs}\n'
+            'Stale node dirs removed: {stale_nodes}\n'
+            'Components reinstalled: {components}\n'
+            'Duration: {duration}\n'
+            '{warnings_block}\n'
+            'The node is now fully ready to use.'
+        ),
         'label': 'Host restore completed',
         'group': 'services',
         'default_enabled': True,

@@ -2057,6 +2057,7 @@ RESTORE_ID=${restore_id}
 CREATED_AT=${created_at}
 HB_RESTORE_INCLUDE_ZFS=${HB_RESTORE_INCLUDE_ZFS:-0}
 HB_ROLLBACK_EXECUTE=${HB_ROLLBACK_EXECUTE:-0}
+HB_COMPAT_CROSS_VERSION=${HB_COMPAT_CROSS_VERSION:-0}
 EOF
     # Persist hardware-drift skips so apply_pending_restore.sh can filter
     # them at boot. The RS_SKIP_PATHS env var only lives in the restore
@@ -2179,6 +2180,72 @@ _rs_run_complete_guided() {
         (( dialog_signal == 1 )) && RS_DRIFT_SUMMARY="$plan_body"
     fi
 
+    # ── NIC remap (silent, staging_root) ─────────────────────
+    # If hb_plan_nic_remaps found NIC(s) with the same MAC as the
+    # backup but a different ifname on the target (motherboard
+    # swap that shifted PCI addresses), rewrite the staging config
+    # in-place so the restored /etc/network/interfaces references
+    # the ifname that actually exists on this host. Also builds
+    # a small summary block for the confirm dialog — informative
+    # only, no yes/no.
+    RS_NIC_REMAP_SUMMARY=""
+    if (( ${#HB_NIC_REMAP[@]:-0} > 0 || ${#HB_NIC_MAC_CHANGED[@]:-0} > 0 )); then
+        local nr_body entry old_if new_if nic_mac old_mac
+        nr_body="\Zb$(translate "NIC changes detected — adjusted automatically")\ZB"$'\n\n'
+        for entry in "${HB_NIC_REMAP[@]}"; do
+            IFS='|' read -r old_if new_if nic_mac <<<"$entry"
+            nr_body+="  \Z4•\Zn $(translate "Renamed"): \Zb${old_if}\ZB → \Zb${new_if}\ZB  ($(translate "same MAC"): ${nic_mac})"$'\n'
+        done
+        for entry in "${HB_NIC_MAC_CHANGED[@]}"; do
+            IFS='|' read -r new_if old_mac nic_mac <<<"$entry"
+            nr_body+="  \Z4•\Zn \Zb${new_if}\ZB $(translate "has a new MAC"): ${nic_mac} ($(translate "was") ${old_mac})"$'\n'
+            nr_body+="    $(translate "If your DHCP has a static reservation for the old MAC, update it.")"$'\n'
+        done
+        RS_NIC_REMAP_SUMMARY="$nr_body"
+        hb_apply_nic_remaps "$staging_root"
+    fi
+
+    # ── Cross-version safe-restore filter ────────────────────
+    # When the backup was taken on a different PVE major or a
+    # different kernel major.minor, restoring boot/kernel/apt
+    # config on top of the current install is what causes the
+    # post-reboot kernel panic. Fold those paths into RS_SKIP_PATHS
+    # so the same downstream machinery that already honours skips
+    # (_rs_apply, _rs_collect_pending_paths, apply_pending_restore)
+    # keeps them out of the restore.
+    RS_CROSS_VERSION_SKIPS=""
+    if [[ "${HB_COMPAT_CROSS_VERSION:-0}" == "1" ]]; then
+        local -a cv_skipped=()
+        local cv_line cv_path cv_reason cv_rel
+        while IFS=$'\t' read -r cv_path cv_reason; do
+            [[ -z "$cv_path" ]] && continue
+            cv_rel="${cv_path#/}"
+            # Only skip when the backup actually carries the path —
+            # otherwise the "excluded" line is misleading.
+            if [[ -e "$staging_root/rootfs/$cv_rel" ]]; then
+                cv_skipped+=("${cv_path}"$'\t'"${cv_reason}")
+                RS_SKIP_PATHS+="${cv_path}"$'\n'
+            fi
+        done < <(hb_unsafe_paths_cross_version)
+
+        if (( ${#cv_skipped[@]} > 0 )); then
+            local cv_body
+            cv_body="\Zb$(translate "Cross-version detected — safe restore mode")\ZB"$'\n\n'
+            cv_body+="$(translate "The backup was taken on a different PVE or kernel major.minor. These paths will be SKIPPED to keep the boot safe:")"$'\n\n'
+            for cv_line in "${cv_skipped[@]}"; do
+                cv_path="${cv_line%%$'\t'*}"
+                cv_reason="${cv_line#*$'\t'}"
+                cv_body+="  \Z1•\Zn \Zb${cv_path}\ZB"$'\n'
+                cv_body+="    $(translate "${cv_reason}")"$'\n\n'
+            done
+            RS_CROSS_VERSION_SKIPS="$cv_body"
+        fi
+        # Trim any leading duplicate newlines the concat may introduce.
+        RS_SKIP_PATHS="${RS_SKIP_PATHS#$'\n'}"
+        RS_SKIP_PATHS="${RS_SKIP_PATHS%$'\n'}"
+        export RS_SKIP_PATHS
+    fi
+
     # Build the rich confirmation body. Replaces the previous 4-strategy
     # menu — by design a Proxmox host restore always requires a reboot
     # for predictable end state (pmxcfs live writes + initramfs + driver
@@ -2222,6 +2289,13 @@ _rs_run_complete_guided() {
             body+="  • \Zb${label}\ZB  (${eta})"$'\n'
         done
     fi
+    # Silent NIC remap block first (informational, no action needed
+    # from the operator — the staging config has already been
+    # rewritten). Kept above drift/cross-version because it's the
+    # least alarming and the most common on hardware refreshes.
+    if [[ -n "${RS_NIC_REMAP_SUMMARY:-}" ]]; then
+        body+=$'\n'"${RS_NIC_REMAP_SUMMARY}"
+    fi
     # If smart restore flagged drift skips earlier, surface them here
     # so the operator sees everything in one screen instead of two
     # consecutive yes/no popups.
@@ -2232,6 +2306,12 @@ _rs_run_complete_guided() {
         local _drift_bullets
         _drift_bullets=$(printf '%s\n' "$RS_DRIFT_SUMMARY" | sed -n '/\Z1•\Zn/,$p')
         body+="$_drift_bullets"$'\n'
+    fi
+    # Same treatment for cross-version skips (PVE major or kernel
+    # major.minor differ between backup and target). The stashed
+    # body already carries its own header — merge it as-is.
+    if [[ -n "${RS_CROSS_VERSION_SKIPS:-}" ]]; then
+        body+=$'\n'"${RS_CROSS_VERSION_SKIPS}"
     fi
     body+=$'\n'"\Zb\Z4$(translate "A reboot is required to finish the restore.")\Zn"$'\n\n'
     body+="$(translate "If notifications are enabled (Telegram/Discord/ntfy/...), you will receive a \"Host restore finished\" message when all background tasks complete.")"$'\n\n'
@@ -2799,6 +2879,13 @@ restore_menu() {
         esac
 
         if [[ $ok -eq 1 ]] && _rs_check_layout "$staging_root"; then
+            # Plan NIC remaps FIRST so hb_compat_check knows which
+            # "missing" NICs are actually renames (same MAC, new
+            # ifname after a motherboard swap) and can downgrade
+            # them from FAIL to INFO. Also fills HB_NIC_MAC_CHANGED
+            # for same-name-different-MAC hosts.
+            hb_plan_nic_remaps "$staging_root"
+
             # Run the compatibility check BEFORE the apply menu so
             # the operator sees PVE-version / hostname / network /
             # storage drift up front. This also sets

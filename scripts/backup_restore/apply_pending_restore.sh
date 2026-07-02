@@ -39,6 +39,7 @@ if [[ -f "$PLAN_ENV" ]]; then
 fi
 
 : "${HB_RESTORE_INCLUDE_ZFS:=0}"
+: "${HB_COMPAT_CROSS_VERSION:=0}"
 
 if [[ ! -f "$APPLY_LIST" ]]; then
     echo "Apply list missing: $APPLY_LIST"
@@ -46,9 +47,10 @@ if [[ ! -f "$APPLY_LIST" ]]; then
     exit 1
 fi
 
-echo "Pending dir: $PENDING_DIR"
-echo "Apply list:  $APPLY_LIST"
-echo "Include ZFS: $HB_RESTORE_INCLUDE_ZFS"
+echo "Pending dir:   $PENDING_DIR"
+echo "Apply list:    $APPLY_LIST"
+echo "Include ZFS:   $HB_RESTORE_INCLUDE_ZFS"
+echo "Cross-version: $HB_COMPAT_CROSS_VERSION"
 
 # Hardware-drift skips persisted by _rs_prepare_pending_restore.
 # Each line is an absolute path; we drop any rel path that matches
@@ -60,7 +62,12 @@ RS_SKIP_PATHS=""
 SKIP_PATHS_FILE="$PENDING_DIR/rs-skip-paths.txt"
 if [[ -f "$SKIP_PATHS_FILE" ]]; then
     RS_SKIP_PATHS=$(cat "$SKIP_PATHS_FILE")
-    echo "Skip paths:  $(wc -l <"$SKIP_PATHS_FILE") entries (drift)"
+    # Skips come from two sources today: hardware drift and
+    # cross-version safe restore. The label is generic so the log
+    # is truthful without having to reconcile the two upstream.
+    _skip_source_label="drift"
+    [[ "${HB_COMPAT_CROSS_VERSION:-0}" == "1" ]] && _skip_source_label="drift + cross-version"
+    echo "Skip paths:  $(wc -l <"$SKIP_PATHS_FILE") entries (${_skip_source_label})"
 fi
 
 echo "running" >"$STATE_FILE"
@@ -265,6 +272,7 @@ EOF
             printf 'PENDING_DIR=%s\n'   "$PENDING_DIR"
             printf 'NEEDS_INITRAMFS=%s\n' "$NEEDS_INITRAMFS"
             printf 'NEEDS_GRUB=%s\n'      "$NEEDS_GRUB"
+            printf 'HB_COMPAT_CROSS_VERSION=%s\n' "${HB_COMPAT_CROSS_VERSION:-0}"
         } > /var/lib/proxmenux/cluster-apply-pending
         chmod 600 /var/lib/proxmenux/cluster-apply-pending
 

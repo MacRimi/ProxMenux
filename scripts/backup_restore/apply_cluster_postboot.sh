@@ -412,6 +412,49 @@ if [[ -n "$ROLLBACK_PLAN_FILE" ]] && command -v jq >/dev/null 2>&1; then
     fi
 fi
 
+# ── Boot sanity check ──────────────────────────────────────────
+# Cross-version restores are the most likely path to a broken
+# boot: even with the safe-restore filter, catch situations where
+# the default kernel has no matching /lib/modules, no ESP is
+# configured, or a stale reference survived. Runs on every restore
+# (cheap); warnings feed the completion notification so it tells
+# the truth instead of a blanket "all fine".
+SANITY_WARNINGS=""
+_sanity_warn() {
+    if [[ -z "$SANITY_WARNINGS" ]]; then
+        SANITY_WARNINGS="$1"
+    else
+        SANITY_WARNINGS="${SANITY_WARNINGS}; $1"
+    fi
+}
+
+if command -v proxmox-boot-tool >/dev/null 2>&1; then
+    if ! proxmox-boot-tool status 2>/dev/null | grep -q 'configured with'; then
+        _sanity_warn "proxmox-boot-tool reports no ESP configured"
+    fi
+fi
+
+if [[ -d /boot ]]; then
+    for _vmlinuz in /boot/vmlinuz-*; do
+        [[ -e "$_vmlinuz" ]] || continue
+        _kver="${_vmlinuz##*vmlinuz-}"
+        if [[ ! -d "/lib/modules/$_kver" ]]; then
+            _sanity_warn "kernel $_kver has no /lib/modules"
+        fi
+    done
+fi
+
+if [[ -L /vmlinuz && ! -e /vmlinuz ]]; then
+    _sanity_warn "/vmlinuz symlink is dangling"
+fi
+
+if [[ -n "$SANITY_WARNINGS" ]]; then
+    echo ""
+    echo "── Boot sanity check ──"
+    echo "$SANITY_WARNINGS"
+    echo "Cross-version: ${HB_COMPAT_CROSS_VERSION:-0}"
+fi
+
 # ── Notify ProxMenux Monitor that we're done ───────────────────
 # Routes through the user's configured channels (Telegram, Discord,
 # ntfy, etc.). Localhost-only endpoint, no auth needed. We try
@@ -429,13 +472,31 @@ if command -v jq >/dev/null 2>&1 && [[ -f "$COMPONENTS_STATUS" ]]; then
 fi
 
 if command -v curl >/dev/null 2>&1; then
-    PAYLOAD=$(printf '{"hostname":"%s","guests":"%s","stubs":"%s","stale_nodes":"%s","components":"%s","duration":"%s"}' \
-        "$(hostname)" \
-        "${copied_guests:-0}" \
-        "${stub_created:-0}" \
-        "${removed_nodes:-0}" \
-        "${COMPONENTS_REINSTALLED_CSV:-none}" \
-        "$POSTBOOT_DURATION_FMT")
+    # jq builds a proper JSON when available so SANITY_WARNINGS with
+    # special chars can't break the payload. Falls back to printf on
+    # hosts without jq — we already restrict SANITY_WARNINGS content
+    # to plain ASCII in the sanity check above, so the fallback is
+    # safe too.
+    if command -v jq >/dev/null 2>&1; then
+        PAYLOAD=$(jq -cn \
+            --arg hostname    "$(hostname)" \
+            --arg guests      "${copied_guests:-0}" \
+            --arg stubs       "${stub_created:-0}" \
+            --arg stale_nodes "${removed_nodes:-0}" \
+            --arg components  "${COMPONENTS_REINSTALLED_CSV:-none}" \
+            --arg duration    "$POSTBOOT_DURATION_FMT" \
+            --arg warnings    "$SANITY_WARNINGS" \
+            '{hostname:$hostname, guests:$guests, stubs:$stubs, stale_nodes:$stale_nodes, components:$components, duration:$duration, warnings:$warnings}')
+    else
+        PAYLOAD=$(printf '{"hostname":"%s","guests":"%s","stubs":"%s","stale_nodes":"%s","components":"%s","duration":"%s","warnings":"%s"}' \
+            "$(hostname)" \
+            "${copied_guests:-0}" \
+            "${stub_created:-0}" \
+            "${removed_nodes:-0}" \
+            "${COMPONENTS_REINSTALLED_CSV:-none}" \
+            "$POSTBOOT_DURATION_FMT" \
+            "$SANITY_WARNINGS")
+    fi
     NOTIFY_HTTP=$(curl -s -o /dev/null -w '%{http_code}' \
         -X POST "http://127.0.0.1:8008/api/internal/restore-event" \
         -H "Content-Type: application/json" \
