@@ -1310,7 +1310,6 @@
   "Encrypt this backup with a keyfile?": "Dieses Backup mit einer Schlüsseldatei verschlüsseln?",
   "Encrypt this backup with the existing keyfile?": "Dieses Backup mit der vorhandenen Schlüsseldatei verschlüsseln?",
   "Encryption": "Verschlüsselung",
-  "Encryption cancelled — a recovery passphrase is required to encrypt. Returning to the previous menu.": "Verschlüsselung abgebrochen – zum Verschlüsseln ist eine Wiederherstellungspassphrase erforderlich.Rückkehr zum vorherigen Menü.",
   "Encryption key created:": "Verschlüsselungsschlüssel erstellt:",
   "Encryption key creation failed": "Die Erstellung des Verschlüsselungsschlüssels ist fehlgeschlagen",
   "Encryption:": "Verschlüsselung:",
