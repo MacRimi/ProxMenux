@@ -1131,11 +1131,34 @@ hb_ask_pbs_encryption() {
         msg_ok "$(hb_translate "Encryption key created:") $key_file"
         HB_PBS_KEYFILE_OPT="--keyfile $key_file"
 
-        # Offer to set up automatic PBS-based recovery for the
-        # keyfile. The operator can decline if they want to handle
-        # offsite escrow manually, but the default flow nudges them
-        # to enable it.
-        hb_pbs_setup_recovery || true
+        # Set up automatic PBS-based recovery for the keyfile.
+        # Cancelling the passphrase used to fall through with
+        # `|| true` and leave the backup encrypted with a keyfile
+        # that only lived on this host — one reinstall away from
+        # being unrecoverable. Now we force an explicit choice:
+        # set the passphrase, accept the risk, or cancel encryption.
+        while ! hb_pbs_setup_recovery; do
+            local _rec_choice
+            _rec_choice=$(dialog --backtitle "ProxMenux" \
+                --title "$(hb_translate "Recovery passphrase required")" \
+                --menu "$(hb_translate "You chose to encrypt this backup. A recovery passphrase protects the keyfile: an encrypted copy is uploaded to PBS with every backup, and the restore flow can retrieve it if this host is ever lost.")"$'\n\n'"$(hb_translate "Without a recovery passphrase, the keyfile lives ONLY on this host. Losing it (fresh install, disk failure, ...) makes every encrypted backup UNRECOVERABLE.")"$'\n\n'"$(hb_translate "What do you want to do?")" \
+                20 82 3 \
+                "1" "$(hb_translate "Set a recovery passphrase (recommended)")" \
+                "2" "$(hb_translate "Continue WITHOUT recovery — I accept the risk")" \
+                "3" "$(hb_translate "Cancel encryption — backup will not be encrypted")" \
+                3>&1 1>&2 2>&3)
+            # ESC / empty → treat as "retry passphrase" (safest default)
+            [[ -z "$_rec_choice" ]] && _rec_choice="1"
+            case "$_rec_choice" in
+                1) continue ;;
+                2) msg_warn "$(hb_translate "Encryption without recovery — the keyfile lives only on this host. Export it manually to a safe location.")"
+                   break ;;
+                3) rm -f "$key_file" 2>/dev/null
+                   HB_PBS_KEYFILE_OPT=""
+                   msg_info "$(hb_translate "Encryption cancelled — backup will proceed unencrypted.")"
+                   break ;;
+            esac
+        done
     else
         # Surface the actual error from proxmox-backup-client to the
         # operator — silent failures here were the reason the user
@@ -1269,6 +1292,13 @@ hb_prepare_borg_passphrase() {
         chmod 600 "$sel_pass_file"
         export BORG_PASSPHRASE="$sel_pass"
         export BORG_ENCRYPT_MODE="repokey"
+        # Same mandatory acknowledgement as the fresh-target path:
+        # the passphrase is the only escape route to the encrypted
+        # repo. See the comment on the identical dialog below.
+        dialog --backtitle "ProxMenux" --colors \
+            --title "$(hb_translate "IMPORTANT — Save this passphrase")" \
+            --msgbox "\Zb\Z1$(hb_translate "This passphrase is the ONLY way to access encrypted Borg backups.")\Zn"$'\n\n'"$(hb_translate "ProxMenux saved it locally at:")"$'\n'"  \Zb${sel_pass_file}\ZB"$'\n\n'"$(hb_translate "If you lose or reinstall this host without a copy of the passphrase somewhere else (password manager, offline note, another host, USB stick...), every encrypted archive in this Borg repository becomes UNRECOVERABLE.")"$'\n\n'"\Zb$(hb_translate "Save the passphrase somewhere safe NOW, before continuing.")\ZB" \
+            18 82
         return 0
     fi
 
@@ -1309,6 +1339,20 @@ hb_prepare_borg_passphrase() {
         target_pass_file="$HB_STATE_DIR/borg-pass-${HB_BORG_LAST_SAVED_NAME}.txt"
     printf '%s' "$pass1" > "$target_pass_file"
     chmod 600 "$target_pass_file"
+
+    # Borg repokey stores the encrypted repo key inside the repo
+    # itself, so the passphrase IS the only thing the operator has
+    # to keep to be able to restore from a fresh host. The two
+    # passphrase prompts above feel like routine setup; without
+    # this block, operators reinstall their host expecting things
+    # to Just Work and then discover the passphrase file is gone
+    # and every encrypted archive is unreadable. Loud, mandatory
+    # acknowledgement: they have to press OK on a screen that says
+    # exactly what's at stake.
+    dialog --backtitle "ProxMenux" --colors \
+        --title "$(hb_translate "IMPORTANT — Save this passphrase")" \
+        --msgbox "\Zb\Z1$(hb_translate "This passphrase is the ONLY way to access encrypted Borg backups.")\Zn"$'\n\n'"$(hb_translate "ProxMenux saved it locally at:")"$'\n'"  \Zb${target_pass_file}\ZB"$'\n\n'"$(hb_translate "If you lose or reinstall this host without a copy of the passphrase somewhere else (password manager, offline note, another host, USB stick...), every encrypted archive in this Borg repository becomes UNRECOVERABLE.")"$'\n\n'"\Zb$(hb_translate "Save the passphrase somewhere safe NOW, before continuing.")\ZB" \
+        18 82
     export BORG_PASSPHRASE="$pass1"
     export BORG_ENCRYPT_MODE="repokey"
 }

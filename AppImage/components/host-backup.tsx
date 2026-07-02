@@ -1989,6 +1989,11 @@ function CreateJobDialog({
   // Backend-specific fields
   const [pbsRepository, setPbsRepository] = useState<string>("")
   const [pbsBackupId, setPbsBackupId] = useState<string>("")
+  // Explicit acknowledgement to proceed with encryption but WITHOUT a
+  // recovery passphrase. Mirrors the shell's 3-way gate: without this
+  // flag (or a filled passphrase pair), submit is blocked when the
+  // operator ticks "Encrypt". Same rationale as ManualBackup below.
+  const [pbsAcceptedNoRecovery, setPbsAcceptedNoRecovery] = useState<boolean>(false)
   // Client-side PBS encryption — sent as `pbs_encrypt` in the payload.
   // Backend resolves the shared keyfile + injects PBS_KEYFILE into
   // the job .env so the runner adds `--keyfile` to the backup call.
@@ -2182,6 +2187,7 @@ function CreateJobDialog({
       setPbsRecoveryPass("")
       setPbsRecoveryPass2("")
       setPbsRecoveryChange(false)
+      setPbsAcceptedNoRecovery(false)
       setLocalDestDir("")
       setBorgRepoSelected("")
       setBorgPassphrase("")
@@ -2268,8 +2274,14 @@ function CreateJobDialog({
         ? true
         : /* borg */ !!borgRepoSelected
 
+  // PBS encryption 3-way gate — see ManualBackup for full rationale.
+  const pbsRecoveryOk = !(backend === "pbs" && pbsEncrypt) ||
+    (pbsRecoveryStatus?.has_recovery && !pbsRecoveryChange) ||
+    (pbsRecoveryPass !== "" && pbsRecoveryPass === pbsRecoveryPass2) ||
+    pbsAcceptedNoRecovery
+
   const canSubmit =
-    canAdvanceFrom1 && canAdvanceFrom2 && canAdvanceFrom3 && canAdvanceFrom4 && backendValid
+    canAdvanceFrom1 && canAdvanceFrom2 && canAdvanceFrom3 && canAdvanceFrom4 && backendValid && pbsRecoveryOk
 
   async function handleCreate() {
     if (!canSubmit) return
@@ -2962,6 +2974,24 @@ function CreateJobDialog({
                                 <p className="text-[11px] text-red-400 mt-1">Passphrases don't match.</p>
                               )}
                             </div>
+                            {!pbsRecoveryPass && !pbsRecoveryPass2 && (
+                              <div className="mt-2 rounded-md border border-red-500/40 bg-red-500/10 p-2.5 space-y-1.5">
+                                <div className="flex items-start gap-1.5 text-[11px] text-red-300">
+                                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                                  <div>
+                                    <span className="font-medium">Without a recovery passphrase, the keyfile lives ONLY on this host.</span> If this host is lost or reinstalled, every encrypted backup becomes unrecoverable.
+                                  </div>
+                                </div>
+                                <Label className="flex items-center gap-2 text-[11px] cursor-pointer">
+                                  <Checkbox
+                                    id="pbsSchedAcceptNoRec"
+                                    checked={pbsAcceptedNoRecovery}
+                                    onCheckedChange={(v) => setPbsAcceptedNoRecovery(!!v)}
+                                  />
+                                  <span>I understand the risk and want to encrypt without recovery.</span>
+                                </Label>
+                              </div>
+                            )}
                             {pbsRecoveryStatus?.has_recovery && pbsRecoveryChange && (
                               <button
                                 type="button"
@@ -3312,6 +3342,11 @@ function ManualBackupDialog({
   // passphrase if one is already saved — only show the inputs when
   // there's no escrow yet OR the operator explicitly asks to change.
   const [pbsRecoveryChange, setPbsRecoveryChange] = useState<boolean>(false)
+  // Explicit acknowledgement to proceed with encryption but WITHOUT a
+  // recovery passphrase. Mirrors the shell's 3-way gate: without this
+  // flag (or a filled passphrase pair), submit is blocked when the
+  // operator ticks "Encrypt".
+  const [pbsAcceptedNoRecovery, setPbsAcceptedNoRecovery] = useState<boolean>(false)
   // Whether the host already has an escrow blob configured. When
   // present, the passphrase input becomes optional ("leave blank to
   // keep saved"). Refreshed after a successful setup call.
@@ -3371,6 +3406,7 @@ function ManualBackupDialog({
       setPbsRecoveryPass("")
       setPbsRecoveryPass2("")
       setPbsRecoveryChange(false)
+      setPbsAcceptedNoRecovery(false)
       setLocalDestDir("")
       setBorgRepoSelected("")
       setBorgPassphrase("")
@@ -3408,7 +3444,16 @@ function ManualBackupDialog({
         // Borg destination carries its own passphrase + encryption.
         // No need to gate on local state — the wizard no longer asks.
         : !!borgRepoSelected
-  const canSubmit = canAdvanceFrom1 && backendValid
+  // Recovery gate for PBS encryption. When "Encrypt" is ticked, either
+  // a matching passphrase pair OR an explicit accept-risk checkbox is
+  // required — otherwise submit stays blocked. Mirrors the shell 3-way
+  // gate so the operator can never silently create an encrypted backup
+  // whose keyfile only lives on this host.
+  const pbsRecoveryOk = !(backend === "pbs" && pbsEncrypt) ||
+    (pbsRecoveryStatus?.has_recovery && !pbsRecoveryChange) ||
+    (pbsRecoveryPass !== "" && pbsRecoveryPass === pbsRecoveryPass2) ||
+    pbsAcceptedNoRecovery
+  const canSubmit = canAdvanceFrom1 && backendValid && pbsRecoveryOk
 
   async function handleRun() {
     if (!canSubmit) return
@@ -3722,6 +3767,24 @@ function ManualBackupDialog({
                               >
                                 Cancel change — keep the saved passphrase
                               </button>
+                            )}
+                            {!pbsRecoveryPass && !pbsRecoveryPass2 && (
+                              <div className="mt-2 rounded-md border border-red-500/40 bg-red-500/10 p-2.5 space-y-1.5">
+                                <div className="flex items-start gap-1.5 text-[11px] text-red-300">
+                                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                                  <div>
+                                    <span className="font-medium">Without a recovery passphrase, the keyfile lives ONLY on this host.</span> If this host is lost or reinstalled, every encrypted backup becomes unrecoverable.
+                                  </div>
+                                </div>
+                                <Label className="flex items-center gap-2 text-[11px] cursor-pointer">
+                                  <Checkbox
+                                    id="pbsManualAcceptNoRec"
+                                    checked={pbsAcceptedNoRecovery}
+                                    onCheckedChange={(v) => setPbsAcceptedNoRecovery(!!v)}
+                                  />
+                                  <span>I understand the risk and want to encrypt without recovery.</span>
+                                </Label>
+                              </div>
                             )}
                           </>
                         )}
@@ -5189,9 +5252,20 @@ function AddDestinationDialog({
                         <p className="text-[11px] text-red-400 mt-1">Passphrases don't match.</p>
                       )}
                     </div>
-                    <p className="text-[11px] text-amber-400/90">
-                      ⚠ Without this passphrase the repo cannot be decrypted — losing it means losing every backup. The passphrase is saved server-side at <code className="font-mono">borg-pass-{name || "&lt;name&gt;"}.txt</code> (chmod 0600) so jobs against this destination can use it transparently.
-                    </p>
+                    <div className="mt-1 rounded-md border border-red-500/40 bg-red-500/10 p-2.5">
+                      <div className="flex items-start gap-1.5 text-[11px] text-red-300">
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                          <p>
+                            <span className="font-medium">This passphrase is the ONLY way to access encrypted Borg backups.</span> It's saved server-side at <code className="font-mono">borg-pass-{name || "&lt;name&gt;"}.txt</code> (chmod 0600) so jobs can use it transparently.
+                          </p>
+                          <p>
+                            If you lose or reinstall this host without a copy of the passphrase somewhere else (password manager, offline note, another host, USB stick...), every encrypted archive in this repository becomes <span className="font-semibold">UNRECOVERABLE</span>.
+                          </p>
+                          <p className="font-medium">Save the passphrase somewhere safe NOW, before continuing.</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
