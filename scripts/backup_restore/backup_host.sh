@@ -2192,7 +2192,13 @@ _rs_run_complete_guided() {
     # a small summary block for the confirm dialog — informative
     # only, no yes/no.
     RS_NIC_REMAP_SUMMARY=""
-    if (( ${#HB_NIC_REMAP[@]:-0} > 0 || ${#HB_NIC_MAC_CHANGED[@]:-0} > 0 )); then
+    # `${#ARR[@]:-0}` is NOT valid bash — you get either length OR
+    # default, never both. `hb_plan_nic_remaps` initialises both
+    # arrays (empty declarations) before this runs, so plain
+    # `${#ARR[@]}` returns 0 for the empty case without tripping
+    # `set -u`. Reported by a user during restore: "line 2195: bad
+    # substitution".
+    if (( ${#HB_NIC_REMAP[@]} > 0 || ${#HB_NIC_MAC_CHANGED[@]} > 0 )); then
         local nr_body entry old_if new_if nic_mac old_mac
         nr_body="\Zb$(translate "NIC changes detected — adjusted automatically")\ZB"$'\n\n'
         for entry in "${HB_NIC_REMAP[@]}"; do
