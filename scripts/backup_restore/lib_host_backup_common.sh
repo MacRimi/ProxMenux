@@ -1089,6 +1089,7 @@ hb_pbs_try_keyfile_recovery() {
 
 hb_ask_pbs_encryption() {
     local key_file="$HB_STATE_DIR/pbs-key.conf"
+    local recovery_enc="$HB_STATE_DIR/pbs-key.recovery.enc"
     export HB_PBS_KEYFILE_OPT=""
     export HB_PBS_ENC_PASS=""
 
@@ -1114,6 +1115,9 @@ hb_ask_pbs_encryption() {
 
     if [[ -s "$key_file" ]]; then
         # Already have a keyfile — one confirmation, no double yes/no.
+        # An existing keyfile is trusted: it can only be here if a
+        # previous encrypted backup completed (cancels in the setup
+        # flow wipe the file — see the create path below).
         dialog --backtitle "ProxMenux" --title "$(hb_translate "Encryption")" \
             --yesno "$(hb_translate "Encrypt this backup with the existing keyfile?")"$'\n\n'"$(hb_translate "Location:") $key_file" \
             10 78 || return 0
@@ -1153,7 +1157,10 @@ hb_ask_pbs_encryption() {
         # unset the --keyfile flag, and return 1 so the caller can
         # bail out and drop the operator back at the previous menu.
         if ! hb_pbs_setup_recovery; then
-            rm -f "$key_file" 2>/dev/null
+            # Cancel = leave no residue. Wipe both the freshly-created
+            # keyfile and any partial recovery blob so the state-dir
+            # is clean for the next try.
+            rm -f "$key_file" "$recovery_enc" 2>/dev/null
             HB_PBS_KEYFILE_OPT=""
             msg_warn "$(hb_translate "Encryption cancelled — a recovery passphrase is required to encrypt. Returning to the previous menu.")"
             return 1
