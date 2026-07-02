@@ -16905,10 +16905,27 @@ def api_host_backups_restore_prepare():
             except (subprocess.TimeoutExpired, OSError, json.JSONDecodeError, ValueError):
                 pass
 
+        # Cross-kernel plan: shared with the CLI menu via
+        # kernel_pin_plan.sh so both surfaces refuse the same restores.
+        # `detected=true` + `action=unavailable` is what the frontend
+        # treats as a hard refuse: it shows the "install a kernel first"
+        # modal instead of proceeding to the safety checkboxes.
+        cross_kernel: dict = {'detected': False}
+        kernel_plan_script = f'{_PROXMENUX_SCRIPTS_DIR}/backup_restore/restore/kernel_pin_plan.sh'
+        if os.path.isfile(kernel_plan_script):
+            try:
+                r = subprocess.run(['bash', kernel_plan_script, staging],
+                                   capture_output=True, text=True, timeout=90)
+                if r.returncode == 0 and r.stdout.strip():
+                    cross_kernel = json.loads(r.stdout.strip())
+            except (subprocess.TimeoutExpired, OSError, json.JSONDecodeError, ValueError):
+                pass
+
         return jsonify({
             'staging_path': staging,
             'paths_available': paths_available,
             'rollback_plan': rollback_plan,
+            'cross_kernel': cross_kernel,
         })
     except Exception as e:
         shutil.rmtree(staging, ignore_errors=True)

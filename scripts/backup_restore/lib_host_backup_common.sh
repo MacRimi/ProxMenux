@@ -2711,6 +2711,85 @@ hb_apply_nic_remaps() {
 # Output: one line per path, tab-separated: <abs_path>\t<reason>
 # The reason is a short label used verbatim in the confirm dialog.
 # ==========================================================
+# ==========================================================
+# KERNEL PIN PLAN — cross-kernel restore only
+# ==========================================================
+# When the backup was taken on a kernel major.minor different
+# from the target's running kernel, the safe and universally
+# correct action is to boot the target with the backup's kernel
+# after the restore. That way every driver / DKMS module that
+# the backup expects (nvidia, coral, intel_gpu, plus every
+# out-of-tree ZFS build) targets a kernel that actually exists
+# and matches, and the auto-reinstall on post-boot builds them
+# against the right ABI. Universal: works for ZFS root, LVM/ext4
+# root, BIOS or UEFI hosts alike.
+#
+# This function decides how to obtain that kernel on the target
+# and publishes the plan for the restore flow to act on.
+#
+# Input:
+#   $1  bk_kernel  — kernel release string from the backup
+#                   (e.g. "6.17.2-1-pve")
+# Output (env vars, all exported):
+#   HB_KERNEL_PIN_ACTION  installed | installable | unavailable
+#   HB_KERNEL_PIN_PKG     candidate package name to install (empty
+#                         when installed / unavailable)
+#   HB_KERNEL_PIN_KVER    the kernel release to pin (same as $1)
+# Also fills HB_KERNEL_PIN_REASON with a short human message
+# when action is "unavailable" (for the refuse dialog).
+# ==========================================================
+hb_kernel_pin_plan() {
+    local bk_kernel="$1"
+    export HB_KERNEL_PIN_ACTION="unavailable"
+    export HB_KERNEL_PIN_PKG=""
+    export HB_KERNEL_PIN_KVER="$bk_kernel"
+    export HB_KERNEL_PIN_REASON=""
+
+    [[ -z "$bk_kernel" ]] && {
+        HB_KERNEL_PIN_REASON="backup did not record its kernel release"
+        return 0
+    }
+
+    # Signed package name convention on modern Proxmox: the actual
+    # binary kernel image ships as `proxmox-kernel-<ver>-signed`, the
+    # unsigned build is `proxmox-kernel-<ver>` (only in special cases).
+    # `pve-kernel-<ver>` was the legacy name pre-Proxmox 8; try both
+    # so this works whether the backup came from an older PVE.
+    local -a candidates=(
+        "proxmox-kernel-${bk_kernel}-signed"
+        "proxmox-kernel-${bk_kernel}"
+        "pve-kernel-${bk_kernel}"
+    )
+    local pkg
+    for pkg in "${candidates[@]}"; do
+        # Already installed → nothing to fetch, just pin later.
+        if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null \
+            | grep -q '^install ok installed$'; then
+            HB_KERNEL_PIN_ACTION="installed"
+            HB_KERNEL_PIN_PKG="$pkg"
+            return 0
+        fi
+    done
+    # Not installed. Refresh apt metadata quietly, then look each
+    # candidate up. `apt-cache policy` shows a non-empty "Candidate"
+    # only when there IS an installable version in the enabled repos.
+    apt-get update -qq >/dev/null 2>&1 || true
+    for pkg in "${candidates[@]}"; do
+        local cand
+        cand=$(apt-cache policy "$pkg" 2>/dev/null \
+            | awk '/Candidate:/ {print $2; exit}')
+        if [[ -n "$cand" && "$cand" != "(none)" ]]; then
+            HB_KERNEL_PIN_ACTION="installable"
+            HB_KERNEL_PIN_PKG="$pkg"
+            return 0
+        fi
+    done
+
+    HB_KERNEL_PIN_ACTION="unavailable"
+    HB_KERNEL_PIN_REASON="not installed on this host and not available in the configured Proxmox repositories"
+    return 0
+}
+
 hb_unsafe_paths_cross_version() {
     cat <<'EOF'
 /etc/default/grub	GRUB defaults tied to prior kernel order

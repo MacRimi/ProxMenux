@@ -40,6 +40,9 @@ fi
 
 : "${HB_RESTORE_INCLUDE_ZFS:=0}"
 : "${HB_COMPAT_CROSS_VERSION:=0}"
+: "${HB_KERNEL_PIN_ACTION:=none}"
+: "${HB_KERNEL_PIN_KVER:=}"
+: "${HB_KERNEL_PIN_PKG:=}"
 
 if [[ ! -f "$APPLY_LIST" ]]; then
     echo "Apply list missing: $APPLY_LIST"
@@ -47,10 +50,13 @@ if [[ ! -f "$APPLY_LIST" ]]; then
     exit 1
 fi
 
-echo "Pending dir:   $PENDING_DIR"
-echo "Apply list:    $APPLY_LIST"
-echo "Include ZFS:   $HB_RESTORE_INCLUDE_ZFS"
-echo "Cross-version: $HB_COMPAT_CROSS_VERSION"
+echo "Pending dir:    $PENDING_DIR"
+echo "Apply list:     $APPLY_LIST"
+echo "Include ZFS:    $HB_RESTORE_INCLUDE_ZFS"
+echo "Cross-version:  $HB_COMPAT_CROSS_VERSION"
+echo "Kernel pin act: $HB_KERNEL_PIN_ACTION"
+echo "Kernel pin ver: $HB_KERNEL_PIN_KVER"
+echo "Kernel pin pkg: $HB_KERNEL_PIN_PKG"
 
 # Hardware-drift skips persisted by _rs_prepare_pending_restore.
 # Each line is an absolute path; we drop any rel path that matches
@@ -304,6 +310,60 @@ UNITEOF
         systemctl daemon-reload >/dev/null 2>&1 || true
         systemctl enable proxmenux-apply-cluster-postboot.service >/dev/null 2>&1 || true
 
+        # ── Cross-kernel: install (if needed) + pin backup's kernel ──
+        # When the backup was taken on a different kernel major.minor
+        # than the target, the restore flow pre-computed a plan telling
+        # us whether the backup's kernel is already on the target or
+        # can be pulled from Proxmox repos. Acting here — during the
+        # onboot restore, before the cluster-postboot fires — gives us
+        # a controlled reboot into the pinned kernel, so the DKMS
+        # auto-reinstall in postboot builds every module against the
+        # right ABI (the kernel the operator's backup actually expects).
+        _kernel_pin_reboot_needed=0
+        if [[ "$HB_KERNEL_PIN_ACTION" != "none" && -n "$HB_KERNEL_PIN_KVER" ]]; then
+            echo ""
+            echo "── Cross-kernel: preparing kernel $HB_KERNEL_PIN_KVER ──"
+            if [[ "$HB_KERNEL_PIN_ACTION" == "installable" ]]; then
+                echo "Installing $HB_KERNEL_PIN_PKG from Proxmox repositories..."
+                apt-get update -qq 2>&1 | tail -5
+                if DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$HB_KERNEL_PIN_PKG" 2>&1 | tail -10; then
+                    echo "  ✓ $HB_KERNEL_PIN_PKG installed"
+                else
+                    echo "  ✗ apt install failed — pin will fall back to whatever kernels are present"
+                fi
+            fi
+            if command -v proxmox-boot-tool >/dev/null 2>&1; then
+                proxmox-boot-tool kernel pin "$HB_KERNEL_PIN_KVER" 2>&1 | sed 's/^/  pin: /'
+                proxmox-boot-tool refresh 2>&1 | sed 's/^/  refresh: /'
+                _kernel_pin_reboot_needed=1
+            else
+                echo "  ! proxmox-boot-tool not available — kernel pin skipped"
+            fi
+        fi
+
+        if (( _kernel_pin_reboot_needed == 1 )); then
+            # Do NOT start the cluster-postboot service in this boot.
+            # We must reboot first so the kernel pin takes effect;
+            # once the machine is back up on the pinned kernel, the
+            # postboot service (enabled with a ConditionPathExists on
+            # cluster-apply-pending) will fire automatically and its
+            # DKMS reinstalls will target the correct kernel.
+            echo ""
+            echo "Rebooting into pinned kernel $HB_KERNEL_PIN_KVER..."
+            echo "completed" >"$STATE_FILE" 2>/dev/null || true
+            # Mark this restore as completed so the on-boot service
+            # doesn't re-fire after we reboot.
+            _rid="$(basename "$PENDING_DIR")"
+            mv "$PENDING_DIR" "${PENDING_BASE}/completed/${_rid}" >/dev/null 2>&1 || true
+            rm -f "$CURRENT_LINK" >/dev/null 2>&1 || true
+            systemctl disable proxmenux-restore-onboot.service >/dev/null 2>&1 || true
+            systemctl daemon-reload >/dev/null 2>&1 || true
+            sync
+            systemctl --no-block reboot
+            exit 0
+        fi
+
+        # Same-kernel path: fire cluster-postboot inline in this boot.
         # `systemctl enable` only adds the unit to multi-user.target.wants/.
         # It does NOT pull the unit into the currently-running boot
         # transaction — by the time we run, multi-user.target may have

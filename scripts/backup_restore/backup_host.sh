@@ -2061,6 +2061,9 @@ CREATED_AT=${created_at}
 HB_RESTORE_INCLUDE_ZFS=${HB_RESTORE_INCLUDE_ZFS:-0}
 HB_ROLLBACK_EXECUTE=${HB_ROLLBACK_EXECUTE:-0}
 HB_COMPAT_CROSS_VERSION=${HB_COMPAT_CROSS_VERSION:-0}
+HB_KERNEL_PIN_ACTION=${HB_KERNEL_PIN_ACTION:-none}
+HB_KERNEL_PIN_KVER=${HB_KERNEL_PIN_KVER:-}
+HB_KERNEL_PIN_PKG=${HB_KERNEL_PIN_PKG:-}
 EOF
     # Persist hardware-drift skips so apply_pending_restore.sh can filter
     # them at boot. The RS_SKIP_PATHS env var only lives in the restore
@@ -2226,6 +2229,15 @@ _rs_run_complete_guided() {
     if [[ "${HB_COMPAT_CROSS_VERSION:-0}" == "1" ]]; then
         local -a cv_skipped=()
         local cv_line cv_path cv_reason cv_rel
+        # The drift block above trims the trailing newline off
+        # RS_SKIP_PATHS ("${skip_paths%$'\n'}"), so the first cv_path
+        # appended below would be pasted onto the previous drift path
+        # (bench-reproduced: `/etc/kernel/proxmox-boot-uuids/etc/default/grub`
+        # in rs-skip-paths.txt broke the match on /etc/default/grub,
+        # apply_pending_restore restored it from the backup, update-grub
+        # generated a boot config against the backup kernel and the
+        # host paniced on next reboot). Restore the missing separator.
+        [[ -n "$RS_SKIP_PATHS" && "${RS_SKIP_PATHS: -1}" != $'\n' ]] && RS_SKIP_PATHS+=$'\n'
         while IFS=$'\t' read -r cv_path cv_reason; do
             [[ -z "$cv_path" ]] && continue
             cv_rel="${cv_path#/}"
@@ -2711,17 +2723,173 @@ _rs_run_complete_extras() {
         rm -f "$cur_pkgs_file"
         if [[ ${#missing[@]} -gt 0 ]]; then
             echo
-            # Split into apt-known vs unknown so the install count
-            # announced below matches what apt-get will actually attempt.
-            local -a installable=() unknown=()
+            # ── Intelligent package filter (universal, not cross-version-only) ─
+            #
+            # `packages.manual.list` lists everything apt-marked as manual on
+            # the SOURCE host. A blind `apt install` of that list on the
+            # target can wreck it in two ways:
+            #
+            #   1. The backup pinned a package to an older SO-major (e.g.
+            #      libzfs6linux from Proxmox 9.1) but the target already
+            #      ships the newer sibling (libzfs7linux from 9.2). APT
+            #      would resolve the older version by cascade-removing the
+            #      newer one plus everything that depends on it
+            #      (zfsutils-linux, zfs-initramfs, zfs-zed). The `zpool`
+            #      binary vanishes → next reboot panics on rpool mount.
+            #      Bench-reproduced on nvidia3 (9.2.3 / kernel 7.0.12) with
+            #      an nvidia2 backup (9.1.9 / kernel 6.17.2).
+            #
+            #   2. Some packages are already present on the target because
+            #      the fresh install included them — apt doesn't need us
+            #      to re-request them, and re-requesting can pull config
+            #      prompts we don't want during unattended restore.
+            #
+            # The filter runs three passes:
+            #   (a) already_installed  → dpkg -s says the pkg is on target
+            #   (b) provided_by_newer  → target already has libFOO<N>* where
+            #                            the backup's pkg is libFOO<M>* with
+            #                            M < N (SO-major bump between
+            #                            Proxmox releases)
+            #   (c) cascade_risk       → apt-get simulate proves the install
+            #                            would REMOVE something critical
+            #
+            # Each pass populates a report array. Nothing is silent — the
+            # operator sees the final tally with reasons.
+            local -a rep_skipped_installed=()
+            local -a rep_skipped_provided=()
+            local -a rep_skipped_cascade=()
+            local -a rep_unknown=()
+            local -a candidates=()
+
             local pkg
             for pkg in "${missing[@]}"; do
+                # Pass (a): already installed?
+                if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null \
+                    | grep -q '^install ok installed$'; then
+                    rep_skipped_installed+=("$pkg")
+                    continue
+                fi
+                # Pass (b): provided by newer sibling? Only for
+                # `<base><N><suffix>` shaped names — the SO-major
+                # convention used by libzfs<N>linux, libzpool<N>linux,
+                # libnvpair<N>linux, libuutil<N>linux, libzstd<N>, etc.
+                if [[ "$pkg" =~ ^(lib[a-z]+)([0-9]+)([a-z]*[0-9]*)$ ]]; then
+                    local _base="${BASH_REMATCH[1]}"
+                    local _num="${BASH_REMATCH[2]}"
+                    local _suffix="${BASH_REMATCH[3]}"
+                    local _newer_found=""
+                    # Only look up to +5 majors ahead — enough to cover any
+                    # realistic Proxmox jump without probing forever.
+                    local _n
+                    for _n in $(seq $((_num + 1)) $((_num + 5))); do
+                        local _sibling="${_base}${_n}${_suffix}"
+                        if dpkg-query -W -f='${Status}' "$_sibling" 2>/dev/null \
+                            | grep -q '^install ok installed$'; then
+                            _newer_found="$_sibling"
+                            break
+                        fi
+                    done
+                    if [[ -n "$_newer_found" ]]; then
+                        rep_skipped_provided+=("${pkg}|${_newer_found}")
+                        continue
+                    fi
+                fi
+                # Not skipped yet — needs the apt cache to know if it's
+                # installable at all. Unknown-to-apt goes to its own list.
                 if apt-cache show "$pkg" >/dev/null 2>&1; then
-                    installable+=("$pkg")
+                    candidates+=("$pkg")
                 else
-                    unknown+=("$pkg")
+                    rep_unknown+=("$pkg")
                 fi
             done
+
+            # Pass (c): apt-simulate to catch cascade-remove risk. We
+            # simulate the full candidate set first; if apt would remove
+            # anything, iteratively drop the "first offender" (the pkg
+            # that appears earliest in the simulated remove path) and
+            # retry until the simulation is clean or the list is empty.
+            local -a installable=()
+            if (( ${#candidates[@]} > 0 )) && command -v apt-get >/dev/null 2>&1; then
+                local _work=("${candidates[@]}")
+                local _guard=0
+                while (( ${#_work[@]} > 0 && _guard < 20 )); do
+                    _guard=$((_guard + 1))
+                    local _sim_out
+                    _sim_out=$(DEBIAN_FRONTEND=noninteractive \
+                        apt-get install -y --simulate --no-install-recommends \
+                        -o Dpkg::Options::="--force-confdef" \
+                        -o Dpkg::Options::="--force-confold" \
+                        "${_work[@]}" 2>&1)
+                    # Look for removals: apt marks them as `Remv <pkg>...`
+                    # in the plan output.
+                    local -a _would_remove=()
+                    mapfile -t _would_remove < <(printf '%s\n' "$_sim_out" \
+                        | awk '/^Remv / {print $2}')
+                    if (( ${#_would_remove[@]} == 0 )); then
+                        installable=("${_work[@]}")
+                        break
+                    fi
+                    # Pick the offender: a package in _work whose install
+                    # is directly linked to the removal. Heuristic — if
+                    # any _work package shares the base+suffix pattern
+                    # with a would-remove package but a different major,
+                    # that's the offender. Otherwise, drop the last one
+                    # (least "essential" by convention of the list).
+                    local _offender=""
+                    local _rm
+                    for _rm in "${_would_remove[@]}"; do
+                        if [[ "$_rm" =~ ^(lib[a-z]+)([0-9]+)([a-z]*[0-9]*)$ ]]; then
+                            local _rmbase="${BASH_REMATCH[1]}"
+                            local _rmsuffix="${BASH_REMATCH[3]}"
+                            local _cand
+                            for _cand in "${_work[@]}"; do
+                                if [[ "$_cand" =~ ^${_rmbase}[0-9]+${_rmsuffix}$ ]]; then
+                                    _offender="$_cand"; break
+                                fi
+                            done
+                        fi
+                        [[ -n "$_offender" ]] && break
+                    done
+                    if [[ -z "$_offender" ]]; then
+                        # No obvious mapping — bail out safely: report
+                        # everything as cascade risk and install nothing.
+                        rep_skipped_cascade+=("${_work[@]/#/${_would_remove[0]}<-}")
+                        _work=()
+                        break
+                    fi
+                    rep_skipped_cascade+=("${_offender}|would remove ${_would_remove[*]:0:3}")
+                    # Drop the offender and retry.
+                    local -a _new_work=()
+                    local _c
+                    for _c in "${_work[@]}"; do
+                        [[ "$_c" == "$_offender" ]] || _new_work+=("$_c")
+                    done
+                    _work=("${_new_work[@]}")
+                done
+            fi
+
+            local -a unknown=("${rep_unknown[@]}")
+
+            # ── Summarize what the filter decided ──
+            if (( ${#rep_skipped_installed[@]} > 0 )); then
+                local _prev="${rep_skipped_installed[*]:0:5}"
+                (( ${#rep_skipped_installed[@]} > 5 )) && _prev+=" … (+ $((${#rep_skipped_installed[@]} - 5)) more)"
+                echo -e "${TAB}${BGN}$(translate "Already installed — skipping"):${CL} ${BL}${_prev}${CL}"
+            fi
+            if (( ${#rep_skipped_provided[@]} > 0 )); then
+                echo -e "${TAB}${BGN}$(translate "Provided by newer version — skipping"):${CL}"
+                local _rec
+                for _rec in "${rep_skipped_provided[@]}"; do
+                    echo -e "${TAB}  ${DGN}${_rec%%|*}${CL} → ${BL}${_rec##*|}${CL}"
+                done
+            fi
+            if (( ${#rep_skipped_cascade[@]} > 0 )); then
+                echo -e "${TAB}${YWB}$(translate "Skipped to protect target system (would cascade-remove packages)"):${CL}"
+                local _rec
+                for _rec in "${rep_skipped_cascade[@]}"; do
+                    echo -e "${TAB}  ${YWB}${_rec%%|*}${CL} — ${_rec##*|}"
+                done
+            fi
 
             if (( ${#installable[@]} > 0 )); then
                 local _preview="${installable[*]:0:6}"
@@ -2902,6 +3070,40 @@ restore_menu() {
             # (_rs_prompt_zfs_opt_in) read to choose between the
             # silent same-host path and the loud cross-host path.
             hb_compat_check "$staging_root"
+
+            # Cross-kernel restore requires the backup's kernel to be
+            # bootable on the target — either already installed or
+            # obtainable from the Proxmox repositories. When it's
+            # neither, refuse cleanly: continuing would leave the
+            # operator with drivers built against a kernel that isn't
+            # present, and DKMS would silently pin the wrong ABI.
+            if [[ "${HB_COMPAT_CROSS_VERSION:-0}" == "1" ]]; then
+                local _bk_kernel=""
+                if [[ -f "$staging_root/metadata/run_info.env" ]]; then
+                    _bk_kernel=$(grep -m1 '^kernel=' "$staging_root/metadata/run_info.env" 2>/dev/null | cut -d= -f2-)
+                fi
+                if [[ -n "$_bk_kernel" ]]; then
+                    hb_kernel_pin_plan "$_bk_kernel"
+                    if [[ "$HB_KERNEL_PIN_ACTION" == "unavailable" ]]; then
+                        # Log so the operator can inspect after the fact.
+                        local _refuse_log="/var/log/proxmenux/restore-refused-$(date +%Y%m%d_%H%M%S).log"
+                        mkdir -p "$(dirname "$_refuse_log")" 2>/dev/null
+                        {
+                            echo "Refused at:      $(date -Iseconds)"
+                            echo "Backup kernel:   $_bk_kernel"
+                            echo "Target running:  $(uname -r)"
+                            echo "Reason:          $HB_KERNEL_PIN_REASON"
+                        } > "$_refuse_log"
+                        dialog --backtitle "ProxMenux" --colors \
+                            --title "$(translate "Restore refused — incompatible kernel")" \
+                            --msgbox "\Zb\Z1$(translate "This backup was taken on kernel"):\Zn \Zb${_bk_kernel}\ZB"$'\n\n'"$(translate "That kernel is") ${HB_KERNEL_PIN_REASON}."$'\n\n'"$(translate "Restoring without a matching kernel would leave drivers and modules built against a kernel that is not present on this host — the system may fail to boot or run degraded.")"$'\n\n'"\Zb$(translate "How to proceed"):\ZB"$'\n'"  • $(translate "Install Proxmox VE from an ISO whose kernel matches")"$'\n'"  • $(translate "Or fetch the kernel manually:") apt install proxmox-kernel-${_bk_kernel}"$'\n'"  • $(translate "Then relaunch the restore.")"$'\n\n'"$(translate "Details logged at"): $_refuse_log" \
+                            22 84
+                        rm -rf "$staging_root"
+                        continue
+                    fi
+                fi
+            fi
+
             if hb_show_compat_report; then
                 if _rs_apply_menu "$staging_root"; then
                     rm -rf "$staging_root"

@@ -5,7 +5,7 @@ import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
@@ -999,6 +999,27 @@ function InspectModal({
     paths: string[]
     rollbackExecute?: boolean
   } | null>(null)
+  // Cross-kernel modal state:
+  //   - refuse: backup kernel is neither installed nor available in
+  //     Proxmox repos. Restore cannot proceed cleanly; the modal
+  //     mirrors the CLI msgbox and tells the operator what to do.
+  //   - notice: backup kernel is installed (or installable). Restore
+  //     will proceed but the operator sees a plain heads-up so they
+  //     know why the flow will pin a different kernel + reboot.
+  const [crossKernelRefuse, setCrossKernelRefuse] = useState<{
+    backupKernel: string
+    targetKernel: string
+    reason: string
+  } | null>(null)
+  const [crossKernelNotice, setCrossKernelNotice] = useState<{
+    backupKernel: string
+    targetKernel: string
+    action: "installed" | "installable"
+    pkg: string
+    stagingPath: string
+    pathsAvailable: string[]
+    rollbackPlan?: RollbackPlan
+  } | null>(null)
 
   const beginRestore = async () => {
     if (!archive) return
@@ -1023,6 +1044,41 @@ function InspectModal({
         body: JSON.stringify(body),
       })
       if (!r?.staging_path) throw new Error("backend did not return a staging path")
+      const ck = r.cross_kernel || {}
+      // Refuse path: kernel unreachable, do not open the restore
+      // options dialog. The operator sees the modal explaining why.
+      if (ck?.detected && ck?.action === "unavailable") {
+        setCrossKernelRefuse({
+          backupKernel: ck.backup_kernel || "",
+          targetKernel: ck.target_kernel || "",
+          reason: ck.reason || "unknown",
+        })
+        // Clean up the staging tree the backend just created — the
+        // restore is not going to run against it.
+        try {
+          await fetchApi("/api/host-backups/restore/cleanup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ staging_path: r.staging_path }),
+          })
+        } catch { /* best effort */ }
+        return
+      }
+      // Notice path: heads-up modal, then continue to the standard
+      // restore options once the operator acknowledges.
+      if (ck?.detected && (ck?.action === "installed" || ck?.action === "installable")) {
+        setCrossKernelNotice({
+          backupKernel: ck.backup_kernel || "",
+          targetKernel: ck.target_kernel || "",
+          action: ck.action,
+          pkg: ck.pkg || "",
+          stagingPath: r.staging_path,
+          pathsAvailable: Array.isArray(r.paths_available) ? r.paths_available : [],
+          rollbackPlan: r.rollback_plan,
+        })
+        return
+      }
+      // Same-kernel: straight to the options dialog.
       setRestoreOptions({
         stagingPath: r.staging_path,
         pathsAvailable: Array.isArray(r.paths_available) ? r.paths_available : [],
@@ -1480,6 +1536,131 @@ function InspectModal({
           <div className="flex justify-end">
             <Button variant="ghost" onClick={() => setRestoreError(null)}>Close</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+    )}
+
+    {/* ── Cross-kernel refuse modal ───────────────────────────
+        Backend detected the backup was taken on a kernel major.minor
+        different from the target's, and that kernel is neither
+        installed nor pullable from Proxmox repos. Restoring anyway
+        would leave drivers/DKMS pinned to a kernel that isn't on
+        the box; we refuse and tell the operator what to do. Copy
+        mirrors the CLI msgbox in backup_host.sh so a user reading
+        both surfaces gets the exact same instructions. */}
+    {crossKernelRefuse && (
+      <Dialog open={true} onOpenChange={(o) => !o && setCrossKernelRefuse(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-500">
+              <AlertTriangle className="h-5 w-5" />
+              Restore refused — incompatible kernel
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p>
+              This backup was taken on kernel{" "}
+              <code className="font-mono text-red-300">{crossKernelRefuse.backupKernel}</code>.
+            </p>
+            <p>
+              That kernel is <span className="font-medium">{crossKernelRefuse.reason}</span>{" "}
+              (current host runs{" "}
+              <code className="font-mono">{crossKernelRefuse.targetKernel}</code>).
+            </p>
+            <p>
+              Restoring without a matching kernel would leave drivers and modules built against a
+              kernel that is not present on this host — the system may fail to boot or run degraded.
+            </p>
+            <div className="rounded-md border border-border bg-muted/40 p-3 space-y-2">
+              <p className="font-medium">How to proceed</p>
+              <ul className="list-disc pl-5 space-y-1 text-xs">
+                <li>Install Proxmox VE from an ISO whose kernel matches the backup.</li>
+                <li>
+                  Or fetch the kernel manually:{" "}
+                  <code className="font-mono">
+                    apt install proxmox-kernel-{crossKernelRefuse.backupKernel}
+                  </code>
+                </li>
+                <li>Then relaunch the restore from this dialog.</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setCrossKernelRefuse(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )}
+
+    {/* ── Cross-kernel notice modal ──────────────────────────
+        Backend detected cross-kernel but the correct kernel is
+        available (already installed or pullable). The restore
+        flow will handle the pin + reboot automatically; this
+        just tells the operator what to expect before they see
+        the standard restore options dialog. */}
+    {crossKernelNotice && (
+      <Dialog open={true} onOpenChange={(o) => !o && setCrossKernelNotice(null)}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-400">
+              <AlertTriangle className="h-5 w-5" />
+              Cross-kernel restore
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p>
+              This backup was taken on kernel{" "}
+              <code className="font-mono">{crossKernelNotice.backupKernel}</code>. The host
+              currently runs <code className="font-mono">{crossKernelNotice.targetKernel}</code>.
+            </p>
+            {crossKernelNotice.action === "installed" ? (
+              <p>
+                <code className="font-mono">{crossKernelNotice.pkg}</code> is already installed on
+                this host. The restore will pin it as the default boot kernel and reboot into it
+                once so DKMS drivers are rebuilt against the correct ABI.
+              </p>
+            ) : (
+              <p>
+                <code className="font-mono">{crossKernelNotice.pkg}</code> is available from
+                Proxmox repos. The restore will install it, pin it as the default boot kernel and
+                reboot into it once so DKMS drivers are rebuilt against the correct ABI.
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              An extra reboot will happen automatically as part of the restore. You do not need to
+              do anything.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const sp = crossKernelNotice.stagingPath
+                setCrossKernelNotice(null)
+                if (sp) {
+                  fetchApi("/api/host-backups/restore/cleanup", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ staging_path: sp }),
+                  }).catch(() => undefined)
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setRestoreOptions({
+                  stagingPath: crossKernelNotice.stagingPath,
+                  pathsAvailable: crossKernelNotice.pathsAvailable,
+                  rollbackPlan: crossKernelNotice.rollbackPlan,
+                })
+                setCrossKernelNotice(null)
+              }}
+            >
+              Understood — continue
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     )}
