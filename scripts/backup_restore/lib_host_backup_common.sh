@@ -1102,7 +1102,17 @@ hb_ask_pbs_encryption() {
     # around in xterm-compatible terminals until overwritten).
     printf '\033]0;ProxMenux\007'
 
-    if [[ -f "$key_file" ]]; then
+    # Wipe any zero-byte keyfile left behind by a previous cancelled or
+    # failed key-create run. Without this the "existing keyfile" branch
+    # below would happily hand `--keyfile <empty>` to
+    # proxmox-backup-client, which then dies mid-backup with an
+    # opaque "unable to load encryption key" error. Reported by a
+    # user who cancelled at the passphrase step and then tried again.
+    if [[ -f "$key_file" && ! -s "$key_file" ]]; then
+        rm -f "$key_file" 2>/dev/null
+    fi
+
+    if [[ -s "$key_file" ]]; then
         # Already have a keyfile — one confirmation, no double yes/no.
         dialog --backtitle "ProxMenux" --title "$(hb_translate "Encryption")" \
             --yesno "$(hb_translate "Encrypt this backup with the existing keyfile?")"$'\n\n'"$(hb_translate "Location:") $key_file" \
@@ -1126,7 +1136,10 @@ hb_ask_pbs_encryption() {
     local create_stderr
     create_stderr=$(proxmox-backup-client key create --kdf none "$key_file" </dev/null 2>&1 >/dev/null)
     local create_rc=$?
-    if [[ $create_rc -eq 0 && -f "$key_file" ]]; then
+    # `-s` (nonzero size) rather than `-f` (exists) — a zero-byte file
+    # is treated as if the create failed. Matches the defensive wipe
+    # at the top of the function.
+    if [[ $create_rc -eq 0 && -s "$key_file" ]]; then
         chmod 600 "$key_file"
         msg_ok "$(hb_translate "Encryption key created:") $key_file"
         HB_PBS_KEYFILE_OPT="--keyfile $key_file"
@@ -1146,6 +1159,11 @@ hb_ask_pbs_encryption() {
             return 1
         fi
     else
+        # Key create failed. Sweep any zero-byte / half-written file
+        # the tool may have left behind so the next attempt starts
+        # from a clean state instead of picking up an unusable
+        # "existing keyfile".
+        [[ -f "$key_file" && ! -s "$key_file" ]] && rm -f "$key_file" 2>/dev/null
         # Surface the actual error from proxmox-backup-client to the
         # operator — silent failures here were the reason the user
         # kept seeing `Encryption: Disabled` after entering the
