@@ -2976,13 +2976,13 @@ _rs_select_component_paths() {
             done
             dialog --backtitle "ProxMenux" --colors \
                 --title "$(translate "Cross-kernel — paths hidden from picker")" \
-                --msgbox "$(translate "The following backup paths are kernel-tied and would break the target host if restored across kernel versions. They are excluded from the selection below:")"$'\n\n'"${_rsp_list_str}"$'\n'"$(translate "If you need any of these, restore this backup on a host with the same kernel major.minor.")" \
-                20 84
+                --msgbox "$(translate "The following backup paths are kernel-tied and are excluded from the picker to keep the target's boot safe. The operator's own tuning inside these paths (IOMMU cmdline, VFIO IDs, custom quirks) is merged back automatically via kernel-agnostic merge:")"$'\n\n'"${_rsp_list_str}"$'\n'"$(translate "To copy any of these files verbatim, restore this backup on a host with the same kernel major.minor.")" \
+                22 84
         fi
 
         if (( ${#_rsp_checklist[@]} == 0 )); then
             dialog --backtitle "ProxMenux" --title "$(translate "Nothing selectable")" \
-                --msgbox "$(translate "Every path in this backup is kernel-tied and cannot be restored across kernel versions.")" 9 78
+                --msgbox "$(translate "Every path in this backup is kernel-tied — nothing to pick in Custom mode. Use Complete restore instead: it applies these paths automatically via the safe-subset filter and re-merges the operator's tuning.")" 12 84
             return 1
         fi
 
@@ -3434,9 +3434,9 @@ _rs_apply_menu() {
         _cur_k=$(uname -r 2>/dev/null || echo "?")
         _cur_mm=$(echo "$_cur_k" | cut -d. -f1-2)
         dialog --backtitle "ProxMenux" --colors \
-            --title "$(translate "Cross-kernel restore — safe subset only")" \
-            --msgbox "$(translate "This backup was taken on kernel"): \Zb${_bkk}\ZB"$'\n'"$(translate "Target host runs"): \Zb${_cur_k}\ZB"$'\n\n'"\Zb$(translate "Only the essential configuration will be restored"):\ZB $(translate "/etc/pve, network, ssh, users, cron, ProxMenux state, etc.")"$'\n\n'"$(translate "Kernel-tied paths (boot config, /etc/systemd/system, initramfs config, apt sources, ZFS state, ...) will be skipped automatically to protect the target's boot.")"$'\n\n'"$(translate "If you need a complete bit-for-bit restore, use a backup taken on kernel") \Zb${_cur_mm}.x\ZB $(translate "or reinstall Proxmox with a version that ships kernel") \Zb${_bkk}\ZB." \
-            22 84
+            --title "$(translate "Cross-kernel restore — kernel-tied paths merged, not copied")" \
+            --msgbox "$(translate "This backup was taken on kernel"): \Zb${_bkk}\ZB"$'\n'"$(translate "Target host runs"): \Zb${_cur_k}\ZB"$'\n\n'"\Zb$(translate "Everything restorable in this backup will be restored"):\ZB $(translate "VMs, LXCs, network, /etc/pve, users, cron, packages, drivers, ProxMenux state, etc.")"$'\n\n'"$(translate "Kernel/boot-tied files (boot config, /etc/systemd/system, initramfs config, apt sources, ZFS state, ...) are NOT copied verbatim to keep the target's boot safe. The operator's own tuning inside them (IOMMU cmdline, VFIO IDs, custom quirks, GRUB timeout, ...) is merged into the target's fresh copies automatically via kernel-agnostic merge.")" \
+            20 84
     fi
 
     while true; do
