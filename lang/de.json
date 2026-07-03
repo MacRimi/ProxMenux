@@ -1460,7 +1460,7 @@
   "Every 6 hours": "Alle 6 Stunden",
   "Every PBS backup from now on will also upload the encrypted recovery copy to PBS — automatically, no extra steps from you.": "Von nun an lädt jedes PBS-Backup auch die verschlüsselte Wiederherstellungskopie auf PBS hoch – automatisch, ohne zusätzliche Schritte Ihrerseits.",
   "Every hour": "Stündlich",
-  "Every path in this backup is kernel-tied — nothing to pick in Custom mode. Use Complete restore instead: it applies these paths automatically via the safe-subset filter and re-merges the operator's tuning.": "Jeder Pfad in diesem Backup ist an den Kernel gebunden – im benutzerdefinierten Modus kann nichts ausgewählt werden.Verwenden Sie stattdessen die vollständige Wiederherstellung: Diese Pfade werden automatisch über den Safe-Subset-Filter angewendet und die Optimierung des Operators wird erneut zusammengeführt.",
+  "Every path in this backup is kernel-tied: the restore applies these paths automatically via the safe-subset filter and re-merges the operator's tuning.": "Jeder Pfad in dieser Sicherung ist an den Kernel gebunden: Die Wiederherstellung wendet diese Pfade automatisch über den Safe-Subset-Filter an und führt die Optimierung des Operators erneut zusammen.",
   "Everything restorable in this backup will be restored": "Alles, was in diesem Backup wiederhergestellt werden kann, wird wiederhergestellt",
   "Example output: rootfs: local-lvm:vm-114-disk-0,size=8G": "Beispielausgabe: rootfs: local-lvm:vm-114-disk-0,size=8G",
   "Example target: /dev/sdb": "Beispielziel: /dev/sdb",
