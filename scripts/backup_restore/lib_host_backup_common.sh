@@ -2711,85 +2711,6 @@ hb_apply_nic_remaps() {
 # Output: one line per path, tab-separated: <abs_path>\t<reason>
 # The reason is a short label used verbatim in the confirm dialog.
 # ==========================================================
-# ==========================================================
-# KERNEL PIN PLAN — cross-kernel restore only
-# ==========================================================
-# When the backup was taken on a kernel major.minor different
-# from the target's running kernel, the safe and universally
-# correct action is to boot the target with the backup's kernel
-# after the restore. That way every driver / DKMS module that
-# the backup expects (nvidia, coral, intel_gpu, plus every
-# out-of-tree ZFS build) targets a kernel that actually exists
-# and matches, and the auto-reinstall on post-boot builds them
-# against the right ABI. Universal: works for ZFS root, LVM/ext4
-# root, BIOS or UEFI hosts alike.
-#
-# This function decides how to obtain that kernel on the target
-# and publishes the plan for the restore flow to act on.
-#
-# Input:
-#   $1  bk_kernel  — kernel release string from the backup
-#                   (e.g. "6.17.2-1-pve")
-# Output (env vars, all exported):
-#   HB_KERNEL_PIN_ACTION  installed | installable | unavailable
-#   HB_KERNEL_PIN_PKG     candidate package name to install (empty
-#                         when installed / unavailable)
-#   HB_KERNEL_PIN_KVER    the kernel release to pin (same as $1)
-# Also fills HB_KERNEL_PIN_REASON with a short human message
-# when action is "unavailable" (for the refuse dialog).
-# ==========================================================
-hb_kernel_pin_plan() {
-    local bk_kernel="$1"
-    export HB_KERNEL_PIN_ACTION="unavailable"
-    export HB_KERNEL_PIN_PKG=""
-    export HB_KERNEL_PIN_KVER="$bk_kernel"
-    export HB_KERNEL_PIN_REASON=""
-
-    [[ -z "$bk_kernel" ]] && {
-        HB_KERNEL_PIN_REASON="backup did not record its kernel release"
-        return 0
-    }
-
-    # Signed package name convention on modern Proxmox: the actual
-    # binary kernel image ships as `proxmox-kernel-<ver>-signed`, the
-    # unsigned build is `proxmox-kernel-<ver>` (only in special cases).
-    # `pve-kernel-<ver>` was the legacy name pre-Proxmox 8; try both
-    # so this works whether the backup came from an older PVE.
-    local -a candidates=(
-        "proxmox-kernel-${bk_kernel}-signed"
-        "proxmox-kernel-${bk_kernel}"
-        "pve-kernel-${bk_kernel}"
-    )
-    local pkg
-    for pkg in "${candidates[@]}"; do
-        # Already installed → nothing to fetch, just pin later.
-        if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null \
-            | grep -q '^install ok installed$'; then
-            HB_KERNEL_PIN_ACTION="installed"
-            HB_KERNEL_PIN_PKG="$pkg"
-            return 0
-        fi
-    done
-    # Not installed. Refresh apt metadata quietly, then look each
-    # candidate up. `apt-cache policy` shows a non-empty "Candidate"
-    # only when there IS an installable version in the enabled repos.
-    apt-get update -qq >/dev/null 2>&1 || true
-    for pkg in "${candidates[@]}"; do
-        local cand
-        cand=$(apt-cache policy "$pkg" 2>/dev/null \
-            | awk '/Candidate:/ {print $2; exit}')
-        if [[ -n "$cand" && "$cand" != "(none)" ]]; then
-            HB_KERNEL_PIN_ACTION="installable"
-            HB_KERNEL_PIN_PKG="$pkg"
-            return 0
-        fi
-    done
-
-    HB_KERNEL_PIN_ACTION="unavailable"
-    HB_KERNEL_PIN_REASON="not installed on this host and not available in the configured Proxmox repositories"
-    return 0
-}
-
 hb_unsafe_paths_cross_version() {
     cat <<'EOF'
 /etc/default/grub	GRUB defaults tied to prior kernel order
@@ -2811,15 +2732,116 @@ hb_unsafe_paths_cross_version() {
 EOF
 }
 
-#   HB_COMPAT_SAME_HOST     → 1 if backup's hostname matches current
-#   HB_COMPAT_ANY_FAIL      → 1 if at least one FAIL was raised
-#   HB_COMPAT_ANY_WARN      → 1 if at least one WARN was raised
-#   HB_COMPAT_CROSS_VERSION → 1 if PVE major OR kernel major.minor differs
-#                             (triggers the safe-restore path filter that
-#                             skips grub/kernel/apt/dkms/... — see
-#                             hb_unsafe_paths_cross_version)
-#   HB_COMPAT_RESULTS[]     → array of "STATUS|category|message" entries
-#                             where STATUS ∈ {PASS, INFO, WARN, FAIL}
+# ==========================================================
+# hb_detect_bootloader — "grub" | "systemd-boot" | "unknown"
+# ==========================================================
+# Proxmox uses systemd-boot on ZFS-on-root installs and GRUB on
+# ext4/lvm. `proxmox-boot-tool status` reports both cases when
+# the tool is present; on rescue paths without pbt we fall back
+# to the presence of /etc/kernel/cmdline (systemd-boot) or
+# /etc/default/grub (GRUB).
+hb_detect_bootloader() {
+    if command -v proxmox-boot-tool >/dev/null 2>&1; then
+        local pbt
+        pbt="$(proxmox-boot-tool status 2>/dev/null || true)"
+        if grep -qi 'systemd-boot' <<<"$pbt"; then
+            echo "systemd-boot"; return 0
+        elif grep -qiE 'grub|BIOS' <<<"$pbt"; then
+            echo "grub"; return 0
+        fi
+    fi
+    if [[ -f /etc/kernel/cmdline ]]; then
+        echo "systemd-boot"
+    elif [[ -f /etc/default/grub ]]; then
+        echo "grub"
+    else
+        echo "unknown"
+    fi
+}
+
+# hb_grub_keys_whitelist — GRUB /etc/default/grub keys that are
+# stable across PVE 9.x / kernel majors and worth merging from the
+# backup on a bk_older restore. Excludes GRUB_DISTRIBUTOR (changes
+# with the distro package) and keys whose values reference boot
+# entries the target install regenerates (GRUB_SAVEDEFAULT).
+hb_grub_keys_whitelist() {
+    cat <<'EOF'
+GRUB_TIMEOUT
+GRUB_TIMEOUT_STYLE
+GRUB_DEFAULT
+GRUB_TERMINAL
+GRUB_TERMINAL_INPUT
+GRUB_TERMINAL_OUTPUT
+GRUB_DISABLE_OS_PROBER
+GRUB_SERIAL_COMMAND
+GRUB_CMDLINE_LINUX_DEFAULT
+GRUB_CMDLINE_LINUX
+GRUB_GFXMODE
+GRUB_GFXPAYLOAD_LINUX
+EOF
+}
+
+# hb_hydration_module_whitelist — module names safe to add to the
+# target's /etc/modules from the backup's modules_loaded_at_boot
+# on a bk_older restore. All are kernel-agnostic in name across
+# 5.x → 7.x. Skips distro defaults (loop, dm-*) since a fresh
+# install already loads them.
+hb_hydration_module_whitelist() {
+    cat <<'EOF'
+vfio
+vfio_pci
+vfio_iommu_type1
+vfio_virqfd
+kvm
+kvm_intel
+kvm_amd
+nvidia
+nvidia_drm
+nvidia_modeset
+nvidia_uvm
+i915
+xe
+EOF
+}
+
+# hb_hydration_files_patterns — glob patterns (relative to root)
+# for files that are safe to copy verbatim from the backup rootfs
+# in a bk_older restore. The rule for inclusion: operator- or
+# ProxMenux-authored file whose content uses stable syntax across
+# kernel majors. Excludes distro-owned files (pve-blacklist.conf,
+# mdadm.conf, nvme.conf) whose contents can evolve between releases.
+hb_hydration_files_patterns() {
+    cat <<'EOF'
+/etc/modprobe.d/proxmenux-*.conf
+/etc/modprobe.d/vfio.conf
+/etc/modprobe.d/vfio-pci.conf
+/etc/modprobe.d/kvm.conf
+/etc/modprobe.d/blacklist-nvidia.conf
+/etc/modprobe.d/blacklist-nouveau.conf
+/etc/modprobe.d/nvidia*.conf
+/etc/modules-load.d/proxmenux-*.conf
+/etc/modules-load.d/vfio*.conf
+/etc/modules-load.d/nvidia*.conf
+/etc/udev/rules.d/10-proxmenux-vfio-bind.rules
+/etc/udev/rules.d/70-nvidia.rules
+EOF
+}
+
+#   HB_COMPAT_SAME_HOST         → 1 if backup's hostname matches current
+#   HB_COMPAT_ANY_FAIL          → 1 if at least one FAIL was raised
+#   HB_COMPAT_ANY_WARN          → 1 if at least one WARN was raised
+#   HB_COMPAT_CROSS_VERSION     → 1 if PVE major OR kernel major.minor differs
+#   HB_COMPAT_KERNEL_DIRECTION  → "same" / "bk_older" / "bk_newer" — only
+#                                 "bk_older" activates the safe-subset
+#                                 restore that skips kernel-tied paths
+#                                 (grub, /etc/systemd/system, initramfs
+#                                 config, apt sources, ZFS state, …).
+#                                 "bk_newer" restores everything as
+#                                 same-version because empirical tests
+#                                 (9.2 → 9.1 with GPU passthrough +
+#                                 IOMMU) prove that direction is safe.
+#   HB_COMPAT_RESULTS[]         → array of "STATUS|category|message"
+#                                 entries where STATUS ∈ {PASS,INFO,WARN,FAIL}
 # Use hb_show_compat_report to surface the result and let the user
 # decide whether to continue.
 # ==========================================================
@@ -2830,6 +2852,32 @@ hb_compat_check() {
     HB_COMPAT_ANY_FAIL=0
     HB_COMPAT_ANY_WARN=0
     HB_COMPAT_CROSS_VERSION=0
+    # HB_COMPAT_KERNEL_DIRECTION captures which direction the kernel
+    # major.minor drift goes:
+    #   same     — backup and target on the same kernel major.minor
+    #              (or one side lacks a kernel string in the manifest).
+    #   bk_older — backup kernel is OLDER than target kernel. This is
+    #              the only direction that has been observed to break
+    #              things: restoring older-kernel-era userspace onto a
+    #              newer target can drag in old libzfs siblings, older
+    #              systemd unit overrides, and DKMS modules built
+    #              against a kernel that isn't the one now running.
+    #              The restore flow uses this to skip the kernel-tied
+    #              paths (grub, /etc/systemd/system, initramfs config,
+    #              etc.) so Full mode still runs but only over the
+    #              safe subset, and Custom mode grays out the unsafe
+    #              paths so the operator can't shoot themself in the
+    #              foot picking them.
+    #   bk_newer — backup kernel is NEWER than target kernel. Empirical
+    #              testing (multiple 9.2 → 9.1 restores with GPU
+    #              passthrough / IOMMU) shows this direction works
+    #              fine as-is: Proxmox repos don't ship future package
+    #              versions on old series, so APT silently skips the
+    #              backup's kernel-tied packages, and modules compile
+    #              against whatever kernel the target is running. No
+    #              safe-mode restrictions apply here; the restore runs
+    #              as though it were same-version.
+    HB_COMPAT_KERNEL_DIRECTION="same"
 
     local meta="$staging_root/metadata"
     local rootfs="$staging_root/rootfs"
@@ -2898,10 +2946,28 @@ hb_compat_check() {
             if [[ "$bk_kmaj" == "$cur_kmaj" ]]; then
                 HB_COMPAT_RESULTS+=("PASS|Kernel|$(hb_translate "Same major.minor:") $bk_kernel → $cur_kernel")
             else
-                # Kernel major.minor drift — same reasoning as the
-                # PVE case above. Safe filter handles it.
-                HB_COMPAT_RESULTS+=("INFO|Kernel|$(hb_translate "Different kernel major.minor:") $bk_kernel → $cur_kernel $(hb_translate "— safe restore mode will skip kernel-tied config")")
-                HB_COMPAT_CROSS_VERSION=1
+                # Kernel major.minor drift — decide direction so the
+                # rest of the restore knows whether to switch on the
+                # safe-subset mode. Bash `[[ ... < ... ]]` is a string
+                # compare, so we split into integers explicitly.
+                local _bk_maj _bk_min _cur_maj _cur_min
+                _bk_maj=${bk_kmaj%%.*}
+                _bk_min=${bk_kmaj##*.}
+                _cur_maj=${cur_kmaj%%.*}
+                _cur_min=${cur_kmaj##*.}
+                if (( _bk_maj < _cur_maj )) \
+                   || (( _bk_maj == _cur_maj && _bk_min < _cur_min )); then
+                    HB_COMPAT_KERNEL_DIRECTION="bk_older"
+                    HB_COMPAT_RESULTS+=("INFO|Kernel|$(hb_translate "Backup on older kernel:") $bk_kernel → $cur_kernel $(hb_translate "— Full/Custom restore will skip kernel-tied paths")")
+                    HB_COMPAT_CROSS_VERSION=1
+                else
+                    # Backup NEWER than target — empirical evidence
+                    # (multiple GPU passthrough tests) shows this
+                    # direction restores cleanly with no filtering.
+                    HB_COMPAT_KERNEL_DIRECTION="bk_newer"
+                    HB_COMPAT_RESULTS+=("INFO|Kernel|$(hb_translate "Backup on newer kernel:") $bk_kernel → $cur_kernel $(hb_translate "— restore proceeds as same-version (verified safe)")")
+                    HB_COMPAT_CROSS_VERSION=1
+                fi
             fi
         fi
     fi

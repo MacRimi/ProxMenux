@@ -2061,9 +2061,8 @@ CREATED_AT=${created_at}
 HB_RESTORE_INCLUDE_ZFS=${HB_RESTORE_INCLUDE_ZFS:-0}
 HB_ROLLBACK_EXECUTE=${HB_ROLLBACK_EXECUTE:-0}
 HB_COMPAT_CROSS_VERSION=${HB_COMPAT_CROSS_VERSION:-0}
-HB_KERNEL_PIN_ACTION=${HB_KERNEL_PIN_ACTION:-none}
-HB_KERNEL_PIN_KVER=${HB_KERNEL_PIN_KVER:-}
-HB_KERNEL_PIN_PKG=${HB_KERNEL_PIN_PKG:-}
+HB_COMPAT_KERNEL_DIRECTION=${HB_COMPAT_KERNEL_DIRECTION:-same}
+HB_HYDRATION_APPLIED=${HB_HYDRATION_APPLIED:-0}
 EOF
     # Persist hardware-drift skips so apply_pending_restore.sh can filter
     # them at boot. The RS_SKIP_PATHS env var only lives in the restore
@@ -2120,6 +2119,328 @@ _rs_handle_ssh_network_risk() {
         --yesno "$(translate "Continue with live apply now? SSH may disconnect immediately.")" \
         10 80; then
         return 1
+    fi
+    return 0
+}
+
+# ==========================================================
+# Kernel-agnostic hydration for bk_older restores
+# ==========================================================
+# In bk_older direction we block whole-file restores of the
+# kernel/boot-tied paths (see hb_unsafe_paths_cross_version) to
+# stop the target's boot from being poisoned by systemd unit
+# overrides, APT sources, GRUB defaults, etc. from an older
+# base. But the operator's OWN customisations inside those
+# paths (IOMMU cmdline, VFIO modules, usb-storage.quirks, custom
+# GRUB_TIMEOUT, ...) are kernel-agnostic and should still land
+# on the target — otherwise a fresh install after a restore
+# forgets everything the operator tuned.
+#
+# The hydration functions below implement a merge-not-copy
+# strategy: they read the operator-authored bits from the
+# manifest (cmdline_extra, modules_loaded_at_boot) or from
+# specific whitelisted files in the staging rootfs, and merge
+# them into the target's live config without touching keys or
+# tokens the target already carries. All four phases are
+# idempotent and additive; running them twice is a no-op.
+# ==========================================================
+
+_rs_hyd_manifest() { echo "$1/metadata/manifest.json"; }
+
+# List operator-authored kernel cmdline tokens from the manifest,
+# one per line. Empty output = nothing to merge.
+_rs_hyd_cmdline_tokens() {
+    local manifest="$1"
+    [[ -f "$manifest" ]] || return 0
+    command -v jq >/dev/null 2>&1 || return 0
+    jq -r '.kernel_params.cmdline_extra // [] | .[]' "$manifest" 2>/dev/null || true
+}
+
+# List modules the backup loaded at boot (from /etc/modules on
+# the source host), one per line.
+_rs_hyd_modules_at_boot() {
+    local manifest="$1"
+    [[ -f "$manifest" ]] || return 0
+    command -v jq >/dev/null 2>&1 || return 0
+    jq -r '.kernel_params.modules_loaded_at_boot // [] | .[]' "$manifest" 2>/dev/null || true
+}
+
+# Read a KEY=VALUE line from a `/etc/default/grub`-style file.
+# Prints the raw VALUE part (including surrounding quotes) if
+# present, empty otherwise. Handles both `KEY=value` and
+# `KEY="value with spaces"` forms.
+_rs_hyd_grub_read_key() {
+    local file="$1" key="$2"
+    [[ -f "$file" ]] || return 0
+    # Grab the LAST assignment (later wins in shell-style config),
+    # skip comment lines, tolerate leading whitespace.
+    grep -E "^[[:space:]]*${key}=" "$file" 2>/dev/null | tail -1 | sed -E "s/^[[:space:]]*${key}=//"
+}
+
+# Write or replace a KEY=VALUE line in a `/etc/default/grub`-style
+# file. If the key already exists (uncommented), rewrites its
+# line in place; otherwise appends the new line at the end. Leaves
+# comment lines untouched.
+_rs_hyd_grub_write_key() {
+    local file="$1" key="$2" value="$3"
+    [[ -f "$file" ]] || return 1
+    if grep -qE "^[[:space:]]*${key}=" "$file"; then
+        # In-place rewrite of the last matching line. Use sed with
+        # a temp file so partial failure doesn't corrupt the target.
+        local tmp
+        tmp="$(mktemp)"
+        awk -v k="$key" -v v="$value" '
+            BEGIN { pat = "^[[:space:]]*" k "=" }
+            $0 ~ pat { print k "=" v; next }
+            { print }
+        ' "$file" > "$tmp" && mv "$tmp" "$file"
+    else
+        printf '%s=%s\n' "$key" "$value" >> "$file"
+    fi
+}
+
+# Strip surrounding double quotes and split a GRUB_CMDLINE_-style
+# value into whitespace-delimited tokens (one per line). Handles
+# escaped inner quotes conservatively.
+_rs_hyd_cmdline_split() {
+    local raw="$1"
+    raw="${raw%\"}"; raw="${raw#\"}"
+    raw="${raw%\'}"; raw="${raw#\'}"
+    # tr will collapse any run of whitespace; xargs normalises.
+    tr -s '[:space:]' '\n' <<<"$raw" | sed '/^$/d'
+}
+
+# Merge two cmdline strings: target wins on ties (same key), any
+# backup token whose KEY (or bare flag) is not in target is
+# appended. Prints the merged cmdline as a single line without
+# surrounding quotes. Also returns 0 if any token was added, 1
+# if nothing changed — useful for the caller to decide whether
+# an update-grub / proxmox-boot-tool refresh is needed.
+_rs_hyd_cmdline_merge() {
+    local target_line="$1" backup_line="$2"
+    local -A target_keys=()
+    local -a merged=()
+    local t bkey
+    while IFS= read -r t; do
+        [[ -z "$t" ]] && continue
+        merged+=("$t")
+        bkey="${t%%=*}"
+        target_keys["$bkey"]=1
+    done < <(_rs_hyd_cmdline_split "$target_line")
+    local added=0
+    while IFS= read -r t; do
+        [[ -z "$t" ]] && continue
+        bkey="${t%%=*}"
+        if [[ -z "${target_keys[$bkey]:-}" ]]; then
+            merged+=("$t")
+            target_keys["$bkey"]=1
+            added=1
+        fi
+    done < <(_rs_hyd_cmdline_split "$backup_line")
+    printf '%s' "${merged[*]}"
+    (( added )) && return 0 || return 1
+}
+
+# Phase 1a — GRUB path
+# ────────────────────
+# Merge cmdline tokens from the backup's cmdline_extra into the
+# target's live GRUB_CMDLINE_LINUX_DEFAULT (never overwrite existing
+# tokens or keys). Also merge whitelisted GRUB_* keys from the
+# backup's /etc/default/grub whose values differ. Reports one
+# summary line per action into the global RS_HYDRATION_ACTIONS[].
+# $3=mode: "plan" reports would-be actions only, "commit" writes.
+_rs_hyd_grub() {
+    local backup_rootfs="$1" manifest="$2" mode="${3:-commit}"
+    local target="/etc/default/grub"
+    local bk_file="$backup_rootfs/etc/default/grub"
+    [[ -f "$target" ]] || return 0
+
+    local changed=0
+
+    # ── cmdline merge ──
+    local bk_tokens
+    bk_tokens="$(_rs_hyd_cmdline_tokens "$manifest" | tr '\n' ' ')"
+    if [[ -n "${bk_tokens// /}" ]]; then
+        local live_default merged_default added_tokens
+        live_default="$(_rs_hyd_grub_read_key "$target" GRUB_CMDLINE_LINUX_DEFAULT)"
+        local stripped="${live_default%\"}"; stripped="${stripped#\"}"
+        if merged_default="$(_rs_hyd_cmdline_merge "$stripped" "$bk_tokens")"; then
+            added_tokens="$(comm -13 \
+                <(printf '%s\n' $stripped | sort -u) \
+                <(printf '%s\n' $merged_default | sort -u) 2>/dev/null | tr '\n' ' ')"
+            [[ "$mode" == "commit" ]] && _rs_hyd_grub_write_key "$target" GRUB_CMDLINE_LINUX_DEFAULT "\"${merged_default}\""
+            RS_HYDRATION_ACTIONS+=("GRUB_CMDLINE_LINUX_DEFAULT — merge tokens: ${added_tokens}")
+            changed=1
+        fi
+    fi
+
+    # ── whitelisted GRUB_* keys from the backup file ──
+    if [[ -f "$bk_file" ]]; then
+        local key bk_val live_val
+        while IFS= read -r key; do
+            [[ -z "$key" ]] && continue
+            [[ "$key" == "GRUB_CMDLINE_LINUX_DEFAULT" || "$key" == "GRUB_CMDLINE_LINUX" ]] && continue
+            bk_val="$(_rs_hyd_grub_read_key "$bk_file" "$key")"
+            [[ -z "$bk_val" ]] && continue
+            live_val="$(_rs_hyd_grub_read_key "$target" "$key")"
+            if [[ "$bk_val" != "$live_val" ]]; then
+                [[ "$mode" == "commit" ]] && _rs_hyd_grub_write_key "$target" "$key" "$bk_val"
+                RS_HYDRATION_ACTIONS+=("${key} — restore operator value from backup")
+                changed=1
+            fi
+        done < <(hb_grub_keys_whitelist)
+    fi
+
+    (( changed )) && return 0 || return 1
+}
+
+# Phase 1b — systemd-boot / ZFS path
+# ──────────────────────────────────
+# /etc/kernel/cmdline is a single-line file holding the ENTIRE
+# kernel cmdline (root=, boot=, rootflags=, plus operator tokens).
+# We MUST NOT copy it verbatim across kernels — the target's fresh
+# install references its own ZFS pool. Instead: keep the target's
+# boot boilerplate, append the operator tokens from cmdline_extra
+# that aren't already there.
+_rs_hyd_kernel_cmdline() {
+    local manifest="$1" mode="${2:-commit}"
+    local target="/etc/kernel/cmdline"
+    [[ -f "$target" ]] || return 0
+
+    local bk_tokens
+    bk_tokens="$(_rs_hyd_cmdline_tokens "$manifest" | tr '\n' ' ')"
+    [[ -z "${bk_tokens// /}" ]] && return 1
+
+    local live merged added_tokens
+    live="$(cat "$target" 2>/dev/null | tr -d '\n')"
+    if merged="$(_rs_hyd_cmdline_merge "$live" "$bk_tokens")"; then
+        added_tokens="$(comm -13 \
+            <(printf '%s\n' $live | sort -u) \
+            <(printf '%s\n' $merged | sort -u) 2>/dev/null | tr '\n' ' ')"
+        [[ "$mode" == "commit" ]] && printf '%s\n' "$merged" > "$target"
+        RS_HYDRATION_ACTIONS+=("/etc/kernel/cmdline (systemd-boot/ZFS) — merge tokens: ${added_tokens}")
+        return 0
+    fi
+    return 1
+}
+
+# Phase 2 — /etc/modules merge
+# ────────────────────────────
+# Append modules from modules_loaded_at_boot that are whitelisted
+# AND not already present in /etc/modules. Preserves comments and
+# existing entries.
+_rs_hyd_modules() {
+    local manifest="$1" mode="${2:-commit}"
+    local target="/etc/modules"
+    [[ -f "$target" ]] || return 0
+
+    local -A live_modules=() whitelist=()
+    local m line
+    while IFS= read -r line; do
+        line="${line%%#*}"
+        m="$(printf '%s' "$line" | xargs)"
+        [[ -n "$m" ]] && live_modules["$m"]=1
+    done < "$target"
+    while IFS= read -r m; do
+        m="$(printf '%s' "$m" | xargs)"
+        [[ -n "$m" ]] && whitelist["$m"]=1
+    done < <(hb_hydration_module_whitelist)
+
+    local added=0
+    while IFS= read -r m; do
+        m="$(printf '%s' "$m" | xargs)"
+        [[ -z "$m" ]] && continue
+        [[ -z "${whitelist[$m]:-}" ]] && continue
+        [[ -n "${live_modules[$m]:-}" ]] && continue
+        [[ "$mode" == "commit" ]] && printf '%s\n' "$m" >> "$target"
+        live_modules["$m"]=1
+        RS_HYDRATION_ACTIONS+=("/etc/modules — add: $m")
+        added=1
+    done < <(_rs_hyd_modules_at_boot "$manifest")
+
+    (( added )) && return 0 || return 1
+}
+
+# Phase 3 — whitelisted files
+# ───────────────────────────
+# For each pattern in hb_hydration_files_patterns, copy the
+# matching file from the staging rootfs to the live target IF the
+# backup carries it and its content differs from the live copy.
+_rs_hyd_files() {
+    local backup_rootfs="$1" mode="${2:-commit}"
+    local pattern src dst
+    local copied=0
+    while IFS= read -r pattern; do
+        [[ -z "$pattern" ]] && continue
+        while IFS= read -r src; do
+            [[ -z "$src" || ! -f "$src" ]] && continue
+            dst="${src#${backup_rootfs}}"
+            [[ "$dst" == /* ]] || continue
+            if ! cmp -s "$src" "$dst" 2>/dev/null; then
+                if [[ "$mode" == "commit" ]]; then
+                    mkdir -p "$(dirname "$dst")" 2>/dev/null || true
+                    cp -a "$src" "$dst" 2>/dev/null || continue
+                fi
+                RS_HYDRATION_ACTIONS+=("${dst} — restore from backup")
+                copied=1
+            fi
+        done < <(compgen -G "${backup_rootfs}${pattern}" 2>/dev/null || true)
+    done < <(hb_hydration_files_patterns)
+    (( copied )) && return 0 || return 1
+}
+
+# Orchestrator for the 4 phases. Two modes:
+#   plan   — populates RS_HYDRATION_ACTIONS and RS_HYDRATION_SUMMARY
+#            without writing to any live file. Safe to call before
+#            the operator's final yes/no.
+#   commit — actually writes to the live target and exports
+#            HB_HYDRATION_APPLIED=1 if anything changed, so that
+#            plan.env carries the flag and apply_pending_restore.sh
+#            forces NEEDS_INITRAMFS/NEEDS_GRUB.
+# Both modes are safe to call multiple times: writes are additive
+# and idempotent, plan is side-effect free.
+_rs_apply_bk_older_hydration() {
+    local staging_root="$1" mode="${2:-commit}"
+    local backup_rootfs="$staging_root/rootfs"
+    local manifest
+    manifest="$(_rs_hyd_manifest "$staging_root")"
+
+    RS_HYDRATION_ACTIONS=()
+    RS_HYDRATION_SUMMARY=""
+
+    [[ -d "$backup_rootfs" ]] || return 0
+
+    local bootloader
+    bootloader="$(hb_detect_bootloader)"
+
+    local any=0
+    case "$bootloader" in
+        systemd-boot)
+            _rs_hyd_kernel_cmdline "$manifest" "$mode" && any=1 || true
+            ;;
+        grub|*)
+            _rs_hyd_grub "$backup_rootfs" "$manifest" "$mode" && any=1 || true
+            ;;
+    esac
+    _rs_hyd_modules "$manifest" "$mode" && any=1 || true
+    _rs_hyd_files "$backup_rootfs" "$mode" && any=1 || true
+
+    if (( any )); then
+        if [[ "$mode" == "commit" ]]; then
+            HB_HYDRATION_APPLIED=1
+            export HB_HYDRATION_APPLIED
+        fi
+        local body a header
+        if [[ "$mode" == "plan" ]]; then
+            header="$(translate "Operator config that WILL be re-applied via kernel-agnostic merge")"
+        else
+            header="$(translate "Operator config re-applied via kernel-agnostic merge")"
+        fi
+        body="\Zb${header}\ZB"$'\n\n'
+        for a in "${RS_HYDRATION_ACTIONS[@]}"; do
+            body+="  \Z2•\Zn ${a}"$'\n'
+        done
+        RS_HYDRATION_SUMMARY="$body"
     fi
     return 0
 }
@@ -2218,15 +2539,12 @@ _rs_run_complete_guided() {
     fi
 
     # ── Cross-version safe-restore filter ────────────────────
-    # When the backup was taken on a different PVE major or a
-    # different kernel major.minor, restoring boot/kernel/apt
-    # config on top of the current install is what causes the
-    # post-reboot kernel panic. Fold those paths into RS_SKIP_PATHS
-    # so the same downstream machinery that already honours skips
-    # (_rs_apply, _rs_collect_pending_paths, apply_pending_restore)
-    # keeps them out of the restore.
+    # Only activates on `bk_older` (backup kernel older than target).
+    # The reverse direction (`bk_newer`) restores cleanly as-is —
+    # verified empirically on multiple 9.2 → 9.1 restores with GPU
+    # passthrough / IOMMU / DKMS drivers.
     RS_CROSS_VERSION_SKIPS=""
-    if [[ "${HB_COMPAT_CROSS_VERSION:-0}" == "1" ]]; then
+    if [[ "${HB_COMPAT_KERNEL_DIRECTION:-same}" == "bk_older" ]]; then
         local -a cv_skipped=()
         local cv_line cv_path cv_reason cv_rel
         # The drift block above trims the trailing newline off
@@ -2265,6 +2583,15 @@ _rs_run_complete_guided() {
         RS_SKIP_PATHS="${RS_SKIP_PATHS#$'\n'}"
         RS_SKIP_PATHS="${RS_SKIP_PATHS%$'\n'}"
         export RS_SKIP_PATHS
+
+        # Kernel-agnostic hydration of operator-authored bits that
+        # would otherwise be lost with the whole-file skip above.
+        # See _rs_apply_bk_older_hydration for the four merge phases.
+        # Runs in "plan" mode BEFORE the confirm dialog so
+        # RS_HYDRATION_SUMMARY can preview what will be re-applied;
+        # the commit runs AFTER the operator says yes, right before
+        # the hot apply.
+        _rs_apply_bk_older_hydration "$staging_root" plan
     fi
 
     # Build the rich confirmation body. Replaces the previous 4-strategy
@@ -2334,6 +2661,12 @@ _rs_run_complete_guided() {
     if [[ -n "${RS_CROSS_VERSION_SKIPS:-}" ]]; then
         body+=$'\n'"${RS_CROSS_VERSION_SKIPS}"
     fi
+    # And the counterpart: what gets re-applied via kernel-agnostic
+    # merge. Rendered in green because it's what the operator gets
+    # back for free even though the whole file was skipped above.
+    if [[ -n "${RS_HYDRATION_SUMMARY:-}" ]]; then
+        body+=$'\n'"${RS_HYDRATION_SUMMARY}"
+    fi
     body+=$'\n'"\Zb\Z4$(translate "A reboot is required to finish the restore.")\Zn"$'\n\n'
     body+="$(translate "If notifications are enabled (Telegram/Discord/ntfy/...), you will receive a \"Host restore finished\" message when all background tasks complete.")"$'\n\n'
     body+="\Zb$(translate "Continue?")\ZB"
@@ -2385,6 +2718,15 @@ _rs_run_complete_guided() {
 
     show_proxmenux_logo
     msg_title "$(translate "Applying safe paths and preparing pending restore")"
+    # Commit the kernel-agnostic hydration BEFORE hot apply so
+    # /etc/modules, /etc/default/grub (or /etc/kernel/cmdline),
+    # and whitelisted vfio/nvidia files carry the operator's
+    # tokens by the time apply_pending_restore.sh reads its
+    # pending list. plan.env picks up HB_HYDRATION_APPLIED=1
+    # and forces NEEDS_INITRAMFS/NEEDS_GRUB post-boot.
+    if [[ "${HB_COMPAT_KERNEL_DIRECTION:-same}" == "bk_older" ]]; then
+        _rs_apply_bk_older_hydration "$staging_root" commit
+    fi
     [[ "$hot_count" -gt 0 ]] && _rs_apply "$staging_root" hot
 
     local -a pending_paths=()
@@ -2581,11 +2923,68 @@ _rs_select_component_paths() {
 
     # ── Dialog checklist (one entry per real backup path) ──
     if [[ -z "$_rsp_selected" ]]; then
+        # In bk_older restores, kernel-tied paths are excluded from
+        # the list entirely (bash `dialog` has no gray-out primitive,
+        # so we hide the unsafe entries and surface their names in a
+        # msgbox up front). Uses the same list `hb_unsafe_paths_cross_version`
+        # returns — single source of truth with the safe filter used
+        # by Full restore.
+        local -A _rsp_blocked=()
+        local -a _rsp_blocked_list=()
+        if [[ "${HB_COMPAT_KERNEL_DIRECTION:-same}" == "bk_older" ]]; then
+            local _rsp_bp _rsp_reason
+            while IFS=$'\t' read -r _rsp_bp _rsp_reason; do
+                [[ -z "$_rsp_bp" ]] && continue
+                local _rsp_bp_rel="${_rsp_bp#/}"
+                _rsp_blocked["$_rsp_bp_rel"]=1
+            done < <(hb_unsafe_paths_cross_version)
+        fi
+
         local -a _rsp_checklist=()
         local _rsp_p
         for _rsp_p in "${_rsp_backup[@]}"; do
+            # Skip paths whose parent (or itself) is on the blocked
+            # list: `/etc/systemd/system/foo` counts as blocked when
+            # `/etc/systemd/system` is on the list.
+            local _rsp_hit="" _rsp_probe="$_rsp_p"
+            while [[ -n "$_rsp_probe" ]]; do
+                if [[ -n "${_rsp_blocked[$_rsp_probe]:-}" ]]; then
+                    _rsp_hit="/$_rsp_probe"
+                    break
+                fi
+                [[ "$_rsp_probe" != *"/"* ]] && break
+                _rsp_probe="${_rsp_probe%/*}"
+            done
+            if [[ -n "$_rsp_hit" ]]; then
+                _rsp_blocked_list+=("$_rsp_hit")
+                continue
+            fi
             _rsp_checklist+=("$_rsp_p" "/$_rsp_p" "off")
         done
+
+        # If any paths were dropped, show them in a msgbox before the
+        # picker so the operator understands why they don't appear.
+        if (( ${#_rsp_blocked_list[@]} > 0 )); then
+            # Deduplicate — a folder can hide many child paths.
+            local -A _rsp_seen=()
+            local _rsp_list_str=""
+            local _rsp_e
+            for _rsp_e in "${_rsp_blocked_list[@]}"; do
+                [[ -n "${_rsp_seen[$_rsp_e]:-}" ]] && continue
+                _rsp_seen["$_rsp_e"]=1
+                _rsp_list_str+="  • ${_rsp_e}"$'\n'
+            done
+            dialog --backtitle "ProxMenux" --colors \
+                --title "$(translate "Cross-kernel — paths hidden from picker")" \
+                --msgbox "$(translate "The following backup paths are kernel-tied and would break the target host if restored across kernel versions. They are excluded from the selection below:")"$'\n\n'"${_rsp_list_str}"$'\n'"$(translate "If you need any of these, restore this backup on a host with the same kernel major.minor.")" \
+                20 84
+        fi
+
+        if (( ${#_rsp_checklist[@]} == 0 )); then
+            dialog --backtitle "ProxMenux" --title "$(translate "Nothing selectable")" \
+                --msgbox "$(translate "Every path in this backup is kernel-tied and cannot be restored across kernel versions.")" 9 78
+            return 1
+        fi
 
         _rsp_selected=$(dialog --backtitle "ProxMenux" --separate-output \
             --title "$(translate "Custom restore by paths")" \
@@ -2655,6 +3054,15 @@ _rs_run_custom_restore() {
     local hot_count="$RS_SEL_HOT"
     local pending_count=$(( RS_SEL_REBOOT + RS_SEL_DANGEROUS ))
 
+    # In bk_older, preview the kernel-agnostic hydration so the
+    # operator sees UPFRONT what will be re-applied automatically
+    # (IOMMU cmdline, VFIO modules, custom GRUB_TIMEOUT, etc.)
+    # even though the whole-file paths remain blocked from the
+    # custom picker.
+    if [[ "${HB_COMPAT_KERNEL_DIRECTION:-same}" == "bk_older" ]]; then
+        _rs_apply_bk_older_hydration "$staging_root" plan
+    fi
+
     local body
     body="\Zb$(translate "About to restore") ${RS_SEL_TOTAL} $(translate "selected path(s):")\ZB"$'\n\n'
     if (( hot_count > 0 )); then
@@ -2663,6 +3071,9 @@ _rs_run_custom_restore() {
     if (( pending_count > 0 )); then
         body+="  • $(translate "Schedule") \Zb\Z4${pending_count}\Zn $(translate "for next boot (needs reboot to take effect)")"$'\n'
     fi
+    if [[ -n "${RS_HYDRATION_SUMMARY:-}" ]]; then
+        body+=$'\n'"${RS_HYDRATION_SUMMARY}"
+    fi
     if (( pending_count > 0 )); then
         body+=$'\n'"\Zb\Z4$(translate "A reboot will be required to complete the restore.")\Zn"$'\n'
     fi
@@ -2670,12 +3081,19 @@ _rs_run_custom_restore() {
 
     if ! dialog --backtitle "ProxMenux" --colors \
         --title "$(translate "Confirm custom restore")" \
-        --yesno "$body" 14 82; then
+        --yesno "$body" 22 82; then
         return 1
     fi
 
     show_proxmenux_logo
     msg_title "$(translate "Applying custom restore")"
+
+    # Commit the hydration BEFORE hot apply. Same rationale as in
+    # the Complete flow: plan.env picks up HB_HYDRATION_APPLIED=1
+    # so apply_pending_restore.sh forces initramfs+grub regen.
+    if [[ "${HB_COMPAT_KERNEL_DIRECTION:-same}" == "bk_older" ]]; then
+        _rs_apply_bk_older_hydration "$staging_root" commit
+    fi
 
     if (( hot_count > 0 )); then
         _rs_apply "$staging_root" hot "${selected_paths[@]}"
@@ -2687,6 +3105,24 @@ _rs_run_custom_restore() {
         if _rs_prepare_pending_restore "$staging_root" "${pending_paths[@]}"; then
             msg_warn "$(translate "Reboot is required to complete the pending restore.")"
         fi
+    elif [[ "${HB_HYDRATION_APPLIED:-0}" == "1" ]]; then
+        # Custom restore picked only hot paths, but hydration
+        # merged tokens into /etc/default/grub or /etc/kernel/cmdline
+        # and/or added modules to /etc/modules. Those need
+        # initramfs + bootloader refresh before the next reboot to
+        # be effective. No post-boot dispatcher runs in this
+        # branch (plan.env is only written by
+        # _rs_prepare_pending_restore), so we do the reflows here.
+        msg_info "$(translate "Regenerating boot artifacts for the merged kernel-agnostic changes...")"
+        update-initramfs -u -k all >/dev/null 2>&1 || true
+        local _bl
+        _bl="$(hb_detect_bootloader)"
+        case "$_bl" in
+            systemd-boot) proxmox-boot-tool refresh >/dev/null 2>&1 || true ;;
+            grub|*)       update-grub               >/dev/null 2>&1 || true ;;
+        esac
+        stop_spinner 2>/dev/null || true
+        msg_ok "$(translate "Boot artifacts regenerated — reboot the host to activate the merged config.")"
     fi
 
     _rs_finish_flow
@@ -2984,6 +3420,25 @@ _rs_apply_menu() {
     # confirmation dialog (option 1). It's still reachable on demand
     # from option 6 of this menu.
 
+    # ── Cross-kernel notice (only for bk_older) ───────────────
+    # When the backup was taken on a kernel older than the target,
+    # let the operator know BEFORE they see the mode menu that
+    # Full restore will silently skip kernel-tied paths and that
+    # Custom will present them as blocked. Nothing to click through
+    # for the reverse direction (bk_newer) — those restores go
+    # through as-is because empirical testing shows they work.
+    if [[ "${HB_COMPAT_KERNEL_DIRECTION:-same}" == "bk_older" ]]; then
+        local _bkk="" _cur_k _cur_mm
+        [[ -f "$staging_root/metadata/run_info.env" ]] && \
+            _bkk=$(grep -m1 '^kernel=' "$staging_root/metadata/run_info.env" 2>/dev/null | cut -d= -f2-)
+        _cur_k=$(uname -r 2>/dev/null || echo "?")
+        _cur_mm=$(echo "$_cur_k" | cut -d. -f1-2)
+        dialog --backtitle "ProxMenux" --colors \
+            --title "$(translate "Cross-kernel restore — safe subset only")" \
+            --msgbox "$(translate "This backup was taken on kernel"): \Zb${_bkk}\ZB"$'\n'"$(translate "Target host runs"): \Zb${_cur_k}\ZB"$'\n\n'"\Zb$(translate "Only the essential configuration will be restored"):\ZB $(translate "/etc/pve, network, ssh, users, cron, ProxMenux state, etc.")"$'\n\n'"$(translate "Kernel-tied paths (boot config, /etc/systemd/system, initramfs config, apt sources, ZFS state, ...) will be skipped automatically to protect the target's boot.")"$'\n\n'"$(translate "If you need a complete bit-for-bit restore, use a backup taken on kernel") \Zb${_cur_mm}.x\ZB $(translate "or reinstall Proxmox with a version that ships kernel") \Zb${_bkk}\ZB." \
+            22 84
+    fi
+
     while true; do
         local choice
         choice=$(dialog --backtitle "ProxMenux" \
@@ -3070,39 +3525,6 @@ restore_menu() {
             # (_rs_prompt_zfs_opt_in) read to choose between the
             # silent same-host path and the loud cross-host path.
             hb_compat_check "$staging_root"
-
-            # Cross-kernel restore requires the backup's kernel to be
-            # bootable on the target — either already installed or
-            # obtainable from the Proxmox repositories. When it's
-            # neither, refuse cleanly: continuing would leave the
-            # operator with drivers built against a kernel that isn't
-            # present, and DKMS would silently pin the wrong ABI.
-            if [[ "${HB_COMPAT_CROSS_VERSION:-0}" == "1" ]]; then
-                local _bk_kernel=""
-                if [[ -f "$staging_root/metadata/run_info.env" ]]; then
-                    _bk_kernel=$(grep -m1 '^kernel=' "$staging_root/metadata/run_info.env" 2>/dev/null | cut -d= -f2-)
-                fi
-                if [[ -n "$_bk_kernel" ]]; then
-                    hb_kernel_pin_plan "$_bk_kernel"
-                    if [[ "$HB_KERNEL_PIN_ACTION" == "unavailable" ]]; then
-                        # Log so the operator can inspect after the fact.
-                        local _refuse_log="/var/log/proxmenux/restore-refused-$(date +%Y%m%d_%H%M%S).log"
-                        mkdir -p "$(dirname "$_refuse_log")" 2>/dev/null
-                        {
-                            echo "Refused at:      $(date -Iseconds)"
-                            echo "Backup kernel:   $_bk_kernel"
-                            echo "Target running:  $(uname -r)"
-                            echo "Reason:          $HB_KERNEL_PIN_REASON"
-                        } > "$_refuse_log"
-                        dialog --backtitle "ProxMenux" --colors \
-                            --title "$(translate "Restore refused — incompatible kernel")" \
-                            --msgbox "\Zb\Z1$(translate "This backup was taken on kernel"):\Zn \Zb${_bk_kernel}\ZB"$'\n\n'"$(translate "That kernel is") ${HB_KERNEL_PIN_REASON}."$'\n\n'"$(translate "Restoring without a matching kernel would leave drivers and modules built against a kernel that is not present on this host — the system may fail to boot or run degraded.")"$'\n\n'"\Zb$(translate "How to proceed"):\ZB"$'\n'"  • $(translate "Install Proxmox VE from an ISO whose kernel matches")"$'\n'"  • $(translate "Or fetch the kernel manually:") apt install proxmox-kernel-${_bk_kernel}"$'\n'"  • $(translate "Then relaunch the restore.")"$'\n\n'"$(translate "Details logged at"): $_refuse_log" \
-                            22 84
-                        rm -rf "$staging_root"
-                        continue
-                    fi
-                fi
-            fi
 
             if hb_show_compat_report; then
                 if _rs_apply_menu "$staging_root"; then

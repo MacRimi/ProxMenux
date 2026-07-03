@@ -16905,27 +16905,113 @@ def api_host_backups_restore_prepare():
             except (subprocess.TimeoutExpired, OSError, json.JSONDecodeError, ValueError):
                 pass
 
-        # Cross-kernel plan: shared with the CLI menu via
-        # kernel_pin_plan.sh so both surfaces refuse the same restores.
-        # `detected=true` + `action=unavailable` is what the frontend
-        # treats as a hard refuse: it shows the "install a kernel first"
-        # modal instead of proceeding to the safety checkboxes.
-        cross_kernel: dict = {'detected': False}
-        kernel_plan_script = f'{_PROXMENUX_SCRIPTS_DIR}/backup_restore/restore/kernel_pin_plan.sh'
-        if os.path.isfile(kernel_plan_script):
+        # Direction-aware cross-kernel signal for the Web restore UI.
+        # We source the same logic the CLI uses: read the backup's
+        # kernel from the staging's run_info.env, compare major.minor
+        # to the target's current kernel, and classify the direction.
+        # "bk_older" is the only mode that trims the picker; the
+        # blocked list mirrors hb_unsafe_paths_cross_version so both
+        # surfaces skip the exact same set. "bk_newer" and "same" send
+        # empty lists and the Web treats them as a normal restore.
+        cross_kernel: dict = {
+            'direction': 'same',
+            'backup_kernel': '',
+            'target_kernel': '',
+            'blocked_paths': [],
+        }
+        try:
+            bk_kernel = ''
+            run_info = os.path.join(staging, 'metadata', 'run_info.env')
+            if os.path.isfile(run_info):
+                with open(run_info, 'r') as f:
+                    for line in f:
+                        if line.startswith('kernel='):
+                            bk_kernel = line.strip().split('=', 1)[1]
+                            break
             try:
-                r = subprocess.run(['bash', kernel_plan_script, staging],
-                                   capture_output=True, text=True, timeout=90)
-                if r.returncode == 0 and r.stdout.strip():
-                    cross_kernel = json.loads(r.stdout.strip())
-            except (subprocess.TimeoutExpired, OSError, json.JSONDecodeError, ValueError):
-                pass
+                tg_kernel = subprocess.check_output(['uname', '-r'], text=True).strip()
+            except (OSError, subprocess.CalledProcessError):
+                tg_kernel = ''
+            cross_kernel['backup_kernel'] = bk_kernel
+            cross_kernel['target_kernel'] = tg_kernel
+            def _mm(k: str) -> tuple:
+                parts = (k or '').split('.')
+                try:
+                    return (int(parts[0]), int(parts[1]))
+                except (ValueError, IndexError):
+                    return (0, 0)
+            if bk_kernel and tg_kernel:
+                bk_mm, tg_mm = _mm(bk_kernel), _mm(tg_kernel)
+                if bk_mm != tg_mm and bk_mm != (0, 0) and tg_mm != (0, 0):
+                    if bk_mm < tg_mm:
+                        cross_kernel['direction'] = 'bk_older'
+                        # Pull the exact list the CLI uses.
+                        lib_sh = f'{_PROXMENUX_SCRIPTS_DIR}/backup_restore/lib_host_backup_common.sh'
+                        if os.path.isfile(lib_sh):
+                            try:
+                                r = subprocess.run(
+                                    ['bash', '-c',
+                                     f'source "{lib_sh}"; hb_unsafe_paths_cross_version'],
+                                    capture_output=True, text=True, timeout=10)
+                                if r.returncode == 0:
+                                    blocked = []
+                                    for line in r.stdout.splitlines():
+                                        parts = line.split('\t', 1)
+                                        if parts and parts[0].strip():
+                                            blocked.append(parts[0].strip())
+                                    cross_kernel['blocked_paths'] = blocked
+                            except (subprocess.TimeoutExpired, OSError):
+                                pass
+                    else:
+                        cross_kernel['direction'] = 'bk_newer'
+        except (OSError, ValueError):
+            pass
+
+        # Hydration preview — only meaningful in bk_older direction.
+        # Runs the same phases the CLI runs in "plan" mode: no
+        # writes to the live target, just the list of would-be
+        # actions. Same code path as the shell dialog, so the Web
+        # banner and the CLI msgbox always list the same items.
+        hydration = {'applies': False, 'actions': []}
+        if cross_kernel['direction'] == 'bk_older':
+            backup_sh = (
+                f'{_PROXMENUX_SCRIPTS_DIR}/backup_restore/backup_host.sh'
+            )
+            if os.path.isfile(backup_sh):
+                try:
+                    # Source lib+backup_host in a subshell, set the
+                    # direction so any inner guard passes, run the
+                    # orchestrator in plan mode, print RS_HYDRATION_ACTIONS
+                    # one per line. HB_LIB_ONLY/HB_NO_MAIN etc. are not
+                    # needed: sourcing backup_host.sh only defines
+                    # functions; nothing runs until we call one.
+                    script = (
+                        f'set +e; '
+                        f'source "{_PROXMENUX_SCRIPTS_DIR}/backup_restore/lib_host_backup_common.sh"; '
+                        f'source "{backup_sh}" >/dev/null 2>&1; '
+                        f'HB_COMPAT_KERNEL_DIRECTION=bk_older '
+                        f'_rs_apply_bk_older_hydration "{staging}" plan >/dev/null 2>&1; '
+                        f'printf "%s\\n" "${{RS_HYDRATION_ACTIONS[@]}}"'
+                    )
+                    r = subprocess.run(
+                        ['bash', '-c', script],
+                        capture_output=True, text=True, timeout=15)
+                    if r.returncode == 0:
+                        actions = [
+                            ln.strip() for ln in r.stdout.splitlines()
+                            if ln.strip()
+                        ]
+                        hydration['actions'] = actions
+                        hydration['applies'] = bool(actions)
+                except (subprocess.TimeoutExpired, OSError):
+                    pass
 
         return jsonify({
             'staging_path': staging,
             'paths_available': paths_available,
             'rollback_plan': rollback_plan,
             'cross_kernel': cross_kernel,
+            'hydration': hydration,
         })
     except Exception as e:
         shutil.rmtree(staging, ignore_errors=True)
