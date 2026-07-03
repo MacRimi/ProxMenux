@@ -869,10 +869,17 @@ hb_select_pbs_repository() {
 #      passphrase. Encrypt the keyfile with openssl using that
 #      passphrase → produces `pbs-key.recovery.enc`.
 #   2. On every PBS backup, we upload `pbs-key.recovery.enc` to a
-#      SEPARATE backup group (`host/proxmenux-keyrecovery-<host>`)
+#      SEPARATE backup group (`host/hostcfg-<host>-keyrecovery`)
 #      with NO `--keyfile` flag — so PBS stores it as a regular
 #      (non-PBS-encrypted) blob. The blob is still protected by
-#      the operator's passphrase via openssl.
+#      the operator's passphrase via openssl. The `-keyrecovery`
+#      suffix on the same `hostcfg-<host>` prefix keeps the two
+#      groups adjacent in the PBS UI, making the recovery snapshots
+#      recognisable as belonging to this host's backups instead of
+#      looking like an unrelated group that an operator might delete
+#      by mistake. Legacy builds used the ID `proxmenux-keyrecovery-<host>`;
+#      the recovery discovery below matches both patterns so old
+#      escrow blobs are still usable.
 #   3. On a fresh install where the local keyfile is missing, the
 #      restore flow looks up the recovery group in PBS, downloads
 #      the blob, asks for the passphrase, decrypts it, and writes
@@ -977,7 +984,7 @@ hb_pbs_upload_recovery_blob() {
             "keyrecovery.conf:$recovery_enc" \
             --repository "$HB_PBS_REPOSITORY" \
             --backup-type host \
-            --backup-id "proxmenux-keyrecovery-$(hostname)" \
+            --backup-id "hostcfg-$(hostname)-keyrecovery" \
             --backup-time "$epoch" \
             >/dev/null 2>&1
 }
@@ -992,8 +999,12 @@ hb_pbs_try_keyfile_recovery() {
         return 1  # silently — main path will surface a clearer error
     fi
 
-    # Discover all proxmenux-keyrecovery-* groups in PBS, picking
-    # the newest snapshot for each group (one row per host).
+    # Discover keyrecovery groups in PBS. Two patterns are matched:
+    #   - hostcfg-<host>-keyrecovery   (current naming — groups
+    #                                   adjacent to the main hostcfg-<host>)
+    #   - proxmenux-keyrecovery-<host> (legacy naming — pre-1.2.2.2)
+    # Both are surfaced together so existing escrow blobs from older
+    # builds remain usable during a fresh-install recovery.
     local -a recovery_entries=()
     mapfile -t recovery_entries < <(
         PBS_PASSWORD="$HB_PBS_SECRET" \
@@ -1001,7 +1012,12 @@ hb_pbs_try_keyfile_recovery() {
         proxmox-backup-client snapshot list \
             --repository "$HB_PBS_REPOSITORY" \
             --output-format json 2>/dev/null \
-        | jq -r '.[] | select(."backup-type" == "host" and (."backup-id" | startswith("proxmenux-keyrecovery-"))) | "\(."backup-id")|\(."backup-time")"' 2>/dev/null \
+        | jq -r '.[]
+            | select(."backup-type" == "host"
+                     and (   ((."backup-id" | startswith("hostcfg-")) and (."backup-id" | endswith("-keyrecovery")))
+                          or (."backup-id" | startswith("proxmenux-keyrecovery-"))
+                     ))
+            | "\(."backup-id")|\(."backup-time")"' 2>/dev/null \
         | sort -t'|' -k1,1 -k2,2nr \
         | awk -F'|' '!seen[$1]++'
     )
@@ -1020,7 +1036,14 @@ hb_pbs_try_keyfile_recovery() {
         local entry id_part host_part iso_label
         for entry in "${recovery_entries[@]}"; do
             id_part="${entry%%|*}"
-            host_part="${id_part#proxmenux-keyrecovery-}"
+            # Strip either naming convention to surface just the
+            # source hostname in the menu label.
+            if [[ "$id_part" == hostcfg-*-keyrecovery ]]; then
+                host_part="${id_part#hostcfg-}"
+                host_part="${host_part%-keyrecovery}"
+            else
+                host_part="${id_part#proxmenux-keyrecovery-}"
+            fi
             iso_label=$(date -u -d "@${entry##*|}" '+%Y-%m-%d %H:%M' 2>/dev/null || echo "${entry##*|}")
             menu+=("$i" "$host_part — $iso_label UTC")
             ((i++))
@@ -1171,17 +1194,23 @@ hb_ask_pbs_encryption() {
         # from a clean state instead of picking up an unusable
         # "existing keyfile".
         [[ -f "$key_file" && ! -s "$key_file" ]] && rm -f "$key_file" 2>/dev/null
-        # Surface the actual error from proxmox-backup-client to the
-        # operator — silent failures here were the reason the user
-        # kept seeing `Encryption: Disabled` after entering the
-        # passphrase. Now we show what proxmox-backup-client said.
+        # Surface the actual error from proxmox-backup-client and
+        # abort the backup: the operator asked for encryption, so
+        # silently downgrading to unencrypted (past behaviour) hid
+        # the failure behind a modal that a hurried operator would
+        # dismiss without reading. Returning 1 propagates cancel to
+        # _bk_pbs, which drops back to the previous menu so the
+        # underlying issue (perms, disk full, ...) can be fixed
+        # before retrying.
         local err_msg
-        err_msg="$(hb_translate "Failed to create encryption key. Backup will proceed without encryption.")"$'\n\n'
+        err_msg="$(hb_translate "Failed to create encryption key. Backup cancelled — fix the underlying issue and retry.")"$'\n\n'
         err_msg+="$(hb_translate "Tool exit code:") $create_rc"$'\n'
         err_msg+="$(hb_translate "Tool output:")"$'\n'
         err_msg+="${create_stderr:-(empty)}"
         dialog --backtitle "ProxMenux" --title "$(hb_translate "Encryption key creation failed")" \
             --msgbox "$err_msg" 14 78
+        HB_PBS_KEYFILE_OPT=""
+        return 1
     fi
 }
 

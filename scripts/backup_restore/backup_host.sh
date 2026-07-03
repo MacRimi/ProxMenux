@@ -149,12 +149,19 @@ _bk_pbs() {
         "${cmd[@]}" 2>&1 | tee -a "$log_file"; then
 
         # Main backup OK — also upload the keyfile recovery blob if
-        # one was configured. This runs as a SEPARATE backup group
+        # one was configured AND this backup actually used the
+        # keyfile. Gating on HB_PBS_KEYFILE_OPT (rather than only on
+        # the file existing on disk) stops the upload when the
+        # operator declined encryption for this run but a recovery
+        # blob is still cached from a prior encrypted backup: in
+        # that case the blob does not describe this snapshot and
+        # uploading it as a paired recovery would be misleading.
+        # This runs as a SEPARATE backup group
         # (`host/proxmenux-keyrecovery-<host>`) with NO --keyfile,
         # so PBS stores it as a plain (non-PBS-encrypted) blob that
         # can be retrieved during fresh-install recovery. The blob
         # is still passphrase-protected by openssl.
-        if [[ -f "$HB_STATE_DIR/pbs-key.recovery.enc" ]]; then
+        if [[ -n "$HB_PBS_KEYFILE_OPT" && -f "$HB_STATE_DIR/pbs-key.recovery.enc" ]]; then
             hb_pbs_upload_recovery_blob "$epoch" \
                 || msg_warn "$(translate "Recovery blob upload failed — main backup is OK, but keyfile recovery from PBS will not be available for this snapshot.")"
         fi

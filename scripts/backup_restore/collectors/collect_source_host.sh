@@ -61,12 +61,6 @@ esac
 # ── memory_kb ──
 memory_kb="$(awk '/^MemTotal:/{print $2; exit}' /proc/meminfo 2>/dev/null || echo 0)"
 
-# ── subscription_status ──
-subscription_status=""
-if command -v pvesubscription >/dev/null 2>&1; then
-  subscription_status="$(pvesubscription get 2>/dev/null | awk -F: '/^status:/{sub(/^[ \t]+/,"",$2); print $2; exit}')"
-fi
-
 # Build JSON. Use --arg for strings (always quoted), --argjson for
 # numbers/arrays/null. Empty strings → null per schema convention.
 jq -n \
@@ -81,7 +75,6 @@ jq -n \
   --arg cpu_model             "$cpu_model" \
   --arg cpu_arch              "$cpu_arch" \
   --argjson memory_kb         "$memory_kb" \
-  --arg subscription_status   "$subscription_status" \
   '{
     hostname:            $hostname,
     pve_version:         (if $pve_version == "" then null else $pve_version end),
@@ -93,6 +86,5 @@ jq -n \
     root_fs:             $root_fs,
     cpu_model:           $cpu_model,
     cpu_arch:            $cpu_arch,
-    memory_kb:           $memory_kb,
-    subscription_status: (if $subscription_status == "" then null else $subscription_status end)
+    memory_kb:           $memory_kb
   }'
