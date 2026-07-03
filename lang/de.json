@@ -1575,7 +1575,7 @@
   "Failed to create directory on host:": "Verzeichnis auf Host konnte nicht erstellt werden:",
   "Failed to create directory:": "Verzeichnis konnte nicht erstellt werden:",
   "Failed to create disk": "Fehler beim Erstellen des Datenträgers",
-  "Failed to create encryption key. Backup will proceed without encryption.": "Fehler beim Erstellen des Verschlüsselungsschlüssels. Die Sicherung erfolgt ohne Verschlüsselung.",
+  "Failed to create encryption key. Backup cancelled — fix the underlying issue and retry.": "Fehler beim Erstellen des Verschlüsselungsschlüssels.Sicherung abgebrochen – beheben Sie das zugrunde liegende Problem und versuchen Sie es erneut.",
   "Failed to create group:": "Gruppe konnte nicht erstellt werden:",
   "Failed to create mount point.": "Mountpunkt konnte nicht erstellt werden.",
   "Failed to create mount point:": "Mountpunkt konnte nicht erstellt werden:",

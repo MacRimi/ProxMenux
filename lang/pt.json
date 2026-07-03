@@ -1575,7 +1575,7 @@
   "Failed to create directory on host:": "Falha ao criar diretório no host:",
   "Failed to create directory:": "Falha ao criar diretório:",
   "Failed to create disk": "Falha ao criar disco",
-  "Failed to create encryption key. Backup will proceed without encryption.": "Falha ao criar a chave de criptografia. O backup continuará sem criptografia.",
+  "Failed to create encryption key. Backup cancelled — fix the underlying issue and retry.": "Falha ao criar chave de criptografia.Backup cancelado — corrija o problema subjacente e tente novamente.",
   "Failed to create group:": "Falha ao criar grupo:",
   "Failed to create mount point.": "Falha ao criar ponto de montagem.",
   "Failed to create mount point:": "Falha ao criar ponto de montagem:",

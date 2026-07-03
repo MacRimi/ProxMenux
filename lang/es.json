@@ -1575,7 +1575,7 @@
   "Failed to create directory on host:": "No se pudo crear el directorio en el host:",
   "Failed to create directory:": "No se pudo crear el directorio:",
   "Failed to create disk": "No se pudo crear el disco",
-  "Failed to create encryption key. Backup will proceed without encryption.": "No se pudo crear la clave de cifrado. La copia de seguridad se realizará sin cifrado.",
+  "Failed to create encryption key. Backup cancelled — fix the underlying issue and retry.": "no se pudo crear la clave de cifrado.Copia de seguridad cancelada: solucione el problema subyacente y vuelva a intentarlo.",
   "Failed to create group:": "No se pudo crear el grupo:",
   "Failed to create mount point.": "No se pudo crear el punto de montaje.",
   "Failed to create mount point:": "No se pudo crear el punto de montaje:",

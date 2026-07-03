@@ -1575,7 +1575,7 @@
   "Failed to create directory on host:": "Échec de la création du répertoire sur l'hôte :",
   "Failed to create directory:": "Échec de la création du répertoire :",
   "Failed to create disk": "Échec de la création du disque",
-  "Failed to create encryption key. Backup will proceed without encryption.": "Échec de la création de la clé de chiffrement. La sauvegarde se poursuivra sans cryptage.",
+  "Failed to create encryption key. Backup cancelled — fix the underlying issue and retry.": "Échec de la création de la clé de cryptage.Sauvegarde annulée : corrigez le problème sous-jacent et réessayez.",
   "Failed to create group:": "Échec de la création du groupe :",
   "Failed to create mount point.": "Échec de la création du point de montage.",
   "Failed to create mount point:": "Échec de la création du point de montage :",

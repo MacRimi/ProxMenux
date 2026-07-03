@@ -1575,7 +1575,7 @@
   "Failed to create directory on host:": "Impossibile creare la directory sull'host:",
   "Failed to create directory:": "Impossibile creare la directory:",
   "Failed to create disk": "Impossibile creare il disco",
-  "Failed to create encryption key. Backup will proceed without encryption.": "Impossibile creare la chiave di crittografia. Il backup procederà senza crittografia.",
+  "Failed to create encryption key. Backup cancelled — fix the underlying issue and retry.": "impossibile creare la chiave di crittografia.Backup annullato: risolvi il problema sottostante e riprova.",
   "Failed to create group:": "Impossibile creare il gruppo:",
   "Failed to create mount point.": "Impossibile creare il punto di montaggio.",
   "Failed to create mount point:": "Impossibile creare il punto di montaggio:",
