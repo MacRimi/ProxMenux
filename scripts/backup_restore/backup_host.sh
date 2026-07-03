@@ -2982,7 +2982,7 @@ _rs_select_component_paths() {
 
         if (( ${#_rsp_checklist[@]} == 0 )); then
             dialog --backtitle "ProxMenux" --title "$(translate "Nothing selectable")" \
-                --msgbox "$(translate "Every path in this backup is kernel-tied — nothing to pick in Custom mode. Use Complete restore instead: it applies these paths automatically via the safe-subset filter and re-merges the operator's tuning.")" 12 84
+                --msgbox "$(translate "Every path in this backup is kernel-tied: the restore applies these paths automatically via the safe-subset filter and re-merges the operator's tuning.")" 10 82
             return 1
         fi
 
