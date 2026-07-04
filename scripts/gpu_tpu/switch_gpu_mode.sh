@@ -338,6 +338,18 @@ EOF
   else
     msg_ok "$(translate 'NVIDIA host services/autoload already aligned for VFIO mode')" | tee -a "$screen_capture"
   fi
+
+  # Sync components_status.json — the host driver stays on disk but is
+  # not in use because the GPU now belongs to a VM. Prevents the update
+  # notification path (and any future logic gated on nvidia_driver.status)
+  # from acting on a state that no longer matches reality.
+  if declare -F update_component_status >/dev/null 2>&1; then
+    local _nvd_ver
+    _nvd_ver=$(jq -r '.nvidia_driver.version // ""' \
+      /usr/local/share/proxmenux/components_status.json 2>/dev/null)
+    update_component_status "nvidia_driver" "vfio_passthrough" \
+      "${_nvd_ver:-}" "gpu" '{"patched":false}' >>"$LOG_FILE" 2>&1 || true
+  fi
 }
 
 _restore_nvidia_host_stack_for_lxc() {
@@ -401,6 +413,21 @@ _restore_nvidia_host_stack_for_lxc() {
     msg_ok "$(translate 'NVIDIA host services/autoload restored for native mode')" | tee -a "$screen_capture"
   else
     msg_ok "$(translate 'NVIDIA host services/autoload already aligned for native mode')" | tee -a "$screen_capture"
+  fi
+
+  # Sync components_status.json back to installed — the host has reclaimed
+  # the GPU and the nvidia stack is being reloaded. Restores the state to
+  # what it was before the VFIO switch so the update notification path and
+  # the auto-reinstall gate see the driver as active on the host again.
+  if declare -F update_component_status >/dev/null 2>&1; then
+    local _nvd_ver
+    _nvd_ver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1)
+    if [[ -z "$_nvd_ver" ]]; then
+      _nvd_ver=$(jq -r '.nvidia_driver.version // ""' \
+        /usr/local/share/proxmenux/components_status.json 2>/dev/null)
+    fi
+    update_component_status "nvidia_driver" "installed" \
+      "${_nvd_ver:-}" "gpu" '{"patched":false}' >>"$LOG_FILE" 2>&1 || true
   fi
 }
 
