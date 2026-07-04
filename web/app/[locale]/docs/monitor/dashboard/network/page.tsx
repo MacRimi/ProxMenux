@@ -34,6 +34,7 @@ export default async function NetworkTabPage({
   const messages = (await getMessages({ locale })) as unknown as {
     docs: { monitor: { dashboard: { network: {
       topRow: { rows: TopRow[] }
+      flow: { elements: string[]; pulses: string[] }
       groups: { badges: string[] }
       drillIn: { rows: DrillRow[] }
       latency: {
@@ -48,6 +49,8 @@ export default async function NetworkTabPage({
   }
   const net = messages.docs.monitor.dashboard.network
   const topRows = net.topRow.rows
+  const flowElements = net.flow.elements
+  const flowPulses = net.flow.pulses
   const badges = net.groups.badges
   const drillRows = net.drillIn.rows
   const targets = net.latency.targets
@@ -95,6 +98,42 @@ export default async function NetworkTabPage({
           </tbody>
         </table>
       </div>
+
+      <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("flow.heading")}</h2>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("flow.intro", { strong })}
+      </p>
+
+      <figure className="my-4">
+        <img
+          src="/monitor/network-flow-overview.png"
+          alt={t("flow.imageAlt")}
+          className="rounded-lg border border-gray-200 shadow-sm w-full"
+        />
+        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
+          {t("flow.imageCaption")}
+        </figcaption>
+      </figure>
+
+      <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("flow.elementsTitle")}</h3>
+      <p className="mb-2 text-gray-800 leading-relaxed">{t("flow.elementsIntro")}</p>
+      <ul className="list-disc pl-6 mb-6 text-gray-800 leading-relaxed space-y-1">
+        {flowElements.map((_, idx) => (
+          <li key={idx}>{t.rich(`flow.elements.${idx}`, { strong })}</li>
+        ))}
+      </ul>
+
+      <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("flow.pulsesTitle")}</h3>
+      <p className="mb-2 text-gray-800 leading-relaxed">{t("flow.pulsesBody")}</p>
+      <ul className="list-disc pl-6 mb-6 text-gray-800 leading-relaxed space-y-1">
+        {flowPulses.map((_, idx) => (
+          <li key={idx}>{t.rich(`flow.pulses.${idx}`, { strong, em })}</li>
+        ))}
+      </ul>
+
+      <Callout variant="tip" title={t("flow.useTitle")}>
+        {t.rich("flow.useBody", { em })}
+      </Callout>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("groups.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">

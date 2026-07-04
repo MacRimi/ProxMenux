@@ -1,0 +1,87 @@
+{
+  "meta": {
+    "title": "ProxMenux Backup & Restore — Overview | Full host backup and restore for Proxmox VE",
+    "description": "ProxMenux Backup & Restore captures the complete state of a Proxmox host — filesystem, structured configuration manifest, and installed packages/components — and reproduces it on the same or a different host. The backup and the restore are self-contained: no external dependencies, and cross-kernel restores are supported through a direction-aware safe-subset filter and kernel-agnostic hydration.",
+    "ogTitle": "ProxMenux Backup & Restore — Overview",
+    "ogDescription": "Full host backup and restore for Proxmox VE with structured manifest, package list and component reinstallers.",
+    "twitterTitle": "ProxMenux Backup & Restore | ProxMenux",
+    "twitterDescription": "Full host backup and restore for Proxmox VE with structured manifest, package list and component reinstallers."
+  },
+  "header": {
+    "title": "Backup & Restore",
+    "description": "Full-host backup and restore for Proxmox VE. Captures filesystem, configuration and installed components in a single archive, and reproduces the host on the same or a different Proxmox install with no external dependencies.",
+    "section": "Backup & Restore"
+  },
+  "intro": {
+    "title": "What it is, in one paragraph",
+    "body": "A ProxMenux backup captures the complete state of a Proxmox host: <strong>the filesystem</strong> (relevant directories under <code>/etc</code>, <code>/root</code>, <code>/var/lib/pve-cluster</code>, plus optional custom paths), <strong>a structured manifest</strong> (JSON with the detected hardware, kernel parameters, network layout, ZFS state, users and cron entries), and <strong>an application inventory</strong> (all packages marked as manually installed by APT, plus the list of components installed by ProxMenux with their exact versions). Any of the three supported destinations — local archive, Proxmox Backup Server (recommended) or Borg — receives the same self-contained payload, and any of them can hydrate the target host without depending on the source being reachable at restore time."
+  },
+  "whatItIsNot": {
+    "heading": "What it is not",
+    "intro": "The section covers <strong>host-level</strong> backup and restore: the Proxmox installation itself, not the workloads running on top of it.",
+    "items": [
+      "<strong>It is not a VM/CT backup tool.</strong> Guest disks and RAM state are not captured by this feature; that is what <code>vzdump</code> is for. The guest <strong>configuration files</strong> (<code>/etc/pve/nodes/&lt;node&gt;/qemu-server/*.conf</code> and <code>lxc/*.conf</code>) <strong>are</strong> captured, so after a restore the guest inventory reappears and disks can be re-attached from an existing PBS/local backup.",
+      "<strong>It is not a cluster-wide operation.</strong> Each node backs up itself. Cluster membership is captured as part of <code>/etc/pve</code> so a restored node can be re-added to its cluster, but restoring a full cluster requires per-node coordination.",
+      "<strong>It is not a full disk image.</strong> Kernel binaries, the initramfs and the boot partition are not captured. On a restore, ProxMenux relies on the target host's own boot artifacts (regenerated automatically by <code>update-initramfs</code> and the bootloader tool) and installs matching drivers against the target's running kernel."
+    ]
+  },
+  "threePillars": {
+    "heading": "The three pillars of a backup",
+    "intro": "A ProxMenux archive is structured around three self-contained payloads. The restore uses all three together to reproduce the source host on a target that may not even have the same kernel installed.",
+    "diagramCaption": "Every backup ships the same three payloads regardless of destination. The restore consumes all three: rootfs to lay down files, manifest to detect drift and cross-kernel differences, and application inventory to re-install packages and components against the target's own kernel.",
+    "pillar1Label": "Filesystem",
+    "pillar1Detail": "rootfs/\n(rsync of\n/etc, /root,\n/var/lib/pve-cluster,\n+ optional paths)",
+    "pillar2Label": "Manifest",
+    "pillar2Detail": "manifest.json\n(hardware, kernel\nparams, network,\nZFS, users, cron,\nZFS pools, storage)",
+    "pillar3Label": "Applications",
+    "pillar3Detail": "packages.manual.list\n+ components_status.json\n(APT manual + ProxMenux\ninstallers with versions)"
+  },
+  "restoreIsUniversal": {
+    "heading": "The restore reproduces the source host, not the archive",
+    "body": "Restoring a ProxMenux backup does not just extract the filesystem. The restore flow reads the manifest to detect drift between the source and the target (hardware differences, NIC renames, kernel version, ZFS pool identity), replays the filesystem, then triggers the correct component installer for every service that was installed on the source (NVIDIA driver, Coral TPU, AMD GPU tools, Intel GPU tools). Each installer runs against the <strong>target's current kernel</strong>, so the restored host does not depend on the source's kernel being present. When the target's kernel is newer than the backup's, a kernel-agnostic <strong>hydration</strong> pass merges the operator's own tuning (IOMMU tokens, VFIO device IDs, custom quirks, GRUB keys) into the target's fresh boot configuration without copying kernel-tied files verbatim."
+  },
+  "twoInterfaces": {
+    "heading": "Two interfaces, one backend",
+    "intro": "Every step of the backup and restore workflow is available from two entry points. Both call the same shell library, produce identical archives, and read the same job registry.",
+    "cliLabel": "ProxMenux Scripts (TUI)",
+    "cliDetail": "menu → Utilities →\nHost Backup / Restore\n\nDialog-based flow,\nSSH-friendly, scriptable\nfor unattended use.",
+    "webLabel": "ProxMenux Monitor (Web UI)",
+    "webDetail": "Backups tab in the\nMonitor's Web interface.\n\nOne-click restore, live\nlog tail, integrated with\nnotifications and the\nrollback delta viewer."
+  },
+  "whereNext": {
+    "heading": "Where to go from here",
+    "intro": "Each subsection below covers one aspect of the workflow in depth. Start with <em>How it works</em> if the goal is to understand what the archive contains and why. Jump to <em>Destinations</em> to configure the target for the copy. Read <em>Restoring</em> and <em>Cross-kernel restore</em> for the recovery side.",
+    "items": [
+      {
+        "label": "How it works",
+        "href": "/docs/backup-restore/how-it-works",
+        "tail": " — the three payloads (rootfs, manifest, applications) in detail, with the collectors that produce them and the format of each file."
+      },
+      {
+        "label": "Destinations",
+        "href": "/docs/backup-restore/destinations",
+        "tail": " — comparison of local, Proxmox Backup Server (recommended) and Borg, and how to configure each one."
+      },
+      {
+        "label": "Creating backups",
+        "href": "/docs/backup-restore/creating-backups",
+        "tail": " — one-off backups, the default path profile, adding custom paths, encryption for PBS."
+      },
+      {
+        "label": "Scheduled jobs",
+        "href": "/docs/backup-restore/scheduled-jobs",
+        "tail": " — new jobs vs. attaching to an existing PVE vzdump job, scheduling formats, the job detail modal."
+      },
+      {
+        "label": "Restoring",
+        "href": "/docs/backup-restore/restoring",
+        "tail": " — the three actions on an archive (view, download, restore), Complete vs. Custom restore, the post-boot dispatcher and why the last ten minutes matter."
+      },
+      {
+        "label": "Cross-kernel restore",
+        "href": "/docs/backup-restore/cross-kernel",
+        "tail": " — direction-aware behaviour when the target kernel differs from the backup's, the safe-subset filter and the four hydration phases."
+      }
+    ]
+  }
+}

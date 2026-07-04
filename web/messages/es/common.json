@@ -168,7 +168,19 @@
       "aboutContributors": "Contribuidores",
       "aboutContributing": "Contribuir",
       "aboutCodeOfConduct": "Código de conducta",
-      "externalRepositories": "Repositorios externos"
+      "externalRepositories": "Repositorios externos",
+      "backupRestore": "Backup & Restore",
+      "backupRestoreOverview": "Descripción general",
+      "backupRestoreHowItWorks": "Cómo funciona",
+      "backupRestoreDestinations": "Destinos",
+      "backupRestoreDestOverview": "Descripción general",
+      "backupRestoreDestLocal": "Archivo local",
+      "backupRestoreDestPbs": "Proxmox Backup Server",
+      "backupRestoreDestBorg": "Borg",
+      "backupRestoreCreating": "Crear copias",
+      "backupRestoreJobs": "Trabajos programados",
+      "backupRestoreRestoring": "Restauración",
+      "backupRestoreCrossKernel": "Restauración cross-kernel"
     }
   },
   "hero": {

@@ -64,7 +64,15 @@ export default async function PostInstallStoragePage({
       />
 
       <Callout variant="info" title={t("intro.title")}>
-        {t.rich("intro.body", { strong })}
+        {t.rich("intro.body", {
+          strong,
+          code,
+          link: (chunks) => (
+            <Link href="/docs/post-install/optional#log2ram" className="text-blue-700 hover:underline">
+              {chunks}
+            </Link>
+          ),
+        })}
       </Callout>
 
       <Callout variant="warning" title={t("notTrackedTitle")}>

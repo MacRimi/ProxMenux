@@ -79,13 +79,13 @@
     },
     {
       "tool": "Log2RAM (consciente de SSD, automático)",
-      "what": "Detecta si el disco raíz es SSD / NVMe e instala Log2RAM desde el git upstream. Dimensiona el ramdisk según la RAM del host (128M / 256M / 512M), programa sync periódico y un auto-sync con umbral del 95 %. Ajusta los límites de journald para caber en el ramdisk.",
+      "what": "Reduce el desgaste del SSD/NVMe moviendo /var/log a una ramdisk tmpfs con sync periódico al disco. Se instala desde el proyecto oficial cuando el disco raíz es SSD o NVMe. Dimensiona la ramdisk según la RAM (128M / 256M / 512M), programa el sync periódico y un guardián de auto-sync que compacta al 80% y trunca los logs calientes al 92% antes de escribir. Ajusta los límites de journald para caber en la ramdisk. Detalle completo en <link>Log2RAM</link>.",
       "category": "Storage",
       "categorySlug": "storage"
     },
     {
       "tool": "ZFS autotrim (solo SSD)",
-      "what": "Activa zpool autotrim=on en cada pool ZFS cuyos vdevs sean todos SSD/NVMe con soporte TRIM (comprueba /sys/block/<dev>/queue/rotational y discard_granularity). Los pools respaldados por HDDs se saltan automáticamente. Solo los pools realmente cambiados por ProxMenux quedan registrados para el uninstall — los pools en los que activaste autotrim a mano se dejan en paz.",
+      "what": "Activa zpool autotrim=on en cada pool ZFS cuyos vdevs sean todos SSD/NVMe con soporte TRIM (comprueba /sys/block/[dev]/queue/rotational y discard_granularity). Los pools respaldados por HDDs se saltan automáticamente. Solo los pools realmente cambiados por ProxMenux quedan registrados para el uninstall — los pools en los que activaste autotrim a mano se dejan en paz.",
       "category": "Storage",
       "categorySlug": "storage"
     },

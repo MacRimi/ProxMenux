@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
-import { Plus } from "lucide-react"
+import { Plus, ExternalLink } from "lucide-react"
 import CopyableCode from "@/components/CopyableCode"
 
 export async function generateMetadata({
@@ -63,6 +63,7 @@ export default async function OptionalSettingsPage({
       testing: { doesItems: string[] }
       fastfetch: { doesItems: string[]; customItems: string[]; logos: Logo[] }
       figurine: { doesItems: string[] }
+      log2ram: { doesItems: string[] }
     } } }
   }
   const cephItems = messages.docs.postInstall.optional.ceph.doesItems
@@ -73,6 +74,7 @@ export default async function OptionalSettingsPage({
   const fastfetchCustomItems = messages.docs.postInstall.optional.fastfetch.customItems
   const fastfetchLogos = messages.docs.postInstall.optional.fastfetch.logos
   const figurineItems = messages.docs.postInstall.optional.figurine.doesItems
+  const log2ramItems = messages.docs.postInstall.optional.log2ram.doesItems
 
   const code = (chunks: React.ReactNode) => <code>{chunks}</code>
   const strong = (chunks: React.ReactNode) => <strong>{chunks}</strong>
@@ -327,6 +329,46 @@ chmod +x "/etc/profile.d/figurine.sh"
       />
 
       <p className="mt-4">{t("figurine.outro")}</p>
+
+      <h3 className="text-xl font-semibold mt-16 mb-4 flex items-center">
+        <StepNumber number={7} />
+        {t("log2ram.title")}
+      </h3>
+
+      <p className="mb-4">
+        {t.rich("log2ram.intro", { code, em })}
+      </p>
+
+      <p className="mb-4 flex items-center gap-1 text-sm">
+        <strong className="mr-1">{t("log2ram.upstreamLabel")}</strong>
+        <a
+          href={t("log2ram.upstreamUrl")}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline inline-flex items-center gap-1"
+        >
+          {t("log2ram.upstreamLinkLabel")}
+          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+        </a>
+      </p>
+
+      <p className="mb-4">
+        <strong>{t("log2ram.doesLabel")}</strong>
+      </p>
+      <ul className="list-disc pl-5 mb-4">
+        {log2ramItems.map((_, idx) => (
+          <li key={idx}>{t.rich(`log2ram.doesItems.${idx}`, { code, em })}</li>
+        ))}
+      </ul>
+
+      <p className="mb-2">
+        <strong>{t("log2ram.howUseLabel")}</strong> {t("log2ram.howUseBody")}
+      </p>
+
+      <p className="text-lg mt-6 mb-2">
+        <strong>{t("log2ram.verifyLabel")}</strong>
+      </p>
+      <CopyableCode code={t.raw("log2ram.verifyCode") as string} />
 
       <section className="mt-12 p-4 bg-blue-100 rounded-md">
         <h2 className="text-xl font-semibold mb-2">{t("autoApplication.title")}</h2>

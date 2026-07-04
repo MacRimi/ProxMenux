@@ -1,0 +1,63 @@
+{
+  "meta": {
+    "title": "Local archive destination — tar.zst on a filesystem or USB drive | ProxMenux",
+    "description": "The local backup destination writes a single .tar.zst archive to any writeable directory: an internal disk, a Proxmox mount point, an NFS share, or a USB drive. Documents the configuration flow, the USB detection and mounting logic, the safety check against writing the archive into a path being backed up, and the sidecar JSON that identifies the file.",
+    "ogTitle": "ProxMenux Backup — Local archive destination",
+    "ogDescription": "How ProxMenux writes local backups as .tar.zst archives and how to configure the destination directory or USB drive.",
+    "twitterTitle": "Local backup destination | ProxMenux",
+    "twitterDescription": "How ProxMenux writes local backups as .tar.zst archives on a filesystem or USB drive."
+  },
+  "header": {
+    "title": "Local archive",
+    "description": "The local destination writes a single compressed tar archive to any writeable directory on the host: an internal disk, an NFS or SMB mount, or a USB drive.",
+    "section": "Backup & Restore"
+  },
+  "intro": {
+    "title": "One file, self-contained",
+    "body": "A local backup produces a single <code>hostcfg-HOST-TIMESTAMP.tar.zst</code> file (or <code>.tar.gz</code> when <code>zstd</code> is absent). The file contains the entire archive tree — <code>manifest.json</code>, <code>metadata/</code> and <code>rootfs/</code> — and can be restored on any Proxmox host with the ProxMenux restore flow, or extracted manually with <code>tar --zstd -xf</code> on any Linux system. No server, no repository init, no external dependency. This is the destination with the shortest recovery path when neither PBS nor Borg is available."
+  },
+  "targetConfig": {
+    "heading": "Configuring the target directory",
+    "intro": "The local destination is a <strong>single persisted target directory</strong> — not a list. ProxMenux stores the operator's choice at <code>/usr/local/share/proxmenux/local-target.conf</code> and reads it on every backup. When no target has been configured, the default <code>HB_LOCAL_TARGET_DEFAULT = /var/lib/vz/dump</code> is used (the same directory Proxmox uses for its own <code>vzdump</code> outputs). The target is configured from <em>Configure backup destinations → Local destinations</em>:",
+    "options": [
+      "<strong>Use default (<code>/var/lib/vz/dump</code>).</strong> The Proxmox local storage. Present on every Proxmox install; the archive sits next to vzdump outputs and is picked up by the Monitor's Backups tab automatically.",
+      "<strong>Enter a custom path.</strong> Any absolute filesystem path can be used: an NFS mount, an SMB share mounted via <code>fstab</code>, a dedicated ZFS dataset, a second internal disk. ProxMenux validates that the path exists and is a directory before persisting it.",
+      "<strong>Pick a USB drive.</strong> Opens the USB submenu (below), which detects removable devices and offers to mount or format one."
+    ]
+  },
+  "usbFlow": {
+    "heading": "USB drive detection and mounting",
+    "intro": "The USB submenu lists partitions on removable devices reported by <code>lsblk</code>. Each partition is presented with its size, filesystem label and current state. The state determines the action ProxMenux offers.",
+    "statesTitle": "The three device states",
+    "stateRows": [
+      { "state": "mounted", "shown": "Size · label · [fstype] · → /mount/point", "action": "The partition is already mounted somewhere. Selecting it persists the current mount point as the local target. No mounting is performed." },
+      { "state": "unmounted", "shown": "Size · label · [fstype] · (not mounted — will be mounted)", "action": "A filesystem is present but not mounted. On confirmation, ProxMenux runs <code>hb_mount_usb_partition</code>: creates <code>/mnt/backup-LABEL</code> (or a UUID-based path if there is no label), mounts the partition and persists the mount point as the local target." },
+      { "state": "empty", "shown": "Size · raw USB disk — no filesystem (will be FORMATTED)", "action": "The device has no filesystem. A destructive path — protected by two confirmations. First a Yes/No dialog explains that the operation will erase the disk. Second, an inputbox requires the operator to <strong>type the exact device path</strong> (e.g. <code>/dev/sdb</code>) before ProxMenux creates a fresh GPT + ext4 partition and mounts it." }
+    ],
+    "notMountedFallback": "When no USB device is detected, the submenu falls back to a plain inputbox. The operator can enter an arbitrary mount point path; if the path is not a registered mount point, a confirmation dialog warns before proceeding."
+  },
+  "safetyCheck": {
+    "heading": "Safety check — destination inside a backup path",
+    "body": "Before writing the archive, <code>_bk_local</code> verifies that the destination directory is <strong>not</strong> a subpath of any directory being backed up. A common footgun would be adding <code>/root</code> to the profile and picking <code>/root/backups</code> as the destination — the archive would then include itself, either producing a corrupt archive or growing without bound until the disk fills. The check resolves both paths with <code>readlink -m</code>, compares them and, on conflict, aborts the backup with a dialog that names the conflicting path and lists three ways to resolve it: choose a destination outside the conflicting path, remove the custom entry that contains the destination, or use Custom mode to uncheck the conflicting path for this run."
+  },
+  "archiveFormat": {
+    "heading": "Archive format and compression",
+    "intro": "The output filename embeds the source hostname and the backup timestamp so that a directory holding several archives sorts chronologically and each file is self-identifying.",
+    "namePattern": "hostcfg-HOSTNAME-YYYYMMDD_HHMMSS.tar.zst",
+    "compressionTitle": "Compression",
+    "compressionBody": "The primary path uses <code>tar --zstd -cf</code> — a single-command pipeline that compresses at zstd's default level. When <code>zstd</code> is not present on the source (rare on Proxmox but possible on minimal installs), ProxMenux falls back to <code>gzip</code>. In the fallback path, if <code>pv</code> is available, a progress bar is added to the pipeline so the operator sees the archive size grow in real time; without <code>pv</code>, plain <code>tar -czf</code> is used silently.",
+    "sourceTitle": "What goes into the archive",
+    "sourceBody": "The tar command is invoked with <code>-C \"$staging_root\" .</code>, which archives the <strong>full staging root</strong>: <code>rootfs/</code>, <code>metadata/</code> and <code>manifest.json</code>. All three payloads land side by side at the top of the tarball. Extracting the archive produces the exact same tree that the restore code consumes."
+  },
+  "sidecar": {
+    "heading": "The sidecar JSON",
+    "intro": "Every successful local backup produces a companion file: <code>HOSTNAME-TIMESTAMP.tar.zst.proxmenux.json</code>, written next to the archive by <code>hb_write_archive_sidecar</code>. This small JSON file lets the ProxMenux Monitor identify the archive as a ProxMenux host backup even if it is later moved, renamed or archived elsewhere.",
+    "contentTitle": "Sidecar contents",
+    "contentBody": "The sidecar stores the schema version, whether the backup came from an interactive run or a scheduled job (<code>kind</code>), the job ID for scheduled runs, the profile mode used (<code>default</code> or <code>custom</code>), the source hostname, the original archive basename, an ISO-8601 creation timestamp and the archive size in bytes.",
+    "whyBody": "The Monitor's Backups tab scans configured local directories for <code>*.proxmenux.json</code> sidecars — not for <code>*.tar.zst</code> files — because a <code>.tar.zst</code> without a sidecar might not be a ProxMenux backup at all. The scan is fast (JSON files are tiny) and the pairing is stable across renames of the archive as long as the sidecar is renamed to match."
+  },
+  "restoreAccess": {
+    "heading": "Restoring from a local archive",
+    "body": "The ProxMenux restore flow discovers local archives by scanning the configured local target for sidecars and displaying them in the Archives list. Selecting one triggers <code>_rs_check_layout</code>, which extracts the tarball into a staging directory and confirms the three-payload layout before proceeding. For manual extraction outside of ProxMenux, <code>tar --zstd -xf hostcfg-HOSTNAME-TIMESTAMP.tar.zst -C /tmp/hostcfg</code> yields the same tree the restore code consumes."
+  }
+}

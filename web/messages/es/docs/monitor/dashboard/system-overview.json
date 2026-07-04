@@ -53,6 +53,30 @@
     "sparklineTitle": "El sparkline es significativo",
     "sparklineBody": "La tarjeta de temperatura dibuja una traza de 5 minutos bajo el valor, con la línea y el degradado siguiendo el mismo par Warning/Critical documentado arriba. Es la forma más rápida de ver si el host está en escalada térmica sin abrir la modal de detalle."
   },
+  "processes": {
+    "heading": "Top procesos por CPU / Memoria",
+    "intro": "Las tarjetas CPU Usage y Memory de la pestaña Resumen son clicables. Al pulsar cualquiera de ellas se abre una lista ordenable con los 25 procesos top — ordenada por uso de CPU si la abriste desde la tarjeta de CPU, o por memoria residente si la abriste desde la de Memory.",
+    "listTitle": "El diálogo con la lista",
+    "listItems": [
+      "<strong>Auto-refresco</strong> — la lista se actualiza cada 5 segundos mientras el diálogo está abierto y deja de pedir datos en cuanto se cierra.",
+      "<strong>Filtro</strong> — la caja de búsqueda acota la lista por command, user o PID.",
+      "<strong>Barra en línea</strong> — la columna de la métrica principal dibuja una barra pequeña escalada al mayor valor de la lista filtrada, para que el orden siga siendo visible aunque ningún proceso esté cerca del 100 %.",
+      "<strong>Layout móvil</strong> — por debajo de 640 px las columnas PID y User se ocultan para que Command, CPU % y Memory sigan cabiendo en la pantalla de un teléfono sin scroll horizontal."
+    ],
+    "captureListAlt": "Modal Top processes by Memory — tabla con columnas PID, USER, COMMAND, CPU %, Memory ordenada por RSS",
+    "captureListCaption": "La tarjeta Memory abre la lista ordenada por RSS (acento índigo). La tarjeta CPU abre la misma lista ordenada por uso de CPU (acento azul).",
+    "detailTitle": "Detalle por proceso",
+    "detailIntro": "Al pulsar cualquier fila de la lista se abre un segundo diálogo con la foto en vivo de ese proceso, organizada en cuatro secciones:",
+    "detailItems": [
+      "<strong>Overview</strong> — estado, proceso padre, número de hilos, descriptores de fichero abiertos, usuario y grupo.",
+      "<strong>Resources</strong> — CPU %, Memoria %, Resident (RSS), Virtual size, Swap, totales de I/O de lectura y escritura.",
+      "<strong>Command</strong> — nombre corto, línea de comandos completa, ruta del ejecutable y directorio de trabajo.",
+      "<strong>Lifetime</strong> — timestamp de arranque y tiempo transcurrido en ejecución."
+    ],
+    "detailRefresh": "El diálogo de detalle se refresca cada 3 segundos mientras está abierto. Si el proceso termina con el diálogo abierto, el polling se detiene, aparece un banner ámbar <em>This process has finished</em> y el último snapshot capturado se queda en pantalla (atenuado) para que sigas viendo qué estaba pasando justo antes de que terminara.",
+    "captureDetailAlt": "Modal de detalle de proceso — secciones Overview, Resources, Command y Lifetime para un único PID",
+    "captureDetailCaption": "Diálogo de detalle por proceso abierto desde una fila de la lista. El color de acento sigue al de la tarjeta que lo abrió (azul para CPU, índigo para Memory)."
+  },
   "middle": {
     "heading": "Medio: gráficas de métricas del nodo",
     "body1": "Bajo la fila superior se encuentra el componente <code>NodeMetricsCharts</code> — gráficas históricas de CPU, memoria y E/S de disco tomadas del propio almacén RRD de Proxmox vía <code>/api/node/metrics</code>. Un selector de timeframe alterna entre <em>1 hora / 24 horas / 7 días / 30 días / 1 año</em>; la resolución de los datos baja a medida que crece la ventana para que la gráfica se mantenga fluida.",
