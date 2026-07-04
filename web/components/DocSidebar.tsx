@@ -249,6 +249,31 @@ export const sidebarItems: MenuItem[] = [
   },
 
   {
+    title: "Backup & Restore",
+    i18nKey: "backupRestore",
+    href: "/docs/backup-restore",
+    submenu: [
+      { title: "Overview", i18nKey: "backupRestoreOverview", href: "/docs/backup-restore" },
+      { title: "How it works", i18nKey: "backupRestoreHowItWorks", href: "/docs/backup-restore/how-it-works" },
+      {
+        title: "Destinations",
+        i18nKey: "backupRestoreDestinations",
+        href: "/docs/backup-restore/destinations",
+        submenu: [
+          { title: "Overview", i18nKey: "backupRestoreDestOverview", href: "/docs/backup-restore/destinations" },
+          { title: "Local archive", i18nKey: "backupRestoreDestLocal", href: "/docs/backup-restore/destinations/local" },
+          { title: "Proxmox Backup Server", i18nKey: "backupRestoreDestPbs", href: "/docs/backup-restore/destinations/pbs" },
+          { title: "Borg", i18nKey: "backupRestoreDestBorg", href: "/docs/backup-restore/destinations/borg" },
+        ],
+      },
+      { title: "Creating backups", i18nKey: "backupRestoreCreating", href: "/docs/backup-restore/creating-backups" },
+      { title: "Scheduled jobs", i18nKey: "backupRestoreJobs", href: "/docs/backup-restore/scheduled-jobs" },
+      { title: "Restoring", i18nKey: "backupRestoreRestoring", href: "/docs/backup-restore/restoring" },
+      { title: "Cross-kernel restore", i18nKey: "backupRestoreCrossKernel", href: "/docs/backup-restore/cross-kernel" },
+    ],
+  },
+
+  {
     title: "Commands Reference",
     i18nKey: "commandsReference",
     submenu: [

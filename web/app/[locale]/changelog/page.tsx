@@ -12,14 +12,16 @@ import CopyableCode from "@/components/CopyableCode"
 
 // Resolve which CHANGELOG.md to read for the given locale. The canonical
 // English file lives at the repo root (so GitHub displays it as-is and
-// existing RSS / external consumers don't break). Localized versions
-// sit under <repo>/lang/<locale>/CHANGELOG.md. Falls back to English if
-// the localized file doesn't exist yet — so a partially-translated
-// changelog still renders (in EN) instead of 404'ing.
+// existing RSS / external consumers don't break). Localized versions sit
+// under <repo>/web/data/changelog/<locale>.md — separate from the
+// /lang/ directory which is now reserved for runtime translation JSON
+// shipped to the host install. Falls back to English if the localized
+// file doesn't exist yet — so a partially-translated changelog still
+// renders (in EN) instead of 404'ing.
 function resolveChangelogPath(locale: string): string {
   const repoRoot = path.join(process.cwd(), "..")
   if (locale && locale !== "en") {
-    const localized = path.join(repoRoot, "lang", locale, "CHANGELOG.md")
+    const localized = path.join(process.cwd(), "data", "changelog", `${locale}.md`)
     if (fs.existsSync(localized)) return localized
   }
   return path.join(repoRoot, "CHANGELOG.md")

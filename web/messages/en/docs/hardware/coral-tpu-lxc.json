@@ -20,7 +20,7 @@
     "title": "Before you start",
     "drivers": "<strong>Coral drivers already installed on the host</strong>. This script does not install them; it only configures passthrough to the container. Run <hostLink>Install Coral TPU on the Host</hostLink> first if you haven't.",
     "driversCheck": "ls /dev/apex_* 2>/dev/null ; lsusb | grep -E '1a6e:089a|18d1:9302'",
-    "container": "<strong>An existing LXC container</strong>, ideally running a <strong>Debian / Ubuntu</strong>-based distro. The inside-container install uses <code>apt-get</code>; Alpine / Arch containers are not currently supported by this script.",
+    "container": "<strong>An existing LXC container</strong>, ideally running a <strong>Debian / Ubuntu</strong>-based distro — the in-container runtime install uses <code>apt-get</code>. <strong>Non-Debian containers</strong> (Alpine, Arch, RHEL, SUSE…) are still supported in <strong>passthrough-only mode</strong>: the script detects the distro and offers a prompt to skip the <code>libedgetpu</code> APT install while still writing the device passthrough config — useful for app containers that bundle the runtime themselves (e.g. the Frigate Docker image).",
     "downtime": "<strong>Be OK with a brief downtime</strong> of the container. The script stops it to apply config changes, then starts it back up to install drivers inside. No host reboot needed."
   },
   "hostPrep": {
@@ -70,8 +70,8 @@
       ],
       "noIgpuTitle": "Why no iGPU drivers here?",
       "noIgpuBody": "Earlier versions of this script also installed Intel <code>va-driver-all</code>, <code>intel-opencl-icd</code> and friends so the same container could do Quick Sync video decode alongside Coral inference. That doubled-up responsibility caused confusing failures when the user only wanted Coral. The iGPU side is now the exclusive job of <lxcGpuLink>Add GPU to LXC</lxcGpuLink> — run it first if you also want hardware video decode in the container.",
-      "debianTitle": "Debian / Ubuntu containers only",
-      "debianBody": "The in-container install uses <code>apt-get</code> directly. Alpine, Arch or RHEL-based containers are not currently supported — the install step will fail and leave the LXC with the passthrough config but no drivers inside. For those distros, install the Coral runtime manually following Google's <coralLink>official guide</coralLink> after the LXC config step."
+      "debianTitle": "Non-Debian containers — passthrough-only mode",
+      "debianBody": "The in-container runtime install uses <code>apt-get</code>, which only ships on Debian/Ubuntu-family distros. On <strong>Alpine, Arch, RHEL or SUSE</strong> containers the script detects the distro via <code>/etc/os-release</code> and shows a confirmation prompt: <em>continue in passthrough-only mode</em> (writes the device config to <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> and skips the <code>libedgetpu</code> APT install) or <em>abort</em>. Passthrough-only is the right choice if the app container that will actually use Coral already bundles the runtime — the canonical example is the Frigate Docker image. Otherwise, follow Google's <coralLink>official guide</coralLink> to install <code>libedgetpu</code> manually after the script has written the LXC config."
     },
     "summary": {
       "title": "Summary",
@@ -95,8 +95,8 @@
     "apexBody": "Host apex module isn't loaded. On the host: <code>lsmod | grep apex</code> — if empty, run <code>modprobe apex</code>, or reboot if you just installed Coral drivers. Once the host has <code>/dev/apex_0</code>, restart the container: <code>pct stop &lt;ctid&gt; &amp;&amp; pct start &lt;ctid&gt;</code>.",
     "replugTitle": "USB Coral disappears after replug in a different port",
     "replugBody": "This is exactly why the script mounts <code>/dev/bus/usb</code> instead of the <code>/dev/coral</code> symlink. If you're hitting this, check your LXC config has <code>lxc.mount.entry: /dev/bus/usb dev/bus/usb ...</code> and not a reference to <code>/dev/coral</code> directly. Old configs from earlier script versions may need updating — re-run the script on the same container and the config gets refreshed.",
-    "alpineTitle": "In-container install fails on an Alpine container",
-    "alpineBody": "The script uses <code>apt-get</code>, which Alpine doesn't have. The LXC passthrough config is still valid — just install the Coral runtime manually with <code>apk add</code> following Google's guide for Alpine, or use a Debian-based container if you don't need the smaller footprint.",
+    "alpineTitle": "Alpine / Arch / RHEL / SUSE container — runtime not installed",
+    "alpineBody": "If you chose <em>passthrough-only mode</em> when the script prompted, the LXC config is written and the Coral device is visible inside the container, but the <code>libedgetpu</code> runtime is not installed. That's by design: Google's APT repo only ships for Debian/Ubuntu. Install the runtime manually with your distro's package manager (Alpine: <code>apk add</code>; Arch: AUR; RHEL/SUSE: build from source) following Google's official guide, or run an app container that bundles the runtime — the Frigate Docker image is the canonical example: just expose the device with <code>--device /dev/apex_0:/dev/apex_0</code> (M.2) or the USB bind mount the script already wrote (USB).",
     "frigateTitle": "Frigate says 'Coral EdgeTPU detected but not available'",
     "frigateBody": "Almost always a permissions issue inside the container. Frigate runs as root by default; check the root user is in the <code>plugdev</code> group inside the container (for USB), and that the process can read <code>/dev/apex_0</code> (for M.2). <code>ls -l /dev/apex_0</code> from inside the container should show group <code>apex</code> — if not, add the GID alignment to <code>/etc/group</code> or switch the container to privileged mode.",
     "logsTitle": "Check both host and container logs",

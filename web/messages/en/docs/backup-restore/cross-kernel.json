@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Cross-kernel restore — direction detection, safe-subset filter, hydration | ProxMenux",
+    "description": "How ProxMenux restores a host backup on a target running a different major kernel version. Documents how the direction of the mismatch is detected, the safe-subset filter that skips boot-critical paths when the target runs a newer kernel than the backup, and the four-phase kernel-agnostic hydration that reapplies user tuning like IOMMU, VFIO IDs and custom cmdline tokens without copying kernel-tied files verbatim.",
+    "ogTitle": "ProxMenux Backup — cross-kernel restore and hydration",
+    "ogDescription": "Direction-aware cross-kernel restore with a safe-subset filter and kernel-agnostic hydration.",
+    "twitterTitle": "Cross-kernel restore | ProxMenux",
+    "twitterDescription": "How ProxMenux handles a restore when the target kernel differs from the backup's."
+  },
+  "header": {
+    "title": "Cross-kernel restore",
+    "description": "How ProxMenux handles a restore when the target host runs a different kernel from the one recorded in the backup — especially when the target runs a newer kernel. Documents how the difference is detected, how boot-critical paths that could break the target are filtered, and how the user's own configuration is reapplied without copying kernel-tied files verbatim.",
+    "section": "Backup & Restore"
+  },
+  "intro": {
+    "title": "Every kernel jump is handled differently",
+    "body": "A Proxmox host's kernel is identified by a version string like <code>6.17.13-2-pve</code>. The first two numbers (<strong>6.17</strong> in this example) define the major version: when they change, some configuration files written for the previous kernel may not be valid on the new one. When the restore detects that the backup and the target have different major kernel versions, the flow branches based on the direction of the jump — whether the backup is older or newer than the target — because the two cases have opposite failure modes. Backups newer than the target restore cleanly as-is (bench-verified across multiple kernel jumps). Backups older than the target need a filter to avoid breaking the target's boot with configuration written for a kernel that has since changed."
+  },
+  "directionCheck": {
+    "heading": "The direction check",
+    "intro": "During the compatibility check, <code>hb_compat_check</code> compares the kernel recorded in the backup's manifest against the target's current kernel (<code>uname -r</code>) and classifies the restore into one of three cases, stored in the internal variable <code>HB_COMPAT_KERNEL_DIRECTION</code>:",
+    "rows": [
+      { "direction": "same", "condition": "The major kernel version matches between backup and target.", "behavior": "The full restore flow runs unchanged. No extra filter, no hydration, no special notice in the UI." },
+      { "direction": "bk_newer", "condition": "Backup kernel is NEWER than the target's (for example: the backup was made on kernel 7.0 and the target runs kernel 6.17).", "behavior": "The full restore flow runs unchanged, exactly like <code>same</code>. No filter is applied. Verified empirically: drivers auto-reinstall against the target's kernel, IOMMU config applies cleanly, VMs with GPU passthrough come up without issue." },
+      { "direction": "bk_older", "condition": "Backup kernel is OLDER than the target's (for example: the backup was made on kernel 6.17 and the target runs kernel 7.0).", "behavior": "The safe-subset filter and the four-phase hydration below are activated. The restore proceeds — the target reproduces the source, but boot-critical files are not copied verbatim." }
+    ]
+  },
+  "whyBkNewerIsSafe": {
+    "heading": "Why a backup with a newer kernel than the target restores unchanged",
+    "body": "When the restore runs against a target with an <em>older</em> kernel than the one recorded in the backup, every mechanism the restore depends on is independent of the kernel version. GPU driver installers and other PCI-device installers detect the running kernel with <code>uname -r</code> and compile DKMS against whatever the target has. The APT package install pulls binaries built for the target's distribution. IOMMU cmdline tokens like <code>intel_iommu=on</code> are stable across major kernel versions. The backup carries paths written under a newer kernel, but those paths (module blacklists, GRUB defaults, initramfs config) are still valid syntax on the older one — kernels ignore tokens they do not recognise instead of failing. This case is equivalent in practice to a same-kernel restore, and ProxMenux treats it as such."
+  },
+  "safeSubsetFilter": {
+    "heading": "The safe-subset filter (only when the target kernel is newer)",
+    "intro": "When the target kernel is newer than the backup's, the compatibility check adds 16 boot-critical paths from <code>hb_unsafe_paths_cross_version</code> to <code>RS_SKIP_PATHS</code>. These paths are excluded from the restore because writing a version of them from an older kernel over a target running a newer one has caused kernel panics in bench tests. The paths cover four categories:",
+    "categoryRows": [
+      { "category": "Bootloader", "paths": "<code>/etc/default/grub</code>, <code>/etc/kernel</code>", "reason": "GRUB defaults tied to the prior kernel order, and proxmox-boot-tool state (cmdline, ESP UUIDs, hooks) that references paths and identifiers from the older install." },
+      { "category": "Kernel modules and boot artifacts", "paths": "<code>/etc/modules-load.d</code>, <code>/etc/modprobe.d</code>, <code>/etc/initramfs-tools</code>", "reason": "Autoload lists that may reference modules renamed between kernel majors, module options that may not apply, initramfs hooks written for the older kernel." },
+      { "category": "Storage stack and filesystem identity", "paths": "<code>/etc/fstab</code>, <code>/etc/multipath</code>, <code>/etc/iscsi</code>, <code>/etc/udev/rules.d</code>, <code>/etc/zfs</code>", "reason": "UUIDs that may not exist on this install, multipath drivers that change between kernels, iSCSI parameters that evolve, udev rules that may bind to nonexistent subsystems, ZFS state (<code>zpool.cache</code> + <code>hostid</code>) that can lock the pool as foreign." },
+      { "category": "APT sources", "paths": "<code>/etc/apt</code>", "reason": "APT source suites may trigger a downgrade of critical packages on the next upgrade." },
+      { "category": "systemd", "paths": "<code>/etc/systemd/system</code>, <code>/etc/systemd/journald.conf</code>, <code>/etc/systemd/logind.conf</code>, <code>/etc/systemd/system.conf</code>, <code>/etc/systemd/user.conf</code>", "reason": "Unit overrides and .wants tied to the older systemd major; configuration keys that may not parse on a newer systemd." }
+    ],
+    "outroBody": "The filter runs BEFORE the confirmation dialog so the user sees the exact list of paths that will be skipped, categorised by reason. The restore still proceeds — everything else (VMs, LXCs, network, /etc/pve, users, cron, ProxMenux state, packages, drivers, /root) is restored normally."
+  },
+  "hydration": {
+    "heading": "Kernel-agnostic hydration",
+    "intro": "The safe-subset filter alone would leave the target without the tuning the user had inside those boot-critical files: IOMMU cmdline for GPU passthrough, VFIO device IDs, custom <code>GRUB_TIMEOUT</code>, nvidia blacklists. The hydration pass re-applies those bits kernel-agnostically. Four phases run when the target kernel is newer than the backup's, each additive (never overwrites a value the target already carries) and idempotent (running twice is a no-op).",
+    "phaseRows": [
+      { "phase": "1a — GRUB path", "detail": "For hosts using GRUB (ext4/lvm installs). <code>_rs_hyd_grub</code> merges every token from the backup's <code>manifest.kernel_params.cmdline_extra</code> into the target's live <code>GRUB_CMDLINE_LINUX_DEFAULT</code>, skipping tokens whose key the target already carries. Then merges whitelisted <code>GRUB_*</code> keys (<code>GRUB_TIMEOUT</code>, <code>GRUB_TIMEOUT_STYLE</code>, <code>GRUB_DEFAULT</code>, <code>GRUB_TERMINAL</code>, <code>GRUB_DISABLE_OS_PROBER</code>, <code>GRUB_SERIAL_COMMAND</code>, <code>GRUB_GFXMODE</code>, <code>GRUB_GFXPAYLOAD_LINUX</code>) from the backup's <code>/etc/default/grub</code> if they differ from the target's." },
+      { "phase": "1b — systemd-boot / ZFS path", "detail": "For hosts using systemd-boot (typically ZFS-on-root). <code>_rs_hyd_kernel_cmdline</code> merges operator tokens from <code>cmdline_extra</code> into the target's <code>/etc/kernel/cmdline</code>, keeping the target's own <code>root=</code>, <code>boot=</code> and <code>rootflags=</code> boilerplate intact." },
+      { "phase": "2 — /etc/modules merge", "detail": "<code>_rs_hyd_modules</code> appends modules from <code>manifest.kernel_params.modules_loaded_at_boot</code> that are in the whitelist (<code>vfio</code>, <code>vfio_pci</code>, <code>vfio_iommu_type1</code>, <code>vfio_virqfd</code>, <code>kvm</code>, <code>kvm_intel</code>, <code>kvm_amd</code>, <code>nvidia</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code>, <code>nvidia_uvm</code>, <code>i915</code>, <code>xe</code>) AND not already present in the target's <code>/etc/modules</code>." },
+      { "phase": "3 — Whitelisted files copy", "detail": "<code>_rs_hyd_files</code> copies operator-authored files from the staging rootfs to the live target when the content differs. Whitelist covers VFIO/nvidia/blacklist files under <code>/etc/modprobe.d</code>, <code>/etc/modules-load.d</code>, and the ProxMenux VFIO bind rule + nvidia udev rules under <code>/etc/udev/rules.d</code>. Distro-owned files (<code>pve-blacklist.conf</code>, <code>mdadm.conf</code>, <code>nvme.conf</code>) are intentionally excluded — their contents evolve between releases." },
+      { "phase": "4 — Force post-boot reflows", "detail": "The four phases write directly to the live target OUTSIDE the normal restore pipeline. To make the merged tokens/modules/files take effect on the next boot, <code>HB_HYDRATION_APPLIED=1</code> propagates through <code>plan.env</code> to <code>apply_pending_restore.sh</code>, which forces <code>NEEDS_INITRAMFS=1</code> and <code>NEEDS_GRUB=1</code> regardless of what was in the apply list. The post-boot dispatcher then regenerates initramfs and refreshes the bootloader." }
+    ]
+  },
+  "planCommit": {
+    "heading": "Plan vs commit — the operator sees a preview first",
+    "body": "The hydration runs in two modes. Before the confirmation dialog, ProxMenux runs <code>_rs_apply_bk_older_hydration</code> in <code>plan</code> mode: it computes exactly what would be merged, populates <code>RS_HYDRATION_SUMMARY</code> with a green block listing each action, and returns without writing. The confirmation dialog shows that green block alongside the amber safe-subset skip list, so the user sees UPFRONT what will be re-applied automatically. After the user confirms, ProxMenux re-runs the same helper in <code>commit</code> mode — same phases, same logic, but this time each phase writes to the live target. Cancelling the confirmation dialog leaves the target untouched."
+  },
+  "flowDiagram": {
+    "heading": "The flow when the target kernel is newer than the backup's",
+    "intro": "The steps added when the target kernel is newer sit inside the normal restore flow. Everything else — hot apply, pending prepare, package install, post-boot dispatcher — runs identically to a same-kernel restore.",
+    "diagram": "  ┌────────────────────────────────────────────────────────────┐\n  │ hb_compat_check                                             │\n  │   HB_COMPAT_KERNEL_DIRECTION = bk_older                     │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ Add 16 boot-critical paths to RS_SKIP_PATHS                 │\n  │   /etc/default/grub, /etc/kernel, /etc/modules-load.d, ...  │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ _rs_apply_bk_older_hydration \"plan\"                         │\n  │   Compute what would be merged                              │\n  │   Populate RS_HYDRATION_SUMMARY (green block)               │\n  │   No writes                                                 │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ Confirmation dialog                                         │\n  │   Amber: paths skipped by safe-subset filter                │\n  │   Green: tokens/files reapplied by hydration                │\n  │   User accepts or cancels                                   │\n  └───────────────────────────┬────────────────────────────────┘\n                              │ (accepted)\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ _rs_apply_bk_older_hydration \"commit\"                       │\n  │   Phase 1a/1b: merge cmdline tokens + GRUB keys             │\n  │   Phase 2: append modules to /etc/modules                   │\n  │   Phase 3: copy whitelisted vfio/nvidia files               │\n  │   Set HB_HYDRATION_APPLIED=1                                │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ Rest of the restore runs normally                           │\n  │   _rs_apply hot (skips RS_SKIP_PATHS)                       │\n  │   _rs_prepare_pending_restore (writes plan.env with         │\n  │     HB_HYDRATION_APPLIED=1)                                 │\n  │   packages.manual.list install                              │\n  │   Reboot                                                    │\n  │   apply_pending_restore.sh (forces NEEDS_INITRAMFS=1,       │\n  │     NEEDS_GRUB=1 because of the hydration flag)             │\n  │   apply_cluster_postboot.sh                                 │\n  │     update-initramfs -u -k all                              │\n  │     update-grub / proxmox-boot-tool refresh                 │\n  │     component --auto-reinstall                              │\n  └────────────────────────────────────────────────────────────┘"
+  },
+  "concreteExamples": {
+    "heading": "Concrete examples",
+    "intro": "The hydration pass is not abstract — it produces observable, correct outcomes for common scenarios. Two examples that hydration handles automatically:",
+    "rows": [
+      { "scenario": "GPU passthrough (VFIO)", "detail": "Source had <code>intel_iommu=on iommu=pt</code> in the cmdline, <code>vfio</code>/<code>vfio_pci</code>/<code>vfio_iommu_type1</code> in <code>/etc/modules</code>, an <code>/etc/modprobe.d/vfio.conf</code> with <code>options vfio-pci ids=10de:2216</code>, and a <code>/etc/modprobe.d/blacklist-nvidia.conf</code>. Hydration merges the cmdline tokens into the target's GRUB or kernel cmdline, appends the vfio modules to <code>/etc/modules</code>, and copies the two user-authored modprobe files. On the next boot, IOMMU is active, VFIO modules load, the GPU is bound to vfio-pci and the VM comes up with passthrough working." },
+      { "scenario": "Custom GRUB defaults", "detail": "Source had <code>GRUB_TIMEOUT=1</code> and <code>GRUB_DISABLE_OS_PROBER=true</code>. Hydration reads both keys from the backup's <code>/etc/default/grub</code>, sees they differ from the fresh install's defaults, and rewrites those two lines in the target's file (leaving everything else, including <code>GRUB_DISTRIBUTOR</code>, untouched)." }
+    ]
+  },
+  "callout": {
+    "warningTitle": "What hydration does not reapply when the target kernel is newer",
+    "warningBody": "Hydration reapplies only the configuration ProxMenux knows to be safe across kernel versions: IOMMU tokens, VFIO IDs, whitelisted GRUB keys, and modules from a fixed list (<code>vfio*</code>, <code>nvidia*</code>, <code>i915</code>, <code>xe</code>, <code>kvm*</code>). Anything outside that set — custom initramfs hooks under <code>/etc/initramfs-tools/hooks/</code>, non-whitelisted files under <code>/etc/modprobe.d/</code>, user-authored systemd unit overrides — remains excluded. The reason is concrete: those files can call kernel-internal interfaces (module APIs, <code>/sys</code> layout, <code>udev</code> hooks) that change between major versions, and applying them verbatim over the newer kernel can prevent the target from booting. When exact reproduction of the boot chain is required, the restore must run on a host with the same major kernel version as the backup."
+  },
+  "codeReference": {
+    "heading": "Where the mechanisms live",
+    "intro": "For developers looking to trace or extend the cross-kernel behaviour:",
+    "rows": [
+      { "component": "Direction detection", "location": "<code>hb_compat_check</code> in <code>lib_host_backup_common.sh</code>. Sets <code>HB_COMPAT_KERNEL_DIRECTION</code>." },
+      { "component": "Safe-subset path list", "location": "<code>hb_unsafe_paths_cross_version</code> in <code>lib_host_backup_common.sh</code>. Emits <code>path\\treason</code> lines used by both the CLI filter and the Web endpoint <code>/api/host-backups/restore/prepare</code>." },
+      { "component": "Hydration phases", "location": "<code>_rs_hyd_grub</code>, <code>_rs_hyd_kernel_cmdline</code>, <code>_rs_hyd_modules</code>, <code>_rs_hyd_files</code> in <code>backup_host.sh</code>. Orchestrated by <code>_rs_apply_bk_older_hydration</code>." },
+      { "component": "Post-boot reflow forcing", "location": "<code>apply_pending_restore.sh</code> reads <code>HB_HYDRATION_APPLIED</code> from <code>plan.env</code> and forces <code>NEEDS_INITRAMFS=1</code>/<code>NEEDS_GRUB=1</code>." },
+      { "component": "Web preview", "location": "<code>/api/host-backups/restore/prepare</code> in <code>flask_server.py</code>. Sources the helper library, runs <code>_rs_apply_bk_older_hydration</code> in plan mode, returns the actions to the Web modal." }
+    ]
+  },
+  "whereNext": {
+    "heading": "Where to go next",
+    "items": [
+      { "label": "Restoring", "href": "/docs/backup-restore/restoring", "tail": " — the full restore pipeline this page's mechanisms plug into." },
+      { "label": "How it works", "href": "/docs/backup-restore/how-it-works", "tail": " — the manifest and collectors that produce the <code>kernel_params</code> block hydration reads from." }
+    ]
+  }
+}

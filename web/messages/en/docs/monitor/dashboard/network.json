@@ -35,6 +35,32 @@
       }
     ]
   },
+  "flow": {
+    "heading": "Network Flow diagram",
+    "intro": "Between the top row and the three group cards, the tab renders a live topology view called <strong>Network Flow</strong>. It draws every path a packet can take through the host — physical NICs at one end, bridges in the middle, VMs and containers at the other — with animated pulses that show real-time rx/tx traffic on each link.",
+    "imageAlt": "Network Flow diagram — NICs on the left, host and bridges in the middle, VMs and LXCs on the right, with animated pulses on each connection",
+    "imageCaption": "Network Flow — colour-coded nodes plus animated comets whose direction and thickness reflect live traffic.",
+    "elementsTitle": "What the diagram shows",
+    "elementsIntro": "Every node is one entity from the same inventory used by the group cards below, but arranged as a topology so relationships between them are immediate:",
+    "elements": [
+      "<strong>NICs</strong> (amber) — every physical interface with link up. Interfaces reported as down are drawn faded.",
+      "<strong>Host</strong> (amber) — the Proxmox host itself, sitting between the NICs and the bridges. Rendered as a fixed anchor; not clickable.",
+      "<strong>Bridges</strong> (cyan) — Linux and OVS bridges. Only bridges that carry at least one active guest are drawn; unused bridges are hidden to keep the diagram focused on what actually moves traffic.",
+      "<strong>LXCs</strong> (cyan) — running containers attached to a bridge.",
+      "<strong>VMs</strong> (purple) — running virtual machines attached to a bridge.",
+      "Offline guests (stopped VMs / containers) are hidden."
+    ],
+    "pulsesTitle": "What the animation encodes",
+    "pulsesBody": "The animated comets that travel along each edge represent live traffic:",
+    "pulses": [
+      "<strong>Direction</strong> — a pulse flowing toward the NIC is <em>tx</em> from the guest; toward the guest is <em>rx</em>.",
+      "<strong>Stroke width</strong> scales with the guest's combined rx+tx rate. An idle guest still draws a faint animated line; a busy one gets a thick one.",
+      "<strong>Comet head glow</strong> — warm at ~1 MB/s, hot at ≥30 MB/s. Useful to spot at a glance which guest is dominating a NIC.",
+      "<strong>Click</strong> — every node except the host is clickable and opens the same per-interface drill-in modal documented below. Tapping the host is intentionally a no-op — there is no host-level modal in this view."
+    ],
+    "useTitle": "When it's useful",
+    "useBody": "The group cards below tell you <em>what</em> exists; the diagram tells you <em>how it's connected</em> and where the traffic is flowing right now. Patterns easy to spot at a glance: a bridge with no active guest attached, two heavy guests going through the same NIC (bottleneck candidate), or a single VM saturating a link while everything else is quiet."
+  },
   "groups": {
     "heading": "Three interface groups",
     "intro": "Below the top row, three cards split the inventory by role. Each card has its own active-count badge in the header. Interface <strong>type</strong> is identified at a glance by a coloured badge on every row:",

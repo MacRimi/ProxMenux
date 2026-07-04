@@ -79,6 +79,9 @@ export default async function AutomatedPage({
   const uninstallLink = (chunks: React.ReactNode) => (
     <Link href="/docs/post-install/uninstall" className="text-blue-600 hover:underline">{chunks}</Link>
   )
+  const log2ramLink = (chunks: React.ReactNode) => (
+    <Link href="/docs/post-install/optional#log2ram" className="text-blue-600 hover:underline">{chunks}</Link>
+  )
 
   return (
     <div>
@@ -116,7 +119,9 @@ export default async function AutomatedPage({
               <tr key={i}>
                 <td className="px-4 py-2 text-gray-500 font-mono">{i + 1}</td>
                 <td className="px-4 py-2 font-semibold">{o.tool}</td>
-                <td className="px-4 py-2 text-gray-700 leading-relaxed">{o.what}</td>
+                <td className="px-4 py-2 text-gray-700 leading-relaxed">
+                  {t.rich(`optimizations.${i}.what`, { link: log2ramLink })}
+                </td>
                 <td className="px-4 py-2">
                   <Link
                     href={`/docs/post-install/${o.categorySlug}`}

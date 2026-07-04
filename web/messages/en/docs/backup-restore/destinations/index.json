@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "Backup destinations — Local, Proxmox Backup Server, Borg | ProxMenux",
+    "description": "Three storage backends receive the same ProxMenux backup payload: a local .tar.zst archive on any writeable filesystem, a PBS backup in a Proxmox Backup Server datastore, or a Borg archive in a local or remote Borg repository. Each backend has its own compression, deduplication, encryption and network characteristics.",
+    "ogTitle": "ProxMenux Backup Destinations",
+    "ogDescription": "Local, Proxmox Backup Server and Borg — three storage backends for the same host backup payload.",
+    "twitterTitle": "ProxMenux Backup Destinations | ProxMenux",
+    "twitterDescription": "Local archive, Proxmox Backup Server and Borg backends for host backups."
+  },
+  "header": {
+    "title": "Destinations",
+    "description": "Three storage backends supported by ProxMenux Backup: local archive, Proxmox Backup Server (recommended) and Borg. Each receives the same three-payload archive; they differ in storage format, deduplication, encryption model and network requirements.",
+    "section": "Backup & Restore"
+  },
+  "intro": {
+    "title": "Same payload, three backends",
+    "body": "Every backup produces the same three payloads (rootfs, manifest, applications). What changes between destinations is how those payloads are stored and how the operator retrieves them for a restore. Each backend is implemented as a separate function in <code>backup_host.sh</code> — <code>_bk_local</code>, <code>_bk_pbs</code>, <code>_bk_borg</code> — but all four share the same staging step (<code>hb_prepare_staging</code>) and the same restore code path. The choice of destination only affects the write and the retrieval; it does not change what a restore does or how it consumes the archive."
+  },
+  "comparison": {
+    "heading": "Feature comparison",
+    "intro": "The following table lists the concrete differences between the three backends as they behave in ProxMenux today. All values describe observed behaviour of the backend itself, not editorial recommendations.",
+    "rows": [
+      {
+        "feature": "Storage format",
+        "local": "Single <code>.tar.zst</code> file (or <code>.tar.gz</code> if <code>zstd</code> is absent).",
+        "pbs": "PBS backup (<code>.pxar</code> chunks in the datastore).",
+        "borg": "Borg archive inside a Borg repository (segment files)."
+      },
+      {
+        "feature": "Compression",
+        "local": "zstd (default level) via <code>tar --zstd</code>. gzip fallback.",
+        "pbs": "PBS-managed. The client streams uncompressed; the server chunks + compresses.",
+        "borg": "Borg's built-in (lz4 default). Configurable at repo init."
+      },
+      {
+        "feature": "Deduplication",
+        "local": "None. Each backup is a full independent archive.",
+        "pbs": "Full chunk-level deduplication across all backups in the datastore.",
+        "borg": "Full chunk-level deduplication across all archives in the repository."
+      },
+      {
+        "feature": "Encryption at rest",
+        "local": "None (relies on filesystem-level protection).",
+        "pbs": "Optional client-side keyfile encryption. Recovery blob uploaded as separate backup group when enabled.",
+        "borg": "Optional repokey encryption (key stored in the repo, unlocked by a passphrase)."
+      },
+      {
+        "feature": "Retention / pruning",
+        "local": "Applied per scheduled job via <code>KEEP_LAST</code>. Old archives (and their sidecars + runner logs) are deleted symmetrically. Interactive backups do not prune.",
+        "pbs": "Applied per scheduled job via <code>proxmox-backup-client prune --keep-last / --keep-daily / --keep-weekly</code>. Interactive backups do not prune.",
+        "borg": "Applied per scheduled job via <code>borg prune --keep-last / --keep-daily / --keep-weekly</code>. Interactive backups do not prune."
+      },
+      {
+        "feature": "Network",
+        "local": "None. Writes to a local mount point (typically an internal disk or a USB drive).",
+        "pbs": "TCP to the PBS server (default port 8007). Requires PBS credentials + fingerprint.",
+        "borg": "Local filesystem path or SSH tunnel to a remote Borg host."
+      },
+      {
+        "feature": "Dependencies",
+        "local": "<code>tar</code>, <code>zstd</code> (present on Proxmox by default).",
+        "pbs": "<code>proxmox-backup-client</code> package (bundled with Proxmox VE 8+).",
+        "borg": "<code>borg</code> binary. Auto-provisioned by ProxMenux from the Monitor AppImage bundle when missing."
+      },
+      {
+        "feature": "Restore access",
+        "local": "Any host with tar+zstd can extract the archive. No PBS/Borg needed.",
+        "pbs": "Requires <code>proxmox-backup-client</code> + PBS credentials + the keyfile (if encrypted).",
+        "borg": "Requires <code>borg</code> + the repository path + the passphrase (if encrypted)."
+      }
+    ],
+    "captionCode": "feature",
+    "captionLocal": "Local",
+    "captionPbs": "Proxmox Backup Server (recommended)",
+    "captionBorg": "Borg"
+  },
+  "sameArchive": {
+    "heading": "The archive layout does not change with the destination",
+    "body": "Inside any of the three destinations, the same <code>rootfs/</code> + <code>metadata/</code> + <code>manifest.json</code> layout described in <em>How it works</em> is present. A <code>.tar.zst</code> extracted from a local archive, a <code>.pxar</code> restored from PBS, and a Borg archive extracted with <code>borg extract</code> all yield an identical directory tree. The restore code path (<code>_rs_check_layout</code>, <code>_rs_apply</code>, <code>_rs_prepare_pending_restore</code>) reads the same three payloads without knowing which destination they came from."
+  },
+  "extractStandalone": {
+    "heading": "Extracting a backup outside of ProxMenux",
+    "intro": "Any of the three archive formats can be read with standard tools without ProxMenux installed on the reading host. The commands below produce the same directory tree that a restore consumes internally.",
+    "localCmd": "# From a local .tar.zst archive:\ntar --zstd -xf hostcfg-HOST-TIMESTAMP.tar.zst\n\n# From a .tar.gz fallback:\ntar -xzf hostcfg-HOST-TIMESTAMP.tar.gz",
+    "pbsCmd": "# From a PBS backup (requires proxmox-backup-client):\nproxmox-backup-client restore \\\n    --repository USER@REALM@HOST:DATASTORE \\\n    host/hostcfg-HOST/BACKUP-TIME \\\n    hostcfg.pxar /tmp/hostcfg\n\n# Add --keyfile KEY-PATH when the backup is encrypted.",
+    "borgCmd": "# From a Borg archive (requires borg binary + passphrase for encrypted repos):\nborg extract REPO-PATH::ARCHIVE-NAME\n\n# On a remote SSH-served repo:\nborg extract ssh://USER@HOST:PORT/REPO-PATH::ARCHIVE-NAME",
+    "note": "The extracted tree can then be inspected manually or fed to a manual restore. See the individual destination pages for the exact retrieval flow ProxMenux uses under the hood."
+  },
+  "whereNext": {
+    "heading": "Per-destination detail",
+    "intro": "Each destination has its own page covering the configuration flow, the on-disk format and the retrieval command used by the restore.",
+    "items": [
+      {
+        "label": "Local archive",
+        "href": "/docs/backup-restore/destinations/local",
+        "tail": " — pre-configuring a local target, USB drive mounting, the safety check against writing the archive into itself, the sidecar JSON that lets the Monitor identify the file."
+      },
+      {
+        "label": "Proxmox Backup Server (recommended)",
+        "href": "/docs/backup-restore/destinations/pbs",
+        "tail": " — datastore selection, credentials and fingerprint, encryption keyfile lifecycle, recovery passphrase, uploading the recovery blob to PBS for fresh-install recovery."
+      },
+      {
+        "label": "Borg",
+        "href": "/docs/backup-restore/destinations/borg",
+        "tail": " — local vs. SSH-served repositories, the Borg binary sourcing (system / cache / Monitor AppImage bundle / GitHub download), repository initialization, passphrase handling, SSH key setup for remote repos."
+      }
+    ]
+  }
+}

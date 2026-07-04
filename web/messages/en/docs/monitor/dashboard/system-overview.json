@@ -53,6 +53,30 @@
     "sparklineTitle": "The sparkline is meaningful",
     "sparklineBody": "The temperature card draws a 5-minute trace under the value, with the line and gradient colour following the same Warning/Critical pair documented above. It's the fastest way to see whether the host is in a thermal climb without opening the detail modal."
   },
+  "processes": {
+    "heading": "Top processes by CPU / Memory",
+    "intro": "The CPU Usage and Memory cards on the Overview tab are clickable. Clicking either opens a sortable list of the top 25 processes — ordered by CPU usage when opened from the CPU card, by resident memory when opened from the Memory card.",
+    "listTitle": "The list dialog",
+    "listItems": [
+      "<strong>Auto-refresh</strong> — the list updates every 5 seconds while the dialog is open and stops polling as soon as it closes.",
+      "<strong>Filter</strong> — the search box narrows the list by command, user or PID.",
+      "<strong>Inline bar</strong> — the primary metric column draws a small bar scaled to the highest value in the filtered list, so ranking stays visible even when no process is near 100 %.",
+      "<strong>Mobile layout</strong> — under 640 px the PID and User columns hide so Command, CPU % and Memory still fit on a phone screen without horizontal scroll."
+    ],
+    "captureListAlt": "Top processes by Memory modal — table with PID, USER, COMMAND, CPU %, Memory columns sorted by RSS",
+    "captureListCaption": "The Memory card opens the list sorted by RSS (indigo accent). The CPU card opens the same list sorted by CPU usage (blue accent).",
+    "detailTitle": "Per-process detail",
+    "detailIntro": "Clicking any row in the list opens a second dialog with the live picture of that one process, organised in four sections:",
+    "detailItems": [
+      "<strong>Overview</strong> — state, parent process, thread count, open file descriptors, user and group.",
+      "<strong>Resources</strong> — CPU %, Memory %, Resident (RSS), Virtual size, Swap, I/O read and write totals.",
+      "<strong>Command</strong> — short name, full command line, executable path and working directory.",
+      "<strong>Lifetime</strong> — start timestamp and elapsed runtime."
+    ],
+    "detailRefresh": "The detail dialog refreshes every 3 seconds while open. If the process finishes mid-dialog, polling stops, an amber <em>This process has finished</em> banner appears, and the last captured snapshot stays on screen (dimmed) so you can still see what was happening just before it ended.",
+    "captureDetailAlt": "Process detail modal — Overview, Resources, Command and Lifetime sections for a single PID",
+    "captureDetailCaption": "Per-process detail dialog opened from a list row. The accent colour matches the card that opened it (blue for CPU, indigo for Memory)."
+  },
   "middle": {
     "heading": "Middle: node metrics charts",
     "body1": "Below the top row sits the <code>NodeMetricsCharts</code> component — historical CPU, memory and disk-I/O graphs sourced from Proxmox's own RRD store via <code>/api/node/metrics</code>. A timeframe selector switches between <em>1 hour / 24 hours / 7 days / 30 days / 1 year</em>; data resolution drops as the window grows so the chart stays smooth.",

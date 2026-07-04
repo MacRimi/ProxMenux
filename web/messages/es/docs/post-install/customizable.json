@@ -25,43 +25,43 @@
   "categories": [
     {
       "name": "Basic Settings",
-      "description": "Repositorios, upgrade del sistema, zona horaria, locale, utilidades comunes."
+      "description": "Sanea las fuentes APT, ejecuta el upgrade oficial de Proxmox y fija zona horaria, locale y utilidades básicas. Es la base sobre la que apoyan todas las demás categorías."
     },
     {
       "name": "System",
-      "description": "Journald, logrotate, límites del kernel, tuning de memoria, kernel panic, reinicios rápidos."
+      "description": "Ajusta el subsistema de logs y los límites del kernel para un host que aloja muchas VMs y contenedores. Cubre journald, logrotate, sysctl (memoria, límites de ficheros), comportamiento en panic y reinicios rápidos."
     },
     {
       "name": "Virtualization",
-      "description": "Auto-instalación de guest agent, activación de IOMMU/VFIO para passthrough de PCI."
+      "description": "Prepara el host para virtualización avanzada. Auto-instala el guest agent en las plantillas y activa IOMMU/VFIO para passthrough de dispositivos PCI (GPU, controladoras, TPU)."
     },
     {
       "name": "Network",
-      "description": "APT sobre IPv4, tuning de sysctl de red, Open vSwitch, TCP BBR, nombres de interfaz persistentes."
+      "description": "Endurece y afina la pila de red del host. Fuerza APT sobre IPv4, aplica sysctl con hardening y tuning de buffers TCP, ofrece Open vSwitch y BBR, y fija nombres persistentes de interfaces por MAC."
     },
     {
       "name": "Storage",
-      "description": "Dimensionado del ARC de ZFS, ZFS auto-snapshot, límites de velocidad de backups vzdump."
+      "description": "Configura los subsistemas de almacenamiento habituales de Proxmox: ARC de ZFS, auto-snapshots y límites de velocidad de vzdump para evitar saturar el disco durante backups."
     },
     {
       "name": "Security",
-      "description": "Desactivar portmapper/rpcbind para reducir la superficie de ataque."
+      "description": "Reduce la superficie de ataque expuesta por defecto. Desactiva los servicios RPC (portmapper/rpcbind) que Proxmox no necesita pero deja escuchando."
     },
     {
       "name": "Customization",
-      "description": "Colores y aliases de bashrc, banner MOTD, eliminación del aviso de suscripción."
+      "description": "Cambia la experiencia visual y de shell del host: colores y aliases en bashrc, banner MOTD y eliminación del aviso de suscripción del web UI."
     },
     {
       "name": "Monitoring",
-      "description": "OVH Real-Time Monitoring (solo en servidores detectados como OVH)."
+      "description": "Integra el host con Real-Time Monitoring de OVH. Sólo aparece cuando ProxMenux detecta un servidor OVH."
     },
     {
       "name": "Performance",
-      "description": "gzip paralelo (pigz) para compresión más rápida en backups y transferencias."
+      "description": "Acelera las operaciones de compresión (backups, transferencias) sustituyendo gzip por su versión paralela pigz."
     },
     {
       "name": "Optional",
-      "description": "Fixes de CPU AMD, Fastfetch, Figurine, repo de Ceph, High Availability, Log2RAM."
+      "description": "Piezas de nicho que no todo host necesita: fixes de CPU AMD, banner Fastfetch, hostname 3D con Figurine, repositorio de Ceph, servicios de Alta Disponibilidad y Log2RAM para reducir el desgaste del SSD."
     }
   ],
   "mixTip": {
