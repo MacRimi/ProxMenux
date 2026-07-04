@@ -217,32 +217,20 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 
 const CURRENT_VERSION_FEATURES = [
   {
-    icon: <Calendar className="h-5 w-5" />,
-    text: "Host scheduler can attach to an existing PVE vzdump job - The new \"How to schedule\" picker lets you create a brand-new ProxMenux timer with its own schedule + retention, or attach the host config backup to an existing vzdump job so it inherits both. The vzdump hook only fires on the global job-end of the matching storage. Third-party hooks already present in /etc/vzdump.conf are preserved and chained.",
-  },
-  {
     icon: <DatabaseBackup className="h-5 w-5" />,
-    text: "Backup tab is no longer read-only - The Scheduled Backup Jobs list now exposes Run and Enable / Disable buttons per row, plus proper recognition of PVE-attached jobs (badge, inherited schedule shown as \"attached → storage:pbs\", state read from ENABLED= in the .env instead of a non-existent timer)",
-  },
-  {
-    icon: <Server className="h-5 w-5" />,
-    text: "PBS scheduled runs no longer fail silently - Two bugs in run_scheduled_backup.sh: PBS_FINGERPRINT was not propagated to proxmox-backup-client, so every push against a self-signed PBS failed with \"certificate validation failed\", and the client's stderr was redirected to /dev/null, hiding the error from the log. The runner now passes the fingerprint and routes the full client output to the per-job log",
+    text: "New Backups section integrated in the Monitor — create, schedule and restore host backups against Local, PBS or Borg destinations; run on a proper systemd timer or attach to an existing PVE vzdump job with live-inherited retention; PBS encryption with paired recovery blobs; and a direction-aware restore flow that safely handles cross-kernel jumps by reapplying IOMMU / VFIO / GRUB tunings, protecting critical packages from cascade-remove, and auto-remapping NICs after a motherboard swap.",
   },
   {
     icon: <HardDrive className="h-5 w-5" />,
-    text: "Local backup target: one configured value instead of a per-run picker - \"Manage local backup target\" simplified to three choices (default /var/lib/vz/dump, custom path, USB disk) plus a Clear option. The scheduler and manual local backups use the configured target directly, without re-asking each time",
+    text: "Storage & Hardware — per-disk cards in a responsive grid; USB-NVMe enclosures (ASMedia / JMicron / Realtek) now show the drive's real model, serial, temperature and health instead of the bridge's identity; USB-SATA SSDs (ASM105x) no longer flip to HDD; consistent blue / amber / red capacity palette across the app; multi-TB PBS datastores render in the right unit.",
   },
   {
-    icon: <Cpu className="h-5 w-5" />,
-    text: "NVIDIA passthrough hardening - Multi-GPU systems get an auto-managed /etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf and the 70-nvidia.rules udev file is disabled only when ALL NVIDIA GPUs are bound to vfio-pci, never when one stays on the host. Six install scripts that ran update-initramfs now also call proxmox-boot-tool refresh so the new initrd actually reaches the ESP on ZFS root + systemd-boot setups",
+    icon: <Activity className="h-5 w-5" />,
+    text: "Network Flow diagram — new live topology view on the Network tab showing NICs → host → bridges → guests with animated rx / tx pulses on every link.",
   },
   {
-    icon: <Wrench className="h-5 w-5" />,
-    text: "Borg saved-target USB capture no longer corrupts borg-targets.txt - dialog --yesno / --msgbox write their TUI escapes to stdout by convention; the USB mount prompt was capturing them into the returned mountpoint, persisting a multi-kilobyte ANSI blob as the target's repo path. The prompt now stashes real stdout in fd 9 and emits the path through that channel only",
-  },
-  {
-    icon: <RefreshCw className="h-5 w-5" />,
-    text: "Smart-restore cross-host: drift dialog stays quiet when checks always fail by design - The plan summary used to surface always-failing host-identifier checks on a cross-host restore (the source and destination hostname will never match), nudging the operator to dismiss the same dialog every time. The summary now filters out the checks that have no meaningful answer outside same-host restores",
+    icon: <Bell className="h-5 w-5" />,
+    text: "Health & Notifications — every WARNING or CRITICAL check is now dismissable (24 h / 7 d / permanent) with an Active Suppressions panel in Settings to revoke; JournalWatcher no longer replays days of old journald events after a Monitor upgrade; Memory Usage chart's ZFS ARC line plots the actual series instead of a flat band.",
   },
 ]
 
