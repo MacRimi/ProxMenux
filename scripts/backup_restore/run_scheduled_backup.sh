@@ -331,19 +331,73 @@ _sb_run_pbs() {
   # without the keyfile, which is the whole point of the escrow.
   local recovery_enc="/usr/local/share/proxmenux/pbs-key.recovery.enc"
   if [[ -n "${PBS_KEYFILE:-}" && -f "$recovery_enc" ]]; then
+    local keyrec_id
+    keyrec_id="hostcfg-$(hostname)-keyrecovery"
     env PBS_PASSWORD="$PBS_PASSWORD" \
         PBS_FINGERPRINT="${PBS_FINGERPRINT:-}" \
       proxmox-backup-client backup \
         "keyrecovery.conf:${recovery_enc}" \
         --repository "$PBS_REPOSITORY" \
         --backup-type host \
-        --backup-id "proxmenux-keyrecovery-$(hostname)" \
+        --backup-id "$keyrec_id" \
         --backup-time "$epoch" \
+        2>&1 || true
+
+    # Prune the paired keyrecovery group with the SAME retention
+    # values as the main backup. Without this the keyrecovery snapshots
+    # accumulate one per run while the main group is pruned to keep-*,
+    # cluttering the datastore over time. Any single keyrecovery snapshot
+    # is sufficient to reconstruct the keyfile — but matching retention
+    # keeps the two groups aligned in count and makes cleanup obvious.
+    env PBS_PASSWORD="$PBS_PASSWORD" \
+        PBS_FINGERPRINT="${PBS_FINGERPRINT:-}" \
+      proxmox-backup-client prune "host/${keyrec_id}" --repository "$PBS_REPOSITORY" \
+        ${KEEP_LAST:+--keep-last "$KEEP_LAST"} \
+        ${KEEP_HOURLY:+--keep-hourly "$KEEP_HOURLY"} \
+        ${KEEP_DAILY:+--keep-daily "$KEEP_DAILY"} \
+        ${KEEP_WEEKLY:+--keep-weekly "$KEEP_WEEKLY"} \
+        ${KEEP_MONTHLY:+--keep-monthly "$KEEP_MONTHLY"} \
+        ${KEEP_YEARLY:+--keep-yearly "$KEEP_YEARLY"} \
         2>&1 || true
   fi
 
   echo "PBS_SNAPSHOT=host/${backup_id}/${epoch}"
   return 0
+}
+
+# For attached jobs, re-read the parent vzdump job's prune-backups
+# live from /etc/pve/jobs.cfg every run and rewrite KEEP_*. The .env
+# only carries a snapshot of the parent's retention at creation time,
+# so if the parent later gained (or changed) prune-backups the child
+# would silently accumulate. Attached mode is authoritative from the
+# parent by design — that's the whole point of "attached".
+_sb_hydrate_attached_retention() {
+  local parent="${PVE_PARENT_JOB:-}"
+  [[ -z "$parent" ]] && return 0
+  local cfg=/etc/pve/jobs.cfg
+  [[ -f "$cfg" ]] || return 0
+
+  local prune
+  prune=$(awk -v pid="$parent" '
+    /^vzdump:[[:space:]]/ { in_block=($2==pid); next }
+    /^[a-z]+:/ { in_block=0; next }
+    in_block && /^[[:space:]]+prune-backups[[:space:]]/ {
+      sub(/^[[:space:]]+prune-backups[[:space:]]+/, "");
+      print; exit
+    }
+  ' "$cfg")
+
+  # Clear any KEEP_* the .env may have — those are the create-time
+  # snapshot and are now stale. If the parent later removed prune-
+  # backups altogether, this correctly stops pruning the child too.
+  unset KEEP_LAST KEEP_HOURLY KEEP_DAILY KEEP_WEEKLY KEEP_MONTHLY KEEP_YEARLY
+
+  [[ -z "$prune" ]] && return 0
+
+  local kv
+  while IFS= read -r kv; do
+    [[ -n "$kv" ]] && export "${kv?}"
+  done < <(hb_pve_prune_to_keep_env "$prune")
 }
 
 main() {
@@ -355,6 +409,11 @@ main() {
 
   # shellcheck source=/dev/null
   source "$job_file"
+
+  # Attached jobs: re-read retention from the PVE parent live (see
+  # _sb_hydrate_attached_retention above for the why). Standalone
+  # jobs keep whatever KEEP_* the .env has.
+  _sb_hydrate_attached_retention
 
   local lock_file="${LOCK_DIR}/proxmenux-backup-${job_id}.lock"
   if command -v flock >/dev/null 2>&1; then

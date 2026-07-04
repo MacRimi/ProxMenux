@@ -62,8 +62,7 @@
         "root_fs":             { "enum": ["ext4", "xfs", "btrfs", "zfs"] },
         "cpu_model":           { "type": "string" },
         "cpu_arch":            { "enum": ["x86_64", "aarch64"] },
-        "memory_kb":           { "type": "integer", "minimum": 0 },
-        "subscription_status": { "type": ["string", "null"] }
+        "memory_kb":           { "type": "integer", "minimum": 0 }
       }
     },
 

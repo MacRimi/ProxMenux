@@ -58,6 +58,31 @@ def _perf_log(section: str, elapsed_ms: float):
     if DEBUG_PERF:
         print(f"[PERF] {section} = {elapsed_ms:.1f}ms")
 
+
+# USB-NVMe bridges (ASMedia, JMicron, Realtek) answer plain smartctl with
+# the *bridge* identity — model shows as "ASMT 2462 NVME" and there is no
+# temperature. Only `-d snt*` passes through to the actual NVMe controller
+# behind the bridge. For removable disks we try the snt* variants first
+# so both identity and health reflect the drive, not the enclosure.
+_USB_NVME_DRIVERS = ('sntasmedia', 'sntjmicron', 'sntrealtek')
+
+
+def _disk_base_for_sysfs(name: str) -> str:
+    """Normalize `/dev/sda` / `sda` to just `sda` for `/sys/block/<name>` lookups."""
+    if name.startswith('/dev/'):
+        return name[5:]
+    return name
+
+
+def _is_disk_removable(disk_name: str) -> bool:
+    """True if `/sys/block/<disk>/removable` reads 1. USB-attached storage."""
+    try:
+        base = _disk_base_for_sysfs(disk_name)
+        with open(f'/sys/block/{base}/removable') as f:
+            return f.read().strip() == '1'
+    except Exception:
+        return False
+
 class HealthMonitor:
     """
     Monitors system health across multiple components with minimal impact.
@@ -2405,15 +2430,33 @@ class HealthMonitor:
         result = {'serial': '', 'model': '', '_fp': fp}
         try:
             dev_path = f'/dev/{disk_name}' if not disk_name.startswith('/') else disk_name
-            proc = subprocess.run(
-                ['smartctl', '-i', '-j', dev_path],
-                capture_output=True, text=True, timeout=5
-            )
-            if proc.returncode in (0, 4):
-                import json as _json
-                data = _json.loads(proc.stdout)
-                result['serial'] = data.get('serial_number', '')
-                result['model'] = data.get('model_name', '') or data.get('model_family', '')
+
+            # Removable disks may be USB-NVMe bridges: try the snt* driver
+            # variants first so identity reflects the drive (Samsung 990 PRO)
+            # rather than the enclosure (ASMT 2462 NVME). If all snt* fail,
+            # fall through to the plain call — that's still correct for
+            # USB-SATA sticks and non-USB devices.
+            attempts = []
+            if _is_disk_removable(disk_name):
+                for drv in _USB_NVME_DRIVERS:
+                    attempts.append(['smartctl', '-i', '-j', '-d', drv, dev_path])
+            attempts.append(['smartctl', '-i', '-j', dev_path])
+
+            import json as _json
+            for cmd in attempts:
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+                if proc.returncode not in (0, 4):
+                    continue
+                try:
+                    data = _json.loads(proc.stdout)
+                except Exception:
+                    continue
+                serial = data.get('serial_number', '')
+                model = data.get('model_name', '') or data.get('model_family', '')
+                if serial or model:
+                    result['serial'] = serial
+                    result['model'] = model
+                    break
         except Exception:
             pass
 
@@ -2451,28 +2494,44 @@ class HealthMonitor:
             # from spinning up HDDs that hdparm / hd-idle just put to
             # sleep — issue #232. The "UNKNOWN" branch below correctly
             # keeps the previous cached result alive on exit code 2.
-            result = subprocess.run(
-                ['smartctl', '-n', 'standby', '--health', '-j', dev_path],
-                capture_output=True, text=True, timeout=5
-            )
-            if result.returncode == 2:
-                # Drive in standby — reuse the previous health state
-                # if we have one, otherwise report UNKNOWN. Either way,
-                # don't refresh the cache TTL so we retry on the next
-                # cycle (a drive can come out of standby at any time).
-                if cached:
-                    return cached['result']
-                return 'UNKNOWN'
+            #
+            # Removable disks may be USB-NVMe bridges: try snt* drivers
+            # first so health reflects the actual NVMe controller. A
+            # bridge that fakes "PASSED" while the drive behind it is
+            # failing is exactly the false-negative we want to avoid.
+            attempts = []
+            if _is_disk_removable(disk_name):
+                for drv in _USB_NVME_DRIVERS:
+                    attempts.append(['smartctl', '-n', 'standby', '--health', '-j', '-d', drv, dev_path])
+            attempts.append(['smartctl', '-n', 'standby', '--health', '-j', dev_path])
+
             import json as _json
-            data = _json.loads(result.stdout)
-            passed = data.get('smart_status', {}).get('passed', None)
-            if passed is True:
-                smart_result = 'PASSED'
-            elif passed is False:
-                smart_result = 'FAILED'
-            else:
+            smart_result = None
+            for cmd in attempts:
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+                if result.returncode == 2:
+                    # Drive in standby — reuse the previous health state
+                    # if we have one, otherwise report UNKNOWN. Either way,
+                    # don't refresh the cache TTL so we retry on the next
+                    # cycle (a drive can come out of standby at any time).
+                    if cached:
+                        return cached['result']
+                    return 'UNKNOWN'
+                try:
+                    data = _json.loads(result.stdout)
+                except Exception:
+                    continue
+                passed = data.get('smart_status', {}).get('passed', None)
+                if passed is True:
+                    smart_result = 'PASSED'
+                    break
+                if passed is False:
+                    smart_result = 'FAILED'
+                    break
+                # No opinion yet — next attempt (fallthrough to plain).
+            if smart_result is None:
                 smart_result = 'UNKNOWN'
-            
+
             # Cache the result with the device fingerprint for hot-swap invalidation
             self._smart_cache[cache_key] = {'result': smart_result, 'time': current_time, 'fp': fp}
             return smart_result

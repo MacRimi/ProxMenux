@@ -136,6 +136,27 @@
     "automates": "This adjustment automates the following process:",
     "outro": "After installation, you'll see your hostname displayed in 3D ASCII art each time you log in, making it immediately clear which Proxmox node you're working on."
   },
+  "log2ram": {
+    "title": "Install Log2RAM (SSD/NVMe wear reduction)",
+    "intro": "Log2RAM mounts <code>/var/log</code> on a tmpfs ramdisk and periodically syncs the contents back to the underlying disk. On a hypervisor journald churn hits the root SSD every few seconds; moving the writes to RAM reduces wear and disk I/O without losing logs — the periodic sync flushes them to disk and a clean shutdown flushes them too.",
+    "upstreamLabel": "Upstream project:",
+    "upstreamUrl": "https://github.com/azlux/log2ram",
+    "upstreamLinkLabel": "azlux/log2ram on GitHub",
+    "doesLabel": "What ProxMenux does:",
+    "doesItems": [
+      "Detects whether the root disk is SSD/NVMe by reading <code>/sys/block/&lt;dev&gt;/queue/rotational</code>. On a rotational disk the Automated flow asks first before installing.",
+      "Clones the upstream repository (<code>azlux/log2ram</code>) into <code>/tmp/log2ram</code> and runs its <code>install.sh</code>, then enables the <code>log2ram</code> systemd unit.",
+      "Sizes the ramdisk based on host RAM: <code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>&gt; 16 GB → 512M</code>. Writes the value to <code>SIZE=</code> in <code>/etc/log2ram.conf</code>.",
+      "Schedules a periodic disk sync via <code>/etc/cron.d/log2ram</code>: every 1h / 3h / 6h according to the same RAM tier.",
+      "Installs an auto-sync guard at <code>/usr/local/bin/log2ram-check.sh</code>, wired to <code>/etc/cron.d/log2ram-auto-sync</code> to run every 10 minutes. When <code>/var/log</code> reaches 80% of the ramdisk size the guard vacuums journald; at 92% it also truncates <code>pveproxy access/error</code> and <code>pveam.log</code> before syncing — the plain <code>log2ram write</code> command copies tmpfs to disk but does NOT shrink the tmpfs, so this guard prevents PVE from crashing with <em>No space left on device</em> when logs grow uncontrolled.",
+      "Adjusts systemd-journald limits (<code>SystemMaxUse</code>, <code>RuntimeMaxUse</code>) to fit within the ramdisk so a single burst cannot fill it.",
+      "Registers itself in <code>installed_tools.json</code> so it can be reverted from Uninstall Optimizations."
+    ],
+    "howUseLabel": "How to use:",
+    "howUseBody": "On the Automated flow Log2RAM applies unattended when an SSD/NVMe root is detected. On the Customizable flow the script prompts for size, sync interval and whether to enable the 90% auto-sync guard.",
+    "verifyLabel": "Verify and manage from the shell:",
+    "verifyCode": "# Service state and configured timers\nsystemctl status log2ram\nsystemctl list-timers log2ram*\n\n# Current ramdisk usage — /var/log IS the tmpfs itself\ndf -h /var/log\n\n# Force a sync now (tmpfs → disk); does NOT shrink the tmpfs\nlog2ram write\n\n# Trigger the auto-sync guard on demand (vacuum + sync when usage is high)\n/usr/local/bin/log2ram-check.sh\n\n# Current config: SIZE, mail settings, path\ncat /etc/log2ram.conf\n\n# ProxMenux-specific cron jobs\ncat /etc/cron.d/log2ram /etc/cron.d/log2ram-auto-sync\n\n# Recent Log2RAM activity\njournalctl -u log2ram -n 50 --no-pager"
+  },
   "autoApplication": {
     "title": "Automatic Application",
     "body": "These optional features are applied only when specifically selected during the post-install process. Each feature can be individually chosen based on your specific needs and preferences."

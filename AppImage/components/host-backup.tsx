@@ -6671,11 +6671,14 @@ function ManualJobWatchModal({
 // PbsKeyfileRecoveryDialog
 // ──────────────────────────────────────────────────────────────
 // Drops the missing PBS keyfile back onto disk by pulling the escrow
-// blob from a `proxmenux-keyrecovery-<host>` snapshot and decrypting
-// it with the operator's recovery passphrase. Mirrors the shell's
-// hb_pbs_try_keyfile_recovery flow. Triggered from the banner in
-// DestinationsSection when the local keyfile is missing but at least
-// one escrow snapshot is present on a configured PBS.
+// blob from a keyrecovery backup and decrypting it with the operator's
+// recovery passphrase. Mirrors the shell's hb_pbs_try_keyfile_recovery
+// flow. Triggered from the banner in DestinationsSection when the
+// local keyfile is missing but at least one escrow backup is present
+// on a configured PBS. The backend endpoint surfaces both the current
+// `hostcfg-<host>-keyrecovery` and the legacy
+// `proxmenux-keyrecovery-<host>` naming, so pre-1.2.2.2 escrow blobs
+// stay recoverable without manual migration.
 // ──────────────────────────────────────────────────────────────
 function PbsKeyfileRecoveryDialog({
   open,

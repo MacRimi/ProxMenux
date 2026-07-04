@@ -3669,6 +3669,25 @@ def _get_smart_data_uncached(disk_name):
             ['smartctl', '-a', '-d', 'sat,16', f'/dev/{disk_name}'],  # Text SAT with 16-byte commands
         ]
 
+        # USB-NVMe bridges (ASMedia ASM2362/ASM2464PD, JMicron JMS583/JMS586,
+        # Realtek RTL9210): the plain `-a` variant answers with the *bridge*
+        # identity (e.g. "ASMT 2462 NVME") and no temperature, because the
+        # bridge exposes itself as generic USB storage. Only `-d snt*`
+        # passes through to the actual NVMe controller and returns real
+        # model, serial, temperature and health.
+        #
+        # For removable disks we prepend the three snt* variants so the
+        # cascade tries them FIRST — otherwise the plain variant "succeeds"
+        # (>50 chars of bridge chatter), the probe cache locks it in, and
+        # temperature is never seen. For non-removable disks the cascade
+        # is unchanged (zero regression risk on internal SATA/NVMe).
+        if is_disk_removable(disk_name):
+            all_commands = [
+                ['smartctl', '-a', '-j', '-d', 'sntasmedia', f'/dev/{disk_name}'],
+                ['smartctl', '-a', '-j', '-d', 'sntjmicron', f'/dev/{disk_name}'],
+                ['smartctl', '-a', '-j', '-d', 'sntrealtek', f'/dev/{disk_name}'],
+            ] + all_commands
+
         # Probe-cache: if we already know which command works for this
         # disk, try that first. The fallback chain is still kept after
         # in case the cached probe stops working (kernel upgrade swapped
@@ -13808,15 +13827,40 @@ def api_pbs_recovery_setup():
     return jsonify({'status': 'ok', 'recovery_path': _PBS_RECOVERY_ENC_PATH})
 
 
+def _is_pbs_keyrecovery_backup_id(bid: str) -> bool:
+    """Match both the current `hostcfg-<host>-keyrecovery` naming
+    and the legacy `proxmenux-keyrecovery-<host>` naming so escrow
+    blobs uploaded by pre-1.2.2.2 builds remain discoverable and
+    stay hidden from the main host-backup list."""
+    if not bid:
+        return False
+    if bid.startswith('proxmenux-keyrecovery-'):
+        return True
+    return bid.startswith('hostcfg-') and bid.endswith('-keyrecovery')
+
+
+def _pbs_keyrecovery_source_host(bid: str) -> str:
+    """Extract the source hostname from either keyrecovery naming."""
+    if bid.startswith('hostcfg-') and bid.endswith('-keyrecovery'):
+        return bid[len('hostcfg-'):-len('-keyrecovery')]
+    if bid.startswith('proxmenux-keyrecovery-'):
+        return bid[len('proxmenux-keyrecovery-'):]
+    return bid
+
+
 @app.route('/api/host-backups/pbs-recovery/available', methods=['GET'])
 @require_auth
 def api_pbs_recovery_available():
-    """List `host/proxmenux-keyrecovery-*` snapshots across every
-    configured PBS repository. The restore flow uses this when the
-    local keyfile is missing — the operator picks a snapshot, types
-    the recovery passphrase, and the keyfile is rebuilt from the
-    decrypted blob. Returns the freshest snapshot per backup-id +
-    repo so multi-host environments don't bury each other."""
+    """List keyrecovery backup groups across every configured PBS
+    repository. Two naming patterns are surfaced: the current
+    `hostcfg-<host>-keyrecovery` (paired with the main backup group
+    for visual adjacency in the PBS UI) and the legacy
+    `proxmenux-keyrecovery-<host>` used by pre-1.2.2.2 builds. The
+    restore flow uses this when the local keyfile is missing — the
+    operator picks a backup, types the recovery passphrase, and the
+    keyfile is rebuilt from the decrypted blob. Returns the freshest
+    backup per backup-id + repo so multi-host environments don't
+    bury each other."""
     out: list = []
     errors: list = []
     for repo in _list_pbs_destinations():
@@ -13851,7 +13895,7 @@ def api_pbs_recovery_available():
             if it.get('backup-type') != 'host':
                 continue
             bid = it.get('backup-id') or ''
-            if not bid.startswith('proxmenux-keyrecovery-'):
+            if not _is_pbs_keyrecovery_backup_id(bid):
                 continue
             t = it.get('backup-time', 0)
             # ISO timestamp — proxmox-backup-client rejects the
@@ -13866,7 +13910,7 @@ def api_pbs_recovery_available():
                     'repo_name': repo['name'],
                     'repo_repository': repo['repository'],
                     'backup_id': bid,
-                    'source_host': bid[len('proxmenux-keyrecovery-'):],
+                    'source_host': _pbs_keyrecovery_source_host(bid),
                     'backup_time': t,
                     'snapshot': f"host/{bid}/{iso}",
                 }
@@ -15853,10 +15897,13 @@ def _list_pbs_snapshots_for_repo(repo: dict, timeout: int = 15) -> tuple[list, s
         if backup_type != 'host':
             continue
         backup_id = it.get('backup-id', '')
-        # Hide internal keyrecovery escrow snapshots — they're a
+        # Hide internal keyrecovery escrow backups — they're a
         # ProxMenux implementation detail, not user-facing backups.
         # See _PBS_RECOVERY_ENC_PATH and the runner upload step.
-        if backup_id.startswith('proxmenux-keyrecovery-'):
+        # Matches both current `hostcfg-<host>-keyrecovery` and
+        # legacy `proxmenux-keyrecovery-<host>` naming so escrow
+        # blobs from either build stay hidden from the main list.
+        if _is_pbs_keyrecovery_backup_id(backup_id):
             continue
         backup_time = it.get('backup-time', 0)
         # proxmox-backup-client expects the timestamp portion as an

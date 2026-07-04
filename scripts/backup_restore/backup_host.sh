@@ -157,7 +157,7 @@ _bk_pbs() {
         # that case the blob does not describe this snapshot and
         # uploading it as a paired recovery would be misleading.
         # This runs as a SEPARATE backup group
-        # (`host/proxmenux-keyrecovery-<host>`) with NO --keyfile,
+        # (`host/hostcfg-<host>-keyrecovery`) with NO --keyfile,
         # so PBS stores it as a plain (non-PBS-encrypted) blob that
         # can be retrieved during fresh-install recovery. The blob
         # is still passphrase-protected by openssl.
@@ -841,7 +841,13 @@ _rs_extract_pbs() {
         proxmox-backup-client snapshot list \
             --repository "$HB_PBS_REPOSITORY" \
             --output-format json 2>/dev/null \
-        | jq -r '.[] | select(."backup-type" == "host" and ((."backup-id" | startswith("proxmenux-keyrecovery-")) | not)) | "\(."backup-type")|\(."backup-id")|\(."backup-time")"' 2>/dev/null \
+        | jq -r '.[]
+            | select(."backup-type" == "host"
+                     and not (
+                          (."backup-id" | startswith("proxmenux-keyrecovery-"))
+                       or ((."backup-id" | startswith("hostcfg-")) and (."backup-id" | endswith("-keyrecovery")))
+                     ))
+            | "\(."backup-type")|\(."backup-id")|\(."backup-time")"' 2>/dev/null \
         | while IFS='|' read -r _type _id _epoch; do
             local _iso
             _iso=$(date -u -d "@${_epoch}" '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null \

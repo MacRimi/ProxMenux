@@ -9,7 +9,7 @@
   },
   "intro": {
     "title": "What this category covers",
-    "body": "Three storage-related optimizations: tune the <strong>ZFS ARC</strong> cache size to a sensible fraction of host RAM, install and schedule <strong>ZFS auto-snapshots</strong>, and remove throttles from <strong>vzdump</strong> so backups run at full speed. All three are independent — pick the ones that match your setup."
+    "body": "Three storage-related optimizations: tune the <strong>ZFS ARC</strong> cache size to a sensible fraction of host RAM, install and schedule <strong>ZFS auto-snapshots</strong>, and remove throttles from <strong>vzdump</strong> so backups run at full speed. All three are independent — pick the ones that match your setup. A fourth storage-adjacent optimization, <link>Log2RAM</link>, reduces SSD/NVMe wear by moving <code>/var/log</code> to a ramdisk — it lives on the Optional page because the ProxMenux Customizable menu groups it there."
   },
   "notTrackedTitle": "None of these are in the Uninstall menu",
   "notTrackedBody": "Unlike most post-install optimizations, the three Storage options are <strong>not currently tracked</strong> in the Uninstall Optimizations flow. If you apply them and later want to revert, you'll have to do it by hand. The manual rollback commands are shown below each section.",
@@ -147,6 +147,11 @@
         "label": "Uninstall Optimizations",
         "href": "/docs/post-install/uninstall",
         "tail": " — revert ARC / vzdump changes."
+      },
+      {
+        "label": "Log2RAM",
+        "href": "/docs/post-install/optional#log2ram",
+        "tail": " — reduces SSD/NVMe wear by ramdisk-backing /var/log; documented under Optional."
       },
       {
         "label": "Customizable Post-Install",

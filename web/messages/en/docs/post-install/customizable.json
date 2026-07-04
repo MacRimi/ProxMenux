@@ -25,43 +25,43 @@
   "categories": [
     {
       "name": "Basic Settings",
-      "description": "Repositories, system upgrade, timezone, locale, common utilities."
+      "description": "Clean the APT sources, run the official Proxmox upgrade and set timezone, locale and common utilities. The baseline every other group sits on top of."
     },
     {
       "name": "System",
-      "description": "Journald, logrotate, kernel limits, memory tuning, kernel panic, fast reboots."
+      "description": "Tune the log subsystem and kernel limits for a host that carries many VMs and containers. Covers journald, logrotate, sysctl (memory, file limits), kernel panic behaviour and fast reboots."
     },
     {
       "name": "Virtualization",
-      "description": "Guest agent auto-install, IOMMU/VFIO enablement for PCI passthrough."
+      "description": "Prepare the host for advanced virtualization. Auto-installs the guest agent on templates and enables IOMMU/VFIO for PCI passthrough of GPUs, controllers and TPUs."
     },
     {
       "name": "Network",
-      "description": "APT over IPv4, network sysctl tuning, Open vSwitch, TCP BBR, persistent interface names."
+      "description": "Harden and tune the host's network stack. Forces APT over IPv4, applies sysctl hardening + TCP buffer tuning, offers Open vSwitch and BBR, and pins persistent interface names by MAC."
     },
     {
       "name": "Storage",
-      "description": "ZFS ARC sizing, ZFS auto-snapshot, vzdump backup speed limits."
+      "description": "Set up Proxmox's common storage subsystems: ZFS ARC sizing, ZFS auto-snapshot, and vzdump speed limits to avoid saturating the disk during backups."
     },
     {
       "name": "Security",
-      "description": "Disable portmapper/rpcbind to reduce the attack surface."
+      "description": "Reduce the attack surface exposed by default. Disables the RPC services (portmapper/rpcbind) that Proxmox does not need but leaves listening."
     },
     {
       "name": "Customization",
-      "description": "Bashrc colors & aliases, MOTD banner, subscription-notice removal."
+      "description": "Change the host's visual and shell experience: colors and aliases in bashrc, MOTD banner and removal of the subscription notice in the web UI."
     },
     {
       "name": "Monitoring",
-      "description": "OVH Real-Time Monitoring (only on detected OVH servers)."
+      "description": "Integrate the host with OVH Real-Time Monitoring. Only appears when ProxMenux detects an OVH server."
     },
     {
       "name": "Performance",
-      "description": "Parallel gzip (pigz) for faster compression in backups and transfers."
+      "description": "Speed up compression operations (backups, transfers) by replacing gzip with its parallel counterpart pigz."
     },
     {
       "name": "Optional",
-      "description": "AMD CPU fixes, Fastfetch, Figurine, Ceph repo, High Availability, Log2RAM."
+      "description": "Niche pieces not every host needs: AMD CPU fixes, Fastfetch banner, Figurine 3D hostname, Ceph repository, High Availability services and Log2RAM to reduce SSD wear."
     }
   ],
   "mixTip": {

@@ -304,7 +304,7 @@ _create_job_attached() {
 _create_job() {
   local id backend on_calendar profile_mode
   id=$(dialog --backtitle "ProxMenux" --title "$(translate "New backup job")" \
-    --inputbox "$(translate "Job ID (letters, numbers, - _)")" 9 68 "hostcfg-daily" 3>&1 1>&2 2>&3) || return 1
+    --inputbox "$(translate "Job ID (letters, numbers, - _)")" 9 68 "my-host-backup" 3>&1 1>&2 2>&3) || return 1
   [[ -z "$id" ]] && return 1
   id=$(echo "$id" | tr -cs '[:alnum:]_-' '-' | sed 's/^-*//; s/-*$//')
   [[ -z "$id" ]] && return 1
