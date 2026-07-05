@@ -275,6 +275,70 @@ _sb_pbs_resolve_password() {
   cat "$pw_file"
 }
 
+# Return the certificate fingerprint of the PBS storage entry whose
+# `<user>@<server>:<datastore>` matches $1. Mirrors the walker in
+# `_sb_pbs_resolve_password` but reads the `fingerprint <sha>` line
+# instead. Needed because attached scheduled jobs are created without
+# PBS_FINGERPRINT in their .env (the wizard inherits it from
+# `/etc/pve/storage.cfg`), and without a fingerprint the client falls
+# back to an interactive `(y/n)` prompt at connect time — which never
+# gets an answer under systemd, hanging the whole job. Empty result
+# is a valid outcome (PBS behind a CA-signed cert doesn't need one);
+# a missing storage entry returns non-zero so the caller can log it.
+_sb_pbs_resolve_fingerprint() {
+  local repo="$1"
+  local cfg=/etc/pve/storage.cfg
+  [[ -f "$cfg" && -n "$repo" ]] || return 1
+
+  local current_type="" current_name="" server="" datastore="" username=""
+  local current_fp=""
+  local found_fp="" found_any=0
+
+  local line key val
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^([a-z]+):[[:space:]]+(.+)$ ]]; then
+      if [[ "$current_type" == "pbs" && -n "$current_name" && -n "$server" && -n "$datastore" ]]; then
+        local u="${username:-root@pam}"
+        local built="${u}@${server}:${datastore}"
+        if [[ "$built" == "$repo" ]]; then
+          found_fp="$current_fp"
+          found_any=1
+          break
+        fi
+      fi
+      current_type="${BASH_REMATCH[1]}"
+      current_name="${BASH_REMATCH[2]}"
+      server=""; datastore=""; username=""; current_fp=""
+      continue
+    fi
+    if [[ "$line" =~ ^[[:space:]]+([a-zA-Z_]+)[[:space:]]+(.+)$ ]]; then
+      key="${BASH_REMATCH[1]}"
+      val="${BASH_REMATCH[2]}"
+      case "$key" in
+        server)      server="$val" ;;
+        datastore)   datastore="$val" ;;
+        username)    username="$val" ;;
+        fingerprint) current_fp="$val" ;;
+      esac
+    fi
+  done < "$cfg"
+  # Final block may not have triggered the start-of-next-block check.
+  if (( ! found_any )); then
+    if [[ "$current_type" == "pbs" && -n "$current_name" && -n "$server" && -n "$datastore" ]]; then
+      local u="${username:-root@pam}"
+      local built="${u}@${server}:${datastore}"
+      if [[ "$built" == "$repo" ]]; then
+        found_fp="$current_fp"
+        found_any=1
+      fi
+    fi
+  fi
+
+  (( found_any )) || return 1
+  # Empty fingerprint is a legit outcome for CA-signed PBS setups.
+  printf '%s' "$found_fp"
+}
+
 _sb_run_pbs() {
   local stage_root="$1"
   local backup_id="$2"
@@ -301,15 +365,33 @@ _sb_run_pbs() {
     PBS_PASSWORD=$(_sb_pbs_resolve_password "$PBS_REPOSITORY" 2>/dev/null || true)
   fi
 
+  # Same treatment for PBS_FINGERPRINT. Attached scheduled jobs are
+  # created without one (the wizard delegates trust to PVE's storage
+  # config), and running proxmox-backup-client with an empty fingerprint
+  # against a self-signed PBS drops into an interactive `(y/n)` prompt —
+  # which under systemd never gets an answer and hangs the timer.
+  # Resolving on-demand from storage.cfg matches the runtime behavior
+  # PVE itself has for its own vzdump jobs.
+  if [[ -z "${PBS_FINGERPRINT:-}" && -n "${PBS_REPOSITORY:-}" ]]; then
+    PBS_FINGERPRINT=$(_sb_pbs_resolve_fingerprint "$PBS_REPOSITORY" 2>/dev/null || true)
+  fi
+
   [[ -z "${PBS_REPOSITORY:-}" || -z "${PBS_PASSWORD:-}" ]] && return 1
   if [[ -n "${PBS_KEYFILE:-}" ]]; then
     cmd+=(--keyfile "$PBS_KEYFILE")
   fi
 
+  # `</dev/null` on every proxmox-backup-client invocation defends
+  # against any interactive prompt (fingerprint mismatch, keyfile
+  # passphrase, ...) that would otherwise block on stdin under systemd
+  # and freeze the timer for its entire timeout window. With the
+  # fingerprint resolved above the prompt should never fire, but if
+  # storage.cfg is out of sync (PBS cert rotated, entry renamed) we
+  # want a fast, clear failure — not a silent hang.
   env PBS_PASSWORD="$PBS_PASSWORD" \
       PBS_ENCRYPTION_PASSWORD="${PBS_ENCRYPTION_PASSWORD:-}" \
       PBS_FINGERPRINT="${PBS_FINGERPRINT:-}" \
-    "${cmd[@]}" 2>&1 || return 1
+    "${cmd[@]}" </dev/null 2>&1 || return 1
 
   # Best effort prune for PBS group.
   env PBS_PASSWORD="$PBS_PASSWORD" \
@@ -321,7 +403,7 @@ _sb_run_pbs() {
       ${KEEP_WEEKLY:+--keep-weekly "$KEEP_WEEKLY"} \
       ${KEEP_MONTHLY:+--keep-monthly "$KEEP_MONTHLY"} \
       ${KEEP_YEARLY:+--keep-yearly "$KEEP_YEARLY"} \
-      2>&1 || true
+      </dev/null 2>&1 || true
 
   # Upload the keyfile recovery blob alongside the main backup so the
   # operator can rebuild the keyfile on a fresh host. Only fires when:
@@ -344,7 +426,7 @@ _sb_run_pbs() {
         --backup-type host \
         --backup-id "$keyrec_id" \
         --backup-time "$epoch" \
-        2>&1 || true
+        </dev/null 2>&1 || true
 
     # Prune the paired keyrecovery group with the SAME retention
     # values as the main backup. Without this the keyrecovery snapshots
@@ -361,7 +443,7 @@ _sb_run_pbs() {
         ${KEEP_WEEKLY:+--keep-weekly "$KEEP_WEEKLY"} \
         ${KEEP_MONTHLY:+--keep-monthly "$KEEP_MONTHLY"} \
         ${KEEP_YEARLY:+--keep-yearly "$KEEP_YEARLY"} \
-        2>&1 || true
+        </dev/null 2>&1 || true
   fi
 
   echo "PBS_SNAPSHOT=host/${backup_id}/${epoch}"
