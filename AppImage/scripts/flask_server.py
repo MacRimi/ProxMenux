@@ -13803,6 +13803,99 @@ def api_pbs_recovery_status():
     })
 
 
+@app.route('/api/host-backups/pbs-encryption/import', methods=['POST'])
+@require_auth
+def api_pbs_encryption_import():
+    """Install a user-provided PBS keyfile at the canonical shared path.
+
+    Body: ``{"content_b64": "<base64 of the keyfile bytes>"}``
+
+    Use case: operators who generated their own PBS master key and want
+    to share it across every host (single recovery blob covers all,
+    cross-host restore is possible). The keyfile is written to a tmp
+    path first and validated with ``proxmox-backup-client key info``;
+    only if the tool accepts it as a real PBS keyfile does it get
+    promoted to the canonical ``_PBS_KEYFILE_PATH``. Any prior
+    keyfile + recovery blob at that location are replaced atomically —
+    the old blob was encrypted for the old key and would no longer be
+    decryptable anyway.
+    """
+    payload = request.get_json(silent=True) or {}
+    content_b64 = payload.get('content_b64') or ''
+    if not content_b64:
+        return jsonify({'error': 'content_b64 is required'}), 400
+
+    import base64
+    try:
+        content = base64.b64decode(content_b64, validate=True)
+    except Exception:
+        return jsonify({'error': 'content_b64 is not valid base64'}), 400
+
+    # PBS keyfiles are compact JSON blobs (~200 bytes). Cap at 8 KB so
+    # a malformed upload can't fill the state dir with garbage.
+    if not content or len(content) > 8192:
+        return jsonify({'error': 'keyfile size out of expected range (1..8192 bytes)'}), 400
+
+    if not shutil.which('proxmox-backup-client'):
+        return jsonify({'error': 'proxmox-backup-client is not installed on this host'}), 500
+
+    try:
+        os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+    except OSError as e:
+        return jsonify({'error': f'cannot create state directory: {e}'}), 500
+
+    import tempfile
+    tmp_fd, tmp_path = tempfile.mkstemp(prefix='pbs-key.import.', dir=_BACKUP_STATE_DIR)
+    try:
+        try:
+            with os.fdopen(tmp_fd, 'wb') as f:
+                f.write(content)
+            os.chmod(tmp_path, 0o600)
+        except OSError as e:
+            return jsonify({'error': f'cannot write tmp keyfile: {e}'}), 500
+
+        try:
+            r = subprocess.run(
+                ['proxmox-backup-client', 'key', 'info', '--output-format', 'json', tmp_path],
+                capture_output=True, text=True, timeout=10,
+            )
+        except (subprocess.TimeoutExpired, OSError) as e:
+            return jsonify({'error': f'validation failed: {type(e).__name__}'}), 500
+
+        if r.returncode != 0:
+            return jsonify({
+                'error': 'proxmox-backup-client did not recognise this file as a valid PBS keyfile',
+            }), 400
+
+        # The old recovery blob was encrypted with the old key — a new
+        # blob has to be built by re-running /pbs-recovery/setup once
+        # the operator confirms this import.
+        try:
+            os.remove(_PBS_RECOVERY_ENC_PATH)
+        except FileNotFoundError:
+            pass
+        except OSError:
+            pass
+
+        try:
+            os.replace(tmp_path, _PBS_KEYFILE_PATH)
+            os.chmod(_PBS_KEYFILE_PATH, 0o600)
+        except OSError as e:
+            return jsonify({'error': f'cannot promote keyfile: {e}'}), 500
+
+        return jsonify({
+            'status': 'ok',
+            'keyfile_path': _PBS_KEYFILE_PATH,
+            'recovery_reset': True,
+        })
+    finally:
+        try:
+            if os.path.exists(tmp_path) and tmp_path != _PBS_KEYFILE_PATH:
+                os.remove(tmp_path)
+        except OSError:
+            pass
+
+
 @app.route('/api/host-backups/pbs-recovery/setup', methods=['POST'])
 @require_auth
 def api_pbs_recovery_setup():
@@ -14428,21 +14521,47 @@ def api_host_backups_job_create():
             import socket
             pbs_backup_id = f'hostcfg-{socket.gethostname()}'
         pbs_fingerprint = (payload.get('pbs_fingerprint') or '').strip()
-        # Client-side encryption: when the operator toggled "encrypt"
-        # we generate the host-wide keyfile (if missing) and pin it
-        # in the .env. The runner sees PBS_KEYFILE and adds --keyfile
-        # to the backup invocation.
-        pbs_encrypt = bool(payload.get('pbs_encrypt'))
+        # Client-side encryption. Three modes:
+        #   - "none"     — no --keyfile flag, plain backup
+        #   - "new"      — generate a fresh per-host keyfile (default,
+        #                  matches legacy `pbs_encrypt: true`)
+        #   - "existing" — reuse whatever keyfile is already installed
+        #                  at _PBS_KEYFILE_PATH (typical after the
+        #                  operator uploaded their own via
+        #                  /api/host-backups/pbs-encryption/import)
+        # Legacy compat: a truthy `pbs_encrypt` bool with no
+        # `pbs_encrypt_mode` maps to "new".
+        pbs_encrypt_mode = (payload.get('pbs_encrypt_mode') or '').strip().lower()
+        if not pbs_encrypt_mode:
+            pbs_encrypt_mode = 'new' if bool(payload.get('pbs_encrypt')) else 'none'
+        if pbs_encrypt_mode not in ('none', 'new', 'existing'):
+            return jsonify({'error': "pbs_encrypt_mode must be 'none', 'new' or 'existing'"}), 400
+
         lines.append(f'PBS_REPOSITORY={pbs_repo}')
         lines.append(f'PBS_PASSWORD={pbs_pass}')
         lines.append(f'PBS_BACKUP_ID={pbs_backup_id}')
         if pbs_fingerprint:
             lines.append(f'PBS_FINGERPRINT={pbs_fingerprint}')
-        if pbs_encrypt:
+
+        if pbs_encrypt_mode == 'new':
             kf = _pbs_keyfile_get_or_create(True)
             if not kf:
                 return jsonify({'error': 'failed to create PBS encryption keyfile (is proxmox-backup-client installed?)'}), 500
             lines.append(f'PBS_KEYFILE={kf}')
+        elif pbs_encrypt_mode == 'existing':
+            # The keyfile must already be present — either from a
+            # previous run or from a fresh import via the dedicated
+            # endpoint. Fail loudly rather than silently generating
+            # a new one that would leave the user's own key unused.
+            if not os.path.isfile(_PBS_KEYFILE_PATH):
+                return jsonify({
+                    'error': (
+                        "pbs_encrypt_mode='existing' but no keyfile is installed at "
+                        f"{_PBS_KEYFILE_PATH} — import one first with "
+                        "POST /api/host-backups/pbs-encryption/import"
+                    ),
+                }), 400
+            lines.append(f'PBS_KEYFILE={_PBS_KEYFILE_PATH}')
     elif backend == 'local':
         explicit = (payload.get('local_dest_dir') or '').strip()
         if explicit:
@@ -14630,6 +14749,14 @@ def _backup_job_detail(env_file: str) -> dict:
         'pbs_fingerprint': raw.get('PBS_FINGERPRINT') or None,
         'has_pbs_password': bool(raw.get('PBS_PASSWORD')),
         'pbs_encrypt': bool(raw.get('PBS_KEYFILE')),
+        # New: mode used the last time the job was created / edited.
+        # The .env only stores PBS_KEYFILE=<path>, so we can't tell
+        # "new" from "existing" after the fact — the edit flow just
+        # sees "encrypted" and defaults to "new" if the operator
+        # decides to reconfigure. Sending "new" whenever a keyfile is
+        # present matches the legacy pbs_encrypt bool: an edit that
+        # doesn't touch the mode dropdown produces the same .env.
+        'pbs_encrypt_mode': ('new' if raw.get('PBS_KEYFILE') else 'none'),
         'local_dest_dir': raw.get('LOCAL_DEST_DIR') or None,
         'local_archive_ext': raw.get('LOCAL_ARCHIVE_EXT') or None,
         'borg_repo': raw.get('BORG_REPO') or None,

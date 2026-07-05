@@ -169,7 +169,29 @@ export default async function PbsDestinationPage({
       </h3>
 
       <p className="mb-4 text-gray-800 leading-relaxed">
-        {t.rich("encryption.keyfileBody", { code })}
+        {t.rich("encryption.keyfileBody", { code, em })}
+      </p>
+
+      <h3 className="text-lg font-semibold mt-6 mb-3 text-gray-900">
+        {t("encryption.modesTitle")}
+      </h3>
+
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("encryption.modesIntro", { em })}
+      </p>
+
+      <h4 className="text-base font-semibold mt-4 mb-2 text-gray-900">
+        {t("encryption.modesPerHostTitle")}
+      </h4>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("encryption.modesPerHostBody", { code, em })}
+      </p>
+
+      <h4 className="text-base font-semibold mt-4 mb-2 text-gray-900">
+        {t("encryption.modesSharedTitle")}
+      </h4>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("encryption.modesSharedBody", { code, em })}
       </p>
 
       <h3 className="text-lg font-semibold mt-6 mb-3 text-gray-900">

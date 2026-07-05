@@ -810,17 +810,9 @@ entities:
 
 ## License
 
-This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0)**.
+This project is licensed under the **GNU General Public License, version 3 (GPL-3.0)**.
 
-You are free to:
-- Share — copy and redistribute the material in any medium or format
-- Adapt — remix, transform, and build upon the material
-
-Under the following terms:
-- Attribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made
-- NonCommercial — You may not use the material for commercial purposes
-
-For more details, see the [full license](https://creativecommons.org/licenses/by-nc/4.0/).
+You are free to use, study, share and modify the software under the terms of the licence. Any distributed derivative work must be licensed under the same terms and include the full source code — see the [full licence text](https://www.gnu.org/licenses/gpl-3.0.html) or the [`LICENSE`](https://github.com/MacRimi/ProxMenux/blob/main/LICENSE) file at the repository root.
 
 
 

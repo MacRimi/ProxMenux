@@ -1972,7 +1972,11 @@ interface JobDetail {
   pbs_backup_id: string | null
   pbs_fingerprint: string | null
   has_pbs_password: boolean
+  // Legacy — kept for backend responses that only track the on/off
+  // toggle. Newer builds also send pbs_encrypt_mode ("none" | "new"
+  // | "existing"); loadFromJobDetail prefers that when present.
   pbs_encrypt: boolean
+  pbs_encrypt_mode?: "none" | "new" | "existing"
   local_dest_dir: string | null
   local_archive_ext: string | null
   borg_repo: string | null
@@ -2025,10 +2029,21 @@ function CreateJobDialog({
   // Backend-specific fields
   const [pbsRepository, setPbsRepository] = useState<string>("")
   const [pbsBackupId, setPbsBackupId] = useState<string>("")
-  // Client-side PBS encryption — sent as `pbs_encrypt` in the payload.
-  // Backend resolves the shared keyfile + injects PBS_KEYFILE into
-  // the job .env so the runner adds `--keyfile` to the backup call.
-  const [pbsEncrypt, setPbsEncrypt] = useState<boolean>(false)
+  // Client-side PBS encryption mode. Three modes match the shell wizard:
+  //   - "none"     — plain backup, no --keyfile
+  //   - "new"      — backend generates a fresh per-host keyfile (default)
+  //   - "existing" — operator uploads their own keyfile (shared across
+  //                  hosts). The upload happens via a dedicated endpoint
+  //                  BEFORE the job create call — see handleCreate below.
+  const [pbsEncryptMode, setPbsEncryptMode] = useState<"none" | "new" | "existing">("none")
+  // File picked in the "existing" mode. Kept in a ref-like state so a
+  // stale reference doesn't linger across modal opens.
+  const [pbsImportFile, setPbsImportFile] = useState<File | null>(null)
+  const [pbsImportBusy, setPbsImportBusy] = useState<boolean>(false)
+  // Legacy alias for the many recovery / gating checks below — a truthy
+  // value means "the operator wants an encrypted backup" regardless of
+  // whether that keyfile came from a fresh generate or from an import.
+  const pbsEncrypt = pbsEncryptMode !== "none"
   // Optional recovery passphrase. When set, the backend encrypts the
   // keyfile with openssl and the runner uploads that blob to PBS with
   // every backup so the keyfile can be rebuilt on a fresh host with
@@ -2123,7 +2138,15 @@ function CreateJobDialog({
     if (r.keep_yearly !== undefined) setKeepYearly(String(r.keep_yearly))
     if (jobDetail.pbs_repository) setPbsRepository(jobDetail.pbs_repository)
     if (jobDetail.pbs_backup_id) setPbsBackupId(jobDetail.pbs_backup_id)
-    setPbsEncrypt(!!jobDetail.pbs_encrypt)
+    // Prefer the new pbs_encrypt_mode string when the backend sends it;
+    // fall back to the legacy bool for older `.env` layouts that only
+    // remember the on/off toggle.
+    const jd = jobDetail as unknown as { pbs_encrypt_mode?: string; pbs_encrypt?: boolean }
+    if (jd.pbs_encrypt_mode === "new" || jd.pbs_encrypt_mode === "existing" || jd.pbs_encrypt_mode === "none") {
+      setPbsEncryptMode(jd.pbs_encrypt_mode)
+    } else {
+      setPbsEncryptMode(jd.pbs_encrypt ? "new" : "none")
+    }
     if (jobDetail.local_dest_dir) setLocalDestDir(jobDetail.local_dest_dir)
     if (jobDetail.borg_repo) setBorgRepoSelected(jobDetail.borg_repo)
     if (jobDetail.borg_encrypt_mode) {
@@ -2214,7 +2237,9 @@ function CreateJobDialog({
       setKeepYearly("0")
       setPbsRepository("")
       setPbsBackupId("")
-      setPbsEncrypt(false)
+      setPbsEncryptMode("none")
+      setPbsImportFile(null)
+      setPbsImportBusy(false)
       setPbsRecoveryPass("")
       setPbsRecoveryPass2("")
       setPbsRecoveryChange(false)
@@ -2322,6 +2347,39 @@ function CreateJobDialog({
     if (mode === "attach" && !selectedPveJob) return
     setSubmitting(true)
     setError(null)
+    // "Import existing" mode: push the user-supplied keyfile to the
+    // canonical shared path BEFORE anything else. This mirrors the
+    // shell wizard where hb_pbs_import_keyfile runs before recovery
+    // setup and before the job .env is written. If the upload fails
+    // we bail loudly instead of silently downgrading to "generate new".
+    if (backend === "pbs" && pbsEncryptMode === "existing") {
+      if (!pbsImportFile) {
+        setError("Pick a keyfile to import.")
+        setSubmitting(false)
+        return
+      }
+      setPbsImportBusy(true)
+      try {
+        const buf = new Uint8Array(await pbsImportFile.arrayBuffer())
+        // btoa on binary requires a String.fromCharCode round-trip.
+        // The keyfile is small (~200 bytes), so no perf concern.
+        let bin = ""
+        for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i])
+        const content_b64 = btoa(bin)
+        await fetchApi("/api/host-backups/pbs-encryption/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content_b64 }),
+        })
+        mutatePbsRecovery()
+      } catch (e) {
+        setError(`Keyfile import failed: ${e instanceof Error ? e.message : String(e)}`)
+        setPbsImportBusy(false)
+        setSubmitting(false)
+        return
+      }
+      setPbsImportBusy(false)
+    }
     // Configure the PBS recovery escrow BEFORE creating the job so the
     // very first backup the runner triggers can already upload the
     // blob. Only fires when the operator typed a passphrase pair.
@@ -2374,7 +2432,7 @@ function CreateJobDialog({
         body.pbs_password = ""
         if (pbsBackupId) body.pbs_backup_id = pbsBackupId
         if (selectedPbs?.fingerprint) body.pbs_fingerprint = selectedPbs.fingerprint
-        body.pbs_encrypt = pbsEncrypt
+        body.pbs_encrypt_mode = pbsEncryptMode
       } else if (backend === "local") {
         if (localDestDir.trim()) body.local_dest_dir = localDestDir.trim()
       } else if (backend === "borg") {
@@ -2938,23 +2996,50 @@ function CreateJobDialog({
                     </p>
                   </div>
                   {/* PBS client-side encryption — same flow as the
-                      shell wizard. A shared keyfile under /usr/local/
-                      share/proxmenux/pbs-key.conf is generated on
-                      first use and reused by every encrypted job. */}
+                      shell wizard. The keyfile can be freshly generated
+                      per host or imported from an existing one the
+                      operator uses across every host. */}
                   <div className="pt-2 border-t border-border space-y-3">
-                    <Label className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox
-                        checked={pbsEncrypt}
-                        onCheckedChange={(v) => setPbsEncrypt(!!v)}
-                      />
-                      <span className="inline-flex items-center gap-1.5">
+                    <div className="space-y-2">
+                      <Label className="inline-flex items-center gap-1.5">
                         <Lock className="h-3.5 w-3.5 text-emerald-400" />
                         Encrypt backups (client-side keyfile)
-                      </span>
-                    </Label>
-                    <p className="text-[11px] text-muted-foreground pl-7">
-                      Adds <code className="font-mono">--keyfile</code> to <code className="font-mono">proxmox-backup-client backup</code>. Encryption happens before upload so chunks land on the PBS server already ciphered. The keyfile lives at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> (chmod 0600) and is shared across every encrypted PBS job on this host.
-                    </p>
+                      </Label>
+                      <Select
+                        value={pbsEncryptMode}
+                        onValueChange={(v) => setPbsEncryptMode(v as "none" | "new" | "existing")}
+                      >
+                        <SelectTrigger className="h-9 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No encryption</SelectItem>
+                          <SelectItem value="new">Generate a new keyfile (per host — safest isolation)</SelectItem>
+                          <SelectItem value="existing">Import an existing keyfile (shared across hosts)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[11px] text-muted-foreground">
+                        Adds <code className="font-mono">--keyfile</code> to <code className="font-mono">proxmox-backup-client backup</code>. Encryption happens before upload so chunks land on PBS already ciphered. The keyfile is installed at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> (chmod 0600) and reused by every encrypted PBS job on this host.
+                      </p>
+                    </div>
+                    {pbsEncryptMode === "existing" && (
+                      <div className="space-y-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
+                        <Label htmlFor="pbsImportFile" className="text-[11px] font-medium">
+                          Keyfile to import
+                        </Label>
+                        <Input
+                          id="pbsImportFile"
+                          type="file"
+                          accept=".conf,.key,application/json,text/plain"
+                          onChange={(e) => setPbsImportFile(e.target.files?.[0] ?? null)}
+                          disabled={pbsImportBusy}
+                          className="h-8 text-[11px]"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          The file is validated with <code className="font-mono">proxmox-backup-client key info</code> before being installed. If validation fails the job is not created and the existing keyfile (if any) stays in place.
+                        </p>
+                      </div>
+                    )}
                     {pbsEncrypt && (
                       <div className="pl-7 space-y-2 rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
                         <div className="text-[11px] font-medium text-foreground flex items-center gap-1.5">
@@ -3350,7 +3435,12 @@ function ManualBackupDialog({
 
   const [pbsRepository, setPbsRepository] = useState<string>("")
   const [pbsBackupId, setPbsBackupId] = useState<string>("")
-  const [pbsEncrypt, setPbsEncrypt] = useState<boolean>(false)
+  // Encryption mode. See CreateJobDialog above for the full comment
+  // block — the three modes and the import flow are identical here.
+  const [pbsEncryptMode, setPbsEncryptMode] = useState<"none" | "new" | "existing">("none")
+  const [pbsImportFile, setPbsImportFile] = useState<File | null>(null)
+  const [pbsImportBusy, setPbsImportBusy] = useState<boolean>(false)
+  const pbsEncrypt = pbsEncryptMode !== "none"
   const [pbsRecoveryPass, setPbsRecoveryPass] = useState<string>("")
   const [pbsRecoveryPass2, setPbsRecoveryPass2] = useState<string>("")
   // Operator opted to replace an already-configured recovery escrow.
@@ -3413,7 +3503,9 @@ function ManualBackupDialog({
       setCustomPaths(new Set())
       setPbsRepository("")
       setPbsBackupId("")
-      setPbsEncrypt(false)
+      setPbsEncryptMode("none")
+      setPbsImportFile(null)
+      setPbsImportBusy(false)
       setPbsRecoveryPass("")
       setPbsRecoveryPass2("")
       setPbsRecoveryChange(false)
@@ -3470,6 +3562,35 @@ function ManualBackupDialog({
     if (!canSubmit) return
     setSubmitting(true)
     setError(null)
+    // "Import existing" mode: same shape as CreateJobDialog — push the
+    // keyfile to the canonical path before anything else, bail loudly
+    // if validation fails so we don't silently fall back to "new".
+    if (backend === "pbs" && pbsEncryptMode === "existing") {
+      if (!pbsImportFile) {
+        setError("Pick a keyfile to import.")
+        setSubmitting(false)
+        return
+      }
+      setPbsImportBusy(true)
+      try {
+        const buf = new Uint8Array(await pbsImportFile.arrayBuffer())
+        let bin = ""
+        for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i])
+        const content_b64 = btoa(bin)
+        await fetchApi("/api/host-backups/pbs-encryption/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content_b64 }),
+        })
+        mutatePbsRecovery()
+      } catch (e) {
+        setError(`Keyfile import failed: ${e instanceof Error ? e.message : String(e)}`)
+        setPbsImportBusy(false)
+        setSubmitting(false)
+        return
+      }
+      setPbsImportBusy(false)
+    }
     // Same pre-step as CreateJob: configure the PBS recovery escrow
     // before the run so the runner's post-backup upload of the blob
     // has something to push.
@@ -3505,7 +3626,7 @@ function ManualBackupDialog({
         body.pbs_password = ""
         if (pbsBackupId) body.pbs_backup_id = pbsBackupId
         if (selectedPbs?.fingerprint) body.pbs_fingerprint = selectedPbs.fingerprint
-        body.pbs_encrypt = pbsEncrypt
+        body.pbs_encrypt_mode = pbsEncryptMode
       } else if (backend === "local") {
         if (localDestDir.trim()) body.local_dest_dir = localDestDir.trim()
       } else if (backend === "borg") {
@@ -3706,19 +3827,46 @@ function ManualBackupDialog({
                     />
                   </div>
                   <div className="pt-2 border-t border-border space-y-3">
-                    <Label className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox
-                        checked={pbsEncrypt}
-                        onCheckedChange={(v) => setPbsEncrypt(!!v)}
-                      />
-                      <span className="inline-flex items-center gap-1.5">
+                    <div className="space-y-2">
+                      <Label className="inline-flex items-center gap-1.5">
                         <Lock className="h-3.5 w-3.5 text-emerald-400" />
                         Encrypt this backup (client-side keyfile)
-                      </span>
-                    </Label>
-                    <p className="text-[11px] text-muted-foreground pl-7">
-                      Uses the shared keyfile at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> (auto-generated on first use).
-                    </p>
+                      </Label>
+                      <Select
+                        value={pbsEncryptMode}
+                        onValueChange={(v) => setPbsEncryptMode(v as "none" | "new" | "existing")}
+                      >
+                        <SelectTrigger className="h-9 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No encryption</SelectItem>
+                          <SelectItem value="new">Generate a new keyfile (per host — safest isolation)</SelectItem>
+                          <SelectItem value="existing">Import an existing keyfile (shared across hosts)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[11px] text-muted-foreground">
+                        Uses the shared keyfile at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code>.
+                      </p>
+                    </div>
+                    {pbsEncryptMode === "existing" && (
+                      <div className="space-y-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
+                        <Label htmlFor="manualPbsImportFile" className="text-[11px] font-medium">
+                          Keyfile to import
+                        </Label>
+                        <Input
+                          id="manualPbsImportFile"
+                          type="file"
+                          accept=".conf,.key,application/json,text/plain"
+                          onChange={(e) => setPbsImportFile(e.target.files?.[0] ?? null)}
+                          disabled={pbsImportBusy}
+                          className="h-8 text-[11px]"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          Validated with <code className="font-mono">proxmox-backup-client key info</code> before install.
+                        </p>
+                      </div>
+                    )}
                     {pbsEncrypt && (
                       <div className="pl-7 space-y-2 rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
                         <div className="text-[11px] font-medium text-foreground flex items-center gap-1.5">
