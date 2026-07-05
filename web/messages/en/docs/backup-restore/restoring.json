@@ -20,19 +20,40 @@
     "heading": "Three actions on a backup",
     "intro": "Selecting a backup from the list opens a menu with three actions.",
     "actionRows": [
-      { "action": "View", "detail": "Opens a read-only view of the archive: manifest.json contents (source hostname, PVE version, kernel, hardware, installed components), the list of paths inside <code>rootfs/</code>, and a diff of what would change on the current host if the backup were applied." },
-      { "action": "Download", "detail": "Exports the archive as a portable <code>.tar.zst</code> file (tar compressed with zstd). It can be extracted on any Linux system with <code>tar --zstd -xf FILE.tar.zst</code>, or on macOS/Windows with any tool that supports zstd (7-Zip, PeaZip, Keka…). The extracted tree contains <code>manifest.json</code>, <code>metadata/</code> and <code>rootfs/</code> — exactly the same layout the restore consumes. Useful for offline inspection or for restoring on a host without access to the original destination (PBS, Borg)." },
-      { "action": "Restore", "detail": "The write path. Extracts the archive into a staging directory, runs the compatibility check, and presents the mode picker (Full or Custom)." }
+      {
+        "action": "View",
+        "detail": "Opens a read-only view of the archive: manifest.json contents (source hostname, PVE version, kernel, hardware, installed components), the list of paths inside <code>rootfs/</code>, and a diff of what would change on the current host if the backup were applied."
+      },
+      {
+        "action": "Download",
+        "detail": "Exports the archive as a portable <code>.tar.zst</code> file (tar compressed with zstd). It can be extracted on any Linux system with <code>tar --zstd -xf FILE.tar.zst</code>, or on macOS/Windows with any tool that supports zstd (7-Zip, PeaZip, Keka…). The extracted tree contains <code>manifest.json</code>, <code>metadata/</code> and <code>rootfs/</code> — exactly the same layout the restore consumes. Useful for offline inspection or for restoring on a host without access to the original destination (PBS, Borg)."
+      },
+      {
+        "action": "Restore",
+        "detail": "The write path. Extracts the archive into a staging directory, runs the compatibility check, and presents the mode picker (Full or Custom)."
+      }
     ]
   },
   "compatibilityCheck": {
     "heading": "The compatibility check",
     "intro": "Before any file is written, <code>hb_compat_check</code> compares the state described in the manifest against the target host. The check runs read-only and produces four independent outputs that drive the rest of the restore.",
     "outputRows": [
-      { "output": "Direction flag", "detail": "<code>HB_COMPAT_KERNEL_DIRECTION</code> — one of <code>same</code>, <code>bk_newer</code> or <code>bk_older</code>. Compares the backup's major kernel version against the target's. Drives the cross-kernel safe-subset filter (only fires on <code>bk_older</code>) and the hydration pass documented on the cross-kernel page." },
-      { "output": "Skip-paths list", "detail": "<code>RS_SKIP_PATHS</code> — every path the restore must NOT apply. Populated by two mechanisms: hardware drift (missing NIC, missing storage ID, foreign ZFS pool) and — when the direction is <code>bk_older</code> — the cross-kernel unsafe-paths list." },
-      { "output": "NIC remap plan", "detail": "When a NIC on the target has the same MAC as one on the source but a different name (typical after a motherboard swap), the compatibility check registers a rename plan (<code>HB_NIC_REMAP</code>) that will rewrite <code>/etc/network/interfaces</code> during the restore." },
-      { "output": "Rollback plan", "detail": "Computed by <code>compute_rollback_plan.sh</code>. Lists VMs, LXCs and components present on the target but not in the backup. The operator opts in during the confirmation dialog to have these removed as part of the restore, so the target ends up matching the backup exactly." }
+      {
+        "output": "Direction flag",
+        "detail": "<code>HB_COMPAT_KERNEL_DIRECTION</code> — one of <code>same</code>, <code>bk_newer</code> or <code>bk_older</code>. Compares the backup's major kernel version against the target's. Drives the cross-kernel safe-subset filter (only fires on <code>bk_older</code>) and the hydration pass documented on the cross-kernel page."
+      },
+      {
+        "output": "Skip-paths list",
+        "detail": "<code>RS_SKIP_PATHS</code> — every path the restore must NOT apply. Populated by two mechanisms: hardware drift (missing NIC, missing storage ID, foreign ZFS pool) and — when the direction is <code>bk_older</code> — the cross-kernel unsafe-paths list."
+      },
+      {
+        "output": "NIC remap plan",
+        "detail": "When a NIC on the target has the same MAC as one on the source but a different name (typical after a motherboard swap), the compatibility check registers a rename plan (<code>HB_NIC_REMAP</code>) that will rewrite <code>/etc/network/interfaces</code> during the restore."
+      },
+      {
+        "output": "Rollback plan",
+        "detail": "Computed by <code>compute_rollback_plan.sh</code>. Lists VMs, LXCs and components present on the target but not in the backup. The operator opts in during the confirmation dialog to have these removed as part of the restore, so the target ends up matching the backup exactly."
+      }
     ],
     "reportBody": "The check also emits a structured report (<code>HB_COMPAT_RESULTS</code>) categorised as PASS / INFO / WARN / FAIL. WARN and FAIL entries surface in the pre-restore panel; the restore refuses to proceed only when a FAIL is present that the operator cannot resolve by clicking Continue."
   },
@@ -40,17 +61,32 @@
     "heading": "Full restore vs Custom restore",
     "intro": "Once the compatibility check is complete, the restore mode menu appears. The choice determines <em>what</em> is applied, not <em>how</em> — both modes share the same underlying pipeline.",
     "modeRows": [
-      { "mode": "Full restore", "detail": "Applies every path in the archive that survives the drift and cross-kernel filters. Also runs the package install and the component auto-reinstall pass. This is the default and the recommended choice — the goal is to reproduce the source, not pick pieces." },
-      { "mode": "Custom restore", "detail": "Opens a checklist showing every path the archive carries. The operator ticks a subset. Paths blocked by the cross-kernel filter appear greyed out and cannot be selected. Package install and component auto-reinstall are skipped by default in Custom mode — the operator is signalling that they want partial application, not a full reproduction." }
+      {
+        "mode": "Full restore",
+        "detail": "Applies every path in the archive that survives the drift and cross-kernel filters. Also runs the package install and the component auto-reinstall pass. This is the default and the recommended choice — the goal is to reproduce the source, not pick pieces."
+      },
+      {
+        "mode": "Custom restore",
+        "detail": "Opens a checklist showing every path the archive carries. The operator ticks a subset. Paths blocked by the cross-kernel filter appear greyed out and cannot be selected. Package install and component auto-reinstall are skipped by default in Custom mode — the operator is signalling that they want partial application, not a full reproduction."
+      }
     ]
   },
   "pathClassification": {
     "heading": "How paths are classified",
     "intro": "Every path selected for the restore is classified by <code>hb_classify_path</code> into one of three categories. The category determines when the path is applied to the system and why.",
     "rows": [
-      { "class": "hot", "detail": "Paths applied <strong>immediately</strong> to the running system. The service that consumes them picks up the change on its own or at the next reload — no reboot required. These are the bulk of a backup: <code>/etc/ssh</code>, <code>/etc/apt</code>, <code>/etc/cron.*</code>, <code>/root</code>, <code>/usr/local/bin</code>, general service configuration files, etc." },
-      { "class": "reboot", "detail": "Paths applied <strong>immediately</strong> as well, but whose actual effect only kicks in on the <strong>next boot</strong>: the kernel only reads <code>/etc/default/grub</code> when the bootloader starts, <code>/etc/fstab</code> when filesystems are mounted at boot, <code>/etc/modules</code> when modules are loaded, etc. The file is in place the moment it is applied but the system has to reboot to consume it. Examples: <code>/etc/default/grub</code>, <code>/etc/kernel</code>, <code>/etc/modules</code>, <code>/etc/fstab</code>, <code>/etc/zfs</code>, <code>/etc/initramfs-tools</code>." },
-      { "class": "dangerous", "detail": "Paths that are <strong>NOT applied on the running system</strong> — a live write could corrupt state or drop the active connection. These are staged in the pending set and written by the post-boot dispatcher after the reboot, when the cluster is up but the system is not yet fully in use. Examples: <code>/etc/pve</code> (pmxcfs is a live FUSE mount; writing directly to it bypasses it), <code>/var/lib/pve-cluster</code> (live cluster data), <code>/etc/network</code> (could reconfigure the very interface the user is connected on over SSH and drop the session)." }
+      {
+        "class": "hot",
+        "detail": "Paths applied <strong>immediately</strong> to the running system. The service that consumes them picks up the change on its own or at the next reload — no reboot required. These are the bulk of a backup: <code>/etc/ssh</code>, <code>/etc/apt</code>, <code>/etc/cron.*</code>, <code>/root</code>, <code>/usr/local/bin</code>, general service configuration files, etc."
+      },
+      {
+        "class": "reboot",
+        "detail": "Paths applied <strong>immediately</strong> as well, but whose actual effect only kicks in on the <strong>next boot</strong>: the kernel only reads <code>/etc/default/grub</code> when the bootloader starts, <code>/etc/fstab</code> when filesystems are mounted at boot, <code>/etc/modules</code> when modules are loaded, etc. The file is in place the moment it is applied but the system has to reboot to consume it. Examples: <code>/etc/default/grub</code>, <code>/etc/kernel</code>, <code>/etc/modules</code>, <code>/etc/fstab</code>, <code>/etc/zfs</code>, <code>/etc/initramfs-tools</code>."
+      },
+      {
+        "class": "dangerous",
+        "detail": "Paths that are <strong>NOT applied on the running system</strong> — a live write could corrupt state or drop the active connection. These are staged in the pending set and written by the post-boot dispatcher after the reboot, when the cluster is up but the system is not yet fully in use. Examples: <code>/etc/pve</code> (pmxcfs is a live FUSE mount; writing directly to it bypasses it), <code>/var/lib/pve-cluster</code> (live cluster data), <code>/etc/network</code> (could reconfigure the very interface the user is connected on over SSH and drop the session)."
+      }
     ]
   },
   "fullFlow": {
@@ -62,10 +98,22 @@
     "heading": "The pending-restore machinery",
     "intro": "Paths classified as <code>reboot</code> or <code>dangerous</code>, and hydration writes, are staged for the next boot instead of being applied live. This is done through a small, self-contained set of files under <code>/var/lib/proxmenux/pending-restore/</code>:",
     "rows": [
-      { "file": "apply-on-boot.list", "content": "One relative path per line — the exact set of paths <code>apply_pending_restore.sh</code> will apply from the staged rootfs. Reading this file tells the operator exactly what will change on the next boot." },
-      { "file": "plan.env", "content": "Environment variables sourced by the on-boot script: restore ID, compatibility flags (<code>HB_COMPAT_CROSS_VERSION</code>, <code>HB_COMPAT_KERNEL_DIRECTION</code>, <code>HB_HYDRATION_APPLIED</code>), rollback opt-in flag, cluster options." },
-      { "file": "rs-skip-paths.txt", "content": "The final <code>RS_SKIP_PATHS</code> list, persisted so <code>apply_pending_restore.sh</code> applies the same exclusions after reboot that were computed during the interactive step. Prevents drift-affected or cross-kernel-unsafe paths from being restored at boot time." },
-      { "file": "rootfs/", "content": "The staged files themselves — the exact bytes that will be laid down. Kept on the same filesystem as <code>/</code> so the on-boot rsync is fast and does not depend on external storage still being reachable at boot." }
+      {
+        "file": "apply-on-boot.list",
+        "content": "One relative path per line — the exact set of paths <code>apply_pending_restore.sh</code> will apply from the staged rootfs. Reading this file tells the operator exactly what will change on the next boot."
+      },
+      {
+        "file": "plan.env",
+        "content": "Environment variables sourced by the on-boot script: restore ID, compatibility flags (<code>HB_COMPAT_CROSS_VERSION</code>, <code>HB_COMPAT_KERNEL_DIRECTION</code>, <code>HB_HYDRATION_APPLIED</code>), rollback opt-in flag, cluster options."
+      },
+      {
+        "file": "rs-skip-paths.txt",
+        "content": "The final <code>RS_SKIP_PATHS</code> list, persisted so <code>apply_pending_restore.sh</code> applies the same exclusions after reboot that were computed during the interactive step. Prevents drift-affected or cross-kernel-unsafe paths from being restored at boot time."
+      },
+      {
+        "file": "rootfs/",
+        "content": "The staged files themselves — the exact bytes that will be laid down. Kept on the same filesystem as <code>/</code> so the on-boot rsync is fast and does not depend on external storage still being reachable at boot."
+      }
     ],
     "unitBody": "The <code>proxmenux-restore-onboot.service</code> systemd unit is enabled at the end of the interactive step. It is a one-shot service that fires early on the next boot, calls <code>apply_pending_restore.sh</code>, then disables itself. The unit is gated by <code>ConditionPathExists=/var/lib/proxmenux/pending-restore/state</code>, so on any boot without a pending restore it is a no-op."
   },
@@ -73,12 +121,62 @@
     "heading": "The post-boot dispatcher — apply_cluster_postboot.sh",
     "intro": "Where the interactive step ends and where the actual host reproduction happens. <code>apply_cluster_postboot.sh</code> is installed as a second one-shot systemd unit (<code>proxmenux-apply-cluster-postboot.service</code>) whose <code>After=</code>/<code>Wants=</code> targets ensure it runs only after pve-cluster and network-online are up. This is where the host-visible restore actions land.",
     "tasks": [
-      { "task": "Apply /etc/pve", "detail": "<code>/etc/pve</code> is a live pmxcfs FUSE mount — it cannot be written to on early boot. The dispatcher copies files from the pending rootfs to the live <code>/etc/pve</code> once the cluster filesystem is up, one file at a time, without restarting pve-cluster." },
-      { "task": "Rebuild initramfs and bootloader", "detail": "Runs <code>update-initramfs -u -k all</code> across every installed kernel, then either <code>update-grub</code> (GRUB installs) or <code>proxmox-boot-tool refresh</code> (systemd-boot / ZFS installs). Skipped if the interactive step determined nothing changed in the paths that affect these tools." },
-      { "task": "Component auto-reinstall", "detail": "Reads the restored <code>components_status.json</code> and iterates over the registered installers (nvidia_driver, coral_driver, amdgpu_top, intel_gpu_tools). Each installer runs in <code>--auto-reinstall</code> mode, reads its previously-recorded version from the state file, and rebuilds against the target's current kernel. The interactive flow does not do this — reinstalling drivers against a kernel that has not yet booted is meaningless." },
-      { "task": "Boot sanity check", "detail": "Before firing the completion notification, verifies that <code>proxmox-boot-tool status</code> shows a configured ESP, every <code>/boot/vmlinuz-*</code> has a matching <code>/lib/modules/&lt;ver&gt;</code> directory, and <code>/vmlinuz</code> resolves. Any inconsistency is surfaced in the notification instead of being hidden." },
-      { "task": "Completion notification", "detail": "Sends the <code>Host restore finished</code> event through <code>hb_notify_lifecycle</code>. Includes total duration, applied path count, sanity-check warnings if any, and a link to the log at <code>/var/log/proxmenux/proxmenux-cluster-postboot-*.log</code>. If notifications are not configured, the event is silent — the log still records everything." }
+      {
+        "task": "Apply /etc/pve",
+        "detail": "<code>/etc/pve</code> is a live pmxcfs FUSE mount — it cannot be written to on early boot. The dispatcher copies files from the pending rootfs to the live <code>/etc/pve</code> once the cluster filesystem is up, one file at a time, without restarting pve-cluster."
+      },
+      {
+        "task": "Rebuild initramfs and bootloader",
+        "detail": "Runs <code>update-initramfs -u -k all</code> across every installed kernel, then either <code>update-grub</code> (GRUB installs) or <code>proxmox-boot-tool refresh</code> (systemd-boot / ZFS installs). Skipped if the interactive step determined nothing changed in the paths that affect these tools."
+      },
+      {
+        "task": "Component auto-reinstall",
+        "detail": "Reads the restored <code>components_status.json</code> and iterates over the registered installers (nvidia_driver, coral_driver, amdgpu_top, intel_gpu_tools). Each installer runs in <code>--auto-reinstall</code> mode, reads its previously-recorded version from the state file, and rebuilds against the target's current kernel. The interactive flow does not do this — reinstalling drivers against a kernel that has not yet booted is meaningless."
+      },
+      {
+        "task": "Boot sanity check",
+        "detail": "Before firing the completion notification, verifies that <code>proxmox-boot-tool status</code> shows a configured ESP, every <code>/boot/vmlinuz-*</code> has a matching <code>/lib/modules/&lt;ver&gt;</code> directory, and <code>/vmlinuz</code> resolves. Any inconsistency is surfaced in the notification instead of being hidden."
+      },
+      {
+        "task": "Completion notification",
+        "detail": "Sends the <code>Host restore finished</code> event through <code>hb_notify_lifecycle</code>. Includes total duration, applied path count, sanity-check warnings if any, and a link to the log at <code>/var/log/proxmenux/proxmenux-cluster-postboot-*.log</code>. If notifications are not configured, the event is silent — the log still records everything."
+      }
     ]
+  },
+  "liveProgress": {
+    "heading": "Live progress in the Monitor's Backups tab",
+    "body": "After the reboot the Backups tab of ProxMenux Monitor renders a live post-restore card that reflects the state of <code>apply_cluster_postboot.service</code> as it runs. The card is driven by <code>/var/lib/proxmenux/restore-state.json</code>, which the dispatcher updates at every milestone (apply cluster config, rebuild initramfs, update bootloader, per-component reinstall, boot sanity check, finalize).",
+    "fields": [
+      {
+        "name": "Status badge",
+        "detail": "One of <em>Restore in progress</em>, <em>Restore complete</em> or <em>Restore failed</em>. The card polls the state file every 2 seconds while running and every 30 seconds after finish."
+      },
+      {
+        "name": "Progress bar + step counter",
+        "detail": "Shows <code>N/M steps</code> with the label of the current step. While the restore is running an <em>estimated time</em> is derived from steps completed and elapsed time."
+      },
+      {
+        "name": "Component list",
+        "detail": "One row per driver being reinstalled (NVIDIA, Intel GPU tools, AMD tools, Coral TPU) with <code>installing</code> / <code>ok</code> / <code>failed</code> plus a link to the per-component log at <code>/var/log/proxmenux/component-*.log</code>."
+      },
+      {
+        "name": "Boot sanity warnings",
+        "detail": "The dispatcher checks for missing <code>/lib/modules/&lt;kernel&gt;</code>, absent ESP configuration and dangling <code>/vmlinuz</code> symlinks. Any warning surfaces here as a coloured banner."
+      },
+      {
+        "name": "Rollback delta",
+        "detail": "Lists VMs, LXCs and components that exist on the target but were not in the restored backup — the same entries surfaced in the pre-restore destructive rollback dialog. Each row carries the manual cleanup command."
+      },
+      {
+        "name": "Log tail",
+        "detail": "The last 600 lines of <code>proxmenux-cluster-postboot-&lt;ts&gt;.log</code>, with an <em>Issues only</em> filter that keeps just lines matching <code>error</code>, <code>warning</code>, <code>failed</code>, <code>✗</code> or <code>traceback</code>."
+      }
+    ],
+    "dismissBody": "Once the restore is <em>complete</em> or <em>failed</em>, a Dismiss button collapses the card. The state file is preserved and the History button re-opens it plus any prior restore (the last 20 runs are archived under <code>/var/lib/proxmenux/restore-history/</code>).",
+    "imageAlt": "ProxMenux Monitor Backups tab showing the post-restore progress card after a completed restore, with the green Restore complete badge, full progress bar, run duration and summary tiles (guests, bind-mount stubs, stale nodes cleaned, components).",
+    "imageCaption": "The Backups tab card after the post-boot dispatcher has finished — status badge, 100% progress bar, run duration and per-component summary tiles.",
+    "detailsImageAlt": "Post-restore Details modal opened on the same completed restore, showing the finalised progress bar at 6/6 steps, the Rollback delta section reporting no drift, and the full log tail with the Full / Issues only toggle.",
+    "detailsImageCaption": "The Details modal for a completed restore, exposing the full run log, the boot sanity result and the rollback delta computed against the backup."
   },
   "postbootExample": {
     "heading": "What the post-boot looks like on the console",
@@ -90,13 +188,41 @@
     "heading": "Why the last ten minutes matter",
     "intro": "The reboot itself takes seconds, but the post-boot dispatcher spends around ten minutes finishing the restore. During this window the host is reachable and login works, but some services (mainly GPU-driver-dependent ones) are not yet available. Time breakdown for a typical Proxmox host with NVIDIA + Coral installed:",
     "rows": [
-      { "stage": "Boot + pve-cluster ready", "time": "~30 s", "detail": "Standard Proxmox boot. SSH, web UI and login are available at the end of this stage." },
-      { "stage": "Apply /etc/pve to pmxcfs", "time": "~10 s", "detail": "Fast — small config files copied one by one to the live cluster filesystem." },
-      { "stage": "Rebuild initramfs across kernels", "time": "3–5 min", "detail": "<code>update-initramfs -u -k all</code> rebuilds one initramfs image per installed kernel. Bulk of the wait." },
-      { "stage": "Rebuild bootloader config", "time": "10–30 s", "detail": "<code>update-grub</code> or <code>proxmox-boot-tool refresh</code>. Fast even on ZFS." },
-      { "stage": "NVIDIA driver reinstall (if applicable)", "time": "5–10 min", "detail": "Downloads the recorded driver version, compiles the DKMS modules against the current kernel, applies the ProxMenux patch if the source had it. Longest single task." },
-      { "stage": "Coral / other component reinstalls", "time": "3–5 min", "detail": "DKMS compiles for Coral, apt install for intel-gpu-tools, .deb download + install for amdgpu_top." },
-      { "stage": "Sanity check + notification", "time": "~2 s", "detail": "Cheap. The operator learns the run completed the moment the notification fires." }
+      {
+        "stage": "Boot + pve-cluster ready",
+        "time": "~30 s",
+        "detail": "Standard Proxmox boot. SSH, web UI and login are available at the end of this stage."
+      },
+      {
+        "stage": "Apply /etc/pve to pmxcfs",
+        "time": "~10 s",
+        "detail": "Fast — small config files copied one by one to the live cluster filesystem."
+      },
+      {
+        "stage": "Rebuild initramfs across kernels",
+        "time": "3–5 min",
+        "detail": "<code>update-initramfs -u -k all</code> rebuilds one initramfs image per installed kernel. Bulk of the wait."
+      },
+      {
+        "stage": "Rebuild bootloader config",
+        "time": "10–30 s",
+        "detail": "<code>update-grub</code> or <code>proxmox-boot-tool refresh</code>. Fast even on ZFS."
+      },
+      {
+        "stage": "NVIDIA driver reinstall (if applicable)",
+        "time": "5–10 min",
+        "detail": "Downloads the recorded driver version, compiles the DKMS modules against the current kernel, applies the ProxMenux patch if the source had it. Longest single task."
+      },
+      {
+        "stage": "Coral / other component reinstalls",
+        "time": "3–5 min",
+        "detail": "DKMS compiles for Coral, apt install for intel-gpu-tools, .deb download + install for amdgpu_top."
+      },
+      {
+        "stage": "Sanity check + notification",
+        "time": "~2 s",
+        "detail": "Cheap. The operator learns the run completed the moment the notification fires."
+      }
     ],
     "outroBody": "The window matters because the operator can log in during this time and see missing tools (<code>nvidia-smi</code> not found, <code>coral</code> not detected). This is expected — the reinstall is still running in the background. The completion notification signals when everything is ready."
   },
@@ -107,18 +233,42 @@
   "logs": {
     "heading": "Where the logs live",
     "rows": [
-      { "log": "/var/log/proxmenux/restore-YYYYMMDD_HHMMSS.log", "detail": "Written by the interactive step. Contains: compatibility results, drift filter, hydration plan, apply hot output, prepare pending output, package install." },
-      { "log": "/var/log/proxmenux/apply-pending-YYYYMMDD_HHMMSS.log", "detail": "Written by <code>apply_pending_restore.sh</code> on early boot. Contains: sourced plan.env, apply-on-boot iteration, skip-paths filtering." },
-      { "log": "/var/log/proxmenux/proxmenux-cluster-postboot-YYYYMMDD_HHMMSS.log", "detail": "Written by <code>apply_cluster_postboot.sh</code>. Contains: pve-cluster apply, initramfs and bootloader output, per-component installer output, sanity check, notification payload." },
-      { "log": "/var/log/proxmenux/component-<name>-YYYYMMDD_HHMMSS.log", "detail": "One log per component installer (nvidia, coral, etc.) that ran in the post-boot pass. Useful when a specific component's reinstall failed and the operator needs the tool's own output." }
+      {
+        "log": "/var/log/proxmenux/restore-YYYYMMDD_HHMMSS.log",
+        "detail": "Written by the interactive step. Contains: compatibility results, drift filter, hydration plan, apply hot output, prepare pending output, package install."
+      },
+      {
+        "log": "/var/log/proxmenux/apply-pending-YYYYMMDD_HHMMSS.log",
+        "detail": "Written by <code>apply_pending_restore.sh</code> on early boot. Contains: sourced plan.env, apply-on-boot iteration, skip-paths filtering."
+      },
+      {
+        "log": "/var/log/proxmenux/proxmenux-cluster-postboot-YYYYMMDD_HHMMSS.log",
+        "detail": "Written by <code>apply_cluster_postboot.sh</code>. Contains: pve-cluster apply, initramfs and bootloader output, per-component installer output, sanity check, notification payload."
+      },
+      {
+        "log": "/var/log/proxmenux/component-<name>-YYYYMMDD_HHMMSS.log",
+        "detail": "One log per component installer (nvidia, coral, etc.) that ran in the post-boot pass. Useful when a specific component's reinstall failed and the operator needs the tool's own output."
+      }
     ]
   },
   "whereNext": {
     "heading": "Where to go next",
     "items": [
-      { "label": "Cross-kernel restore", "href": "/docs/backup-restore/cross-kernel", "tail": " — the direction-aware safe-subset filter and the hydration pass invoked when the target kernel differs from the backup's." },
-      { "label": "How it works", "href": "/docs/backup-restore/how-it-works", "tail": " — the archive layout, manifest and application inventory that the restore consumes." },
-      { "label": "Scheduled jobs", "href": "/docs/backup-restore/scheduled-jobs", "tail": " — the unattended flow that produces the archives this page consumes." }
+      {
+        "label": "Cross-kernel restore",
+        "href": "/docs/backup-restore/cross-kernel",
+        "tail": " — the direction-aware safe-subset filter and the hydration pass invoked when the target kernel differs from the backup's."
+      },
+      {
+        "label": "How it works",
+        "href": "/docs/backup-restore/how-it-works",
+        "tail": " — the archive layout, manifest and application inventory that the restore consumes."
+      },
+      {
+        "label": "Scheduled jobs",
+        "href": "/docs/backup-restore/scheduled-jobs",
+        "tail": " — the unattended flow that produces the archives this page consumes."
+      }
     ]
   }
 }
