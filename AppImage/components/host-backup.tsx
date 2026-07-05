@@ -452,7 +452,7 @@ export function HostBackup() {
           ) : jobsResp.jobs.filter((j) => !j.manual).length === 0 ? null : (
             <div className="space-y-2">
               {actionError && (
-                <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
+                <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">
                   {actionError}
                 </div>
               )}
@@ -1419,7 +1419,7 @@ function InspectModal({
             )}
 
             {error && (
-              <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
+              <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">
                 {error}
               </div>
             )}
@@ -2389,7 +2389,15 @@ function CreateJobDialog({
         })
         mutatePbsRecovery()
       } catch (e) {
-        setError(`Keyfile import failed: ${e instanceof Error ? e.message : String(e)}`)
+        // The import endpoint returns `{error, tool_output, tool_exit_code}`
+        // on validation failure. Surface the tool output verbatim so the
+        // operator can tell a real "not a keyfile" from a "keyfile needs
+        // a passphrase / uses unsupported KDF" and act on it.
+        const err = e as Error & { body?: { tool_output?: string; tool_exit_code?: number } }
+        const detail = err.body?.tool_output
+          ? `${err.message}\n\nproxmox-backup-client output:\n${err.body.tool_output}`
+          : err.message
+        setError(`Keyfile import failed: ${detail || String(e)}`)
         setPbsImportBusy(false)
         setSubmitting(false)
         return
@@ -3390,7 +3398,7 @@ function CreateJobDialog({
               })()}
 
               {error && (
-                <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
+                <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">
                   {error}
                 </div>
               )}
@@ -3653,7 +3661,15 @@ function ManualBackupDialog({
         })
         mutatePbsRecovery()
       } catch (e) {
-        setError(`Keyfile import failed: ${e instanceof Error ? e.message : String(e)}`)
+        // The import endpoint returns `{error, tool_output, tool_exit_code}`
+        // on validation failure. Surface the tool output verbatim so the
+        // operator can tell a real "not a keyfile" from a "keyfile needs
+        // a passphrase / uses unsupported KDF" and act on it.
+        const err = e as Error & { body?: { tool_output?: string; tool_exit_code?: number } }
+        const detail = err.body?.tool_output
+          ? `${err.message}\n\nproxmox-backup-client output:\n${err.body.tool_output}`
+          : err.message
+        setError(`Keyfile import failed: ${detail || String(e)}`)
         setPbsImportBusy(false)
         setSubmitting(false)
         return
@@ -4188,7 +4204,7 @@ function ManualBackupDialog({
               </div>
 
               {error && (
-                <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
+                <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">
                   {error}
                 </div>
               )}
@@ -4527,7 +4543,7 @@ function DestinationsSection({
         </Button>
       </div>
       {error && (
-        <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
+        <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">
           {error}
         </div>
       )}
@@ -5539,7 +5555,7 @@ function AddDestinationDialog({
             </div>
           )}
           {error && (
-            <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
+            <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">
               {error}
             </div>
           )}
@@ -5905,7 +5921,7 @@ function ExtraPathsSection() {
         </p>
 
         {error && (
-          <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
+          <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">
             {error}
           </div>
         )}
@@ -6090,7 +6106,7 @@ function UsbDrivesSection() {
       </p>
 
       {error && (
-        <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
+        <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">
           {error}
         </div>
       )}
@@ -6441,7 +6457,7 @@ function JobDetailModal({
           </DialogHeader>
 
           {actionError && (
-            <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
+            <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">
               {actionError}
             </div>
           )}
@@ -6818,7 +6834,7 @@ function ManualJobWatchModal({
           </DialogHeader>
 
           {actionError && (
-            <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
+            <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">
               {actionError}
             </div>
           )}
@@ -7065,7 +7081,7 @@ function PbsKeyfileRecoveryDialog({
         </div>
 
         {error && (
-          <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
+          <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">
             {error}
           </div>
         )}

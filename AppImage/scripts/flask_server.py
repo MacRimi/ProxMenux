@@ -13762,6 +13762,30 @@ def _pbs_keyfile_get_or_create(create_if_missing: bool = True) -> str:
         return ''
 
 
+def _pbs_keyfile_fingerprint(path: str = '') -> str:
+    """Return the fingerprint of a PBS keyfile as reported by
+    `proxmox-backup-client key info`, or '' if the file is missing or
+    the tool is unavailable. Fingerprints look like
+    `AA:BB:CC:DD:EE:FF:GG:HH` and identify the exact key used to encrypt
+    a backup — displaying them next to a manifest's expected fingerprint
+    is what tells an operator whether they have the right key or a
+    different-but-similar one."""
+    kf = path or _PBS_KEYFILE_PATH
+    if not os.path.isfile(kf) or not shutil.which('proxmox-backup-client'):
+        return ''
+    try:
+        r = subprocess.run(
+            ['proxmox-backup-client', 'key', 'info', '--output-format', 'json', kf],
+            capture_output=True, text=True, timeout=10,
+        )
+        if r.returncode != 0 or not r.stdout:
+            return ''
+        info = json.loads(r.stdout)
+        return (info.get('fingerprint') or '').strip()
+    except (subprocess.TimeoutExpired, OSError, json.JSONDecodeError, ValueError):
+        return ''
+
+
 def _pbs_recovery_encrypt(passphrase: str, in_path: str, out_path: str) -> bool:
     """openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt < passphrase.
     Mirrors hb_pbs_encrypt_recovery in the shell so a blob produced
@@ -13821,6 +13845,11 @@ def api_pbs_recovery_status():
         'has_recovery': os.path.isfile(_PBS_RECOVERY_ENC_PATH),
         'keyfile_path': _PBS_KEYFILE_PATH,
         'recovery_path': _PBS_RECOVERY_ENC_PATH,
+        # Fingerprint of the installed keyfile — empty when no keyfile
+        # is present. Exposed so the Web UI can render it next to the
+        # manifest's expected fingerprint after a download error
+        # ("missing key — manifest was created with key XX:XX:...").
+        'keyfile_fingerprint': _pbs_keyfile_fingerprint(),
     })
 
 
@@ -14010,6 +14039,14 @@ def api_pbs_encryption_import():
     except OSError as e:
         return jsonify({'error': f'cannot create state directory: {e}'}), 500
 
+    # Strip a leading UTF-8 BOM (b'\xef\xbb\xbf') if the operator's
+    # editor added one — the byte order mark makes the file no longer
+    # a valid JSON document and `key info` refuses it with a parse
+    # error that reads like a generic "not a keyfile", which sends
+    # the operator down the wrong debugging path.
+    if content.startswith(b'\xef\xbb\xbf'):
+        content = content[3:]
+
     import tempfile
     tmp_fd, tmp_path = tempfile.mkstemp(prefix='pbs-key.import.', dir=_BACKUP_STATE_DIR)
     try:
@@ -14029,8 +14066,17 @@ def api_pbs_encryption_import():
             return jsonify({'error': f'validation failed: {type(e).__name__}'}), 500
 
         if r.returncode != 0:
+            # Surface the real tool output so the operator can tell a
+            # bad-file error from a needs-passphrase error (keyfiles
+            # generated with `--kdf scrypt` need to be decrypted with
+            # their original passphrase before they can be reused as an
+            # import — ProxMenux only supports kdf=none for the
+            # canonical shared keyfile).
+            tool_output = (r.stderr or r.stdout or '').strip()
             return jsonify({
                 'error': 'proxmox-backup-client did not recognise this file as a valid PBS keyfile',
+                'tool_output': tool_output[:800] if tool_output else '(no output from proxmox-backup-client key info)',
+                'tool_exit_code': r.returncode,
             }), 400
 
         # The old recovery blob was encrypted with the old key — a new
@@ -14069,6 +14115,15 @@ def api_pbs_recovery_setup():
     the operator's recovery passphrase. Body: {passphrase}. Idempotent
     — re-running it with a new passphrase replaces the escrow.
 
+    If no keyfile is installed yet, one is generated on the spot before
+    the escrow is built. This lets the Create-job / Manual-backup Web
+    flow call this endpoint the moment the operator confirms the
+    passphrase (prompt-first, matching the CLI wizard): keyfile plus
+    recovery blob are both created atomically, so a valid job can be
+    stored right after with pbs_encrypt_mode='existing'. Previously
+    the endpoint 400'd with 'no PBS keyfile present' because the
+    keyfile was only materialised later, during job creation.
+
     The blob is uploaded to PBS by the runner after every successful
     encrypted backup (see _sb_run_pbs / hb_pbs_upload_recovery_blob),
     so the operator can rebuild the keyfile from any host with just
@@ -14077,10 +14132,17 @@ def api_pbs_recovery_setup():
     passphrase = payload.get('passphrase') or ''
     if not passphrase:
         return jsonify({'error': 'passphrase is required'}), 400
-    if not os.path.isfile(_PBS_KEYFILE_PATH):
-        return jsonify({'error': 'no PBS keyfile present — enable encryption on a job first'}), 400
     if not shutil.which('openssl'):
         return jsonify({'error': 'openssl is not installed; cannot create recovery blob'}), 500
+
+    # Materialise the keyfile if it isn't already there. A pre-existing
+    # keyfile is trusted and reused — we never rotate it silently.
+    if not os.path.isfile(_PBS_KEYFILE_PATH):
+        if not shutil.which('proxmox-backup-client'):
+            return jsonify({'error': 'proxmox-backup-client is not installed on this host'}), 500
+        if not _pbs_keyfile_get_or_create(True):
+            return jsonify({'error': 'failed to create PBS encryption keyfile'}), 500
+
     if not _pbs_recovery_encrypt(passphrase, _PBS_KEYFILE_PATH, _PBS_RECOVERY_ENC_PATH):
         return jsonify({'error': 'openssl encryption failed'}), 500
     return jsonify({'status': 'ok', 'recovery_path': _PBS_RECOVERY_ENC_PATH})
@@ -16607,17 +16669,35 @@ def _run_pbs_export(task_id: str, repo: dict, snapshot: str, output_path: str):
         # 1) Pull the .pxar archive out of the snapshot. PBS stores the
         # host backup as `hostcfg.pxar.didx`; restoring it as `hostcfg.pxar`
         # writes the file tree under <target>/hostcfg/.
+        # If a local keyfile is installed we always pass --keyfile: PBS
+        # ignores it for unencrypted archives and needs it for encrypted
+        # ones. Without this flag an encrypted download fails with
+        # "missing key - manifest was created with key XX:XX:..." even
+        # when the operator has the correct key on disk.
         _update(state='restoring', message='Pulling snapshot from PBS')
         target_tree = os.path.join(staging, 'tree')
         os.makedirs(target_tree, exist_ok=True)
-        r = subprocess.run(
-            ['proxmox-backup-client', 'restore',
-             '--repository', repo['repository'],
-             snapshot, 'hostcfg.pxar', target_tree],
-            capture_output=True, text=True, timeout=1800, env=env,
-        )
+        cmd = ['proxmox-backup-client', 'restore',
+               '--repository', repo['repository']]
+        if os.path.isfile(_PBS_KEYFILE_PATH):
+            cmd.extend(['--keyfile', _PBS_KEYFILE_PATH])
+        cmd.extend([snapshot, 'hostcfg.pxar', target_tree])
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800, env=env)
         if r.returncode != 0:
-            _update(state='failed', error=(r.stderr.strip() or 'pbs restore failed'))
+            err = (r.stderr.strip() or 'pbs restore failed')
+            # Fingerprint mismatch is the most common encrypted-restore
+            # failure and the error message alone doesn't tell the
+            # operator whether the installed keyfile is the wrong one
+            # or PBS just isn't finding it. Include the local keyfile
+            # fingerprint so a side-by-side compare with the manifest's
+            # XX:XX:... value is possible without shell access.
+            if 'missing key' in err.lower() or 'was created with key' in err.lower():
+                local_fp = _pbs_keyfile_fingerprint()
+                if local_fp:
+                    err += f'\n\nLocal keyfile fingerprint: {local_fp}'
+                else:
+                    err += '\n\n(No local PBS keyfile installed at ' + _PBS_KEYFILE_PATH + ')'
+            _update(state='failed', error=err)
             return
 
         # 2) Pack the restored tree as a .tar.zst — same format the
