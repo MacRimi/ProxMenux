@@ -13783,7 +13783,7 @@ def _pbs_keyfile_fingerprint(path: str = '') -> str:
         return ''
     try:
         r = subprocess.run(
-            ['proxmox-backup-client', 'key', 'info', '--output-format', 'json', kf],
+            ['proxmox-backup-client', 'key', 'show', '--output-format', 'json', kf],
             capture_output=True, text=True, timeout=10,
         )
         if r.returncode != 0 or not r.stdout:

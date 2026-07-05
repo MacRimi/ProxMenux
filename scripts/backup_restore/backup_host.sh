@@ -731,55 +731,44 @@ _bk_manage_pbs_encryption_keyfile() {
         local installed=0
         [[ -s "$key_file" ]] && installed=1
 
-        local preview=""
+        # Precompute values used both by the compact prompt and the
+        # detailed info modal.
+        local fp="" kdf_hint="unknown" installed_at=""
         if (( installed )); then
-            local fp="" kdf_hint="unknown" installed_at=""
             if command -v proxmox-backup-client >/dev/null 2>&1; then
-                fp=$(proxmox-backup-client key info --output-format json "$key_file" 2>/dev/null \
+                fp=$(proxmox-backup-client key show --output-format json "$key_file" 2>/dev/null \
                      | grep -oE '"fingerprint"[[:space:]]*:[[:space:]]*"[^"]*"' \
                      | head -1 | sed 's/.*"\([^"]*\)".*/\1/')
             fi
-            # KDF detection covers both keyfile shapes: modern PBS writes
-            # `"kdf":null` for kdf=none keys; the older format used
-            # `"kdf":"None"`. Anything else is treated as scrypt.
             if grep -qE '"kdf":[[:space:]]*(null|"None")' "$key_file" 2>/dev/null; then
                 kdf_hint="none"
             elif grep -q '"Scrypt"' "$key_file" 2>/dev/null; then
                 kdf_hint="scrypt"
             fi
             installed_at=$(date -r "$key_file" '+%Y-%m-%d %H:%M' 2>/dev/null || echo "")
-            # Colors chosen for readability on the light-gray dialog
-            # background: \Z4 (blue) reads well; \Z2 (bright green) gets
-            # washed out.
-            preview="$(hb_translate "Installed:") \Zb\Z4$(hb_translate "yes")\Zn"$'\n'
-            preview+="$(hb_translate "Path:")        $key_file"$'\n'
-            [[ -n "$installed_at" ]] && preview+="$(hb_translate "Installed at:") $installed_at"$'\n'
-            preview+="$(hb_translate "KDF:")         $kdf_hint"$'\n'
-            [[ -n "$fp" ]] && preview+="$(hb_translate "Fingerprint:") $fp"$'\n'
-            preview+="$(hb_translate "Keyfile passphrase stored:") "
-            [[ -s "$pass_file" ]] && preview+="\Zb\Z4$(hb_translate "yes")\Zn"$'\n' || preview+="\Zb$(hb_translate "no")\Zn"$'\n'
-            preview+="$(hb_translate "Recovery escrow present:")  "
-            [[ -s "$recovery_enc" ]] && preview+="\Zb\Z4$(hb_translate "yes")\Zn"$'\n' || preview+="\Zb\Z1$(hb_translate "no")\Zn"$'\n'
-            # Explicit "the key IS recoverable" line so an operator glancing
-            # at "KDF: unknown" or a missing passphrase field doesn't infer
-            # that the key has been lost. Recovery only requires the escrow
-            # blob on PBS and its passphrase — neither of which lives in
-            # this on-disk keyfile.
-            if [[ -s "$recovery_enc" ]]; then
-                preview+="$(hb_translate "Recoverable via PBS escrow:") \Zb\Z4$(hb_translate "yes")\Zn"$'\n'
-            else
-                preview+="$(hb_translate "Recoverable via PBS escrow:") \Zb\Z1$(hb_translate "no")\Zn — $(hb_translate "set a recovery passphrase to enable recovery on a fresh host")"$'\n'
-            fi
+        fi
+
+        # Menu prompt: ONE line summarising the two things that
+        # actually matter (installed + recoverable). Everything else
+        # goes in the "Show detailed keyfile info" action which uses
+        # --msgbox — that widget honours embedded newlines, whereas
+        # dialog --menu collapses them into spaces on many distros and
+        # produced an unreadable wall of text no matter how tight the
+        # per-field layout was.
+        local prompt=""
+        if (( installed )); then
+            local recov_state="\Zb\Z1no — set a recovery passphrase\Zn"
+            [[ -s "$recovery_enc" ]] && recov_state="\Zb\Z4yes\Zn"
+            prompt="Encryption keyfile: \Zb\Z4installed\Zn  •  Recoverable: ${recov_state}"
         else
-            preview="$(hb_translate "No keyfile installed on this host.")"$'\n\n'
-            preview+="$(hb_translate "PBS encrypted backups won't work until one is generated or imported. Both actions happen during job creation the first time you tick 'Encrypt backups'.")"
+            prompt="No encryption keyfile installed on this host."
         fi
 
         local choice
         if (( installed )); then
             choice=$(dialog --backtitle "ProxMenux" --colors \
                 --title "$(translate "Manage PBS encryption keyfile")" \
-                --menu "\n${preview}\n" \
+                --menu "\n${prompt}\n" \
                 "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
                 "info"    "$(hb_translate "Show detailed keyfile info")" \
                 "pass"    "$(hb_translate "Update stored keyfile passphrase")" \
@@ -790,7 +779,7 @@ _bk_manage_pbs_encryption_keyfile() {
         else
             choice=$(dialog --backtitle "ProxMenux" --colors \
                 --title "$(translate "Manage PBS encryption keyfile")" \
-                --menu "\n${preview}\n" \
+                --menu "\n${prompt}\n" \
                 "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
                 "back" "$(hb_translate "← Return")" \
                 3>&1 1>&2 2>&3) || break
@@ -798,12 +787,37 @@ _bk_manage_pbs_encryption_keyfile() {
 
         case "$choice" in
             info)
-                # Full `key info` output (may need passphrase for scrypt).
-                local info_out
-                info_out=$(proxmox-backup-client key info "$key_file" 2>&1)
-                dialog --backtitle "ProxMenux" \
-                    --title "$(hb_translate "Keyfile info")" \
-                    --msgbox "$info_out" 20 80
+                # Terminal output pattern used across ProxMenux (logo +
+                # msg_title + labeled TAB/BGN/BL/CL rows + "press enter
+                # to return"), same shape as _bk_pbs's post-backup
+                # summary. Fits arbitrarily wide fingerprints without
+                # the wrapping issues that dialog --msgbox has, and lets
+                # the operator copy-paste the fingerprint from a real
+                # terminal buffer.
+                show_proxmenux_logo
+                msg_title "$(translate "PBS encryption keyfile — detailed info")"
+                echo -e ""
+                echo -e "${TAB}${BGN}$(translate "Path:")${CL}           ${BL}${key_file}${CL}"
+                [[ -n "$installed_at" ]] && \
+                  echo -e "${TAB}${BGN}$(translate "Installed at:")${CL}   ${BL}${installed_at}${CL}"
+                echo -e "${TAB}${BGN}$(translate "KDF:")${CL}            ${BL}${kdf_hint}${CL}"
+                [[ -n "$fp" ]] && \
+                  echo -e "${TAB}${BGN}$(translate "Fingerprint:")${CL}    ${BL}${fp}${CL}"
+                if [[ -s "$pass_file" ]]; then
+                    echo -e "${TAB}${BGN}$(translate "Keyfile passphrase stored:")${CL}  ${BL}$(translate "yes (scrypt-unlock passphrase stored)")${CL}"
+                else
+                    echo -e "${TAB}${BGN}$(translate "Keyfile passphrase stored:")${CL}  ${BL}$(translate "no (kdf=none, not needed)")${CL}"
+                fi
+                if [[ -s "$recovery_enc" ]]; then
+                    echo -e "${TAB}${BGN}$(translate "Recovery blob:")${CL}  ${BL}$(translate "yes")${CL}"
+                    echo -e "${TAB}${BGN}$(translate "Recoverable:")${CL}    ${BL}$(translate "yes (via PBS escrow + recovery passphrase)")${CL}"
+                else
+                    echo -e "${TAB}${BGN}$(translate "Recovery blob:")${CL}  ${BL}$(translate "no")${CL}"
+                    echo -e "${TAB}${BGN}$(translate "Recoverable:")${CL}    ${BL}$(translate "no (no escrow blob — set a recovery passphrase to enable recovery)")${CL}"
+                fi
+                echo -e ""
+                msg_success "$(translate "Press Enter to return to menu...")"
+                read -r
                 ;;
             pass)
                 local new_pass new_pass2
