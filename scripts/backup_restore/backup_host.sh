@@ -644,16 +644,28 @@ _bk_local_target_usb_submenu() {
 
 _bk_manage_destinations() {
     while true; do
+        # Option 4 (keyfile management) only appears when a keyfile is
+        # actually installed on disk. Without one there's nothing to
+        # manage — the keyfile gets materialised during job creation
+        # (Generate / Import flow), not from this destinations menu.
+        # Once the first encrypted job is created, this entry becomes
+        # visible on the next open.
+        local -a menu_items=(
+            1 "$(translate "Proxmox Backup Server (PBS) destinations")"
+            2 "$(translate "Borg repositories")"
+            3 "$(translate "Local archive targets (paths + USB mount/unmount)")"
+        )
+        if [[ -s "$HB_STATE_DIR/pbs-key.conf" ]]; then
+            menu_items+=(4 "$(translate "PBS encryption keyfile (show / replace / remove)")")
+        fi
+        menu_items+=(0 "$(translate "Return")")
+
         local choice
         choice=$(dialog --backtitle "ProxMenux" \
             --title "$(translate "Configure backup destinations")" \
             --menu "\n$(translate "Pre-configure destinations so you don't have to enter them every time you back up.")" \
             "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
-            1   "$(translate "Proxmox Backup Server (PBS) destinations")" \
-            2   "$(translate "Borg repositories")" \
-            3   "$(translate "Local archive targets (paths + USB mount/unmount)")" \
-            4   "$(translate "PBS encryption keyfile (show / replace / remove)")" \
-            0   "$(translate "Return")" \
+            "${menu_items[@]}" \
             3>&1 1>&2 2>&3) || break
 
         case "$choice" in
@@ -727,21 +739,37 @@ _bk_manage_pbs_encryption_keyfile() {
                      | grep -oE '"fingerprint"[[:space:]]*:[[:space:]]*"[^"]*"' \
                      | head -1 | sed 's/.*"\([^"]*\)".*/\1/')
             fi
-            if grep -q '"kdf":[[:space:]]*"None"' "$key_file" 2>/dev/null; then
+            # KDF detection covers both keyfile shapes: modern PBS writes
+            # `"kdf":null` for kdf=none keys; the older format used
+            # `"kdf":"None"`. Anything else is treated as scrypt.
+            if grep -qE '"kdf":[[:space:]]*(null|"None")' "$key_file" 2>/dev/null; then
                 kdf_hint="none"
             elif grep -q '"Scrypt"' "$key_file" 2>/dev/null; then
                 kdf_hint="scrypt"
             fi
             installed_at=$(date -r "$key_file" '+%Y-%m-%d %H:%M' 2>/dev/null || echo "")
-            preview="$(hb_translate "Installed:") \Zb\Z2$(hb_translate "yes")\Zn"$'\n'
+            # Colors chosen for readability on the light-gray dialog
+            # background: \Z4 (blue) reads well; \Z2 (bright green) gets
+            # washed out.
+            preview="$(hb_translate "Installed:") \Zb\Z4$(hb_translate "yes")\Zn"$'\n'
             preview+="$(hb_translate "Path:")        $key_file"$'\n'
             [[ -n "$installed_at" ]] && preview+="$(hb_translate "Installed at:") $installed_at"$'\n'
             preview+="$(hb_translate "KDF:")         $kdf_hint"$'\n'
             [[ -n "$fp" ]] && preview+="$(hb_translate "Fingerprint:") $fp"$'\n'
             preview+="$(hb_translate "Keyfile passphrase stored:") "
-            [[ -s "$pass_file" ]] && preview+="\Zb\Z2$(hb_translate "yes")\Zn"$'\n' || preview+="\Zb$(hb_translate "no")\Zn"$'\n'
+            [[ -s "$pass_file" ]] && preview+="\Zb\Z4$(hb_translate "yes")\Zn"$'\n' || preview+="\Zb$(hb_translate "no")\Zn"$'\n'
             preview+="$(hb_translate "Recovery escrow present:")  "
-            [[ -s "$recovery_enc" ]] && preview+="\Zb\Z2$(hb_translate "yes")\Zn"$'\n' || preview+="\Zb$(hb_translate "no")\Zn"$'\n'
+            [[ -s "$recovery_enc" ]] && preview+="\Zb\Z4$(hb_translate "yes")\Zn"$'\n' || preview+="\Zb\Z1$(hb_translate "no")\Zn"$'\n'
+            # Explicit "the key IS recoverable" line so an operator glancing
+            # at "KDF: unknown" or a missing passphrase field doesn't infer
+            # that the key has been lost. Recovery only requires the escrow
+            # blob on PBS and its passphrase — neither of which lives in
+            # this on-disk keyfile.
+            if [[ -s "$recovery_enc" ]]; then
+                preview+="$(hb_translate "Recoverable via PBS escrow:") \Zb\Z4$(hb_translate "yes")\Zn"$'\n'
+            else
+                preview+="$(hb_translate "Recoverable via PBS escrow:") \Zb\Z1$(hb_translate "no")\Zn — $(hb_translate "set a recovery passphrase to enable recovery on a fresh host")"$'\n'
+            fi
         else
             preview="$(hb_translate "No keyfile installed on this host.")"$'\n\n'
             preview+="$(hb_translate "PBS encrypted backups won't work until one is generated or imported. Both actions happen during job creation the first time you tick 'Encrypt backups'.")"

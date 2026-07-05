@@ -13870,16 +13870,27 @@ def api_pbs_encryption_keyfile_info():
     # without their passphrase, so parsing the JSON manually gives us
     # a hint even for imported scrypt keys the operator brought their
     # own passphrase for.
+    # KDF detection covers all three shapes proxmox-backup-client
+    # writes across versions:
+    #   - modern kdf=none  → JSON `null`  → Python None
+    #   - legacy kdf=none  → string "None"
+    #   - kdf=scrypt       → object {"Scrypt": {...}}
     kdf_hint = 'unknown'
     try:
         with open(_PBS_KEYFILE_PATH, 'r') as f:
             raw = f.read(4096)
         body = json.loads(raw)
-        kdf_raw = body.get('kdf')
-        if isinstance(kdf_raw, str):
+        # `body.get('kdf', 'MISSING')` distinguishes "field explicitly
+        # null" (present with JSON null → we want 'none') from "field
+        # absent" (unlikely but treat as unknown to be safe).
+        _sentinel = object()
+        kdf_raw = body.get('kdf', _sentinel)
+        if kdf_raw is None:
+            kdf_hint = 'none'
+        elif isinstance(kdf_raw, str):
+            # "None" → "none", any other string mirrors verbatim.
             kdf_hint = kdf_raw.lower()
         elif isinstance(kdf_raw, dict):
-            # scrypt keyfiles carry `"kdf": {"Scrypt": {...}}`.
             kdf_hint = next(iter(kdf_raw)).lower() if kdf_raw else 'unknown'
     except (OSError, json.JSONDecodeError, ValueError, StopIteration):
         pass
