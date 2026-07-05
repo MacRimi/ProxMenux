@@ -19,10 +19,113 @@ set +u
 
 MARKER="${PMX_CLUSTER_APPLY_MARKER:-/var/lib/proxmenux/cluster-apply-pending}"
 LOG_DIR="${PMX_LOG_DIR:-/var/log/proxmenux}"
+# State file the Monitor Web polls to show a live progress card on
+# the Backups tab. A dismiss action (POST /api/host-backups/restore/dismiss)
+# just flips `acknowledged` to true — the file itself lives until the
+# next restore overwrites it, and a copy is archived under history/
+# when the run finishes so the operator can browse past restores.
+STATE_DIR="/var/lib/proxmenux"
+STATE_FILE="$STATE_DIR/restore-state.json"
+HISTORY_DIR="$STATE_DIR/restore-history"
+mkdir -p "$STATE_DIR" "$HISTORY_DIR" >/dev/null 2>&1 || true
 
 mkdir -p "$LOG_DIR" >/dev/null 2>&1 || true
 LOG_FILE="${LOG_DIR}/proxmenux-cluster-postboot-$(date +%Y%m%d_%H%M%S).log"
 exec >>"$LOG_FILE" 2>&1
+
+# ── State-file helpers ─────────────────────────────────────────
+# Every milestone advances `steps_done` and optionally updates a
+# handful of other fields. Writes go through a temp file + rename
+# so the Monitor never reads a half-written JSON. All calls are
+# `|| true` at the callsite — if jq or write fails, the restore
+# still proceeds; only the UI progress reporting suffers.
+_state_started_at="$(date -Iseconds)"
+_state_steps_total=0
+_state_steps_done=0
+_state_write() {
+    # Merges a JSON snippet ($1) into the existing state file.
+    # Missing state file → seeded from an empty JSON object first.
+    command -v jq >/dev/null 2>&1 || return 0
+    [[ -f "$STATE_FILE" ]] || echo '{}' > "$STATE_FILE"
+    local tmp
+    tmp=$(mktemp "${STATE_FILE}.XXXXXX") || return 0
+    if jq -c ". * $1" "$STATE_FILE" > "$tmp" 2>/dev/null; then
+        mv -f "$tmp" "$STATE_FILE"
+    else
+        rm -f "$tmp"
+    fi
+}
+_state_step() {
+    # Called as a *step transition*: the previous step just finished,
+    # start the next one. Increments steps_done and sets the label to
+    # $1. Init seeds current_step with the first step's label; every
+    # _state_step call after that advances to the NEXT step.
+    #
+    # Example flow with 3 total steps:
+    #   init         → steps_done=0, current_step="Applying cluster config"
+    #   step "Foo"   → steps_done=1, current_step="Foo"
+    #   step "Bar"   → steps_done=2, current_step="Bar"
+    #   _state_finish→ steps_done=3, status="complete"
+    local label="$1"
+    _state_steps_done=$((_state_steps_done + 1))
+    # jq variable names sdone/stotal — plain `done` collides with the
+    # bash reserved word when the arg is on its own continuation line.
+    _state_write "$(jq -n \
+        --arg step "$label" \
+        --argjson sdone "$_state_steps_done" \
+        --argjson stotal "$_state_steps_total" \
+        '{current_step:$step, steps_done:$sdone, steps_total:$stotal}')"
+}
+_state_component() {
+    # Add or update an entry in state.components. Arrays are replaced
+    # by jq's `*` merge, so plain _state_write can't be used for the
+    # per-component list — this helper explicitly appends new entries
+    # and updates existing ones by name.
+    #   $1 = component name (nvidia_driver, coral_driver, …)
+    #   $2 = status: installing | ok | failed
+    #   $3 = per-component log path (empty allowed)
+    #   $4 = installer exit code (only meaningful for failed; empty otherwise)
+    command -v jq >/dev/null 2>&1 || return 0
+    [[ -f "$STATE_FILE" ]] || echo '{}' > "$STATE_FILE"
+    local tmp
+    tmp=$(mktemp "${STATE_FILE}.XXXXXX") || return 0
+    if jq -c \
+        --arg name "$1" \
+        --arg status "$2" \
+        --arg log "$3" \
+        --arg rc "${4:-}" \
+        '($.components // []) as $comps
+         | ($comps | map(.name) | index($name)) as $idx
+         | ({name:$name, status:$status, log:$log}
+            + (if $rc == "" then {} else {exit_code:$rc} end)) as $entry
+         | .components =
+             (if $idx == null then $comps + [$entry]
+              else ($comps | map(if .name == $name then $entry else . end)) end)' \
+        "$STATE_FILE" > "$tmp" 2>/dev/null; then
+        mv -f "$tmp" "$STATE_FILE"
+    else
+        rm -f "$tmp"
+    fi
+}
+_state_finish() {
+    # $1 = "complete" | "failed"
+    local final_status="$1"
+    _state_write "$(jq -n \
+        --arg s "$final_status" \
+        --arg t "$(date -Iseconds)" \
+        --arg dur "${POSTBOOT_DURATION_FMT:-}" \
+        '{status:$s, finished_at:$t, duration:$dur}')"
+    # Archive a copy to history/ so past restores stay browsable
+    # from the Monitor even after the operator dismisses the card.
+    if [[ -f "$STATE_FILE" ]]; then
+        cp -f "$STATE_FILE" "$HISTORY_DIR/$(date +%Y%m%d_%H%M%S)-${final_status}.json" 2>/dev/null || true
+        # Keep the last 20 entries in the history dir. Everything
+        # older is expected to have been reviewed already. Using
+        # find+sort-by-mtime keeps this safe against odd filenames.
+        find "$HISTORY_DIR" -maxdepth 1 -type f -name '*.json' -printf '%T@ %p\n' 2>/dev/null \
+            | sort -rn | tail -n +21 | cut -d' ' -f2- | xargs -r rm -f 2>/dev/null || true
+    fi
+}
 
 echo "=== ProxMenux cluster post-boot apply at $(date -Iseconds) ==="
 
@@ -44,9 +147,51 @@ echo "Pending dir:     $PENDING_DIR"
 echo "Needs initramfs: $NEEDS_INITRAMFS"
 echo "Needs grub:      $NEEDS_GRUB"
 
+# Compute how many milestones the Monitor will see for this run.
+# Base 3 = apply /etc/pve + boot sanity check + finalize. Add one
+# for each optional phase that will actually run.
+_state_steps_total=3
+[[ "$NEEDS_INITRAMFS" == "1" ]] && _state_steps_total=$((_state_steps_total + 1))
+[[ "$NEEDS_GRUB" == "1" ]] && _state_steps_total=$((_state_steps_total + 1))
+# Count components that will be re-installed via --auto-reinstall.
+# Read the same components_status.json the reinstall loop uses so
+# our step count matches exactly what the loop will process.
+_COMP_STATUS_PATH="/usr/local/share/proxmenux/components_status.json"
+_COMPONENT_KEYS=(nvidia_driver amdgpu_top intel_gpu_tools coral_driver)
+_comps_to_reinstall=0
+if command -v jq >/dev/null 2>&1 && [[ -f "$_COMP_STATUS_PATH" ]]; then
+    for _k in "${_COMPONENT_KEYS[@]}"; do
+        [[ "$(jq -r ".$_k.status // \"\"" "$_COMP_STATUS_PATH" 2>/dev/null)" == "installed" ]] \
+            && _comps_to_reinstall=$((_comps_to_reinstall + 1))
+    done
+fi
+(( _comps_to_reinstall > 0 )) && _state_steps_total=$((_state_steps_total + _comps_to_reinstall))
+
+# Seed the initial state file so the Monitor's poll sees the run
+# almost immediately after the postboot unit starts. `acknowledged`
+# false means the Backups tab card will show; the operator flips
+# it to true (via POST /dismiss) after they've read the summary.
+_state_write "$(jq -n \
+    --arg started "$_state_started_at" \
+    --arg log "$LOG_FILE" \
+    --argjson steps "$_state_steps_total" \
+    '{status:"running",
+      started_at:$started,
+      finished_at:null,
+      current_step:"Applying cluster config",
+      steps_done:0,
+      steps_total:$steps,
+      log_path:$log,
+      components:[],
+      rollback_delta:{},
+      sanity_warnings:[],
+      summary:null,
+      acknowledged:false}')"
+
 if [[ -z "$RECOVERY_ROOT" || ! -d "$RECOVERY_ROOT" ]]; then
     echo "Recovery root invalid — aborting cleanly."
     rm -f "$MARKER"
+    _state_finish "failed" || true
     exit 0
 fi
 
@@ -282,6 +427,7 @@ if [[ "$NEEDS_INITRAMFS" == "1" ]] || [[ "$NEEDS_GRUB" == "1" ]]; then
 fi
 
 if [[ "$NEEDS_INITRAMFS" == "1" ]] && command -v update-initramfs >/dev/null 2>&1; then
+    _state_step "Rebuilding initramfs" || true
     echo "Running: update-initramfs -u -k all  (5-10 min — restore touched initramfs inputs)"
     if update-initramfs -u -k all 2>&1 | tail -10; then
         echo "  ✓ update-initramfs done"
@@ -296,6 +442,7 @@ else
 fi
 
 if [[ "$NEEDS_GRUB" == "1" ]] && command -v update-grub >/dev/null 2>&1; then
+    _state_step "Updating bootloader" || true
     echo "Running: update-grub"
     if update-grub 2>&1 | tail -3; then
         echo "  ✓ update-grub done"
@@ -358,6 +505,8 @@ if command -v jq >/dev/null 2>&1 && [[ -f "$COMPONENTS_STATUS" ]]; then
 
         echo ""
         echo "  → $comp (running $installer --auto-reinstall)"
+        _state_step "Reinstalling $comp" || true
+        _state_component "$comp" "installing" "" ""
         # Redirect to a per-component log instead of piping. NVIDIA's
         # runfile installer forks helpers that inherit stdout, so a
         # `bash $installer | sed | tail` pipeline never sees EOF after
@@ -368,8 +517,10 @@ if command -v jq >/dev/null 2>&1 && [[ -f "$COMPONENTS_STATUS" ]]; then
         sed -e 's/^/    /' "$comp_log" | tail -15
         if (( rc == 0 )); then
             echo "  ✓ $comp ok  (full log: $comp_log)"
+            _state_component "$comp" "ok" "$comp_log" ""
         else
             echo "  ✗ $comp installer exited $rc — see $comp_log"
+            _state_component "$comp" "failed" "$comp_log" "$rc"
         fi
     done
 fi
@@ -393,6 +544,14 @@ if [[ -n "$ROLLBACK_PLAN_FILE" ]] && command -v jq >/dev/null 2>&1; then
     rb_vm_extras=$(jq -r '.vms_to_remove | join(", ") // ""' "$ROLLBACK_PLAN_FILE" 2>/dev/null)
     rb_lxc_extras=$(jq -r '.lxcs_to_remove | join(", ") // ""' "$ROLLBACK_PLAN_FILE" 2>/dev/null)
     rb_comp_extras=$(jq -r '.components_to_uninstall | join(", ") // ""' "$ROLLBACK_PLAN_FILE" 2>/dev/null)
+    # Copy the structured plan into the state file so the Monitor's
+    # detail modal can render each list as its own table without
+    # re-parsing the CSV strings above.
+    _state_write "$(jq -c '{rollback_delta:{
+        vms_to_remove: (.vms_to_remove // []),
+        lxcs_to_remove: (.lxcs_to_remove // []),
+        components_to_uninstall: (.components_to_uninstall // [])
+    }}' "$ROLLBACK_PLAN_FILE" 2>/dev/null)" || true
     if [[ -n "$rb_vm_extras" || -n "$rb_lxc_extras" || -n "$rb_comp_extras" ]]; then
         echo ""
         echo "── Rollback delta report ──"
@@ -419,6 +578,7 @@ fi
 # configured, or a stale reference survived. Runs on every restore
 # (cheap); warnings feed the completion notification so it tells
 # the truth instead of a blanket "all fine".
+_state_step "Boot sanity check" || true
 SANITY_WARNINGS=""
 _sanity_warn() {
     if [[ -z "$SANITY_WARNINGS" ]]; then
@@ -453,6 +613,14 @@ if [[ -n "$SANITY_WARNINGS" ]]; then
     echo "── Boot sanity check ──"
     echo "$SANITY_WARNINGS"
     echo "Cross-version: ${HB_COMPAT_CROSS_VERSION:-0}"
+fi
+
+# Persist sanity warnings as a JSON array so the Monitor's detail
+# modal can render each warning as its own line. Empty warnings →
+# empty array, which the UI treats as "sanity OK".
+if command -v jq >/dev/null 2>&1; then
+    _state_write "$(jq -cn --arg s "$SANITY_WARNINGS" \
+        '{sanity_warnings: (if $s == "" then [] else ($s | split("; ")) end)}')" || true
 fi
 
 # ── Notify ProxMenux Monitor that we're done ───────────────────
@@ -508,6 +676,21 @@ if command -v curl >/dev/null 2>&1; then
         echo "Notification skipped (Monitor not reachable or disabled — HTTP $NOTIFY_HTTP)"
     fi
 fi
+
+# Persist a compact summary the Monitor's card can render inline.
+# Mirrors what the notification block sends; keeps a single source
+# of truth for both the alert channels and the Web UI.
+if command -v jq >/dev/null 2>&1; then
+    _state_write "$(jq -cn \
+        --arg hostname    "$(hostname)" \
+        --arg guests      "${copied_guests:-0}" \
+        --arg stubs       "${stub_created:-0}" \
+        --arg stale_nodes "${removed_nodes:-0}" \
+        --arg components  "${COMPONENTS_REINSTALLED_CSV:-none}" \
+        --arg duration    "$POSTBOOT_DURATION_FMT" \
+        '{summary:{hostname:$hostname, guests:$guests, stubs:$stubs, stale_nodes:$stale_nodes, components:$components, duration:$duration}}')" || true
+fi
+_state_finish "complete" || true
 
 echo ""
 echo "=== Apply finished at $(date -Iseconds) — total ${POSTBOOT_DURATION_FMT} ==="

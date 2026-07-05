@@ -299,6 +299,11 @@ const initMessage = {
     setTimeout(() => {
       if (fitAddonRef.current && termRef.current) {
         fitAddonRef.current.fit()
+        // Send the keyboard to the xterm instance so any --yesno /
+        // --menu the script opens receives Enter / arrow keys
+        // directly. Without this the modal's Close button (or any
+        // other focusable descendant) intercepts the keystrokes.
+        termRef.current.focus()
       }
     }, 100)
 
@@ -682,6 +687,13 @@ const initMessage = {
           }}
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
+          // Radix defaults to focusing the first focusable descendant
+          // when a Dialog opens — that used to land on the Close button
+          // and every Enter/Space keystroke intended for the shell
+          // dialogs INSIDE the terminal would close the modal instead.
+          // Preempting the auto-focus lets the xterm focus() call in
+          // initializeTerminal below own the keyboard from the start.
+          onOpenAutoFocus={(e) => e.preventDefault()}
           hideClose
         >
           <DialogTitle className="sr-only">{title}</DialogTitle>

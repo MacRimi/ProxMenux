@@ -237,6 +237,22 @@ def _list_target_disks() -> list[str]:
     return fresh
 
 
+def _is_disk_usb(disk_name: str) -> bool:
+    """True if the disk sits behind a USB bus, checked via the resolved
+    sysfs device path. USB-NVMe bridges (ASMedia, JMicron, Realtek) and
+    plain USB-HDDs both report `/sys/block/<disk>/removable = 0`, so the
+    older removable-flag heuristic missed them and the temperature
+    poller never tried the snt* driver variants that are the only way
+    to reach the NVMe controller behind those bridges."""
+    try:
+        base = disk_name[5:] if disk_name.startswith('/dev/') else disk_name
+        real = os.path.realpath(f'/sys/block/{base}')
+        return any(seg.startswith('usb') and (len(seg) == 3 or seg[3:].isdigit())
+                   for seg in real.split('/'))
+    except Exception:
+        return False
+
+
 def _smartctl_cmd_for(disk_name: str, probe: str) -> list[str]:
     """Build the smartctl invocation for a given probe key.
 
@@ -354,7 +370,15 @@ def _read_temperature(disk_name: str) -> Optional[float]:
         # Cached probe stopped working — fall through and re-detect.
 
     # Slow path: try every probe and remember the first one that works.
-    for probe in ("auto", "nvme", "ata", "sat"):
+    # For USB-attached disks we prepend the three snt* driver variants —
+    # USB-NVMe bridges (ASMedia / JMicron / Realtek) don't answer the
+    # plain probes with real SMART; only snt* passes through to the NVMe
+    # controller so temperature actually comes back. Non-USB disks skip
+    # them, so this adds zero overhead on internal drives.
+    probes: tuple[str, ...] = ("auto", "nvme", "ata", "sat")
+    if _is_disk_usb(disk_name):
+        probes = ("sntasmedia", "sntjmicron", "sntrealtek") + probes
+    for probe in probes:
         if probe == cached_probe:
             continue  # already tried above
         temp = _handle(_try_probe(disk_name, probe))

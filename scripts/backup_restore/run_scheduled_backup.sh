@@ -27,6 +27,9 @@ else
   exit 1
 fi
 
+load_language
+initialize_cache
+
 LIB_FILE="$SCRIPT_DIR/lib_host_backup_common.sh"
 [[ ! -f "$LIB_FILE" ]] && LIB_FILE="$LOCAL_SCRIPTS_DEFAULT/backup_restore/lib_host_backup_common.sh"
 if [[ -f "$LIB_FILE" ]]; then
@@ -516,15 +519,15 @@ main() {
       archive_path=$(grep "^LOCAL_ARCHIVE=" <<<"$_output" | cut -d'=' -f2-)
       ;;
     borg)
-      (( TTY )) && { echo; msg_info "$(translate "Sending snapshot to Borg repository...")"; stop_spinner; }
-      echo "Sending snapshot to Borg repository ${BORG_REPO:-} ..." >>"$log_file"
+      (( TTY )) && { echo; msg_info "$(translate "Sending backup to Borg repository...")"; stop_spinner; }
+      echo "Sending backup to Borg repository ${BORG_REPO:-} ..." >>"$log_file"
       _sb_run_borg "$stage_root" "${job_id}-${ts}" >>"$log_file" 2>&1
       rc=$?
       archive_path="${BORG_REPO:-}::${job_id}-${ts}"
       ;;
     pbs)
-      (( TTY )) && { echo; msg_info "$(translate "Sending snapshot to PBS...")"; stop_spinner; }
-      echo "Sending snapshot to PBS ${PBS_REPOSITORY:-} (id=${PBS_BACKUP_ID:-hostcfg-$(hostname)}) ..." >>"$log_file"
+      (( TTY )) && { echo; msg_info "$(translate "Sending backup to PBS...")"; stop_spinner; }
+      echo "Sending backup to PBS ${PBS_REPOSITORY:-} (id=${PBS_BACKUP_ID:-hostcfg-$(hostname)}) ..." >>"$log_file"
       _sb_run_pbs "$stage_root" "${PBS_BACKUP_ID:-hostcfg-$(hostname)}" "$(date +%s)" >>"$log_file" 2>&1
       rc=$?
       archive_path="${PBS_REPOSITORY:-}::host/${PBS_BACKUP_ID:-hostcfg-$(hostname)}"

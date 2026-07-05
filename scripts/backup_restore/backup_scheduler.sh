@@ -75,6 +75,22 @@ _list_jobs() {
   done | sort
 }
 
+# Same as _list_jobs but skips one-shot manual runs (Sprint B).
+# Manual entries are `.env` files with `MANUAL_RUN=1` — they're
+# closed executions, not configured tasks. Used by "Show jobs"
+# and "Run a job now" so those views only surface real backup
+# tasks; Delete / Toggle keep using _list_jobs so the operator
+# can still clean up leftover manual entries from those menus.
+_list_scheduled_jobs() {
+  local f id
+  for f in "$JOBS_DIR"/*.env; do
+    [[ -f "$f" ]] || continue
+    grep -q '^MANUAL_RUN=1$' "$f" 2>/dev/null && continue
+    id=$(basename "$f" .env)
+    printf '%s\n' "$id"
+  done | sort
+}
+
 # Returns 0 if the job is attached to a PVE vzdump storage (no systemd
 # timer — the trigger comes from the vzdump hook, matched by PVE_STORAGE
 # against $STOREID set by PVE for every backup phase).
@@ -443,9 +459,18 @@ _create_job() {
 _pick_job() {
   local title="$1"
   local __out_var="$2"
+  # Optional scope: "all" (default) surfaces every .env in JOBS_DIR
+  # including one-shot manual runs; "scheduled" filters those out so
+  # Run-now only shows real configured tasks. Delete / Toggle keep
+  # the default so the operator can still clean up manual leftovers.
+  local scope="${3:-all}"
 
   local -a ids=()
-  mapfile -t ids < <(_list_jobs)
+  if [[ "$scope" == "scheduled" ]]; then
+    mapfile -t ids < <(_list_scheduled_jobs)
+  else
+    mapfile -t ids < <(_list_jobs)
+  fi
   if [[ ${#ids[@]} -eq 0 ]]; then
     dialog --backtitle "ProxMenux" --title "$(translate "No jobs")" \
       --msgbox "$(translate "No scheduled backup jobs found.")" 8 62
@@ -495,8 +520,11 @@ _render_action_screen() {
 }
 
 _job_run_now() {
+  # "scheduled" scope — one-shot manual runs are closed executions,
+  # not tasks to re-fire. Filtering them out of this picker prevents
+  # accidental re-runs of an operator's past manual backups.
   local id=""
-  _pick_job "$(translate "Run job now")" id || return 1
+  _pick_job "$(translate "Run job now")" id scheduled || return 1
   # Defensive guard against a future regression of the nameref-shadowing
   # bug that left $id empty here on 2026-06-07. Without this, the runner
   # gets called with no argument and emits "Usage: ... <job_id>".
@@ -527,8 +555,12 @@ _job_run_now() {
 }
 
 _job_toggle() {
+  # "scheduled" scope — one-shot manual runs carry ENABLED=0 by
+  # definition and can't be re-fired from a timer, so offering them
+  # in this picker was noise. Delete keeps the "all" scope so the
+  # operator can still clean up manual entries from that menu.
   local id=""
-  _pick_job "$(translate "Enable/Disable job")" id || return 1
+  _pick_job "$(translate "Enable/Disable job")" id scheduled || return 1
   if [[ -z "$id" ]]; then
     _render_action_screen "$(translate "Enable/Disable job")"
     msg_error "$(translate "Job selection returned empty id — aborting.")"
@@ -610,21 +642,79 @@ _job_delete() {
 _show_jobs() {
   local tmp
   tmp=$(mktemp) || return
+
+  # Per-job block: header line with status badge + 3 detail lines
+  # summarising the backend destination and the last run — same
+  # information the Monitor UI shows on the Backups tab, condensed
+  # for the shell dialog.
+  local -a job_ids=()
+  local id
+  while IFS= read -r id; do
+    [[ -z "$id" ]] && continue
+    job_ids+=("$id")
+  done < <(_list_scheduled_jobs)
+
   {
     echo "=== $(translate "Scheduled backup jobs") ==="
     echo ""
-    local id
-    while IFS= read -r id; do
-      [[ -z "$id" ]] && continue
-      echo "• $id   [$(_show_job_status "$id")]"
-      if [[ -f "${LOG_DIR}/${id}-last.status" ]]; then
-        sed 's/^/    /' "${LOG_DIR}/${id}-last.status"
-      fi
-      echo ""
-    done < <(_list_jobs)
+    if [[ ${#job_ids[@]} -eq 0 ]]; then
+      translate "No scheduled backup jobs configured."
+    else
+      local status backend dest label profile last_run last_result
+      for id in "${job_ids[@]}"; do
+        status=$(_show_job_status "$id")
+        backend=$(_job_env_get "$id" BACKEND || echo "")
+        profile=$(_job_env_get "$id" PROFILE_MODE || echo default)
+        case "$backend" in
+          pbs)
+            local pbs_repo pbs_bid
+            pbs_repo=$(_job_env_get "$id" PBS_REPOSITORY || echo "?")
+            pbs_bid=$(_job_env_get "$id" PBS_BACKUP_ID || echo "?")
+            dest="$pbs_repo  (id=$pbs_bid)"
+            label="PBS"
+            ;;
+          local)
+            dest=$(_job_env_get "$id" LOCAL_DEST_DIR || echo "?")
+            label="Local archive"
+            ;;
+          borg)
+            dest=$(_job_env_get "$id" BORG_REPO || echo "?")
+            label="Borg"
+            ;;
+          *)
+            dest="?"
+            label="${backend:-?}"
+            ;;
+        esac
+        last_run=""; last_result=""
+        if [[ -f "${LOG_DIR}/${id}-last.status" ]]; then
+          local last_at
+          last_at=$(grep -m1 '^RUN_AT=' "${LOG_DIR}/${id}-last.status" | cut -d= -f2-)
+          last_result=$(grep -m1 '^RESULT=' "${LOG_DIR}/${id}-last.status" | cut -d= -f2-)
+          # Trim the timezone suffix for readability (14:13:54 vs 14:13:54+02:00)
+          last_run="${last_at%%+*}"
+          last_run="${last_run%%-[0-9][0-9]:[0-9][0-9]}"
+          last_run="${last_run/T/ }"
+        fi
+
+        printf "• %s   [%s]\n" "$id" "$status"
+        printf "    %-9s %s · %s\n" "$(translate "Backend:")" "$label" "$dest"
+        printf "    %-9s %s\n" "$(translate "Profile:")" "$profile"
+        if [[ -n "$last_run" ]]; then
+          printf "    %-9s %s  →  %s\n" "$(translate "Last run:")" "$last_run" "${last_result:-?}"
+        else
+          printf "    %-9s %s\n" "$(translate "Last run:")" "$(translate "never")"
+        fi
+        echo ""
+      done
+    fi
   } > "$tmp"
+
+  # Same window size as the parent scheduler menu — keeps the
+  # dimensions consistent across the flow instead of one dialog
+  # shrinking or growing per view.
   dialog --backtitle "ProxMenux" --title "$(translate "Scheduled backup jobs")" \
-    --textbox "$tmp" 28 100 || true
+    --textbox "$tmp" "$HB_UI_MENU_H" "$HB_UI_MENU_W" || true
   rm -f "$tmp"
 }
 

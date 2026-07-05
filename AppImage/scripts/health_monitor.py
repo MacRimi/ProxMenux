@@ -83,6 +83,22 @@ def _is_disk_removable(disk_name: str) -> bool:
     except Exception:
         return False
 
+
+def _is_disk_usb(disk_name: str) -> bool:
+    """True if the disk sits behind a USB bus. Reads the resolved sysfs
+    device path — reliable for USB-NVMe bridges and USB-attached HDDs
+    that report `removable=0` even though they ARE USB (so the older
+    `_is_disk_removable` heuristic skipped snt* driver probes and left
+    NVMe-behind-a-bridge disks with the bridge's own chatter cached
+    forever)."""
+    try:
+        base = _disk_base_for_sysfs(disk_name)
+        real = os.path.realpath(f'/sys/block/{base}')
+        return any(seg.startswith('usb') and (len(seg) == 3 or seg[3:].isdigit())
+                   for seg in real.split('/'))
+    except Exception:
+        return False
+
 class HealthMonitor:
     """
     Monitors system health across multiple components with minimal impact.
@@ -2431,13 +2447,16 @@ class HealthMonitor:
         try:
             dev_path = f'/dev/{disk_name}' if not disk_name.startswith('/') else disk_name
 
-            # Removable disks may be USB-NVMe bridges: try the snt* driver
-            # variants first so identity reflects the drive (Samsung 990 PRO)
-            # rather than the enclosure (ASMT 2462 NVME). If all snt* fail,
-            # fall through to the plain call — that's still correct for
-            # USB-SATA sticks and non-USB devices.
+            # USB-attached disks may sit behind an NVMe bridge: try the
+            # snt* driver variants first so identity reflects the drive
+            # (Samsung 990 PRO) rather than the enclosure (ASMT 2462 NVME).
+            # If all snt* fail, fall through to the plain call — that's
+            # still correct for USB-SATA sticks and non-USB devices.
+            # USB detection is by sysfs path (`_is_disk_usb`) rather than
+            # the `removable` flag, since USB-NVMe and USB-HDD both report
+            # `removable=0` even though they ARE USB.
             attempts = []
-            if _is_disk_removable(disk_name):
+            if _is_disk_usb(disk_name) or _is_disk_removable(disk_name):
                 for drv in _USB_NVME_DRIVERS:
                     attempts.append(['smartctl', '-i', '-j', '-d', drv, dev_path])
             attempts.append(['smartctl', '-i', '-j', dev_path])
@@ -2495,12 +2514,14 @@ class HealthMonitor:
             # sleep — issue #232. The "UNKNOWN" branch below correctly
             # keeps the previous cached result alive on exit code 2.
             #
-            # Removable disks may be USB-NVMe bridges: try snt* drivers
-            # first so health reflects the actual NVMe controller. A
-            # bridge that fakes "PASSED" while the drive behind it is
+            # USB-attached disks may sit behind an NVMe bridge: try snt*
+            # drivers first so health reflects the actual NVMe controller.
+            # A bridge that fakes "PASSED" while the drive behind it is
             # failing is exactly the false-negative we want to avoid.
+            # USB detection uses the sysfs path so USB-NVMe bridges (which
+            # report removable=0) are caught too.
             attempts = []
-            if _is_disk_removable(disk_name):
+            if _is_disk_usb(disk_name) or _is_disk_removable(disk_name):
                 for drv in _USB_NVME_DRIVERS:
                     attempts.append(['smartctl', '-n', 'standby', '--health', '-j', '-d', drv, dev_path])
             attempts.append(['smartctl', '-n', 'standby', '--health', '-j', dev_path])

@@ -46,6 +46,7 @@ import {
   History,
 } from "lucide-react"
 import { ScriptTerminalModal } from "./script-terminal-modal"
+import { RestoreProgressCard } from "./restore-progress-card"
 import { fetchApi, getApiUrl } from "../lib/api-config"
 import { fetchTerminalTicket } from "../lib/terminal-ws"
 import { formatStorage, formatBytes } from "../lib/utils"
@@ -415,6 +416,12 @@ export function HostBackup() {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {/* ── Post-restore progress card ────────────────────
+          Renders only while a restore is running or its
+          summary hasn't been acknowledged. Once dismissed,
+          it collapses to a "Past restores" ghost button. */}
+      <RestoreProgressCard />
+
       {/* ── Scheduled jobs ───────────────────────────────── */}
       <Card className="bg-card border-border">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
@@ -2347,12 +2354,21 @@ function CreateJobDialog({
     if (mode === "attach" && !selectedPveJob) return
     setSubmitting(true)
     setError(null)
-    // "Import existing" mode: push the user-supplied keyfile to the
-    // canonical shared path BEFORE anything else. This mirrors the
-    // shell wizard where hb_pbs_import_keyfile runs before recovery
-    // setup and before the job .env is written. If the upload fails
-    // we bail loudly instead of silently downgrading to "generate new".
-    if (backend === "pbs" && pbsEncryptMode === "existing") {
+    // Encryption submit paths:
+    //   • enabled + keyfile already on disk → mode = "existing", no upload
+    //     (backend reuses the canonical file at _PBS_KEYFILE_PATH).
+    //   • enabled + no keyfile + Generate    → mode = "new", backend creates it.
+    //   • enabled + no keyfile + Import      → upload the file first, then
+    //     mode = "existing" so the backend uses the freshly-installed key.
+    //
+    // Only the third branch actually needs to POST to
+    // /api/host-backups/pbs-encryption/import — the second is handled
+    // server-side, and the first has nothing to upload.
+    const needsImport =
+      backend === "pbs" &&
+      pbsEncryptMode === "existing" &&
+      !pbsRecoveryStatus?.has_keyfile
+    if (needsImport) {
       if (!pbsImportFile) {
         setError("Pick a keyfile to import.")
         setSubmitting(false)
@@ -2995,51 +3011,100 @@ function CreateJobDialog({
                       PBS organises backups into named groups, each with its own retention. Leave blank to use the automatic default for this host (recommended).
                     </p>
                   </div>
-                  {/* PBS client-side encryption — same flow as the
-                      shell wizard. The keyfile can be freshly generated
-                      per host or imported from an existing one the
-                      operator uses across every host. */}
+                  {/* PBS client-side encryption — mirrors the shell wizard:
+                      step 1 is a plain yes/no, step 2 only appears when
+                      no keyfile is installed yet. Once a keyfile exists,
+                      every future encrypted job silently reuses it. */}
                   <div className="pt-2 border-t border-border space-y-3">
-                    <div className="space-y-2">
-                      <Label className="inline-flex items-center gap-1.5">
-                        <Lock className="h-3.5 w-3.5 text-emerald-400" />
-                        Encrypt backups (client-side keyfile)
-                      </Label>
-                      <Select
-                        value={pbsEncryptMode}
-                        onValueChange={(v) => setPbsEncryptMode(v as "none" | "new" | "existing")}
-                      >
-                        <SelectTrigger className="h-9 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No encryption</SelectItem>
-                          <SelectItem value="new">Generate a new keyfile (per host — safest isolation)</SelectItem>
-                          <SelectItem value="existing">Import an existing keyfile (shared across hosts)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-[11px] text-muted-foreground">
-                        Adds <code className="font-mono">--keyfile</code> to <code className="font-mono">proxmox-backup-client backup</code>. Encryption happens before upload so chunks land on PBS already ciphered. The keyfile is installed at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> (chmod 0600) and reused by every encrypted PBS job on this host.
-                      </p>
-                    </div>
-                    {pbsEncryptMode === "existing" && (
-                      <div className="space-y-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
-                        <Label htmlFor="pbsImportFile" className="text-[11px] font-medium">
-                          Keyfile to import
-                        </Label>
-                        <Input
-                          id="pbsImportFile"
-                          type="file"
-                          accept=".conf,.key,application/json,text/plain"
-                          onChange={(e) => setPbsImportFile(e.target.files?.[0] ?? null)}
-                          disabled={pbsImportBusy}
-                          className="h-8 text-[11px]"
-                        />
-                        <p className="text-[10px] text-muted-foreground">
-                          The file is validated with <code className="font-mono">proxmox-backup-client key info</code> before being installed. If validation fails the job is not created and the existing keyfile (if any) stays in place.
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={pbsEncrypt}
+                        onCheckedChange={(v) => {
+                          const checked = !!v
+                          if (!checked) {
+                            setPbsEncryptMode("none")
+                          } else {
+                            // Yes → if the host already has a keyfile, submit
+                            // "existing" (reuse it silently). If not, default
+                            // to "new" (Generate) — the operator can flip to
+                            // "existing" (Import) via the radio below.
+                            setPbsEncryptMode(pbsRecoveryStatus?.has_keyfile ? "existing" : "new")
+                          }
+                        }}
+                        className="mt-0.5"
+                      />
+                      <div className="flex-1">
+                        <div className="inline-flex items-center gap-1.5 text-sm">
+                          <Lock className="h-3.5 w-3.5 text-emerald-400" />
+                          Encrypt backups (client-side keyfile)
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          Adds <code className="font-mono">--keyfile</code> to <code className="font-mono">proxmox-backup-client backup</code>. Encryption happens before upload so chunks land on PBS already ciphered. The keyfile is installed at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> (chmod 0600) and reused by every encrypted PBS job on this host.
                         </p>
                       </div>
+                    </label>
+
+                    {pbsEncrypt && pbsRecoveryStatus?.has_keyfile && (
+                      <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-[11px] text-muted-foreground flex items-start gap-2">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
+                        <div>
+                          An encryption key is already installed on this host — it will be reused for this job. To replace it, first import a new one from Settings → Host backup or remove the existing keyfile.
+                        </div>
+                      </div>
                     )}
+
+                    {pbsEncrypt && !pbsRecoveryStatus?.has_keyfile && (
+                      <div className="space-y-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
+                        <div className="text-[11px] font-medium">
+                          No encryption key is stored on this host. Choose how to set one up:
+                        </div>
+                        <label className="flex items-start gap-2 cursor-pointer text-[11px]">
+                          <input
+                            type="radio"
+                            name="pbsEncryptSetupCreate"
+                            checked={pbsEncryptMode === "new"}
+                            onChange={() => setPbsEncryptMode("new")}
+                            className="mt-1"
+                          />
+                          <div className="flex-1">
+                            <div className="font-medium">Generate a new keyfile (per host — safest isolation)</div>
+                            <div className="text-muted-foreground">Creates a fresh keyfile at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code>. Backup up the recovery passphrase (below) to survive host loss.</div>
+                          </div>
+                        </label>
+                        <label className="flex items-start gap-2 cursor-pointer text-[11px]">
+                          <input
+                            type="radio"
+                            name="pbsEncryptSetupCreate"
+                            checked={pbsEncryptMode === "existing"}
+                            onChange={() => setPbsEncryptMode("existing")}
+                            className="mt-1"
+                          />
+                          <div className="flex-1">
+                            <div className="font-medium">Import an existing keyfile (shared across hosts)</div>
+                            <div className="text-muted-foreground">Use the same keyfile another host already has — enables cross-host restore of encrypted backups.</div>
+                          </div>
+                        </label>
+                        {pbsEncryptMode === "existing" && (
+                          <div className="space-y-1.5 pt-1">
+                            <Label htmlFor="pbsImportFile" className="text-[11px] font-medium">
+                              Keyfile to import
+                            </Label>
+                            <Input
+                              id="pbsImportFile"
+                              type="file"
+                              accept=".conf,.key,application/json,text/plain"
+                              onChange={(e) => setPbsImportFile(e.target.files?.[0] ?? null)}
+                              disabled={pbsImportBusy}
+                              className="h-8 text-[11px]"
+                            />
+                            <p className="text-[10px] text-muted-foreground">
+                              Validated with <code className="font-mono">proxmox-backup-client key info</code> before install. On validation failure the job is not created and no keyfile is written.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {pbsEncrypt && (
                       <div className="pl-7 space-y-2 rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
                         <div className="text-[11px] font-medium text-foreground flex items-center gap-1.5">
@@ -3562,10 +3627,14 @@ function ManualBackupDialog({
     if (!canSubmit) return
     setSubmitting(true)
     setError(null)
-    // "Import existing" mode: same shape as CreateJobDialog — push the
-    // keyfile to the canonical path before anything else, bail loudly
-    // if validation fails so we don't silently fall back to "new".
-    if (backend === "pbs" && pbsEncryptMode === "existing") {
+    // Same three encryption submit paths as CreateJobDialog. Only
+    // "Import + no keyfile installed yet" actually uploads; the on-disk
+    // reuse case sends mode=existing without touching the file.
+    const needsImport =
+      backend === "pbs" &&
+      pbsEncryptMode === "existing" &&
+      !pbsRecoveryStatus?.has_keyfile
+    if (needsImport) {
       if (!pbsImportFile) {
         setError("Pick a keyfile to import.")
         setSubmitting(false)
@@ -3827,46 +3896,91 @@ function ManualBackupDialog({
                     />
                   </div>
                   <div className="pt-2 border-t border-border space-y-3">
-                    <div className="space-y-2">
-                      <Label className="inline-flex items-center gap-1.5">
-                        <Lock className="h-3.5 w-3.5 text-emerald-400" />
-                        Encrypt this backup (client-side keyfile)
-                      </Label>
-                      <Select
-                        value={pbsEncryptMode}
-                        onValueChange={(v) => setPbsEncryptMode(v as "none" | "new" | "existing")}
-                      >
-                        <SelectTrigger className="h-9 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No encryption</SelectItem>
-                          <SelectItem value="new">Generate a new keyfile (per host — safest isolation)</SelectItem>
-                          <SelectItem value="existing">Import an existing keyfile (shared across hosts)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-[11px] text-muted-foreground">
-                        Uses the shared keyfile at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code>.
-                      </p>
-                    </div>
-                    {pbsEncryptMode === "existing" && (
-                      <div className="space-y-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
-                        <Label htmlFor="manualPbsImportFile" className="text-[11px] font-medium">
-                          Keyfile to import
-                        </Label>
-                        <Input
-                          id="manualPbsImportFile"
-                          type="file"
-                          accept=".conf,.key,application/json,text/plain"
-                          onChange={(e) => setPbsImportFile(e.target.files?.[0] ?? null)}
-                          disabled={pbsImportBusy}
-                          className="h-8 text-[11px]"
-                        />
-                        <p className="text-[10px] text-muted-foreground">
-                          Validated with <code className="font-mono">proxmox-backup-client key info</code> before install.
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={pbsEncrypt}
+                        onCheckedChange={(v) => {
+                          const checked = !!v
+                          if (!checked) {
+                            setPbsEncryptMode("none")
+                          } else {
+                            setPbsEncryptMode(pbsRecoveryStatus?.has_keyfile ? "existing" : "new")
+                          }
+                        }}
+                        className="mt-0.5"
+                      />
+                      <div className="flex-1">
+                        <div className="inline-flex items-center gap-1.5 text-sm">
+                          <Lock className="h-3.5 w-3.5 text-emerald-400" />
+                          Encrypt this backup (client-side keyfile)
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          Uses the shared keyfile at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code>.
                         </p>
                       </div>
+                    </label>
+
+                    {pbsEncrypt && pbsRecoveryStatus?.has_keyfile && (
+                      <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-[11px] text-muted-foreground flex items-start gap-2">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
+                        <div>
+                          An encryption key is already installed on this host — it will be reused for this backup.
+                        </div>
+                      </div>
                     )}
+
+                    {pbsEncrypt && !pbsRecoveryStatus?.has_keyfile && (
+                      <div className="space-y-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
+                        <div className="text-[11px] font-medium">
+                          No encryption key is stored on this host. Choose how to set one up:
+                        </div>
+                        <label className="flex items-start gap-2 cursor-pointer text-[11px]">
+                          <input
+                            type="radio"
+                            name="manualPbsEncryptSetup"
+                            checked={pbsEncryptMode === "new"}
+                            onChange={() => setPbsEncryptMode("new")}
+                            className="mt-1"
+                          />
+                          <div className="flex-1">
+                            <div className="font-medium">Generate a new keyfile (per host — safest isolation)</div>
+                            <div className="text-muted-foreground">Creates a fresh keyfile. Set a recovery passphrase (below) to survive host loss.</div>
+                          </div>
+                        </label>
+                        <label className="flex items-start gap-2 cursor-pointer text-[11px]">
+                          <input
+                            type="radio"
+                            name="manualPbsEncryptSetup"
+                            checked={pbsEncryptMode === "existing"}
+                            onChange={() => setPbsEncryptMode("existing")}
+                            className="mt-1"
+                          />
+                          <div className="flex-1">
+                            <div className="font-medium">Import an existing keyfile (shared across hosts)</div>
+                            <div className="text-muted-foreground">Reuse the same keyfile another host already has.</div>
+                          </div>
+                        </label>
+                        {pbsEncryptMode === "existing" && (
+                          <div className="space-y-1.5 pt-1">
+                            <Label htmlFor="manualPbsImportFile" className="text-[11px] font-medium">
+                              Keyfile to import
+                            </Label>
+                            <Input
+                              id="manualPbsImportFile"
+                              type="file"
+                              accept=".conf,.key,application/json,text/plain"
+                              onChange={(e) => setPbsImportFile(e.target.files?.[0] ?? null)}
+                              disabled={pbsImportBusy}
+                              className="h-8 text-[11px]"
+                            />
+                            <p className="text-[10px] text-muted-foreground">
+                              Validated with <code className="font-mono">proxmox-backup-client key info</code> before install.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {pbsEncrypt && (
                       <div className="pl-7 space-y-2 rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
                         <div className="text-[11px] font-medium text-foreground flex items-center gap-1.5">
@@ -4436,7 +4550,7 @@ function DestinationsSection({
               PBS keyfile is missing — recover it from PBS
             </div>
             <div className="text-[11px] text-muted-foreground mt-0.5">
-              An encrypted recovery copy of the keyfile is available ({pbsRecoveryAvailable!.snapshots.length} snapshot{pbsRecoveryAvailable!.snapshots.length === 1 ? "" : "s"}). Click to rebuild the keyfile using your recovery passphrase.
+              An encrypted recovery copy of the keyfile is available ({pbsRecoveryAvailable!.snapshots.length} backup{pbsRecoveryAvailable!.snapshots.length === 1 ? "" : "s"}). Click to rebuild the keyfile using your recovery passphrase.
             </div>
           </div>
           <span className="text-xs text-emerald-300 shrink-0 self-center">Recover →</span>
@@ -7597,6 +7711,17 @@ function RestoreOptionsModal({
 
         {step === "choose" && (
           <div className="space-y-3">
+            {/* Post-restore Monitor hint — the Backups tab renders a live
+                progress card driven by /var/lib/proxmenux/restore-state.json,
+                so the operator has a place to watch component reinstalls,
+                sanity warnings, and the rollback delta after the reboot. */}
+            <div className="rounded-md border border-blue-500/40 bg-blue-500/5 p-3 text-[11px] text-muted-foreground flex items-start gap-2">
+              <History className="h-3.5 w-3.5 text-blue-400 shrink-0 mt-0.5" />
+              <div>
+                After the reboot, this Backups tab will show a live post-restore progress card with ETA, per-component status, log tail and rollback delta. If Telegram/Discord/ntfy notifications are configured, you'll also receive the "Host restore finished" event.
+              </div>
+            </div>
+
             {isBkOlder && (
               <div className="rounded-md border border-amber-500/50 bg-amber-500/5 p-3">
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">

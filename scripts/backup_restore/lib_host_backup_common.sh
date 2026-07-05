@@ -953,20 +953,18 @@ hb_pbs_import_keyfile() {
     return 0
 }
 
-hb_pbs_setup_recovery() {
-    local key_file="$HB_STATE_DIR/pbs-key.conf"
-    local recovery_enc="$HB_STATE_DIR/pbs-key.recovery.enc"
-
-    # Choosing "encrypt" already implies wanting to protect the keyfile.
-    # No second yes/no — go straight to the passphrase input. Cancel at
-    # any passphrase prompt propagates up as return 1 so the caller can
-    # drop the operator back to the previous menu.
+# Prompt for a recovery passphrase pair; on OK returns the passphrase on
+# stdout. Cancel or empty input returns non-zero WITHOUT creating any
+# file. The caller decides when — and whether — to persist a keyfile
+# and its recovery blob after this. Splitting the prompt out of the
+# side-effectful phase means "user cancels passphrase" leaves the disk
+# in exactly the state it was before the encryption flow started.
+_hb_pbs_prompt_recovery_pass() {
     if ! command -v openssl >/dev/null 2>&1; then
         dialog --backtitle "ProxMenux" --title "$(hb_translate "Recovery setup failed")" \
             --msgbox "$(hb_translate "openssl is not installed — cannot create recovery copy. Install openssl and retry.")" 9 70
         return 1
     fi
-
     local pass1 pass2
     while true; do
         pass1=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Recovery passphrase")" \
@@ -980,8 +978,20 @@ hb_pbs_setup_recovery() {
         dialog --backtitle "ProxMenux" \
             --msgbox "$(hb_translate "Passphrases do not match. Try again.")" 8 50
     done
+    printf '%s' "$pass1"
+}
 
-    if ! printf '%s' "$pass1" | hb_pbs_encrypt_recovery "$key_file" "$recovery_enc"; then
+# Encrypt the on-disk keyfile with the supplied passphrase, drop an
+# offsite copy under /root, and show the operator the success dialog.
+# Precondition: the keyfile exists at $HB_STATE_DIR/pbs-key.conf.
+# Returns non-zero only on openssl failure (rare). The caller is
+# responsible for undoing whatever it just did if this fails.
+_hb_pbs_finalize_recovery() {
+    local pass="$1"
+    local key_file="$HB_STATE_DIR/pbs-key.conf"
+    local recovery_enc="$HB_STATE_DIR/pbs-key.recovery.enc"
+
+    if ! printf '%s' "$pass" | hb_pbs_encrypt_recovery "$key_file" "$recovery_enc"; then
         dialog --backtitle "ProxMenux" --title "$(hb_translate "Recovery setup failed")" \
             --msgbox "$(hb_translate "openssl encryption failed.")" 9 70
         return 1
@@ -1007,6 +1017,15 @@ hb_pbs_setup_recovery() {
     dialog --backtitle "ProxMenux" --title "$(hb_translate "Recovery ready")" \
         --msgbox "$success_msg" 18 80
     return 0
+}
+
+# Public wrapper preserved for external callers that already have a
+# keyfile on disk and just want the recovery blob generated. Combines
+# the prompt + finalize phases.
+hb_pbs_setup_recovery() {
+    local pass
+    pass=$(_hb_pbs_prompt_recovery_pass) || return 1
+    _hb_pbs_finalize_recovery "$pass"
 }
 
 # Upload the local recovery .enc to PBS as a separate snapshot
@@ -1111,7 +1130,7 @@ hb_pbs_try_keyfile_recovery() {
     local recovery_snapshot="host/${picked_id}/${iso}"
 
     dialog --backtitle "ProxMenux" --title "$(hb_translate "Keyfile recovery available")" \
-        --yesno "$(hb_translate "Local keyfile is missing but a recovery copy was found in PBS.")"$'\n\n'"$(hb_translate "Snapshot:") $recovery_snapshot"$'\n\n'"$(hb_translate "Recover the keyfile using your recovery passphrase?")" \
+        --yesno "$(hb_translate "Local keyfile is missing but a recovery copy was found in PBS.")"$'\n\n'"$(hb_translate "Backup:") $recovery_snapshot"$'\n\n'"$(hb_translate "Recover the keyfile using your recovery passphrase?")" \
         13 78 || return 1
 
     # Download the blob once; we may retry passphrase entry without
@@ -1160,166 +1179,176 @@ hb_pbs_try_keyfile_recovery() {
 }
 
 
-# Internal helper: create a fresh PBS keyfile at the canonical path,
-# offer the recovery passphrase, and export HB_PBS_KEYFILE_OPT.
-# Returns 0 on success, 1 on any failure or cancel (leaves state
-# clean — canonical path is wiped on cancel so the next attempt
-# starts fresh).
+# Internal helper: create a fresh PBS keyfile at the canonical path
+# and its paired recovery blob. The passphrase is prompted BEFORE the
+# keyfile hits disk — so if the operator cancels at the passphrase
+# prompt, nothing is created and nothing needs cleaning up. The only
+# time we ever have to remove a keyfile here is if openssl fails to
+# encrypt the recovery blob (rare); that's a real error, not a cancel.
 _hb_pbs_create_new_keyfile() {
     local key_file="$HB_STATE_DIR/pbs-key.conf"
     local recovery_enc="$HB_STATE_DIR/pbs-key.recovery.enc"
 
+    # 1. Collect the recovery passphrase. Cancel here → zero side effect.
+    local pass
+    pass=$(_hb_pbs_prompt_recovery_pass) || return 1
+
+    # 2. Create the keyfile. Point of no return: any failure past here
+    #    leaves us with state to clean up.
     msg_info "$(hb_translate "Creating PBS encryption key...")"
     mkdir -p "$HB_STATE_DIR"
     local create_stderr
     create_stderr=$(proxmox-backup-client key create --kdf none "$key_file" </dev/null 2>&1 >/dev/null)
     local create_rc=$?
-    if [[ $create_rc -eq 0 && -s "$key_file" ]]; then
-        chmod 600 "$key_file"
-        msg_ok "$(hb_translate "Encryption key created:") $key_file"
-        HB_PBS_KEYFILE_OPT="--keyfile $key_file"
-        if ! hb_pbs_setup_recovery; then
-            rm -f "$key_file" "$recovery_enc" 2>/dev/null
-            HB_PBS_KEYFILE_OPT=""
-            return 1
-        fi
-        return 0
+    if [[ $create_rc -ne 0 || ! -s "$key_file" ]]; then
+        # Sweep any zero-byte residue and surface the real error.
+        [[ -f "$key_file" && ! -s "$key_file" ]] && rm -f "$key_file" 2>/dev/null
+        local err_msg
+        err_msg="$(hb_translate "Failed to create encryption key. Backup cancelled — fix the underlying issue and retry.")"$'\n\n'
+        err_msg+="$(hb_translate "Tool exit code:") $create_rc"$'\n'
+        err_msg+="$(hb_translate "Tool output:")"$'\n'
+        err_msg+="${create_stderr:-(empty)}"
+        dialog --backtitle "ProxMenux" --title "$(hb_translate "Encryption key creation failed")" \
+            --msgbox "$err_msg" 14 78
+        HB_PBS_KEYFILE_OPT=""
+        return 1
+    fi
+    chmod 600 "$key_file"
+    msg_ok "$(hb_translate "Encryption key created:") $key_file"
+
+    # 3. Encrypt the recovery blob with the already-collected passphrase.
+    #    Only an openssl-level failure lands us in the wipe branch.
+    if ! _hb_pbs_finalize_recovery "$pass"; then
+        rm -f "$key_file" "$recovery_enc" 2>/dev/null
+        HB_PBS_KEYFILE_OPT=""
+        return 1
     fi
 
-    # Create failed — sweep zero-byte residue and surface the real error.
-    [[ -f "$key_file" && ! -s "$key_file" ]] && rm -f "$key_file" 2>/dev/null
-    local err_msg
-    err_msg="$(hb_translate "Failed to create encryption key. Backup cancelled — fix the underlying issue and retry.")"$'\n\n'
-    err_msg+="$(hb_translate "Tool exit code:") $create_rc"$'\n'
-    err_msg+="$(hb_translate "Tool output:")"$'\n'
-    err_msg+="${create_stderr:-(empty)}"
-    dialog --backtitle "ProxMenux" --title "$(hb_translate "Encryption key creation failed")" \
-        --msgbox "$err_msg" 14 78
-    HB_PBS_KEYFILE_OPT=""
-    return 1
+    HB_PBS_KEYFILE_OPT="--keyfile $key_file"
+    return 0
 }
 
-# Internal helper: prompt the operator for a source path, validate
-# with hb_pbs_import_keyfile, install at the canonical path, offer
-# the recovery passphrase, and export HB_PBS_KEYFILE_OPT. Returns
-# 0 on success, 1 on cancel or failure (state is left clean).
+# Internal helper: prompt for the source path, validate WITHOUT
+# copying, ask the recovery passphrase, and only then install the
+# keyfile at the canonical path. Cancel at any dialog before the
+# install step leaves the disk untouched — no "phantom" keyfile.
 _hb_pbs_import_dialog() {
     local key_file="$HB_STATE_DIR/pbs-key.conf"
+    local recovery_enc="$HB_STATE_DIR/pbs-key.recovery.enc"
     local src
 
+    # 1. Ask the path.
     src=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Import PBS keyfile")" \
         --inputbox "$(hb_translate "Absolute path to your existing PBS keyfile:")"$'\n\n'"$(hb_translate "The file is validated with 'proxmox-backup-client key info' and copied to")"$'\n'"$key_file $(hb_translate "with chmod 600.")" \
         14 78 "" 3>&1 1>&2 2>&3) || return 1
     src="$(echo "$src" | xargs)"
     [[ -z "$src" ]] && return 1
 
-    hb_pbs_import_keyfile "$src"
-    local rc=$?
-    case $rc in
-        0)
-            msg_ok "$(hb_translate "Imported existing encryption key:") $key_file"
-            HB_PBS_KEYFILE_OPT="--keyfile $key_file"
-            # Recovery blob is still offered. When the same key lives
-            # on multiple hosts, a single blob works for all — but
-            # re-uploading from each host is idempotent and lets the
-            # operator recover the key from PBS even if only ONE host
-            # is left standing.
-            if ! hb_pbs_setup_recovery; then
-                HB_PBS_KEYFILE_OPT=""
-                return 1
-            fi
-            return 0
-            ;;
-        1)
-            dialog --backtitle "ProxMenux" --title "$(hb_translate "Import failed")" \
-                --msgbox "$(hb_translate "The file does not exist, is empty or is not readable.")"$'\n\n'"$(hb_translate "Path:") $src" \
-                10 78
-            return 1
-            ;;
-        2)
-            dialog --backtitle "ProxMenux" --title "$(hb_translate "Import failed")" \
-                --msgbox "$(hb_translate "proxmox-backup-client did not recognise this file as a valid PBS keyfile.")"$'\n\n'"$(hb_translate "Path:") $src" \
-                10 78
-            return 1
-            ;;
-        *)
-            dialog --backtitle "ProxMenux" --title "$(hb_translate "Import failed")" \
-                --msgbox "$(hb_translate "Could not copy the keyfile into place. Check permissions on:") $HB_STATE_DIR" \
-                10 78
-            return 1
-            ;;
-    esac
+    # 2. Validate the source without touching the canonical path yet.
+    #    Same shape as the check inside hb_pbs_import_keyfile, so a
+    #    later install call can't disagree with what we saw here.
+    if [[ ! -s "$src" || ! -r "$src" ]]; then
+        dialog --backtitle "ProxMenux" --title "$(hb_translate "Import failed")" \
+            --msgbox "$(hb_translate "The file does not exist, is empty or is not readable.")"$'\n\n'"$(hb_translate "Path:") $src" \
+            10 78
+        return 1
+    fi
+    if ! proxmox-backup-client key info --output-format json "$src" >/dev/null 2>&1; then
+        dialog --backtitle "ProxMenux" --title "$(hb_translate "Import failed")" \
+            --msgbox "$(hb_translate "proxmox-backup-client did not recognise this file as a valid PBS keyfile.")"$'\n\n'"$(hb_translate "Path:") $src" \
+            10 78
+        return 1
+    fi
+
+    # 3. Collect the recovery passphrase. Cancel here → zero side effect
+    #    (the source file is still where it was; we haven't copied yet).
+    local pass
+    pass=$(_hb_pbs_prompt_recovery_pass) || return 1
+
+    # 4. Now install the keyfile. Point of no return.
+    if ! hb_pbs_import_keyfile "$src"; then
+        dialog --backtitle "ProxMenux" --title "$(hb_translate "Import failed")" \
+            --msgbox "$(hb_translate "Could not copy the keyfile into place. Check permissions on:") $HB_STATE_DIR" \
+            10 78
+        return 1
+    fi
+    msg_ok "$(hb_translate "Imported existing encryption key:") $key_file"
+
+    # 5. Encrypt the recovery blob with the passphrase collected in step 3.
+    #    openssl failure is the only path that has to undo the install.
+    if ! _hb_pbs_finalize_recovery "$pass"; then
+        rm -f "$key_file" "$recovery_enc" 2>/dev/null
+        HB_PBS_KEYFILE_OPT=""
+        return 1
+    fi
+
+    HB_PBS_KEYFILE_OPT="--keyfile $key_file"
+    return 0
 }
 
 hb_ask_pbs_encryption() {
+    # Two-step flow:
+    #   1. Yes/No: "Do you want to encrypt this backup?"
+    #        No  → plain backup, no keyfile touched.
+    #        Yes → step 2.
+    #   2a. Keyfile already exists on this host → use it silently.
+    #   2b. No keyfile yet → menu with 2 options:
+    #         new    → generate + confirm passphrase (legacy flow).
+    #         import → prompt path, validate, copy into place.
+    #         cancel → ABORT the whole backup (operator asked for
+    #                  encryption but didn't pick a method; we don't
+    #                  silently downgrade to plain).
+    # A single-run helper leftover from a cancelled/failed create can
+    # leave a zero-byte keyfile behind; we wipe it before deciding so
+    # the "keyfile exists" branch never trips on an empty file.
     local key_file="$HB_STATE_DIR/pbs-key.conf"
-    local recovery_enc="$HB_STATE_DIR/pbs-key.recovery.enc"
     export HB_PBS_KEYFILE_OPT=""
     export HB_PBS_ENC_PASS=""
 
-    # Wipe any scrollback that might leak above our dialogs — most
-    # often the terminal title or a stray line from a prior manual
-    # `proxmox-backup-client` invocation in the same SSH session.
     clear
     printf '\033]0;ProxMenux\007'
 
-    # Wipe any zero-byte keyfile left behind by a previous cancelled
-    # or failed key-create run — otherwise the "existing" branch would
-    # hand `--keyfile <empty>` to proxmox-backup-client and die mid
-    # backup with an opaque "unable to load encryption key" error.
     if [[ -f "$key_file" && ! -s "$key_file" ]]; then
         rm -f "$key_file" 2>/dev/null
     fi
 
-    # Build the menu. When a keyfile is already present the operator
-    # can Use it as-is; otherwise the choice is Generate / Import /
-    # Skip. Same shape both times so muscle memory works.
-    local -a menu_items=()
-    if [[ -s "$key_file" ]]; then
-        menu_items+=("existing" "$(hb_translate "Use existing keyfile at") $key_file")
+    # ── Step 1: yes/no ─────────────────────────────────────────
+    if ! dialog --backtitle "ProxMenux" --title "$(hb_translate "Encryption")" \
+        --yesno "$(hb_translate "Do you want to encrypt this backup?")" 8 60; then
+        # No → continue without encryption. `HB_PBS_KEYFILE_OPT` stays
+        # empty; the runner will call proxmox-backup-client without
+        # --keyfile.
+        return 0
     fi
-    menu_items+=(
-        "new"    "$(hb_translate "Generate a new keyfile (one per host — safest isolation)")"
-        "import" "$(hb_translate "Import an existing keyfile from a path (shared across hosts)")"
-        "none"   "$(hb_translate "Skip — no encryption for this backup")"
-    )
-    local menu_h=14
-    (( ${#menu_items[@]} > 8 )) && menu_h=16
+
+    # ── Step 2a: keyfile already present → reuse silently ─────
+    if [[ -s "$key_file" ]]; then
+        HB_PBS_KEYFILE_OPT="--keyfile $key_file"
+        msg_ok "$(hb_translate "Using existing encryption key:") $key_file"
+        return 0
+    fi
+
+    # ── Step 2b: no keyfile → let the operator generate or import ─
     local choice
-    choice=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Encryption")" \
-        --menu "$(hb_translate "Choose how to protect this backup:")" \
-        "$menu_h" 78 4 "${menu_items[@]}" \
-        3>&1 1>&2 2>&3) || return 0
+    choice=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Encryption key")" \
+        --menu "$(hb_translate "No encryption key is stored on this host. Choose how to set one up:")" \
+        12 78 2 \
+        "new"    "$(hb_translate "Generate a new keyfile (one per host — safest isolation)")" \
+        "import" "$(hb_translate "Import an existing keyfile from a path (shared across hosts)")" \
+        3>&1 1>&2 2>&3) || return 1   # Cancel → abort backup.
 
     case "$choice" in
-        existing)
-            # An existing keyfile is trusted — it only lands here after
-            # a previous encrypted backup completed successfully (the
-            # create / import paths wipe the file on cancel).
-            HB_PBS_KEYFILE_OPT="--keyfile $key_file"
-            msg_ok "$(hb_translate "Using existing encryption key:") $key_file"
-            return 0
-            ;;
         new)
-            # Operator asked to Replace or first-time Generate — wipe
-            # any prior keyfile + recovery blob so the create path
-            # starts from a clean slate.
-            if [[ -s "$key_file" ]]; then
-                rm -f "$key_file" "$recovery_enc" 2>/dev/null
-            fi
             _hb_pbs_create_new_keyfile
             return $?
             ;;
         import)
-            if [[ -s "$key_file" ]]; then
-                rm -f "$key_file" "$recovery_enc" 2>/dev/null
-            fi
             _hb_pbs_import_dialog
             return $?
             ;;
         *)
-            # "none" or unknown → no encryption for this backup.
-            return 0
+            # Empty selection from dialog — treat as cancel.
+            return 1
             ;;
     esac
 }
@@ -2446,6 +2475,15 @@ hb_prompt_dest_dir() {
 }
 
 hb_prompt_restore_source_dir() {
+    # Same fd-9 trick used by hb_prompt_mounted_path: this function
+    # is called as `dir=$(hb_prompt_restore_source_dir)` which
+    # captures stdout, so any --msgbox we open inside would render
+    # into the subshell (invisible to the operator) and the caller
+    # would think the flow "hung". Stash real stdout in fd 9,
+    # redirect stdout to the tty for every dialog, and emit the
+    # actual return value through fd 9 at the end.
+    exec 9>&1 >/dev/tty
+
     local choice out
 
     choice=$(dialog --backtitle "ProxMenux" \
@@ -2470,11 +2508,16 @@ hb_prompt_restore_source_dir() {
     esac
 
     out=$(hb_trim_dialog_value "$out")
-    [[ -n "$out" && -d "$out" ]] || {
-        msg_error "$(hb_translate "Directory does not exist.")"
+    if [[ -z "$out" || ! -d "$out" ]]; then
+        dialog --backtitle "ProxMenux" \
+            --title "$(hb_translate "Directory not found")" \
+            --msgbox "$(hb_translate "The selected path does not exist on this host:")"$'\n\n'"${out:-<empty>}" \
+            10 78 || true
         return 1
-    }
-    echo "$out"
+    fi
+    # Emit the real return value through the saved fd 9 — the caller's
+    # `$(...)` capture reads from fd 9 (see the exec at the top).
+    echo "$out" >&9
 }
 
 # Return the set of scheduler job_ids that currently have a .env on
@@ -2524,6 +2567,13 @@ hb_is_host_backup_archive() {
 }
 
 hb_prompt_local_archive() {
+    # See hb_prompt_restore_source_dir above for why we do the fd-9
+    # trick — same story: caller uses `archive=$(hb_prompt_local_archive)`
+    # so any --msgbox inside would render into the subshell and
+    # never reach the operator. Force dialog output to the tty and
+    # emit the selected archive path via fd 9 at the end.
+    exec 9>&1 >/dev/tty
+
     local base_dir="$1"
     local title="${2:-$(hb_translate "Select backup archive")}"
     local -a rows=() files=() menu=()
@@ -2592,7 +2642,9 @@ hb_prompt_local_archive() {
         --menu "$menu_prompt" \
         "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${menu[@]}" 3>&1 1>&2 2>&3) || return 1
 
-    echo "${files[$((choice-1))]}"
+    # Emit the selected archive path through fd 9 so the caller's
+    # `$(...)` capture actually receives it (see the exec at the top).
+    echo "${files[$((choice-1))]}" >&9
 }
 
 # ==========================================================

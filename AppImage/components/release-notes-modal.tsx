@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 
-const APP_VERSION = "1.2.2.2-beta" // Sync with AppImage/package.json
+const APP_VERSION = "1.2.2.3-beta" // Sync with AppImage/package.json
 
 interface ReleaseNote {
   date: string
@@ -221,8 +221,16 @@ const CURRENT_VERSION_FEATURES = [
     text: "New Backups section integrated in the Monitor — create, schedule and restore host backups against Local, PBS or Borg destinations; run on a proper systemd timer or attach to an existing PVE vzdump job with live-inherited retention; PBS encryption with paired recovery blobs; and a direction-aware restore flow that safely handles cross-kernel jumps by reapplying IOMMU / VFIO / GRUB tunings, protecting critical packages from cascade-remove, and auto-remapping NICs after a motherboard swap.",
   },
   {
+    icon: <RefreshCw className="h-5 w-5" />,
+    text: "Live post-restore progress — after a reboot the Backups tab shows a real-time progress card with step-by-step milestones, ETA, per-component status (NVIDIA, Intel GPU tools, Coral, AMD tools), boot sanity warnings, a rollback delta widget listing VMs / LXCs / components that exist on the host but weren't in the backup, and a log tail with an Issues-only filter. Past restores are archived and browsable.",
+  },
+  {
+    icon: <Shield className="h-5 w-5" />,
+    text: "PBS encryption flow reworked — first a yes/no dialog; only when a keyfile is not yet installed does a second menu ask whether to generate a new one or import an existing one (shared across hosts). Subsequent encrypted backups reuse the installed key silently. Cancelling never leaves a phantom keyfile behind.",
+  },
+  {
     icon: <HardDrive className="h-5 w-5" />,
-    text: "Storage & Hardware — per-disk cards in a responsive grid; USB-NVMe enclosures (ASMedia / JMicron / Realtek) now show the drive's real model, serial, temperature and health instead of the bridge's identity; USB-SATA SSDs (ASM105x) no longer flip to HDD; consistent blue / amber / red capacity palette across the app; multi-TB PBS datastores render in the right unit.",
+    text: "Storage & Hardware — per-disk cards in a responsive grid; USB-NVMe enclosures (ASMedia / JMicron / Realtek) now show the drive's real model, serial, temperature and health instead of the bridge's identity; USB detection now walks the sysfs device path instead of trusting `/sys/block/*/removable`, so USB-NVMe and USB-HDD enclosures that report removable=0 finally reach the snt* pass-through and expose full SMART (temperature, power-on hours, power cycles, health); USB-SATA SSDs (ASM105x) no longer flip to HDD; consistent blue / amber / red capacity palette across the app; multi-TB PBS datastores render in the right unit.",
   },
   {
     icon: <Activity className="h-5 w-5" />,

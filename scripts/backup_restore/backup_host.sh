@@ -163,7 +163,7 @@ _bk_pbs() {
         # is still passphrase-protected by openssl.
         if [[ -n "$HB_PBS_KEYFILE_OPT" && -f "$HB_STATE_DIR/pbs-key.recovery.enc" ]]; then
             hb_pbs_upload_recovery_blob "$epoch" \
-                || msg_warn "$(translate "Recovery blob upload failed — main backup is OK, but keyfile recovery from PBS will not be available for this snapshot.")"
+                || msg_warn "$(translate "Recovery blob upload failed — main backup is OK, but keyfile recovery from PBS will not be available for this backup.")"
         fi
 
         elapsed=$((SECONDS - t_start))
@@ -174,7 +174,7 @@ _bk_pbs() {
         echo -e "${TAB}${BGN}$(translate "Method:")${CL}      ${BL}Proxmox Backup Server (PBS)${CL}"
         echo -e "${TAB}${BGN}$(translate "Repository:")${CL}  ${BL}${HB_PBS_REPOSITORY}${CL}"
         echo -e "${TAB}${BGN}$(translate "Backup ID:")${CL}   ${BL}${backup_id}${CL}"
-        echo -e "${TAB}${BGN}$(translate "Snapshot:")${CL}    ${BL}host/${backup_id}/${snap_time}${CL}"
+        echo -e "${TAB}${BGN}$(translate "Backup path:")${CL} ${BL}host/${backup_id}/${snap_time}${CL}"
         echo -e "${TAB}${BGN}$(translate "Data size:")${CL}   ${BL}${staged_size}${CL}"
         echo -e "${TAB}${BGN}$(translate "Duration:")${CL}    ${BL}$(hb_human_elapsed "$elapsed")${CL}"
         echo -e "${TAB}${BGN}$(translate "Encryption:")${CL}  ${BL}${_pbs_enc_label}${CL}"
@@ -843,10 +843,11 @@ _rs_extract_pbs() {
             --output-format json 2>/dev/null \
         | jq -r '.[]
             | select(."backup-type" == "host"
-                     and not (
-                          (."backup-id" | startswith("proxmenux-keyrecovery-"))
-                       or ((."backup-id" | startswith("hostcfg-")) and (."backup-id" | endswith("-keyrecovery")))
-                     ))
+                     and (
+                          ((."backup-id" | startswith("proxmenux-keyrecovery-"))
+                           or ((."backup-id" | startswith("hostcfg-")) and (."backup-id" | endswith("-keyrecovery"))))
+                          | not
+                         ))
             | "\(."backup-type")|\(."backup-id")|\(."backup-time")"' 2>/dev/null \
         | while IFS='|' read -r _type _id _epoch; do
             local _iso
@@ -863,8 +864,8 @@ _rs_extract_pbs() {
         # it. msg_error alone gets erased the moment we `return 1`
         # because the restore_menu loop redraws the source picker
         # immediately afterward.
-        dialog --backtitle "ProxMenux" --title "$(translate "No snapshots")" \
-            --msgbox "$(translate "No host snapshots were found in this PBS repository:")"$'\n\n'"$HB_PBS_REPOSITORY" \
+        dialog --backtitle "ProxMenux" --title "$(translate "No backups")" \
+            --msgbox "$(translate "No host backups were found in this PBS repository:")"$'\n\n'"$HB_PBS_REPOSITORY" \
             10 78
         return 1
     fi
@@ -873,8 +874,8 @@ _rs_extract_pbs() {
     for snapshot in "${snapshots[@]}"; do menu+=("$i" "$snapshot"); ((i++)); done
     local sel
     sel=$(dialog --backtitle "ProxMenux" \
-        --title "$(translate "Select snapshot to restore")" \
-        --menu "\n$(translate "Available host snapshots:")" \
+        --title "$(translate "Select backup to restore")" \
+        --menu "\n$(translate "Available host backups:")" \
         "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${menu[@]}" 3>&1 1>&2 2>&3) || return 1
     snapshot="${snapshots[$((sel-1))]}"
 
@@ -893,7 +894,7 @@ _rs_extract_pbs() {
     )
     if [[ ${#archives[@]} -eq 0 ]]; then
         dialog --backtitle "ProxMenux" --title "$(translate "No archives")" \
-            --msgbox "$(translate "No .pxar archives were found in this snapshot:")"$'\n\n'"$snapshot" \
+            --msgbox "$(translate "No .pxar archives were found in this backup:")"$'\n\n'"$snapshot" \
             10 78
         return 1
     fi
@@ -915,7 +916,7 @@ _rs_extract_pbs() {
     msg_title "$(translate "Restore from PBS  →  staging")"
     echo -e ""
     echo -e "${TAB}${BGN}$(translate "Repository:")${CL}       ${BL}${HB_PBS_REPOSITORY}${CL}"
-    echo -e "${TAB}${BGN}$(translate "Snapshot:")${CL}         ${BL}${snapshot}${CL}"
+    echo -e "${TAB}${BGN}$(translate "Backup:")${CL}         ${BL}${snapshot}${CL}"
     echo -e "${TAB}${BGN}$(translate "Archive:")${CL}          ${BL}${archive}${CL}"
     echo -e "${TAB}${BGN}$(translate "Staging directory:")${CL} ${BL}${staging_root}${CL}"
     echo -e ""
@@ -960,16 +961,16 @@ _rs_extract_pbs() {
     # error rather than the raw log.
     local extra_hint=""
     if grep -qiE 'encryption key|unable to (load|read) key|no key (file|found)|decrypt|failed to decrypt' "$log_file" 2>/dev/null; then
-        extra_hint=$'\n\n'"$(translate "This snapshot is encrypted but no keyfile is available on this host.")"
+        extra_hint=$'\n\n'"$(translate "This backup is encrypted but no keyfile is available on this host.")"
         if [[ -f "$HB_STATE_DIR/pbs-key.conf" ]]; then
-            extra_hint+=$'\n\n'"$(translate "A keyfile is present but doesn't match the one used to create the snapshot. Make sure you have the correct keyfile from the source host.")"
+            extra_hint+=$'\n\n'"$(translate "A keyfile is present but doesn't match the one used to create the backup. Make sure you have the correct keyfile from the source host.")"
         else
-            extra_hint+=$'\n\n'"$(translate "No keyfile recovery copy was found in PBS for this snapshot — it was created before the recovery feature existed. The encrypted content cannot be recovered.")"
+            extra_hint+=$'\n\n'"$(translate "No keyfile recovery copy was found in PBS for this backup — it was created before the recovery feature existed. The encrypted content cannot be recovered.")"
         fi
     fi
 
     dialog --backtitle "ProxMenux" --title "$(translate "PBS extraction failed")" \
-        --msgbox "$(translate "Could not extract from PBS.")"$'\n\n'"$(translate "Snapshot:") $snapshot"$'\n'"$(translate "Archive:") $archive$extra_hint" \
+        --msgbox "$(translate "Could not extract from PBS.")"$'\n\n'"$(translate "Backup:") $snapshot"$'\n'"$(translate "Archive:") $archive$extra_hint" \
         16 78
     hb_show_log "$log_file" "$(translate "PBS restore error log")"
     return 1
@@ -1751,8 +1752,9 @@ _rs_offer_reboot_after_pending() {
             bg_block+="  • ${label}  (${eta})"$'\n'
         done
         bg_block+=$'\n'"$(translate "Monitor progress:")"$'\n'
-        bg_block+="  tail -f /var/log/proxmenux/proxmenux-cluster-postboot-*.log"$'\n'
-        bg_block+="  systemctl status proxmenux-apply-cluster-postboot.service"$'\n\n'
+        bg_block+="  • $(translate "ProxMenux Monitor → Backups tab (live progress card with ETA, logs, rollback delta)")"$'\n'
+        bg_block+="  • tail -f /var/log/proxmenux/proxmenux-cluster-postboot-*.log"$'\n'
+        bg_block+="  • systemctl status proxmenux-apply-cluster-postboot.service"$'\n\n'
         bg_block+="$(translate "If notifications are enabled (Telegram/Discord/ntfy/...), you will receive a \"Host restore finished\" message when all background tasks complete.")"$'\n\n'
     fi
 
@@ -2681,6 +2683,7 @@ _rs_run_complete_guided() {
         body+=$'\n'"${RS_HYDRATION_SUMMARY}"
     fi
     body+=$'\n'"\Zb\Z4$(translate "A reboot is required to finish the restore.")\Zn"$'\n\n'
+    body+="$(translate "After the reboot you can follow the post-restore work live from ProxMenux Monitor → Backups tab (ETA, per-component status, log tail, rollback delta).")"$'\n\n'
     body+="$(translate "If notifications are enabled (Telegram/Discord/ntfy/...), you will receive a \"Host restore finished\" message when all background tasks complete.")"$'\n\n'
     body+="\Zb$(translate "Continue?")\ZB"
 
@@ -3089,6 +3092,7 @@ _rs_run_custom_restore() {
     fi
     if (( pending_count > 0 )); then
         body+=$'\n'"\Zb\Z4$(translate "A reboot will be required to complete the restore.")\Zn"$'\n'
+        body+="$(translate "Follow post-restore progress live from ProxMenux Monitor → Backups tab after the reboot.")"$'\n'
     fi
     body+=$'\n'"\Zb$(translate "Continue?")\ZB"
 

@@ -2658,6 +2658,29 @@ def is_disk_removable(disk_name):
         return False
 
 
+def is_disk_usb(disk_name):
+    """Return True if the disk is attached via USB, using the sysfs device
+    path. Reliable for USB-attached HDDs and USB-NVMe bridges (which
+    both report `/sys/block/<disk>/removable = 0` even though they ARE
+    USB) — the previous heuristic based on the removable flag missed
+    them entirely, so snt* pass-through was never attempted and the
+    bridge's own identity + missing temperature/hours were cached.
+
+    Uses `os.path.realpath` (no subprocess) so it's cheap enough to be
+    called on every SMART probe.
+    """
+    try:
+        real = os.path.realpath(f'/sys/block/{disk_name}')
+        # sysfs path segment like `usb1`, `usb2`, ... always precedes a
+        # USB-attached block device. Match on the segment prefix rather
+        # than a substring so a directory happening to contain "usb" in
+        # its literal name can't false-positive.
+        return any(seg.startswith('usb') and (len(seg) == 3 or seg[3:].isdigit())
+                   for seg in real.split('/'))
+    except Exception:
+        return False
+
+
 def _is_system_mount(mountpoint):
     """Check if mountpoint is a critical system path (matching bash scripts logic)."""
     system_mounts = ('/', '/boot', '/boot/efi', '/efi', '/usr', '/var', '/etc', 
@@ -3676,12 +3699,15 @@ def _get_smart_data_uncached(disk_name):
         # passes through to the actual NVMe controller and returns real
         # model, serial, temperature and health.
         #
-        # For removable disks we prepend the three snt* variants so the
-        # cascade tries them FIRST — otherwise the plain variant "succeeds"
-        # (>50 chars of bridge chatter), the probe cache locks it in, and
-        # temperature is never seen. For non-removable disks the cascade
-        # is unchanged (zero regression risk on internal SATA/NVMe).
-        if is_disk_removable(disk_name):
+        # For USB-attached disks we prepend the three snt* variants so
+        # the cascade tries them FIRST — otherwise the plain variant
+        # "succeeds" (>50 chars of bridge chatter), the probe cache locks
+        # it in, and temperature is never seen. USB detection is by sysfs
+        # path (`is_disk_usb`) rather than the `removable` flag: USB-NVMe
+        # bridges and USB-HDDs both report `removable=0` even though they
+        # ARE USB, so the older `is_disk_removable` check missed them.
+        # For internal SATA/NVMe the cascade is unchanged (zero regression).
+        if is_disk_usb(disk_name) or is_disk_removable(disk_name):
             all_commands = [
                 ['smartctl', '-a', '-j', '-d', 'sntasmedia', f'/dev/{disk_name}'],
                 ['smartctl', '-a', '-j', '-d', 'sntjmicron', f'/dev/{disk_name}'],
@@ -10027,45 +10053,40 @@ def api_network_summary():
         bridge_interfaces = []
         
         for interface_name, stats in net_if_stats.items():
-            # Skip loopback and special interfaces
-            if interface_name in ['lo', 'docker0'] or interface_name.startswith(('veth', 'tap', 'fw')):
+            # Delegate classification to the shared helper so this endpoint
+            # matches the full /api/network path. The inline prefix-based
+            # check that lived here missed operator-renamed NICs (e.g.
+            # `nic0` via systemd .link rules) and reported 0 physical
+            # interfaces even when the host clearly had one — surfaces as
+            # "Network Interfaces: N/A" on the System Overview card.
+            iface_type = get_interface_type(interface_name)
+            if iface_type not in ('physical', 'bridge'):
                 continue
-            
+
             is_up = stats.isup
-            
-            # Classify interface type
-            if interface_name.startswith(('enp', 'eth', 'eno', 'ens', 'wlan', 'wlp')):
+            addresses = []
+            if interface_name in net_if_addrs:
+                for addr in net_if_addrs[interface_name]:
+                    if addr.family == socket.AF_INET:
+                        addresses.append({'ip': addr.address, 'netmask': addr.netmask})
+
+            if iface_type == 'physical':
                 physical_total += 1
                 if is_up:
                     physical_active += 1
-                    # Get IP addresses
-                    addresses = []
-                    if interface_name in net_if_addrs:
-                        for addr in net_if_addrs[interface_name]:
-                            if addr.family == socket.AF_INET:
-                                addresses.append({'ip': addr.address, 'netmask': addr.netmask})
-                    
                     physical_interfaces.append({
                         'name': interface_name,
-                        'status': 'up' if is_up else 'down',
-                        'addresses': addresses
+                        'status': 'up',
+                        'addresses': addresses,
                     })
-            
-            elif interface_name.startswith(('vmbr', 'br')):
+            else:  # bridge
                 bridge_total += 1
                 if is_up:
                     bridge_active += 1
-                    # Get IP addresses
-                    addresses = []
-                    if interface_name in net_if_addrs:
-                        for addr in net_if_addrs[interface_name]:
-                            if addr.family == socket.AF_INET:
-                                addresses.append({'ip': addr.address, 'netmask': addr.netmask})
-                    
                     bridge_interfaces.append({
                         'name': interface_name,
-                        'status': 'up' if is_up else 'down',
-                        'addresses': addresses
+                        'status': 'up',
+                        'addresses': addresses,
                     })
         
         return jsonify({
@@ -13800,6 +13821,151 @@ def api_pbs_recovery_status():
         'has_recovery': os.path.isfile(_PBS_RECOVERY_ENC_PATH),
         'keyfile_path': _PBS_KEYFILE_PATH,
         'recovery_path': _PBS_RECOVERY_ENC_PATH,
+    })
+
+
+# ─── Restore progress state (written by apply_cluster_postboot.sh) ──
+# The postboot script maintains /var/lib/proxmenux/restore-state.json
+# with a `running|complete|failed` status plus milestone counters,
+# per-component results, sanity warnings and a rollback delta. The
+# Backups tab polls status() to render a live card while the restore
+# is running and a summary once it's done; dismiss() flips the
+# `acknowledged` flag so the card collapses; history() lists archived
+# runs; log() returns a filtered tail of the postboot log.
+
+_RESTORE_STATE_FILE = '/var/lib/proxmenux/restore-state.json'
+_RESTORE_HISTORY_DIR = '/var/lib/proxmenux/restore-history'
+_RESTORE_LOG_DIR = '/var/log/proxmenux'
+
+
+def _read_restore_state(path):
+    try:
+        with open(path, 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return None
+
+
+@app.route('/api/host-backups/restore/status', methods=['GET'])
+@require_auth
+def api_host_backups_restore_status():
+    """Current restore-state.json content — empty response means no
+    restore has ever run on this host (or the state dir is missing)."""
+    state = _read_restore_state(_RESTORE_STATE_FILE)
+    if state is None:
+        return jsonify({'state': None})
+    return jsonify({'state': state})
+
+
+@app.route('/api/host-backups/restore/dismiss', methods=['POST'])
+@require_auth
+def api_host_backups_restore_dismiss():
+    """Flip acknowledged=true on the current state file so the Backups
+    tab card collapses. The state file itself is preserved until the
+    next restore overwrites it — the operator can still open the
+    history modal to review this run's details later."""
+    state = _read_restore_state(_RESTORE_STATE_FILE)
+    if state is None:
+        return jsonify({'error': 'no restore state to dismiss'}), 404
+    state['acknowledged'] = True
+    try:
+        tmp = _RESTORE_STATE_FILE + '.tmp'
+        with open(tmp, 'w') as f:
+            json.dump(state, f)
+        os.replace(tmp, _RESTORE_STATE_FILE)
+    except OSError as e:
+        return jsonify({'error': f'cannot persist state: {e}'}), 500
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/host-backups/restore/history', methods=['GET'])
+@require_auth
+def api_host_backups_restore_history():
+    """List archived restore runs (newest first). Each entry carries
+    just the summary metadata; the detail modal fetches the full
+    payload on demand via ?file=<name>."""
+    file_arg = request.args.get('file')
+    if file_arg:
+        # Reject anything that could climb out of the history dir.
+        # Filenames are always <YYYYmmdd_HHMMSS>-<complete|failed>.json.
+        if '/' in file_arg or '..' in file_arg or not file_arg.endswith('.json'):
+            return jsonify({'error': 'invalid file name'}), 400
+        full = os.path.join(_RESTORE_HISTORY_DIR, file_arg)
+        payload = _read_restore_state(full)
+        if payload is None:
+            return jsonify({'error': 'not found'}), 404
+        return jsonify({'state': payload})
+
+    entries = []
+    try:
+        for name in os.listdir(_RESTORE_HISTORY_DIR):
+            if not name.endswith('.json'):
+                continue
+            full = os.path.join(_RESTORE_HISTORY_DIR, name)
+            try:
+                mtime = os.stat(full).st_mtime
+            except OSError:
+                continue
+            payload = _read_restore_state(full) or {}
+            entries.append({
+                'file': name,
+                'mtime': mtime,
+                'status': payload.get('status', 'unknown'),
+                'started_at': payload.get('started_at'),
+                'finished_at': payload.get('finished_at'),
+                'duration': (payload.get('summary') or {}).get('duration'),
+            })
+    except FileNotFoundError:
+        pass
+    entries.sort(key=lambda e: e['mtime'], reverse=True)
+    return jsonify({'entries': entries})
+
+
+@app.route('/api/host-backups/restore/log', methods=['GET'])
+@require_auth
+def api_host_backups_restore_log():
+    """Return a tail of the postboot log — optionally filtered to just
+    error/warning lines. Path is taken from the state file's log_path
+    (or from ?path=… for a history entry) and validated to live under
+    /var/log/proxmenux so an operator can't read arbitrary files."""
+    path = request.args.get('path')
+    filter_mode = request.args.get('filter', 'all')  # all | issues
+    try:
+        tail_lines = min(int(request.args.get('tail', '400')), 4000)
+    except ValueError:
+        tail_lines = 400
+
+    if not path:
+        state = _read_restore_state(_RESTORE_STATE_FILE) or {}
+        path = state.get('log_path')
+    if not path:
+        return jsonify({'lines': [], 'path': None})
+
+    # Resolve to guard against traversal; the log MUST live inside
+    # /var/log/proxmenux for the endpoint to expose it.
+    real = os.path.realpath(path)
+    if not real.startswith(_RESTORE_LOG_DIR + os.sep) and real != _RESTORE_LOG_DIR:
+        return jsonify({'error': 'log path outside allowed directory'}), 400
+    if not os.path.isfile(real):
+        return jsonify({'lines': [], 'path': path}), 200
+
+    try:
+        with open(real, 'r', errors='replace') as f:
+            # Simple tail: read the whole file (postboot logs are
+            # small — a few hundred KB at worst) and slice.
+            data = f.readlines()
+    except OSError as e:
+        return jsonify({'error': f'cannot read log: {e}'}), 500
+
+    if filter_mode == 'issues':
+        needle = re.compile(r'(error|warning|failed|✗|✘|traceback)', re.IGNORECASE)
+        data = [ln for ln in data if needle.search(ln)]
+
+    return jsonify({
+        'path': path,
+        'total_lines': len(data),
+        'lines': [ln.rstrip('\n') for ln in data[-tail_lines:]],
+        'filter': filter_mode,
     })
 
 
