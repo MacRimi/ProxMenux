@@ -1239,33 +1239,54 @@ _hb_pbs_import_dialog() {
 
     # 1. Ask the path.
     src=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Import PBS keyfile")" \
-        --inputbox "$(hb_translate "Absolute path to your existing PBS keyfile:")"$'\n\n'"$(hb_translate "The file is validated with 'proxmox-backup-client key info' and copied to")"$'\n'"$key_file $(hb_translate "with chmod 600.")" \
+        --inputbox "$(hb_translate "Absolute path to your existing PBS keyfile:")"$'\n\n'"$(hb_translate "The file is copied to")"$'\n'"$key_file $(hb_translate "with chmod 600. ProxMenux does not validate the contents — any keyfile you accept as valid on your PBS is accepted here.")" \
         14 78 "" 3>&1 1>&2 2>&3) || return 1
     src="$(echo "$src" | xargs)"
     [[ -z "$src" ]] && return 1
 
-    # 2. Validate the source without touching the canonical path yet.
-    #    Same shape as the check inside hb_pbs_import_keyfile, so a
-    #    later install call can't disagree with what we saw here.
+    # 2. Basic existence + readability. We deliberately do NOT validate
+    #    the content: `proxmox-backup-client key info` refuses scrypt
+    #    keyfiles that require their original passphrase, and forcing
+    #    the operator to strip encryption before importing is worse
+    #    than trusting their input. If the file is not a real keyfile,
+    #    the first backup will fail with a clear message.
     if [[ ! -s "$src" || ! -r "$src" ]]; then
         dialog --backtitle "ProxMenux" --title "$(hb_translate "Import failed")" \
             --msgbox "$(hb_translate "The file does not exist, is empty or is not readable.")"$'\n\n'"$(hb_translate "Path:") $src" \
             10 78
         return 1
     fi
-    if ! proxmox-backup-client key info --output-format json "$src" >/dev/null 2>&1; then
-        dialog --backtitle "ProxMenux" --title "$(hb_translate "Import failed")" \
-            --msgbox "$(hb_translate "proxmox-backup-client did not recognise this file as a valid PBS keyfile.")"$'\n\n'"$(hb_translate "Path:") $src" \
-            10 78
-        return 1
-    fi
 
-    # 3. Collect the recovery passphrase. Cancel here → zero side effect
+    # 3. Ask for the keyfile passphrase. Blank == kdf=none (no
+    #    passphrase). If the source key uses --kdf scrypt the operator
+    #    types it here and we persist it next to the keyfile so the
+    #    scheduled runner (systemd, no stdin) can unlock the key
+    #    without prompting.
+    local keyfile_pass keyfile_pass2
+    while true; do
+        keyfile_pass=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Keyfile passphrase")" \
+            --insecure --passwordbox "$(hb_translate "Passphrase used to unlock the imported keyfile (leave blank if the keyfile is unencrypted / kdf=none):")" \
+            "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+        # Blank is a legitimate answer — kdf=none, no passphrase.
+        if [[ -z "$keyfile_pass" ]]; then
+            keyfile_pass2=""
+            break
+        fi
+        keyfile_pass2=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Keyfile passphrase")" \
+            --insecure --passwordbox "$(hb_translate "Confirm the keyfile passphrase:")" \
+            "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+        [[ "$keyfile_pass" == "$keyfile_pass2" ]] && break
+        dialog --backtitle "ProxMenux" \
+            --msgbox "$(hb_translate "Passphrases do not match. Try again.")" 8 50
+    done
+
+    # 4. Collect the recovery passphrase. Cancel here → zero side effect
     #    (the source file is still where it was; we haven't copied yet).
     local pass
     pass=$(_hb_pbs_prompt_recovery_pass) || return 1
 
-    # 4. Now install the keyfile. Point of no return.
+    # 5. Install the keyfile. Point of no return.
+    #    hb_pbs_import_keyfile just copies + chmods; content is not inspected.
     if ! hb_pbs_import_keyfile "$src"; then
         dialog --backtitle "ProxMenux" --title "$(hb_translate "Import failed")" \
             --msgbox "$(hb_translate "Could not copy the keyfile into place. Check permissions on:") $HB_STATE_DIR" \
@@ -1274,10 +1295,27 @@ _hb_pbs_import_dialog() {
     fi
     msg_ok "$(hb_translate "Imported existing encryption key:") $key_file"
 
-    # 5. Encrypt the recovery blob with the passphrase collected in step 3.
+    # 6. Persist the keyfile passphrase (if any) next to the keyfile.
+    #    Same trust boundary — chmod 600, root-only. Empty passphrase
+    #    means no file: the runner treats absent file as kdf=none.
+    #    Also export HB_PBS_ENC_PASS so _bk_pbs (called right after
+    #    this returns) picks it up for the current backup without
+    #    needing to re-read the file.
+    local keyfile_pass_file="$HB_STATE_DIR/pbs-key.pass"
+    if [[ -n "$keyfile_pass" ]]; then
+        umask 077
+        printf '%s' "$keyfile_pass" > "$keyfile_pass_file"
+        chmod 600 "$keyfile_pass_file" 2>/dev/null || true
+        HB_PBS_ENC_PASS="$keyfile_pass"
+    else
+        rm -f "$keyfile_pass_file" 2>/dev/null || true
+        HB_PBS_ENC_PASS=""
+    fi
+
+    # 7. Encrypt the recovery blob with the recovery passphrase.
     #    openssl failure is the only path that has to undo the install.
     if ! _hb_pbs_finalize_recovery "$pass"; then
-        rm -f "$key_file" "$recovery_enc" 2>/dev/null
+        rm -f "$key_file" "$recovery_enc" "$keyfile_pass_file" 2>/dev/null
         HB_PBS_KEYFILE_OPT=""
         return 1
     fi
@@ -1324,6 +1362,13 @@ hb_ask_pbs_encryption() {
     # ── Step 2a: keyfile already present → reuse silently ─────
     if [[ -s "$key_file" ]]; then
         HB_PBS_KEYFILE_OPT="--keyfile $key_file"
+        # Load the stored keyfile passphrase if any — imports of
+        # scrypt-encoded keyfiles persist it here so proxmox-backup-client
+        # can unlock the key without a stdin prompt.
+        local _pass_file="$HB_STATE_DIR/pbs-key.pass"
+        if [[ -s "$_pass_file" ]]; then
+            HB_PBS_ENC_PASS=$(cat "$_pass_file" 2>/dev/null || true)
+        fi
         msg_ok "$(hb_translate "Using existing encryption key:") $key_file"
         return 0
     fi

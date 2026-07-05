@@ -2046,6 +2046,7 @@ function CreateJobDialog({
   // File picked in the "existing" mode. Kept in a ref-like state so a
   // stale reference doesn't linger across modal opens.
   const [pbsImportFile, setPbsImportFile] = useState<File | null>(null)
+  const [pbsImportKeyfilePass, setPbsImportKeyfilePass] = useState<string>("")
   const [pbsImportBusy, setPbsImportBusy] = useState<boolean>(false)
   // Legacy alias for the many recovery / gating checks below — a truthy
   // value means "the operator wants an encrypted backup" regardless of
@@ -2066,7 +2067,7 @@ function CreateJobDialog({
   // present, the passphrase input becomes optional ("leave blank to
   // keep saved"). Refreshed after a successful setup call.
   const { data: pbsRecoveryStatus, mutate: mutatePbsRecovery } = useSWR<{
-    has_keyfile: boolean; has_recovery: boolean
+    has_keyfile: boolean; has_recovery: boolean; has_keyfile_passphrase?: boolean
   }>(
     open && backend === "pbs" ? "/api/host-backups/pbs-recovery/status" : null,
     fetcher,
@@ -2246,6 +2247,7 @@ function CreateJobDialog({
       setPbsBackupId("")
       setPbsEncryptMode("none")
       setPbsImportFile(null)
+      setPbsImportKeyfilePass("")
       setPbsImportBusy(false)
       setPbsRecoveryPass("")
       setPbsRecoveryPass2("")
@@ -2385,7 +2387,10 @@ function CreateJobDialog({
         await fetchApi("/api/host-backups/pbs-encryption/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content_b64 }),
+          body: JSON.stringify({
+            content_b64,
+            keyfile_passphrase: pbsImportKeyfilePass,
+          }),
         })
         mutatePbsRecovery()
       } catch (e) {
@@ -3093,21 +3098,40 @@ function CreateJobDialog({
                           </div>
                         </label>
                         {pbsEncryptMode === "existing" && (
-                          <div className="space-y-1.5 pt-1">
-                            <Label htmlFor="pbsImportFile" className="text-[11px] font-medium">
-                              Keyfile to import
-                            </Label>
-                            <Input
-                              id="pbsImportFile"
-                              type="file"
-                              accept=".conf,.key,application/json,text/plain"
-                              onChange={(e) => setPbsImportFile(e.target.files?.[0] ?? null)}
-                              disabled={pbsImportBusy}
-                              className="h-8 text-[11px]"
-                            />
-                            <p className="text-[10px] text-muted-foreground">
-                              Validated with <code className="font-mono">proxmox-backup-client key info</code> before install. On validation failure the job is not created and no keyfile is written.
-                            </p>
+                          <div className="space-y-2 pt-1">
+                            <div className="space-y-1.5">
+                              <Label htmlFor="pbsImportFile" className="text-[11px] font-medium">
+                                Keyfile to import
+                              </Label>
+                              <Input
+                                id="pbsImportFile"
+                                type="file"
+                                accept=".conf,.key,application/json,text/plain"
+                                onChange={(e) => setPbsImportFile(e.target.files?.[0] ?? null)}
+                                disabled={pbsImportBusy}
+                                className="h-8 text-[11px]"
+                              />
+                              <p className="text-[10px] text-muted-foreground">
+                                ProxMenux does not validate the file — any keyfile you accept as valid on your PBS is accepted here. If it later fails at backup time, the tool's error tells you why.
+                              </p>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor="pbsImportKeyfilePass" className="text-[11px] font-medium">
+                                Keyfile passphrase (optional)
+                              </Label>
+                              <Input
+                                id="pbsImportKeyfilePass"
+                                type="password"
+                                value={pbsImportKeyfilePass}
+                                onChange={(e) => setPbsImportKeyfilePass(e.target.value)}
+                                disabled={pbsImportBusy}
+                                placeholder="Leave blank if the keyfile has no passphrase"
+                                className="h-8 text-[11px] font-mono"
+                              />
+                              <p className="text-[10px] text-muted-foreground">
+                                If the keyfile was generated with <code className="font-mono">proxmox-backup-client key create --kdf scrypt</code> (the tool's default) it needs the original passphrase to be unlocked at backup time. Leave blank for <code className="font-mono">--kdf none</code> keyfiles. Stored at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.pass</code> (chmod 600).
+                              </p>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -3512,6 +3536,7 @@ function ManualBackupDialog({
   // block — the three modes and the import flow are identical here.
   const [pbsEncryptMode, setPbsEncryptMode] = useState<"none" | "new" | "existing">("none")
   const [pbsImportFile, setPbsImportFile] = useState<File | null>(null)
+  const [pbsImportKeyfilePass, setPbsImportKeyfilePass] = useState<string>("")
   const [pbsImportBusy, setPbsImportBusy] = useState<boolean>(false)
   const pbsEncrypt = pbsEncryptMode !== "none"
   const [pbsRecoveryPass, setPbsRecoveryPass] = useState<string>("")
@@ -3525,7 +3550,7 @@ function ManualBackupDialog({
   // present, the passphrase input becomes optional ("leave blank to
   // keep saved"). Refreshed after a successful setup call.
   const { data: pbsRecoveryStatus, mutate: mutatePbsRecovery } = useSWR<{
-    has_keyfile: boolean; has_recovery: boolean
+    has_keyfile: boolean; has_recovery: boolean; has_keyfile_passphrase?: boolean
   }>(
     open && backend === "pbs" ? "/api/host-backups/pbs-recovery/status" : null,
     fetcher,
@@ -3578,6 +3603,7 @@ function ManualBackupDialog({
       setPbsBackupId("")
       setPbsEncryptMode("none")
       setPbsImportFile(null)
+      setPbsImportKeyfilePass("")
       setPbsImportBusy(false)
       setPbsRecoveryPass("")
       setPbsRecoveryPass2("")
@@ -3657,7 +3683,10 @@ function ManualBackupDialog({
         await fetchApi("/api/host-backups/pbs-encryption/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content_b64 }),
+          body: JSON.stringify({
+            content_b64,
+            keyfile_passphrase: pbsImportKeyfilePass,
+          }),
         })
         mutatePbsRecovery()
       } catch (e) {
@@ -3977,21 +4006,40 @@ function ManualBackupDialog({
                           </div>
                         </label>
                         {pbsEncryptMode === "existing" && (
-                          <div className="space-y-1.5 pt-1">
-                            <Label htmlFor="manualPbsImportFile" className="text-[11px] font-medium">
-                              Keyfile to import
-                            </Label>
-                            <Input
-                              id="manualPbsImportFile"
-                              type="file"
-                              accept=".conf,.key,application/json,text/plain"
-                              onChange={(e) => setPbsImportFile(e.target.files?.[0] ?? null)}
-                              disabled={pbsImportBusy}
-                              className="h-8 text-[11px]"
-                            />
-                            <p className="text-[10px] text-muted-foreground">
-                              Validated with <code className="font-mono">proxmox-backup-client key info</code> before install.
-                            </p>
+                          <div className="space-y-2 pt-1">
+                            <div className="space-y-1.5">
+                              <Label htmlFor="manualPbsImportFile" className="text-[11px] font-medium">
+                                Keyfile to import
+                              </Label>
+                              <Input
+                                id="manualPbsImportFile"
+                                type="file"
+                                accept=".conf,.key,application/json,text/plain"
+                                onChange={(e) => setPbsImportFile(e.target.files?.[0] ?? null)}
+                                disabled={pbsImportBusy}
+                                className="h-8 text-[11px]"
+                              />
+                              <p className="text-[10px] text-muted-foreground">
+                                ProxMenux does not validate the file — any keyfile accepted by your PBS is accepted here.
+                              </p>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor="manualPbsImportKeyfilePass" className="text-[11px] font-medium">
+                                Keyfile passphrase (optional)
+                              </Label>
+                              <Input
+                                id="manualPbsImportKeyfilePass"
+                                type="password"
+                                value={pbsImportKeyfilePass}
+                                onChange={(e) => setPbsImportKeyfilePass(e.target.value)}
+                                disabled={pbsImportBusy}
+                                placeholder="Leave blank if the keyfile has no passphrase"
+                                className="h-8 text-[11px] font-mono"
+                              />
+                              <p className="text-[10px] text-muted-foreground">
+                                Only needed for keyfiles created with <code className="font-mono">--kdf scrypt</code> (the default of <code className="font-mono">proxmox-backup-client key create</code>). Stored at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.pass</code> (chmod 600) and reused by every encrypted job on this host.
+                              </p>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -4354,7 +4402,7 @@ function DestinationsSection({
   // exists. Drives the "Recover keyfile" banner.
   const hasPbs = (destinations?.pbs?.length ?? 0) > 0
   const { data: pbsRecoveryStatus, mutate: mutatePbsRecovery } = useSWR<{
-    has_keyfile: boolean; has_recovery: boolean
+    has_keyfile: boolean; has_recovery: boolean; has_keyfile_passphrase?: boolean
   }>(hasPbs ? "/api/host-backups/pbs-recovery/status" : null, fetcher)
   const { data: pbsRecoveryAvailable } = useSWR<{
     snapshots: Array<{ repo_name: string; repo_repository: string; backup_id: string; source_host: string; backup_time: number; snapshot: string }>

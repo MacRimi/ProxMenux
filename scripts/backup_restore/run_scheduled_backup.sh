@@ -376,6 +376,20 @@ _sb_run_pbs() {
     PBS_FINGERPRINT=$(_sb_pbs_resolve_fingerprint "$PBS_REPOSITORY" 2>/dev/null || true)
   fi
 
+  # PBS_ENCRYPTION_PASSWORD: the passphrase that unlocks the keyfile
+  # itself when it was created with `--kdf scrypt`. The Import flow
+  # persists it at pbs-key.pass (chmod 600, root-only, same trust
+  # boundary as the keyfile). If the file is absent the keyfile is
+  # kdf=none and no passphrase is needed. `PBS_ENCRYPTION_PASSWORD`
+  # from the .env still wins if the operator set it there for a
+  # per-job override.
+  if [[ -z "${PBS_ENCRYPTION_PASSWORD:-}" ]]; then
+    local _pbs_pass_file="/usr/local/share/proxmenux/pbs-key.pass"
+    if [[ -r "$_pbs_pass_file" ]]; then
+      PBS_ENCRYPTION_PASSWORD=$(cat "$_pbs_pass_file" 2>/dev/null || true)
+    fi
+  fi
+
   [[ -z "${PBS_REPOSITORY:-}" || -z "${PBS_PASSWORD:-}" ]] && return 1
   if [[ -n "${PBS_KEYFILE:-}" ]]; then
     cmd+=(--keyfile "$PBS_KEYFILE")

@@ -13738,6 +13738,14 @@ _PBS_KEYFILE_PATH = f'{_BACKUP_STATE_DIR}/pbs-key.conf'
 # shell's hb_pbs_setup_recovery flow byte-for-byte (AES-256-CBC +
 # PBKDF2 600k iterations).
 _PBS_RECOVERY_ENC_PATH = f'{_BACKUP_STATE_DIR}/pbs-key.recovery.enc'
+# Passphrase used to unlock the keyfile itself when it was created with
+# `--kdf scrypt`. Written by the "Import existing keyfile" flow when
+# the operator provides one; empty file (or missing) means the keyfile
+# is kdf=none and no passphrase is needed. Read at backup time by the
+# runner and exported as PBS_ENCRYPTION_PASSWORD so
+# proxmox-backup-client can decrypt the key without prompting.
+# Same trust boundary as the keyfile itself: chmod 600, next to it.
+_PBS_KEYFILE_PASS_PATH = f'{_BACKUP_STATE_DIR}/pbs-key.pass'
 
 
 def _pbs_keyfile_get_or_create(create_if_missing: bool = True) -> str:
@@ -13843,6 +13851,13 @@ def api_pbs_recovery_status():
     return jsonify({
         'has_keyfile': os.path.isfile(_PBS_KEYFILE_PATH),
         'has_recovery': os.path.isfile(_PBS_RECOVERY_ENC_PATH),
+        # True only when a non-empty passphrase file exists next to the
+        # keyfile. Lets the UI skip re-prompting the operator for the
+        # scrypt-unlock passphrase during subsequent job creations.
+        'has_keyfile_passphrase': (
+            os.path.isfile(_PBS_KEYFILE_PASS_PATH)
+            and os.path.getsize(_PBS_KEYFILE_PASS_PATH) > 0
+        ),
         'keyfile_path': _PBS_KEYFILE_PATH,
         'recovery_path': _PBS_RECOVERY_ENC_PATH,
         # Fingerprint of the installed keyfile — empty when no keyfile
@@ -14041,11 +14056,17 @@ def api_pbs_encryption_import():
 
     # Strip a leading UTF-8 BOM (b'\xef\xbb\xbf') if the operator's
     # editor added one — the byte order mark makes the file no longer
-    # a valid JSON document and `key info` refuses it with a parse
-    # error that reads like a generic "not a keyfile", which sends
-    # the operator down the wrong debugging path.
+    # a valid JSON document and downstream tools refuse it with a
+    # cryptic parse error.
     if content.startswith(b'\xef\xbb\xbf'):
         content = content[3:]
+
+    # Optional passphrase for a scrypt-encoded keyfile. Blank means the
+    # keyfile is kdf=none. We do NOT verify that the passphrase actually
+    # unlocks the keyfile — that would require the operator to be
+    # present and the flow to be interactive. If it's wrong, backups
+    # will fail loudly with proxmox-backup-client's own error message.
+    keyfile_pass = payload.get('keyfile_passphrase') or ''
 
     import tempfile
     tmp_fd, tmp_path = tempfile.mkstemp(prefix='pbs-key.import.', dir=_BACKUP_STATE_DIR)
@@ -14057,37 +14078,26 @@ def api_pbs_encryption_import():
         except OSError as e:
             return jsonify({'error': f'cannot write tmp keyfile: {e}'}), 500
 
-        try:
-            r = subprocess.run(
-                ['proxmox-backup-client', 'key', 'info', '--output-format', 'json', tmp_path],
-                capture_output=True, text=True, timeout=10,
-            )
-        except (subprocess.TimeoutExpired, OSError) as e:
-            return jsonify({'error': f'validation failed: {type(e).__name__}'}), 500
-
-        if r.returncode != 0:
-            # Surface the real tool output so the operator can tell a
-            # bad-file error from a needs-passphrase error (keyfiles
-            # generated with `--kdf scrypt` need to be decrypted with
-            # their original passphrase before they can be reused as an
-            # import — ProxMenux only supports kdf=none for the
-            # canonical shared keyfile).
-            tool_output = (r.stderr or r.stdout or '').strip()
-            return jsonify({
-                'error': 'proxmox-backup-client did not recognise this file as a valid PBS keyfile',
-                'tool_output': tool_output[:800] if tool_output else '(no output from proxmox-backup-client key info)',
-                'tool_exit_code': r.returncode,
-            }), 400
+        # No content validation. The operator brings their own key —
+        # any KDF, any format, any origin. If it later doesn't work
+        # with proxmox-backup-client the failure will surface at
+        # backup time with a clear error. This is a deliberate
+        # trust-the-operator design: keeping `key info` validation
+        # here rejected legitimate scrypt-encoded keyfiles that could
+        # only be inspected with their original passphrase, which is
+        # exactly the case ProxMenux can't provide in a non-interactive
+        # flow.
 
         # The old recovery blob was encrypted with the old key — a new
         # blob has to be built by re-running /pbs-recovery/setup once
         # the operator confirms this import.
-        try:
-            os.remove(_PBS_RECOVERY_ENC_PATH)
-        except FileNotFoundError:
-            pass
-        except OSError:
-            pass
+        for stale in (_PBS_RECOVERY_ENC_PATH, _PBS_KEYFILE_PASS_PATH):
+            try:
+                os.remove(stale)
+            except FileNotFoundError:
+                pass
+            except OSError:
+                pass
 
         try:
             os.replace(tmp_path, _PBS_KEYFILE_PATH)
@@ -14095,9 +14105,22 @@ def api_pbs_encryption_import():
         except OSError as e:
             return jsonify({'error': f'cannot promote keyfile: {e}'}), 500
 
+        # Persist the keyfile passphrase alongside the key, chmod 600.
+        # Same trust boundary as the keyfile itself: root-only. Empty
+        # value → don't write anything (blank passphrase == kdf=none).
+        if keyfile_pass:
+            try:
+                fd = os.open(_PBS_KEYFILE_PASS_PATH,
+                             os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+                with os.fdopen(fd, 'w') as f:
+                    f.write(keyfile_pass)
+            except OSError as e:
+                return jsonify({'error': f'cannot store keyfile passphrase: {e}'}), 500
+
         return jsonify({
             'status': 'ok',
             'keyfile_path': _PBS_KEYFILE_PATH,
+            'keyfile_pass_stored': bool(keyfile_pass),
             'recovery_reset': True,
         })
     finally:
