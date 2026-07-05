@@ -193,7 +193,7 @@
     ]
   },
   "whyItWorks": {
-    "heading": "Why the three-payload split is the right one",
+    "heading": "Why the three-payload split is the one used",
     "body": "The split is not a filesystem decision — it is a <strong>lifecycle</strong> decision. Filesystem content moves with <code>rsync</code>: fast, transparent, atomic per file. Configuration state that a restore has to interpret before touching the target moves as <strong>structured JSON</strong>: readable independently, versionable through a schema, machine-diffable against the target's own state. Software that has to be re-installed against the target's environment moves as an <strong>inventory</strong>: names and versions only, letting the target's package manager and ProxMenux's own installers decide the actual binaries. Each payload optimises for what it needs to do, and the three combine into a restore that is atomic in intent but fault-tolerant in practice: a corrupt manifest still leaves the rootfs restorable, a missing package still leaves the components installable, a component installer failing on one entry does not stop the next."
   }
 }

@@ -193,7 +193,7 @@
     ]
   },
   "whyItWorks": {
-    "heading": "Por qué la separación en tres bloques es la correcta",
+    "heading": "Por qué la separación en tres bloques es la usada",
     "body": "La separación no responde a una decisión de sistema de ficheros — responde a una decisión de <strong>ciclo de vida</strong>. El contenido del sistema de ficheros se mueve con <code>rsync</code>: rápido, transparente, atómico por fichero. El estado de configuración que la restauración tiene que interpretar antes de tocar el destino se mueve como <strong>JSON estructurado</strong>: legible de forma independiente, versionable mediante un esquema, diff-eable contra el estado propio del destino. El software que se tiene que reinstalar contra el entorno del destino se mueve como <strong>inventario</strong>: sólo nombres y versiones, dejando que el gestor de paquetes del destino y los instaladores propios de ProxMenux decidan los binarios reales. Cada bloque se optimiza para lo que tiene que hacer, y los tres combinan en una restauración que es atómica en la intención pero tolerante a fallos en la práctica: un manifiesto corrupto sigue dejando el rootfs restaurable, un paquete perdido sigue dejando los componentes instalables, un instalador que falla en una entrada no detiene la siguiente."
   }
 }
