@@ -333,6 +333,190 @@ const formatRunAt = (iso: string | null) => {
   }
 }
 
+// ── PBS keyfile management (shared between CreateJob + ManualBackup) ──
+//
+// Rendered inside the encryption section when a keyfile is already
+// installed. Replaces the older static info box that pointed to a
+// non-existent "Settings → Host backup" panel: the operator now has
+// three concrete actions (change stored keyfile passphrase, replace
+// keyfile, remove keyfile) with destructive-confirmation modals that
+// call the /api/host-backups/pbs-encryption/* endpoints and mutate
+// pbsRecoveryStatus so the parent dialog re-renders on success.
+//
+// `onReplaced` is called after a successful remove/replace-remove so
+// the parent can reset its local pbsEncryptMode from "existing" back
+// to "new" and let the Generate/Import radio unfold naturally.
+function KeyfileManageInline({
+  reuseText,
+  onReplaced,
+  mutateStatus,
+}: {
+  reuseText: string
+  onReplaced: () => void
+  mutateStatus: () => Promise<unknown>
+}) {
+  const [action, setAction] = useState<null | "passphrase" | "replace" | "remove">(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const [pass1, setPass1] = useState("")
+  const [pass2, setPass2] = useState("")
+  const [backupFirst, setBackupFirst] = useState(true)
+
+  const close = () => {
+    setAction(null)
+    setBusy(false)
+    setErr(null)
+    setPass1("")
+    setPass2("")
+    setBackupFirst(true)
+  }
+
+  const runPassphrase = async () => {
+    if (pass1 !== pass2) {
+      setErr("Passphrases do not match.")
+      return
+    }
+    setBusy(true)
+    setErr(null)
+    try {
+      await fetchApi("/api/host-backups/pbs-encryption/passphrase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ new_passphrase: pass1 }),
+      })
+      await mutateStatus()
+      close()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e))
+      setBusy(false)
+    }
+  }
+
+  const runRemove = async (mode: "remove" | "replace") => {
+    setBusy(true)
+    setErr(null)
+    try {
+      await fetchApi("/api/host-backups/pbs-encryption/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ backup_before_remove: backupFirst }),
+      })
+      await mutateStatus()
+      if (mode === "replace") onReplaced()
+      close()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e))
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-[11px] text-muted-foreground flex items-start gap-2">
+        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
+        <div>{reuseText}</div>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 text-[11px]"
+          onClick={() => setAction("passphrase")}
+        >
+          Update stored passphrase
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 text-[11px]"
+          onClick={() => setAction("replace")}
+        >
+          Replace keyfile
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 text-[11px] !text-red-400 border-red-500/40 hover:bg-red-500/10"
+          onClick={() => setAction("remove")}
+        >
+          Remove keyfile
+        </Button>
+      </div>
+
+      <Dialog open={action === "passphrase"} onOpenChange={(v) => !v && close()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update stored keyfile passphrase</DialogTitle>
+            <DialogDescription>
+              This only rotates the passphrase ProxMenux uses to unlock the keyfile at backup time (stored in <code className="font-mono">/usr/local/share/proxmenux/pbs-key.pass</code>). It does <strong>not</strong> re-encrypt the keyfile itself.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="mpass1" className="text-xs">New passphrase</Label>
+              <Input id="mpass1" type="password" value={pass1} onChange={(e) => setPass1(e.target.value)} placeholder="Leave blank to remove the stored passphrase" className="font-mono h-9" />
+            </div>
+            {pass1 && (
+              <div>
+                <Label htmlFor="mpass2" className="text-xs">Confirm new passphrase</Label>
+                <Input id="mpass2" type="password" value={pass2} onChange={(e) => setPass2(e.target.value)} className="font-mono h-9" />
+              </div>
+            )}
+            {err && (
+              <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">{err}</div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={close}>Cancel</Button>
+            <Button onClick={runPassphrase} disabled={busy || (!!pass1 && pass1 !== pass2)}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={action === "replace" || action === "remove"} onOpenChange={(v) => !v && close()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-400" />
+              {action === "replace" ? "Replace keyfile" : "Remove keyfile"}
+            </DialogTitle>
+            <DialogDescription>
+              Backups already stored on PBS were encrypted with the current keyfile. After this action:
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1 pl-2">
+            <li>New backups will use {action === "replace" ? "the newly generated / imported keyfile" : "no encryption on this host until a new keyfile is set up"}.</li>
+            <li>Downloading pre-existing encrypted backups from this host <strong className="text-red-400">will fail</strong> unless you keep a copy of the current key.</li>
+            <li>Existing recovery blobs on PBS stay intact — they still recover the old key with its original passphrase.</li>
+          </ul>
+          <label className="flex items-start gap-2 cursor-pointer text-xs">
+            <Checkbox checked={backupFirst} onCheckedChange={(v) => setBackupFirst(!!v)} className="mt-0.5" />
+            <span>Save a copy of the current keyfile + passphrase + recovery blob under <code className="font-mono">/root/pbs-key.old-&lt;timestamp&gt;.*</code> before {action === "replace" ? "replacing" : "removing"}.</span>
+          </label>
+          {err && (
+            <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">{err}</div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={close} disabled={busy}>Cancel</Button>
+            <Button
+              onClick={() => runRemove(action === "replace" ? "replace" : "remove")}
+              disabled={busy}
+              className="!bg-red-500 hover:!bg-red-600 !text-white"
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (action === "replace" ? "Remove current — set up new" : "Remove")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
 export function HostBackup() {
   const { data: jobsResp, error: jobsErr, mutate: mutateJobs } = useSWR<{ jobs: BackupJob[] }>(
     "/api/host-backups/jobs",
@@ -3058,12 +3242,11 @@ function CreateJobDialog({
                     </label>
 
                     {pbsEncrypt && pbsRecoveryStatus?.has_keyfile && (
-                      <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-[11px] text-muted-foreground flex items-start gap-2">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
-                        <div>
-                          An encryption key is already installed on this host — it will be reused for this job. To replace it, first import a new one from Settings → Host backup or remove the existing keyfile.
-                        </div>
-                      </div>
+                      <KeyfileManageInline
+                        reuseText="An encryption key is already installed on this host — it will be reused for this job. Use the buttons below to change the stored passphrase, replace the key with a new one, or remove it entirely."
+                        onReplaced={() => setPbsEncryptMode("new")}
+                        mutateStatus={mutatePbsRecovery}
+                      />
                     )}
 
                     {pbsEncrypt && !pbsRecoveryStatus?.has_keyfile && (
@@ -3966,12 +4149,11 @@ function ManualBackupDialog({
                     </label>
 
                     {pbsEncrypt && pbsRecoveryStatus?.has_keyfile && (
-                      <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-[11px] text-muted-foreground flex items-start gap-2">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
-                        <div>
-                          An encryption key is already installed on this host — it will be reused for this backup.
-                        </div>
-                      </div>
+                      <KeyfileManageInline
+                        reuseText="An encryption key is already installed on this host — it will be reused for this backup. Use the buttons below to change the stored passphrase, replace the key with a new one, or remove it entirely."
+                        onReplaced={() => setPbsEncryptMode("new")}
+                        mutateStatus={mutatePbsRecovery}
+                      />
                     )}
 
                     {pbsEncrypt && !pbsRecoveryStatus?.has_keyfile && (

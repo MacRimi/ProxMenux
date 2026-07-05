@@ -13842,6 +13842,153 @@ def _pbs_recovery_decrypt(passphrase: str, in_path: str, out_path: str) -> bool:
     return True
 
 
+@app.route('/api/host-backups/pbs-encryption/keyfile-info', methods=['GET'])
+@require_auth
+def api_pbs_encryption_keyfile_info():
+    """Snapshot of the installed keyfile for the "Manage keyfile" panel.
+    Extends /pbs-recovery/status with metadata that only makes sense
+    when a keyfile is actually installed (installed_at, kdf hint).
+    Returns 200 with `installed: false` when no keyfile is present so
+    the panel can render a neutral empty state without special-casing
+    404s in the caller."""
+    installed = os.path.isfile(_PBS_KEYFILE_PATH)
+    if not installed:
+        return jsonify({
+            'installed': False,
+            'path': _PBS_KEYFILE_PATH,
+        })
+    installed_at = ''
+    try:
+        installed_at = time.strftime(
+            '%Y-%m-%dT%H:%M:%SZ',
+            time.gmtime(os.path.getmtime(_PBS_KEYFILE_PATH)),
+        )
+    except OSError:
+        pass
+    # Best-effort KDF hint from the JSON keyfile body itself. `key info`
+    # would be the authoritative source but refuses scrypt keyfiles
+    # without their passphrase, so parsing the JSON manually gives us
+    # a hint even for imported scrypt keys the operator brought their
+    # own passphrase for.
+    kdf_hint = 'unknown'
+    try:
+        with open(_PBS_KEYFILE_PATH, 'r') as f:
+            raw = f.read(4096)
+        body = json.loads(raw)
+        kdf_raw = body.get('kdf')
+        if isinstance(kdf_raw, str):
+            kdf_hint = kdf_raw.lower()
+        elif isinstance(kdf_raw, dict):
+            # scrypt keyfiles carry `"kdf": {"Scrypt": {...}}`.
+            kdf_hint = next(iter(kdf_raw)).lower() if kdf_raw else 'unknown'
+    except (OSError, json.JSONDecodeError, ValueError, StopIteration):
+        pass
+    return jsonify({
+        'installed': True,
+        'path': _PBS_KEYFILE_PATH,
+        'fingerprint': _pbs_keyfile_fingerprint(),
+        'kdf_hint': kdf_hint,
+        'installed_at': installed_at,
+        'has_keyfile_passphrase': (
+            os.path.isfile(_PBS_KEYFILE_PASS_PATH)
+            and os.path.getsize(_PBS_KEYFILE_PASS_PATH) > 0
+        ),
+        'has_recovery': os.path.isfile(_PBS_RECOVERY_ENC_PATH),
+    })
+
+
+@app.route('/api/host-backups/pbs-encryption/remove', methods=['POST'])
+@require_auth
+def api_pbs_encryption_remove():
+    """Remove the installed keyfile + its paired local artifacts
+    (passphrase file, recovery blob). Optionally backs the three up to
+    /root under a timestamped prefix so the operator can still decrypt
+    or rebuild them later. Never touches the recovery blob(s) already
+    uploaded to PBS — those stay recoverable with their original
+    passphrase and are the safe way to reach any pre-existing backup
+    encrypted with the removed key.
+
+    Body: `{backup_before_remove: bool}` (default true)
+    """
+    payload = request.get_json(silent=True) or {}
+    do_backup = bool(payload.get('backup_before_remove', True))
+    if not os.path.isfile(_PBS_KEYFILE_PATH):
+        return jsonify({'error': 'no keyfile installed'}), 404
+
+    backed_up = []
+    if do_backup:
+        ts = time.strftime('%Y%m%d_%H%M%S', time.localtime())
+        for src, dst_suffix in (
+            (_PBS_KEYFILE_PATH, '.conf'),
+            (_PBS_KEYFILE_PASS_PATH, '.pass'),
+            (_PBS_RECOVERY_ENC_PATH, '.recovery.enc'),
+        ):
+            if not os.path.isfile(src):
+                continue
+            dst = f'/root/pbs-key.old-{ts}{dst_suffix}'
+            try:
+                with open(src, 'rb') as fin, open(os.open(dst, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), 'wb') as fout:
+                    fout.write(fin.read())
+                backed_up.append(dst)
+            except OSError as e:
+                return jsonify({
+                    'error': f'backup to /root failed for {src}: {e}',
+                    'partial_backups': backed_up,
+                }), 500
+
+    # Wipe order: recovery blob first so a mid-flight failure leaves us
+    # in a clean, backup-still-decryptable-with-blob state.
+    removed = []
+    for path in (_PBS_RECOVERY_ENC_PATH, _PBS_KEYFILE_PASS_PATH, _PBS_KEYFILE_PATH):
+        try:
+            os.remove(path)
+            removed.append(path)
+        except FileNotFoundError:
+            pass
+        except OSError as e:
+            return jsonify({
+                'error': f'remove failed for {path}: {e}',
+                'backed_up': backed_up,
+                'removed': removed,
+            }), 500
+    return jsonify({
+        'status': 'ok',
+        'backed_up': backed_up,
+        'removed': removed,
+    })
+
+
+@app.route('/api/host-backups/pbs-encryption/passphrase', methods=['POST'])
+@require_auth
+def api_pbs_encryption_passphrase():
+    """Update ONLY the stored keyfile passphrase (pbs-key.pass) without
+    touching the keyfile itself. Useful when the operator rotates the
+    passphrase on their own PBS setup and needs ProxMenux to catch up.
+    Body: `{new_passphrase}`. Empty value wipes the file — the runner
+    then treats the keyfile as kdf=none.
+    """
+    payload = request.get_json(silent=True) or {}
+    new_pass = payload.get('new_passphrase') or ''
+    if not os.path.isfile(_PBS_KEYFILE_PATH):
+        return jsonify({'error': 'no keyfile installed'}), 404
+    if not new_pass:
+        try:
+            os.remove(_PBS_KEYFILE_PASS_PATH)
+        except FileNotFoundError:
+            pass
+        except OSError as e:
+            return jsonify({'error': f'cannot remove passphrase file: {e}'}), 500
+        return jsonify({'status': 'ok', 'has_keyfile_passphrase': False})
+    try:
+        fd = os.open(_PBS_KEYFILE_PASS_PATH,
+                     os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, 'w') as f:
+            f.write(new_pass)
+    except OSError as e:
+        return jsonify({'error': f'cannot write passphrase file: {e}'}), 500
+    return jsonify({'status': 'ok', 'has_keyfile_passphrase': True})
+
+
 @app.route('/api/host-backups/pbs-recovery/status', methods=['GET'])
 @require_auth
 def api_pbs_recovery_status():
