@@ -47,6 +47,7 @@ type FileRow = { file: string; content: string }
 type TaskRow = { task: string; detail: string }
 type TimeRow = { stage: string; time: string; detail: string }
 type LogRow = { log: string; detail: string }
+type FieldRow = { name: string; detail: string }
 type WhereNextItem = { label: string; href: string; tail: string }
 
 export default async function RestoringPage({
@@ -66,6 +67,7 @@ export default async function RestoringPage({
       pathClassification: { rows: ClassRow[] }
       pendingMachinery: { rows: FileRow[] }
       postbootDispatcher: { tasks: TaskRow[] }
+      liveProgress: { fields: FieldRow[] }
       tenMinutes: { rows: TimeRow[] }
       logs: { rows: LogRow[] }
       whereNext: { items: WhereNextItem[] }
@@ -78,6 +80,7 @@ export default async function RestoringPage({
   const classRows = rs.pathClassification.rows
   const pendingRows = rs.pendingMachinery.rows
   const postbootTasks = rs.postbootDispatcher.tasks
+  const liveFields = rs.liveProgress.fields
   const timeRows = rs.tenMinutes.rows
   const logRows = rs.logs.rows
   const whereNextItems = rs.whereNext.items
@@ -318,6 +321,58 @@ export default async function RestoringPage({
         </a>
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("postbootExample.imageCaption")}
+        </figcaption>
+      </figure>
+
+      <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">
+        {t("liveProgress.heading")}
+      </h2>
+
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("liveProgress.body", { code })}
+      </p>
+
+      <div className="overflow-x-auto mb-6">
+        <table className="w-full text-sm border border-gray-200 rounded-md">
+          <thead className="bg-gray-50 text-gray-900">
+            <tr>
+              <th className="text-left px-3 py-2 border-b border-gray-200 whitespace-nowrap">Card element</th>
+              <th className="text-left px-3 py-2 border-b border-gray-200">Detail</th>
+            </tr>
+          </thead>
+          <tbody className="text-gray-800">
+            {liveFields.map((row, idx) => (
+              <tr key={row.name} className={idx < liveFields.length - 1 ? "border-b border-gray-100" : ""}>
+                <td className="px-3 py-2 align-top whitespace-nowrap"><strong>{row.name}</strong></td>
+                <td className="px-3 py-2 align-top">{t.rich(`liveProgress.fields.${idx}.detail`, { code, em })}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="mb-6 text-gray-800 leading-relaxed">
+        {t.rich("liveProgress.dismissBody", { code, em })}
+      </p>
+
+      <figure className="my-6">
+        <a
+          href="/images/docs/backup-restore/monitor-restore-progress-card.png"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block cursor-zoom-in group"
+          aria-label={t("liveProgress.imageAlt")}
+        >
+          <Image
+            src="/images/docs/backup-restore/monitor-restore-progress-card.png"
+            alt={t("liveProgress.imageAlt")}
+            width={1600}
+            height={800}
+            className="rounded-lg border border-gray-200 shadow-sm w-full h-auto transition group-hover:shadow-md"
+          />
+        </a>
+        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
+          {t("liveProgress.imageCaption")}
         </figcaption>
       </figure>
 

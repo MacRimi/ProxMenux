@@ -1574,8 +1574,21 @@ def internal_restore_event():
 
     Only accepts requests from localhost (127.0.0.1) for security.
     """
-    remote_addr = request.remote_addr
-    if remote_addr not in ('127.0.0.1', '::1', 'localhost'):
+    # Flask bound to 0.0.0.0 receives loopback connections as the
+    # IPv4-mapped IPv6 form (`::ffff:127.0.0.1`) on dual-stack hosts,
+    # not as bare `127.0.0.1`. Unwrap the mapped IPv4 before asking the
+    # stdlib classifier so every loopback representation (v4, v6,
+    # IPv4-mapped) is accepted.
+    remote_addr = request.remote_addr or ''
+    try:
+        import ipaddress
+        addr = ipaddress.ip_address(remote_addr.split('%')[0])
+        if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped is not None:
+            addr = addr.ipv4_mapped
+        is_loopback = addr.is_loopback
+    except (ValueError, TypeError):
+        is_loopback = remote_addr in ('127.0.0.1', '::1', 'localhost')
+    if not is_loopback:
         return jsonify({'error': 'forbidden', 'detail': 'localhost only'}), 403
 
     try:

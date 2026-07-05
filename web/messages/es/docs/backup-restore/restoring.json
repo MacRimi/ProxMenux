@@ -143,6 +143,39 @@
       }
     ]
   },
+  "liveProgress": {
+    "heading": "Progreso en vivo en la pestaña Backups del Monitor",
+    "body": "Tras el reboot, la pestaña Backups del Monitor de ProxMenux muestra una tarjeta de progreso en vivo que refleja el estado de <code>apply_cluster_postboot.service</code> a medida que avanza. La tarjeta lee <code>/var/lib/proxmenux/restore-state.json</code>, que el dispatcher actualiza en cada hito (aplicar configuración del cluster, reconstruir initramfs, actualizar bootloader, reinstalación por componente, verificación de arranque, finalización).",
+    "fields": [
+      {
+        "name": "Insignia de estado",
+        "detail": "Una de estas tres: <em>Restauración en curso</em>, <em>Restauración completa</em> o <em>Restauración fallida</em>. Mientras se ejecuta, la tarjeta consulta el fichero de estado cada 2 segundos; una vez terminada, cada 30 segundos."
+      },
+      {
+        "name": "Barra de progreso + contador de pasos",
+        "detail": "Muestra <code>N/M steps</code> con la etiqueta del paso actual. Durante la ejecución se calcula un <em>tiempo estimado</em> restante a partir de los pasos completados y el tiempo transcurrido."
+      },
+      {
+        "name": "Lista de componentes",
+        "detail": "Una fila por cada driver reinstalado (NVIDIA, Intel GPU tools, AMD tools, Coral TPU) con estado <code>installing</code> / <code>ok</code> / <code>failed</code> y un enlace al log por componente en <code>/var/log/proxmenux/component-*.log</code>."
+      },
+      {
+        "name": "Avisos de arranque",
+        "detail": "El dispatcher verifica si falta <code>/lib/modules/&lt;kernel&gt;</code>, si no hay ESP configurada y si hay un symlink <code>/vmlinuz</code> colgado. Cualquier aviso aparece aquí en un banner coloreado."
+      },
+      {
+        "name": "Delta de rollback",
+        "detail": "Lista VMs, LXCs y componentes que existen en el destino pero no estaban en el backup restaurado — las mismas entradas que aparecen en el diálogo de rollback destructivo pre-restore. Cada fila incluye el comando de limpieza manual."
+      },
+      {
+        "name": "Tail del log",
+        "detail": "Las últimas 600 líneas de <code>proxmenux-cluster-postboot-&lt;ts&gt;.log</code>, con un filtro <em>Issues only</em> que deja solo las líneas con <code>error</code>, <code>warning</code>, <code>failed</code>, <code>✗</code> o <code>traceback</code>."
+      }
+    ],
+    "dismissBody": "Cuando la restauración termina como <em>complete</em> o <em>failed</em>, el botón Dismiss colapsa la tarjeta. El fichero de estado se conserva y el botón History la reabre junto con cualquier restauración anterior (se archivan las últimas 20 en <code>/var/lib/proxmenux/restore-history/</code>).",
+    "imageAlt": "Pestaña Backups del Monitor de ProxMenux mostrando la tarjeta de progreso en vivo con pasos, estado por componente y tail del log.",
+    "imageCaption": "La tarjeta de la pestaña Backups mientras el post-boot dispatcher está en ejecución."
+  },
   "postbootExample": {
     "heading": "Cómo se ve el post-boot en la consola",
     "body": "En la consola física del host la ejecución exitosa del dispatcher termina con una línea <code>[ OK ] Finished proxmenux-apply-cluster-postboot.service</code>. Cuando esa línea aparece — normalmente acompañada de los <code>OK</code> del <code>multi-user.target</code> y del <code>graphical.target</code> — la restauración ha terminado por completo: componentes reinstalados, boot artifacts regenerados, cluster reconciliado.",

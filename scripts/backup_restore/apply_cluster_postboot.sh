@@ -33,6 +33,13 @@ mkdir -p "$LOG_DIR" >/dev/null 2>&1 || true
 LOG_FILE="${LOG_DIR}/proxmenux-cluster-postboot-$(date +%Y%m%d_%H%M%S).log"
 exec >>"$LOG_FILE" 2>&1
 
+# Capture start epoch BEFORE any long-running step. The final duration
+# is derived from this; the previous approach used stat -c %Y on the
+# log file, which reads the last-write mtime — and since we `exec >>`
+# to the log for the whole run, that mtime is always ~end-of-run and
+# the duration came out as 0m00s.
+POSTBOOT_START_EPOCH=$(date +%s)
+
 # ── State-file helpers ─────────────────────────────────────────
 # Every milestone advances `steps_done` and optionally updates a
 # handful of other fields. Writes go through a temp file + rename
@@ -109,12 +116,22 @@ _state_component() {
 }
 _state_finish() {
     # $1 = "complete" | "failed"
+    # Promotes steps_done to steps_total so the progress bar reads 100%
+    # instead of freezing at whatever the last _state_step call left it
+    # at (typically N-1 because "finalize" itself never gets its own
+    # _state_step). Also relabels current_step so the card stops
+    # showing the last in-flight step ("Boot sanity check") as if it
+    # were still running.
     local final_status="$1"
+    local final_label="Restore finished"
+    [[ "$final_status" == "failed" ]] && final_label="Restore failed"
     _state_write "$(jq -n \
         --arg s "$final_status" \
         --arg t "$(date -Iseconds)" \
         --arg dur "${POSTBOOT_DURATION_FMT:-}" \
-        '{status:$s, finished_at:$t, duration:$dur}')"
+        --arg step "$final_label" \
+        --argjson stotal "$_state_steps_total" \
+        '{status:$s, finished_at:$t, duration:$dur, current_step:$step, steps_done:$stotal, steps_total:$stotal}')"
     # Archive a copy to history/ so past restores stay browsable
     # from the Monitor even after the operator dismisses the card.
     if [[ -f "$STATE_FILE" ]]; then
@@ -526,7 +543,7 @@ if command -v jq >/dev/null 2>&1 && [[ -f "$COMPONENTS_STATUS" ]]; then
 fi
 
 POSTBOOT_END_EPOCH=$(date +%s)
-POSTBOOT_DURATION=$((POSTBOOT_END_EPOCH - $(stat -c %Y "$LOG_FILE")))
+POSTBOOT_DURATION=$((POSTBOOT_END_EPOCH - POSTBOOT_START_EPOCH))
 POSTBOOT_DURATION_FMT=$(printf '%dm%02ds' $((POSTBOOT_DURATION / 60)) $((POSTBOOT_DURATION % 60)))
 
 # ── Rollback delta report (read-only) ──────────────────────────
