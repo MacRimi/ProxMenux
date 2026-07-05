@@ -376,6 +376,27 @@ export default async function RestoringPage({
         </figcaption>
       </figure>
 
+      <figure className="my-6">
+        <a
+          href="/images/docs/backup-restore/monitor-restore-progress-details.png"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block cursor-zoom-in group"
+          aria-label={t("liveProgress.detailsImageAlt")}
+        >
+          <Image
+            src="/images/docs/backup-restore/monitor-restore-progress-details.png"
+            alt={t("liveProgress.detailsImageAlt")}
+            width={1600}
+            height={1200}
+            className="rounded-lg border border-gray-200 shadow-sm w-full h-auto transition group-hover:shadow-md"
+          />
+        </a>
+        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
+          {t("liveProgress.detailsImageCaption")}
+        </figcaption>
+      </figure>
+
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">
         {t("tenMinutes.heading")}
       </h2>

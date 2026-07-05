@@ -173,8 +173,10 @@
       }
     ],
     "dismissBody": "Once the restore is <em>complete</em> or <em>failed</em>, a Dismiss button collapses the card. The state file is preserved and the History button re-opens it plus any prior restore (the last 20 runs are archived under <code>/var/lib/proxmenux/restore-history/</code>).",
-    "imageAlt": "ProxMenux Monitor Backups tab showing the live post-restore progress card with steps, per-component status and log tail.",
-    "imageCaption": "The Backups tab card while the post-boot dispatcher is running."
+    "imageAlt": "ProxMenux Monitor Backups tab showing the post-restore progress card after a completed restore, with the green Restore complete badge, full progress bar, run duration and summary tiles (guests, bind-mount stubs, stale nodes cleaned, components).",
+    "imageCaption": "The Backups tab card after the post-boot dispatcher has finished — status badge, 100% progress bar, run duration and per-component summary tiles.",
+    "detailsImageAlt": "Post-restore Details modal opened on the same completed restore, showing the finalised progress bar at 6/6 steps, the Rollback delta section reporting no drift, and the full log tail with the Full / Issues only toggle.",
+    "detailsImageCaption": "The Details modal for a completed restore, exposing the full run log, the boot sanity result and the rollback delta computed against the backup."
   },
   "postbootExample": {
     "heading": "What the post-boot looks like on the console",

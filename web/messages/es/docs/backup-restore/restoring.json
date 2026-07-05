@@ -173,8 +173,10 @@
       }
     ],
     "dismissBody": "Cuando la restauración termina como <em>complete</em> o <em>failed</em>, el botón Dismiss colapsa la tarjeta. El fichero de estado se conserva y el botón History la reabre junto con cualquier restauración anterior (se archivan las últimas 20 en <code>/var/lib/proxmenux/restore-history/</code>).",
-    "imageAlt": "Pestaña Backups del Monitor de ProxMenux mostrando la tarjeta de progreso en vivo con pasos, estado por componente y tail del log.",
-    "imageCaption": "La tarjeta de la pestaña Backups mientras el post-boot dispatcher está en ejecución."
+    "imageAlt": "Pestaña Backups del Monitor de ProxMenux mostrando la tarjeta de progreso post-restauración tras una restauración completada, con la insignia verde \"Restore complete\", la barra de progreso llena, la duración del proceso y los recuadros de resumen (guests, bind-mount stubs, stale nodes cleaned, components).",
+    "imageCaption": "La tarjeta de la pestaña Backups tras finalizar el post-boot dispatcher — insignia de estado, barra al 100%, duración total y recuadros de resumen por componente.",
+    "detailsImageAlt": "Modal Details post-restauración abierto sobre la misma restauración completada, mostrando la barra final en 6/6 pasos, la sección Rollback delta indicando que no hay entradas nuevas y el tail del log completo con el conmutador Full / Issues only.",
+    "detailsImageCaption": "El modal Details de una restauración completada, con el log completo, el resultado de la verificación de arranque y el delta de rollback calculado contra el backup."
   },
   "postbootExample": {
     "heading": "Cómo se ve el post-boot en la consola",
