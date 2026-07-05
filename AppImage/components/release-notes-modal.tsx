@@ -222,7 +222,7 @@ const CURRENT_VERSION_FEATURES = [
   },
   {
     icon: <RefreshCw className="h-5 w-5" />,
-    text: "Live post-restore progress — after a reboot the Backups tab shows a real-time progress card with step-by-step milestones, ETA, per-component status (NVIDIA, Intel GPU tools, Coral, AMD tools), boot sanity warnings, a rollback delta widget listing VMs / LXCs / components that exist on the host but weren't in the backup, and a log tail with an Issues-only filter. Past restores are archived and browsable.",
+    text: "Live post-restore progress — after a reboot the Backups tab shows a real-time progress card with step-by-step milestones, estimated time remaining, per-component status (NVIDIA, Intel GPU tools, Coral, AMD tools), boot sanity warnings, a rollback delta widget listing VMs / LXCs / components that exist on the host but weren't in the backup, and a log tail with an Issues-only filter. Past restores are archived and browsable.",
   },
   {
     icon: <Shield className="h-5 w-5" />,

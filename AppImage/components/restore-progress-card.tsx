@@ -124,18 +124,21 @@ const formatRelative = (iso: string) => {
   }
 }
 
-// Rough ETA derived from steps_done + elapsed. Best-effort: skips at
-// step 0 (no data yet) and returns "—" once the run is terminal.
+// Rough time-remaining estimate derived from steps_done + elapsed.
+// Best-effort: at step 0 there's no data yet, so it returns
+// "estimating time…". After the run is terminal, "—". The output is
+// a full phrase so the caller doesn't have to add suffix words that
+// only make sense on some branches.
 const computeEta = (state: RestoreState): string => {
   if (state.status !== "running") return "—"
-  if (!state.steps_done || state.steps_done <= 0) return "estimating…"
+  if (!state.steps_done || state.steps_done <= 0) return "estimating time…"
   const elapsedSec = Math.max(1, Math.round((Date.now() - new Date(state.started_at).getTime()) / 1000))
   const perStep = elapsedSec / state.steps_done
   const remaining = Math.max(0, state.steps_total - state.steps_done)
   const eta = Math.round(perStep * remaining)
-  if (eta < 60) return `~${eta}s`
-  if (eta < 3600) return `~${Math.round(eta / 60)}m`
-  return `~${Math.round(eta / 3600)}h`
+  if (eta < 60) return `~${eta}s left`
+  if (eta < 3600) return `~${Math.round(eta / 60)}m left`
+  return `~${Math.round(eta / 3600)}h left`
 }
 
 // ── Small building blocks ─────────────────────────────────────
@@ -316,7 +319,7 @@ const RestoreDetailModal: React.FC<{
               <span>{state.current_step || "—"}</span>
               <span>
                 {state.steps_done}/{state.steps_total} steps
-                {state.status === "running" && ` · ETA ${computeEta(state)}`}
+                {state.status === "running" && ` · ${computeEta(state)}`}
               </span>
             </div>
             <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -552,7 +555,7 @@ export const RestoreProgressCard: React.FC = () => {
               </span>
               <span>
                 {state.steps_done}/{state.steps_total} steps
-                {state.status === "running" && ` · ETA ${computeEta(state)}`}
+                {state.status === "running" && ` · ${computeEta(state)}`}
                 {state.summary?.duration && state.status !== "running" && ` · ${state.summary.duration}`}
               </span>
             </div>

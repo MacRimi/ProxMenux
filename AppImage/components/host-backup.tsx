@@ -7718,7 +7718,7 @@ function RestoreOptionsModal({
             <div className="rounded-md border border-blue-500/40 bg-blue-500/5 p-3 text-[11px] text-muted-foreground flex items-start gap-2">
               <History className="h-3.5 w-3.5 text-blue-400 shrink-0 mt-0.5" />
               <div>
-                After the reboot, this Backups tab will show a live post-restore progress card with ETA, per-component status, log tail and rollback delta. If Telegram/Discord/ntfy notifications are configured, you'll also receive the "Host restore finished" event.
+                After the reboot, this Backups tab will show a live post-restore progress card with estimated time, per-component status, log tail and rollback delta. If Telegram/Discord/ntfy notifications are configured, you'll also receive the "Host restore finished" event.
               </div>
             </div>
 

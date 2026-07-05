@@ -1752,7 +1752,7 @@ _rs_offer_reboot_after_pending() {
             bg_block+="  • ${label}  (${eta})"$'\n'
         done
         bg_block+=$'\n'"$(translate "Monitor progress:")"$'\n'
-        bg_block+="  • $(translate "ProxMenux Monitor → Backups tab (live progress card with ETA, logs, rollback delta)")"$'\n'
+        bg_block+="  • $(translate "ProxMenux Monitor → Backups tab (live progress card with estimated time, logs, rollback delta)")"$'\n'
         bg_block+="  • tail -f /var/log/proxmenux/proxmenux-cluster-postboot-*.log"$'\n'
         bg_block+="  • systemctl status proxmenux-apply-cluster-postboot.service"$'\n\n'
         bg_block+="$(translate "If notifications are enabled (Telegram/Discord/ntfy/...), you will receive a \"Host restore finished\" message when all background tasks complete.")"$'\n\n'
@@ -2683,7 +2683,7 @@ _rs_run_complete_guided() {
         body+=$'\n'"${RS_HYDRATION_SUMMARY}"
     fi
     body+=$'\n'"\Zb\Z4$(translate "A reboot is required to finish the restore.")\Zn"$'\n\n'
-    body+="$(translate "After the reboot you can follow the post-restore work live from ProxMenux Monitor → Backups tab (ETA, per-component status, log tail, rollback delta).")"$'\n\n'
+    body+="$(translate "After the reboot you can follow the post-restore work live from ProxMenux Monitor → Backups tab (estimated time, per-component status, log tail, rollback delta).")"$'\n\n'
     body+="$(translate "If notifications are enabled (Telegram/Discord/ntfy/...), you will receive a \"Host restore finished\" message when all background tasks complete.")"$'\n\n'
     body+="\Zb$(translate "Continue?")\ZB"
 
