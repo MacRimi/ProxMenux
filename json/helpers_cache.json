@@ -668,12 +668,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000",
-      "scriptcat00004"
+      "scriptcat00018"
     ],
     "category_names": [
-      "Miscellaneous",
-      "Network & Firewall"
+      "MQTT & Messaging"
     ],
     "notes": [
       "To see config: `cat /opt/cinny/config.json`"
