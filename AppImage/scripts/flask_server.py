@@ -15614,17 +15614,40 @@ def api_host_backups_manual_run():
             # form when they need a separate retention bucket.
             pbs_backup_id = f'hostcfg-{socket.gethostname()}'
         pbs_fingerprint = (payload.get('pbs_fingerprint') or '').strip()
-        pbs_encrypt = bool(payload.get('pbs_encrypt'))
+        # Encryption mode: matches the job-create endpoint exactly.
+        # Reads the modern `pbs_encrypt_mode` string ("none"/"new"/
+        # "existing") first, falls back to legacy `pbs_encrypt` bool
+        # only if the modern field is absent. Both dialogs on the
+        # front-end send the modern field — the older ManualBackup
+        # code path was ignoring it and silently downgrading every
+        # encrypted manual backup to plain because it only looked at
+        # the legacy `pbs_encrypt` boolean, which the front-end
+        # stopped sending.
+        pbs_encrypt_mode = (payload.get('pbs_encrypt_mode') or '').strip().lower()
+        if not pbs_encrypt_mode:
+            pbs_encrypt_mode = 'new' if bool(payload.get('pbs_encrypt')) else 'none'
+        if pbs_encrypt_mode not in ('none', 'new', 'existing'):
+            return jsonify({'error': "pbs_encrypt_mode must be 'none', 'new' or 'existing'"}), 400
         lines.append(f'PBS_REPOSITORY={pbs_repo}')
         lines.append(f'PBS_PASSWORD={pbs_pass}')
         lines.append(f'PBS_BACKUP_ID={pbs_backup_id}')
         if pbs_fingerprint:
             lines.append(f'PBS_FINGERPRINT={pbs_fingerprint}')
-        if pbs_encrypt:
+        if pbs_encrypt_mode == 'new':
             kf = _pbs_keyfile_get_or_create(True)
             if not kf:
                 return jsonify({'error': 'failed to create PBS encryption keyfile'}), 500
             lines.append(f'PBS_KEYFILE={kf}')
+        elif pbs_encrypt_mode == 'existing':
+            if not os.path.isfile(_PBS_KEYFILE_PATH):
+                return jsonify({
+                    'error': (
+                        "pbs_encrypt_mode='existing' but no keyfile is installed at "
+                        f"{_PBS_KEYFILE_PATH} — import one first with "
+                        "POST /api/host-backups/pbs-encryption/import"
+                    ),
+                }), 400
+            lines.append(f'PBS_KEYFILE={_PBS_KEYFILE_PATH}')
     elif backend == 'local':
         explicit = (payload.get('local_dest_dir') or '').strip()
         dest_dir = explicit.rstrip('/') if explicit else _get_local_target()['effective']
@@ -16846,6 +16869,18 @@ def _run_pbs_export(task_id: str, repo: dict, snapshot: str, output_path: str):
         env = {**os.environ, 'PBS_PASSWORD': pwd}
         if fp:
             env['PBS_FINGERPRINT'] = fp
+        # Load the scrypt-unlock passphrase stored during import. Without
+        # this env var proxmox-backup-client can't decrypt a scrypt
+        # keyfile at restore time and fails with "no password input
+        # mechanism available". kdf=none keyfiles don't need it (empty
+        # file → env stays empty). Matches how the scheduled runner
+        # resolves PBS_ENCRYPTION_PASSWORD in run_scheduled_backup.sh.
+        try:
+            if os.path.isfile(_PBS_KEYFILE_PASS_PATH) and os.path.getsize(_PBS_KEYFILE_PASS_PATH) > 0:
+                with open(_PBS_KEYFILE_PASS_PATH, 'r') as _pf:
+                    env['PBS_ENCRYPTION_PASSWORD'] = _pf.read()
+        except OSError:
+            pass
 
         # 1) Pull the .pxar archive out of the snapshot. PBS stores the
         # host backup as `hostcfg.pxar.didx`; restoring it as `hostcfg.pxar`

@@ -346,12 +346,15 @@ const formatRunAt = (iso: string | null) => {
 // `onReplaced` is called after a successful remove/replace-remove so
 // the parent can reset its local pbsEncryptMode from "existing" back
 // to "new" and let the Generate/Import radio unfold naturally.
-function KeyfileManageInline({
-  reuseText,
+// Bare row of three destructive keyfile actions + their confirm
+// modals. Meant to be embedded inside the operator's own "change
+// mode" container — this component renders no info box, no toggle,
+// no Cancel link. The parent handles when to show/hide it and how
+// to signal "user wants to keep things as they are".
+function KeyfileActionsBar({
   onReplaced,
   mutateStatus,
 }: {
-  reuseText: string
   onReplaced: () => void
   mutateStatus: () => Promise<unknown>
 }) {
@@ -412,10 +415,7 @@ function KeyfileManageInline({
 
   return (
     <div className="space-y-2">
-      <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-[11px] text-muted-foreground flex items-start gap-2">
-        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
-        <div>{reuseText}</div>
-      </div>
+      <div className="text-[11px] font-medium text-foreground">Manage installed keyfile</div>
       <div className="flex flex-wrap gap-1.5">
         <Button
           type="button"
@@ -531,6 +531,16 @@ export function HostBackup() {
   const [viewingJobId, setViewingJobId] = useState<string | null>(null)
   const [watchingManualId, setWatchingManualId] = useState<string | null>(null)
   const [runningManual, setRunningManual] = useState<boolean>(false)
+  // Independent tracker for the most recent manual backup that's still
+  // running. Survives the operator closing the ManualJobWatchModal —
+  // the modal only drives auto-refresh while it's OPEN, so if the
+  // operator dismisses it before the job finishes, the archive lists
+  // would only refresh on the next SWR tick (30-60 s). Polling the
+  // job status here at 3 s and calling mutate once we see the run
+  // transition to completed closes that gap regardless of modal
+  // state. Set = single slot per launch; a fresh manual replaces the
+  // slot (the previous one falls back to the periodic SWR tick).
+  const [pendingManualJobId, setPendingManualJobId] = useState<string | null>(null)
 
   async function confirmDeleteJob() {
     if (!jobToDelete) return
@@ -562,6 +572,25 @@ export function HostBackup() {
     fetcher,
     { refreshInterval: 30000 },
   )
+
+  // Background poll for the pending manual backup, independent of the
+  // watch modal being open. Fires mutateArchives/mutateRemoteArchives
+  // as soon as the run flips to done so the operator sees the new
+  // entry in Available Archives without a manual refresh.
+  const { data: pendingManualPoll } = useSWR<JobDetail>(
+    pendingManualJobId ? `/api/host-backups/jobs/${encodeURIComponent(pendingManualJobId)}` : null,
+    fetcher,
+    { refreshInterval: 3000 },
+  )
+  useEffect(() => {
+    const d = pendingManualPoll as JobDetail | undefined
+    if (pendingManualJobId && d?.last_run_at && d?.last_result) {
+      mutateJobs()
+      mutateArchives()
+      mutateRemoteArchives()
+      setPendingManualJobId(null)
+    }
+  }, [pendingManualPoll, pendingManualJobId, mutateJobs, mutateArchives, mutateRemoteArchives])
 
   const [inspectingArchive, setInspectingArchive] = useState<UnifiedArchive | null>(null)
 
@@ -1001,15 +1030,12 @@ export function HostBackup() {
           setRunningManual(false)
           mutateJobs()
           setWatchingManualId(jobId)
-          // Refresh BOTH archive lists a few seconds after launch so
-          // the new backup shows up regardless of backend: local
-          // archives are on disk locally, PBS / Borg snapshots are
-          // pulled from `remote-archives`. Without the second mutate
-          // a Borg manual stayed invisible until the next 60s tick.
-          setTimeout(() => {
-            mutateArchives()
-            mutateRemoteArchives()
-          }, 5000)
+          // Register the job with the modal-independent background
+          // poller so the Available Archives list refreshes the
+          // instant the run finishes, even if the operator closes
+          // the watch modal before then. Replaces the old fire-and-
+          // forget 5 s mutate that used to miss slow backups.
+          setPendingManualJobId(jobId)
         }}
       />
 
@@ -3241,13 +3267,6 @@ function CreateJobDialog({
                       </div>
                     </label>
 
-                    {pbsEncrypt && pbsRecoveryStatus?.has_keyfile && (
-                      <KeyfileManageInline
-                        reuseText="An encryption key is already installed on this host — it will be reused for this job. Use the buttons below to change the stored passphrase, replace the key with a new one, or remove it entirely."
-                        onReplaced={() => setPbsEncryptMode("new")}
-                        mutateStatus={mutatePbsRecovery}
-                      />
-                    )}
 
                     {pbsEncrypt && !pbsRecoveryStatus?.has_keyfile && (
                       <div className="space-y-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
@@ -3322,10 +3341,6 @@ function CreateJobDialog({
 
                     {pbsEncrypt && (
                       <div className="pl-7 space-y-2 rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
-                        <div className="text-[11px] font-medium text-foreground flex items-center gap-1.5">
-                          <AlertTriangle className="h-3.5 w-3.5 text-blue-400" />
-                          Recovery passphrase (strongly recommended)
-                        </div>
                         {pbsRecoveryStatus?.has_recovery && !pbsRecoveryChange ? (
                           /* Escrow already saved — mirror the shell: skip
                              the prompt unless the operator opts to change. */
@@ -3345,6 +3360,23 @@ function CreateJobDialog({
                           </div>
                         ) : (
                           <>
+                            {/* When the operator clicked "Change" and a keyfile
+                                is already installed, the keyfile management
+                                actions sit at the top of the panel. This
+                                collapses two prior boxes (keyfile info + recovery
+                                escrow) into one, and only exposes the destructive
+                                buttons when the operator explicitly asks for
+                                change. */}
+                            {pbsRecoveryStatus?.has_keyfile && (
+                              <>
+                                <KeyfileActionsBar
+                                  onReplaced={() => setPbsEncryptMode("new")}
+                                  mutateStatus={mutatePbsRecovery}
+                                />
+                                <div className="border-t border-blue-500/20 my-1" />
+                                <div className="text-[11px] font-medium text-foreground">Change recovery passphrase</div>
+                              </>
+                            )}
                             <p className="text-[11px] text-muted-foreground">
                               With a recovery passphrase, an encrypted copy of the keyfile is uploaded to PBS with every backup. If you lose this host, you can recover the keyfile on a fresh install with just the passphrase. Without it, losing the local keyfile means the encrypted backups become unrecoverable forever.
                             </p>
@@ -4148,13 +4180,6 @@ function ManualBackupDialog({
                       </div>
                     </label>
 
-                    {pbsEncrypt && pbsRecoveryStatus?.has_keyfile && (
-                      <KeyfileManageInline
-                        reuseText="An encryption key is already installed on this host — it will be reused for this backup. Use the buttons below to change the stored passphrase, replace the key with a new one, or remove it entirely."
-                        onReplaced={() => setPbsEncryptMode("new")}
-                        mutateStatus={mutatePbsRecovery}
-                      />
-                    )}
 
                     {pbsEncrypt && !pbsRecoveryStatus?.has_keyfile && (
                       <div className="space-y-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
@@ -4229,10 +4254,6 @@ function ManualBackupDialog({
 
                     {pbsEncrypt && (
                       <div className="pl-7 space-y-2 rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
-                        <div className="text-[11px] font-medium text-foreground flex items-center gap-1.5">
-                          <AlertTriangle className="h-3.5 w-3.5 text-blue-400" />
-                          Recovery passphrase (strongly recommended)
-                        </div>
                         {pbsRecoveryStatus?.has_recovery && !pbsRecoveryChange ? (
                           <div className="flex items-start gap-2 text-[11px]">
                             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
@@ -4250,6 +4271,16 @@ function ManualBackupDialog({
                           </div>
                         ) : (
                           <>
+                            {pbsRecoveryStatus?.has_keyfile && (
+                              <>
+                                <KeyfileActionsBar
+                                  onReplaced={() => setPbsEncryptMode("new")}
+                                  mutateStatus={mutatePbsRecovery}
+                                />
+                                <div className="border-t border-blue-500/20 my-1" />
+                                <div className="text-[11px] font-medium text-foreground">Change recovery passphrase</div>
+                              </>
+                            )}
                             <p className="text-[11px] text-muted-foreground">
                               With a recovery passphrase an encrypted copy of the keyfile is uploaded to PBS on every backup. Lets you recover it on a fresh host with just the passphrase.
                             </p>
