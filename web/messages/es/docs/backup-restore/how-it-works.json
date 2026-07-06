@@ -9,12 +9,12 @@
   },
   "header": {
     "title": "Cómo funciona",
-    "description": "Desglose interno de una copia de ProxMenux — sistema de ficheros, manifiesto e inventario de aplicaciones — y cómo la restauración consume los tres para reproducir el host de origen sobre un destino que puede no compartir el mismo kernel.",
+    "description": "Desglose interno de una copia de seguridad creada con ProxMenux — sistema de ficheros, manifiesto e inventario de aplicaciones — y cómo la restauración consume los tres para reproducir el host de origen sobre un destino que puede no compartir el mismo kernel.",
     "section": "Backup & Restore"
   },
   "intro": {
     "title": "Un archivo, tres bloques",
-    "body": "Cada copia produce un layout de directorio con tres bloques bien definidos bajo una única raíz de staging. El archivo que se sube al destino (archivo local <code>.tar.zst</code>, backup PBS o archivo Borg) contiene ese layout exacto. La restauración lee los tres bloques de forma independiente, en un orden concreto que garantiza la corrección: primero se copia el <strong>rootfs</strong> para colocar la configuración, después se consulta <strong>el manifiesto</strong> para detectar drift y decidir qué omitir, y finalmente <strong>el inventario de aplicaciones</strong> dirige la pasada de reinstalación post-arranque. No hay dependencias entre bloques — cada uno puede inspeccionarse o extraerse de forma independiente."
+    "body": "Cada copia produce un layout de directorio con tres bloques bien definidos bajo una única raíz de staging. El archivo que se sube al destino (archivo local <code>.tar.zst</code>, backup PBS o archivo Borg) contiene ese layout exacto. La restauración lee los tres bloques de forma independiente, en un orden concreto que garantiza la corrección: primero se copia el <strong>rootfs</strong> —el sistema de archivos raíz del host— para colocar la configuración, después se consulta <strong>el manifiesto</strong> para detectar drift y decidir qué omitir, y finalmente <strong>el inventario de aplicaciones</strong> dirige la pasada de reinstalación post-arranque. No hay dependencias entre bloques — cada uno puede inspeccionarse o extraerse de forma independiente."
   },
   "layout": {
     "heading": "Layout del archivo",
@@ -121,7 +121,7 @@
       }
     ],
     "schemaTitle": "Validación por esquema",
-    "schemaBody": "El manifiesto valida contra <code>scripts/backup_restore/schema/manifest.schema.json</code>. Ejecutar <code>build_manifest.sh --validate</code> dispara una validación JSON Schema por Python (requiere <code>python3</code> + <code>jsonschema</code>). Si el módulo no está presente, la comprobación se omite silenciosamente — la validación es principalmente una ayuda de desarrollo, no una dependencia en tiempo de ejecución."
+    "schemaBody": "ProxMenux incluye una plantilla que describe qué campos debe contener el manifiesto y qué forma tiene cada uno. Cuando se genera una copia se puede comprobar automáticamente que el manifiesto respeta esa plantilla, de modo que si un colector produjera un JSON malformado o con un campo mal escrito se detectaría en el momento. Es una comprobación destinada al desarrollo del propio ProxMenux: si el sistema no la tiene instalada, la copia sigue funcionando con normalidad y el manifiesto se genera igual."
   },
   "applications": {
     "heading": "El inventario de aplicaciones",

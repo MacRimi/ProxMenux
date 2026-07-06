@@ -1,7 +1,8 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
-import { Star, ExternalLink } from "lucide-react"
+import { Star, ExternalLink, BookOpen } from "lucide-react"
 import Image from "next/image"
+import { Link } from "@/i18n/navigation"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
@@ -98,7 +99,7 @@ export default async function PbsDestinationPage({
       </h2>
 
       <p className="mb-4 text-gray-800 leading-relaxed">
-        {t.rich("repoSelection.intro", { code })}
+        {t.rich("repoSelection.intro", { code, em })}
       </p>
 
       <div className="overflow-x-auto mb-6">
@@ -160,6 +161,23 @@ export default async function PbsDestinationPage({
         {t("encryption.heading")}
       </h2>
 
+      <div className="mb-6 flex items-start gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
+        <BookOpen className="h-4 w-4 text-slate-500 shrink-0 mt-0.5" aria-hidden="true" />
+        <p className="leading-relaxed">
+          {t.rich("encryption.glossaryHint", {
+            em,
+            glosarioLink: (chunks) => (
+              <Link
+                href="/docs/backup-restore/glossary#group-0"
+                className="text-blue-600 hover:underline font-medium"
+              >
+                {chunks}
+              </Link>
+            ),
+          })}
+        </p>
+      </div>
+
       <p className="mb-4 text-gray-800 leading-relaxed">
         {t.rich("encryption.intro", { code, strong })}
       </p>
@@ -207,7 +225,7 @@ export default async function PbsDestinationPage({
       </h3>
 
       <p className="mb-4 text-gray-800 leading-relaxed">
-        {t.rich("encryption.blobUploadBody1", { code })}
+        {t.rich("encryption.blobUploadBody1", { code, strong })}
       </p>
 
       <figure className="my-6">
@@ -230,6 +248,12 @@ export default async function PbsDestinationPage({
           {t("encryption.blobUploadImageCaption")}
         </figcaption>
       </figure>
+
+      <Callout variant="success" title={t("encryption.envelopeSecurityTitle")}>
+        <p className="leading-relaxed">
+          {t.rich("encryption.envelopeSecurityBody", { code, strong, em })}
+        </p>
+      </Callout>
 
       <h4 className="text-base font-semibold mt-6 mb-2 text-gray-900">
         {t("encryption.blobUploadConstraintTitle")}

@@ -180,7 +180,8 @@
       "backupRestoreCreating": "Creating backups",
       "backupRestoreJobs": "Scheduled jobs",
       "backupRestoreRestoring": "Restoring",
-      "backupRestoreCrossKernel": "Cross-kernel restore"
+      "backupRestoreCrossKernel": "Cross-kernel restore",
+      "backupRestoreGlossary": "Glossary"
     }
   },
   "hero": {

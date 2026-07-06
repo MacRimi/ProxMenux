@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
-import { Info } from "lucide-react"
+import { Info, CalendarClock } from "lucide-react"
 import { Link } from "@/i18n/navigation"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
@@ -112,6 +112,20 @@ export default async function ScheduledJobsPage({
             </h3>
             <p className="text-sm text-blue-900/90 leading-relaxed">
               {t.rich("attachBadge.body", { code, strong })}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="my-8 rounded-lg border border-emerald-200 bg-emerald-50 p-5">
+        <div className="flex items-start gap-3">
+          <CalendarClock className="h-5 w-5 text-emerald-700 shrink-0 mt-0.5" aria-hidden="true" />
+          <div>
+            <h3 className="text-base font-semibold text-emerald-900 mb-1">
+              {t("frequencyBadge.title")}
+            </h3>
+            <p className="text-sm text-emerald-900/90 leading-relaxed">
+              {t.rich("frequencyBadge.body", { code, strong })}
             </p>
           </div>
         </div>
