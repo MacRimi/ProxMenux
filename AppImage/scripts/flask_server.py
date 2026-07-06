@@ -15419,25 +15419,42 @@ def api_host_backups_job_update(job_id):
             import socket
             pbs_backup_id = f'hostcfg-{socket.gethostname()}'
         pbs_fingerprint = (payload.get('pbs_fingerprint') or existing.get('PBS_FINGERPRINT') or '').strip()
-        # Encryption: payload `pbs_encrypt` is the new state. When the
-        # operator toggles it ON we persist the keyfile path; OFF
-        # simply omits PBS_KEYFILE from the rewritten .env. We never
-        # delete the host-wide keyfile here — other jobs may depend on
-        # it. The `pbs_encrypt` key is required to be passed
-        # explicitly on edit so an absent field is treated as "keep
-        # the current state".
-        if 'pbs_encrypt' in payload:
-            pbs_encrypt = bool(payload.get('pbs_encrypt'))
-        else:
-            pbs_encrypt = bool(existing.get('PBS_KEYFILE'))
+        # Encryption: matches job-create + manual-run. The Web sends
+        # `pbs_encrypt_mode` ("none" / "new" / "existing"); older
+        # clients may still send the legacy `pbs_encrypt` bool.
+        # Absent field on edit means "keep the current state" — so
+        # a partial payload doesn't accidentally turn encryption off.
+        # Before this fix the endpoint only looked at `pbs_encrypt`
+        # and defaulted to `bool(existing PBS_KEYFILE)` when absent,
+        # which meant unchecking the box in the Edit dialog was a
+        # no-op because the new UI sends `pbs_encrypt_mode` instead.
+        pbs_encrypt_mode = (payload.get('pbs_encrypt_mode') or '').strip().lower()
+        if not pbs_encrypt_mode:
+            if 'pbs_encrypt' in payload:
+                pbs_encrypt_mode = 'new' if bool(payload.get('pbs_encrypt')) else 'none'
+            else:
+                pbs_encrypt_mode = 'existing' if existing.get('PBS_KEYFILE') else 'none'
+        if pbs_encrypt_mode not in ('none', 'new', 'existing'):
+            return jsonify({'error': "pbs_encrypt_mode must be 'none', 'new' or 'existing'"}), 400
         lines.append(f'PBS_REPOSITORY={pbs_repo}')
         lines.append(f'PBS_PASSWORD={pbs_pass}')
         lines.append(f'PBS_BACKUP_ID={pbs_backup_id}')
-        if pbs_encrypt:
+        if pbs_encrypt_mode == 'new':
             kf = _pbs_keyfile_get_or_create(True)
             if not kf:
                 return jsonify({'error': 'failed to create PBS encryption keyfile'}), 500
             lines.append(f'PBS_KEYFILE={kf}')
+        elif pbs_encrypt_mode == 'existing':
+            if not os.path.isfile(_PBS_KEYFILE_PATH):
+                return jsonify({
+                    'error': (
+                        "pbs_encrypt_mode='existing' but no keyfile is installed at "
+                        f"{_PBS_KEYFILE_PATH} — import one first with "
+                        "POST /api/host-backups/pbs-encryption/import"
+                    ),
+                }), 400
+            lines.append(f'PBS_KEYFILE={_PBS_KEYFILE_PATH}')
+        # else 'none' → no PBS_KEYFILE line written → job runs unencrypted
         if pbs_fingerprint:
             lines.append(f'PBS_FINGERPRINT={pbs_fingerprint}')
     elif backend == 'local':

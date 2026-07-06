@@ -422,11 +422,22 @@ _create_job() {
         --inputbox "$(translate "Backup ID for this job:")" \
         "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "$bid" 3>&1 1>&2 2>&3) || return 1
       bid=$(echo "$bid" | tr -cs '[:alnum:]_-' '-' | sed 's/-*$//')
+      # PBS_KEYFILE: `hb_ask_pbs_encryption` sets HB_PBS_KEYFILE_OPT
+      # to the FULL CLI flag string ("--keyfile /path") when
+      # encryption is accepted, and leaves it empty otherwise. The
+      # previous read of `HB_PBS_KEYFILE` was picking up an unset
+      # variable and always wrote an empty PBS_KEYFILE — so the
+      # Monitor Web (which detects encryption from a non-empty
+      # PBS_KEYFILE line) surfaced every CLI-created encrypted job
+      # as unencrypted. Derive the canonical path from
+      # HB_PBS_KEYFILE_OPT presence instead.
+      local pbs_kf_val=""
+      [[ -n "${HB_PBS_KEYFILE_OPT:-}" ]] && pbs_kf_val="$HB_STATE_DIR/pbs-key.conf"
       lines+=(
         "PBS_REPOSITORY=${HB_PBS_REPOSITORY}"
         "PBS_PASSWORD=${HB_PBS_SECRET}"
         "PBS_BACKUP_ID=${bid}"
-        "PBS_KEYFILE=${HB_PBS_KEYFILE:-}"
+        "PBS_KEYFILE=${pbs_kf_val}"
         "PBS_ENCRYPTION_PASSWORD=${HB_PBS_ENC_PASS:-}"
       )
       ;;
