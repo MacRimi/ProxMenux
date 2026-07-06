@@ -1862,6 +1862,40 @@
     "os": "debian"
   },
   {
+    "name": "BeaverHabits",
+    "slug": "beaverhabits",
+    "desc": "BeaverHabits is a self-hosted habit tracking app without goals. Track streaks, view heatmaps, and manage your daily habits through a clean web interface powered by NiceGUI and Python.",
+    "script": "ct/beaverhabits.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/beaverhabits.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/beaverhabits.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00000"
+    ],
+    "category_names": [
+      "Miscellaneous"
+    ],
+    "notes": [
+      "Habit data is stored in /opt/beaverhabits/.user.",
+      "Set TRUSTED_LOCAL_EMAIL in the service environment to skip authentication for a specific email."
+    ],
+    "warnings": [],
+    "port": 8080,
+    "website": "https://beaverhabits.com",
+    "documentation": "https://github.com/daya0576/beaverhabits/wiki",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/beaverhabits.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "BentoPDF",
     "slug": "bentopdf",
     "desc": "A privacy-first, 100% client-side PDF Toolkit. No signups/accounts, works in the browser, online or offline.",
@@ -3160,6 +3194,40 @@
       "pve"
     ],
     "config_path": "/opt/convertx/.env",
+    "os": "debian"
+  },
+  {
+    "name": "CookCLI",
+    "slug": "cookcli",
+    "desc": "CookCLI is a recipe management CLI and embedded web server in a single binary. It serves a Cooklang recipe collection as a web interface with shopping lists, pantry tracking, and meal planning.",
+    "script": "ct/cookcli.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/cookcli.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/cookcli.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Recipes are stored in /opt/cookcli/recipes. Sample recipes are added on first install.",
+      "Add your own .cook recipe files to /opt/cookcli/recipes and restart the service."
+    ],
+    "warnings": [],
+    "port": 9080,
+    "website": "https://cooklang.org",
+    "documentation": "https://github.com/cooklang/cookcli/blob/main/docs/server.md",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cooklang.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -5951,8 +6019,12 @@
     "category_names": [
       "AI / Coding & Dev-Tools"
     ],
-    "notes": [],
-    "warnings": [],
+    "notes": [
+      "For Autodeployment you can use var_forgejo_instance (Forgejo Instance URL (e.g. https://codeberg.org)) | var_forgejo_runner_uuid (Forgejo Runner UUID) | var_forgejo_runner_token (Forgejo Runner Token) before bash call"
+    ],
+    "warnings": [
+      "Warning: This app requires user input! Full automation is at your own risk."
+    ],
     "port": 0,
     "website": "https://forgejo.org/docs/latest/admin/actions/runner-installation/",
     "documentation": "https://forgejo.org/docs/latest/admin/actions/runner-installation/",
@@ -7340,6 +7412,40 @@
       "pve"
     ],
     "config_path": "/opt/hivemq/conf/config.xml",
+    "os": "debian"
+  },
+  {
+    "name": "Hister",
+    "slug": "hister",
+    "desc": "Hister is a privacy-focused personal search engine that indexes the websites you visit via a browser extension. It stores your browsing history locally with full-text search, advanced query language, and optional semantic search.",
+    "script": "ct/hister.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/hister.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/hister.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Install the Hister browser extension (Chrome or Firefox) and set the server URL to http://YOUR_IP:4433.",
+      "Search index and data are stored in /opt/hister/data. Disk usage grows as more pages are indexed."
+    ],
+    "warnings": [],
+    "port": 4433,
+    "website": "https://hister.org",
+    "documentation": "https://hister.org/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hister.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -9450,6 +9556,44 @@
       "pve"
     ],
     "config_path": "/opt/LazyLibrarian/config.ini",
+    "os": "debian"
+  },
+  {
+    "name": "LeafWiki",
+    "slug": "leafwiki",
+    "desc": "LeafWiki is a self-hosted wiki built as a single Go binary with SQLite and Markdown stored on disk. No Node.js, no Redis, no Postgres — just a binary and a data directory.",
+    "script": "ct/leafwiki.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/leafwiki.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/leafwiki.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Admin password is stored in /etc/leafwiki/.env.",
+      "Wiki data and Markdown files are stored in /opt/leafwiki/data."
+    ],
+    "warnings": [],
+    "port": 8080,
+    "website": "https://leafwiki.com",
+    "documentation": "https://github.com/perber/leafwiki",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/leafwiki.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": "auto-generated"
+    },
     "os": "debian"
   },
   {
@@ -12330,6 +12474,45 @@
     "os": "debian"
   },
   {
+    "name": "NoteDiscovery",
+    "slug": "notediscovery",
+    "desc": "NoteDiscovery is a lightweight, self-hosted knowledge base and note-taking platform. Write Markdown notes, build a graph of linked knowledge, and search full-text across your entire vault — all stored as plain files.",
+    "script": "ct/notediscovery.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/notediscovery.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/notediscovery.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Notes are stored as plain Markdown files in /opt/notediscovery/data."
+    ],
+    "warnings": [
+      "Authentication is disabled by default. Enable it in /opt/notediscovery/config.yaml and change the default password."
+    ],
+    "port": 8000,
+    "website": "https://www.notediscovery.com",
+    "documentation": "https://github.com/gamosoft/NoteDiscovery/tree/main/documentation",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/notediscovery.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "",
+      "password": "admin"
+    },
+    "os": "debian"
+  },
+  {
     "name": "Notifiarr",
     "slug": "notifiarr",
     "desc": "Notifiarr is a purpose built system to bring many applications together to manage and customize notifications via Discord. You can monitor many aspects of your network(s), be notified of downtime, be notified of health issues, etc",
@@ -14864,6 +15047,44 @@
       "pve"
     ],
     "config_path": "/opt/poweradmin/config/settings.php",
+    "os": "debian"
+  },
+  {
+    "name": "Poznote",
+    "slug": "poznote",
+    "desc": "Poznote is a personal note-taking and documentation platform built with PHP 8.4 and SQLite. Features include Markdown editing, OIDC/SSO support, MCP server integration, and a clean web interface served via nginx.",
+    "script": "ct/poznote.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/poznote.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/poznote.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Notes and the SQLite database are stored in /var/www/html/data.",
+      "OIDC/SSO and settings-page password can be configured via the .env file (see .env.template in the repo)."
+    ],
+    "warnings": [],
+    "port": 8040,
+    "website": "https://github.com/timothepoznanski/poznote",
+    "documentation": "https://github.com/timothepoznanski/poznote",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/poznote.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin_change_me",
+      "password": "admin"
+    },
     "os": "debian"
   },
   {
@@ -18090,6 +18311,46 @@
       "pve"
     ],
     "config_path": "/etc/swizzin/",
+    "os": "debian"
+  },
+  {
+    "name": "Sync-in",
+    "slug": "sync-in",
+    "desc": "Sync-in is a self-hosted platform for file storage, synchronization, and team collaboration. Features include drag-and-drop uploads, OIDC/LDAP authentication, WebDAV support, full-text search, and online document editing with OnlyOffice or Collabora.",
+    "script": "ct/sync-in.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/sync-in.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/sync-in.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00011"
+    ],
+    "category_names": [
+      "Files & Downloads"
+    ],
+    "notes": [
+      "Configuration and generated secrets are stored in /opt/sync-in/environment.yaml.",
+      "Files are stored in /opt/sync-in/data. Increase disk size accordingly."
+    ],
+    "warnings": [
+      "Change the default credentials (sync-in / sync-in) immediately after first login."
+    ],
+    "port": 8080,
+    "website": "https://sync-in.com",
+    "documentation": "https://sync-in.com/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/sync-in.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "sync-in",
+      "password": "sync-in"
+    },
     "os": "debian"
   },
   {
@@ -21323,6 +21584,41 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Yuvomi",
+    "slug": "yuvomi",
+    "desc": "Yuvomi is a self-hosted family planner covering tasks, calendars, shopping lists, meals, and budget tracking. Data is stored in an encrypted SQLite database (SQLCipher) with optional WebDAV backup and OIDC support.",
+    "script": "ct/yuvomi.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/yuvomi.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/yuvomi.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00000"
+    ],
+    "category_names": [
+      "Miscellaneous"
+    ],
+    "notes": [
+      "Data is stored in /opt/yuvomi/data. Backups go to /opt/yuvomi/backups."
+    ],
+    "warnings": [
+      "Database encryption key and session secret are auto-generated and stored in /opt/yuvomi/.env. Do not lose the DB_ENCRYPTION_KEY — without it the database is unrecoverable."
+    ],
+    "port": 3000,
+    "website": "https://github.com/ulsklyc/yuvomi",
+    "documentation": "https://github.com/ulsklyc/yuvomi",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/yuvomi.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
