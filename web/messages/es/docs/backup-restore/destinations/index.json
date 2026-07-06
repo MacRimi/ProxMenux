@@ -75,8 +75,8 @@
     "captionBorg": "Borg"
   },
   "sameArchive": {
-    "heading": "El layout del archivo no cambia con el destino",
-    "body": "Dentro de cualquiera de los tres destinos está presente el mismo layout <code>rootfs/</code> + <code>metadata/</code> + <code>manifest.json</code> descrito en <em>Cómo funciona</em>. Un <code>.tar.zst</code> extraído de un archivo local, un <code>.pxar</code> restaurado desde PBS y un archivo Borg extraído con <code>borg extract</code> producen todos un árbol de directorios idéntico. El camino de código de la restauración (<code>_rs_check_layout</code>, <code>_rs_apply</code>, <code>_rs_prepare_pending_restore</code>) lee los mismos tres bloques sin saber de qué destino vienen."
+    "heading": "El contenido interno de la copia es el mismo en cualquier destino",
+    "body": "Con independencia de dónde se guarde la copia, dentro siempre están los mismos tres bloques descritos en <em>Cómo funciona</em>: el sistema de ficheros (<code>rootfs/</code>), los metadatos (<code>metadata/</code>) y el manifiesto (<code>manifest.json</code>). Al extraer una copia local <code>.tar.zst</code>, restaurar un archivo <code>.pxar</code> desde PBS o descomprimir un archivo Borg, el árbol de directorios resultante es idéntico en los tres casos. Esto significa que el proceso de restauración lee siempre los mismos ficheros y no le importa desde qué destino provenga la copia."
   },
   "extractStandalone": {
     "heading": "Extraer una copia fuera de ProxMenux",
