@@ -226,8 +226,8 @@ run_updates_dialog() {
 
 
 declare -a COMMUNITY_SCRIPTS=(
-    "Proxmox VE Post Install|Helper-Scripts|bash -c \"\$(wget -qLO - https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pve-install.sh); msg_success \\\"\$(translate 'Press ENTER to continue...')\\\"; read -r _\""
-    "Proxmox VE Microcode|Helper-Scripts|bash -c \"\$(wget -qLO - https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/microcode.sh); msg_success \\\"\$(translate 'Press ENTER to continue...')\\\"; read -r _\""
+    "Proxmox VE Post Install|Helper-Scripts|bash -c \"source '$UTILS_FILE'; wget -qLO - https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pve-install.sh | bash; msg_success \\\"\$(translate 'Press ENTER to continue...')\\\"; read -r _\""
+    "Proxmox VE Microcode|Helper-Scripts|bash -c \"source '$UTILS_FILE'; wget -qLO - https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/microcode.sh | bash; msg_success \\\"\$(translate 'Press ENTER to continue...')\\\"; read -r _\""
 )
 
 # ==========================================================
