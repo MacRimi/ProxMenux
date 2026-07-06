@@ -24,6 +24,10 @@
     "title": "Modo adjunto — recomendado cuando ya existe una tarea vzdump de PVE",
     "body": "Cuando ya hay una tarea de copia vzdump de PVE configurada para las VMs y los LXCs de este nodo, adjuntar la copia de host a esa tarea garantiza que la configuración del host se captura en la <strong>misma ventana</strong> que los invitados. En la restauración, las configuraciones de los invitados vienen de la copia de host (viven bajo <code>/etc/pve</code>), y los discos de los invitados vienen de la copia vzdump tomada al mismo tiempo — ambos conjuntos son consistentes entre sí, por lo que una recuperación completa del nodo puede reproducir el host y re-adjuntar cada invitado sin drift de versiones."
   },
+  "frequencyBadge": {
+    "title": "Frecuencia recomendada",
+    "body": "Para garantizar la máxima compatibilidad entre la copia y su posterior restauración se recomienda hacer copias de seguridad del host con frecuencia. Cuanto más reciente sea la copia respecto al estado actual del host, menor será la desviación de configuración, paquetes y componentes que la restauración tendrá que reconciliar."
+  },
   "modes": {
     "heading": "Los dos modos",
     "rows": [

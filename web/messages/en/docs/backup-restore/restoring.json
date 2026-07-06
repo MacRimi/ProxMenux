@@ -173,10 +173,10 @@
       }
     ],
     "dismissBody": "Once the restore is <em>complete</em> or <em>failed</em>, a Dismiss button collapses the card. The state file is preserved and the History button re-opens it plus any prior restore (the last 20 runs are archived under <code>/var/lib/proxmenux/restore-history/</code>).",
-    "imageAlt": "ProxMenux Monitor Backups tab showing the post-restore progress card after a completed restore, with the green Restore complete badge, full progress bar, run duration and summary tiles (guests, bind-mount stubs, stale nodes cleaned, components).",
-    "imageCaption": "The Backups tab card after the post-boot dispatcher has finished — status badge, 100% progress bar, run duration and per-component summary tiles.",
-    "detailsImageAlt": "Post-restore Details modal opened on the same completed restore, showing the finalised progress bar at 6/6 steps, the Rollback delta section reporting no drift, and the full log tail with the Full / Issues only toggle.",
-    "detailsImageCaption": "The Details modal for a completed restore, exposing the full run log, the boot sanity result and the rollback delta computed against the backup."
+    "imageAlt": "ProxMenux Monitor's Post-restore progress Details modal opened during a running restore, showing the blue Restore in progress badge, the current step (Rebuilding initramfs), the estimated time remaining, a partially filled progress bar and the live tail of the postboot log.",
+    "imageCaption": "The Details modal while the post-boot dispatcher is still running — badge, current step, time remaining and live log tail.",
+    "detailsImageAlt": "The same Details modal after the restore has finished, with the green Restore complete badge, the total run duration (0m53s), a fully filled 6/6 progress bar, the empty Rollback delta and the archived postboot log.",
+    "detailsImageCaption": "The same modal once the run has finished — badge, total duration, filled progress bar and the archived postboot log."
   },
   "postbootExample": {
     "heading": "What the post-boot looks like on the console",

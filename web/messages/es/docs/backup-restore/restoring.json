@@ -173,10 +173,10 @@
       }
     ],
     "dismissBody": "Cuando la restauración termina como <em>complete</em> o <em>failed</em>, el botón Dismiss colapsa la tarjeta. El fichero de estado se conserva y el botón History la reabre junto con cualquier restauración anterior (se archivan las últimas 20 en <code>/var/lib/proxmenux/restore-history/</code>).",
-    "imageAlt": "Pestaña Backups del Monitor de ProxMenux mostrando la tarjeta de progreso post-restauración tras una restauración completada, con la insignia verde \"Restore complete\", la barra de progreso llena, la duración del proceso y los recuadros de resumen (guests, bind-mount stubs, stale nodes cleaned, components).",
-    "imageCaption": "La tarjeta de la pestaña Backups tras finalizar el post-boot dispatcher — insignia de estado, barra al 100%, duración total y recuadros de resumen por componente.",
-    "detailsImageAlt": "Modal Details post-restauración abierto sobre la misma restauración completada, mostrando la barra final en 6/6 pasos, la sección Rollback delta indicando que no hay entradas nuevas y el tail del log completo con el conmutador Full / Issues only.",
-    "detailsImageCaption": "El modal Details de una restauración completada, con el log completo, el resultado de la verificación de arranque y el delta de rollback calculado contra el backup."
+    "imageAlt": "Modal Details de progreso post-restauración del Monitor de ProxMenux abierto durante una restauración en curso, con la insignia azul Restore in progress, el paso actual (Rebuilding initramfs), el tiempo estimado restante, la barra de progreso parcialmente llena y el tail del log del postboot en vivo.",
+    "imageCaption": "El modal Details mientras el post-boot dispatcher sigue en ejecución — insignia, paso actual, tiempo restante y tail del log en vivo.",
+    "detailsImageAlt": "El mismo modal Details una vez terminada la restauración, con la insignia verde Restore complete, la duración total (0m53s), la barra de progreso al 6/6, la sección Rollback delta vacía y el log del postboot archivado.",
+    "detailsImageCaption": "El mismo modal una vez finalizada la ejecución — insignia, duración total, barra al 100% y log del postboot archivado."
   },
   "postbootExample": {
     "heading": "Cómo se ve el post-boot en la consola",

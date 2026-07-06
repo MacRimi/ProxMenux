@@ -270,6 +270,7 @@ export const sidebarItems: MenuItem[] = [
       { title: "Scheduled jobs", i18nKey: "backupRestoreJobs", href: "/docs/backup-restore/scheduled-jobs" },
       { title: "Restoring", i18nKey: "backupRestoreRestoring", href: "/docs/backup-restore/restoring" },
       { title: "Cross-kernel restore", i18nKey: "backupRestoreCrossKernel", href: "/docs/backup-restore/cross-kernel" },
+      { title: "Glossary", i18nKey: "backupRestoreGlossary", href: "/docs/backup-restore/glossary" },
     ],
   },
 

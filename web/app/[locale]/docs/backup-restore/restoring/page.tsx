@@ -355,19 +355,24 @@ export default async function RestoringPage({
         {t.rich("liveProgress.dismissBody", { code, em })}
       </p>
 
+      {/* Two states of the Details modal side-by-side: the running run
+          first (badge blue, current step, time remaining), then the
+          completed run (badge green, filled bar, total duration).
+          File names are historical — `-details.png` was captured while
+          the run was in progress and `-card.png` after it finished. */}
       <figure className="my-6">
         <a
-          href="/images/docs/backup-restore/monitor-restore-progress-card.png"
+          href="/images/docs/backup-restore/monitor-restore-progress-details.png"
           target="_blank"
           rel="noopener noreferrer"
           className="block cursor-zoom-in group"
           aria-label={t("liveProgress.imageAlt")}
         >
           <Image
-            src="/images/docs/backup-restore/monitor-restore-progress-card.png"
+            src="/images/docs/backup-restore/monitor-restore-progress-details.png"
             alt={t("liveProgress.imageAlt")}
             width={1600}
-            height={800}
+            height={1200}
             className="rounded-lg border border-gray-200 shadow-sm w-full h-auto transition group-hover:shadow-md"
           />
         </a>
@@ -378,14 +383,14 @@ export default async function RestoringPage({
 
       <figure className="my-6">
         <a
-          href="/images/docs/backup-restore/monitor-restore-progress-details.png"
+          href="/images/docs/backup-restore/monitor-restore-progress-card.png"
           target="_blank"
           rel="noopener noreferrer"
           className="block cursor-zoom-in group"
           aria-label={t("liveProgress.detailsImageAlt")}
         >
           <Image
-            src="/images/docs/backup-restore/monitor-restore-progress-details.png"
+            src="/images/docs/backup-restore/monitor-restore-progress-card.png"
             alt={t("liveProgress.detailsImageAlt")}
             width={1600}
             height={1200}

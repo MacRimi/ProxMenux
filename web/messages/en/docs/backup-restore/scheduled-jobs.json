@@ -24,6 +24,10 @@
     "title": "Attach mode — recommended when a PVE vzdump task already exists",
     "body": "When a PVE vzdump backup task is already configured for the VMs and LXCs on this node, attaching the host backup to that task guarantees the host configuration is captured in the <strong>same window</strong> as the guests. On restore, the guest configs come from the host backup (they live under <code>/etc/pve</code>), and the guest disks come from the vzdump backup taken alongside — both sets are consistent with each other, so a full-node recovery can reproduce the host and re-attach every guest without version drift."
   },
+  "frequencyBadge": {
+    "title": "Recommended frequency",
+    "body": "To maximise compatibility between a host backup and its future restore, run host backups frequently. The closer the backup is to the current state of the host, the less configuration, package and component drift the restore has to reconcile."
+  },
   "modes": {
     "heading": "The two modes",
     "rows": [
