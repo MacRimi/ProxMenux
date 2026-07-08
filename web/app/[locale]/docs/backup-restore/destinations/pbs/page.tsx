@@ -217,7 +217,7 @@ export default async function PbsDestinationPage({
       </h3>
 
       <p className="mb-4 text-gray-800 leading-relaxed">
-        {t.rich("encryption.recoveryBody", { code })}
+        {t.rich("encryption.recoveryBody", { code, em, strong })}
       </p>
 
       <h3 className="text-lg font-semibold mt-6 mb-3 text-gray-900">
@@ -269,6 +269,14 @@ export default async function PbsDestinationPage({
 
       <p className="mb-6 text-gray-800 leading-relaxed">
         {t.rich("encryption.recoverBody", { code })}
+      </p>
+
+      <h3 className="text-lg font-semibold mt-6 mb-3 text-gray-900">
+        {t("encryption.monitorManagementTitle")}
+      </h3>
+
+      <p className="mb-6 text-gray-800 leading-relaxed">
+        {t.rich("encryption.monitorManagementBody", { code, em })}
       </p>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">
