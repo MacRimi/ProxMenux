@@ -1195,17 +1195,18 @@ _rs_extract_pbs() {
     # error rather than the raw log.
     local extra_hint=""
     if grep -qiE 'encryption key|unable to (load|read) key|no key (file|found)|decrypt|failed to decrypt' "$log_file" 2>/dev/null; then
-        extra_hint=$'\n\n'"$(translate "This backup is encrypted but no keyfile is available on this host.")"
+        extra_hint=$'\n\n'"$(translate "This backup is encrypted.")"
         if [[ -f "$HB_STATE_DIR/pbs-key.conf" ]]; then
-            extra_hint+=$'\n\n'"$(translate "A keyfile is present but doesn't match the one used to create the backup. Make sure you have the correct keyfile from the source host.")"
+            extra_hint+=$'\n\n'"$(translate "A keyfile is present at:")"$'\n'"       $HB_STATE_DIR/pbs-key.conf"$'\n'"$(translate "but it does not match the one used to create the backup. Replace it with the correct keyfile from the source host and retry.")"
         else
-            extra_hint+=$'\n\n'"$(translate "No keyfile recovery copy was found in PBS for this backup — it was created before the recovery feature existed. The encrypted content cannot be recovered.")"
+            extra_hint+=$'\n\n'"$(translate "The automatic recovery chain (PVE storage key, local envelope in /root, PBS keyrecovery group) did not find a usable keyfile for this snapshot.")"
+            extra_hint+=$'\n\n'"$(translate "Copy your keyfile to:")"$'\n'"       $HB_STATE_DIR/pbs-key.conf"$'\n'"$(translate "and run Restore again — or pick an unencrypted backup.")"
         fi
     fi
 
     dialog --backtitle "ProxMenux" --title "$(translate "PBS extraction failed")" \
         --msgbox "$(translate "Could not extract from PBS.")"$'\n\n'"$(translate "Backup:") $snapshot"$'\n'"$(translate "Archive:") $archive$extra_hint" \
-        16 78
+        20 78
     hb_show_log "$log_file" "$(translate "PBS restore error log")"
     return 1
 }

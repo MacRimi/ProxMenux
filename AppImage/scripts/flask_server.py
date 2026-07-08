@@ -46,6 +46,7 @@ import socket
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import time
 import threading
 import urllib.parse
@@ -13746,6 +13747,177 @@ _PBS_RECOVERY_ENC_PATH = f'{_BACKUP_STATE_DIR}/pbs-key.recovery.enc'
 # proxmox-backup-client can decrypt the key without prompting.
 # Same trust boundary as the keyfile itself: chmod 600, next to it.
 _PBS_KEYFILE_PASS_PATH = f'{_BACKUP_STATE_DIR}/pbs-key.pass'
+# Escrow-mode state file: one line, 'none'|'local'|'full'. Mirrors the
+# shell's $HB_STATE_DIR/pbs-key.mode. Missing file = legacy install =
+# 'full' (the pre-3-mode behaviour) so upgrades are silent.
+_PBS_ESCROW_MODE_PATH = f'{_BACKUP_STATE_DIR}/pbs-key.mode'
+_PBS_ESCROW_MODES = ('none', 'local', 'full')
+# PVE stores per-storage encryption keyfiles here when the operator
+# enables `encryption-key` on a PBS storage entry. Same JSON keyfile
+# format as `proxmox-backup-client key create --kdf none` — usable
+# verbatim with --keyfile. Reusing it avoids duplicating a secret
+# across the PVE config and ProxMenux state.
+_PVE_STORAGE_KEY_DIR = '/etc/pve/priv/storage'
+_PVE_STORAGE_CFG = '/etc/pve/storage.cfg'
+
+
+def _pbs_read_escrow_mode() -> str:
+    """Read the current escrow mode ('none'|'local'|'full'). Falls back
+    to 'full' for legacy installs where the mode file doesn't exist —
+    that matches the pre-feature behaviour."""
+    try:
+        with open(_PBS_ESCROW_MODE_PATH, 'r') as f:
+            v = f.read(32).strip()
+        if v in _PBS_ESCROW_MODES:
+            return v
+    except OSError:
+        pass
+    return 'full'
+
+
+def _pbs_write_escrow_mode(mode: str) -> bool:
+    if mode not in _PBS_ESCROW_MODES:
+        return False
+    try:
+        os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+        fd = os.open(
+            _PBS_ESCROW_MODE_PATH,
+            os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+            0o600,
+        )
+        with os.fdopen(fd, 'w') as f:
+            f.write(mode + '\n')
+    except OSError:
+        return False
+    return True
+
+
+def _pbs_discover_pve_keyfiles() -> list:
+    """List PVE-managed PBS storage entries that carry an encryption
+    keyfile at /etc/pve/priv/storage/<NAME>.enc. Returns
+    [{name, server, datastore, path}] for each matching entry. Empty
+    list on any read error — this is best-effort discovery.
+    """
+    if not (os.path.isfile(_PVE_STORAGE_CFG) and os.path.isdir(_PVE_STORAGE_KEY_DIR)):
+        return []
+    entries = []
+    current = None
+    try:
+        with open(_PVE_STORAGE_CFG, 'r') as f:
+            for raw_line in f:
+                line = raw_line.rstrip('\n')
+                if not line.strip():
+                    continue
+                # Non-indented block start: "<type>: <name>"
+                if not line[0].isspace():
+                    if current and current.get('type') == 'pbs':
+                        entries.append(current)
+                    stripped = line.strip()
+                    if ':' in stripped:
+                        typ, _, name = stripped.partition(':')
+                        name = name.strip()
+                        current = {'type': typ.strip(), 'name': name}
+                    else:
+                        current = None
+                    continue
+                # Indented body line: "    key value"
+                if current is None:
+                    continue
+                parts = line.strip().split(None, 1)
+                if len(parts) == 2:
+                    current[parts[0]] = parts[1]
+        if current and current.get('type') == 'pbs':
+            entries.append(current)
+    except OSError:
+        return []
+
+    result = []
+    for e in entries:
+        name = e.get('name') or ''
+        if not name:
+            continue
+        kf = os.path.join(_PVE_STORAGE_KEY_DIR, f'{name}.enc')
+        if not os.path.isfile(kf):
+            continue
+        result.append({
+            'name': name,
+            'server': e.get('server', ''),
+            'datastore': e.get('datastore', ''),
+            'path': kf,
+        })
+    return result
+
+
+def _pbs_pve_keyfile_for_repository(repository: str) -> dict:
+    """Given a PBS repository string 'user@realm@host:datastore', return
+    the matching PVE-storage keyfile entry (dict) or {} if none matches.
+    """
+    if not repository or ':' not in repository or '@' not in repository:
+        return {}
+    # Split repo on last '@' and last ':' — user/realm may contain '@'
+    # in the token form.
+    host_and_ds = repository.rsplit('@', 1)[-1]
+    host, _, datastore = host_and_ds.rpartition(':')
+    if not host or not datastore:
+        return {}
+    for e in _pbs_discover_pve_keyfiles():
+        if e.get('server') == host and e.get('datastore') == datastore:
+            return e
+    return {}
+
+
+def _pbs_do_finalize_recovery(passphrase: str, mode: str) -> tuple:
+    """Wrap the on-disk keyfile with the operator's passphrase (writes
+    _PBS_RECOVERY_ENC_PATH) and persist the escrow mode. Called by
+    both import and set-mode flows.
+
+    - mode 'full' or 'local' → envelope written + mode file updated.
+    - mode 'none' should never reach here — the caller must skip the
+      call entirely. Guarded by an assert for safety.
+
+    Every artefact ProxMenux writes lives under _BACKUP_STATE_DIR
+    (usually /usr/local/share/proxmenux/). No copies leak into /root/
+    — the operator uses the Monitor's Download button when they want
+    the keyfile offsite. Returns (ok, '') — the second slot is kept
+    for API compatibility with older callers that expected an offsite
+    path there.
+    """
+    assert mode in ('local', 'full'), 'finalize_recovery called with invalid mode'
+    if not shutil.which('openssl'):
+        return False, ''
+    if not os.path.isfile(_PBS_KEYFILE_PATH):
+        return False, ''
+    if not _pbs_recovery_encrypt(passphrase, _PBS_KEYFILE_PATH, _PBS_RECOVERY_ENC_PATH):
+        return False, ''
+    _pbs_write_escrow_mode(mode)
+    return True, ''
+
+
+def _pbs_install_pve_keyfile(src_path: str) -> bool:
+    """Copy a PVE-storage keyfile into the ProxMenux canonical location.
+    Atomic: writes to a temp path in the same directory, chmods, then
+    renames. Returns True on success."""
+    if not (src_path and os.path.isfile(src_path)):
+        return False
+    try:
+        os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(
+            prefix='pbs-key.', suffix='.pve', dir=_BACKUP_STATE_DIR,
+        )
+        try:
+            with os.fdopen(fd, 'wb') as fout, open(src_path, 'rb') as fin:
+                fout.write(fin.read())
+            os.chmod(tmp, 0o600)
+            os.replace(tmp, _PBS_KEYFILE_PATH)
+        except OSError:
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+            return False
+    except OSError:
+        return False
+    return True
 
 
 def _pbs_keyfile_get_or_create(create_if_missing: bool = True) -> str:
@@ -13905,6 +14077,7 @@ def api_pbs_encryption_keyfile_info():
             and os.path.getsize(_PBS_KEYFILE_PASS_PATH) > 0
         ),
         'has_recovery': os.path.isfile(_PBS_RECOVERY_ENC_PATH),
+        'escrow_mode': _pbs_read_escrow_mode(),
     })
 
 
@@ -13919,38 +14092,26 @@ def api_pbs_encryption_remove():
     passphrase and are the safe way to reach any pre-existing backup
     encrypted with the removed key.
 
-    Body: `{backup_before_remove: bool}` (default true)
+    Deleting is destructive and unconditional — the operator is
+    expected to click Download first if they want a copy. ProxMenux
+    never scatters files under /root/ any more.
     """
-    payload = request.get_json(silent=True) or {}
-    do_backup = bool(payload.get('backup_before_remove', True))
     if not os.path.isfile(_PBS_KEYFILE_PATH):
         return jsonify({'error': 'no keyfile installed'}), 404
 
-    backed_up = []
-    if do_backup:
-        ts = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-        for src, dst_suffix in (
-            (_PBS_KEYFILE_PATH, '.conf'),
-            (_PBS_KEYFILE_PASS_PATH, '.pass'),
-            (_PBS_RECOVERY_ENC_PATH, '.recovery.enc'),
-        ):
-            if not os.path.isfile(src):
-                continue
-            dst = f'/root/pbs-key.old-{ts}{dst_suffix}'
-            try:
-                with open(src, 'rb') as fin, open(os.open(dst, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), 'wb') as fout:
-                    fout.write(fin.read())
-                backed_up.append(dst)
-            except OSError as e:
-                return jsonify({
-                    'error': f'backup to /root failed for {src}: {e}',
-                    'partial_backups': backed_up,
-                }), 500
+    backed_up: list = []
 
     # Wipe order: recovery blob first so a mid-flight failure leaves us
-    # in a clean, backup-still-decryptable-with-blob state.
+    # in a clean, backup-still-decryptable-with-blob state. The escrow
+    # mode file goes last because it's the smallest side-effect and
+    # missing = 'full' (legacy default), which is a safe fallback.
     removed = []
-    for path in (_PBS_RECOVERY_ENC_PATH, _PBS_KEYFILE_PASS_PATH, _PBS_KEYFILE_PATH):
+    for path in (
+        _PBS_RECOVERY_ENC_PATH,
+        _PBS_KEYFILE_PASS_PATH,
+        _PBS_KEYFILE_PATH,
+        _PBS_ESCROW_MODE_PATH,
+    ):
         try:
             os.remove(path)
             removed.append(path)
@@ -14023,6 +14184,10 @@ def api_pbs_recovery_status():
         # manifest's expected fingerprint after a download error
         # ("missing key — manifest was created with key XX:XX:...").
         'keyfile_fingerprint': _pbs_keyfile_fingerprint(),
+        # Current escrow model: 'none' | 'local' | 'full'. Missing on
+        # legacy hosts (pre-3-mode feature) — the reader falls back to
+        # 'full' silently, matching the pre-feature behaviour.
+        'escrow_mode': _pbs_read_escrow_mode(),
     })
 
 
@@ -14174,35 +14339,41 @@ def api_host_backups_restore_log():
 @app.route('/api/host-backups/pbs-encryption/import', methods=['POST'])
 @require_auth
 def api_pbs_encryption_import():
-    """Install a user-provided PBS keyfile at the canonical shared path.
+    """Install a PBS keyfile at the canonical shared path and set the
+    escrow mode in one atomic step.
 
-    Body: ``{"content_b64": "<base64 of the keyfile bytes>"}``
+    Body (all fields optional except as noted):
 
-    Use case: operators who generated their own PBS master key and want
-    to share it across every host (single recovery blob covers all,
-    cross-host restore is possible). The keyfile is written to a tmp
-    path first and validated with ``proxmox-backup-client key info``;
-    only if the tool accepts it as a real PBS keyfile does it get
-    promoted to the canonical ``_PBS_KEYFILE_PATH``. Any prior
-    keyfile + recovery blob at that location are replaced atomically —
-    the old blob was encrypted for the old key and would no longer be
-    decryptable anyway.
+        source: "content" (default) | "pve-storage"
+        content_b64: <base64 bytes>          # source=content
+        pve_storage_name: "<storage-name>"   # source=pve-storage
+        keyfile_passphrase: <scrypt kdf>     # source=content only
+        escrow_mode: "none" | "local" | "full"   # default "full"
+        escrow_passphrase: <str>             # required unless escrow_mode='none'
+
+    Behaviour by escrow_mode:
+      - none:  keyfile installed, no envelope, no /root copy, no upload
+      - local: envelope written + copied to /root, no PBS upload
+      - full:  envelope written + copied to /root, runner uploads to PBS
+
+    Any prior recovery blob at the canonical path is dropped — it was
+    encrypted for the old key. The escrow mode file is updated to
+    reflect the new choice; downstream runs (both shell and runner)
+    read it back.
     """
     payload = request.get_json(silent=True) or {}
-    content_b64 = payload.get('content_b64') or ''
-    if not content_b64:
-        return jsonify({'error': 'content_b64 is required'}), 400
+    source = (payload.get('source') or 'content').strip().lower()
+    if source not in ('content', 'pve-storage', 'generate', 'path'):
+        return jsonify({'error': "source must be 'content', 'pve-storage', 'generate' or 'path'"}), 400
 
-    import base64
-    try:
-        content = base64.b64decode(content_b64, validate=True)
-    except Exception:
-        return jsonify({'error': 'content_b64 is not valid base64'}), 400
-
-    # PBS keyfiles are compact JSON blobs (~200 bytes). Cap at 8 KB so
-    # a malformed upload can't fill the state dir with garbage.
-    if not content or len(content) > 8192:
-        return jsonify({'error': 'keyfile size out of expected range (1..8192 bytes)'}), 400
+    escrow_mode = (payload.get('escrow_mode') or 'full').strip().lower()
+    if escrow_mode not in _PBS_ESCROW_MODES:
+        return jsonify({'error': f'escrow_mode must be one of {_PBS_ESCROW_MODES}'}), 400
+    escrow_pass = payload.get('escrow_passphrase') or ''
+    if escrow_mode != 'none' and not escrow_pass:
+        return jsonify({'error': 'escrow_passphrase is required when escrow_mode is not "none"'}), 400
+    if escrow_mode != 'none' and not shutil.which('openssl'):
+        return jsonify({'error': 'openssl is not installed; cannot build the recovery envelope'}), 500
 
     if not shutil.which('proxmox-backup-client'):
         return jsonify({'error': 'proxmox-backup-client is not installed on this host'}), 500
@@ -14212,21 +14383,115 @@ def api_pbs_encryption_import():
     except OSError as e:
         return jsonify({'error': f'cannot create state directory: {e}'}), 500
 
-    # Strip a leading UTF-8 BOM (b'\xef\xbb\xbf') if the operator's
-    # editor added one — the byte order mark makes the file no longer
-    # a valid JSON document and downstream tools refuse it with a
-    # cryptic parse error.
-    if content.startswith(b'\xef\xbb\xbf'):
-        content = content[3:]
+    # ── Resolve the keyfile bytes based on source ──────────────────
+    keyfile_pass = ''
+    if source == 'generate':
+        # Fresh keyfile generated server-side via proxmox-backup-client.
+        # We short-circuit the "load bytes → atomic install" pipeline
+        # below because the tool already writes the file at the
+        # canonical path.
+        stale_recovery = _PBS_RECOVERY_ENC_PATH
+        try:
+            os.remove(stale_recovery)
+        except FileNotFoundError:
+            pass
+        except OSError:
+            pass
+        # Wipe any zero-byte residue so the "already installed" branch
+        # in _pbs_keyfile_get_or_create doesn't misfire.
+        try:
+            if os.path.isfile(_PBS_KEYFILE_PATH) and os.path.getsize(_PBS_KEYFILE_PATH) == 0:
+                os.remove(_PBS_KEYFILE_PATH)
+        except OSError:
+            pass
+        # If a keyfile is already present the operator must remove it
+        # first — silent replacement here would drop backups they still
+        # need to decrypt.
+        if os.path.isfile(_PBS_KEYFILE_PATH):
+            return jsonify({
+                'error': "a keyfile is already installed at "
+                         f"{_PBS_KEYFILE_PATH}. Remove it first via /pbs-encryption/remove.",
+            }), 409
+        if not _pbs_keyfile_get_or_create(True):
+            return jsonify({'error': 'failed to generate the encryption keyfile'}), 500
+        keyfile_pass = ''
+        offsite_copy = ''
+        if escrow_mode == 'none':
+            _pbs_write_escrow_mode('none')
+        else:
+            ok, offsite_copy = _pbs_do_finalize_recovery(escrow_pass, escrow_mode)
+            if not ok:
+                return jsonify({'error': 'openssl encryption of the recovery envelope failed'}), 500
+        return jsonify({
+            'status': 'ok',
+            'source': 'generate',
+            'keyfile_path': _PBS_KEYFILE_PATH,
+            'keyfile_pass_stored': False,
+            'escrow_mode': escrow_mode,
+            'recovery_ready': escrow_mode != 'none',
+            'offsite_copy': offsite_copy,
+        })
 
-    # Optional passphrase for a scrypt-encoded keyfile. Blank means the
-    # keyfile is kdf=none. We do NOT verify that the passphrase actually
-    # unlocks the keyfile — that would require the operator to be
-    # present and the flow to be interactive. If it's wrong, backups
-    # will fail loudly with proxmox-backup-client's own error message.
-    keyfile_pass = payload.get('keyfile_passphrase') or ''
+    if source == 'path':
+        # Read a keyfile from an absolute path on this host. Mirrors
+        # the shell wizard's "import from path" branch — the operator
+        # dropped the file somewhere on disk (via scp, USB, etc.) and
+        # types the path. Same size cap + BOM strip as source=content.
+        src_path = (payload.get('keyfile_path') or '').strip()
+        if not src_path:
+            return jsonify({'error': "keyfile_path is required when source is 'path'"}), 400
+        if not os.path.isabs(src_path):
+            return jsonify({'error': 'keyfile_path must be an absolute path'}), 400
+        if not os.path.isfile(src_path):
+            return jsonify({'error': f'no file at {src_path}'}), 404
+        try:
+            with open(src_path, 'rb') as f:
+                content = f.read(8192 + 1)
+        except OSError as e:
+            return jsonify({'error': f'cannot read {src_path}: {e}'}), 500
+        if not content or len(content) > 8192:
+            return jsonify({'error': 'keyfile size out of expected range (1..8192 bytes)'}), 400
+        if content.startswith(b'\xef\xbb\xbf'):
+            content = content[3:]
+        keyfile_pass = ''  # keyfile passphrase never used by this branch
 
-    import tempfile
+    elif source == 'content':
+        content_b64 = payload.get('content_b64') or ''
+        if not content_b64:
+            return jsonify({'error': "content_b64 is required when source is 'content'"}), 400
+        import base64
+        try:
+            content = base64.b64decode(content_b64, validate=True)
+        except Exception:
+            return jsonify({'error': 'content_b64 is not valid base64'}), 400
+        if not content or len(content) > 8192:
+            return jsonify({'error': 'keyfile size out of expected range (1..8192 bytes)'}), 400
+        # Strip a leading UTF-8 BOM if the operator's editor added one.
+        if content.startswith(b'\xef\xbb\xbf'):
+            content = content[3:]
+        # Optional keyfile passphrase (scrypt KDF).
+        keyfile_pass = payload.get('keyfile_passphrase') or ''
+    else:
+        # source == 'pve-storage'
+        pve_name = (payload.get('pve_storage_name') or '').strip()
+        if not pve_name:
+            return jsonify({'error': "pve_storage_name is required when source is 'pve-storage'"}), 400
+        pve_path = os.path.join(_PVE_STORAGE_KEY_DIR, f'{pve_name}.enc')
+        if not os.path.isfile(pve_path):
+            return jsonify({
+                'error': f'no PVE-managed keyfile at {pve_path}',
+            }), 404
+        try:
+            with open(pve_path, 'rb') as f:
+                content = f.read(8192 + 1)
+        except OSError as e:
+            return jsonify({'error': f'cannot read PVE keyfile: {e}'}), 500
+        if not content or len(content) > 8192:
+            return jsonify({'error': 'PVE keyfile out of expected size range (1..8192 bytes)'}), 400
+        # PVE-managed keyfiles are always --kdf none by construction.
+        keyfile_pass = ''
+
+    # ── Atomic install to _PBS_KEYFILE_PATH ────────────────────────
     tmp_fd, tmp_path = tempfile.mkstemp(prefix='pbs-key.import.', dir=_BACKUP_STATE_DIR)
     try:
         try:
@@ -14236,19 +14501,8 @@ def api_pbs_encryption_import():
         except OSError as e:
             return jsonify({'error': f'cannot write tmp keyfile: {e}'}), 500
 
-        # No content validation. The operator brings their own key —
-        # any KDF, any format, any origin. If it later doesn't work
-        # with proxmox-backup-client the failure will surface at
-        # backup time with a clear error. This is a deliberate
-        # trust-the-operator design: keeping `key info` validation
-        # here rejected legitimate scrypt-encoded keyfiles that could
-        # only be inspected with their original passphrase, which is
-        # exactly the case ProxMenux can't provide in a non-interactive
-        # flow.
-
-        # The old recovery blob was encrypted with the old key — a new
-        # blob has to be built by re-running /pbs-recovery/setup once
-        # the operator confirms this import.
+        # The old recovery blob was encrypted with the old key — drop it.
+        # The paired passphrase file goes too; the new source drives it.
         for stale in (_PBS_RECOVERY_ENC_PATH, _PBS_KEYFILE_PASS_PATH):
             try:
                 os.remove(stale)
@@ -14263,9 +14517,8 @@ def api_pbs_encryption_import():
         except OSError as e:
             return jsonify({'error': f'cannot promote keyfile: {e}'}), 500
 
-        # Persist the keyfile passphrase alongside the key, chmod 600.
-        # Same trust boundary as the keyfile itself: root-only. Empty
-        # value → don't write anything (blank passphrase == kdf=none).
+        # Persist the keyfile passphrase (if any). Same trust boundary
+        # as the keyfile itself.
         if keyfile_pass:
             try:
                 fd = os.open(_PBS_KEYFILE_PASS_PATH,
@@ -14275,11 +14528,23 @@ def api_pbs_encryption_import():
             except OSError as e:
                 return jsonify({'error': f'cannot store keyfile passphrase: {e}'}), 500
 
+        # ── Finalize per escrow mode ───────────────────────────────
+        offsite_copy = ''
+        if escrow_mode == 'none':
+            _pbs_write_escrow_mode('none')
+        else:
+            ok, offsite_copy = _pbs_do_finalize_recovery(escrow_pass, escrow_mode)
+            if not ok:
+                return jsonify({'error': 'openssl encryption of the recovery envelope failed'}), 500
+
         return jsonify({
             'status': 'ok',
+            'source': source,
             'keyfile_path': _PBS_KEYFILE_PATH,
             'keyfile_pass_stored': bool(keyfile_pass),
-            'recovery_reset': True,
+            'escrow_mode': escrow_mode,
+            'recovery_ready': escrow_mode != 'none',
+            'offsite_copy': offsite_copy,
         })
     finally:
         try:
@@ -14287,6 +14552,124 @@ def api_pbs_encryption_import():
                 os.remove(tmp_path)
         except OSError:
             pass
+
+
+@app.route('/api/host-backups/pbs-encryption/download-keyfile', methods=['GET'])
+@require_auth
+def api_pbs_encryption_download_keyfile():
+    """Send the installed PBS keyfile as a downloadable attachment.
+    This is how the operator gets an offsite copy without exposing
+    the file over shell — they hit Download, save it somewhere safe
+    (USB, password manager, another host), and can later re-import
+    it on a reinstalled host via the same Import flow. Returns 404
+    when no keyfile is installed."""
+    if not os.path.isfile(_PBS_KEYFILE_PATH):
+        return jsonify({'error': 'no keyfile installed'}), 404
+    filename = f'pbs-key.conf'
+    try:
+        # send_file handles the streaming + Content-Disposition header;
+        # forcing as_attachment makes the browser show a save dialog
+        # instead of rendering the JSON inline.
+        return send_file(
+            _PBS_KEYFILE_PATH,
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=filename,
+        )
+    except OSError as e:
+        return jsonify({'error': f'cannot read keyfile: {e}'}), 500
+
+
+@app.route('/api/host-backups/pbs-encryption/discover-pve-keyfiles', methods=['GET'])
+@require_auth
+def api_pbs_discover_pve_keyfiles():
+    """List PBS storage entries in /etc/pve/storage.cfg that carry an
+    encryption keyfile at /etc/pve/priv/storage/<NAME>.enc. When a
+    `repository` query param is provided, the entry (if any) whose
+    server + datastore match that repository is flagged with
+    `matches_repository: true` so the frontend can pre-select it as
+    the recommended import source.
+
+    Response:
+        {
+          entries: [
+            {name, server, datastore, path, matches_repository (bool)}
+          ]
+        }
+    """
+    repo = (request.args.get('repository') or '').strip()
+    matched = _pbs_pve_keyfile_for_repository(repo) if repo else {}
+    matched_path = matched.get('path', '') if matched else ''
+    entries = []
+    for e in _pbs_discover_pve_keyfiles():
+        entries.append({
+            **e,
+            'matches_repository': (bool(matched_path) and e['path'] == matched_path),
+        })
+    return jsonify({'entries': entries})
+
+
+@app.route('/api/host-backups/pbs-encryption/set-escrow-mode', methods=['POST'])
+@require_auth
+def api_pbs_set_escrow_mode():
+    """Change the escrow mode for an already-installed keyfile without
+    touching the keyfile itself.
+
+    Body:
+        escrow_mode: "none" | "local" | "full"
+        escrow_passphrase: <str>     # required when going to local/full
+                                     # or when current mode is 'none'
+
+    Transitions:
+      any → none:  drops the local envelope + /root offsite copy;
+                   writes mode='none'. Uploaded PBS envelopes are NOT
+                   touched (they stay recoverable with their original
+                   passphrase).
+      any → local/full:  encrypts a fresh envelope from the current
+                         keyfile with the provided passphrase. When
+                         going from 'none' the passphrase is mandatory;
+                         when just switching between local/full it is
+                         also required because we always rebuild the
+                         envelope so both modes stay consistent.
+    """
+    if not os.path.isfile(_PBS_KEYFILE_PATH):
+        return jsonify({'error': 'no keyfile installed'}), 404
+    payload = request.get_json(silent=True) or {}
+    new_mode = (payload.get('escrow_mode') or '').strip().lower()
+    if new_mode not in _PBS_ESCROW_MODES:
+        return jsonify({'error': f'escrow_mode must be one of {_PBS_ESCROW_MODES}'}), 400
+
+    if new_mode == 'none':
+        # Wipe local envelope + best-effort /root copies. Uploaded PBS
+        # blobs stay — the operator may still recover the old key via
+        # its old passphrase using the keyrecovery snapshot group.
+        for p in (_PBS_RECOVERY_ENC_PATH,):
+            try:
+                os.remove(p)
+            except FileNotFoundError:
+                pass
+            except OSError as e:
+                return jsonify({'error': f'cannot remove {p}: {e}'}), 500
+        _pbs_write_escrow_mode('none')
+        return jsonify({
+            'status': 'ok',
+            'escrow_mode': 'none',
+            'recovery_ready': False,
+        })
+
+    # new_mode is 'local' or 'full' → rebuild the envelope from scratch.
+    passphrase = payload.get('escrow_passphrase') or ''
+    if not passphrase:
+        return jsonify({'error': 'escrow_passphrase is required for local/full modes'}), 400
+    ok, offsite = _pbs_do_finalize_recovery(passphrase, new_mode)
+    if not ok:
+        return jsonify({'error': 'openssl encryption of the recovery envelope failed'}), 500
+    return jsonify({
+        'status': 'ok',
+        'escrow_mode': new_mode,
+        'recovery_ready': True,
+        'offsite_copy': offsite,
+    })
 
 
 @app.route('/api/host-backups/pbs-recovery/setup', methods=['POST'])
@@ -14326,6 +14709,11 @@ def api_pbs_recovery_setup():
 
     if not _pbs_recovery_encrypt(passphrase, _PBS_KEYFILE_PATH, _PBS_RECOVERY_ENC_PATH):
         return jsonify({'error': 'openssl encryption failed'}), 500
+    # Legacy setup implies the operator wants the full escrow behaviour
+    # (envelope uploaded to PBS by the runner). New callers should use
+    # /pbs-encryption/set-escrow-mode with an explicit mode, but this
+    # endpoint remains for compatibility with older Monitor builds.
+    _pbs_write_escrow_mode('full')
     return jsonify({'status': 'ok', 'recovery_path': _PBS_RECOVERY_ENC_PATH})
 
 

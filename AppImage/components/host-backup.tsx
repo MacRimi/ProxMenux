@@ -338,32 +338,268 @@ const formatRunAt = (iso: string | null) => {
 // Rendered inside the encryption section when a keyfile is already
 // installed. Replaces the older static info box that pointed to a
 // non-existent "Settings → Host backup" panel: the operator now has
-// three concrete actions (change stored keyfile passphrase, replace
-// keyfile, remove keyfile) with destructive-confirmation modals that
-// call the /api/host-backups/pbs-encryption/* endpoints and mutate
-// pbsRecoveryStatus so the parent dialog re-renders on success.
-//
-// `onReplaced` is called after a successful remove/replace-remove so
-// the parent can reset its local pbsEncryptMode from "existing" back
-// to "new" and let the Generate/Import radio unfold naturally.
-// Bare row of three destructive keyfile actions + their confirm
-// modals. Meant to be embedded inside the operator's own "change
-// mode" container — this component renders no info box, no toggle,
-// no Cancel link. The parent handles when to show/hide it and how
-// to signal "user wants to keep things as they are".
+// concrete actions (download keyfile, update stored passphrase,
+// change recovery model, remove keyfile) with destructive-confirmation
+// modals that call the /api/host-backups/pbs-encryption/* endpoints
+// and mutate pbsRecoveryStatus so the parent dialog re-renders on
+// success. There is no "Replace keyfile" action any more — replacing
+// the key would silently orphan every encrypted backup that used it.
+// The operator instead uses Remove + set up again via the normal flow
+// (Generate a new keyfile / Use an existing keyfile), which surfaces
+// the source picker properly.
+// ──────────────────────────────────────────────────────────────
+// PbsKeyfileActions — the trimmed action set the operator sees
+// inside every PBS destination row: Download, Upload (import a new
+// keyfile), Delete. No stored-passphrase rotation, no escrow toggle
+// — those live in the setup dialogs where the operator makes the
+// initial call. Placing these three next to the destination they
+// belong to matches "the key is a PBS thing" without dragging in
+// the fuller management surface.
+// ──────────────────────────────────────────────────────────────
+function PbsKeyfileActions() {
+  const { data: info, mutate: mutateInfo } = useSWR<{
+    installed: boolean
+    fingerprint?: string
+    path: string
+    escrow_mode?: "none" | "local" | "full"
+  }>("/api/host-backups/pbs-encryption/keyfile-info", fetcher)
+
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importPath, setImportPath] = useState("")
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const closeUpload = () => {
+    setUploadOpen(false)
+    setImportFile(null)
+    setImportPath("")
+    setBusy(false)
+    setErr(null)
+  }
+  const closeDelete = () => {
+    setDeleteOpen(false)
+    setBusy(false)
+    setErr(null)
+  }
+
+  const download = () => {
+    // Same plain-<a>-download trick used elsewhere: bypasses fetch so
+    // an ad-blocker or a stale SWR cache can't intervene.
+    const a = document.createElement("a")
+    a.href = "/api/host-backups/pbs-encryption/download-keyfile"
+    a.download = "pbs-key.conf"
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
+  const runUpload = async () => {
+    if (!importFile && !importPath.trim()) {
+      setErr("Pick a keyfile file or enter an absolute path on this host.")
+      return
+    }
+    setBusy(true)
+    setErr(null)
+    try {
+      const body: Record<string, unknown> = { escrow_mode: "none" }
+      if (importFile) {
+        const buf = new Uint8Array(await importFile.arrayBuffer())
+        let bin = ""
+        for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i])
+        body.source = "content"
+        body.content_b64 = btoa(bin)
+      } else {
+        body.source = "path"
+        body.keyfile_path = importPath.trim()
+      }
+      await fetchApi("/api/host-backups/pbs-encryption/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      await mutateInfo()
+      closeUpload()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e))
+      setBusy(false)
+    }
+  }
+
+  const runDelete = async () => {
+    setBusy(true)
+    setErr(null)
+    try {
+      await fetchApi("/api/host-backups/pbs-encryption/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      })
+      await mutateInfo()
+      closeDelete()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e))
+      setBusy(false)
+    }
+  }
+
+  const installed = !!info?.installed
+
+  return (
+    <div className="mt-2 border-t border-white/10 pt-2 space-y-1.5">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="text-xs min-w-0 flex-1 flex items-center gap-1.5">
+          <span className="font-medium text-muted-foreground">Encryption keyfile:</span>{" "}
+          {installed ? (
+            <span
+              className="inline-flex items-center gap-1 text-emerald-400 font-medium"
+              title={info?.fingerprint ? `Keyfile fingerprint: ${info.fingerprint}` : undefined}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              installed
+            </span>
+          ) : (
+            <span className="text-blue-400 font-medium">not installed on this host</span>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {installed && (
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 text-[11px] !text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/10"
+                onClick={download}
+                title="Download the keyfile as pbs-key.conf"
+              >
+                <Download className="h-3.5 w-3.5 mr-1" />
+                Download
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 text-[11px] !text-red-400 border-red-500/40 hover:bg-red-500/10"
+                onClick={() => setDeleteOpen(true)}
+                title="Remove the local keyfile"
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                Delete
+              </Button>
+            </>
+          )}
+          {!installed && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-[11px] !text-blue-400 border-blue-500/40 hover:bg-blue-500/10"
+              onClick={() => setUploadOpen(true)}
+              title="Import a keyfile you already have"
+            >
+              <Lock className="h-3.5 w-3.5 mr-1" />
+              Upload
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <Dialog open={uploadOpen} onOpenChange={(v) => !v && closeUpload()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload PBS keyfile</DialogTitle>
+            <DialogDescription>
+              Import a keyfile you already have. It lands at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> and every subsequent encrypted backup reuses it. Recovery escrow stays off — use the setup wizard if you want to enable it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="pbsKfUploadFile" className="text-xs">Upload from your machine</Label>
+              <Input
+                id="pbsKfUploadFile"
+                type="file"
+                accept=".conf,.key,application/json,text/plain"
+                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                disabled={busy || !!importPath.trim()}
+                className="h-9 mt-1"
+              />
+            </div>
+            <div className="text-[10px] text-center text-muted-foreground">— or —</div>
+            <div>
+              <Label htmlFor="pbsKfUploadPath" className="text-xs">Absolute path on this host</Label>
+              <Input
+                id="pbsKfUploadPath"
+                type="text"
+                value={importPath}
+                onChange={(e) => setImportPath(e.target.value)}
+                disabled={busy || !!importFile}
+                placeholder="/usr/local/share/proxmenux/pbs-key.conf"
+                className="h-9 mt-1 font-mono text-xs"
+              />
+            </div>
+            {err && (
+              <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">{err}</div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeUpload} disabled={busy}>Cancel</Button>
+            <Button
+              onClick={runUpload}
+              disabled={busy || (!importFile && !importPath.trim())}
+              className="!bg-blue-500 hover:!bg-blue-600 !text-white"
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Import"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteOpen} onOpenChange={(v) => !v && closeDelete()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-400" />
+              Delete keyfile
+            </DialogTitle>
+            <DialogDescription>
+              Backups already stored on PBS were encrypted with the current keyfile. After this action:
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1 pl-2">
+            <li>New backups will use no encryption on this host until a new keyfile is set up.</li>
+            <li>Downloading pre-existing encrypted backups from this host <strong className="text-red-400">will fail</strong> unless you kept a copy of the current key.</li>
+            <li>Existing recovery blobs on PBS stay intact — they still recover the old key with its original passphrase.</li>
+          </ul>
+          {err && (
+            <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">{err}</div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDelete} disabled={busy}>Cancel</Button>
+            <Button onClick={runDelete} disabled={busy} className="!bg-red-500 hover:!bg-red-600 !text-white">
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
 function KeyfileActionsBar({
-  onReplaced,
   mutateStatus,
+  escrowMode,
 }: {
-  onReplaced: () => void
   mutateStatus: () => Promise<unknown>
+  escrowMode?: "none" | "local" | "full"
 }) {
-  const [action, setAction] = useState<null | "passphrase" | "replace" | "remove">(null)
+  const [action, setAction] = useState<null | "passphrase" | "escrow">(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [pass1, setPass1] = useState("")
   const [pass2, setPass2] = useState("")
-  const [backupFirst, setBackupFirst] = useState(true)
+  const [newEscrowMode, setNewEscrowMode] = useState<"none" | "local" | "full">(escrowMode ?? "full")
 
   const close = () => {
     setAction(null)
@@ -371,7 +607,7 @@ function KeyfileActionsBar({
     setErr(null)
     setPass1("")
     setPass2("")
-    setBackupFirst(true)
+    setNewEscrowMode(escrowMode ?? "full")
   }
 
   const runPassphrase = async () => {
@@ -395,17 +631,29 @@ function KeyfileActionsBar({
     }
   }
 
-  const runRemove = async (mode: "remove" | "replace") => {
+  const runEscrowMode = async () => {
+    // Local/full → passphrase required + match. None → passphrase ignored.
+    if (newEscrowMode !== "none") {
+      if (!pass1) {
+        setErr("Passphrase is required for local or full escrow.")
+        return
+      }
+      if (pass1 !== pass2) {
+        setErr("Passphrases do not match.")
+        return
+      }
+    }
     setBusy(true)
     setErr(null)
     try {
-      await fetchApi("/api/host-backups/pbs-encryption/remove", {
+      const body: Record<string, unknown> = { escrow_mode: newEscrowMode }
+      if (newEscrowMode !== "none") body.escrow_passphrase = pass1
+      await fetchApi("/api/host-backups/pbs-encryption/set-escrow-mode", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ backup_before_remove: backupFirst }),
+        body: JSON.stringify(body),
       })
       await mutateStatus()
-      if (mode === "replace") onReplaced()
       close()
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e))
@@ -413,10 +661,48 @@ function KeyfileActionsBar({
     }
   }
 
+  // The UX we expose is binary: "is the key uploaded to PBS?" — yes
+  // (mode='full') or no (mode='none'). The 'local' backend mode still
+  // exists but is not surfaced here; if a host somehow reports it,
+  // show it verbatim so the state isn't lost on the operator.
+  const uploadOn = escrowMode === "full"
+  const escrowLabel = escrowMode === undefined
+    ? undefined
+    : escrowMode === "full"
+      ? "Uploaded to PBS on every backup"
+      : escrowMode === "local"
+        ? "Local envelope only (advanced mode)"
+        : "Kept only on this host — you handle the offsite copy"
+
   return (
     <div className="space-y-2">
       <div className="text-[11px] font-medium text-foreground">Manage installed keyfile</div>
+      {escrowLabel !== undefined && (
+        <div className="flex items-center gap-2 text-[10.5px] text-muted-foreground bg-background/40 border border-white/10 rounded px-2 py-1">
+          <span className="font-medium text-foreground">Upload to PBS:</span>
+          <span>{uploadOn ? "Yes" : "No"} — {escrowLabel}</span>
+        </div>
+      )}
       <div className="flex flex-wrap gap-1.5">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 text-[11px] !text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/10"
+          onClick={() => {
+            // Trigger a plain browser download of the canonical keyfile.
+            // No fetch/save-file dance — the browser handles it, so an
+            // ad-blocker or a stale SWR cache can't get in the way.
+            const a = document.createElement("a")
+            a.href = "/api/host-backups/pbs-encryption/download-keyfile"
+            a.download = "pbs-key.conf"
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+          }}
+        >
+          Download keyfile
+        </Button>
         <Button
           type="button"
           size="sm"
@@ -431,18 +717,9 @@ function KeyfileActionsBar({
           size="sm"
           variant="outline"
           className="h-7 text-[11px]"
-          onClick={() => setAction("replace")}
+          onClick={() => { setNewEscrowMode(uploadOn ? "none" : "full"); setAction("escrow") }}
         >
-          Replace keyfile
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-7 text-[11px] !text-red-400 border-red-500/40 hover:bg-red-500/10"
-          onClick={() => setAction("remove")}
-        >
-          Remove keyfile
+          {uploadOn ? "Stop uploading to PBS" : "Start uploading to PBS"}
         </Button>
       </div>
 
@@ -478,41 +755,70 @@ function KeyfileActionsBar({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={action === "replace" || action === "remove"} onOpenChange={(v) => !v && close()}>
+      <Dialog open={action === "escrow"} onOpenChange={(v) => !v && close()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-400" />
-              {action === "replace" ? "Replace keyfile" : "Remove keyfile"}
-            </DialogTitle>
+            <DialogTitle>{newEscrowMode === "full" ? "Start uploading key to PBS" : "Stop uploading key to PBS"}</DialogTitle>
             <DialogDescription>
-              Backups already stored on PBS were encrypted with the current keyfile. After this action:
+              {newEscrowMode === "full"
+                ? "ProxMenux will wrap the keyfile with a passphrase and upload the envelope to PBS after every backup. A reinstalled host can recover the key with just the passphrase."
+                : "The passphrase-wrapped copy on this host will be dropped and no envelope will be uploaded on future backups. The keyfile itself stays at its canonical path — but you become responsible for keeping an offsite copy."}
             </DialogDescription>
           </DialogHeader>
-          <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1 pl-2">
-            <li>New backups will use {action === "replace" ? "the newly generated / imported keyfile" : "no encryption on this host until a new keyfile is set up"}.</li>
-            <li>Downloading pre-existing encrypted backups from this host <strong className="text-red-400">will fail</strong> unless you keep a copy of the current key.</li>
-            <li>Existing recovery blobs on PBS stay intact — they still recover the old key with its original passphrase.</li>
-          </ul>
-          <label className="flex items-start gap-2 cursor-pointer text-xs">
-            <Checkbox checked={backupFirst} onCheckedChange={(v) => setBackupFirst(!!v)} className="mt-0.5" />
-            <span>Save a copy of the current keyfile + passphrase + recovery blob under <code className="font-mono">/root/pbs-key.old-&lt;timestamp&gt;.*</code> before {action === "replace" ? "replacing" : "removing"}.</span>
-          </label>
-          {err && (
-            <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">{err}</div>
-          )}
+          <div className="space-y-3">
+            {newEscrowMode === "full" ? (
+              <>
+                <div>
+                  <Label htmlFor="escrowPass1" className="text-xs">Recovery passphrase</Label>
+                  <Input
+                    id="escrowPass1"
+                    type="password"
+                    value={pass1}
+                    onChange={(e) => setPass1(e.target.value)}
+                    placeholder="Long random string — write it down somewhere safe"
+                    className="font-mono h-9 mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="escrowPass2" className="text-xs">Confirm passphrase</Label>
+                  <Input
+                    id="escrowPass2"
+                    type="password"
+                    value={pass2}
+                    onChange={(e) => setPass2(e.target.value)}
+                    placeholder="Type it again"
+                    className="font-mono h-9 mt-1"
+                  />
+                  {pass1 && pass2 && pass1 !== pass2 && (
+                    <p className="text-xs text-red-400 mt-1">Passphrases don&apos;t match.</p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-3 py-2 leading-relaxed space-y-1">
+                <div className="font-semibold">Losing the keyfile makes every encrypted backup on PBS unreadable.</div>
+                <div>Keyfile path on this host: <code className="font-mono text-[10.5px] bg-amber-500/20 rounded px-1">/usr/local/share/proxmenux/pbs-key.conf</code></div>
+                <div>Copy that file to an offsite location (USB, password manager, another host) before continuing.</div>
+              </div>
+            )}
+            {err && (
+              <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">{err}</div>
+            )}
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={close} disabled={busy}>Cancel</Button>
-            <Button
-              onClick={() => runRemove(action === "replace" ? "replace" : "remove")}
-              disabled={busy}
-              className="!bg-red-500 hover:!bg-red-600 !text-white"
-            >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (action === "replace" ? "Remove current — set up new" : "Remove")}
+            <Button onClick={runEscrowMode} disabled={busy}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (newEscrowMode === "full" ? "Enable upload" : "Stop upload")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* NOTE: no Remove keyfile dialog here — deletion lives inside
+          each PBS destination row (PbsKeyfileActions), so the setup
+          menus of Create Job / Manual Backup only cover key-related
+          toggles (download / passphrase / escrow) and never surface
+          a destructive delete. */}
     </div>
   )
 }
@@ -1235,6 +1541,66 @@ function InspectModal({
     rollbackExecute?: boolean
   } | null>(null)
 
+  // ── Keyfile-required inline import ────────────────────────────
+  // When this modal opens on an encrypted PBS backup and the local
+  // keyfile is missing at /usr/local/share/proxmenux/pbs-key.conf,
+  // Restore / Download / View contents would all fail with
+  // "missing key". We block the buttons and offer an inline Import
+  // panel that reuses /api/host-backups/pbs-encryption/import with
+  // source=content + escrow_mode=none — same endpoint as the setup
+  // flow, so the imported keyfile lands at the canonical path and is
+  // reused by every subsequent backup + restore.
+  const { data: keyfileInfo, mutate: mutateKeyfileInfo } = useSWR<{
+    installed: boolean
+    fingerprint?: string
+    path: string
+  }>(
+    open && remoteArc?.encrypted ? "/api/host-backups/pbs-encryption/keyfile-info" : null,
+    fetcher,
+  )
+  const needsKeyfile = !!(remoteArc?.encrypted && keyfileInfo && !keyfileInfo.installed)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importPath, setImportPath] = useState<string>("")
+  const [importing, setImporting] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
+
+  const runImportKeyfile = async () => {
+    // Either a file upload OR a typed absolute path on this host —
+    // both land at /usr/local/share/proxmenux/pbs-key.conf with
+    // escrow_mode='none'. When both are provided the file wins.
+    if (!importFile && !importPath.trim()) {
+      setImportError("Pick a keyfile file or enter an absolute path on this host.")
+      return
+    }
+    setImporting(true)
+    setImportError(null)
+    try {
+      const body: Record<string, unknown> = { escrow_mode: "none" }
+      if (importFile) {
+        const buf = new Uint8Array(await importFile.arrayBuffer())
+        let bin = ""
+        for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i])
+        body.source = "content"
+        body.content_b64 = btoa(bin)
+      } else {
+        body.source = "path"
+        body.keyfile_path = importPath.trim()
+      }
+      await fetchApi("/api/host-backups/pbs-encryption/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      await mutateKeyfileInfo()
+      setImportFile(null)
+      setImportPath("")
+    } catch (e) {
+      setImportError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setImporting(false)
+    }
+  }
+
   const beginRestore = async () => {
     if (!archive) return
     setRestoreError(null)
@@ -1633,6 +1999,71 @@ function InspectModal({
                 {error}
               </div>
             )}
+
+            {/* Encrypted-backup gate: no local keyfile → block the
+                three actions until the operator imports the key. The
+                import lands at the canonical path with escrow_mode=
+                'none', so subsequent runs reuse it silently. */}
+            {needsKeyfile && (
+              <section className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 space-y-2 text-xs">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+                  <div className="flex-1 space-y-1">
+                    <div className="font-semibold text-amber-300">Encrypted backup — keyfile required</div>
+                    <div className="text-muted-foreground leading-relaxed">
+                      This snapshot is encrypted but no local keyfile is installed at
+                      {" "}<code className="font-mono text-[10.5px]">/usr/local/share/proxmenux/pbs-key.conf</code>.
+                      Import the keyfile that was used at backup time to continue.
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-1.5 pt-1 border-t border-amber-500/30">
+                  <Label htmlFor="keyfileImport" className="text-[11px] font-medium">Upload from your machine</Label>
+                  <Input
+                    id="keyfileImport"
+                    type="file"
+                    accept=".conf,.key,application/json,text/plain"
+                    onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                    disabled={importing || !!importPath.trim()}
+                    className="h-8 text-[11px]"
+                  />
+                </div>
+                <div className="text-[10px] text-center text-muted-foreground">— or —</div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="keyfileImportPath" className="text-[11px] font-medium">Absolute path on this host</Label>
+                  <Input
+                    id="keyfileImportPath"
+                    type="text"
+                    value={importPath}
+                    onChange={(e) => setImportPath(e.target.value)}
+                    disabled={importing || !!importFile}
+                    placeholder="/usr/local/share/proxmenux/pbs-key.conf"
+                    className="h-8 text-[11px] font-mono"
+                  />
+                </div>
+                {importError && (
+                  <div className="text-red-500 px-2 py-1.5 rounded border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">
+                    {importError}
+                  </div>
+                )}
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    onClick={runImportKeyfile}
+                    disabled={importing || (!importFile && !importPath.trim())}
+                    className="bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30"
+                    variant="outline"
+                  >
+                    {importing ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Lock className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    Import keyfile
+                  </Button>
+                </div>
+              </section>
+            )}
           </div>
         </ScrollArea>
 
@@ -1645,9 +2076,9 @@ function InspectModal({
           <div className="flex items-center gap-2 flex-wrap">
             <Button
               onClick={beginRestore}
-              disabled={restorePreparing}
-              className="bg-green-600 hover:bg-green-700 text-white"
-              title="Restore this snapshot to the current host (Complete or Custom by paths)"
+              disabled={restorePreparing || needsKeyfile}
+              className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+              title={needsKeyfile ? "Import the encryption keyfile above to enable Restore" : "Restore this snapshot to the current host (Complete or Custom by paths)"}
             >
               {restorePreparing ? (
                 <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
@@ -1658,10 +2089,10 @@ function InspectModal({
             </Button>
             <Button
               onClick={downloadArchive}
-              disabled={downloading}
-              className="bg-blue-500/10 border border-blue-500/40 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300"
+              disabled={downloading || needsKeyfile}
+              className="bg-blue-500/10 border border-blue-500/40 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300 disabled:opacity-50"
               variant="outline"
-              title="Download the snapshot as a .tar.zst"
+              title={needsKeyfile ? "Import the encryption keyfile above to enable Download" : "Download the snapshot as a .tar.zst"}
             >
               {downloading ? (
                 <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
@@ -1672,9 +2103,10 @@ function InspectModal({
             </Button>
             <Button
               onClick={() => setViewingContents(true)}
-              className="bg-blue-500/10 border border-blue-500/40 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300"
+              disabled={needsKeyfile}
+              className="bg-blue-500/10 border border-blue-500/40 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300 disabled:opacity-50"
               variant="outline"
-              title="Extract + show manifest, plan, files, metadata as HTML"
+              title={needsKeyfile ? "Import the encryption keyfile above to enable View contents" : "Extract + show manifest, plan, files, metadata as HTML"}
             >
               <Eye className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">View contents</span>
@@ -2256,7 +2688,9 @@ function CreateJobDialog({
   // File picked in the "existing" mode. Kept in a ref-like state so a
   // stale reference doesn't linger across modal opens.
   const [pbsImportFile, setPbsImportFile] = useState<File | null>(null)
-  const [pbsImportKeyfilePass, setPbsImportKeyfilePass] = useState<string>("")
+  // Absolute-path alternative to the file upload — mirrors the shell
+  // wizard's `_hb_pbs_import_dialog` when there is no PVE .enc match.
+  const [pbsImportPath, setPbsImportPath] = useState<string>("")
   const [pbsImportBusy, setPbsImportBusy] = useState<boolean>(false)
   // Legacy alias for the many recovery / gating checks below — a truthy
   // value means "the operator wants an encrypted backup" regardless of
@@ -2273,15 +2707,36 @@ function CreateJobDialog({
   // passphrase if one is already saved — only show the inputs when
   // there's no escrow yet OR the operator explicitly asks to change.
   const [pbsRecoveryChange, setPbsRecoveryChange] = useState<boolean>(false)
+  // Binary "upload key to PBS?" toggle. `true` maps to escrow_mode='full'
+  // (passphrase required, envelope uploaded on every backup); `false`
+  // maps to escrow_mode='none' (keyfile stays local, operator handles
+  // the offsite copy). Defaults to 'No' — the keyfile is always
+  // downloadable from the Monitor, so the operator can grab it and
+  // save it offsite themselves without leaving a passphrase-wrapped
+  // copy on the PBS server.
+  const [pbsUploadToPbs, setPbsUploadToPbs] = useState<boolean>(false)
   // Whether the host already has an escrow blob configured. When
   // present, the passphrase input becomes optional ("leave blank to
   // keep saved"). Refreshed after a successful setup call.
   const { data: pbsRecoveryStatus, mutate: mutatePbsRecovery } = useSWR<{
-    has_keyfile: boolean; has_recovery: boolean; has_keyfile_passphrase?: boolean
+    has_keyfile: boolean; has_recovery: boolean; has_keyfile_passphrase?: boolean; escrow_mode?: "none" | "local" | "full"
   }>(
     open && backend === "pbs" ? "/api/host-backups/pbs-recovery/status" : null,
     fetcher,
   )
+  // Auto-discover a PVE-managed keyfile for the currently selected
+  // PBS repository. When one is found, the "Use an existing keyfile"
+  // radio uses it silently (matches the shell wizard's PVE auto-detect
+  // path — the operator doesn't have to upload the same file twice).
+  const { data: pbsPveDiscover } = useSWR<{
+    entries: Array<{ name: string; server: string; datastore: string; path: string; matches_repository: boolean }>
+  }>(
+    open && backend === "pbs" && pbsRepository && !pbsRecoveryStatus?.has_keyfile
+      ? `/api/host-backups/pbs-encryption/discover-pve-keyfiles?repository=${encodeURIComponent(pbsRepository)}`
+      : null,
+    fetcher,
+  )
+  const pbsPveMatch = pbsPveDiscover?.entries?.find((e) => e.matches_repository)
   const [localDestDir, setLocalDestDir] = useState<string>("")
   const [borgRepoSelected, setBorgRepoSelected] = useState<string>("")
   const [borgPassphrase, setBorgPassphrase] = useState<string>("")
@@ -2457,11 +2912,12 @@ function CreateJobDialog({
       setPbsBackupId("")
       setPbsEncryptMode("none")
       setPbsImportFile(null)
-      setPbsImportKeyfilePass("")
+      setPbsImportPath("")
       setPbsImportBusy(false)
       setPbsRecoveryPass("")
       setPbsRecoveryPass2("")
       setPbsRecoveryChange(false)
+      setPbsUploadToPbs(false)
       setLocalDestDir("")
       setBorgRepoSelected("")
       setBorgPassphrase("")
@@ -2554,8 +3010,13 @@ function CreateJobDialog({
   // There is no opt-out: encrypting without recovery would leave the
   // keyfile only on this host, and a reinstall would render every
   // encrypted backup unrecoverable.
+  // Passphrase requirement only kicks in when: encryption is on AND
+  // there's no keyfile installed yet (fresh setup) AND the operator
+  // opted to upload the key to PBS. Every other case (reuse existing
+  // keyfile, or "no upload" mode) doesn't need a passphrase.
   const pbsRecoveryOk = !(backend === "pbs" && pbsEncrypt) ||
-    (pbsRecoveryStatus?.has_recovery && !pbsRecoveryChange) ||
+    pbsRecoveryStatus?.has_keyfile ||
+    !pbsUploadToPbs ||
     (pbsRecoveryPass !== "" && pbsRecoveryPass === pbsRecoveryPass2)
 
   const canSubmit =
@@ -2576,71 +3037,75 @@ function CreateJobDialog({
     // Only the third branch actually needs to POST to
     // /api/host-backups/pbs-encryption/import — the second is handled
     // server-side, and the first has nothing to upload.
-    const needsImport =
+    // Unified encryption setup: one atomic call to /pbs-encryption/import
+    // covers keyfile install + escrow setup, whether the operator picked
+    // "generate a new keyfile" or "import an existing one", and whether
+    // they opted to upload the envelope to PBS or keep the key local.
+    const needsInstall =
       backend === "pbs" &&
-      pbsEncryptMode === "existing" &&
+      pbsEncrypt &&
       !pbsRecoveryStatus?.has_keyfile
-    if (needsImport) {
-      if (!pbsImportFile) {
-        setError("Pick a keyfile to import.")
+    if (needsInstall) {
+      // Existing + no PVE auto-detect requires either a file upload
+      // or a typed absolute path — mirrors the shell wizard.
+      // Existing + PVE auto-detect uses source=pve-storage.
+      if (pbsEncryptMode === "existing" && !pbsPveMatch && !pbsImportFile && !pbsImportPath.trim()) {
+        setError("Pick a keyfile file or enter an absolute path on this host.")
+        setSubmitting(false)
+        return
+      }
+      if (pbsUploadToPbs && pbsRecoveryPass !== pbsRecoveryPass2) {
+        setError("Recovery passphrases don't match.")
         setSubmitting(false)
         return
       }
       setPbsImportBusy(true)
       try {
-        const buf = new Uint8Array(await pbsImportFile.arrayBuffer())
-        // btoa on binary requires a String.fromCharCode round-trip.
-        // The keyfile is small (~200 bytes), so no perf concern.
-        let bin = ""
-        for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i])
-        const content_b64 = btoa(bin)
+        // Source picker mirrors the shell wizard's dispatch:
+        //   generate       → new keyfile via proxmox-backup-client
+        //   pve-storage    → reuse /etc/pve/priv/storage/<name>.enc
+        //   content        → upload a file the operator picked
+        //   path           → read a file at an absolute path
+        let source: "generate" | "pve-storage" | "content" | "path"
+        if (pbsEncryptMode === "new") source = "generate"
+        else if (pbsPveMatch) source = "pve-storage"
+        else if (pbsImportFile) source = "content"
+        else source = "path"
+        const body: Record<string, unknown> = {
+          source,
+          escrow_mode: pbsUploadToPbs ? "full" : "none",
+        }
+        if (pbsUploadToPbs) body.escrow_passphrase = pbsRecoveryPass
+        if (source === "pve-storage") {
+          body.pve_storage_name = pbsPveMatch!.name
+        } else if (source === "content") {
+          const buf = new Uint8Array(await pbsImportFile!.arrayBuffer())
+          let bin = ""
+          for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i])
+          body.content_b64 = btoa(bin)
+        } else if (source === "path") {
+          body.keyfile_path = pbsImportPath.trim()
+        }
         await fetchApi("/api/host-backups/pbs-encryption/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            content_b64,
-            keyfile_passphrase: pbsImportKeyfilePass,
-          }),
+          body: JSON.stringify(body),
         })
         mutatePbsRecovery()
       } catch (e) {
-        // The import endpoint returns `{error, tool_output, tool_exit_code}`
-        // on validation failure. Surface the tool output verbatim so the
-        // operator can tell a real "not a keyfile" from a "keyfile needs
-        // a passphrase / uses unsupported KDF" and act on it.
         const err = e as Error & { body?: { tool_output?: string; tool_exit_code?: number } }
         const detail = err.body?.tool_output
           ? `${err.message}\n\nproxmox-backup-client output:\n${err.body.tool_output}`
           : err.message
-        setError(`Keyfile import failed: ${detail || String(e)}`)
+        setError(`Encryption setup failed: ${detail || String(e)}`)
         setPbsImportBusy(false)
         setSubmitting(false)
         return
       }
       setPbsImportBusy(false)
     }
-    // Configure the PBS recovery escrow BEFORE creating the job so the
-    // very first backup the runner triggers can already upload the
-    // blob. Only fires when the operator typed a passphrase pair.
-    if (backend === "pbs" && pbsEncrypt && pbsRecoveryPass) {
-      if (pbsRecoveryPass !== pbsRecoveryPass2) {
-        setError("Recovery passphrases don't match.")
-        setSubmitting(false)
-        return
-      }
-      try {
-        await fetchApi("/api/host-backups/pbs-recovery/setup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ passphrase: pbsRecoveryPass }),
-        })
-        mutatePbsRecovery()
-      } catch (e) {
-        setError(`Recovery setup failed: ${e instanceof Error ? e.message : String(e)}`)
-        setSubmitting(false)
-        return
-      }
-    }
+    // NOTE: recovery escrow is now bundled into the /pbs-encryption/import
+    // call above. No separate /pbs-recovery/setup pass is needed.
     try {
       const body: Record<string, unknown> = {
         id: jobId,
@@ -3299,39 +3764,51 @@ function CreateJobDialog({
                             <div className="text-muted-foreground">Use the same keyfile another host already has — enables cross-host restore of encrypted backups.</div>
                           </div>
                         </label>
-                        {pbsEncryptMode === "existing" && (
+                        {pbsEncryptMode === "existing" && pbsPveMatch && (
+                          <div className="pt-1 rounded-md border border-emerald-500/40 bg-emerald-500/5 p-2.5 text-[11px] space-y-1">
+                            <div className="flex items-start gap-1.5">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
+                              <div className="flex-1">
+                                <div className="font-medium text-foreground">Auto-detected from PVE storage &apos;{pbsPveMatch.name}&apos;</div>
+                                <div className="text-muted-foreground mt-0.5">
+                                  Existing key at <code className="font-mono text-[10.5px]">{pbsPveMatch.path}</code>
+                                </div>
+                                <div className="text-muted-foreground mt-0.5">Will be copied to the ProxMenux state directory. No file upload needed.</div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {pbsEncryptMode === "existing" && !pbsPveMatch && (
                           <div className="space-y-2 pt-1">
                             <div className="space-y-1.5">
                               <Label htmlFor="pbsImportFile" className="text-[11px] font-medium">
-                                Keyfile to import
+                                Upload from your machine
                               </Label>
                               <Input
                                 id="pbsImportFile"
                                 type="file"
                                 accept=".conf,.key,application/json,text/plain"
                                 onChange={(e) => setPbsImportFile(e.target.files?.[0] ?? null)}
-                                disabled={pbsImportBusy}
+                                disabled={pbsImportBusy || !!pbsImportPath.trim()}
                                 className="h-8 text-[11px]"
                               />
-                              <p className="text-[10px] text-muted-foreground">
-                                ProxMenux does not validate the file — any keyfile you accept as valid on your PBS is accepted here. If it later fails at backup time, the tool's error tells you why.
-                              </p>
                             </div>
+                            <div className="text-[10px] text-center text-muted-foreground">— or —</div>
                             <div className="space-y-1.5">
-                              <Label htmlFor="pbsImportKeyfilePass" className="text-[11px] font-medium">
-                                Keyfile passphrase (optional)
+                              <Label htmlFor="pbsImportPath" className="text-[11px] font-medium">
+                                Absolute path on this host
                               </Label>
                               <Input
-                                id="pbsImportKeyfilePass"
-                                type="password"
-                                value={pbsImportKeyfilePass}
-                                onChange={(e) => setPbsImportKeyfilePass(e.target.value)}
-                                disabled={pbsImportBusy}
-                                placeholder="Leave blank if the keyfile has no passphrase"
+                                id="pbsImportPath"
+                                type="text"
+                                value={pbsImportPath}
+                                onChange={(e) => setPbsImportPath(e.target.value)}
+                                disabled={pbsImportBusy || !!pbsImportFile}
+                                placeholder="/usr/local/share/proxmenux/pbs-key.conf"
                                 className="h-8 text-[11px] font-mono"
                               />
                               <p className="text-[10px] text-muted-foreground">
-                                If the keyfile was generated with <code className="font-mono">proxmox-backup-client key create --kdf scrypt</code> (the tool's default) it needs the original passphrase to be unlocked at backup time. Leave blank for <code className="font-mono">--kdf none</code> keyfiles. Stored at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.pass</code> (chmod 600).
+                                Either option works. The file lands at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> and every subsequent encrypted backup reuses it.
                               </p>
                             </div>
                           </div>
@@ -3340,15 +3817,13 @@ function CreateJobDialog({
                     )}
 
                     {pbsEncrypt && (
-                      <div className="pl-7 space-y-2 rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
-                        {pbsRecoveryStatus?.has_recovery && !pbsRecoveryChange ? (
-                          /* Escrow already saved — mirror the shell: skip
-                             the prompt unless the operator opts to change. */
+                      <div className="pl-7 space-y-3 rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
+                        {pbsRecoveryStatus?.has_keyfile && !pbsRecoveryChange && (
                           <div className="flex items-start gap-2 text-[11px]">
                             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
                             <div className="flex-1">
-                              <div className="text-foreground">Recovery escrow already configured for this host.</div>
-                              <div className="text-muted-foreground mt-0.5">Backups created by this job will reuse the existing passphrase. No need to type it again.</div>
+                              <div className="text-foreground">Keyfile installed. Backups reuse it silently.</div>
+                              <div className="text-muted-foreground mt-0.5">The current PBS-upload setting stays in effect.</div>
                             </div>
                             <button
                               type="button"
@@ -3358,61 +3833,89 @@ function CreateJobDialog({
                               Change
                             </button>
                           </div>
-                        ) : (
+                        )}
+                        {pbsRecoveryStatus?.has_keyfile && pbsRecoveryChange && (
                           <>
-                            {/* When the operator clicked "Change" and a keyfile
-                                is already installed, the keyfile management
-                                actions sit at the top of the panel. This
-                                collapses two prior boxes (keyfile info + recovery
-                                escrow) into one, and only exposes the destructive
-                                buttons when the operator explicitly asks for
-                                change. */}
-                            {pbsRecoveryStatus?.has_keyfile && (
-                              <>
-                                <KeyfileActionsBar
-                                  onReplaced={() => setPbsEncryptMode("new")}
-                                  mutateStatus={mutatePbsRecovery}
-                                />
-                                <div className="border-t border-blue-500/20 my-1" />
-                                <div className="text-[11px] font-medium text-foreground">Change recovery passphrase</div>
-                              </>
-                            )}
-                            <p className="text-[11px] text-muted-foreground">
-                              With a recovery passphrase, an encrypted copy of the keyfile is uploaded to PBS with every backup. If you lose this host, you can recover the keyfile on a fresh install with just the passphrase. Without it, losing the local keyfile means the encrypted backups become unrecoverable forever.
-                            </p>
+                            <KeyfileActionsBar
+                              mutateStatus={mutatePbsRecovery}
+                              escrowMode={pbsRecoveryStatus?.escrow_mode}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setPbsRecoveryChange(false)}
+                              className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                            >
+                              Done — hide keyfile options
+                            </button>
+                          </>
+                        )}
+                        {!pbsRecoveryStatus?.has_keyfile && (
+                          <>
                             <div>
-                              <Label htmlFor="pbsRecPass" className="text-[11px]">Passphrase</Label>
-                              <Input
-                                id="pbsRecPass"
-                                type="password"
-                                value={pbsRecoveryPass}
-                                onChange={(e) => setPbsRecoveryPass(e.target.value)}
-                                placeholder="Long random string — write it down somewhere safe"
-                                className="font-mono mt-1 h-8 text-xs"
-                              />
+                              <div className="text-[11px] font-medium text-foreground mb-2">Upload key to PBS?</div>
+                              <div className="grid gap-1.5">
+                                <label className="flex items-start gap-2 cursor-pointer text-[11px]">
+                                  <input
+                                    type="radio"
+                                    name="pbsUploadToPbsCreate"
+                                    checked={!pbsUploadToPbs}
+                                    onChange={() => setPbsUploadToPbs(false)}
+                                    className="mt-1"
+                                  />
+                                  <div className="flex-1">
+                                    <div className="font-medium">No, keep local only</div>
+                                    <div className="text-muted-foreground">Keyfile stays only at <code className="font-mono text-[10.5px]">/usr/local/share/proxmenux/pbs-key.conf</code>. You are responsible for keeping an offsite copy — losing it makes every encrypted backup unreadable.</div>
+                                  </div>
+                                </label>
+                                <label className="flex items-start gap-2 cursor-pointer text-[11px]">
+                                  <input
+                                    type="radio"
+                                    name="pbsUploadToPbsCreate"
+                                    checked={pbsUploadToPbs}
+                                    onChange={() => setPbsUploadToPbs(true)}
+                                    className="mt-1"
+                                  />
+                                  <div className="flex-1">
+                                    <div className="font-medium">Yes, upload</div>
+                                    <div className="text-muted-foreground">Set a recovery passphrase now. ProxMenux uploads a passphrase-wrapped copy of the keyfile to PBS with every backup so you can recover it on a reinstalled host with just the passphrase.</div>
+                                  </div>
+                                </label>
+                              </div>
                             </div>
-                            <div>
-                              <Label htmlFor="pbsRecPass2" className="text-[11px]">Confirm passphrase</Label>
-                              <Input
-                                id="pbsRecPass2"
-                                type="password"
-                                value={pbsRecoveryPass2}
-                                onChange={(e) => setPbsRecoveryPass2(e.target.value)}
-                                placeholder="Type it again"
-                                className="font-mono mt-1 h-8 text-xs"
-                              />
-                              {pbsRecoveryPass && pbsRecoveryPass2 && pbsRecoveryPass !== pbsRecoveryPass2 && (
-                                <p className="text-[11px] text-red-400 mt-1">Passphrases don't match.</p>
-                              )}
-                            </div>
-                            {pbsRecoveryStatus?.has_recovery && pbsRecoveryChange && (
-                              <button
-                                type="button"
-                                onClick={() => { setPbsRecoveryChange(false); setPbsRecoveryPass(""); setPbsRecoveryPass2("") }}
-                                className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
-                              >
-                                Cancel change — keep the saved passphrase
-                              </button>
+                            {pbsUploadToPbs ? (
+                              <div className="space-y-2 pt-1 border-t border-blue-500/20">
+                                <div>
+                                  <Label htmlFor="pbsRecPass" className="text-[11px]">Recovery passphrase</Label>
+                                  <Input
+                                    id="pbsRecPass"
+                                    type="password"
+                                    value={pbsRecoveryPass}
+                                    onChange={(e) => setPbsRecoveryPass(e.target.value)}
+                                    placeholder="Long random string — write it down somewhere safe"
+                                    className="font-mono mt-1 h-8 text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="pbsRecPass2" className="text-[11px]">Confirm passphrase</Label>
+                                  <Input
+                                    id="pbsRecPass2"
+                                    type="password"
+                                    value={pbsRecoveryPass2}
+                                    onChange={(e) => setPbsRecoveryPass2(e.target.value)}
+                                    placeholder="Type it again"
+                                    className="font-mono mt-1 h-8 text-xs"
+                                  />
+                                  {pbsRecoveryPass && pbsRecoveryPass2 && pbsRecoveryPass !== pbsRecoveryPass2 && (
+                                    <p className="text-[11px] text-red-400 mt-1">Passphrases don't match.</p>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="pt-1 border-t border-blue-500/20 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-3 py-2 leading-relaxed space-y-1">
+                                <div className="font-semibold">Keep an offsite copy of the keyfile.</div>
+                                <div>After the job is created, copy <code className="font-mono text-[10.5px] bg-amber-500/20 rounded px-1">/usr/local/share/proxmenux/pbs-key.conf</code> to an external medium (USB, password manager, another host).</div>
+                                <div>Without that copy, losing this host makes every encrypted backup on PBS unreadable.</div>
+                              </div>
                             )}
                           </>
                         )}
@@ -3751,7 +4254,9 @@ function ManualBackupDialog({
   // block — the three modes and the import flow are identical here.
   const [pbsEncryptMode, setPbsEncryptMode] = useState<"none" | "new" | "existing">("none")
   const [pbsImportFile, setPbsImportFile] = useState<File | null>(null)
-  const [pbsImportKeyfilePass, setPbsImportKeyfilePass] = useState<string>("")
+  // Absolute-path alternative to the file upload — mirrors the shell
+  // wizard's `_hb_pbs_import_dialog` when there is no PVE .enc match.
+  const [pbsImportPath, setPbsImportPath] = useState<string>("")
   const [pbsImportBusy, setPbsImportBusy] = useState<boolean>(false)
   const pbsEncrypt = pbsEncryptMode !== "none"
   const [pbsRecoveryPass, setPbsRecoveryPass] = useState<string>("")
@@ -3761,15 +4266,36 @@ function ManualBackupDialog({
   // passphrase if one is already saved — only show the inputs when
   // there's no escrow yet OR the operator explicitly asks to change.
   const [pbsRecoveryChange, setPbsRecoveryChange] = useState<boolean>(false)
+  // Binary "upload key to PBS?" toggle. `true` maps to escrow_mode='full'
+  // (passphrase required, envelope uploaded on every backup); `false`
+  // maps to escrow_mode='none' (keyfile stays local, operator handles
+  // the offsite copy). Defaults to 'No' — the keyfile is always
+  // downloadable from the Monitor, so the operator can grab it and
+  // save it offsite themselves without leaving a passphrase-wrapped
+  // copy on the PBS server.
+  const [pbsUploadToPbs, setPbsUploadToPbs] = useState<boolean>(false)
   // Whether the host already has an escrow blob configured. When
   // present, the passphrase input becomes optional ("leave blank to
   // keep saved"). Refreshed after a successful setup call.
   const { data: pbsRecoveryStatus, mutate: mutatePbsRecovery } = useSWR<{
-    has_keyfile: boolean; has_recovery: boolean; has_keyfile_passphrase?: boolean
+    has_keyfile: boolean; has_recovery: boolean; has_keyfile_passphrase?: boolean; escrow_mode?: "none" | "local" | "full"
   }>(
     open && backend === "pbs" ? "/api/host-backups/pbs-recovery/status" : null,
     fetcher,
   )
+  // Auto-discover a PVE-managed keyfile for the currently selected
+  // PBS repository. When one is found, the "Use an existing keyfile"
+  // radio uses it silently (matches the shell wizard's PVE auto-detect
+  // path — the operator doesn't have to upload the same file twice).
+  const { data: pbsPveDiscover } = useSWR<{
+    entries: Array<{ name: string; server: string; datastore: string; path: string; matches_repository: boolean }>
+  }>(
+    open && backend === "pbs" && pbsRepository && !pbsRecoveryStatus?.has_keyfile
+      ? `/api/host-backups/pbs-encryption/discover-pve-keyfiles?repository=${encodeURIComponent(pbsRepository)}`
+      : null,
+    fetcher,
+  )
+  const pbsPveMatch = pbsPveDiscover?.entries?.find((e) => e.matches_repository)
   const [localDestDir, setLocalDestDir] = useState<string>("")
   const [borgRepoSelected, setBorgRepoSelected] = useState<string>("")
   const [borgPassphrase, setBorgPassphrase] = useState<string>("")
@@ -3818,11 +4344,12 @@ function ManualBackupDialog({
       setPbsBackupId("")
       setPbsEncryptMode("none")
       setPbsImportFile(null)
-      setPbsImportKeyfilePass("")
+      setPbsImportPath("")
       setPbsImportBusy(false)
       setPbsRecoveryPass("")
       setPbsRecoveryPass2("")
       setPbsRecoveryChange(false)
+      setPbsUploadToPbs(false)
       setLocalDestDir("")
       setBorgRepoSelected("")
       setBorgPassphrase("")
@@ -3867,8 +4394,13 @@ function ManualBackupDialog({
   // encrypting without recovery would leave the keyfile only on this
   // host, and a reinstall would render every encrypted backup
   // unrecoverable.
+  // Passphrase requirement only kicks in when: encryption is on AND
+  // there's no keyfile installed yet (fresh setup) AND the operator
+  // opted to upload the key to PBS. Every other case (reuse existing
+  // keyfile, or "no upload" mode) doesn't need a passphrase.
   const pbsRecoveryOk = !(backend === "pbs" && pbsEncrypt) ||
-    (pbsRecoveryStatus?.has_recovery && !pbsRecoveryChange) ||
+    pbsRecoveryStatus?.has_keyfile ||
+    !pbsUploadToPbs ||
     (pbsRecoveryPass !== "" && pbsRecoveryPass === pbsRecoveryPass2)
   const canSubmit = canAdvanceFrom1 && backendValid && pbsRecoveryOk
 
@@ -3876,72 +4408,66 @@ function ManualBackupDialog({
     if (!canSubmit) return
     setSubmitting(true)
     setError(null)
-    // Same three encryption submit paths as CreateJobDialog. Only
-    // "Import + no keyfile installed yet" actually uploads; the on-disk
-    // reuse case sends mode=existing without touching the file.
-    const needsImport =
+    // Unified encryption setup — mirrors CreateJobDialog. One atomic
+    // /pbs-encryption/import call covers keyfile install + escrow
+    // setup with source picked from what the operator provided.
+    const needsInstall =
       backend === "pbs" &&
-      pbsEncryptMode === "existing" &&
+      pbsEncrypt &&
       !pbsRecoveryStatus?.has_keyfile
-    if (needsImport) {
-      if (!pbsImportFile) {
-        setError("Pick a keyfile to import.")
+    if (needsInstall) {
+      if (pbsEncryptMode === "existing" && !pbsPveMatch && !pbsImportFile && !pbsImportPath.trim()) {
+        setError("Pick a keyfile file or enter an absolute path on this host.")
+        setSubmitting(false)
+        return
+      }
+      if (pbsUploadToPbs && pbsRecoveryPass !== pbsRecoveryPass2) {
+        setError("Recovery passphrases don't match.")
         setSubmitting(false)
         return
       }
       setPbsImportBusy(true)
       try {
-        const buf = new Uint8Array(await pbsImportFile.arrayBuffer())
-        let bin = ""
-        for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i])
-        const content_b64 = btoa(bin)
+        let source: "generate" | "pve-storage" | "content" | "path"
+        if (pbsEncryptMode === "new") source = "generate"
+        else if (pbsPveMatch) source = "pve-storage"
+        else if (pbsImportFile) source = "content"
+        else source = "path"
+        const body: Record<string, unknown> = {
+          source,
+          escrow_mode: pbsUploadToPbs ? "full" : "none",
+        }
+        if (pbsUploadToPbs) body.escrow_passphrase = pbsRecoveryPass
+        if (source === "pve-storage") {
+          body.pve_storage_name = pbsPveMatch!.name
+        } else if (source === "content") {
+          const buf = new Uint8Array(await pbsImportFile!.arrayBuffer())
+          let bin = ""
+          for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i])
+          body.content_b64 = btoa(bin)
+        } else if (source === "path") {
+          body.keyfile_path = pbsImportPath.trim()
+        }
         await fetchApi("/api/host-backups/pbs-encryption/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            content_b64,
-            keyfile_passphrase: pbsImportKeyfilePass,
-          }),
+          body: JSON.stringify(body),
         })
         mutatePbsRecovery()
       } catch (e) {
-        // The import endpoint returns `{error, tool_output, tool_exit_code}`
-        // on validation failure. Surface the tool output verbatim so the
-        // operator can tell a real "not a keyfile" from a "keyfile needs
-        // a passphrase / uses unsupported KDF" and act on it.
         const err = e as Error & { body?: { tool_output?: string; tool_exit_code?: number } }
         const detail = err.body?.tool_output
           ? `${err.message}\n\nproxmox-backup-client output:\n${err.body.tool_output}`
           : err.message
-        setError(`Keyfile import failed: ${detail || String(e)}`)
+        setError(`Encryption setup failed: ${detail || String(e)}`)
         setPbsImportBusy(false)
         setSubmitting(false)
         return
       }
       setPbsImportBusy(false)
     }
-    // Same pre-step as CreateJob: configure the PBS recovery escrow
-    // before the run so the runner's post-backup upload of the blob
-    // has something to push.
-    if (backend === "pbs" && pbsEncrypt && pbsRecoveryPass) {
-      if (pbsRecoveryPass !== pbsRecoveryPass2) {
-        setError("Recovery passphrases don't match.")
-        setSubmitting(false)
-        return
-      }
-      try {
-        await fetchApi("/api/host-backups/pbs-recovery/setup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ passphrase: pbsRecoveryPass }),
-        })
-        mutatePbsRecovery()
-      } catch (e) {
-        setError(`Recovery setup failed: ${e instanceof Error ? e.message : String(e)}`)
-        setSubmitting(false)
-        return
-      }
-    }
+    // NOTE: recovery escrow is now bundled into the /pbs-encryption/import
+    // call above. No separate /pbs-recovery/setup pass is needed.
     try {
       const body: Record<string, unknown> = {
         backend,
@@ -4212,39 +4738,51 @@ function ManualBackupDialog({
                             <div className="text-muted-foreground">Reuse the same keyfile another host already has.</div>
                           </div>
                         </label>
-                        {pbsEncryptMode === "existing" && (
+                        {pbsEncryptMode === "existing" && pbsPveMatch && (
+                          <div className="pt-1 rounded-md border border-emerald-500/40 bg-emerald-500/5 p-2.5 text-[11px] space-y-1">
+                            <div className="flex items-start gap-1.5">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
+                              <div className="flex-1">
+                                <div className="font-medium text-foreground">Auto-detected from PVE storage &apos;{pbsPveMatch.name}&apos;</div>
+                                <div className="text-muted-foreground mt-0.5">
+                                  Existing key at <code className="font-mono text-[10.5px]">{pbsPveMatch.path}</code>
+                                </div>
+                                <div className="text-muted-foreground mt-0.5">Will be copied to the ProxMenux state directory. No file upload needed.</div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {pbsEncryptMode === "existing" && !pbsPveMatch && (
                           <div className="space-y-2 pt-1">
                             <div className="space-y-1.5">
                               <Label htmlFor="manualPbsImportFile" className="text-[11px] font-medium">
-                                Keyfile to import
+                                Upload from your machine
                               </Label>
                               <Input
                                 id="manualPbsImportFile"
                                 type="file"
                                 accept=".conf,.key,application/json,text/plain"
                                 onChange={(e) => setPbsImportFile(e.target.files?.[0] ?? null)}
-                                disabled={pbsImportBusy}
+                                disabled={pbsImportBusy || !!pbsImportPath.trim()}
                                 className="h-8 text-[11px]"
                               />
-                              <p className="text-[10px] text-muted-foreground">
-                                ProxMenux does not validate the file — any keyfile accepted by your PBS is accepted here.
-                              </p>
                             </div>
+                            <div className="text-[10px] text-center text-muted-foreground">— or —</div>
                             <div className="space-y-1.5">
-                              <Label htmlFor="manualPbsImportKeyfilePass" className="text-[11px] font-medium">
-                                Keyfile passphrase (optional)
+                              <Label htmlFor="manualPbsImportPath" className="text-[11px] font-medium">
+                                Absolute path on this host
                               </Label>
                               <Input
-                                id="manualPbsImportKeyfilePass"
-                                type="password"
-                                value={pbsImportKeyfilePass}
-                                onChange={(e) => setPbsImportKeyfilePass(e.target.value)}
-                                disabled={pbsImportBusy}
-                                placeholder="Leave blank if the keyfile has no passphrase"
+                                id="manualPbsImportPath"
+                                type="text"
+                                value={pbsImportPath}
+                                onChange={(e) => setPbsImportPath(e.target.value)}
+                                disabled={pbsImportBusy || !!pbsImportFile}
+                                placeholder="/usr/local/share/proxmenux/pbs-key.conf"
                                 className="h-8 text-[11px] font-mono"
                               />
                               <p className="text-[10px] text-muted-foreground">
-                                Only needed for keyfiles created with <code className="font-mono">--kdf scrypt</code> (the default of <code className="font-mono">proxmox-backup-client key create</code>). Stored at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.pass</code> (chmod 600) and reused by every encrypted job on this host.
+                                Either option works. The file lands at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> and every subsequent encrypted backup reuses it.
                               </p>
                             </div>
                           </div>
@@ -4253,13 +4791,13 @@ function ManualBackupDialog({
                     )}
 
                     {pbsEncrypt && (
-                      <div className="pl-7 space-y-2 rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
-                        {pbsRecoveryStatus?.has_recovery && !pbsRecoveryChange ? (
+                      <div className="pl-7 space-y-3 rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
+                        {pbsRecoveryStatus?.has_keyfile && !pbsRecoveryChange && (
                           <div className="flex items-start gap-2 text-[11px]">
                             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
                             <div className="flex-1">
-                              <div className="text-foreground">Recovery escrow already configured for this host.</div>
-                              <div className="text-muted-foreground mt-0.5">This backup will reuse the existing passphrase. No need to type it again.</div>
+                              <div className="text-foreground">Keyfile installed. This backup reuses it silently.</div>
+                              <div className="text-muted-foreground mt-0.5">The current PBS-upload setting stays in effect.</div>
                             </div>
                             <button
                               type="button"
@@ -4269,54 +4807,89 @@ function ManualBackupDialog({
                               Change
                             </button>
                           </div>
-                        ) : (
+                        )}
+                        {pbsRecoveryStatus?.has_keyfile && pbsRecoveryChange && (
                           <>
-                            {pbsRecoveryStatus?.has_keyfile && (
-                              <>
-                                <KeyfileActionsBar
-                                  onReplaced={() => setPbsEncryptMode("new")}
-                                  mutateStatus={mutatePbsRecovery}
-                                />
-                                <div className="border-t border-blue-500/20 my-1" />
-                                <div className="text-[11px] font-medium text-foreground">Change recovery passphrase</div>
-                              </>
-                            )}
-                            <p className="text-[11px] text-muted-foreground">
-                              With a recovery passphrase an encrypted copy of the keyfile is uploaded to PBS on every backup. Lets you recover it on a fresh host with just the passphrase.
-                            </p>
+                            <KeyfileActionsBar
+                              mutateStatus={mutatePbsRecovery}
+                              escrowMode={pbsRecoveryStatus?.escrow_mode}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setPbsRecoveryChange(false)}
+                              className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                            >
+                              Done — hide keyfile options
+                            </button>
+                          </>
+                        )}
+                        {!pbsRecoveryStatus?.has_keyfile && (
+                          <>
                             <div>
-                              <Label htmlFor="manualPbsRecPass" className="text-[11px]">Passphrase</Label>
-                              <Input
-                                id="manualPbsRecPass"
-                                type="password"
-                                value={pbsRecoveryPass}
-                                onChange={(e) => setPbsRecoveryPass(e.target.value)}
-                                placeholder="Long random string — write it down somewhere safe"
-                                className="font-mono mt-1 h-8 text-xs"
-                              />
+                              <div className="text-[11px] font-medium text-foreground mb-2">Upload key to PBS?</div>
+                              <div className="grid gap-1.5">
+                                <label className="flex items-start gap-2 cursor-pointer text-[11px]">
+                                  <input
+                                    type="radio"
+                                    name="pbsUploadToPbsManual"
+                                    checked={!pbsUploadToPbs}
+                                    onChange={() => setPbsUploadToPbs(false)}
+                                    className="mt-1"
+                                  />
+                                  <div className="flex-1">
+                                    <div className="font-medium">No, keep local only</div>
+                                    <div className="text-muted-foreground">Keyfile stays only at <code className="font-mono text-[10.5px]">/usr/local/share/proxmenux/pbs-key.conf</code>. You are responsible for keeping an offsite copy — losing it makes every encrypted backup unreadable.</div>
+                                  </div>
+                                </label>
+                                <label className="flex items-start gap-2 cursor-pointer text-[11px]">
+                                  <input
+                                    type="radio"
+                                    name="pbsUploadToPbsManual"
+                                    checked={pbsUploadToPbs}
+                                    onChange={() => setPbsUploadToPbs(true)}
+                                    className="mt-1"
+                                  />
+                                  <div className="flex-1">
+                                    <div className="font-medium">Yes, upload</div>
+                                    <div className="text-muted-foreground">Set a recovery passphrase now. ProxMenux uploads a passphrase-wrapped copy of the keyfile to PBS with every backup so you can recover it on a reinstalled host with just the passphrase.</div>
+                                  </div>
+                                </label>
+                              </div>
                             </div>
-                            <div>
-                              <Label htmlFor="manualPbsRecPass2" className="text-[11px]">Confirm passphrase</Label>
-                              <Input
-                                id="manualPbsRecPass2"
-                                type="password"
-                                value={pbsRecoveryPass2}
-                                onChange={(e) => setPbsRecoveryPass2(e.target.value)}
-                                placeholder="Type it again"
-                                className="font-mono mt-1 h-8 text-xs"
-                              />
-                              {pbsRecoveryPass && pbsRecoveryPass2 && pbsRecoveryPass !== pbsRecoveryPass2 && (
-                                <p className="text-[11px] text-red-400 mt-1">Passphrases don't match.</p>
-                              )}
-                            </div>
-                            {pbsRecoveryStatus?.has_recovery && pbsRecoveryChange && (
-                              <button
-                                type="button"
-                                onClick={() => { setPbsRecoveryChange(false); setPbsRecoveryPass(""); setPbsRecoveryPass2("") }}
-                                className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
-                              >
-                                Cancel change — keep the saved passphrase
-                              </button>
+                            {pbsUploadToPbs ? (
+                              <div className="space-y-2 pt-1 border-t border-blue-500/20">
+                                <div>
+                                  <Label htmlFor="manualPbsRecPass" className="text-[11px]">Recovery passphrase</Label>
+                                  <Input
+                                    id="manualPbsRecPass"
+                                    type="password"
+                                    value={pbsRecoveryPass}
+                                    onChange={(e) => setPbsRecoveryPass(e.target.value)}
+                                    placeholder="Long random string — write it down somewhere safe"
+                                    className="font-mono mt-1 h-8 text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="manualPbsRecPass2" className="text-[11px]">Confirm passphrase</Label>
+                                  <Input
+                                    id="manualPbsRecPass2"
+                                    type="password"
+                                    value={pbsRecoveryPass2}
+                                    onChange={(e) => setPbsRecoveryPass2(e.target.value)}
+                                    placeholder="Type it again"
+                                    className="font-mono mt-1 h-8 text-xs"
+                                  />
+                                  {pbsRecoveryPass && pbsRecoveryPass2 && pbsRecoveryPass !== pbsRecoveryPass2 && (
+                                    <p className="text-[11px] text-red-400 mt-1">Passphrases don't match.</p>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="pt-1 border-t border-blue-500/20 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-3 py-2 leading-relaxed space-y-1">
+                                <div className="font-semibold">Keep an offsite copy of the keyfile.</div>
+                                <div>After this backup, copy <code className="font-mono text-[10.5px] bg-amber-500/20 rounded px-1">/usr/local/share/proxmenux/pbs-key.conf</code> to an external medium (USB, password manager, another host).</div>
+                                <div>Without that copy, losing this host makes every encrypted backup on PBS unreadable.</div>
+                              </div>
                             )}
                           </>
                         )}
@@ -4612,10 +5185,11 @@ function DestinationsSection({
     { refreshInterval: 60_000, revalidateOnFocus: false },
   )
   // Recovery state — only needed when at least one PBS destination
-  // exists. Drives the "Recover keyfile" banner.
+  // exists. Drives the "Recover keyfile" banner and the "PBS encryption
+  // key" management block.
   const hasPbs = (destinations?.pbs?.length ?? 0) > 0
   const { data: pbsRecoveryStatus, mutate: mutatePbsRecovery } = useSWR<{
-    has_keyfile: boolean; has_recovery: boolean; has_keyfile_passphrase?: boolean
+    has_keyfile: boolean; has_recovery: boolean; has_keyfile_passphrase?: boolean; escrow_mode?: "none" | "local" | "full"; keyfile_fingerprint?: string
   }>(hasPbs ? "/api/host-backups/pbs-recovery/status" : null, fetcher)
   const { data: pbsRecoveryAvailable } = useSWR<{
     snapshots: Array<{ repo_name: string; repo_repository: string; backup_id: string; source_host: string; backup_time: number; snapshot: string }>
@@ -4833,6 +5407,7 @@ function DestinationsSection({
           <span className="text-xs text-emerald-300 shrink-0 self-center">Recover →</span>
         </button>
       )}
+
       <div className="space-y-2">
         {items.map((it) => {
           const cap = capByEdid.get(it.id)
@@ -5234,6 +5809,11 @@ function DestinationRow({
           <Loader2 className="h-3 w-3 animate-spin" /> Probing capacity…
         </p>
       )}
+      {/* Keyfile actions live inside each PBS row — the encryption key
+          is host-wide but conceptually belongs to PBS usage, so the
+          Download / Upload / Delete controls sit next to the
+          destination(s) they support. */}
+      {item.kind === "pbs" && <PbsKeyfileActions />}
     </div>
   )
 }
