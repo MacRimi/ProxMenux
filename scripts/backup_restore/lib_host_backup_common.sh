@@ -1258,8 +1258,8 @@ _hb_pbs_manual_keyfile_import() {
     local target_keyfile="$1"
     local src
     src=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Import encryption keyfile")" \
-        --inputbox "$(hb_translate "No PBS keyfile is installed on this host and no automatic recovery was possible.")"$'\n\n'"$(hb_translate "Absolute path to your PBS keyfile:")"$'\n\n'"$(hb_translate "The file is copied to")"$'\n'"$target_keyfile" \
-        16 78 "" 3>&1 1>&2 2>&3) || return 1
+        --inputbox "$(hb_translate "No PBS keyfile is installed on this host and no automatic recovery was possible.")"$'\n\n'"$(hb_translate "Copy your PBS keyfile onto this host first (via scp, USB, sftp, etc.) — for example to")"$'\n'"       /tmp/pbs-key.conf"$'\n\n'"$(hb_translate "Then enter the absolute path where you placed it below. The file will be copied to")"$'\n'"       $target_keyfile"$'\n\n'"$(hb_translate "Leave blank and press OK — or press Cancel — to abort.")" \
+        20 78 "" 3>&1 1>&2 2>&3) || return 1
     src="$(echo "$src" | xargs)"
     [[ -z "$src" ]] && return 1
     if [[ ! -s "$src" || ! -r "$src" ]]; then
@@ -1515,8 +1515,8 @@ _hb_pbs_import_dialog() {
 
     # 1. Ask the path.
     src=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Import PBS keyfile")" \
-        --inputbox "$(hb_translate "Absolute path to your existing PBS keyfile:")"$'\n\n'"$(hb_translate "The file is copied to")"$'\n'"$key_file $(hb_translate "with chmod 600. ProxMenux does not validate the contents — any keyfile you accept as valid on your PBS is accepted here.")" \
-        14 78 "" 3>&1 1>&2 2>&3) || return 1
+        --inputbox "$(hb_translate "Copy your existing PBS keyfile onto this host first (via scp, USB, sftp, etc.) — for example to")"$'\n'"       /tmp/pbs-key.conf"$'\n\n'"$(hb_translate "Then enter the absolute path where you placed it. The file will be copied to")"$'\n'"       $key_file"$'\n\n'"$(hb_translate "Leave blank and press OK — or press Cancel — to abort. ProxMenux does not validate the contents; any keyfile your PBS accepts is accepted here.")" \
+        20 78 "" 3>&1 1>&2 2>&3) || return 1
     src="$(echo "$src" | xargs)"
     [[ -z "$src" ]] && return 1
 
