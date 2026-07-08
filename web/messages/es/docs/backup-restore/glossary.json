@@ -42,7 +42,7 @@
           "id": "sobre-recuperacion",
           "term": "Sobre de recuperación",
           "also": "recovery envelope, escrow blob, pbs-key.recovery.enc",
-          "def": "La propia <a href=\"#clave-cifrado\">clave de cifrado</a> envuelta en una capa adicional: se cifra con la <a href=\"#passphrase-recuperacion\">passphrase de recuperación</a> mediante <a href=\"#aes-256-cbc\">AES-256-CBC</a> y <a href=\"#pbkdf2\">PBKDF2</a> antes de salir del host. Es lo que se sube a PBS en el grupo <code>-keyrecovery</code> y lo que se guarda además en <code>/root/pbs-key.recovery-HOSTNAME-FECHA.enc</code> como respaldo local. Sin la passphrase, el sobre es opaco: descargarlo desde PBS no revela la clave."
+          "def": "La propia <a href=\"#clave-cifrado\">clave de cifrado</a> envuelta en una capa adicional: se cifra con la <a href=\"#passphrase-recuperacion\">passphrase de recuperación</a> mediante <a href=\"#aes-256-cbc\">AES-256-CBC</a> y <a href=\"#pbkdf2\">PBKDF2</a> antes de salir del host. Es lo que se sube a PBS en el grupo <code>-keyrecovery</code>. Sin la passphrase, el sobre es opaco: descargarlo desde PBS no revela la clave."
         },
         {
           "id": "cifrado-cliente",

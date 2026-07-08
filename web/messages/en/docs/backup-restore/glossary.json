@@ -38,7 +38,7 @@
         {
           "id": "sobre-recuperacion",
           "term": "Recovery envelope",
-          "def": "The <a href=\"#clave-cifrado\">keyfile</a> wrapped in an extra layer: it is encrypted with the <a href=\"#passphrase-recuperacion\">recovery passphrase</a> using <a href=\"#aes-256-cbc\">AES-256-CBC</a> and <a href=\"#pbkdf2\">PBKDF2</a> before it ever leaves the host. It is what gets uploaded to PBS as the <code>-keyrecovery</code> group and what is also written to <code>/root/pbs-key.recovery-HOSTNAME-DATE.enc</code> as an offsite backup. Without the passphrase, the envelope is opaque: downloading it from PBS does not reveal the keyfile."
+          "def": "The <a href=\"#clave-cifrado\">keyfile</a> wrapped in an extra layer: it is encrypted with the <a href=\"#passphrase-recuperacion\">recovery passphrase</a> using <a href=\"#aes-256-cbc\">AES-256-CBC</a> and <a href=\"#pbkdf2\">PBKDF2</a> before it ever leaves the host. It is what gets uploaded to PBS as the <code>-keyrecovery</code> group. Without the passphrase, the envelope is opaque: downloading it from PBS does not reveal the keyfile."
         },
         {
           "id": "cifrado-cliente",
