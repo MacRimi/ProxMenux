@@ -448,35 +448,44 @@ TEMPLATES = {
     # status oscillation (OK->WARNING->OK) which creates noise.
     # The health_persistent and new_error templates cover this better.
     'state_change': {
-        'title': '{hostname}: {category} changed to {current}',
+        'title': '{hostname}: {category} changed to {current}{entity_suffix}',
         'body': '{category} status changed from {previous} to {current}.\n{reason}',
         'label': 'Health state changed',
         'group': 'health',
         'default_enabled': False,
     },
     'new_error': {
-        'title': '{hostname}: New {severity} - {category}',
+        'title': '{hostname}: New {severity} - {category}{entity_suffix}',
         'body': '{reason}',
         'label': 'New health issue',
         'group': 'health',
         'default_enabled': True,
     },
     'error_resolved': {
-        'title': '{hostname}: Resolved - {category}',
+        # `{entity}` is populated by health_persistence.resolve_error()
+        # (via _entity_from_details) and by PollingCollector's spread of
+        # the original details blob. When absent, _SafeDict elides the
+        # placeholder and the title collapses back to "Resolved - <cat>"
+        # without a trailing dash.
+        'title': '{hostname}: Resolved - {category}{entity_suffix}',
         'body': 'The {category} issue has been resolved.\n{reason}\n\U0001F6A6 Previous severity: {original_severity}\n\u23F1\uFE0F Duration: {duration}',
         'label': 'Recovery notification',
         'group': 'health',
         'default_enabled': True,
     },
     'error_escalated': {
-        'title': '{hostname}: Escalated to {severity} - {category}',
+        'title': '{hostname}: Escalated to {severity} - {category}{entity_suffix}',
         'body': '{reason}',
         'label': 'Health issue escalated',
         'group': 'health',
         'default_enabled': True,
     },
     'health_degraded': {
-        'title': '{hostname}: Health check degraded',
+        # flask_server._health_collector already builds the rich title
+        # (e.g. "prox: Storage CRITICAL — Tuxis (dir)") and passes it in
+        # data['title']. Fall back to the constant when absent so hand-
+        # rolled callers keep working.
+        'title': '{title_or_default}',
         'body': '{reason}',
         'label': 'Health check degraded',
         'group': 'health',
@@ -787,7 +796,7 @@ TEMPLATES = {
         'default_enabled': True,
     },
     'pci_passthrough_conflict': {
-        'title': '{hostname}: PCIe device conflict detected',
+        'title': '{hostname}: PCIe device conflict detected — {device_pci}',
         'body': (
             'A PCIe device is assigned to multiple guests.\n'
             'Device: {device_pci}\n'
@@ -809,7 +818,7 @@ TEMPLATES = {
     
     # ── Network events ──
     'network_down': {
-        'title': '{hostname}: Network connectivity lost',
+        'title': '{hostname}: Network connectivity lost{entity_suffix}',
         'body': 'The node has lost network connectivity.\nReason: {reason}',
         'label': 'Network connectivity lost',
         'group': 'network',
@@ -839,7 +848,7 @@ TEMPLATES = {
         'default_enabled': True,
     },
     'firewall_issue': {
-        'title': '{hostname}: Firewall issue detected',
+        'title': '{hostname}: Firewall issue detected{entity_suffix}',
         'body': 'A firewall configuration issue has been detected.\nReason: {reason}',
         'label': 'Firewall issue detected',
         'group': 'security',
@@ -916,7 +925,7 @@ TEMPLATES = {
         'default_enabled': True,
     },
     'system_problem': {
-        'title': '{hostname}: System problem detected',
+        'title': '{hostname}: System problem detected{entity_suffix}',
         'body': 'A system-level problem has been detected.\nReason: {reason}',
         'label': 'System problem detected',
         'group': 'services',
@@ -939,7 +948,7 @@ TEMPLATES = {
     
     # ── Hidden internal templates (not shown in UI) ──
     'service_fail_batch': {
-        'title': '{hostname}: {service_count} services failed',
+        'title': '{hostname}: {service_count} services failed{entity_suffix}',
         'body': '{reason}',
         'label': 'Service fail batch',
         'group': 'services',
@@ -1004,31 +1013,31 @@ TEMPLATES = {
         'hidden': True,
     },
     'unknown_persistent': {
-        'title': '{hostname}: Check unavailable - {category}',
+        'title': '{hostname}: Check unavailable - {category}{entity_suffix}',
         'body': 'Health check for {category} has been unavailable for 3+ cycles.\n{reason}',
         'label': 'Check unavailable',
         'group': 'health',
         'default_enabled': False,
         'hidden': True,
     },
-    
+
     # ── Health Monitor events ──
     'health_persistent': {
-        'title': '{hostname}: {count} active health issue(s)',
+        'title': '{hostname}: {count} active health issue(s){entity_suffix}',
         'body': 'The following health issues remain unresolved:\n{issue_list}\n\nThis digest is sent once every 24 hours while issues persist.',
         'label': 'Active health issues (daily)',
         'group': 'health',
         'default_enabled': True,
     },
     'health_issue_new': {
-        'title': '{hostname}: New health issue — {category}',
+        'title': '{hostname}: New health issue — {category}{entity_suffix}',
         'body': 'New {severity} issue detected in: {category}\nDetails: {reason}',
         'label': 'New health issue',
         'group': 'health',
         'default_enabled': True,
     },
     'health_issue_resolved': {
-        'title': '{hostname}: Resolved - {category}',
+        'title': '{hostname}: Resolved - {category}{entity_suffix}',
         'body': '{category} issue has been resolved.\n{reason}\nDuration: {duration}',
         'label': 'Health issue resolved',
         'group': 'health',
@@ -1224,11 +1233,19 @@ TEMPLATES = {
     # bullet list make sure the operator sees exactly what's moving
     # without opening the dashboard first.
     'secure_gateway_update_available': {
-        'title': '{hostname}: {app_name} update available — v{latest_version}',
+        # `{update_title_suffix}` and `{version_line}` are computed in
+        # `_build_managed_install_event` so the same template can render
+        # both scenarios cleanly:
+        # - Tailscale itself moved: "— v<new>" + "current → latest" line
+        # - Only sidecar packages moved: "— v<current> (packages only)" +
+        #   single-line "Tailscale unchanged" body
+        # Prevents the confusing "v1.90.9-r6 → v1.90.9-r6" render when
+        # Tailscale is stable and only alpine libs are updating.
+        'title': '{hostname}: {app_name} update available{update_title_suffix}',
         'body': (
             '{app_name} (managed by ProxMenux) has 📦 {package_count} package update(s) '
             'pending in its container.\n'
-            '🔹 Current Tailscale: v{current_version}  →  🟢 Latest: v{latest_version}\n\n'
+            '{version_line}\n\n'
             '💡 Open ProxMenux Monitor > Settings > Secure Gateway and click '
             '"Update" to apply.\n\n'
             '🗂️ Packages:\n{package_list}'
@@ -1468,6 +1485,36 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
     # Ensure important_list is never blank (fallback to 'none')
     if not variables.get('important_list', '').strip():
         variables['important_list'] = 'none'
+
+    # Derive the affected object's display name for titles that use it.
+    # Priority: caller-supplied `entity` (health_monitor.emit_event) →
+    # per-detail fields spread in from `record_error`'s details blob.
+    # `entity_suffix` gives templates a way to render "…- Storage 'Tuxis'"
+    # without the trailing " - " when the field is empty.
+    _ent = str(variables.get('entity', '')).strip()
+    if not _ent:
+        _ent = (
+            variables.get('storage_name')
+            or variables.get('mount_point')
+            or variables.get('device')
+            or variables.get('interface')
+            or variables.get('vm_name')
+            or ''
+        )
+        _ent = str(_ent).strip()
+    variables['entity'] = _ent
+    variables['entity_suffix'] = f' — {_ent}' if _ent else ''
+
+    # `title_or_default` lets a template surface a caller-computed title
+    # when the caller already knows the entity context (e.g.
+    # flask_server's health collector), and fall back to a stock string
+    # otherwise. Prevents empty subject lines when the caller forgot to
+    # populate `title`.
+    _caller_title = str(variables.get('title', '')).strip()
+    if not _caller_title:
+        hn = variables.get('hostname', '')
+        _caller_title = f'{hn}: Health check degraded' if hn else 'Health check degraded'
+    variables['title_or_default'] = _caller_title
     
     # `format_map` with a SafeDict avoids the KeyError → "show raw template
     # with `{placeholder}` literal" failure mode. If a template gets a new

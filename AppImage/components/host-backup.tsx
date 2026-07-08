@@ -208,6 +208,63 @@ interface PreflightReport {
 
 const fetcher = async (url: string) => fetchApi(url)
 
+// Detect encrypted-backup key errors coming from proxmox-backup-client
+// and pull the manifest + provided fingerprints out of the message so
+// the UI can render them prominently instead of burying the info
+// inside a raw stack-trace-shaped string. Returns null when the error
+// is not encryption-related — the caller should fall back to plain
+// text rendering in that case.
+type KeyfileError = {
+  manifestFp: string | null
+  providedFp: string | null
+  raw: string
+}
+const parseKeyfileError = (raw: string): KeyfileError | null => {
+  if (!raw) return null
+  const lower = raw.toLowerCase()
+  if (!/missing key|wrong key|was created with key|manifest.?s key|does not match|no key found|unable to (load|read) key|failed to decrypt/.test(lower)) {
+    return null
+  }
+  const manifest = raw.match(/(?:was created with key|manifest'?s key)\s+([0-9a-f:]+)/i)
+  const provided = raw.match(/provided key\s+([0-9a-f:]+)/i)
+  return {
+    manifestFp: manifest?.[1] ?? null,
+    providedFp: provided?.[1] ?? null,
+    raw,
+  }
+}
+
+const KeyfileErrorBlock: React.FC<{ err: KeyfileError; className?: string }> = ({ err, className }) => (
+  <div className={`text-xs rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-100 px-3 py-3 space-y-2 ${className ?? ""}`}>
+    <div className="flex items-start gap-2">
+      <Lock className="h-4 w-4 mt-0.5 shrink-0 text-amber-400" />
+      <div className="flex-1 min-w-0 space-y-1">
+        <div className="font-semibold text-amber-300">Encrypted backup — wrong keyfile on this host</div>
+        <div className="text-amber-100/90">
+          The keyfile installed here does not match the one used to create this backup, so PBS refuses to open it.
+        </div>
+        {err.manifestFp && (
+          <div className="pt-1">
+            <div className="text-[10.5px] uppercase tracking-wider text-amber-300/80">Required (manifest)</div>
+            <div className="font-mono text-[11px] break-all">{err.manifestFp}</div>
+          </div>
+        )}
+        {err.providedFp && (
+          <div>
+            <div className="text-[10.5px] uppercase tracking-wider text-amber-300/80">Currently installed</div>
+            <div className="font-mono text-[11px] break-all">{err.providedFp}</div>
+          </div>
+        )}
+        <div className="pt-1 text-amber-100/90">
+          Import the correct keyfile from{" "}
+          <span className="font-medium">Backup configuration → Destinations → PBS row → Upload</span>
+          {" "}(you may need to Delete the current one first) and retry.
+        </div>
+      </div>
+    </div>
+  </div>
+)
+
 const formatMtime = (mtime: number) =>
   new Date(mtime * 1000).toLocaleString(undefined, {
     year: "numeric",
@@ -1956,11 +2013,16 @@ function InspectModal({
               </div>
             )}
 
-            {error && (
-              <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">
-                {error}
-              </div>
-            )}
+            {error && (() => {
+              const kf = parseKeyfileError(error)
+              return kf ? (
+                <KeyfileErrorBlock err={kf} />
+              ) : (
+                <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">
+                  {error}
+                </div>
+              )
+            })()}
 
             {/* Encrypted-backup gate: no local keyfile → block the
                 three actions until the operator imports the key. The
@@ -2110,24 +2172,30 @@ function InspectModal({
     />
 
     {/* ── Restore error toast (prepare failed) ─────────────────── */}
-    {restoreError && (
-      <Dialog open={true} onOpenChange={() => setRestoreError(null)}>
-        <DialogContent className="max-w-md bg-card border-border">
-          <DialogHeader>
-            <DialogTitle className="text-base flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              Restore preparation failed
-            </DialogTitle>
-            <DialogDescription className="text-xs text-red-400 break-all">
-              {restoreError}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end">
-            <Button variant="ghost" onClick={() => setRestoreError(null)}>Close</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    )}
+    {restoreError && (() => {
+      const kf = parseKeyfileError(restoreError)
+      return (
+        <Dialog open={true} onOpenChange={() => setRestoreError(null)}>
+          <DialogContent className="max-w-md bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="text-base flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
+                {kf ? "Restore blocked — encrypted backup" : "Restore preparation failed"}
+              </DialogTitle>
+              {!kf && (
+                <DialogDescription className="text-xs text-red-400 break-all">
+                  {restoreError}
+                </DialogDescription>
+              )}
+            </DialogHeader>
+            {kf && <KeyfileErrorBlock err={kf} />}
+            <div className="flex justify-end">
+              <Button variant="ghost" onClick={() => setRestoreError(null)}>Close</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )
+    })()}
 
     {/* ── Restore options modal: opens only AFTER the prepare step,
         so the Custom checklist already knows what's inside. ──── */}
@@ -8022,11 +8090,16 @@ function ArchiveContentsModal({
           </div>
         )}
 
-        {error && !loading && (
-          <div className="text-sm text-red-400 px-3 py-3 mx-6 rounded-md border border-red-500/30 bg-red-500/10">
-            {error}
-          </div>
-        )}
+        {error && !loading && (() => {
+          const kf = parseKeyfileError(error)
+          return kf ? (
+            <div className="px-6"><KeyfileErrorBlock err={kf} /></div>
+          ) : (
+            <div className="text-sm text-red-400 px-3 py-3 mx-6 rounded-md border border-red-500/30 bg-red-500/10">
+              {error}
+            </div>
+          )
+        })()}
 
         {data && !loading && (
           <ScrollArea className="flex-1 min-h-0 px-6">

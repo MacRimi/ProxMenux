@@ -2544,12 +2544,17 @@ class PollingCollector:
             if not error_key:
                 continue
             
+            # Keep the raw `details` blob in the tracker so recovery
+            # notifications later can name the same entity ("Storage
+            # 'Tuxis'") that the original alert did — without this, the
+            # resolved notification defaults to the bare category.
             current_keys[error_key] = {
                 'category': error.get('category', ''),
                 'severity': error.get('severity', 'WARNING'),
                 'reason': error.get('reason', ''),
                 'first_seen': error.get('first_seen', ''),
                 'error_key': error_key,
+                'details': error.get('details'),
             }
             category = error.get('category', '')
             severity = error.get('severity', 'WARNING')
@@ -2880,6 +2885,18 @@ class PollingCollector:
                 'duration': duration_label,
                 'is_recovery': True,
             }
+            # Spread the original details blob so the resolved notification
+            # can use the same {storage_name}/{vm_name}/{device} placeholders
+            # the alert did. Mirrors what the alert path does on line ~2718.
+            resolved_details = old_meta.get('details')
+            if isinstance(resolved_details, str):
+                try:
+                    resolved_details = json.loads(resolved_details)
+                except (json.JSONDecodeError, TypeError):
+                    resolved_details = None
+            if isinstance(resolved_details, dict):
+                for _k, _v in resolved_details.items():
+                    data.setdefault(_k, _v)
 
             self._queue.put(NotificationEvent(
                 'error_resolved', 'OK', data, source='health',
@@ -3503,13 +3520,20 @@ class PollingCollector:
         about the final shape."""
         item_type = item.get('type', '')
         update = item.get('update_check', {}) or {}
+        # Version fallbacks: if `latest` is missing (checker couldn't
+        # determine an upstream — network hiccup, or the app itself
+        # isn't in the update list because only sidecar packages need
+        # updating), anchor to the current version so template
+        # placeholders never render as "v" with nothing after.
+        _cur = item.get('current_version') or ''
+        _lat = update.get('latest') or _cur or 'unknown'
         common = {
             'hostname': self._hostname,
             'name': item.get('name') or item.get('id'),
             'menu_label': item.get('menu_label') or '',
             'menu_script': item.get('menu_script') or '',
-            'current_version': item.get('current_version') or '',
-            'latest_version': update.get('latest') or '',
+            'current_version': _cur or 'unknown',
+            'latest_version': _lat,
         }
 
         if item_type == 'oci_app':
@@ -3519,12 +3543,24 @@ class PollingCollector:
                 f" → {p.get('latest', '?')}"
                 for p in packages
             ]
+            # Decide the wording based on whether Tailscale itself moved.
+            # When current == latest, showing "v1.90 → v1.90" reads as a
+            # bug ("update to same version?"); switch to a neutral line
+            # that makes it clear only sidecar packages are updating.
+            if _cur and _lat and _cur == _lat:
+                update_title_suffix = f' — v{_cur} (packages only)'
+                version_line = f'🔹 Tailscale: v{_cur} (unchanged — only sidecar packages need updating)'
+            else:
+                update_title_suffix = f' — v{_lat}'
+                version_line = f'🔹 Current Tailscale: v{_cur or "unknown"}  →  🟢 Latest: v{_lat}'
             data = {
                 **common,
                 'app_id': item.get('id', '').removeprefix('oci:'),
                 'app_name': common['name'],
                 'package_count': len(packages),
                 'package_list': '\n'.join(pkg_lines) or '  (no detail)',
+                'update_title_suffix': update_title_suffix,
+                'version_line': version_line,
             }
             return 'secure_gateway_update_available', data
 

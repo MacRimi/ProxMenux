@@ -1255,6 +1255,12 @@ def _health_collector_loop():
                             'category': cat_name,
                             'status': cur_status,
                             'reason': reason,
+                            # `entity` lets the notification title name the
+                            # actual affected object ("Storage Tuxis") instead
+                            # of the bare category ("Storage"). Populated by
+                            # `_check_XXX` in health_monitor when a single
+                            # entity dominates; empty otherwise.
+                            'entity': cat_data.get('entity', ''),
                         })
                 
                 _prev_statuses[cat_key] = cur_status
@@ -1274,13 +1280,32 @@ def _health_collector_loop():
                 
                 if len(degraded) == 1:
                     d = degraded[0]
-                    title = f"{hostname}: Health {d['status']} - {d['category']}"
+                    # Prefer the specific entity in the title so the reader
+                    # sees WHICH object failed without opening the app.
+                    # Falls back to the category label when the check didn't
+                    # provide one (aggregate-only reasons).
+                    if d.get('entity'):
+                        title = f"{hostname}: {d['category']} {d['status']} — {d['entity']}"
+                    else:
+                        title = f"{hostname}: Health {d['status']} - {d['category']}"
                     body = d['reason']
                     severity = d['status']
                 else:
-                    # Multiple categories degraded at once -- group them
+                    # Multiple categories degraded at once -- group them.
+                    # Title lists the categories + first entity per category
+                    # so the reader can distinguish "storage + network"
+                    # from "cpu + memory" at a glance.
                     max_sev = max(degraded, key=lambda x: _SEV_RANK.get(x['status'], 0))['status']
-                    title = f"{hostname}: {len(degraded)} health checks degraded"
+                    cat_labels = []
+                    for d in degraded:
+                        label = d['category']
+                        if d.get('entity'):
+                            label = f"{label} ({d['entity']})"
+                        cat_labels.append(label)
+                    title = f"{hostname}: {len(degraded)} health checks degraded — {', '.join(cat_labels)}"
+                    # Cap title if the join went long
+                    if len(title) > 200:
+                        title = title[:197] + '…'
                     lines = []
                     for d in degraded:
                         lines.append(f"  [{d['status']}] {d['category']}: {d['reason']}")

@@ -1508,6 +1508,15 @@ def check_app_update_available(app_id: str, force: bool = False) -> Dict[str, An
         except Exception:
             pass
 
+    # When Tailscale itself isn't in the update list but other packages
+    # inside the container are, `latest_version` stays None and downstream
+    # notification renders "— v" / "🟢 Latest: v" with a dangling prefix.
+    # Anchor it to the installed version so the notification reads
+    # cleanly ("current == latest" tells the operator Tailscale itself
+    # is unchanged, only sidecar packages are updating).
+    if result["current_version"] and not result["latest_version"]:
+        result["latest_version"] = result["current_version"]
+
     _app_update_cache[app_id] = result
     return result
 
