@@ -594,48 +594,21 @@ function KeyfileActionsBar({
   mutateStatus: () => Promise<unknown>
   escrowMode?: "none" | "local" | "full"
 }) {
-  const [action, setAction] = useState<null | "passphrase" | "escrow">(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [pass1, setPass1] = useState("")
   const [pass2, setPass2] = useState("")
-  const [newEscrowMode, setNewEscrowMode] = useState<"none" | "local" | "full">(escrowMode ?? "full")
+  // Pending radio state — reflects the operator's intended mode after
+  // Apply. Seeded from the current mode so a No-op click on Apply is
+  // rejected. Binary UX ('none' vs 'full') matches the setup wizard.
+  const currentIsFull = escrowMode === "full"
+  const [pendingMode, setPendingMode] = useState<"none" | "full">(currentIsFull ? "full" : "none")
 
-  const close = () => {
-    setAction(null)
-    setBusy(false)
-    setErr(null)
-    setPass1("")
-    setPass2("")
-    setNewEscrowMode(escrowMode ?? "full")
-  }
-
-  const runPassphrase = async () => {
-    if (pass1 !== pass2) {
-      setErr("Passphrases do not match.")
-      return
-    }
-    setBusy(true)
-    setErr(null)
-    try {
-      await fetchApi("/api/host-backups/pbs-encryption/passphrase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ new_passphrase: pass1 }),
-      })
-      await mutateStatus()
-      close()
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
-      setBusy(false)
-    }
-  }
-
-  const runEscrowMode = async () => {
-    // Local/full → passphrase required + match. None → passphrase ignored.
-    if (newEscrowMode !== "none") {
+  const runApply = async () => {
+    // Yes → passphrase required + match. No → passphrase ignored.
+    if (pendingMode === "full") {
       if (!pass1) {
-        setErr("Passphrase is required for local or full escrow.")
+        setErr("Recovery passphrase is required.")
         return
       }
       if (pass1 !== pass2) {
@@ -646,179 +619,168 @@ function KeyfileActionsBar({
     setBusy(true)
     setErr(null)
     try {
-      const body: Record<string, unknown> = { escrow_mode: newEscrowMode }
-      if (newEscrowMode !== "none") body.escrow_passphrase = pass1
+      const body: Record<string, unknown> = { escrow_mode: pendingMode }
+      if (pendingMode === "full") body.escrow_passphrase = pass1
       await fetchApi("/api/host-backups/pbs-encryption/set-escrow-mode", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       })
       await mutateStatus()
-      close()
+      setPass1("")
+      setPass2("")
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e))
+    } finally {
       setBusy(false)
     }
   }
 
-  // The UX we expose is binary: "is the key uploaded to PBS?" — yes
-  // (mode='full') or no (mode='none'). The 'local' backend mode still
-  // exists but is not surfaced here; if a host somehow reports it,
-  // show it verbatim so the state isn't lost on the operator.
-  const uploadOn = escrowMode === "full"
-  const escrowLabel = escrowMode === undefined
-    ? undefined
-    : escrowMode === "full"
-      ? "Uploaded to PBS on every backup"
-      : escrowMode === "local"
-        ? "Local envelope only (advanced mode)"
-        : "Kept only on this host — you handle the offsite copy"
+  // Contextual Apply-button label. Three transitions:
+  //   No → Yes            → "Start uploading"
+  //   Yes → No            → "Stop uploading"
+  //   Yes → Yes (new pw)  → "Update passphrase" (rewraps envelope)
+  const applyLabel =
+    pendingMode === "full" && !currentIsFull
+      ? "Start uploading"
+      : pendingMode === "none" && currentIsFull
+        ? "Stop uploading"
+        : pendingMode === "full" && currentIsFull
+          ? "Update passphrase"
+          : "Apply"
+
+  // Apply is enabled when there is a real change to commit.
+  const canApply = (
+    (pendingMode !== (currentIsFull ? "full" : "none")) ||        // mode change
+    (pendingMode === "full" && !!pass1 && pass1 === pass2)        // passphrase update
+  )
+
+  const download = () => {
+    const a = document.createElement("a")
+    a.href = "/api/host-backups/pbs-encryption/download-keyfile"
+    a.download = "pbs-key.conf"
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="text-[11px] font-medium text-foreground">Manage installed keyfile</div>
-      {escrowLabel !== undefined && (
-        <div className="flex items-center gap-2 text-[10.5px] text-muted-foreground bg-background/40 border border-white/10 rounded px-2 py-1">
+
+      {/* Current status — icon + colour by state, no truncated fp. */}
+      {escrowMode !== undefined && (
+        <div className="flex items-center gap-2 text-xs bg-background/40 border border-white/10 rounded px-2.5 py-1.5">
           <span className="font-medium text-foreground">Upload to PBS:</span>
-          <span>{uploadOn ? "Yes" : "No"} — {escrowLabel}</span>
+          {currentIsFull ? (
+            <span className="inline-flex items-center gap-1 text-emerald-400 font-medium">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Yes — envelope uploaded on every backup
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-blue-400 font-medium">
+              No — kept only on this host
+            </span>
+          )}
         </div>
       )}
+
+      {/* Change mode + passphrase — one integrated form, no popover.
+          Radio picks the intent; the passphrase pair unfolds when the
+          intent is Yes (both for a first-time upload and for a
+          passphrase rotation while already in Yes). */}
+      <div className="space-y-2 rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
+        <div className="text-[11px] font-medium text-foreground">Upload key to PBS?</div>
+        <div className="grid gap-1.5">
+          <label className="flex items-start gap-2 cursor-pointer text-[11px]">
+            <input
+              type="radio"
+              name="pendingModeChange"
+              checked={pendingMode === "none"}
+              onChange={() => { setPendingMode("none"); setPass1(""); setPass2("") }}
+              className="mt-1"
+            />
+            <div className="flex-1">
+              <div className="font-medium">No, keep local only</div>
+              <div className="text-muted-foreground">Keyfile stays at <code className="font-mono text-[10.5px]">/usr/local/share/proxmenux/pbs-key.conf</code>. You handle the offsite copy — use <em>Download keyfile</em> below.</div>
+            </div>
+          </label>
+          <label className="flex items-start gap-2 cursor-pointer text-[11px]">
+            <input
+              type="radio"
+              name="pendingModeChange"
+              checked={pendingMode === "full"}
+              onChange={() => setPendingMode("full")}
+              className="mt-1"
+            />
+            <div className="flex-1">
+              <div className="font-medium">Yes, upload</div>
+              <div className="text-muted-foreground">A passphrase-wrapped copy of the keyfile is uploaded to PBS with every backup. Fill the passphrase pair below to enable — or to rotate the current one.</div>
+            </div>
+          </label>
+        </div>
+        {pendingMode === "full" && (
+          <div className="space-y-2 pt-2 border-t border-blue-500/20">
+            <div>
+              <Label htmlFor="mgmtPass1" className="text-[11px]">
+                {currentIsFull ? "New recovery passphrase" : "Recovery passphrase"}
+              </Label>
+              <Input
+                id="mgmtPass1"
+                type="password"
+                value={pass1}
+                onChange={(e) => setPass1(e.target.value)}
+                placeholder={currentIsFull ? "Type a new passphrase to rotate" : "Long random string — write it down somewhere safe"}
+                className="font-mono mt-1 h-8 text-xs"
+              />
+            </div>
+            <div>
+              <Label htmlFor="mgmtPass2" className="text-[11px]">Confirm passphrase</Label>
+              <Input
+                id="mgmtPass2"
+                type="password"
+                value={pass2}
+                onChange={(e) => setPass2(e.target.value)}
+                placeholder="Type it again"
+                className="font-mono mt-1 h-8 text-xs"
+              />
+              {pass1 && pass2 && pass1 !== pass2 && (
+                <p className="text-[11px] text-red-400 mt-1">Passphrases don&apos;t match.</p>
+              )}
+            </div>
+          </div>
+        )}
+        {err && (
+          <div className="text-[11px] text-red-500 px-2 py-1.5 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">{err}</div>
+        )}
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            size="sm"
+            onClick={runApply}
+            disabled={busy || !canApply}
+            className="!bg-blue-500 hover:!bg-blue-600 !text-white disabled:opacity-50"
+          >
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : applyLabel}
+          </Button>
+        </div>
+      </div>
+
       <div className="flex flex-wrap gap-1.5">
         <Button
           type="button"
           size="sm"
           variant="outline"
           className="h-7 text-[11px] !text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/10"
-          onClick={() => {
-            // Trigger a plain browser download of the canonical keyfile.
-            // No fetch/save-file dance — the browser handles it, so an
-            // ad-blocker or a stale SWR cache can't get in the way.
-            const a = document.createElement("a")
-            a.href = "/api/host-backups/pbs-encryption/download-keyfile"
-            a.download = "pbs-key.conf"
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-          }}
+          onClick={download}
         >
+          <Download className="h-3.5 w-3.5 mr-1" />
           Download keyfile
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-7 text-[11px]"
-          onClick={() => setAction("passphrase")}
-        >
-          Update stored passphrase
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-7 text-[11px]"
-          onClick={() => { setNewEscrowMode(uploadOn ? "none" : "full"); setAction("escrow") }}
-        >
-          {uploadOn ? "Stop uploading to PBS" : "Start uploading to PBS"}
         </Button>
       </div>
 
-      <Dialog open={action === "passphrase"} onOpenChange={(v) => !v && close()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update stored keyfile passphrase</DialogTitle>
-            <DialogDescription>
-              This only rotates the passphrase ProxMenux uses to unlock the keyfile at backup time (stored in <code className="font-mono">/usr/local/share/proxmenux/pbs-key.pass</code>). It does <strong>not</strong> re-encrypt the keyfile itself.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label htmlFor="mpass1" className="text-xs">New passphrase</Label>
-              <Input id="mpass1" type="password" value={pass1} onChange={(e) => setPass1(e.target.value)} placeholder="Leave blank to remove the stored passphrase" className="font-mono h-9" />
-            </div>
-            {pass1 && (
-              <div>
-                <Label htmlFor="mpass2" className="text-xs">Confirm new passphrase</Label>
-                <Input id="mpass2" type="password" value={pass2} onChange={(e) => setPass2(e.target.value)} className="font-mono h-9" />
-              </div>
-            )}
-            {err && (
-              <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">{err}</div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={close}>Cancel</Button>
-            <Button onClick={runPassphrase} disabled={busy || (!!pass1 && pass1 !== pass2)}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={action === "escrow"} onOpenChange={(v) => !v && close()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{newEscrowMode === "full" ? "Start uploading key to PBS" : "Stop uploading key to PBS"}</DialogTitle>
-            <DialogDescription>
-              {newEscrowMode === "full"
-                ? "ProxMenux will wrap the keyfile with a passphrase and upload the envelope to PBS after every backup. A reinstalled host can recover the key with just the passphrase."
-                : "The passphrase-wrapped copy on this host will be dropped and no envelope will be uploaded on future backups. The keyfile itself stays at its canonical path — but you become responsible for keeping an offsite copy."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            {newEscrowMode === "full" ? (
-              <>
-                <div>
-                  <Label htmlFor="escrowPass1" className="text-xs">Recovery passphrase</Label>
-                  <Input
-                    id="escrowPass1"
-                    type="password"
-                    value={pass1}
-                    onChange={(e) => setPass1(e.target.value)}
-                    placeholder="Long random string — write it down somewhere safe"
-                    className="font-mono h-9 mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="escrowPass2" className="text-xs">Confirm passphrase</Label>
-                  <Input
-                    id="escrowPass2"
-                    type="password"
-                    value={pass2}
-                    onChange={(e) => setPass2(e.target.value)}
-                    placeholder="Type it again"
-                    className="font-mono h-9 mt-1"
-                  />
-                  {pass1 && pass2 && pass1 !== pass2 && (
-                    <p className="text-xs text-red-400 mt-1">Passphrases don&apos;t match.</p>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-3 py-2 leading-relaxed space-y-1">
-                <div className="font-semibold">Losing the keyfile makes every encrypted backup on PBS unreadable.</div>
-                <div>Keyfile path on this host: <code className="font-mono text-[10.5px] bg-amber-500/20 rounded px-1">/usr/local/share/proxmenux/pbs-key.conf</code></div>
-                <div>Copy that file to an offsite location (USB, password manager, another host) before continuing.</div>
-              </div>
-            )}
-            {err && (
-              <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">{err}</div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={close} disabled={busy}>Cancel</Button>
-            <Button onClick={runEscrowMode} disabled={busy}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (newEscrowMode === "full" ? "Enable upload" : "Stop upload")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* NOTE: no Remove keyfile dialog here — deletion lives inside
-          each PBS destination row (PbsKeyfileActions), so the setup
-          menus of Create Job / Manual Backup only cover key-related
-          toggles (download / passphrase / escrow) and never surface
-          a destructive delete. */}
+      {/* Deletion lives inside the PBS destination row (PbsKeyfileActions);
+          setup menus of Create Job / Manual Backup never surface it. */}
     </div>
   )
 }

@@ -1485,13 +1485,17 @@ _hb_pbs_create_new_keyfile() {
     # 4. Finalize per mode. On mode='none' we skip finalize entirely —
     #    no envelope, no msgbox. The operator was already told in the
     #    upload prompt where the keyfile lives; the backup summary
-    #    reprints "Encryption: Enabled" when the run starts.
+    #    reprints "Encryption: Enabled" when the run starts. Any
+    #    envelope leftover from a previous keyfile is dropped so the
+    #    runner does not upload a stale, undecipherable blob.
     if [[ "$mode" != "none" ]]; then
         if ! _hb_pbs_finalize_recovery "$pass" "$mode"; then
             rm -f "$key_file" "$recovery_enc" 2>/dev/null
             HB_PBS_KEYFILE_OPT=""
             return 1
         fi
+    else
+        rm -f "$recovery_enc" 2>/dev/null || true
     fi
 
     _hb_pbs_write_escrow_mode "$mode"
@@ -1593,13 +1597,17 @@ _hb_pbs_import_dialog() {
 
     # 8. Finalize per mode. mode='none' skips finalize (no envelope,
     #    no msgbox) — the operator was already told in the upload
-    #    prompt where the keyfile lives.
+    #    prompt where the keyfile lives. Any leftover envelope from a
+    #    previous keyfile (wrapped with the OLD key) is dropped here so
+    #    the runner does not upload a stale, undecipherable blob.
     if [[ "$mode" != "none" ]]; then
         if ! _hb_pbs_finalize_recovery "$pass" "$mode"; then
             rm -f "$key_file" "$recovery_enc" "$keyfile_pass_file" 2>/dev/null
             HB_PBS_KEYFILE_OPT=""
             return 1
         fi
+    else
+        rm -f "$recovery_enc" 2>/dev/null || true
     fi
 
     _hb_pbs_write_escrow_mode "$mode"
@@ -1647,13 +1655,17 @@ _hb_pbs_reuse_pve_keyfile() {
     HB_PBS_ENC_PASS=""
 
     # 5. Finalize per mode. mode='none' skips finalize (no envelope,
-    #    no msgbox).
+    #    no msgbox). Drop any envelope left over from a previous
+    #    keyfile — it is wrapped with an OLD key the runner cannot
+    #    decrypt any more.
     if [[ "$mode" != "none" ]]; then
         if ! _hb_pbs_finalize_recovery "$pass" "$mode"; then
             rm -f "$key_file" "$recovery_enc" 2>/dev/null
             HB_PBS_KEYFILE_OPT=""
             return 1
         fi
+    else
+        rm -f "$recovery_enc" 2>/dev/null || true
     fi
 
     _hb_pbs_write_escrow_mode "$mode"

@@ -687,38 +687,6 @@ _bk_manage_destinations() {
     done
 }
 
-# Backup the current keyfile + its paired files to /root under a
-# timestamped prefix. Returns the timestamp on success (empty on
-# failure). Never overwrites existing files. Used before any
-# destructive change (replace / remove) so the operator can still
-# decrypt pre-existing backups if they need to.
-_bk_pbs_backup_keyfile_to_root() {
-    local ts key_file="$HB_STATE_DIR/pbs-key.conf"
-    local pass_file="$HB_STATE_DIR/pbs-key.pass"
-    local recovery_enc="$HB_STATE_DIR/pbs-key.recovery.enc"
-    [[ -f "$key_file" ]] || { echo ""; return 1; }
-    ts=$(date +%Y%m%d_%H%M%S)
-    umask 077
-    cp -f "$key_file" "/root/pbs-key.old-${ts}.conf" 2>/dev/null || { echo ""; return 1; }
-    chmod 600 "/root/pbs-key.old-${ts}.conf" 2>/dev/null || true
-    if [[ -f "$pass_file" ]]; then
-        cp -f "$pass_file" "/root/pbs-key.old-${ts}.pass" 2>/dev/null || true
-        chmod 600 "/root/pbs-key.old-${ts}.pass" 2>/dev/null || true
-    fi
-    if [[ -f "$recovery_enc" ]]; then
-        cp -f "$recovery_enc" "/root/pbs-key.old-${ts}.recovery.enc" 2>/dev/null || true
-        chmod 600 "/root/pbs-key.old-${ts}.recovery.enc" 2>/dev/null || true
-    fi
-    echo "$ts"
-}
-
-# Wipe local keyfile + pass + recovery. Never touches PBS.
-_bk_pbs_wipe_local_keyfile() {
-    rm -f "$HB_STATE_DIR/pbs-key.conf" \
-          "$HB_STATE_DIR/pbs-key.pass" \
-          "$HB_STATE_DIR/pbs-key.recovery.enc" 2>/dev/null
-}
-
 # Dedicated management submenu for the PBS encryption keyfile.
 # Available as option 4 of "Configure backup destinations". All
 # destructive actions offer a backup-to-/root step first and require
@@ -770,11 +738,12 @@ _bk_manage_pbs_encryption_keyfile() {
                 --title "$(translate "Manage PBS encryption keyfile")" \
                 --menu "\n${prompt}\n" \
                 "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
-                "info"    "$(hb_translate "Show detailed keyfile info")" \
-                "pass"    "$(hb_translate "Update stored keyfile passphrase")" \
-                "replace" "$(hb_translate "Replace keyfile (generate new or import)")" \
-                "remove"  "$(hb_translate "Remove keyfile from this host")" \
-                "back"    "$(hb_translate "← Return")" \
+                "info"     "$(hb_translate "Show detailed keyfile info")" \
+                "download" "$(hb_translate "Copy the keyfile to a path for offsite backup")" \
+                "import"   "$(hb_translate "Import a keyfile from an absolute path (replaces the current one)")" \
+                "escrow"   "$(hb_translate "Upload to PBS: enable, disable or rotate the recovery passphrase")" \
+                "remove"   "$(hb_translate "Remove keyfile from this host")" \
+                "back"     "$(hb_translate "← Return")" \
                 3>&1 1>&2 2>&3) || break
         else
             choice=$(dialog --backtitle "ProxMenux" --colors \
@@ -819,86 +788,108 @@ _bk_manage_pbs_encryption_keyfile() {
                 msg_success "$(translate "Press Enter to return to menu...")"
                 read -r
                 ;;
-            pass)
-                local new_pass new_pass2
-                while true; do
-                    new_pass=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Update keyfile passphrase")" \
-                        --insecure --passwordbox "$(hb_translate "New passphrase used to unlock the keyfile (leave blank to remove the stored passphrase — for kdf=none keyfiles):")" \
-                        "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || { new_pass=""; break; }
-                    if [[ -z "$new_pass" ]]; then
-                        new_pass2=""
-                        break
-                    fi
-                    new_pass2=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Update keyfile passphrase")" \
-                        --insecure --passwordbox "$(hb_translate "Confirm new passphrase:")" \
-                        "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || { new_pass=""; break; }
-                    [[ "$new_pass" == "$new_pass2" ]] && break
-                    dialog --backtitle "ProxMenux" \
-                        --msgbox "$(hb_translate "Passphrases do not match. Try again.")" 8 50
-                done
-                if [[ -n "$new_pass" ]]; then
-                    umask 077
-                    printf '%s' "$new_pass" > "$pass_file"
-                    chmod 600 "$pass_file" 2>/dev/null || true
-                    dialog --backtitle "ProxMenux" \
-                        --msgbox "$(hb_translate "Stored keyfile passphrase updated.")" 8 60
+            download)
+                # Copy the keyfile to an operator-supplied path so
+                # they can scp/USB it offsite. Same trust boundary as
+                # the Monitor's Download button.
+                local dst
+                dst=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Download keyfile")" \
+                    --inputbox "$(hb_translate "Destination path for the copy (typically outside ProxMenux state):")"$'\n\n'"$(hb_translate "Default:") /tmp/pbs-key.conf" \
+                    12 78 "/tmp/pbs-key.conf" 3>&1 1>&2 2>&3) || continue
+                dst="$(echo "$dst" | xargs)"
+                [[ -z "$dst" ]] && continue
+                if cp -f "$key_file" "$dst" 2>/dev/null; then
+                    chmod 600 "$dst" 2>/dev/null || true
+                    dialog --backtitle "ProxMenux" --title "$(hb_translate "Keyfile copied")" \
+                        --msgbox "$(hb_translate "Keyfile copied to:")"$'\n\n'"$dst"$'\n\n'"$(hb_translate "Move that copy offsite (USB, password manager, another host). Delete it from this path when done.")" \
+                        13 78
                 else
-                    rm -f "$pass_file" 2>/dev/null
-                    dialog --backtitle "ProxMenux" \
-                        --msgbox "$(hb_translate "Stored keyfile passphrase removed.")" 8 60
+                    dialog --backtitle "ProxMenux" --title "$(hb_translate "Copy failed")" \
+                        --msgbox "$(hb_translate "Could not write to:") $dst" 9 70
                 fi
                 ;;
-            replace|remove)
-                local action_title="$(hb_translate "Replace keyfile")"
-                [[ "$choice" == "remove" ]] && action_title="$(hb_translate "Remove keyfile")"
-                # Destructive warning + confirmation
+            import)
+                # Import a new keyfile from an absolute path — replaces
+                # the currently installed one only if the operator
+                # completes the import dialog. Cancel / empty path /
+                # missing file all leave the current keyfile in place.
+                local warn_body
+                warn_body="\Zb\Z1$(hb_translate "This replaces the currently installed keyfile.")\Zn"$'\n\n'
+                warn_body+="$(hb_translate "Backups already on PBS were encrypted with the current key — downloading them will fail unless you first Download the current keyfile to keep a copy.")"$'\n\n'
+                warn_body+="$(hb_translate "Continue with the import?")"
+                if ! dialog --backtitle "ProxMenux" --colors --yesno "$warn_body" 14 78; then
+                    continue
+                fi
+                # No upfront wipe. `_hb_pbs_import_dialog` only touches
+                # the canonical path after the operator has typed a
+                # valid absolute path AND finished the whole wizard;
+                # on cancel or missing file it returns non-zero and
+                # the current keyfile stays untouched.
+                _hb_pbs_import_dialog || true
+                ;;
+            escrow)
+                # Toggle Upload to PBS Yes/No + set or rotate the
+                # recovery passphrase — same three transitions the
+                # Monitor exposes on the KeyfileActionsBar.
+                local cur_mode="none"
+                [[ -s "$HB_STATE_DIR/pbs-key.mode" ]] && cur_mode="$(cat "$HB_STATE_DIR/pbs-key.mode" 2>/dev/null | tr -d '[:space:]')"
+                local esc_action
+                if [[ "$cur_mode" == "full" ]]; then
+                    esc_action=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "PBS upload")" \
+                        --menu "$(hb_translate "Upload to PBS is currently: yes. Pick an action:")" \
+                        12 78 3 \
+                        "rotate" "$(hb_translate "Rotate the recovery passphrase")" \
+                        "stop"   "$(hb_translate "Stop uploading to PBS")" \
+                        "cancel" "$(hb_translate "Cancel")" \
+                        3>&1 1>&2 2>&3) || continue
+                else
+                    esc_action=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "PBS upload")" \
+                        --menu "$(hb_translate "Upload to PBS is currently: no. Pick an action:")" \
+                        10 78 2 \
+                        "start"  "$(hb_translate "Start uploading to PBS — sets a recovery passphrase")" \
+                        "cancel" "$(hb_translate "Cancel")" \
+                        3>&1 1>&2 2>&3) || continue
+                fi
+                case "$esc_action" in
+                    start|rotate)
+                        _hb_pbs_prompt_recovery_pass || continue
+                        local pass="$HB_PBS_PASS_RESULT"
+                        if _hb_pbs_finalize_recovery "$pass" full; then
+                            _hb_pbs_write_escrow_mode full
+                            dialog --backtitle "ProxMenux" \
+                                --msgbox "$(hb_translate "Upload to PBS enabled. The envelope is uploaded on every encrypted backup.")" 10 70
+                        fi
+                        ;;
+                    stop)
+                        if dialog --backtitle "ProxMenux" --colors --defaultno --yesno \
+                            "\Zb\Z1$(hb_translate "Stop uploading?")\Zn"$'\n\n'"$(hb_translate "The local envelope is dropped and future backups do not upload anything. Uploaded envelopes already on PBS stay intact and remain recoverable with their original passphrase.")" \
+                            13 78; then
+                            rm -f "$recovery_enc" 2>/dev/null
+                            _hb_pbs_write_escrow_mode none
+                            dialog --backtitle "ProxMenux" \
+                                --msgbox "$(hb_translate "Upload to PBS disabled.")" 8 60
+                        fi
+                        ;;
+                esac
+                ;;
+            remove)
+                # Destructive removal of the local keyfile. No copies
+                # kept anywhere — the operator is expected to hit
+                # Download first if they want to save the key.
                 local warn_body
                 warn_body="\Zb\Z1$(hb_translate "This is a destructive action")\Zn"$'\n\n'
                 warn_body+="$(hb_translate "Backups already stored on PBS were encrypted with the current keyfile. After this action:")"$'\n'
-                warn_body+="  • $(hb_translate "New backups will use the new (or no) keyfile.")"$'\n'
-                warn_body+="  • $(hb_translate "Downloading pre-existing encrypted backups from this host will fail unless you keep a copy of the current key.")"$'\n'
-                warn_body+="  • $(hb_translate "Existing recovery blobs on PBS stay intact — they still recover the old key with its original passphrase.")"$'\n\n'
-                warn_body+="$(hb_translate "Continue?")"
-                if ! dialog --backtitle "ProxMenux" --colors --yesno "$warn_body" 16 80; then
+                warn_body+="  • $(hb_translate "New backups on this host will be unencrypted until a new keyfile is set up.")"$'\n'
+                warn_body+="  • $(hb_translate "Downloading pre-existing encrypted backups from this host will fail unless you kept a copy of the current key.")"$'\n'
+                warn_body+="  • $(hb_translate "Existing recovery envelopes already on PBS stay intact — they still recover the old key with its original passphrase.")"$'\n\n'
+                warn_body+="$(hb_translate "Use Download first if you want to save a copy of the current key. Continue?")"
+                if ! dialog --backtitle "ProxMenux" --colors --defaultno --yesno "$warn_body" 18 80; then
                     continue
                 fi
-                local do_backup=1
-                if ! dialog --backtitle "ProxMenux" \
-                    --title "$(hb_translate "Backup current key")" \
-                    --yesno "$(hb_translate "Save a copy of the current keyfile + passphrase + recovery blob under /root/pbs-key.old-<timestamp>.* before ${action_title,,}?")" \
-                    10 78; then
-                    do_backup=0
-                fi
-                local ts=""
-                if (( do_backup )); then
-                    ts=$(_bk_pbs_backup_keyfile_to_root)
-                    if [[ -z "$ts" ]]; then
-                        dialog --backtitle "ProxMenux" \
-                            --msgbox "$(hb_translate "Backup to /root failed. Aborting.")" 8 60
-                        continue
-                    fi
-                fi
-                _bk_pbs_wipe_local_keyfile
-                if [[ "$choice" == "replace" ]]; then
-                    # Delegate to the yes/no + generate/import flow.
-                    # HB_ASK_ENCRYPT_INSTRUCTIONS is unused here, we
-                    # directly call the two helpers.
-                    local rmenu
-                    rmenu=$(dialog --backtitle "ProxMenux" \
-                        --title "$(hb_translate "Replace keyfile")" \
-                        --menu "$(hb_translate "How should the new keyfile be set up?")" \
-                        10 78 2 \
-                        "new"    "$(hb_translate "Generate a new keyfile (per host — safest isolation)")" \
-                        "import" "$(hb_translate "Import an existing keyfile from a path (shared across hosts)")" \
-                        3>&1 1>&2 2>&3) || rmenu=""
-                    case "$rmenu" in
-                        new) _hb_pbs_create_new_keyfile || true ;;
-                        import) _hb_pbs_import_dialog || true ;;
-                    esac
-                fi
-                local done_msg="$action_title $(hb_translate "completed.")"
-                [[ -n "$ts" ]] && done_msg+=$'\n\n'"$(hb_translate "Backup saved with prefix:") /root/pbs-key.old-${ts}"
-                dialog --backtitle "ProxMenux" --msgbox "$done_msg" 10 78
+                rm -f "$key_file" "$recovery_enc" "$pass_file" \
+                      "$HB_STATE_DIR/pbs-key.mode" 2>/dev/null
+                dialog --backtitle "ProxMenux" \
+                    --msgbox "$(hb_translate "Keyfile removed.")" 8 60
                 ;;
             back|"") break ;;
         esac
