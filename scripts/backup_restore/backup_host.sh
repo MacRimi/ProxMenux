@@ -1179,23 +1179,23 @@ _rs_extract_pbs() {
         return 0
     fi
 
-    # Decide whether this is the "encrypted snapshot without
-    # keyfile" pattern. proxmox-backup-client emits messages like
-    # `missing key - manifest was created with key XX:XX:...` or
-    # `unable to load encryption key` / `no key found` / `Failed
-    # to decrypt` when that's the cause. If so, surface a helpful
-    # error rather than the raw log, and pull the actual
-    # missing-key line (which carries the required key's fingerprint)
-    # verbatim into the dialog so the operator does not have to hunt
-    # for it in a scrolling terminal buffer.
+    # Decide whether this is the "encrypted snapshot without a usable
+    # keyfile" pattern. proxmox-backup-client emits several distinct
+    # messages depending on how the mismatch surfaces:
+    #   • missing key - manifest was created with key XX:XX:...
+    #   • wrong key - unable to verify signature since manifest's
+    #     key AA:AA:.. does not match provided key BB:BB:..
+    #   • unable to load encryption key / no key file / no key found
+    #   • failed to decrypt / decrypt error
+    # If any hits, surface a helpful error and pull the offending
+    # line verbatim into the dialog so the operator has the fingerprint
+    # of the correct key without hunting through a scrolling terminal.
     local extra_hint=""
-    if grep -qiE 'encryption key|unable to (load|read) key|no key (file|found)|decrypt|failed to decrypt|missing key|was created with key' "$log_file" 2>/dev/null; then
-        # Extract the diagnostic line proxmox-backup-client prints
-        # (typically "Error: missing key - manifest was created with
-        # key XX:XX:XX:XX:XX:XX:XX:XX"). Strip trailing whitespace
-        # and cap at the first hit; multiple lines rarely add signal.
+    if grep -qiE 'encryption key|unable to (load|read) key|no key (file|found)|decrypt|failed to decrypt|missing key|wrong key|was created with key|manifest.?s key|does not match' "$log_file" 2>/dev/null; then
+        # Extract the specific PBS diagnostic line (single line — the
+        # subsequent messages usually restate the same fact).
         local pbc_err
-        pbc_err=$(grep -iE 'missing key|was created with key|unable to (load|read) key|no key (file|found)' "$log_file" 2>/dev/null \
+        pbc_err=$(grep -iE 'missing key|wrong key|was created with key|manifest.?s key|does not match|unable to (load|read) key|no key (file|found)' "$log_file" 2>/dev/null \
                   | sed -E 's/[[:space:]]+$//' | head -1)
         extra_hint=$'\n\n'"$(translate "This backup is encrypted.")"
         if [[ -n "$pbc_err" ]]; then
