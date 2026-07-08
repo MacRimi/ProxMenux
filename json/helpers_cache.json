@@ -7058,7 +7058,8 @@
     ],
     "notes": [
       "Initial Setup credentials: `tail /var/log/graylog-server/server.log` after the server starts for the first time.",
-      "Type `cat ~/graylog.creds` to get admin password that you use to log in AFTER the Initial Setup"
+      "Type `cat ~/graylog.creds` to get admin password that you use to log in AFTER the Initial Setup",
+      "Application uses MongoDB which currently doesn't play well with Linux Kernel v7.x. If you use that version of kernel, you will have to downgrade before using this application"
     ],
     "warnings": [],
     "port": 9000,
