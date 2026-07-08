@@ -1181,24 +1181,36 @@ _rs_extract_pbs() {
 
     # Decide whether this is the "encrypted snapshot without
     # keyfile" pattern. proxmox-backup-client emits messages like
+    # `missing key - manifest was created with key XX:XX:...` or
     # `unable to load encryption key` / `no key found` / `Failed
     # to decrypt` when that's the cause. If so, surface a helpful
-    # error rather than the raw log.
+    # error rather than the raw log, and pull the actual
+    # missing-key line (which carries the required key's fingerprint)
+    # verbatim into the dialog so the operator does not have to hunt
+    # for it in a scrolling terminal buffer.
     local extra_hint=""
-    if grep -qiE 'encryption key|unable to (load|read) key|no key (file|found)|decrypt|failed to decrypt' "$log_file" 2>/dev/null; then
+    if grep -qiE 'encryption key|unable to (load|read) key|no key (file|found)|decrypt|failed to decrypt|missing key|was created with key' "$log_file" 2>/dev/null; then
+        # Extract the diagnostic line proxmox-backup-client prints
+        # (typically "Error: missing key - manifest was created with
+        # key XX:XX:XX:XX:XX:XX:XX:XX"). Strip trailing whitespace
+        # and cap at the first hit; multiple lines rarely add signal.
+        local pbc_err
+        pbc_err=$(grep -iE 'missing key|was created with key|unable to (load|read) key|no key (file|found)' "$log_file" 2>/dev/null \
+                  | sed -E 's/[[:space:]]+$//' | head -1)
         extra_hint=$'\n\n'"$(translate "This backup is encrypted.")"
+        if [[ -n "$pbc_err" ]]; then
+            extra_hint+=$'\n\n'"$(translate "proxmox-backup-client reported:")"$'\n'"       $pbc_err"
+        fi
         if [[ -f "$HB_STATE_DIR/pbs-key.conf" ]]; then
-            extra_hint+=$'\n\n'"$(translate "A keyfile is present at:")"$'\n'"       $HB_STATE_DIR/pbs-key.conf"$'\n'"$(translate "but it does not match the one used to create the backup. Replace it with the correct keyfile from the source host and retry.")"
+            extra_hint+=$'\n\n'"$(translate "A keyfile is installed at:")"$'\n'"       $HB_STATE_DIR/pbs-key.conf"$'\n'"$(translate "but it does not match the one used to create the backup. Replace it with the correct keyfile from the source host and retry.")"
         else
-            extra_hint+=$'\n\n'"$(translate "The automatic recovery chain (PVE storage key, local envelope in /root, PBS keyrecovery group) did not find a usable keyfile for this snapshot.")"
-            extra_hint+=$'\n\n'"$(translate "Copy your keyfile to:")"$'\n'"       $HB_STATE_DIR/pbs-key.conf"$'\n'"$(translate "and run Restore again — or pick an unencrypted backup.")"
+            extra_hint+=$'\n\n'"$(translate "Copy the correct keyfile to this host and rerun Restore — or pick an unencrypted backup.")"
         fi
     fi
 
     dialog --backtitle "ProxMenux" --title "$(translate "PBS extraction failed")" \
-        --msgbox "$(translate "Could not extract from PBS.")"$'\n\n'"$(translate "Backup:") $snapshot"$'\n'"$(translate "Archive:") $archive$extra_hint" \
-        20 78
-    hb_show_log "$log_file" "$(translate "PBS restore error log")"
+        --msgbox "$(translate "Could not extract from PBS.")"$'\n\n'"$(translate "Backup:") $snapshot"$'\n'"$(translate "Archive:") $archive$extra_hint"$'\n\n'"$(translate "Full log:") $log_file" \
+        22 84
     return 1
 }
 
