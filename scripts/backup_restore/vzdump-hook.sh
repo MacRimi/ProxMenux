@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# ==========================================================
+# ProxMenux - vzdump hook
+# ==========================================================
 # ProxMenux vzdump hook: bridges PVE vzdump jobs to attached host-config
 # backups. Installed system-wide via /etc/vzdump.conf ("script:" line).
 # PVE 9 invokes the hook for every phase and only exports a fixed set of env
