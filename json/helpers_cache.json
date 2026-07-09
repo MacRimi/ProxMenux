@@ -5245,7 +5245,8 @@
       "Documents & Notes"
     ],
     "notes": [
-      "Create your admin account on first visit at the web UI."
+      "Create your admin account on first visit at the web UI.",
+      "To get your ONE-TIME SETUP CODE, type `grep -r \"BOOTSTRAP SETUP\" /var/log` inside LXC"
     ],
     "warnings": [
       "ExcaliDash is in BETA. Back up your data regularly."
