@@ -21430,7 +21430,8 @@
       "Media & Streaming"
     ],
     "notes": [
-      "Set API keys (TMDB_API, MAL_API, IGDB_ID, IGDB_SECRET) in /opt/yamtrack/src/.env to enable media search from external providers."
+      "Set API keys (TMDB_API, MAL_API, IGDB_ID, IGDB_SECRET) in /opt/yamtrack/src/.env to enable media search from external providers.",
+      "If you need to access the python console of Yamtrack (e.g.  creating a user) with the console), you can call  `/opt/yamtrack/.venv/bin/python manage.py shell`"
     ],
     "warnings": [
       "If using a reverse proxy, set the URLS variable in .env to your external URL (e.g., URLS=https://yamtrack.example.com)."
