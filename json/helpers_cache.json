@@ -5246,7 +5246,7 @@
     ],
     "notes": [
       "Create your admin account on first visit at the web UI.",
-      "To get your ONE-TIME SETUP CODE, type `grep -r \"BOOTSTRAP SETUP\" /var/log` inside LXC"
+      "To get your ONE-TIME SETUP CODE, type `journalctl --no-pager -a | grep -i \"BOOTSTRAP SETUP\"` inside LXC"
     ],
     "warnings": [
       "ExcaliDash is in BETA. Back up your data regularly."
@@ -17956,7 +17956,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
