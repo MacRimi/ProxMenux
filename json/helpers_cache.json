@@ -17064,7 +17064,7 @@
     "documentation": "https://docs.shinobi.video/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/shinobi.webp",
     "updateable": true,
-    "privileged": false,
+    "privileged": true,
     "has_arm": true,
     "is_dev": false,
     "execute_in": [
@@ -17955,7 +17955,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/squid.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": true,
     "execute_in": [
       "lxc"
