@@ -2833,7 +2833,7 @@
       "Use `cat ~/cliproxy.creds` inside LXC to see management password."
     ],
     "warnings": [
-      "After setup, authenticate your AI providers via the built-in management panel at port 8317."
+      "After setup, authenticate your AI providers via the built-in management panel at port 8317/management.html."
     ],
     "port": 8317,
     "website": "https://github.com/router-for-me/CLIProxyAPI",
