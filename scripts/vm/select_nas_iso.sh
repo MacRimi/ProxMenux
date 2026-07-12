@@ -191,7 +191,7 @@ function select_nas_iso() {
     ""  ""
     ""  "\Z4───────────────── Community Scripts ─────────────────\Zn"
     ""  ""
-    "8" "Umbrel OS      VM          (Helper Scripts)"
+    "8" "Umbrel OS      VM          (Helper-Scripts)"
     "9" "$(translate "Return to Main Menu")"
   )
 

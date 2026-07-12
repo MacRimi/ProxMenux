@@ -64,7 +64,7 @@ function select_linux_iso() {
                   --menu "\nSeleccione el tipo de instalación de Linux:\n\n$header" \
                   20 70 10 \
                   1 "$(printf '%-35s│ %s' 'Instalar con metodo tradicional' 'Desde ISO oficial')" \
-                  2 "$(printf '%-35s│ %s' 'Instalar con script Cloud-Init' 'Helper Scripts')" \
+                  2 "$(printf '%-35s│ %s' 'Instalar con script Cloud-Init' 'Helper-Scripts')" \
                   3 "$(printf '%-35s│ %s' 'Instalar con ISO personal' 'Almacenamiento ISO')" \
                   4 "Volver al menú principal" \
                   3>&1 1>&2 2>&3)
@@ -171,13 +171,13 @@ function select_linux_iso_official() {
 
 function select_linux_cloudinit() {
   local CLOUDINIT_OPTIONS=(
-    "1" "Arch Linux   (Cloud-Init automated)   │ Helper Scripts"
-    "2" "Debian 13    (Cloud-Init automated)   │ Helper Scripts"
-    "3" "Debian 12    (Cloud-Init automated)   │ Helper Scripts"
-    "4" "Ubuntu 22.04 (Cloud-Init automated)   │ Helper Scripts"
-    "5" "Ubuntu 24.04 (Cloud-Init automated)   │ Helper Scripts"
-    "6" "Ubuntu 24.10 (Cloud-Init automated)   │ Helper Scripts"
-    "7" "Ubuntu 25.04 (Cloud-Init automated)   │ Helper Scripts"
+    "1" "Arch Linux   (Cloud-Init automated)   │ Helper-Scripts"
+    "2" "Debian 13    (Cloud-Init automated)   │ Helper-Scripts"
+    "3" "Debian 12    (Cloud-Init automated)   │ Helper-Scripts"
+    "4" "Ubuntu 22.04 (Cloud-Init automated)   │ Helper-Scripts"
+    "5" "Ubuntu 24.04 (Cloud-Init automated)   │ Helper-Scripts"
+    "6" "Ubuntu 24.10 (Cloud-Init automated)   │ Helper-Scripts"
+    "7" "Ubuntu 25.04 (Cloud-Init automated)   │ Helper-Scripts"
     "8" "$(translate "Return to Main Menu")"
   )
 
@@ -278,9 +278,9 @@ function select_linux_custom_iso() {
 
 function select_linux_other_scripts() {
 local OTHER_OPTIONS=(
-  "1" "Home Assistant OS VM (HAOS)       │ Helper Scripts"
-  "2" "Docker VM (Debian + SSH + Docker) │ Helper Scripts"
-  "3" "Nextcloud                         │ Helper Scripts"
+  "1" "Home Assistant OS VM (HAOS)       │ Helper-Scripts"
+  "2" "Docker VM (Debian + SSH + Docker) │ Helper-Scripts"
+  "3" "Nextcloud                         │ Helper-Scripts"
   "4" "$(translate "Return to Main Menu")"
 )
 

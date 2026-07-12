@@ -3794,41 +3794,102 @@ restore_menu() {
 }
 
 # ==========================================================
+# COMMUNITY SCRIPTS LAUNCHERS
+# ==========================================================
+
+_bk_format_menu_item() {
+    local description="$1"
+    local source="$2"
+    local total_width=61
+
+    local spaces_needed=$((total_width - ${#description} - ${#source}))
+    [[ $spaces_needed -lt 3 ]] && spaces_needed=3
+
+    printf '%s%*s%s' "$description" "$spaces_needed" "" "$source"
+}
+
+_bk_community_launcher() {
+    local title="$1" author="$2" repo_url="$3" run_cmd="$4"
+    local body
+    body="\n$(translate "This is an external community script maintained by") ${author}.\n\n"
+    body+="$(translate "For any question, issue or bug report, please use the official repository"):\n"
+    body+="${repo_url}\n\n"
+    body+="$(translate "Consider visiting the repository and supporting the project.")\n\n"
+    body+="$(translate "ProxMenux only acts as a launcher — once the script starts, control leaves ProxMenux.")\n\n"
+    body+="$(translate "Do you want to run the script now?")"
+
+    dialog --backtitle "ProxMenux" --title "$title" --yesno "$body" 20 78
+    if [[ $? -eq 0 ]]; then
+        clear
+        eval "$run_cmd"
+    fi
+}
+
+_bk_community_pve_host_backup() {
+    _bk_community_launcher \
+        "PVE Host Backup — Helper-Scripts" \
+        "Helper-Scripts (community-scripts)" \
+        "https://github.com/community-scripts/ProxmoxVE" \
+        'bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/host-backup.sh)"'
+}
+
+_bk_community_proxmox_toolbox() {
+    _bk_community_launcher \
+        "proxmox_toolbox — Tontonjo" \
+        "Tontonjo" \
+        "https://github.com/Tontonjo/proxmox_toolbox" \
+        'bash <(wget -qO- https://raw.githubusercontent.com/Tontonjo/proxmox_toolbox/main/proxmox_toolbox.sh)'
+}
+
+_bk_community_proxsave() {
+    _bk_community_launcher \
+        "proxsave — tis24dev" \
+        "tis24dev" \
+        "https://github.com/tis24dev/proxsave" \
+        'bash -c "$(curl -fsSL https://raw.githubusercontent.com/tis24dev/proxsave/main/install.sh)"'
+}
+
+
+# ==========================================================
 # MAIN MENU
 # ==========================================================
 main_menu() {
     while true; do
         local choice
-        choice=$(dialog --backtitle "ProxMenux" \
+
+        choice=$(dialog --colors --backtitle "ProxMenux" \
             --title "$(translate "Host Config Backup / Restore")" \
             --menu "\n$(translate "Select operation:")" \
-            "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
-            1   "$(translate "Backup host configuration")" \
-            2   "$(translate "Restore host configuration")" \
+            24 84 16 \
+            1   "$(_bk_format_menu_item "$(translate "Backup host configuration")" "")" \
+            2   "$(_bk_format_menu_item "$(translate "Restore host configuration")" "")" \
             ""  " " \
-            ""  "$(translate "─────────────────────── Backup settings ───────────────────────")" \
+            3   "$(_bk_format_menu_item "$(translate "Manage custom paths (add / remove your folders)")" "")" \
+            4   "$(_bk_format_menu_item "$(translate "Scheduled backups and retention policies")" "")" \
+            5   "$(_bk_format_menu_item "$(translate "Configure backup destinations (PBS, Borg, local)")" "")" \
             ""  " " \
-            3   "$(translate "Manage custom paths (add / remove your folders)")" \
-            4   "$(translate "Scheduled backups and retention policies")" \
-            5   "$(translate "Configure backup destinations (PBS, Borg, local)")" \
+            ""  "\Z4───────────────────── Community Scripts ─────────────────────\Z4" \
+            6   "$(_bk_format_menu_item "PVE Host Backup" "Helper-Scripts")" \
+            7   "$(_bk_format_menu_item "proxmox_toolbox" "Tontonjo")" \
+            8   "$(_bk_format_menu_item "proxsave" "tis24dev")" \
             ""  " " \
-            0   "$(translate "Return")" \
+            0   "$(_bk_format_menu_item "$(translate "Return")" "")" \
             3>&1 1>&2 2>&3) || break
 
         case "$choice" in
-            1) backup_menu  ;;
+            1) backup_menu ;;
             2) restore_menu ;;
             3) _bk_manage_extra_paths ;;
             4) _bk_scheduler ;;
             5) _bk_manage_destinations ;;
+            6) _bk_community_pve_host_backup ;;
+            7) _bk_community_proxmox_toolbox ;;
+            8) _bk_community_proxsave ;;
             0) break ;;
         esac
     done
 }
 
-# Only spawn the TUI when invoked directly. Sourcing the file
-# (e.g. from restore/monitor_apply.sh) imports all the functions
-# without triggering the main menu.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     main_menu
 fi
