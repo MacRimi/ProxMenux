@@ -1256,9 +1256,7 @@ show_menu() {
         
 
         menu_items+=("" "")
-        menu_items+=("-" "───────────────────── $(translate "Community Scripts") ──────────────────────")
-        menu_items+=("" "")
-        
+        menu_items+=("" "\Z4───────────────────── Community Scripts ──────────────────────\Zn")
 
         for script in "${COMMUNITY_SCRIPTS[@]}"; do
             IFS='|' read -r name source command <<< "$script"
@@ -1277,11 +1275,11 @@ show_menu() {
         
 
         exec 3>&1
-        script_selection=$(dialog --clear \
+        script_selection=$(dialog --clear --colors \
                                  --backtitle "ProxMenux" \
                                  --title "$(translate "Network Management")" \
                                  --menu "\n$(translate "Select a network management option:"):\n" \
-                                 28 78 19 \
+                                 28 82 19 \
                                  "${menu_items[@]}" 2>&1 1>&3)
         exit_status=$?
         exec 3>&-

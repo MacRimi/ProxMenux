@@ -34,14 +34,14 @@ while true; do
     OPTION=$(dialog --colors --backtitle "ProxMenux" \
         --title "$(translate "Storage & Share Manager")" \
         --menu "\n$(translate "Select an option:")" 28 78 17 \
-            "" "\Z4──────────────────────── HOST ─────────────────────────\Zn" \
+            "" "\Zb\Z4                          HOST\Zn" \
             "1"         "$(translate "Add NFS share    as Proxmox Storage")" \
             "2"         "$(translate "Add Samba share  as Proxmox Storage")" \
             "3"         "$(translate "Add iSCSI Target as Proxmox Storage")" \
             "4"         "$(translate "Add Local Disk   as Proxmox Storage")" \
             "5"         "$(translate "Create Shared Directory on Host")" \
             ""          "" \
-            ""  "\Z4──────────────────────── LXC ─────────────────────────\Zn" \
+            ""  "\Zb\Z4                          LXC\Zn" \
             "6"         "$(translate "Configure LXC Mount Points    (Host ↔ Container)")" \
             ""          "" \
             "7"         "$(translate "Configure NFS   Client in LXC (only privileged)")" \
