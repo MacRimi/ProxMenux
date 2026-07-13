@@ -226,8 +226,8 @@ run_updates_dialog() {
 
 
 declare -a COMMUNITY_SCRIPTS=(
-    "Proxmox VE Post Install|Helper-Scripts|bash -c \"source '$UTILS_FILE'; wget -qLO - https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pve-install.sh | bash; msg_success \\\"\$(translate 'Press ENTER to continue...')\\\"; read -r _\""
-    "Proxmox VE Microcode|Helper-Scripts|bash -c \"source '$UTILS_FILE'; wget -qLO - https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/microcode.sh | bash; msg_success \\\"\$(translate 'Press ENTER to continue...')\\\"; read -r _\""
+    "Proxmox VE Post Install|Helper-Scripts|bash -c \"\$(wget -qLO - https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pve-install.sh); msg_success \\\"\$(translate 'Press ENTER to continue...')\\\"; read -r _\""
+    "Proxmox VE Microcode|Helper-Scripts|bash -c \"\$(wget -qLO - https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/microcode.sh); msg_success \\\"\$(translate 'Press ENTER to continue...')\\\"; read -r _\""
 )
 
 # ==========================================================
@@ -322,9 +322,7 @@ show_menu() {
         
 
         menu_items+=("" "")
-        menu_items+=("-" "───────────────────── $(post_install_label "Community Scripts") ──────────────────────")
-        menu_items+=("" "")
-        
+        menu_items+=("" "\Z4───────────────────── Community Scripts ──────────────────────\Zn")
 
         for script in "${COMMUNITY_SCRIPTS[@]}"; do
             IFS='|' read -r name source command <<< "$script"
@@ -343,11 +341,11 @@ show_menu() {
         
 
         exec 3>&1
-        script_selection=$(dialog --clear \
+        script_selection=$(dialog --clear --colors \
                                  --backtitle "ProxMenux" \
                                  --title "$(translate "Post-Installation Scripts")" \
                                  --menu "\n$(translate "Select a post-installation script:"):\n" \
-                                 22 78 15 \
+                                 24 84 16 \
                                  "${menu_items[@]}" 2>&1 1>&3)
         exit_status=$?
         exec 3>&-
