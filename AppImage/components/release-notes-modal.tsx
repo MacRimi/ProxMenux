@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 
-const APP_VERSION = "1.2.2.3-beta" // Sync with AppImage/package.json
+const APP_VERSION = "1.2.3" // Sync with AppImage/package.json
 
 interface ReleaseNote {
   date: string
@@ -218,27 +218,27 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 const CURRENT_VERSION_FEATURES = [
   {
     icon: <DatabaseBackup className="h-5 w-5" />,
-    text: "New Backups section integrated in the Monitor — create, schedule and restore host backups against Local, PBS or Borg destinations; run on a proper systemd timer or attach to an existing PVE vzdump job with live-inherited retention; PBS encryption with paired recovery blobs; and a direction-aware restore flow that safely handles cross-kernel jumps by reapplying IOMMU / VFIO / GRUB tunings, protecting critical packages from cascade-remove, and auto-remapping NICs after a motherboard swap.",
-  },
-  {
-    icon: <RefreshCw className="h-5 w-5" />,
-    text: "Live post-restore progress — after a reboot the Backups tab shows a real-time progress card with step-by-step milestones, estimated time remaining, per-component status (NVIDIA, Intel GPU tools, Coral, AMD tools), boot sanity warnings, a rollback delta widget listing VMs / LXCs / components that exist on the host but weren't in the backup, and a log tail with an Issues-only filter. Past restores are archived and browsable.",
-  },
-  {
-    icon: <Shield className="h-5 w-5" />,
-    text: "PBS encryption flow reworked — first a yes/no dialog; only when a keyfile is not yet installed does a second menu ask whether to generate a new one or import an existing one (shared across hosts). Subsequent encrypted backups reuse the installed key silently. Cancelling never leaves a phantom keyfile behind.",
-  },
-  {
-    icon: <HardDrive className="h-5 w-5" />,
-    text: "Storage & Hardware — per-disk cards in a responsive grid; USB-NVMe enclosures (ASMedia / JMicron / Realtek) now show the drive's real model, serial, temperature and health instead of the bridge's identity; USB detection now walks the sysfs device path instead of trusting `/sys/block/*/removable`, so USB-NVMe and USB-HDD enclosures that report removable=0 finally reach the snt* pass-through and expose full SMART (temperature, power-on hours, power cycles, health); USB-SATA SSDs (ASM105x) no longer flip to HDD; consistent blue / amber / red capacity palette across the app; multi-TB PBS datastores render in the right unit.",
+    text: "Backups integrated in the Monitor — a new first-class section to create, schedule and restore host backups against Local, PBS or Borg destinations from the Web dashboard. Jobs run on a proper systemd timer or attach to an existing PVE vzdump job with retention live-inherited from the parent. Encrypted PBS backups store a paired recovery blob next to each snapshot so a fresh install can always get the key back. After a reboot the tab shows a real-time restore progress card with milestones, per-component status (NVIDIA, Intel GPU tools, Coral, AMD tools), boot sanity warnings and a rollback delta listing anything on the host that wasn't in the backup.",
   },
   {
     icon: <Activity className="h-5 w-5" />,
-    text: "Network Flow diagram — new live topology view on the Network tab showing NICs → host → bridges → guests with animated rx / tx pulses on every link.",
+    text: "Network Flow diagram — a new live topology view on the Network tab showing NICs → host → bridges → LXCs / VMs with animated rx / tx pulses on every internal link, so the operator can see in real time how traffic distributes inside the host and which guests are pulling or pushing data.",
+  },
+  {
+    icon: <Sparkles className="h-5 w-5" />,
+    text: "Redesigned cards across Overview, VM / LXC, Storage and Network — layouts reworked for faster reading and denser, more practical information: key numbers surface at a glance, grouped by relevance, and the responsive grid now behaves cleanly from a phone up to an ultrawide.",
+  },
+  {
+    icon: <HardDrive className="h-5 w-5" />,
+    text: "Physical Disks and Physical Interfaces cards redesigned — clearer per-item presentation on the Storage and Network tabs. USB-NVMe / USB-SATA enclosures reporting removable=0 (ASMedia, JMicron, Realtek, ASM105x) now walk sysfs to detect USB attachment, so the -d snt* pass-through is tried and the drive's real model, serial, temperature, power-on hours and health surface — instead of the bridge's chatter.",
+  },
+  {
+    icon: <Sliders className="h-5 w-5" />,
+    text: "Health Monitor Thresholds — the Settings panel that controls per-category Warning and Critical levels (CPU, memory, temperature, storage, disks, ...) was reworked with clearer visual grouping and inline hints, so tuning a threshold now takes a couple of clicks instead of scrolling through a wall of numbers.",
   },
   {
     icon: <Bell className="h-5 w-5" />,
-    text: "Health & Notifications — every WARNING or CRITICAL check is now dismissable (24 h / 7 d / permanent) with an Active Suppressions panel in Settings to revoke; JournalWatcher no longer replays days of old journald events after a Monitor upgrade; Memory Usage chart's ZFS ARC line plots the actual series instead of a flat band.",
+    text: "Richer notifications out of the box — for users not running an AI agent, the templated body now identifies the affected object (which storage, which interface, which container), surfaces the top offenders with an \"…and N more\" tail when the list is long, and preserves the same identity in the recovery message. Users with AI enrichment enabled continue to get their tailored rewrite on top of this improved base.",
   },
 ]
 
