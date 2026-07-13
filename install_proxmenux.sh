@@ -900,15 +900,18 @@ install_proxmenux() {
         bash "$LOCAL_SCRIPTS/global/cleanup_gpu_hookscripts.sh" || true
     fi
 
-    if [[ "${UPDATE_MODE:-0}" == "1" ]]; then
-        msg_ok "ProxMenux update complete — relaunching menu..."
-        # Hand off to the freshly-installed menu binary. `exec` replaces
-        # this shell so nothing tries to keep parsing the install script
-        # afterwards, and there is zero time window where any process
-        # could read a half-rewritten /usr/local/bin/menu (already
-        # protected by the atomic mv above; this is belt-and-suspenders).
-        exec "$INSTALL_DIR/$MENU_SCRIPT"
-    fi
+    # UPDATE_MODE used to `exec "$INSTALL_DIR/$MENU_SCRIPT"` here to
+    # auto-relaunch the freshly-installed menu. That produced visible
+    # "line: syntax" errors when bash tried to read the just-rewritten
+    # /usr/local/bin/menu (or a shared utils.sh sourced by it) under
+    # its feet. Fall through to the standard "installed successfully"
+    # end-of-run message instead — the operator types `menu` when
+    # ready and the terminal is stable by then.
+    #
+    # `change_release_channel` in scripts/menus/config_menu.sh is
+    # unaffected: it invokes the installer without `--update`
+    # (UPDATE_MODE=0) so it never went through this branch, and its
+    # "return to config menu" behaviour is preserved.
 
     msg_title "ProxMenux has been installed successfully"
 

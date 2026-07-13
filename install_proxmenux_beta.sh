@@ -811,13 +811,16 @@ if [ -x "$BASE_DIR/scripts/global/cleanup_gpu_hookscripts.sh" ]; then
     bash "$BASE_DIR/scripts/global/cleanup_gpu_hookscripts.sh" || true
 fi
 
-# Update path: hand off to the freshly-installed menu instead of telling
-# the operator to type `menu` again. See install_proxmenux.sh for the
-# full rationale — same fix here for the beta channel.
-if [[ "$UPDATE_MODE" == "1" ]]; then
-    msg_ok "ProxMenux Beta update complete — relaunching menu..."
-    exec "$INSTALL_DIR/$MENU_SCRIPT"
-fi
+# UPDATE_MODE used to `exec "$INSTALL_DIR/$MENU_SCRIPT"` here to
+# auto-relaunch the freshly-installed menu. That produced visible
+# "line: syntax" errors when bash tried to read the just-rewritten
+# /usr/local/bin/menu (or a shared utils.sh sourced by it) under its
+# feet. Fall through to the standard end-of-run message instead —
+# the operator types `menu` when ready and the terminal is stable.
+#
+# `change_release_channel` in scripts/menus/config_menu.sh is
+# unaffected: it invokes the installer without `--update`
+# (UPDATE_MODE=0) so it never went through this branch.
 
 msg_title "ProxMenux Beta installed successfully"
 
