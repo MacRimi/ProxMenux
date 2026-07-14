@@ -3466,7 +3466,8 @@
     "notes": [
       "Downloads and installs the update script locally to `/usr/local/bin/update-lxcs.sh`. Cron runs the local copy — no remote code execution at runtime.",
       "To exclude containers from updating, edit `/etc/update-lxcs.conf` and add their CTIDs: `EXCLUDE=100,101,102`",
-      "Logs are written to `/var/log/update-lxcs-cron.log`."
+      "Logs are written to `/var/log/update-lxcs-cron.log`.",
+      "You can watch the source of local updater here: `https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/update-lxcs-cron.sh`."
     ],
     "warnings": [],
     "port": 0,
@@ -7032,7 +7033,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -11928,6 +11929,40 @@
     "os": "debian"
   },
   {
+    "name": "Newt",
+    "slug": "newt",
+    "desc": "Newt is a lightweight, headless, fully user-space WireGuard tunnel client and TCP/UDP proxy for Pangolin. It connects a site to a Pangolin server to securely expose private resources without port forwarding or opening inbound firewall ports.",
+    "script": "ct/newt.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/newt.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/newt.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00004"
+    ],
+    "category_names": [
+      "Network & Firewall"
+    ],
+    "notes": [
+      "Requires a running Pangolin server to connect to.",
+      "Requires a Newt ID, Newt Secret and Pangolin endpoint, which can be obtained by creating a site/node in your Pangolin dashboard."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://pangolin.net",
+    "documentation": "https://docs.pangolin.net/manage/sites/install-site",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pangolin.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Nextcloud Exporter",
     "slug": "nextcloud-exporter",
     "desc": "Prometheus exporter for Nextcloud servers. ",
@@ -16708,6 +16743,42 @@
       "pve"
     ],
     "config_path": "/opt/salt/.env",
+    "os": "debian"
+  },
+  {
+    "name": "Satisfactory",
+    "slug": "satisfactory",
+    "desc": "Host a persistent Satisfactory world for PC players using the official Linux dedicated server and SteamCMD.",
+    "script": "ct/satisfactory.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/satisfactory.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/satisfactory.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00024"
+    ],
+    "category_names": [
+      "Gaming & Leisure"
+    ],
+    "notes": [
+      "Open or forward ports 7777 TCP/UDP and 8888 TCP. External and internal port 7777 must match.",
+      "The server is managed and claimed from the in-game Server Manager."
+    ],
+    "warnings": [
+      "Updates stop and restart the game server; schedule them when no players are connected."
+    ],
+    "port": 7777,
+    "website": "https://www.satisfactorygame.com/",
+    "documentation": "https://satisfactory.wiki.gg/wiki/Dedicated_servers",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/satisfactory.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -21620,7 +21691,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
