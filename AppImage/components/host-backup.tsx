@@ -413,7 +413,7 @@ const formatRunAt = (iso: string | null) => {
 // belong to matches "the key is a PBS thing" without dragging in
 // the fuller management surface.
 // ──────────────────────────────────────────────────────────────
-function PbsKeyfileActions() {
+function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
   const { data: info, mutate: mutateInfo } = useSWR<{
     installed: boolean
     fingerprint?: string
@@ -427,6 +427,22 @@ function PbsKeyfileActions() {
   const [importPath, setImportPath] = useState("")
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+
+  // Auto-discover a PVE-managed keyfile at /etc/pve/priv/storage/<NAME>.enc
+  // that matches this specific PBS repository. When present, the Upload
+  // modal surfaces a one-click "Use PVE-managed key" shortcut at the
+  // top so the operator doesn't have to hunt down the file path — the
+  // exact convenience the shell TUI already provides during its import
+  // wizard. Only fetched while the modal is open + a repository is known.
+  const { data: pveDiscover } = useSWR<{
+    entries: Array<{ name: string; server: string; datastore: string; path: string; matches_repository: boolean }>
+  }>(
+    uploadOpen && pbsRepository
+      ? `/api/host-backups/pbs-encryption/discover-pve-keyfiles?repository=${encodeURIComponent(pbsRepository)}`
+      : null,
+    fetcher,
+  )
+  const pveMatch = pveDiscover?.entries?.find((e) => e.matches_repository) || null
 
   const closeUpload = () => {
     setUploadOpen(false)
@@ -572,6 +588,34 @@ function PbsKeyfileActions() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            {pveMatch && (
+              <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 space-y-2 text-xs">
+                <div className="flex items-start gap-2">
+                  <Lock className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
+                  <div className="flex-1 space-y-1">
+                    <div className="font-semibold text-emerald-300">PVE-managed keyfile detected for this PBS</div>
+                    <div className="text-muted-foreground">
+                      Proxmox already stores an encryption key for storage <code className="font-mono text-[10.5px]">{pveMatch.name}</code> at{" "}
+                      <code className="font-mono text-[10.5px] break-all">{pveMatch.path}</code>. Import it in one click.
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setImportPath(pveMatch.path)
+                      setImportFile(null)
+                    }}
+                    disabled={busy}
+                    className="!bg-emerald-600 hover:!bg-emerald-700 !text-white h-7 text-[11px]"
+                  >
+                    Use this key
+                  </Button>
+                </div>
+              </div>
+            )}
+            {pveMatch && <div className="text-[10px] text-center text-muted-foreground">— or upload your own —</div>}
             <div>
               <Label htmlFor="pbsKfUploadFile" className="text-xs">Upload from your machine</Label>
               <Input
@@ -592,7 +636,7 @@ function PbsKeyfileActions() {
                 value={importPath}
                 onChange={(e) => setImportPath(e.target.value)}
                 disabled={busy || !!importFile}
-                placeholder="/usr/local/share/proxmenux/pbs-key.conf"
+                placeholder="e.g. /etc/pve/priv/storage/<NAME>.enc or /root/my-pbs-key"
                 className="h-9 mt-1 font-mono text-xs"
               />
             </div>
@@ -1578,6 +1622,21 @@ function InspectModal({
     fetcher,
   )
   const needsKeyfile = !!(remoteArc?.encrypted && keyfileInfo && !keyfileInfo.installed)
+  // Same PVE-managed keyfile auto-discovery the setup wizards use: when
+  // the encrypted snapshot lives on a PBS whose PVE storage.cfg entry
+  // has an `encryption-key` file at /etc/pve/priv/storage/<NAME>.enc,
+  // surface a one-click "Use this key" shortcut in the amber panel so
+  // the operator doesn't have to type the full path. Only fetched when
+  // the amber gate is actually rendered (encrypted + no keyfile).
+  const { data: pveDiscoverInspect } = useSWR<{
+    entries: Array<{ name: string; server: string; datastore: string; path: string; matches_repository: boolean }>
+  }>(
+    needsKeyfile && remoteArc?.repo_repository
+      ? `/api/host-backups/pbs-encryption/discover-pve-keyfiles?repository=${encodeURIComponent(remoteArc.repo_repository)}`
+      : null,
+    fetcher,
+  )
+  const pveMatchInspect = pveDiscoverInspect?.entries?.find((e) => e.matches_repository) || null
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importPath, setImportPath] = useState<string>("")
   const [importing, setImporting] = useState(false)
@@ -2041,8 +2100,37 @@ function InspectModal({
                     </div>
                   </div>
                 </div>
+                {pveMatchInspect && (
+                  <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-2.5 space-y-1.5 text-[11px]">
+                    <div className="flex items-start gap-2">
+                      <Lock className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
+                      <div className="flex-1 space-y-1">
+                        <div className="font-semibold text-emerald-300">PVE-managed keyfile detected for this PBS</div>
+                        <div className="text-muted-foreground">
+                          Proxmox stores an encryption key for storage <code className="font-mono text-[10.5px]">{pveMatchInspect.name}</code> at{" "}
+                          <code className="font-mono text-[10.5px] break-all">{pveMatchInspect.path}</code>. Import it in one click.
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setImportPath(pveMatchInspect.path)
+                          setImportFile(null)
+                        }}
+                        disabled={importing}
+                        className="!bg-emerald-600 hover:!bg-emerald-700 !text-white h-6 text-[10.5px] px-2"
+                      >
+                        Use this key
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-1.5 pt-1 border-t border-amber-500/30">
-                  <Label htmlFor="keyfileImport" className="text-[11px] font-medium">Upload from your machine</Label>
+                  <Label htmlFor="keyfileImport" className="text-[11px] font-medium">
+                    {pveMatchInspect ? "Or upload from your machine" : "Upload from your machine"}
+                  </Label>
                   <Input
                     id="keyfileImport"
                     type="file"
@@ -2061,7 +2149,7 @@ function InspectModal({
                     value={importPath}
                     onChange={(e) => setImportPath(e.target.value)}
                     disabled={importing || !!importFile}
-                    placeholder="/usr/local/share/proxmenux/pbs-key.conf"
+                    placeholder="e.g. /etc/pve/priv/storage/<NAME>.enc or /root/my-pbs-key"
                     className="h-8 text-[11px] font-mono"
                   />
                 </div>
@@ -3834,7 +3922,7 @@ function CreateJobDialog({
                                 value={pbsImportPath}
                                 onChange={(e) => setPbsImportPath(e.target.value)}
                                 disabled={pbsImportBusy || !!pbsImportFile}
-                                placeholder="/usr/local/share/proxmenux/pbs-key.conf"
+                                placeholder="e.g. /etc/pve/priv/storage/<NAME>.enc or /root/my-pbs-key"
                                 className="h-8 text-[11px] font-mono"
                               />
                               <p className="text-[10px] text-muted-foreground">
@@ -4808,7 +4896,7 @@ function ManualBackupDialog({
                                 value={pbsImportPath}
                                 onChange={(e) => setPbsImportPath(e.target.value)}
                                 disabled={pbsImportBusy || !!pbsImportFile}
-                                placeholder="/usr/local/share/proxmenux/pbs-key.conf"
+                                placeholder="e.g. /etc/pve/priv/storage/<NAME>.enc or /root/my-pbs-key"
                                 className="h-8 text-[11px] font-mono"
                               />
                               <p className="text-[10px] text-muted-foreground">
@@ -5843,7 +5931,7 @@ function DestinationRow({
           is host-wide but conceptually belongs to PBS usage, so the
           Download / Upload / Delete controls sit next to the
           destination(s) they support. */}
-      {item.kind === "pbs" && <PbsKeyfileActions />}
+      {item.kind === "pbs" && <PbsKeyfileActions pbsRepository={item.repository} />}
     </div>
   )
 }

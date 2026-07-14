@@ -1,17 +1,18 @@
 {
   "_description": "Verified AI models for ProxMenux notifications. Only models listed here will be shown to users. Models are tested to work with the chat/completions API format.",
-  "_updated": "2026-07-13",
+  "_updated": "2026-07-14",
   "_verifier": "Refreshed with tools/ai-models-verifier (private). Re-run before each ProxMenux release to keep the list current. The verifier and ProxMenux share the same reasoning/thinking-model handlers so their verdicts stay aligned with runtime behaviour.",
 
   "groq": {
     "models": [
       "llama-3.3-70b-versatile",
       "llama-3.1-8b-instant",
+      "meta-llama/llama-4-scout-17b-16e-instruct",
       "openai/gpt-oss-120b",
       "openai/gpt-oss-20b"
     ],
     "recommended": "llama-3.3-70b-versatile",
-    "_note": "Verified 2026-07-13 against Groq's public production catalog. Legacy llama-3.1-70b-versatile / llama3-70b-8192 / llama3-8b-8192 / mixtral-8x7b-32768 / gemma2-9b-it removed (retired upstream). openai/gpt-oss-120b (500 T/s) and openai/gpt-oss-20b (1000 T/s) added — both listed as current production."
+    "_note": "Verified functionally 2026-07-14 with the Groq API (15 models discovered, 9 passed). Legacy llama-3.1-70b-versatile / llama3-70b-8192 / llama3-8b-8192 / mixtral-8x7b-32768 / gemma2-9b-it removed (retired upstream). llama-4-scout added (current-gen Llama 4, 0.47s). openai/gpt-oss-120b / gpt-oss-20b confirmed. Passing but excluded: allam-2-7b (Arabic-focused), qwen/qwen3-32b (Chinese-first, unreliable Spanish output), openai/gpt-oss-safeguard-20b (safety-classifier variant), groq/compound-mini (agentic system, wrong fit for notification translation)."
   },
 
   "gemini": {
@@ -69,7 +70,7 @@
       "mistralai/mistral-small-3.2-24b-instruct"
     ],
     "recommended": "meta-llama/llama-3.3-70b-instruct",
-    "_note": "Verified 2026-07-13 against OpenRouter's public /api/v1/models catalog (343 models advertised). anthropic/claude-3.5-haiku / anthropic/claude-3.5-sonnet / google/gemini-flash-1.5 / mistralai/mistral-7b-instruct / mistralai/mixtral-8x7b-instruct removed (GONE from catalog). Modern replacements added: llama-4-scout (Meta's current gen), claude-haiku-4.5 / claude-sonnet-4.6 (Anthropic current gen via OpenRouter proxy), gemini-2.5-flash / flash-lite (Google current gen), mistral-small-3.2-24b (Mistral current small)."
+    "_note": "Verified functionally 2026-07-14 with the OpenRouter API — all 10 curated candidates pass the Spanish-translation notification test. Fastest: llama-4-scout (0.51s), gemini-2.5-flash-lite (1.14s), gemini-2.5-flash (1.94s), llama-3.3-70b-instruct (2.29s), claude-haiku-4.5 (2.71s). Legacy anthropic/claude-3.5-* / google/gemini-flash-1.5 / mistralai/mistral-7b-instruct / mixtral-8x7b-instruct removed (GONE from catalog). Modern replacements added: llama-4-scout (Meta's current gen — dramatically fastest), claude-haiku-4.5 / claude-sonnet-4.6, gemini-2.5-flash / flash-lite, mistral-small-3.2-24b. recommended kept as llama-3.3-70b for capability/latency balance; llama-4-scout is a faster alternative worth considering as recommended after a broader release."
   },
 
   "ollama": {

@@ -388,7 +388,7 @@ select_language() {
 # Show installation confirmation for new installations
 show_installation_confirmation() {
     if whiptail --title "ProxMenux Installation" \
-        --yesno "ProxMenux will install:\n\n• dialog       (interactive menus) - Official Debian package\n• curl         (file downloads) - Official Debian package\n• jq           (JSON processing) - Official Debian package\n• ProxMenux core files     (/usr/local/share/proxmenux)\n• ProxMenux Monitor        (Web dashboard on port 8008)\n• Pre-built translation files (English, Spanish, French, German, Italian, Portuguese)\n\nProceed with installation?" 20 70; then
+        --yesno "ProxMenux will install:\n\n• dialog       (interactive menus) - Official Debian package\n• curl         (file downloads) - Official Debian package\n• jq           (JSON processing) - Official Debian package\n• ProxMenux core files     (/usr/local/share/proxmenux)\n• ProxMenux Monitor        (Web dashboard on port 8008)\n• Pre-built translation files\n\nProceed with installation?" 20 70; then
         return 0
     else
         return 1

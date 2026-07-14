@@ -822,10 +822,19 @@ filter_option_c_branch() {
     return 0
   fi
 
+  # Accept the target branch AND any newer branch (major ≥ target).
+  # Historical behaviour was an exact-major match, which locked kernel
+  # 7.x users to 580.x only. When a 580.x build happens to fail to
+  # compile on a very recent kernel + toolchain combo (reproduced on
+  # kernel 7.0.14-4-pve — see issue #248), the operator had no
+  # in-menu escape. `MIN_DRIVER_VERSION` from get_kernel_compatibility_info
+  # still gates the floor, so this only opens the ceiling: newer stable
+  # branches like 590 / 595 / 600 that satisfy the min version become
+  # selectable, while ancient branches remain filtered out.
   while IFS= read -r ver; do
     [[ -z "$ver" ]] && continue
     local ver_major="${ver%%.*}"
-    if [[ "$ver_major" == "$target_branch" ]]; then
+    if (( 10#$ver_major >= 10#$target_branch )); then
       printf '%s\n' "$ver"
     fi
   done <<< "$versions_in"

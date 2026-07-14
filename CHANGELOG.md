@@ -1,4 +1,119 @@
 
+## 2026-07-14
+
+### New version ProxMenux v1.2.3
+
+
+![ProxMenux Backups](https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/ProxMenux_backup.png)
+
+Stable consolidation of the **v1.2.2.x beta cycle** (v1.2.2.1 → v1.2.2.2 → v1.2.2.3). The headline is a new **Backups** section inside the Monitor with a first-class create / schedule / restore flow against Local, PBS and Borg, a live post-restore progress card, a reworked PBS encryption dialog, and a direction-aware restore that handles cross-kernel jumps safely. Around it: a new Network Flow topology view, redesigned cards across Overview / VM & LXC / Storage / Network, richer plain-templated notifications that identify the affected object without needing AI, a refreshed Health Monitor Thresholds panel, and a full re-verification of the AI-model catalogue for the five supported providers.
+
+---
+
+## 🗄️ Backups integrated in the Monitor
+
+- **Create / schedule / restore** host backups against **Local**, **Proxmox Backup Server** and **Borg** destinations from the dashboard.
+- **Two scheduling modes**: dedicated systemd timer, or *attached* to an existing PVE vzdump job with retention live-inherited from the parent on every run.
+- **PBS encryption with paired recovery blob**: encrypted backups store a passphrase-wrapped copy of the keyfile as a `-keyrecovery` group next to each snapshot, so a fresh install can always get the key back with the operator's passphrase.
+- **Direction-aware restore**: reapplies IOMMU / VFIO / GRUB tunings on cross-kernel jumps, protects critical packages from cascade-remove, auto-remaps NICs after a motherboard swap.
+- **Live post-restore progress card**: after the reboot, the Backups tab shows a real-time card with step-by-step milestones, per-component status (NVIDIA, Intel GPU tools, Coral, AMD tools), boot sanity warnings, a rollback delta widget listing anything on the host that was not in the backup, and a log tail with an Issues-only filter. Past restores are archived and browsable.
+- **PBS keyfile management inline in the Monitor**: each PBS destination row exposes Download / Upload / Delete for the keyfile plus a Yes/No + passphrase + contextual Apply toggle for the escrow. When the installed keyfile does not match the backup's manifest, View contents / Download / Restore now show a structured amber panel with the required fingerprint so the operator knows which keyfile to import.
+
+---
+
+## 🌐 Network Flow diagram
+
+- New live topology view on the **Network** tab: NICs → host → bridges → LXCs / VMs.
+- Animated rx / tx pulses on every internal link — immediate answer to *"which guest is pulling / pushing right now"* without cross-referencing multiple panels.
+- Tree layout designed to read cleanly on mobile devices.
+
+---
+
+## 🎨 Redesigned cards across Overview / VM & LXC / Storage / Network
+
+- Layouts reworked for faster reading and denser, more practical information.
+- Key numbers surface at a glance, grouped by relevance.
+- Responsive grid behaves cleanly from a phone up to an ultrawide.
+- **Physical Disks** and **Physical Interfaces** cards on Storage and Network get the largest visual change — clearer per-item presentation.
+
+---
+
+## 🔔 Richer notifications out of the box
+
+For users who do **not** use an AI enhancement agent, the plain-templated body now carries more useful content:
+
+- Titles and reasons name the affected object (`Storage 'Tuxis' unavailable` instead of `1 Proxmox storage(s) unavailable`, `Network connectivity lost — vmbr0`, `3 health checks degraded — Storage (Tuxis), Network (vmbr0), CPU`).
+- Long lists surface the top offenders with an `…and N more` tail so nothing is silently dropped.
+- Recovery notifications preserve the same identity used in the alert.
+- Users with AI enrichment keep getting their tailored rewrite on top of this improved base.
+
+---
+
+## 🩺 Health Monitor Thresholds redesigned
+
+- The **Settings → Health Monitor Thresholds** panel that controls per-category Warning and Critical levels (CPU, memory, temperature, storage, disks, …) was reworked with clearer visual grouping and inline hints.
+- Tuning a threshold now takes a couple of clicks instead of scrolling through a wall of numbers.
+
+---
+
+## 🛠 Notable fixes
+
+- **USB-NVMe / USB-SATA SMART on `removable=0` enclosures** — enclosures reporting `removable=0` (ASMedia, JMicron, Realtek, ASM105x) now walk sysfs to detect USB attachment, so `-d snt*` pass-through is tried and the drive's real model, serial, temperature, power-on hours and health surface. Temperature history sampler picks up the same fix.
+- **PBS encryption prompt reworked** to a single explicit *Encrypt this backup?* Yes/No — nothing is uploaded to PBS unless the answer is Yes. Only when a keyfile is not yet installed does a second dialog ask whether to generate a new one or import an existing one. Cancelling never leaves a phantom keyfile behind.
+- **Attached scheduled backups now inherit retention on every run** — jobs attached to a PVE vzdump parent re-read the parent's `prune-backups` config at each run and rewrite `KEEP_*` accordingly. Previously frozen to the value at job creation time.
+- **Installer no longer auto-relaunches `menu` after an update** — the `exec MENU_SCRIPT` at the tail of the update path triggered *"line: syntax"* errors when bash tried to read the just-rewritten `/usr/local/bin/menu` under its feet. Flow now exits cleanly; operator types `menu` when ready. `change_release_channel` in Settings unaffected.
+- **PBS restore listing broken on Proxmox 9 / jq 1.7** — `hb_pbs_list_snapshots` switched from the prefix form `and not (...)` (rejected by jq 1.7) to the postfix form `and ((...) | not)` (accepted by both jq 1.6 and 1.7). Silent stderr redirect removed so future parse errors surface.
+- **`run_scheduled_backup.sh` no longer crashes when `LANGUAGE` is unset** — cron / systemd invocations now load language + initialize the translation cache before sourcing utility functions that require it.
+- **Local archive restore prompts no longer freeze silently** — `hb_prompt_restore_source_dir` and `hb_prompt_local_archive` use the fd-9 TTY handoff already applied elsewhere.
+- **Terminal modal auto-focuses xterm** so `dialog --yesno` inside CLI scripts receives arrow keys instead of the Close button.
+- **NVIDIA VFIO passthrough writes back `vfio_passthrough` in `components_status.json`** — `switch_gpu_mode.sh`, `switch_gpu_mode_direct.sh` and `add_gpu_vm.sh` update component status when they flip the driver posture. Post-restore auto-reinstall no longer kicks the NVIDIA installer on hosts intentionally left in VFIO mode.
+- **Secure Gateway update notifications no longer trail a bare `— v`** — when only sidecar packages need updating (Tailscale itself unchanged), the title now reads `secure-gateway update available — v<current> (packages only)` and the body shows a single line "Tailscale: v… (unchanged — only sidecar packages need updating)" instead of the confusing `v → v` arrow.
+- **AI model auto-migration for deprecated aliases** — users with `claude-3-5-haiku-latest`, `claude-3-5-sonnet-latest` or `claude-3-opus-latest` (all 404 upstream now) are silently migrated to the current recommendation (`claude-haiku-4-5`, etc.) within 24 h of upgrade, with an `ai_model_migrated` notification explaining what happened.
+- **NVIDIA installer no longer locked to the recommended branch** (#248) — `filter_option_c_branch` used to require an EXACT major match against the kernel-recommended branch, so kernel 7.0.14 users only saw 580.x drivers even when specific 580.x builds failed to compile on the newer PVE 9.1 toolchain. Filter now accepts branch ≥ recommended, so newer stable branches (590 / 595 / 600) are selectable in-menu when they compile. `MIN_DRIVER_VERSION` still gates the floor.
+- **PBS keyfile auto-detection in the Monitor** — the *Upload PBS keyfile* modal (per-destination row) and the encrypted-backup keyfile-required panel (View contents / Download / Restore) now query `/etc/pve/priv/storage/<NAME>.enc` for the selected PBS repository and, when a match is found, offer a one-click *Use this key* import — the same convenience the shell TUI already provided.
+- **Upload PBS keyfile — clearer placeholder** — the *Absolute path on this host* input placeholder was showing the ProxMenux canonical destination path (`/usr/local/share/proxmenux/pbs-key.conf`), which reads as "reuse the file already there". Replaced with a source-path example (`e.g. /etc/pve/priv/storage/<NAME>.enc or /root/my-pbs-key`).
+- **Assorted minor** — PVE webhook URL follows the active SSL state; disk observations recorded before the SMART gate; Login screen no longer swallows a 401 forever after a brief stale-token state; toggles visible on light theme.
+
+---
+
+## 🤖 AI providers refresh
+
+`AppImage/config/verified_ai_models.json` refreshed with functional verification against all five supported providers (`_updated: 2026-07-14`):
+
+| Provider    | Removed (deprecated / 404)                                                                     | Added / kept                                                                                                       | Recommended                       |
+|-------------|-----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|-----------------------------------|
+| groq        | `llama-3.1-70b-versatile`, `llama3-70b/8b-8192`, `mixtral-8x7b`, `gemma2-9b-it`                | `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `llama-4-scout`, `openai/gpt-oss-20b`, `openai/gpt-oss-120b`    | `llama-3.3-70b-versatile`         |
+| gemini      | `gemini-2.0-flash*`, `gemini-1.5-flash`, `gemini-1.0-pro`                                     | `gemini-flash-lite-latest`, `gemini-2.5-flash-lite/flash`, `gemini-3-flash-preview`, `gemini-3.1/3.5-flash-lite/flash` | `gemini-2.5-flash-lite`           |
+| openai      | `gpt-5.4-nano`, `gpt-5.4-mini` (HTTP 400)                                                     | `gpt-4.1-nano/mini`, `gpt-4o-mini`, `gpt-4.1`, `gpt-4o`, `gpt-5-chat-latest`, `gpt-5-nano`                          | `gpt-4.1-nano`                    |
+| anthropic   | `claude-3-5-haiku-latest`, `claude-3-5-sonnet-latest`, `claude-3-opus-latest` (404 upstream)  | `claude-haiku-4-5`, `claude-sonnet-5`, `claude-opus-4-8`, `claude-sonnet-4-6`, `claude-opus-4-6`, `claude-fable-5` | `claude-haiku-4-5`                |
+| openrouter  | `claude-3.5-*`, `gemini-flash-1.5`, `mistral-7b`, `mixtral-8x7b`                              | `llama-4-scout`, `claude-haiku-4.5`, `claude-sonnet-4.6`, `gemini-2.5-flash/lite`, `mistral-small-3.2-24b`         | `meta-llama/llama-3.3-70b-instruct` |
+
+Auto-migration is built-in: `PollingCollector._check_ai_model_availability()` runs every 24 h and moves users whose configured model was removed to the recommended replacement, with an `ai_model_migrated` notification explaining what happened.
+
+---
+
+## ⬆ Upgrading from v1.2.2
+
+- ProxMenux notifies stable users automatically on the next `menu` launch.
+- Monitor service restarts in-place — **no host reboot is needed** for the upgrade itself.
+- Users on the v1.2.2.x beta channel: the same `menu` flow detects the switch to stable and offers to move the install off the beta installer.
+- Health Monitor settings, dismissed alerts and per-category suppression durations are preserved verbatim.
+- AI configurations pointing at now-deprecated models (`claude-3-5-*-latest`, some `gemini-2.0-*`, retired Groq / OpenRouter IDs) are auto-migrated to the recommended replacement within 24 h of the first Monitor poll after the upgrade, with an explanatory notification sent through every enabled channel.
+
+---
+
+## 🙏 Acknowledgments
+
+Special thanks to the community members who shaped this release with concrete designs, field reports and testing:
+
+- **[@JF_Car](https://github.com/JF_Car)** — proposed the tree layout for the new Network Flow diagram so it reads correctly on mobile devices.
+- **[@ghosthvj](https://github.com/ghosthvj)** — contributed the design for the new **Physical Disks** and **Physical Interfaces** cards.
+- **[@riglesias](https://github.com/riglesias)**, **[@princo56](https://github.com/princo56)** and **[@jonatanc](https://github.com/jonatanc)** — tested the beta cycle end-to-end and provided the suggestions that closed most of the operator-visible gaps.
+
+And to every user who opened an issue, commented in [GitHub Discussions](https://github.com/MacRimi/ProxMenux/discussions), reported a bug on the community channel, or told us what worked and what didn't on their hardware — most internal fixes in this release started as one of those reports. Keep them coming.
+
+---
+
 ## 2026-06-02
 
 ### New version ProxMenux v1.2.2 — *Stable consolidation of the v1.2.1.x cycle*
