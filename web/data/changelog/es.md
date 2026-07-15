@@ -1,4 +1,107 @@
 
+## 2026-07-14
+
+### Nueva versión ProxMenux v1.2.3
+
+
+![ProxMenux Backups](https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/ProxMenux_backup.png)
+
+Consolidación estable del **ciclo beta v1.2.2.x** (v1.2.2.1 → v1.2.2.2 → v1.2.2.3). La novedad principal es una nueva sección **Backups** con un flujo para crear / programar / restaurar contra Local, PBS y Borg, una tarjeta de progreso en tiempo real de post-restore, un diálogo de cifrado PBS, y una restauración *direction-aware* que gestiona los saltos entre kernels. Alrededor de eso: una nueva vista de topología Network Flow, tarjetas rediseñadas en Overview / VM & LXC / Storage / Network, notificaciones con informcacion más ricas  sin necesidad de IA, un panel Health Monitor Thresholds actualizado, y una re-verificación completa del catálogo de modelos IA en los cinco providers soportados.
+
+---
+
+## 🗄️ Backups integrados en el Monitor
+
+- **Crear / programar / restaurar** copias del host contra destinos **Local**, **Proxmox Backup Server** y **Borg** desde el dashboard.
+- **Dos modos de programación**: timer systemd propio, o *attached* a un job vzdump PVE existente (recomendado) con retención heredada de la tarea de copia en cada ejecución.
+- **Cifrado PBS con blob de recuperación**: los backups cifrados almacenan una copia de la keyfile envuelta con passphrase como grupo `-keyrecovery` junto a cada backup, para que una instalación instalacion nueva de proxmox siempre pueda recuperar la clave con la passphrase del usuario.
+- **Restauración direction-aware**: reaplica ajustes IOMMU / VFIO / GRUB en saltos entre kernels, protege paquetes críticos del cascade-remove, re-mapea NICs automáticamente tras un cambio de placa base.
+- **Tarjeta de progreso post-restore en vivo**: tras el reboot, la pestaña Backups muestra una tarjeta en tiempo real con hitos paso a paso, estado por componente (NVIDIA, Intel GPU tools, Coral, AMD tools) y un log tail con filtro "Issues only". Las restauraciones pasadas quedan archivadas y navegables.
+- **Gestión de la keyfile PBS inline en el Monitor**: cada fila de destino PBS expone Descargar / Subir / Eliminar para la keyfile, más un toggle Sí/No + passphrase + botón Apply contextual para el escrow. Cuando la keyfile instalada no coincide con el manifest del backup, View contents / Download / Restore ahora muestran un panel ámbar estructurado con el fingerprint requerido, para saber qué keyfile importar.
+
+---
+
+## 🌐 Diagrama Network Flow
+
+- Nueva vista de topología en vivo en la pestaña **Network**: NICs → host → bridges → LXCs / VMs.
+- Pulsos rx / tx animados en cada enlace interno — respuesta inmediata a *"¿qué guest está tirando o empujando ahora mismo?"* sin cruzar varios paneles.
+- Layout en árbol diseñado para leerse limpio en dispositivos móviles.
+
+---
+
+## 🎨 Tarjetas rediseñadas en Overview / VM & LXC / Storage / Network
+
+- Layouts rediseñados para lectura más rápida y con información más densa y práctica.
+- Números clave a la vista de un vistazo, agrupados por relevancia.
+- Grid responsive que se comporta limpio desde móvil hasta ultrawide.
+- Las tarjetas de **Physical Disks** y **Physical Interfaces** en Storage y Network son el cambio visual más grande — presentación por-item más clara.
+
+---
+
+## 🔔 Notificaciones más ricas out of the box
+
+Para quienes **no** usan un agente de enriquecimiento con IA, el cuerpo de las plantilas ahora añade contenido más útil:
+
+- Los títulos nombran el objeto afectado (`Storage 'PBS' unavailable` en vez de `1 Proxmox storage(s) unavailable`, `Network connectivity lost — vmbr0`, `3 health checks degraded — Storage (myPBS), Network (vmbr0), CPU`).
+- Las listas largas muestran los top offenders con una coleta `…and N more` para no perder nada en silencio.
+- Las notificaciones de recovery preservan la misma identidad usada en la alerta.
+- Los usuarios con enrichment IA siguen recibiendo su reescritura personalizada encima de esta base mejorada.
+
+---
+
+## 🩺 Panel Health Monitor Thresholds rediseñado
+
+- El panel **Settings → Health Monitor Thresholds** que controla los niveles Warning y Critical por categoría (CPU, memoria, temperatura, storage, disks, …) se ha rediseñado con agrupación visual más clara e hints inline.
+- Ajustar un threshold ahora es un par de clicks en vez de scrollear por un muro de números.
+
+---
+
+## 🛠 Fixes destacados
+
+- **SMART en enclosures USB-NVMe / USB-SATA que reportan `removable=0`** — los enclosures que reportan `removable=0` (ASMedia, JMicron, Realtek, ASM105x) ahora hacen walk de sysfs para detectar attachment USB, así se prueba el pass-through `-d snt*` y aparecen el modelo real del drive, serial, temperatura, power-on hours y health. El sampler del histórico de temperatura hereda el mismo fix.
+- **Prompt de cifrado PBS reworked** a una única pregunta explícita *Encrypt this backup?* Sí/No — nada se sube a PBS a menos que la respuesta sea Sí. Solo cuando no hay keyfile instalada aparece un segundo diálogo que pregunta si generar una nueva o importar una existente. Cancelar nunca deja una keyfile fantasma detrás.
+- **Los backups attached programados ahora heredan retención en cada ejecución** — los jobs attached a un padre vzdump PVE releen la config `prune-backups` del padre en cada run y reescriben `KEEP_*` según corresponda. Antes quedaba congelado al valor del momento de creación del job.
+- **El installer ya no auto-relanza `menu` tras un update** — el `exec MENU_SCRIPT` al final del update path disparaba errores visibles *"line: syntax"* cuando bash intentaba leer el `/usr/local/bin/menu` recién reescrito por debajo. El flujo ahora sale limpio; el usuario teclea `menu` cuando esté listo. `change_release_channel` en Settings no se ve afectado.
+- **PBS restore listing roto en Proxmox 9 / jq 1.7** — `hb_pbs_list_snapshots` cambió de la forma prefix `and not (...)` (jq 1.7 la rechaza) a la postfix `and ((...) | not)` (ambos jq 1.6 y 1.7 la aceptan). También se quitó un `2>/dev/null` que enmascaraba el error de parseo.
+- **`run_scheduled_backup.sh` ya no crashea cuando `LANGUAGE` está unset** — las invocaciones cron / systemd ahora cargan el idioma + inicializan el cache de traducción antes de hacer source a las funciones que lo requieren.
+- **Los prompts de restore de archive local ya no se congelan en silencio** — `hb_prompt_restore_source_dir` y `hb_prompt_local_archive` usan el TTY handoff fd-9 ya aplicado en otros sitios.
+- **El modal de terminal auto-focusea xterm** para que `dialog --yesno` dentro de scripts CLI reciba las flechas en lugar del botón Close.
+- **NVIDIA VFIO passthrough escribe `vfio_passthrough` de vuelta en `components_status.json`** — `switch_gpu_mode.sh`, `switch_gpu_mode_direct.sh` y `add_gpu_vm.sh` actualizan el status del componente al cambiar el estado del driver. El auto-reinstall post-restore ya no pisa NVIDIA en hosts dejados intencionadamente en modo VFIO.
+- **Las notificaciones de update de Secure Gateway ya no arrastran un `— v` colgando** — cuando solo hay paquetes sidecar que actualizar (Tailscale mismo sin cambio), el título dice `secure-gateway update available — v<current> (packages only)` y el body muestra una única línea "Tailscale: v… (unchanged — only sidecar packages need updating)" en vez de la confusa flecha `v → v`.
+- **Auto-migración de modelos IA deprecados** — usuarios con `claude-3-5-haiku-latest`, `claude-3-5-sonnet-latest` o `claude-3-opus-latest` (todos 404 upstream ahora) se migran en silencio a la recomendación actual (`claude-haiku-4-5`, etc.) dentro de las 24 h del upgrade, con una notificación `ai_model_migrated` explicando qué pasó.
+- **NVIDIA installer ya no bloqueado a la branch recomendada** (#248) — `filter_option_c_branch` requería un match EXACTO de major branch contra la recomendada por kernel, así que los usuarios de kernel 7.0.14 solo veían drivers 580.x aunque builds concretos de 580.x fallaran al compilar contra el toolchain nuevo de PVE 9.1. El filtro ahora acepta branch ≥ recomendada, así que branches estables más nuevas (590 / 595 / 600) son seleccionables in-menu cuando compilan. `MIN_DRIVER_VERSION` sigue vigilando el suelo.
+- **Minor variado** — la URL del webhook PVE sigue el estado SSL activo; las disk observations se registran antes del gate SMART; la pantalla de Login ya no se traga un 401 para siempre tras un stale-token breve; los toggles visibles en tema claro.
+
+---
+
+## 🤖 Refresh de providers IA
+
+`AppImage/config/verified_ai_models.json` refrescado con verificación funcional contra los cinco providers soportados (`_updated: 2026-07-14`):
+
+| Provider    | Eliminados (deprecados / 404)                                                                 | Añadidos / mantenidos                                                                                              | Recomendado                       |
+|-------------|-----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|-----------------------------------|
+| groq        | `llama-3.1-70b-versatile`, `llama3-70b/8b-8192`, `mixtral-8x7b`, `gemma2-9b-it`                | `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `llama-4-scout`, `openai/gpt-oss-20b`, `openai/gpt-oss-120b`    | `llama-3.3-70b-versatile`         |
+| gemini      | `gemini-2.0-flash*`, `gemini-1.5-flash`, `gemini-1.0-pro`                                     | `gemini-flash-lite-latest`, `gemini-2.5-flash-lite/flash`, `gemini-3-flash-preview`, `gemini-3.1/3.5-flash-lite/flash` | `gemini-2.5-flash-lite`           |
+| openai      | `gpt-5.4-nano`, `gpt-5.4-mini` (HTTP 400)                                                     | `gpt-4.1-nano/mini`, `gpt-4o-mini`, `gpt-4.1`, `gpt-4o`, `gpt-5-chat-latest`, `gpt-5-nano`                          | `gpt-4.1-nano`                    |
+| anthropic   | `claude-3-5-haiku-latest`, `claude-3-5-sonnet-latest`, `claude-3-opus-latest` (404 upstream)  | `claude-haiku-4-5`, `claude-sonnet-5`, `claude-opus-4-8`, `claude-sonnet-4-6`, `claude-opus-4-6`, `claude-fable-5` | `claude-haiku-4-5`                |
+| openrouter  | `claude-3.5-*`, `gemini-flash-1.5`, `mistral-7b`, `mixtral-8x7b`                              | `llama-4-scout`, `claude-haiku-4.5`, `claude-sonnet-4.6`, `gemini-2.5-flash/lite`, `mistral-small-3.2-24b`         | `meta-llama/llama-3.3-70b-instruct` |
+
+Auto-migración incluida: `PollingCollector._check_ai_model_availability()` se ejecuta cada 24 h y mueve a los usuarios cuyo modelo configurado haya sido retirado a la recomendación reemplazo, con una notificación `ai_model_migrated` explicando qué pasó.
+
+---
+
+## 🙏 Acknowledgments
+
+Agradecimiento especial a los miembros de la comunidad que dieron forma a esta release con diseños concretos, reports de campo y pruebas:
+
+- **[@JF_Car](https://github.com/JF_Car)** — propuso el layout en árbol del nuevo diagrama Network Flow para que se lea correctamente en dispositivos móviles.
+- **[@ghosthvj](https://github.com/ghosthvj)** — contribuyó el diseño de las nuevas tarjetas de **Physical Disks** y **Physical Interfaces**.
+- **[@riglesias](https://github.com/riglesias)**, **[@princo56](https://github.com/princo56)** y **[@jonatanc](https://github.com/jonatanc)** — probaron el ciclo beta end-to-end y aportaron las sugerencias que cerraron la mayoría de los gaps visibles para el usuario.
+
+Y a cada usuario que abrió una issue, comentó en [GitHub Discussions](https://github.com/MacRimi/ProxMenux/discussions), reportó un bug por el canal comunitario, o simplemente pasó a decir qué funcionaba y qué no en su hardware — la mayor parte de los fixes internos de esta release empezaron como uno de esos reports. Que sigan viniendo.
+
+---
+
 ## 2026-06-02
 
 ### Nueva versión ProxMenux v1.2.2 — *Consolidación estable del ciclo v1.2.1.x*

@@ -6,17 +6,17 @@
 
 ![ProxMenux Backups](https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/ProxMenux_backup.png)
 
-Stable consolidation of the **v1.2.2.x beta cycle** (v1.2.2.1 → v1.2.2.2 → v1.2.2.3). The headline is a new **Backups** section inside the Monitor with a first-class create / schedule / restore flow against Local, PBS and Borg, a live post-restore progress card, a reworked PBS encryption dialog, and a direction-aware restore that handles cross-kernel jumps safely. Around it: a new Network Flow topology view, redesigned cards across Overview / VM & LXC / Storage / Network, richer plain-templated notifications that identify the affected object without needing AI, a refreshed Health Monitor Thresholds panel, and a full re-verification of the AI-model catalogue for the five supported providers.
+Stable consolidation of the **v1.2.2.x beta cycle** (v1.2.2.1 → v1.2.2.2 → v1.2.2.3). The headline is a new **Backups** section with a create / schedule / restore flow against Local, PBS and Borg, a live post-restore progress card, a PBS encryption dialog, and a direction-aware restore that handles cross-kernel jumps. Around it: a new Network Flow topology view, redesigned cards across Overview / VM & LXC / Storage / Network, notifications with richer information without needing AI, a refreshed Health Monitor Thresholds panel, and a full re-verification of the AI-model catalogue for the five supported providers.
 
 ---
 
 ## 🗄️ Backups integrated in the Monitor
 
 - **Create / schedule / restore** host backups against **Local**, **Proxmox Backup Server** and **Borg** destinations from the dashboard.
-- **Two scheduling modes**: dedicated systemd timer, or *attached* to an existing PVE vzdump job with retention live-inherited from the parent on every run.
-- **PBS encryption with paired recovery blob**: encrypted backups store a passphrase-wrapped copy of the keyfile as a `-keyrecovery` group next to each snapshot, so a fresh install can always get the key back with the operator's passphrase.
+- **Two scheduling modes**: dedicated systemd timer, or *attached* (recommended) to an existing PVE vzdump job with retention inherited from the backup task on each run.
+- **PBS encryption with recovery blob**: encrypted backups store a passphrase-wrapped copy of the keyfile as a `-keyrecovery` group next to each backup, so a new Proxmox install can always get the key back with the user's passphrase.
 - **Direction-aware restore**: reapplies IOMMU / VFIO / GRUB tunings on cross-kernel jumps, protects critical packages from cascade-remove, auto-remaps NICs after a motherboard swap.
-- **Live post-restore progress card**: after the reboot, the Backups tab shows a real-time card with step-by-step milestones, per-component status (NVIDIA, Intel GPU tools, Coral, AMD tools), boot sanity warnings, a rollback delta widget listing anything on the host that was not in the backup, and a log tail with an Issues-only filter. Past restores are archived and browsable.
+- **Live post-restore progress card**: after the reboot, the Backups tab shows a real-time card with step-by-step milestones, per-component status (NVIDIA, Intel GPU tools, Coral, AMD tools) and a log tail with an Issues-only filter. Past restores are archived and browsable.
 - **PBS keyfile management inline in the Monitor**: each PBS destination row exposes Download / Upload / Delete for the keyfile plus a Yes/No + passphrase + contextual Apply toggle for the escrow. When the installed keyfile does not match the backup's manifest, View contents / Download / Restore now show a structured amber panel with the required fingerprint so the operator knows which keyfile to import.
 
 ---
@@ -40,9 +40,9 @@ Stable consolidation of the **v1.2.2.x beta cycle** (v1.2.2.1 → v1.2.2.2 → v
 
 ## 🔔 Richer notifications out of the box
 
-For users who do **not** use an AI enhancement agent, the plain-templated body now carries more useful content:
+For users who do **not** use an AI enhancement agent, the templated body now adds more useful content:
 
-- Titles and reasons name the affected object (`Storage 'Tuxis' unavailable` instead of `1 Proxmox storage(s) unavailable`, `Network connectivity lost — vmbr0`, `3 health checks degraded — Storage (Tuxis), Network (vmbr0), CPU`).
+- Titles name the affected object (`Storage 'PBS' unavailable` instead of `1 Proxmox storage(s) unavailable`, `Network connectivity lost — vmbr0`, `3 health checks degraded — Storage (myPBS), Network (vmbr0), CPU`).
 - Long lists surface the top offenders with an `…and N more` tail so nothing is silently dropped.
 - Recovery notifications preserve the same identity used in the alert.
 - Users with AI enrichment keep getting their tailored rewrite on top of this improved base.
