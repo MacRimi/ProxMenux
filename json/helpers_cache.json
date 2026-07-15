@@ -16,7 +16,8 @@
     ],
     "notes": [
       "Database credentials: `cat ~/2FAuth.creds`",
-      "The very first account created is automatically set up as an administrator account."
+      "The very first account created is automatically set up as an administrator account.",
+      "Users should register with http://<LXC_IP>/register"
     ],
     "warnings": [],
     "port": 80,
@@ -12087,8 +12088,8 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nexterm.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
+    "has_arm": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -21685,7 +21686,7 @@
       "Database encryption key and session secret are auto-generated and stored in /opt/yuvomi/.env. Do not lose the DB_ENCRYPTION_KEY — without it the database is unrecoverable."
     ],
     "port": 3000,
-    "website": "https://github.com/ulsklyc/yuvomi",
+    "website": "https://yuvomi.cloud/",
     "documentation": "https://github.com/ulsklyc/yuvomi",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/yuvomi.webp",
     "updateable": true,
