@@ -350,7 +350,7 @@ python3 -c "from pycoral.utils.edgetpu import list_edge_tpus; print(list_edge_tp
       </Callout>
 
       <Callout variant="troubleshoot" title={t("troubleshoot.alpineTitle")}>
-        {t.rich("troubleshoot.alpineBody", { code })}
+        {t.rich("troubleshoot.alpineBody", { code, em })}
       </Callout>
 
       <Callout variant="troubleshoot" title={t("troubleshoot.frigateTitle")}>
