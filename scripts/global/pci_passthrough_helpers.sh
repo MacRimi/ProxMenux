@@ -380,6 +380,9 @@ function _pci_sriov_role() {
 
 PROXMENUX_VFIO_BIND_STATE="/etc/proxmenux/vfio-bind.bdfs"
 PROXMENUX_VFIO_BIND_UDEV_RULE="/etc/udev/rules.d/10-proxmenux-vfio-bind.rules"
+# Auto-managed blacklist applied only when *every* NVIDIA GPU on the host
+# is in passthrough. Removed when any NVIDIA GPU goes back to the host.
+PROXMENUX_NVIDIA_VFIO_BLACKLIST="/etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf"
 # Legacy artifact paths from a previous attempt — kept here so we can
 # remove them when migrating a host that ran the older init-top hook.
 PROXMENUX_VFIO_BIND_LEGACY_HOOK="/etc/initramfs-tools/scripts/init-top/proxmenux-vfio-bind"
@@ -447,6 +450,7 @@ _proxmenux_vfio_bind_add_bdfs() {
     done
     if $changed; then
         _proxmenux_vfio_bind_write_udev_rule
+        _proxmenux_nvidia_vfio_blacklist_sync || true
         [[ -n "${HOST_CONFIG_CHANGED+x}" ]] && HOST_CONFIG_CHANGED=true
     fi
 }
@@ -471,12 +475,124 @@ _proxmenux_vfio_bind_remove_bdfs() {
     if ! cmp -s "$tmp" "$PROXMENUX_VFIO_BIND_STATE"; then
         mv "$tmp" "$PROXMENUX_VFIO_BIND_STATE"
         _proxmenux_vfio_bind_write_udev_rule
+        _proxmenux_nvidia_vfio_blacklist_sync || true
         [[ -n "${HOST_CONFIG_CHANGED+x}" ]] && HOST_CONFIG_CHANGED=true
         # If empty, remove state file too (keeps host clean)
         [[ ! -s "$PROXMENUX_VFIO_BIND_STATE" ]] && rm -f "$PROXMENUX_VFIO_BIND_STATE"
     else
         rm -f "$tmp"
     fi
+}
+
+# Returns 0 if every NVIDIA GPU on this host is registered for VFIO
+# passthrough, 1 otherwise. Used to decide whether a global nvidia
+# module blacklist is safe (mono-GPU host or all-passthrough case)
+# or whether the host still needs the nvidia driver loaded for at
+# least one GPU (multi-GPU mixed case).
+_proxmenux_all_nvidia_in_vfio() {
+    local -a host_nvidia=() vfio_nvidia=()
+    local d cls vendor
+    for d in /sys/bus/pci/devices/*; do
+        vendor=$(cat "$d/vendor" 2>/dev/null)
+        [[ "$vendor" != "0x10de" ]] && continue
+        cls=$(cat "$d/class" 2>/dev/null)
+        case "$cls" in
+            0x0300*|0x0302*) host_nvidia+=("$(basename "$d")") ;;
+        esac
+    done
+    (( ${#host_nvidia[@]} == 0 )) && return 1
+
+    if [[ -f "$PROXMENUX_VFIO_BIND_STATE" ]]; then
+        local bdf full
+        while IFS= read -r bdf; do
+            [[ -z "$bdf" ]] && continue
+            case "$bdf" in \#*) continue ;; esac
+            full="$bdf"
+            [[ "$full" != 0000:* ]] && full="0000:${full}"
+            vendor=$(cat "/sys/bus/pci/devices/${full}/vendor" 2>/dev/null)
+            [[ "$vendor" != "0x10de" ]] && continue
+            cls=$(cat "/sys/bus/pci/devices/${full}/class" 2>/dev/null)
+            case "$cls" in
+                0x0300*|0x0302*) vfio_nvidia+=("$full") ;;
+            esac
+        done < "$PROXMENUX_VFIO_BIND_STATE"
+    fi
+
+    (( ${#vfio_nvidia[@]} >= ${#host_nvidia[@]} ))
+}
+
+# Apply or remove the auto-managed nvidia blacklist + the nvidia-smi
+# udev rule based on whether every host NVIDIA GPU is in VFIO
+# passthrough. Returns 0 if anything changed (caller may want to
+# rebuild initramfs).
+_proxmenux_nvidia_vfio_blacklist_sync() {
+    local nvidia_udev_rule="/etc/udev/rules.d/70-nvidia.rules"
+    local changed=1
+
+    if _proxmenux_all_nvidia_in_vfio; then
+        if [[ ! -f "$PROXMENUX_NVIDIA_VFIO_BLACKLIST" ]]; then
+            cat > "$PROXMENUX_NVIDIA_VFIO_BLACKLIST" <<'EOF'
+# ProxMenux: every NVIDIA GPU on this host is in VFIO passthrough.
+# Block the nvidia module so it doesn't loop trying to claim devices
+# already owned by vfio-pci. Removed automatically when any GPU
+# returns to the host.
+blacklist nvidia
+blacklist nvidia_drm
+blacklist nvidia_modeset
+blacklist nvidia_uvm
+EOF
+            changed=0
+        fi
+        # nvidia-smi-on-PCI-event udev rule loops infinitely when nvidia
+        # is blacklisted (the RUN+= call fails and re-triggers). Rename
+        # it out of the way; the original is preserved with a .proxmenux-
+        # disabled suffix so it can be restored cleanly.
+        if [[ -f "$nvidia_udev_rule" ]]; then
+            mv "$nvidia_udev_rule" "${nvidia_udev_rule}.proxmenux-disabled" 2>/dev/null
+            udevadm control --reload-rules >/dev/null 2>&1 || true
+            changed=0
+        fi
+    else
+        if [[ -f "$PROXMENUX_NVIDIA_VFIO_BLACKLIST" ]]; then
+            rm -f "$PROXMENUX_NVIDIA_VFIO_BLACKLIST"
+            changed=0
+        fi
+        # Some NVIDIA GPU is back on the host — restore the udev rule.
+        if [[ -f "${nvidia_udev_rule}.proxmenux-disabled" ]]; then
+            mv "${nvidia_udev_rule}.proxmenux-disabled" "$nvidia_udev_rule" 2>/dev/null
+            udevadm control --reload-rules >/dev/null 2>&1 || true
+            changed=0
+        fi
+    fi
+    return $changed
+}
+
+# Returns the BDF of a PCI bridge sharing the IOMMU group of $1, if any.
+# The kernel refuses to bind vfio-pci to root ports, so when a GPU shares
+# its IOMMU group with the upstream root port the VFIO setup silently
+# does nothing — the GPU keeps its native driver and the host can also
+# end up with a stuck boot if other devices behind the bridge were
+# expected to come up under the original driver. Detecting this lets
+# callers warn the operator and bail out before writing host config.
+_proxmenux_vfio_bind_group_bridge() {
+    local target="$1"
+    [[ "$target" != 0000:* ]] && target="0000:${target}"
+    local group_link
+    group_link=$(readlink "/sys/bus/pci/devices/${target}/iommu_group" 2>/dev/null) || return 1
+    local group_num
+    group_num=$(basename "$group_link")
+    local member bdf cls
+    for member in "/sys/kernel/iommu_groups/${group_num}/devices/"*; do
+        bdf=$(basename "$member")
+        [[ "$bdf" == "$target" ]] && continue
+        cls=$(cat "$member/class" 2>/dev/null)
+        # PCI bridge class is 0x0604xx (Normal bridge 0x060400, Subtractive 0x060401).
+        if [[ "$cls" == 0x0604* ]]; then
+            echo "$bdf"
+            return 0
+        fi
+    done
+    return 1
 }
 
 _proxmenux_vfio_bind_purge_vendor() {

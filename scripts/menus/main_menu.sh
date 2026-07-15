@@ -14,7 +14,6 @@
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
-VENV_PATH="/opt/googletrans-env"
 
 
 if ! command -v dialog &>/dev/null; then
@@ -23,47 +22,11 @@ if ! command -v dialog &>/dev/null; then
 fi
 
 
-check_pve9_translation_compatibility() {
-    local pve_version
-    
-    if command -v pveversion &>/dev/null; then
-        pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
-    else
-        return 0
-    fi
-    
-    if [[ -n "$pve_version" ]] && [[ "$pve_version" -ge 9 ]] && [[ -d "$VENV_PATH" ]]; then
-        
-        local has_googletrans=false
-        local has_cache=false
-        
-        if [[ -f "$VENV_PATH/bin/pip" ]]; then
-            if "$VENV_PATH/bin/pip" list 2>/dev/null | grep -q "googletrans"; then
-                has_googletrans=true
-            fi
-        fi
-        
-        if [[ -f "$BASE_DIR/cache.json" ]]; then
-            has_cache=true
-        fi
-        
-        if [[ "$has_googletrans" = true ]] || [[ "$has_cache" = true ]]; then
-            
-            dialog --clear \
-                --backtitle "ProxMenux - Compatibility Required" \
-                --title "Translation Environment Incompatible with PVE $pve_version" \
-                --msgbox "NOTICE: You are running Proxmox VE $pve_version with translation components installed.\n\nTranslations are NOT supported in PVE 9+. This causes:\n• Menu loading errors\n• Translation failures\n• System instability\n\nREQUIRED ACTION:\nProxMenux will now automatically reinstall the Normal Version.\n\nThis process will:\n• Remove incompatible translation components\n• Install PVE 9+ compatible version\n• Preserve all your settings and preferences\n\nPress OK to continue with automatic reinstallation..." 20 75
-            
-            bash "$BASE_DIR/install_proxmenux.sh"
-
-        fi
-        exit 0 
-    fi
-}
-
-check_pve9_translation_compatibility
-
 # ==========================================================
+# The legacy "PVE9 + googletrans incompatible" gate that used to live
+# here has been removed along with the googletrans runtime. Translations
+# are now a static lookup against $BASE_DIR/lang/<lang>.json — there is
+# no runtime venv to be incompatible with any PVE version.
 
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
@@ -94,7 +57,7 @@ show_menu() {
         dialog --clear \
             --backtitle "ProxMenux" \
             --title "$(translate "$menu_title")" \
-            --menu "\n$(translate "Select an option:")" 20 70 11 \
+            --menu "\n$(translate "Select an option:")" 21 70 12 \
             1 "$(translate "Settings post-install Proxmox")" \
             2 "$(translate "Hardware: GPUs and Coral-TPU")" \
             3 "$(translate "Create VM from template or script")" \
@@ -104,6 +67,7 @@ show_menu() {
             7 "$(translate "Network Management")" \
             8 "$(translate "Security")" \
             9 "$(translate "Utilities and Tools")" \
+            b "$(translate "Host Backup & Restore")" \
             h "$(translate "Help and Info Commands")" \
             s "$(translate "Settings")" \
             0 "$(translate "Exit")" 2>"$TEMP_FILE"
@@ -129,6 +93,7 @@ show_menu() {
             7) exec bash "$LOCAL_SCRIPTS/menus/network_menu.sh" ;;
             8) exec bash "$LOCAL_SCRIPTS/menus/security_menu.sh" ;;
             9) exec bash "$LOCAL_SCRIPTS/menus/utilities_menu.sh" ;;
+            b) bash "$LOCAL_SCRIPTS/backup_restore/backup_host.sh" ;;
             h) bash "$LOCAL_SCRIPTS/help_info_menu.sh" ;;
             s) exec bash "$LOCAL_SCRIPTS/menus/config_menu.sh" ;;
             0) clear; msg_ok "$(translate "Thank you for using ProxMenux. Goodbye!")"; rm -f "$TEMP_FILE"; exit 0 ;;

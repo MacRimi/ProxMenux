@@ -108,7 +108,7 @@ export function StorageMetrics() {
   return (
     <div className="space-y-6">
       {/* Storage Overview Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 xl:gap-6">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Storage</CardTitle>

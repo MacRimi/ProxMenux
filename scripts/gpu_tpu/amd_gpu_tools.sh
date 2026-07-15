@@ -257,7 +257,39 @@ main() {
   fi
 }
 
+# ==========================================================
+# Non-interactive auto-reinstall (post-restore hook)
+# ==========================================================
+# Called from apply_cluster_postboot.sh when components_status
+# says amdgpu_top was installed on the source but its binary is
+# missing on the target (typical for a fresh PVE install + host
+# restore — the .deb downloaded from GitHub is not in
+# packages.manual.list, so we re-fetch and install it). No
+# dialogs.
+auto_reinstall_from_state() {
+  : >"$LOG_FILE"
+  echo "=== amd_gpu_tools auto_reinstall $(date -Iseconds) ===" >>"$LOG_FILE"
+  command -v jq >/dev/null 2>&1 || return 1
+  [[ -f "$COMPONENTS_STATUS_FILE" ]] || return 1
+  local s
+  s=$(jq -r '.amdgpu_top.status // ""' "$COMPONENTS_STATUS_FILE" 2>/dev/null)
+  [[ "$s" == "installed" ]] || { echo "not installed in state ($s)" >>"$LOG_FILE"; return 0; }
+  if command -v amdgpu_top >/dev/null 2>&1 || dpkg -s amdgpu-top >/dev/null 2>&1; then
+    echo "already present — no-op" >>"$LOG_FILE"; return 0
+  fi
+  export DEBIAN_FRONTEND=noninteractive
+  install_dependencies >>"$LOG_FILE" 2>&1
+  if ! get_latest_release >>"$LOG_FILE" 2>&1; then
+    echo "Failed to fetch latest release info" >>"$LOG_FILE"; return 2
+  fi
+  install_amdgpu_top
+}
+
 # Run main function
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  if [[ "${1:-}" == "--auto-reinstall" ]]; then
+    auto_reinstall_from_state
+    exit $?
+  fi
   main
 fi

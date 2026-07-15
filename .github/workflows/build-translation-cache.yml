@@ -1,0 +1,99 @@
+name: Build translation cache
+
+# Regenerates lang/*.json whenever a bash script under scripts/ changes.
+# The runtime translate() in scripts/utils.sh reads these JSON files and
+# falls back to the English source on miss, so keeping them up-to-date is
+# what makes ProxMenux multilingual without any runtime googletrans
+# dependency on the user's host.
+#
+# Triggers:
+#   - push to develop touching scripts/**/*.sh
+#   - manual via workflow_dispatch (force --refresh)
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'scripts/**/*.sh'
+      - 'menu'
+      - 'install_proxmenux.sh'
+      - 'install_proxmenux_beta.sh'
+      - '.github/scripts/build_translation_cache.py'
+      - '.github/workflows/build-translation-cache.yml'
+  workflow_dispatch:
+    inputs:
+      refresh:
+        description: 'Re-translate every entry (ignore cached values)'
+        type: boolean
+        default: false
+
+# Avoid two cache rebuilds from racing each other on the same branch and
+# fighting over the auto-commit.
+concurrency:
+  group: build-translation-cache-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  rebuild-cache:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # auto-commit lang/*.json back to develop
+
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          # Need full history so the auto-commit doesn't fail when the
+          # cache job runs minutes after the trigger push (GH default
+          # fetch-depth=1 sometimes diverges from origin/develop after a
+          # quick follow-up push).
+          fetch-depth: 0
+          # Use a PAT (or default GITHUB_TOKEN if branch protections allow
+          # it) so the push back to develop actually fires later steps
+          # (workflow runs from auto-commits) if you ever need them.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install googletrans
+        run: |
+          python -m pip install --upgrade pip
+          # 4.0.0-rc1 is the same pin that build_translation_cache.py
+          # was written against. Bump in lockstep with the script.
+          pip install 'googletrans==4.0.0-rc1' 'httpx==0.13.3' 'httpcore==0.9.1' 'h11==0.9.0'
+
+      - name: Regenerate lang/*.json
+        run: |
+          REFRESH_FLAG=""
+          if [[ "${{ github.event.inputs.refresh }}" == "true" ]]; then
+            REFRESH_FLAG="--refresh"
+          fi
+          # Extra files outside scripts/ that also contain translate "..."
+          # calls. Keep this list in sync with the `paths` trigger above.
+          python .github/scripts/build_translation_cache.py \
+            --scripts-dir scripts \
+            --extra-file menu \
+            --extra-file install_proxmenux.sh \
+            --extra-file install_proxmenux_beta.sh \
+            --output-dir lang \
+            --provider googletrans \
+            $REFRESH_FLAG
+
+      - name: Commit + push if changed
+        run: |
+          if git diff --quiet -- lang/; then
+            echo "No translation changes — skipping commit."
+            exit 0
+          fi
+          git config user.name  "ProxMenuxBot"
+          git config user.email "bot@proxmenux.local"
+          git add lang/
+          git commit -m "chore(lang): auto-rebuild translation cache
+
+          Source: ${GITHUB_SHA::7}
+          Triggered by: ${{ github.event_name }}"
+          git push origin develop

@@ -40,11 +40,13 @@ import os
 import platform
 import re
 import select
+import shlex
 import shutil
 import socket
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import time
 import threading
 import urllib.parse
@@ -57,7 +59,7 @@ from pathlib import Path
 
 import jwt
 import psutil
-from flask import Flask, jsonify, request, send_file, send_from_directory, Response
+from flask import Flask, jsonify, request, send_file, send_from_directory, Response, after_this_request
 from flask_cors import CORS
 
 # Ensure local imports work even if working directory changes
@@ -77,7 +79,7 @@ from flask_notification_routes import notification_bp  # noqa: E402
 from flask_oci_routes import oci_bp  # noqa: E402
 from notification_manager import notification_manager  # noqa: E402
 import post_install_versions  # noqa: E402  — Sprint 12A: detect post-install function updates
-from jwt_middleware import require_auth  # noqa: E402
+from jwt_middleware import require_auth, require_auth_or_ticket  # noqa: E402
 import auth_manager  # noqa: E402
 
 # -------------------------------------------------------------------
@@ -1253,6 +1255,12 @@ def _health_collector_loop():
                             'category': cat_name,
                             'status': cur_status,
                             'reason': reason,
+                            # `entity` lets the notification title name the
+                            # actual affected object ("Storage Tuxis") instead
+                            # of the bare category ("Storage"). Populated by
+                            # `_check_XXX` in health_monitor when a single
+                            # entity dominates; empty otherwise.
+                            'entity': cat_data.get('entity', ''),
                         })
                 
                 _prev_statuses[cat_key] = cur_status
@@ -1272,13 +1280,32 @@ def _health_collector_loop():
                 
                 if len(degraded) == 1:
                     d = degraded[0]
-                    title = f"{hostname}: Health {d['status']} - {d['category']}"
+                    # Prefer the specific entity in the title so the reader
+                    # sees WHICH object failed without opening the app.
+                    # Falls back to the category label when the check didn't
+                    # provide one (aggregate-only reasons).
+                    if d.get('entity'):
+                        title = f"{hostname}: {d['category']} {d['status']} — {d['entity']}"
+                    else:
+                        title = f"{hostname}: Health {d['status']} - {d['category']}"
                     body = d['reason']
                     severity = d['status']
                 else:
-                    # Multiple categories degraded at once -- group them
+                    # Multiple categories degraded at once -- group them.
+                    # Title lists the categories + first entity per category
+                    # so the reader can distinguish "storage + network"
+                    # from "cpu + memory" at a glance.
                     max_sev = max(degraded, key=lambda x: _SEV_RANK.get(x['status'], 0))['status']
-                    title = f"{hostname}: {len(degraded)} health checks degraded"
+                    cat_labels = []
+                    for d in degraded:
+                        label = d['category']
+                        if d.get('entity'):
+                            label = f"{label} ({d['entity']})"
+                        cat_labels.append(label)
+                    title = f"{hostname}: {len(degraded)} health checks degraded — {', '.join(cat_labels)}"
+                    # Cap title if the join went long
+                    if len(title) > 200:
+                        title = title[:197] + '…'
                     lines = []
                     for d in degraded:
                         lines.append(f"  [{d['status']}] {d['category']}: {d['reason']}")
@@ -2657,6 +2684,29 @@ def is_disk_removable(disk_name):
         return False
 
 
+def is_disk_usb(disk_name):
+    """Return True if the disk is attached via USB, using the sysfs device
+    path. Reliable for USB-attached HDDs and USB-NVMe bridges (which
+    both report `/sys/block/<disk>/removable = 0` even though they ARE
+    USB) — the previous heuristic based on the removable flag missed
+    them entirely, so snt* pass-through was never attempted and the
+    bridge's own identity + missing temperature/hours were cached.
+
+    Uses `os.path.realpath` (no subprocess) so it's cheap enough to be
+    called on every SMART probe.
+    """
+    try:
+        real = os.path.realpath(f'/sys/block/{disk_name}')
+        # sysfs path segment like `usb1`, `usb2`, ... always precedes a
+        # USB-attached block device. Match on the segment prefix rather
+        # than a substring so a directory happening to contain "usb" in
+        # its literal name can't false-positive.
+        return any(seg.startswith('usb') and (len(seg) == 3 or seg[3:].isdigit())
+                   for seg in real.split('/'))
+    except Exception:
+        return False
+
+
 def _is_system_mount(mountpoint):
     """Check if mountpoint is a critical system path (matching bash scripts logic)."""
     system_mounts = ('/', '/boot', '/boot/efi', '/efi', '/usr', '/var', '/etc', 
@@ -2988,12 +3038,25 @@ def get_storage_info():
                         is_system_disk = sys_info.get('is_system', False)
                         system_usage = sys_info.get('usage', [])
                         
+                        # `standby` reflects what the temperature poller
+                        # last observed (smartctl -n standby exit code 2).
+                        # Surfaced here so the UI can paint a "Standby"
+                        # badge and tell the operator that a frozen
+                        # temperature graph isn't a monitor bug — the
+                        # disk is parked. See issue #232.
+                        in_standby = False
+                        try:
+                            import disk_temperature_history as _dth
+                            in_standby = _dth.is_disk_in_standby(disk_name)
+                        except Exception:
+                            pass
                         physical_disks[disk_name] = {
                             'name': disk_name,
                             'size': disk_size_kb,  # In KB for formatMemory() in Storage Summary
                             'size_formatted': size_str,  # Added formatted size string for Storage section
                             'size_bytes': disk_size_bytes,
                             'temperature': smart_data.get('temperature', 0),
+                            'standby': in_standby,
                             'health': smart_data.get('health', 'unknown'),
                             'power_on_hours': smart_data.get('power_on_hours', 0),
                             'smart_status': smart_data.get('smart_status', 'unknown'),
@@ -3567,6 +3630,15 @@ def _smart_default_payload() -> dict:
         'family': None,
         'sata_version': None,
         'form_factor': None,
+        # Internal flag — True if smartctl confirmed the disk type
+        # (HDD with RPM, or SSD via "Solid State Device" / JSON
+        # rotation_rate=0). Stripped before the dict reaches the API.
+        # Drives the kernel /sys/.../rotational fallback: that path is
+        # only safe when smartctl had NO opinion, because USB-SATA
+        # enclosures (ASM105x etc.) advertise rotational=1 to the
+        # kernel even when the drive behind them is an SSD that
+        # smartctl can correctly identify via SAT passthrough.
+        '_rotation_known': False,
     }
 
 
@@ -3646,6 +3718,28 @@ def _get_smart_data_uncached(disk_name):
             ['smartctl', '-a', '-d', 'sat,16', f'/dev/{disk_name}'],  # Text SAT with 16-byte commands
         ]
 
+        # USB-NVMe bridges (ASMedia ASM2362/ASM2464PD, JMicron JMS583/JMS586,
+        # Realtek RTL9210): the plain `-a` variant answers with the *bridge*
+        # identity (e.g. "ASMT 2462 NVME") and no temperature, because the
+        # bridge exposes itself as generic USB storage. Only `-d snt*`
+        # passes through to the actual NVMe controller and returns real
+        # model, serial, temperature and health.
+        #
+        # For USB-attached disks we prepend the three snt* variants so
+        # the cascade tries them FIRST — otherwise the plain variant
+        # "succeeds" (>50 chars of bridge chatter), the probe cache locks
+        # it in, and temperature is never seen. USB detection is by sysfs
+        # path (`is_disk_usb`) rather than the `removable` flag: USB-NVMe
+        # bridges and USB-HDDs both report `removable=0` even though they
+        # ARE USB, so the older `is_disk_removable` check missed them.
+        # For internal SATA/NVMe the cascade is unchanged (zero regression).
+        if is_disk_usb(disk_name) or is_disk_removable(disk_name):
+            all_commands = [
+                ['smartctl', '-a', '-j', '-d', 'sntasmedia', f'/dev/{disk_name}'],
+                ['smartctl', '-a', '-j', '-d', 'sntjmicron', f'/dev/{disk_name}'],
+                ['smartctl', '-a', '-j', '-d', 'sntrealtek', f'/dev/{disk_name}'],
+            ] + all_commands
+
         # Probe-cache: if we already know which command works for this
         # disk, try that first. The fallback chain is still kept after
         # in case the cached probe stops working (kernel upgrade swapped
@@ -3702,6 +3796,7 @@ def _get_smart_data_uncached(disk_name):
                             
                             if 'rotation_rate' in data:
                                 smart_data['rotation_rate'] = data['rotation_rate']
+                                smart_data['_rotation_known'] = True
 
                             
                             # Extract SMART status
@@ -3895,19 +3990,17 @@ def _get_smart_data_uncached(disk_name):
                                 # print(f"[v0] Found serial: {smart_data['serial']}")
                                 pass
                             
-                            elif line.startswith('Rotation Rate:') and smart_data['rotation_rate'] == 0:
+                            elif line.startswith('Rotation Rate:') and not smart_data['_rotation_known']:
                                 rate_str = line.split(':', 1)[1].strip()
                                 if 'rpm' in rate_str.lower():
                                     try:
                                         smart_data['rotation_rate'] = int(rate_str.split()[0])
-                                        # print(f"[v0] Found rotation rate: {smart_data['rotation_rate']} RPM")
-                                        pass
+                                        smart_data['_rotation_known'] = True
                                     except (ValueError, IndexError):
                                         pass
                                 elif 'Solid State Device' in rate_str:
                                     smart_data['rotation_rate'] = 0  # SSD
-                                    # print(f"[v0] Found SSD (no rotation)")
-                                    pass
+                                    smart_data['_rotation_known'] = True
                             
                             # SMART status detection
                             elif 'SMART overall-health self-assessment test result:' in line:
@@ -4118,21 +4211,27 @@ def _get_smart_data_uncached(disk_name):
             elif temp > warn:
                 smart_data['health'] = 'warning'
 
-        # CHANGE: Use -1 to indicate HDD with unknown RPM instead of inventing 7200 RPM
-        # Fallback: Check kernel's rotational flag if smartctl didn't provide rotation_rate
-        # This fixes detection for older disks that don't report RPM via smartctl
-        if smart_data['rotation_rate'] == 0:
+        # Fallback: ask the kernel only when smartctl had no opinion.
+        # USB-SATA enclosures (ASM105x family etc.) advertise
+        # rotational=1 to the kernel even when there's an SSD behind
+        # them, so trusting /sys here without first checking what
+        # smartctl said would flip a correctly-identified SSD back to
+        # HDD. The previous condition (`rotation_rate == 0`) couldn't
+        # tell "smartctl confirmed SSD" from "smartctl never spoke",
+        # which is what bit the OCZ-SOLID2 behind an ASM105x dock on
+        # the lab host (sdd showed as HDD in the UI while smartctl
+        # was reporting it as SSD).
+        if not smart_data['_rotation_known']:
             try:
                 rotational_path = f"/sys/block/{disk_name}/queue/rotational"
                 if os.path.exists(rotational_path):
                     with open(rotational_path, 'r') as f:
                         rotational = int(f.read().strip())
                         if rotational == 1:
-                            # Disk is rotational (HDD), use -1 to indicate "HDD but RPM unknown"
-                            smart_data['rotation_rate'] = -1
-                        # If rotational == 0, it's an SSD, keep rotation_rate as 0
-            except Exception as e:
-                pass  # If we can't read the file, leave rotation_rate as is
+                            smart_data['rotation_rate'] = -1  # HDD, RPM unknown
+            except Exception:
+                pass
+        smart_data.pop('_rotation_known', None)
 
             
     except FileNotFoundError:
@@ -4407,6 +4506,212 @@ def api_storage_observations():
     except Exception as e:
         return jsonify({'observations': [], 'error': str(e)}), 500
 
+# ─── Background sampler ────────────────────────────────────────
+# A daemon thread polls psutil every 2 s and feeds the per-NIC rate
+# cache. This way the very first /api/network HTTP request after a
+# page load already has enough history to return a rate — no more
+# 15-20 s "waiting for data" on the Network Flow card.
+def _net_rate_sampler_loop():
+    # Fast bootstrap: take TWO samples 1 s apart so the very first
+    # /api/network response (which may arrive in under a second of the
+    # service starting) already has a valid delta to derive rates
+    # from. After that, normal 2 s cadence.
+    try:
+        io = psutil.net_io_counters(pernic=True)
+        _compute_per_nic_rates_live(io)
+        time.sleep(1.0)
+        io = psutil.net_io_counters(pernic=True)
+        _compute_per_nic_rates_live(io)
+    except Exception:
+        pass
+    while True:
+        try:
+            io = psutil.net_io_counters(pernic=True)
+            _compute_per_nic_rates_live(io)
+        except Exception:
+            pass
+        time.sleep(2.0)
+
+_NET_RATE_SAMPLER_STARTED = False
+def _ensure_net_rate_sampler():
+    global _NET_RATE_SAMPLER_STARTED
+    if _NET_RATE_SAMPLER_STARTED:
+        return
+    _NET_RATE_SAMPLER_STARTED = True
+    t = _net_threading.Thread(target=_net_rate_sampler_loop, daemon=True)
+    t.start()
+
+
+# Start the sampler immediately at module load — the dashboard can
+# now ask for rates from its very first poll, instead of waiting for
+# its own request to bootstrap the cache.
+try:
+    _ensure_net_rate_sampler()
+except Exception:
+    pass
+
+
+# ─── Per-NIC live rate (moving window) ──────────────────────────
+# Keep the last ~30s of byte counters and derive the rate from the
+# oldest-vs-newest sample. This is robust against bursty traffic
+# (where a single poll may see 0 bytes between packets) — the window
+# spans multiple poll periods so the rate stays above zero as long
+# as traffic flowed at any point inside it.
+import threading as _net_threading
+_NET_RATE_LOCK = _net_threading.Lock()
+_NET_RATE_HISTORY = {}        # iface → list[(t, rx_bytes, tx_bytes)]
+_NET_RATE_WINDOW_TARGET_S = 5.0    # rate is averaged over this many seconds
+                                   # — short window = near-instant feedback
+                                   # so a Network Flow display matches what
+                                   # the guest itself reports in real time.
+_NET_RATE_WINDOW_MAX_S = 60.0      # samples older than this are discarded
+_NET_RATE_MAX_SAMPLES = 60
+_NET_RATE_STICKY = {}              # iface → {rx: last_nonzero_rx, tx, t}
+_NET_RATE_STICKY_TTL_S = 3600.0    # 1 h — effectively keep the last seen
+                                   # non-zero rate visible until the iface
+                                   # disappears (VM stopped) or 1 h passes.
+                                   # The Network Flow card must NEVER show
+                                   # a "live" guest dropping to 0 just
+                                   # because there's a brief silence.
+
+def _compute_per_nic_rates_live(net_io_per_nic):
+    """Return ``{iface: {rx_Bps, tx_Bps}}`` averaged over ~30 s of
+    history. If the calculated rate dips to 0 but we saw nonzero
+    traffic within the last STICKY_TTL seconds, return that recent
+    value instead — bursty NICs (especially the WAN uplink) flicker
+    between bursts and we don't want the diagram blinking to 0.
+    """
+    now = time.time()
+    rates = {}
+    with _NET_RATE_LOCK:
+        for iface, io in net_io_per_nic.items():
+            hist = _NET_RATE_HISTORY.setdefault(iface, [])
+            cutoff = now - _NET_RATE_WINDOW_MAX_S
+            hist = [s for s in hist if s[0] >= cutoff]
+            hist.append((now, io.bytes_recv, io.bytes_sent))
+            if len(hist) > _NET_RATE_MAX_SAMPLES:
+                hist = hist[-_NET_RATE_MAX_SAMPLES:]
+            _NET_RATE_HISTORY[iface] = hist
+            if len(hist) < 2:
+                continue
+            # Find the first sample that is at least WINDOW_TARGET_S
+            # old. If none exist (e.g. service just restarted, history
+            # is still warming up), fall back to the OLDEST available
+            # sample — gives the widest possible window so the rate is
+            # still computable instead of yielding window=0.
+            #
+            # Bug fix: the previous loop set ``oldest = s`` on EVERY
+            # iteration, so when no sample qualified it ended up
+            # pointing to the newest one — window=0 → continue → no
+            # rate ever published until 30 s of history accumulated.
+            # Result: visible "drops to 0" each time the cache thinned.
+            oldest = hist[0]
+            for s in hist:
+                if now - s[0] >= _NET_RATE_WINDOW_TARGET_S:
+                    oldest = s
+                    break
+            window = now - oldest[0]
+            if window <= 0:
+                continue
+            rx_rate = max(0, io.bytes_recv - oldest[1]) / window
+            tx_rate = max(0, io.bytes_sent - oldest[2]) / window
+            # Sticky last-nonzero values to avoid 0-flicker.
+            sticky = _NET_RATE_STICKY.setdefault(iface, {'rx': 0.0, 'tx': 0.0, 't': 0.0})
+            if rx_rate > 0:
+                sticky['rx'] = rx_rate
+                sticky['t'] = now
+            elif now - sticky['t'] < _NET_RATE_STICKY_TTL_S and sticky['rx'] > 0:
+                rx_rate = sticky['rx']
+            if tx_rate > 0:
+                sticky['tx'] = tx_rate
+                sticky['t'] = now
+            elif now - sticky['t'] < _NET_RATE_STICKY_TTL_S and sticky['tx'] > 0:
+                tx_rate = sticky['tx']
+            rates[iface] = {
+                'rx_Bps': round(rx_rate, 2),
+                'tx_Bps': round(tx_rate, 2),
+            }
+    return rates
+
+
+# ─── Resolve the bridge each interface belongs to ─────────────
+# /sys/class/net/<iface>/master is a symlink pointing to the master
+# device (bridge or bond). This is the kernel's authoritative source.
+def _iface_master(iface_name):
+    try:
+        master_path = f'/sys/class/net/{iface_name}/master'
+        if os.path.islink(master_path):
+            return os.path.basename(os.readlink(master_path))
+    except Exception:
+        pass
+    return None
+
+
+# Walks through Proxmox firewall bridges (fwbrXXX) to reach the real
+# vmbr. With firewall on, a VM's veth100i0 lands on fwbr100i0; the
+# real vmbr is reached via the matching fwpr100p0 sitting in vmbr0.
+# Chain: veth/tap → fwbr (intermediate) → fwpr (peer) → vmbr (real).
+def _resolve_bridge_owner(iface_name):
+    import re
+    master = _iface_master(iface_name)
+    if not master:
+        return None
+    if master.startswith('fwbr'):
+        fwpr = re.sub(r'^fwbr', 'fwpr', master)
+        fwpr = re.sub(r'i(\d+)$', r'p\1', fwpr)
+        try:
+            if os.path.exists(f'/sys/class/net/{fwpr}'):
+                real = _iface_master(fwpr)
+                if real:
+                    return real
+        except Exception:
+            pass
+    return master
+
+
+# ─── ethtool: max link speed per NIC ────────────────────────────
+# Parses "Supported link modes:" — the highest baseT value is the
+# hardware ceiling. Cached per-iface because subprocess + parse runs
+# ~150-500 ms per NIC, and Supported link modes essentially never
+# changes for a given NIC at runtime.
+_ETHTOOL_MAX_CACHE = {}
+def _ethtool_max_speed(iface_name):
+    if iface_name in _ETHTOOL_MAX_CACHE:
+        return _ETHTOOL_MAX_CACHE[iface_name]
+    try:
+        import subprocess, re
+        result = subprocess.run(
+            ['ethtool', iface_name],
+            capture_output=True, text=True, timeout=2,
+        )
+        if result.returncode != 0:
+            _ETHTOOL_MAX_CACHE[iface_name] = 0
+            return 0
+        max_speed = 0
+        in_supported = False
+        for line in result.stdout.splitlines():
+            stripped = line.strip()
+            if 'Supported link modes' in stripped:
+                in_supported = True
+                tail = stripped.split(':', 1)[1].strip() if ':' in stripped else ''
+                tokens = tail.split()
+            elif in_supported and line.startswith((' ', '\t')) and ':' not in stripped:
+                tokens = stripped.split()
+            else:
+                in_supported = False
+                tokens = []
+            for tok in tokens:
+                m = re.match(r'(\d+)base', tok)
+                if m:
+                    val = int(m.group(1))
+                    if val > max_speed:
+                        max_speed = val
+        _ETHTOOL_MAX_CACHE[iface_name] = max_speed
+        return max_speed
+    except Exception:
+        return 0
+
+
 def get_interface_type(interface_name):
     """Detect the type of network interface"""
     try:
@@ -4609,6 +4914,15 @@ def get_network_info():
             # print(f"[v0] Error getting per-NIC stats: {e}")
             pass
             net_io_per_nic = {}
+
+        # Per-interface live rate (bytes/sec) computed from delta vs the
+        # previous call to this endpoint. The dashboard polls /api/network
+        # on a fixed cadence, so the delta between two polls is the rate
+        # the user actually wants to see — no extra sleep needed.
+        # Cache lives at module scope; staleness is bounded so a paused
+        # tab + late refresh doesn't return absurd jumps as "rate".
+        _ensure_net_rate_sampler()
+        per_nic_rates = _compute_per_nic_rates_live(net_io_per_nic)
         
         physical_active_count = 0
         physical_total_count = 0
@@ -4695,7 +5009,37 @@ def get_network_info():
                 interface_info['errors_out'] = io_stats.errout
                 interface_info['drops_in'] = io_stats.dropin
                 interface_info['drops_out'] = io_stats.dropout
+
+                # Live rate (B/s) from delta-since-last-call. Same
+                # vm_lxc-orientation flip as the cumulative bytes
+                # above — the host sees a VM's "send" as the bridge's
+                # "receive", so we invert when surfacing the rate from
+                # the VM's perspective.
+                rate = per_nic_rates.get(interface_name)
+                if rate:
+                    if interface_type == 'vm_lxc':
+                        interface_info['rx_Bps'] = rate['tx_Bps']
+                        interface_info['tx_Bps'] = rate['rx_Bps']
+                    else:
+                        interface_info['rx_Bps'] = rate['rx_Bps']
+                        interface_info['tx_Bps'] = rate['tx_Bps']
             
+            if interface_type == 'physical':
+                # Hardware ceiling from ethtool; UI shows it next to the
+                # negotiated speed when the two differ.
+                max_speed = _ethtool_max_speed(interface_name)
+                if max_speed:
+                    interface_info['max_speed'] = max_speed
+
+            # Master device (bridge or bond) — for tap*/veth*/bond
+            # interfaces this is the bridge they're enslaved to.
+            # We walk through any intermediate fwbr to reach the real
+            # vmbr so a guest behind the Proxmox firewall still lands
+            # under its true bridge in the Network Flow diagram.
+            master = _resolve_bridge_owner(interface_name)
+            if master:
+                interface_info['bridge_owner'] = master
+
             if interface_type == 'bond':
                 bond_info = get_bond_info(interface_name)
                 interface_info['bond_mode'] = bond_info['mode']
@@ -4728,6 +5072,24 @@ def get_network_info():
         network_data['bridge_total_count'] = bridge_total_count
         network_data['vm_lxc_active_count'] = vm_lxc_active_count
         network_data['vm_lxc_total_count'] = vm_lxc_total_count
+
+        # Map physical NICs ↔ bridges using them. For a bridge with a
+        # direct NIC parent, that NIC gets the bridge in its list. For
+        # bridges sitting on top of a bond, every bond slave gets the
+        # bridge listed too.
+        bridges_per_nic = {}
+        for bridge in network_data['bridge_interfaces']:
+            phys = bridge.get('bridge_physical_interface') or ''
+            if not phys:
+                continue
+            if phys.startswith('bond'):
+                for slave in bridge.get('bridge_bond_slaves') or []:
+                    bridges_per_nic.setdefault(slave, []).append(bridge['name'])
+            else:
+                bridges_per_nic.setdefault(phys, []).append(bridge['name'])
+        for phy in network_data['physical_interfaces']:
+            if phy['name'] in bridges_per_nic:
+                phy['used_by_bridges'] = bridges_per_nic[phy['name']]
         
         # print(f"[v0] Physical interfaces: {physical_active_count} active out of {physical_total_count} total")
         pass
@@ -7715,6 +8077,418 @@ def api_system():
         pass
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/processes', methods=['GET'])
+@require_auth
+def api_processes():
+    """Top processes for the CPU Usage / Memory "more info" modals.
+
+    Reads /proc/<pid>/stat (and friends) directly with two passes 1 s
+    apart for CPU delta. Per-process aggregation (one row per process —
+    a multi-vCPU VM shows the sum of its kvm threads under one PID).
+
+    Skipping the psutil object layer cuts the endpoint's own CPU cost
+    roughly 5×, so when the monitor process appears in the list it
+    reports a much more honest reading of its real impact instead of
+    the inflated value the heavier psutil iteration was producing.
+
+    Query: sort=cpu|mem, limit=1..100 (default 20).
+    """
+    try:
+        sort = request.args.get('sort', 'cpu')
+        if sort not in ('cpu', 'mem'):
+            sort = 'cpu'
+        try:
+            # Cap raised to 500 so the modal can over-fetch and let the
+            # client-side filter find processes that aren't in the top-N
+            # by metric (e.g., searching "proxmenux" in the Memory modal
+            # finds it even though its RSS is far from the top).
+            limit = max(1, min(int(request.args.get('limit', 20)), 500))
+        except (TypeError, ValueError):
+            limit = 20
+
+        import pwd
+
+        SC_CLK_TCK = os.sysconf('SC_CLK_TCK') or 100
+        try:
+            PAGE_SIZE_KB = os.sysconf('SC_PAGE_SIZE') // 1024 or 4
+        except (ValueError, OSError):
+            PAGE_SIZE_KB = 4
+        # We normalize CPU% to the host total (matches the CPU Usage card
+        # on the dashboard, so users can compare the two directly without
+        # thinking about per-core vs whole-system scales).
+        NCPU = os.cpu_count() or 1
+
+        # Total memory (kB) — denominator for mem_pct
+        total_kb = 0
+        try:
+            with open('/proc/meminfo') as f:
+                for line in f:
+                    if line.startswith('MemTotal:'):
+                        total_kb = int(line.split()[1])
+                        break
+        except OSError:
+            pass
+
+        user_cache = {}
+        def _user_name(uid):
+            if uid in user_cache:
+                return user_cache[uid]
+            try:
+                name = pwd.getpwuid(uid).pw_name
+            except KeyError:
+                name = str(uid)
+            user_cache[uid] = name
+            return name
+
+        def _list_pids():
+            try:
+                for entry in os.listdir('/proc'):
+                    if entry.isdigit():
+                        yield int(entry)
+            except OSError:
+                return
+
+        def _read_cpu_time(pid):
+            """Just utime+stime in clock ticks. Cheapest possible read."""
+            try:
+                with open(f'/proc/{pid}/stat', 'rb') as f:
+                    line = f.read()
+            except (OSError, FileNotFoundError):
+                return None
+            rpar = line.rfind(b')')
+            if rpar < 0:
+                return None
+            rest = line[rpar + 2:].split()
+            try:
+                return int(rest[11]) + int(rest[12])
+            except (IndexError, ValueError):
+                return None
+
+        def _read_meta(pid):
+            """Returns (comm, ppid, num_threads, rss_kb, uid, cmdline) or None."""
+            try:
+                with open(f'/proc/{pid}/stat', 'rb') as f:
+                    line = f.read()
+            except (OSError, FileNotFoundError):
+                return None
+            lpar = line.find(b'(')
+            rpar = line.rfind(b')')
+            if lpar < 0 or rpar < 0:
+                return None
+            comm = line[lpar + 1:rpar].decode('utf-8', 'replace')
+            rest = line[rpar + 2:].split()
+            try:
+                ppid = int(rest[1])
+            except (IndexError, ValueError):
+                ppid = 0
+
+            rss_kb = 0
+            try:
+                with open(f'/proc/{pid}/statm') as f:
+                    rss_kb = int(f.read().split()[1]) * PAGE_SIZE_KB
+            except (OSError, FileNotFoundError, IndexError, ValueError):
+                pass
+
+            uid = 0
+            try:
+                with open(f'/proc/{pid}/status') as f:
+                    for ln in f:
+                        if ln.startswith('Uid:'):
+                            uid = int(ln.split()[1])
+                            break
+            except (OSError, FileNotFoundError, IndexError, ValueError):
+                pass
+
+            cmdline = ''
+            try:
+                with open(f'/proc/{pid}/cmdline', 'rb') as f:
+                    raw = f.read()
+                if raw:
+                    cmdline = raw.replace(b'\x00', b' ').strip().decode('utf-8', 'replace')
+            except (OSError, FileNotFoundError):
+                pass
+
+            return (comm, ppid, rss_kb, uid, cmdline)
+
+        if sort == 'cpu':
+            # System uptime — denominator for cpu_avg (CPU% averaged
+            # over the entire lifetime of the process). Used to
+            # surface long-running idle processes that don't show up
+            # in the 1-s delta (e.g. an orphaned `bash -s` that loops
+            # with `sleep 5` between iterations — averaged it's 4 %
+            # of one core for weeks, instantaneously it samples 0).
+            try:
+                with open('/proc/uptime') as f:
+                    host_uptime_sec = float(f.read().split()[0])
+            except (OSError, ValueError):
+                host_uptime_sec = 0.0
+
+            # Pass 1: snapshot CPU time for every running PID.
+            snap1 = {pid: _read_cpu_time(pid) for pid in _list_pids()}
+            snap1 = {k: v for k, v in snap1.items() if v is not None}
+
+            time.sleep(1.0)
+
+            # Pass 2: re-read CPU time, compute delta, plus metadata.
+            results = []
+            for pid in _list_pids():
+                now = _read_cpu_time(pid)
+                if now is None:
+                    continue
+                prior = snap1.get(pid)
+                if prior is None:
+                    # Process started during the sample window — skip
+                    # (no baseline to delta against).
+                    continue
+                meta = _read_meta(pid)
+                if meta is None:
+                    continue
+                comm, _ppid, rss_kb, uid, cmdline = meta
+                delta_jiffies = max(0, now - prior)
+                # delta_jiffies / clock_tps = CPU seconds used in the 1 s
+                # window. Dividing by NCPU expresses it as a fraction of
+                # the whole host (so values line up with the CPU Usage
+                # card — 1 % in the modal == 1 % of the host total).
+                cpu_pct = round((delta_jiffies / SC_CLK_TCK) * 100 / NCPU, 1)
+
+                # cpu_avg — proportion of host CPU this process has
+                # consumed across its entire lifetime. Read the
+                # per-process start time from /proc/<pid>/stat (field
+                # 21, in ticks since boot) and turn it into seconds via
+                # host_uptime - start_seconds. Falls back to 0.0 when
+                # start time isn't readable (kernel threads, perms).
+                cpu_avg = 0.0
+                try:
+                    with open(f'/proc/{pid}/stat', 'rb') as f:
+                        st_line = f.read()
+                    st_rpar = st_line.rfind(b')')
+                    st_rest = st_line[st_rpar + 2:].split()
+                    starttime_ticks = int(st_rest[19])  # field 22 minus the 2 skipped after comm
+                    proc_uptime_sec = max(1.0, host_uptime_sec - (starttime_ticks / SC_CLK_TCK))
+                    cpu_avg = round((now / SC_CLK_TCK) * 100 / NCPU / proc_uptime_sec, 1)
+                except (OSError, FileNotFoundError, IndexError, ValueError):
+                    pass
+
+                mem_pct = round((rss_kb / total_kb * 100) if total_kb else 0.0, 1)
+                results.append({
+                    'pid': pid,
+                    'parent_pid': pid,
+                    'user': _user_name(uid),
+                    'cpu': cpu_pct,
+                    'cpu_avg': cpu_avg,
+                    'mem': mem_pct,
+                    'rss_kb': rss_kb,
+                    'command': comm,
+                    'cmdline': cmdline or comm,
+                })
+
+            # Sort by the larger of (now, avg) so a process is
+            # captured whether it's spiking right now OR running an
+            # always-on baseline. Without this an orphan bash loop
+            # never made the top-N and the operator had no UI
+            # surface to find it.
+            results.sort(key=lambda r: max(r['cpu'], r.get('cpu_avg', 0.0)), reverse=True)
+            processes = results[:limit]
+
+        else:
+            # Memory sort: single pass, no delta needed.
+            results = []
+            for pid in _list_pids():
+                meta = _read_meta(pid)
+                if meta is None:
+                    continue
+                comm, _ppid, rss_kb, uid, cmdline = meta
+                mem_pct = round((rss_kb / total_kb * 100) if total_kb else 0.0, 1)
+                results.append({
+                    'pid': pid,
+                    'parent_pid': pid,
+                    'user': _user_name(uid),
+                    'cpu': 0.0,
+                    'mem': mem_pct,
+                    'rss_kb': rss_kb,
+                    'command': comm,
+                    'cmdline': cmdline or comm,
+                })
+            results.sort(key=lambda r: r['mem'], reverse=True)
+            processes = results[:limit]
+
+        return jsonify({
+            'processes': processes,
+            'sort': sort,
+            'captured_at': int(time.time()),
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/processes/<int:pid>', methods=['GET'])
+@require_auth
+def api_process_detail(pid):
+    """Detailed info for a single process read from /proc/<pid>/.
+
+    Called from the Top-process row-click → detail modal. Lazy: only
+    hit when the user explicitly clicks a row, then refreshed inside
+    the modal every few seconds while it's open.
+    """
+    import pwd, grp
+    try:
+        proc_path = f'/proc/{pid}'
+        if not os.path.isdir(proc_path):
+            return jsonify({'error': 'Process not found', 'pid': pid}), 404
+
+        info = {'pid': pid}
+
+        # Short name + full argv
+        try:
+            with open(f'{proc_path}/comm') as f:
+                info['comm'] = f.read().strip()
+        except Exception:
+            info['comm'] = None
+        try:
+            with open(f'{proc_path}/cmdline', 'rb') as f:
+                raw = f.read()
+            # argv null-byte separated; drop trailing null
+            info['cmdline'] = raw.replace(b'\0', b' ').strip().decode('utf-8', 'replace')
+        except Exception:
+            info['cmdline'] = None
+
+        # Symlinks (may EACCES for kernel threads / other namespaces)
+        try:
+            info['exe'] = os.readlink(f'{proc_path}/exe')
+        except (OSError, PermissionError):
+            info['exe'] = None
+        try:
+            info['cwd'] = os.readlink(f'{proc_path}/cwd')
+        except (OSError, PermissionError):
+            info['cwd'] = None
+
+        # /proc/<pid>/status (Vm* sizes, State, PPid, Threads, Uid, Gid)
+        status = {}
+        try:
+            with open(f'{proc_path}/status') as f:
+                for line in f:
+                    if ':' in line:
+                        k, v = line.split(':', 1)
+                        status[k.strip()] = v.strip()
+        except Exception:
+            pass
+
+        info['state'] = status.get('State', '')
+        try:
+            info['ppid'] = int(status.get('PPid', '0'))
+        except (ValueError, TypeError):
+            info['ppid'] = 0
+        try:
+            info['threads'] = int(status.get('Threads', '0'))
+        except (ValueError, TypeError):
+            info['threads'] = 0
+
+        def _kb(field):
+            try:
+                return int(status.get(field, '0').split()[0])
+            except (ValueError, IndexError, AttributeError):
+                return 0
+        info['vm_rss_kb'] = _kb('VmRSS')
+        info['vm_size_kb'] = _kb('VmSize')
+        info['vm_swap_kb'] = _kb('VmSwap')
+
+        # Uid → user name; Gid → group name
+        try:
+            uid = int(status.get('Uid', '0').split()[0])
+            info['uid'] = uid
+            try:
+                info['user'] = pwd.getpwuid(uid).pw_name
+            except KeyError:
+                info['user'] = str(uid)
+        except Exception:
+            info['uid'] = None
+            info['user'] = None
+        try:
+            gid = int(status.get('Gid', '0').split()[0])
+            info['gid'] = gid
+            try:
+                info['group'] = grp.getgrgid(gid).gr_name
+            except KeyError:
+                info['group'] = str(gid)
+        except Exception:
+            info['gid'] = None
+            info['group'] = None
+
+        # Parent process short name (for the "started by" line)
+        info['parent_name'] = None
+        if info['ppid']:
+            try:
+                with open(f'/proc/{info["ppid"]}/comm') as f:
+                    info['parent_name'] = f.read().strip()
+            except Exception:
+                pass
+
+        # Start time + elapsed runtime from `ps` — /proc/<pid>/stat exposes
+        # raw clock ticks; `ps` formats them as the human-friendly strings
+        # we want (lstart: "Wed Jun 4 17:12:23 2026"; etime: "2h59m").
+        try:
+            ps_out = subprocess.run(
+                ['ps', '-o', 'lstart=,etime=', '-p', str(pid)],
+                capture_output=True, text=True, timeout=2
+            )
+            if ps_out.returncode == 0:
+                line = ps_out.stdout.strip()
+                if line:
+                    # lstart is 5 whitespace-separated tokens, etime is 1
+                    # token after, so we split off the trailing field from
+                    # the right.
+                    parts = line.rsplit(None, 1)
+                    if len(parts) == 2:
+                        info['start_time'] = parts[0]
+                        info['elapsed'] = parts[1]
+        except Exception:
+            pass
+
+        # CPU% / MEM% from psutil with delta sampling. CPU is normalized
+        # to the host total (divided by cpu_count) so values match what
+        # the parent list and the CPU Usage card show.
+        info['cpu'] = 0.0
+        info['mem'] = 0.0
+        try:
+            p_proc = psutil.Process(pid)
+            ncpu = os.cpu_count() or 1
+            info['cpu'] = round(p_proc.cpu_percent(interval=1.0) / ncpu, 1)
+            try:
+                info['mem'] = round(p_proc.memory_percent(), 1)
+            except psutil.NoSuchProcess:
+                pass
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+
+        # I/O accounting (kernel requires CONFIG_TASK_IO_ACCOUNTING; also EACCES for non-self)
+        try:
+            io = {}
+            with open(f'{proc_path}/io') as f:
+                for line in f:
+                    if ':' in line:
+                        k, v = line.split(':', 1)
+                        try:
+                            io[k.strip()] = int(v.strip())
+                        except ValueError:
+                            pass
+            info['io_read_bytes'] = io.get('read_bytes')
+            info['io_write_bytes'] = io.get('write_bytes')
+        except (OSError, PermissionError):
+            info['io_read_bytes'] = None
+            info['io_write_bytes'] = None
+
+        # Open FDs
+        try:
+            info['fd_count'] = len(os.listdir(f'{proc_path}/fd'))
+        except (OSError, PermissionError):
+            info['fd_count'] = None
+
+        info['captured_at'] = int(time.time())
+        return jsonify(info)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/temperature/history', methods=['GET'])
 @require_auth
 def api_temperature_history():
@@ -8873,7 +9647,10 @@ def api_smart_run_test(disk_name):
                 capture_output=True, text=True, timeout=10
             )
             if check_proc.returncode != 0:
-                return jsonify({'error': f'Cannot access NVMe device: {check_proc.stderr.strip() or "Device not responding"}'}), 500
+                # Device-level failure, not a server bug — return 400 so
+                # the UI surfaces the real stderr instead of a generic
+                # "500 INTERNAL SERVER ERROR".
+                return jsonify({'error': f'Cannot access NVMe device: {check_proc.stderr.strip() or "Device not responding"}'}), 400
             
             # Check if device supports self-test by looking at OACS field
             # OACS bit 4 (0x10) indicates Device Self-test support
@@ -8913,8 +9690,8 @@ def api_smart_run_test(disk_name):
                 # Check for permission errors
                 if 'permission' in error_msg.lower() or 'operation not permitted' in error_msg.lower():
                     return jsonify({'error': f'Permission denied. Run as root: {error_msg}'}), 403
-                return jsonify({'error': f'Failed to start test: {error_msg}'}), 500
-            
+                return jsonify({'error': f'Failed to start test: {error_msg}'}), 400
+
             # Start background monitor to save JSON when test completes
             # Check 'Current Device Self-Test Operation' field - if > 0, test is running
             sleep_interval = 10 if test_type == 'short' else 60
@@ -8945,7 +9722,21 @@ def api_smart_run_test(disk_name):
             )
             
             if proc.returncode not in (0, 4):  # 4 = test started successfully
-                return jsonify({'error': f'Failed to start test: {proc.stderr}'}), 500
+                # smartctl scribbles the useful diagnostic on stderr for
+                # most failures but some device-level errors (USB SATA
+                # bridges that reject the SMART command, drives whose
+                # ATA passthrough is broken, ...) print the reason on
+                # stdout instead. Concatenate both so the operator sees
+                # the real reason in the toast rather than an opaque
+                # "500 INTERNAL SERVER ERROR". Status is 400: the smartctl
+                # process ran fine, the device is what rejected the test.
+                err_detail = (proc.stderr or '').strip()
+                out_detail = (proc.stdout or '').strip()
+                combined = err_detail
+                if out_detail and out_detail not in err_detail:
+                    combined = f'{err_detail}\n{out_detail}' if err_detail else out_detail
+                combined = combined or f'smartctl exited with code {proc.returncode}'
+                return jsonify({'error': f'Failed to start test: {combined}'}), 400
             
             # Start background monitor to save JSON when test completes
             sleep_interval = 10 if test_type == 'short' else 60
@@ -9039,7 +9830,13 @@ def _update_smart_cron():
         test_type = schedule.get('test_type', 'short')
         retention = schedule.get('retention', 10)
         
-        cmd = f'/usr/local/share/proxmenux/scripts/smart-scheduled-test.sh --schedule-id {schedule_id} --test-type {test_type} --retention {retention}'
+        # The installer keeps the storage helpers under
+        # /usr/local/share/proxmenux/scripts/storage/, mirroring the
+        # repo layout. The previous path (without /storage/) generated
+        # cron lines that pointed at a non-existent file, so the timer
+        # fired, cron logged nothing, and the operator saw "no
+        # scheduled tests in history" with no obvious clue why.
+        cmd = f'/usr/local/share/proxmenux/scripts/storage/smart-scheduled-test.sh --schedule-id {schedule_id} --test-type {test_type} --retention {retention}'
         if disks != ['all']:
             cmd += f" --disks '{','.join(disks)}'"
         
@@ -9282,45 +10079,40 @@ def api_network_summary():
         bridge_interfaces = []
         
         for interface_name, stats in net_if_stats.items():
-            # Skip loopback and special interfaces
-            if interface_name in ['lo', 'docker0'] or interface_name.startswith(('veth', 'tap', 'fw')):
+            # Delegate classification to the shared helper so this endpoint
+            # matches the full /api/network path. The inline prefix-based
+            # check that lived here missed operator-renamed NICs (e.g.
+            # `nic0` via systemd .link rules) and reported 0 physical
+            # interfaces even when the host clearly had one — surfaces as
+            # "Network Interfaces: N/A" on the System Overview card.
+            iface_type = get_interface_type(interface_name)
+            if iface_type not in ('physical', 'bridge'):
                 continue
-            
+
             is_up = stats.isup
-            
-            # Classify interface type
-            if interface_name.startswith(('enp', 'eth', 'eno', 'ens', 'wlan', 'wlp')):
+            addresses = []
+            if interface_name in net_if_addrs:
+                for addr in net_if_addrs[interface_name]:
+                    if addr.family == socket.AF_INET:
+                        addresses.append({'ip': addr.address, 'netmask': addr.netmask})
+
+            if iface_type == 'physical':
                 physical_total += 1
                 if is_up:
                     physical_active += 1
-                    # Get IP addresses
-                    addresses = []
-                    if interface_name in net_if_addrs:
-                        for addr in net_if_addrs[interface_name]:
-                            if addr.family == socket.AF_INET:
-                                addresses.append({'ip': addr.address, 'netmask': addr.netmask})
-                    
                     physical_interfaces.append({
                         'name': interface_name,
-                        'status': 'up' if is_up else 'down',
-                        'addresses': addresses
+                        'status': 'up',
+                        'addresses': addresses,
                     })
-            
-            elif interface_name.startswith(('vmbr', 'br')):
+            else:  # bridge
                 bridge_total += 1
                 if is_up:
                     bridge_active += 1
-                    # Get IP addresses
-                    addresses = []
-                    if interface_name in net_if_addrs:
-                        for addr in net_if_addrs[interface_name]:
-                            if addr.family == socket.AF_INET:
-                                addresses.append({'ip': addr.address, 'netmask': addr.netmask})
-                    
                     bridge_interfaces.append({
                         'name': interface_name,
-                        'status': 'up' if is_up else 'down',
-                        'addresses': addresses
+                        'status': 'up',
+                        'addresses': addresses,
                     })
         
         return jsonify({
@@ -9623,14 +10415,149 @@ def api_node_metrics():
                                     '--timeframe', timeframe, '--output-format', 'json'],
                                    capture_output=True, text=True, timeout=10)
         
+        # Detect well-known Proxmox-side failures BEFORE trying to parse
+        # the JSON. These are PVE host problems (rrdcached down, RRD file
+        # corrupt, node-name mismatch). None of them are caused by the
+        # Monitor itself — surface a specific message so the operator
+        # doesn't blame ProxMenux for a Proxmox-host data-store issue.
+        if rrd_result.returncode != 0:
+            stderr_str = (rrd_result.stderr or '') + (rrd_result.stdout or '')
+            stderr_lower = stderr_str.lower()
+            if 'mmaping file' in stderr_lower and 'invalid argument' in stderr_lower:
+                # Corrupt RRD file on disk. Operator must recreate it.
+                return jsonify({
+                    'error': 'Proxmox RRD database is corrupt',
+                    'details': (
+                        'The host metrics file Proxmox keeps under '
+                        '/var/lib/rrdcached/db/pve-node-9.0/ failed to '
+                        'memory-map (Invalid argument). This is a Proxmox-side '
+                        'data-store issue, not a Monitor bug.'
+                    ),
+                    'suggestion': (
+                        'Stop pvestatd + pve-cluster + rrdcached, move the '
+                        'broken RRD aside, restart the services. Proxmox will '
+                        'rebuild the RRD from scratch (history is lost).'
+                    ),
+                    'raw': stderr_str.strip()[:500],
+                }), 503
+            if 'no such file' in stderr_lower or 'no such node' in stderr_lower or 'does not exist' in stderr_lower:
+                return jsonify({
+                    'error': 'Proxmox node name mismatch',
+                    'details': (
+                        f"pvesh could not find node '{local_node}'. The "
+                        'usual cause is that the host was renamed after '
+                        'Proxmox was installed, so /etc/pve/nodes/ still '
+                        'carries the old name. This is a Proxmox-side '
+                        'config issue, not a Monitor bug.'
+                    ),
+                    'suggestion': 'Compare `hostname` with `ls /etc/pve/nodes/` — they must match.',
+                    'raw': stderr_str.strip()[:500],
+                }), 503
+            if 'rrd' in stderr_lower or 'empty' in stderr_lower:
+                return jsonify({
+                    'error': 'Proxmox RRD data not available',
+                    'details': 'The RRD database appears empty. Proxmox may not have collected metrics yet (fresh install) or rrdcached was down at boot.',
+                    'suggestion': 'systemctl restart rrdcached pvestatd ; wait ~5 min and reload this page.',
+                    'raw': stderr_str.strip()[:500],
+                }), 503
+            return jsonify({
+                'error': 'Proxmox metrics command failed',
+                'details': 'pvesh exited non-zero. Check Proxmox host status.',
+                'raw': stderr_str.strip()[:500],
+            }), 503
+
         if rrd_result.returncode == 0:
             rrd_data = json.loads(rrd_result.stdout)
 
-            if zfs_arc_size > 0:
-                for item in rrd_data:
-                    # If zfsarc field is missing or 0, add current value
-                    if 'zfsarc' not in item or item.get('zfsarc', 0) == 0:
-                        item['zfsarc'] = zfs_arc_size
+            # PVE 9.x exposes the actual ARC history as `arcsize` in RRD;
+            # the previous code ignored it and stamped every point with
+            # the live ARC size, producing a flat band at the current
+            # value (issue: ZFS ARC line painted full-bar). Use the real
+            # series when present so the chart matches Proxmox's own
+            # Summary view. On older PVE that doesn't expose `arcsize`,
+            # fall back to the live value as a constant placeholder.
+            for item in rrd_data:
+                if 'arcsize' in item:
+                    item['zfsarc'] = item['arcsize']
+                elif zfs_arc_size > 0 and ('zfsarc' not in item or item.get('zfsarc', 0) == 0):
+                    item['zfsarc'] = zfs_arc_size
+
+            # Period stats — computed BEFORE downsampling so the
+            # AVG/MAX/MIN header in the chart reflects real per-minute
+            # extremes instead of averages.
+            #
+            # Three sources depending on the timeframe:
+            #
+            #   - hour/day  → PVE returns 1-min raw points. AVG/MAX/MIN
+            #     of the in-memory list IS the truth.
+            #
+            #   - week/month → PVE already downsamples to 30-min /
+            #     ~1-hour points using consolidation function AVG, so
+            #     the in-memory points are already averages. Taking
+            #     max() of them gives "max of averages", NOT the real
+            #     peak. We issue two extra pvesh calls per request
+            #     (`--cf MAX` and `--cf MIN`) to recover the real
+            #     extremes from PVE's own RRD consolidation. The
+            #     extra calls add ~150 ms — only on week/month and
+            #     only when the chart loads, so the overhead is small.
+            def _values_from(items, field_key, scale=1.0):
+                return [item[field_key] * scale for item in items
+                        if isinstance(item.get(field_key), (int, float))
+                        and not isinstance(item[field_key], bool)
+                        and item[field_key] is not None]
+
+            def _stats_native(field_key, scale=1.0):
+                values = _values_from(rrd_data, field_key, scale)
+                if not values:
+                    return None
+                return {
+                    'avg': sum(values) / len(values),
+                    'max': max(values),
+                    'min': min(values),
+                }
+
+            def _pvesh_rrd(cf):
+                """One extra pvesh call with a non-default CF.
+                Returns the parsed list or None on any failure — caller
+                falls back to the AVG-based numbers."""
+                try:
+                    extra = subprocess.run(
+                        ['pvesh', 'get', f'/nodes/{local_node}/rrddata',
+                         '--timeframe', timeframe, '--cf', cf,
+                         '--output-format', 'json'],
+                        capture_output=True, text=True, timeout=10,
+                    )
+                    if extra.returncode == 0 and extra.stdout:
+                        return json.loads(extra.stdout)
+                except (subprocess.SubprocessError, json.JSONDecodeError, OSError):
+                    pass
+                return None
+
+            def _build_stats(field_key, scale=1.0):
+                native = _stats_native(field_key, scale)
+                if native is None:
+                    return None
+                # On week/month, the points we already have are AVG.
+                # Try to upgrade max/min to the real RRD extremes.
+                if timeframe in ('week', 'month'):
+                    cf_max = _pvesh_rrd('MAX')
+                    if cf_max:
+                        vals = _values_from(cf_max, field_key, scale)
+                        if vals:
+                            native['max'] = max(vals)
+                    cf_min = _pvesh_rrd('MIN')
+                    if cf_min:
+                        vals = _values_from(cf_min, field_key, scale)
+                        if vals:
+                            native['min'] = min(vals)
+                return native
+
+            period_stats = {
+                # cpu: RRD stores fraction 0-1, surface as %.
+                'cpu': _build_stats('cpu', scale=100.0),
+                # memory_used: bytes → GB so units match the chart.
+                'memory_used': _build_stats('memused', scale=1 / (1024 ** 3)),
+            }
 
             # 24h downsampling: RRD returns ~1440 minute-level points which
             # plots as a dense thicket of vertical spikes. Group into 5-min
@@ -9664,30 +10591,27 @@ def api_node_metrics():
             payload = {
                 'node': local_node,
                 'timeframe': timeframe,
-                'data': rrd_data
+                'data': rrd_data,
+                # AVG/MAX/MIN computed over the raw (pre-downsampling)
+                # points so the chart header captures real per-minute
+                # extremes even on multi-day timeframes.
+                'period_stats': period_stats,
             }
             _node_metrics_cache_set(timeframe, payload)
             return jsonify(payload)
-        else:
-            # Check if RRD file is empty or corrupted
-            stderr_lower = rrd_result.stderr.lower() if rrd_result.stderr else ''
-            if 'rrd' in stderr_lower or 'no such file' in stderr_lower or 'empty' in stderr_lower:
-                return jsonify({
-                    'error': 'RRD data not available',
-                    'details': 'The RRD database file may be empty or corrupted. This can happen if rrdcached was not running properly after Proxmox installation.',
-                    'suggestion': 'Try restarting rrdcached: systemctl restart rrdcached'
-                }), 503  # Service Unavailable - more appropriate than 500
-            return jsonify({'error': f'Failed to get RRD data: {rrd_result.stderr}'}), 500
-            
+        # Note: the old `else` branch that handled rrd_result.returncode != 0
+        # was removed — the early-return block above now catches every
+        # non-zero exit BEFORE we ever attempt json.loads(), so reaching
+        # this point with returncode != 0 is impossible.
+
     except json.JSONDecodeError:
         # pvesh returned invalid JSON - likely empty RRD
         return jsonify({
-            'error': 'RRD data not available',
-            'details': 'Unable to parse metrics data. The RRD database may be empty or corrupted.',
-            'suggestion': 'Try restarting rrdcached: systemctl restart rrdcached'
+            'error': 'Proxmox RRD data not available',
+            'details': 'pvesh returned non-JSON output. The RRD database is likely empty (fresh install where pvestatd has not run yet) or the rrdcached daemon is down.',
+            'suggestion': 'systemctl restart rrdcached pvestatd ; wait ~5 min and reload.',
         }), 503
     except Exception as e:
-
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/logs/counts', methods=['GET'])
@@ -11753,9 +12677,5701 @@ def stream_script_logs(session_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# ── Host Backup (Sprint 13D, 1.3.0 preview) ──────────────────
+# These endpoints surface the host-backup pipeline implemented in
+# scripts/backup_restore/ (collectors + restore tooling). They:
+#   - list configured scheduled jobs (from /var/lib/proxmenux/backup-jobs/)
+#   - list backup archives present on disk for local_tar destinations
+#   - extract the manifest from an archive (uses parse_manifest.sh)
+#   - run the dry-run preflight report (uses run_restore.sh)
+# Mutating actions (run-now, create-job, --apply restore) stay on CLI for
+# now — UI surface for those lands later in the 1.3.x cycle.
+
+_PROXMENUX_SCRIPTS_DIR = '/usr/local/share/proxmenux/scripts'
+_BACKUP_JOBS_DIR = '/var/lib/proxmenux/backup-jobs'
+_BACKUP_LOG_DIR = '/var/log/proxmenux/backup-jobs'
+# Always scan PVE's default dump directory in addition to per-job
+# DEST_DIRs — manual backups from backup_host.sh (options 1-6) land
+# there without ever creating a job env file.
+_BACKUP_DEFAULT_DUMP_DIRS = ('/var/lib/vz/dump',)
+# Filenames produced by ProxMenux host backups:
+#   manual  (backup_host.sh line 253):  hostcfg-<HOSTNAME>-YYYYMMDD_HHMMSS.tar.zst
+#   scheduled (run_scheduled_backup.sh): <JOB_ID>-YYYYMMDD_HHMMSS.<ext>
+# This regex matches both; we then cross-check against the known job_ids
+# (everything else, like PVE's vzdump-lxc-*, gets dropped).
+_BACKUP_FILENAME_RE = re.compile(r'^([A-Za-z0-9._-]+)-(\d{8}_\d{6})\.tar(\.zst|\.gz)?$')
+
+
+def _parse_job_env(file_path: str) -> dict:
+    """Parse a /var/lib/proxmenux/backup-jobs/*.env file (shell KEY=value
+    format with optional quoting) into a Python dict. Returns {} on any
+    I/O or parse error so callers can just .get() with defaults."""
+    out: dict = {}
+    try:
+        with open(file_path) as f:
+            for raw in f:
+                line = raw.strip()
+                if not line or line.startswith('#') or '=' not in line:
+                    continue
+                key, val = line.split('=', 1)
+                key = key.strip()
+                val = val.strip()
+                # Strip shell quoting if balanced
+                if len(val) >= 2 and val[0] == val[-1] and val[0] in ('"', "'"):
+                    val = val[1:-1]
+                out[key] = val
+    except OSError:
+        pass
+    return out
+
+
+def _collect_backup_scan_dirs():
+    """Build the de-duplicated list of directories we scan for host
+    backup archives. Sources, in priority order:
+      - PVE default dump dirs (/var/lib/vz/dump et al.)
+      - The configured local target (local-target.conf)
+      - Every job .env that targets a local backend
+      - Every USB partition mounted under our naming convention
+    Returns directories that actually exist on disk."""
+    import glob
+    dirs = []
+    seen = set()
+    def _add(d):
+        if d and d not in seen and os.path.isdir(d):
+            seen.add(d)
+            dirs.append(d)
+    for d in _BACKUP_DEFAULT_DUMP_DIRS:
+        _add(d)
+
+    # Configured local target
+    try:
+        _add(_get_local_target().get('configured'))
+    except Exception:
+        pass
+
+    # Per-job local destinations — handle both the legacy field names
+    # (METHOD, DEST_DIR, DEST) and the current ones (BACKEND, LOCAL_DEST_DIR).
+    try:
+        env_files = sorted(glob.glob(f'{_BACKUP_JOBS_DIR}/*.env'))
+    except OSError:
+        env_files = []
+    for env_file in env_files:
+        job = _parse_job_env(env_file)
+        backend = (job.get('BACKEND') or job.get('METHOD') or '').lower()
+        if backend not in ('local', 'local_tar'):
+            continue
+        _add(job.get('LOCAL_DEST_DIR') or job.get('DEST_DIR') or job.get('DEST'))
+
+    # Mounted USB partitions — anything under /mnt/proxmenux-backup-* and
+    # /media/* gets included since those are where hb_mount_usb_partition
+    # parks them. Defensive: only existing mountpoints.
+    try:
+        for mp_glob in ('/mnt/proxmenux-backup-*', '/media/*'):
+            for mp in glob.glob(mp_glob):
+                _add(mp)
+    except OSError:
+        pass
+
+    return dirs
+
+
+def _known_job_ids():
+    """Set of job_ids that have a .env file on disk — used to associate
+    a scheduled archive (<job_id>-<ts>.tar*) with its job."""
+    import glob
+    try:
+        env_files = glob.glob(f'{_BACKUP_JOBS_DIR}/*.env')
+    except OSError:
+        return set()
+    return {os.path.basename(p)[:-len('.env')] for p in env_files}
+
+
+# In-process cache for the tar-peek fallback so we don't re-decompress
+# every archive on every Monitor refresh. Keyed by absolute archive
+# path; the cached tuple is (size, mtime, is_proxmenux_backup_bool).
+# Invalidated automatically whenever size or mtime changes.
+_BACKUP_PEEK_CACHE: dict = {}
+
+
+def _read_archive_sidecar(archive_path):
+    """Read and parse the <archive>.proxmenux.json sidecar if present.
+    Returns the parsed dict on success, or None if the sidecar is
+    missing or unreadable. A corrupted sidecar drops back to the next
+    detection path (peek) rather than masking the archive entirely."""
+    sidecar = archive_path + '.proxmenux.json'
+    if not os.path.isfile(sidecar):
+        return None
+    try:
+        with open(sidecar) as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _peek_host_backup_marker(archive_path, st):
+    """Check whether the archive contains 'metadata/run_info.env' — the
+    in-tar marker that every ProxMenux host backup ships with. Used as
+    a fallback when no sidecar is present (legacy archives, or archives
+    copied in from elsewhere). Result is cached by (size, mtime) so a
+    second call within the same process is free.
+
+    Implementation: stream `tar -atf` (auto-detect compression by
+    extension; GNU tar 1.30+) line by line and short-circuit as soon as
+    we hit the marker. The marker lives in the first ~10-20 entries of
+    every ProxMenux archive, so we cap the scan at 500 entries — well
+    above the real archive's TOC depth but bounded enough that a
+    pathological archive can't keep the worker tied up.
+    """
+    cached = _BACKUP_PEEK_CACHE.get(archive_path)
+    if cached and cached[0] == st.st_size and cached[1] == int(st.st_mtime):
+        return cached[2]
+
+    is_pmx = False
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            ['tar', '-atf', archive_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        assert proc.stdout is not None
+        for i, line in enumerate(proc.stdout):
+            if i > 500:
+                break
+            entry = line.strip()
+            if entry.startswith('./'):
+                entry = entry[2:]
+            entry = entry.rstrip('/')
+            if entry == 'metadata/run_info.env':
+                is_pmx = True
+                break
+    except OSError:
+        is_pmx = False
+    finally:
+        if proc is not None:
+            try:
+                proc.kill()
+            except OSError:
+                pass
+            try:
+                proc.wait(timeout=2)
+            except (subprocess.TimeoutExpired, OSError):
+                pass
+
+    _BACKUP_PEEK_CACHE[archive_path] = (st.st_size, int(st.st_mtime), is_pmx)
+    return is_pmx
+
+
+def _identify_host_backup(archive_path, st, hostname, job_ids):
+    """Return a dict of {kind, job_id, profile, source_hostname,
+    detected_via} if this archive is a ProxMenux host backup, or None
+    if it isn't (or we can't tell).
+
+    Order of confidence (best → worst):
+      1. <archive>.proxmenux.json sidecar — definitive, written by the
+         backup script when the archive completes.
+      2. Filename matches a known scheduled job_id (.env still on disk).
+      3. Filename starts with 'hostcfg-' — the convention for manual
+         and the recommended convention for scheduled jobs.
+      4. Tar-peek for metadata/run_info.env — the universal marker that
+         every ProxMenux backup carries inside. Caches by mtime/size so
+         repeat calls are free.
+    """
+    sc = _read_archive_sidecar(archive_path)
+    if sc is not None:
+        return {
+            'kind': sc.get('kind') or 'manual',
+            'job_id': sc.get('job_id'),
+            'profile': sc.get('profile'),
+            'source_hostname': sc.get('hostname'),
+            'detected_via': 'sidecar',
+        }
+
+    name = os.path.basename(archive_path)
+    m = _BACKUP_FILENAME_RE.match(name)
+    stem = m.group(1) if m else None
+
+    if stem and stem in job_ids:
+        return {
+            'kind': 'scheduled', 'job_id': stem,
+            'profile': None, 'source_hostname': None,
+            'detected_via': 'job_id_match',
+        }
+
+    if stem == f'hostcfg-{hostname}':
+        return {
+            'kind': 'manual', 'job_id': None,
+            'profile': None, 'source_hostname': hostname,
+            'detected_via': 'hostcfg_prefix',
+        }
+
+    if stem and stem.startswith('hostcfg-'):
+        return {
+            'kind': 'manual', 'job_id': None,
+            'profile': None, 'source_hostname': None,
+            'detected_via': 'hostcfg_prefix',
+        }
+
+    if _peek_host_backup_marker(archive_path, st):
+        return {
+            'kind': 'legacy', 'job_id': None,
+            'profile': None, 'source_hostname': None,
+            'detected_via': 'tar_peek',
+        }
+    return None
+
+
+def _find_backup_archive_path(archive_id):
+    """Resolve an archive_id (basename) to an absolute path by checking
+    every directory we scan for backups (PVE default + per-job DEST_DIRs).
+    Returns None if the file isn't found anywhere we know about, or if
+    the resolved file isn't identifiable as a ProxMenux backup. This is
+    a deliberate allow-list: callers can't request arbitrary host paths
+    via the API even if they hit the inspect/preflight URLs directly."""
+    if '/' in archive_id or archive_id in ('.', '..') or archive_id.startswith('.'):
+        return None  # don't let basename traversal sneak through
+    if not archive_id.endswith(_BACKUP_TAR_SUFFIXES):
+        return None  # we only handle the tar family
+    hostname = socket.gethostname()
+    job_ids = _known_job_ids()
+    for d in _collect_backup_scan_dirs():
+        candidate = os.path.join(d, archive_id)
+        if not os.path.isfile(candidate):
+            continue
+        try:
+            st = os.stat(candidate)
+        except OSError:
+            continue
+        if _identify_host_backup(candidate, st, hostname, job_ids) is None:
+            continue  # exists but isn't a ProxMenux backup — reject
+        return candidate
+    return None
+
+
+_JOB_ID_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
+_BACKUP_RUNNER = '/usr/local/share/proxmenux/scripts/backup_restore/run_scheduled_backup.sh'
+
+
+def _backup_job_summary(env_file: str) -> dict:
+    """Build the UI summary for one job .env, reading the actual fields
+    produced by the current scheduler (BACKEND, LOCAL_DEST_DIR,
+    PBS_REPOSITORY, BORG_REPO, KEEP_*, PVE_STORAGE, ENABLED)."""
+    job_id = os.path.basename(env_file)[:-len('.env')]
+    job = _parse_job_env(env_file)
+
+    backend = (job.get('BACKEND') or job.get('METHOD') or 'unknown').lower()
+    attached = bool(job.get('PVE_STORAGE'))
+    pve_storage = job.get('PVE_STORAGE') or None
+
+    if backend == 'pbs':
+        destination = job.get('PBS_REPOSITORY') or ''
+        bid = job.get('PBS_BACKUP_ID')
+        if bid:
+            destination = f'{destination} :: host/{bid}'
+    elif backend == 'local':
+        destination = (job.get('LOCAL_DEST_DIR') or job.get('DEST_DIR')
+                       or job.get('DEST') or '')
+    elif backend == 'borg':
+        destination = job.get('BORG_REPO') or ''
+    else:
+        destination = (job.get('DEST_DIR') or job.get('DEST')
+                       or job.get('PBS_REPO') or job.get('BORG_REPO') or '')
+
+    keep_parts = []
+    for k_key, label in (
+        ('KEEP_LAST', 'last'),
+        ('KEEP_HOURLY', 'hourly'),
+        ('KEEP_DAILY', 'daily'),
+        ('KEEP_WEEKLY', 'weekly'),
+        ('KEEP_MONTHLY', 'monthly'),
+        ('KEEP_YEARLY', 'yearly'),
+    ):
+        v = job.get(k_key)
+        if v and v != '0':
+            keep_parts.append(f'{label}={v}')
+    retention = ', '.join(keep_parts) or job.get('RETENTION') or ''
+
+    if attached:
+        enabled = (job.get('ENABLED', '1') == '1')
+        schedule = f'attached → storage:{pve_storage}' if pve_storage else 'attached'
+        timer_enabled = False
+        next_run = None
+    else:
+        timer_unit = f'proxmenux-backup-{job_id}.timer'
+        timer_enabled = subprocess.run(
+            ['systemctl', 'is-enabled', '--quiet', timer_unit],
+            capture_output=True
+        ).returncode == 0
+        enabled = timer_enabled
+        schedule = job.get('ON_CALENDAR') or 'manual'
+        next_run = None
+        try:
+            r = subprocess.run(
+                ['systemctl', 'list-timers', '--no-pager', '--output=json', timer_unit],
+                capture_output=True, text=True, timeout=5
+            )
+            if r.returncode == 0 and r.stdout.strip():
+                rows = json.loads(r.stdout)
+                if rows and isinstance(rows, list):
+                    # systemd's list-timers --output=json emits `next`
+                    # as MICROSECONDS since the unix epoch (uint64).
+                    # Passing that raw to `new Date(…)` in the browser
+                    # was interpreting it as milliseconds → year 58433.
+                    # Normalize it to an ISO 8601 timestamp here so the
+                    # frontend just calls `new Date(iso).toLocaleString()`.
+                    next_us = rows[0].get('next')
+                    if isinstance(next_us, (int, float)) and next_us > 0:
+                        from datetime import datetime as _dt
+                        next_run = _dt.fromtimestamp(next_us / 1_000_000).isoformat()
+        except (subprocess.TimeoutExpired, json.JSONDecodeError, ValueError, OSError):
+            pass
+
+    last_status = None
+    last_status_file = f'{_BACKUP_LOG_DIR}/{job_id}-last.status'
+    if os.path.exists(last_status_file):
+        try:
+            with open(last_status_file) as f:
+                last_status = f.read().strip()
+        except OSError:
+            pass
+
+    return {
+        'id': job_id,
+        'destination': destination,
+        'method': backend,
+        'on_calendar': schedule,
+        'retention': retention,
+        'timer_enabled': timer_enabled,
+        'enabled': enabled,
+        'attached': attached,
+        'pve_storage': pve_storage,
+        'profile_mode': job.get('PROFILE_MODE') or 'default',
+        'manual': job.get('MANUAL_RUN') == '1',
+        'last_status': last_status,
+        'next_run': next_run,
+        # `encrypted` is a per-job flag — for PBS it's "has a keyfile
+        # assigned", for Borg "the destination's encryption is on".
+        # Used by the UI to render the lock badge consistently.
+        'encrypted': (
+            bool(job.get('PBS_KEYFILE')) if backend == 'pbs'
+            else (job.get('BORG_ENCRYPT_MODE') or 'none') != 'none' if backend == 'borg'
+            else False
+        ),
+    }
+
+
+@app.route('/api/host-backups/jobs', methods=['GET'])
+@require_auth
+def api_host_backups_jobs():
+    """List scheduled host-backup jobs created via the backup_scheduler
+    CLI. Reports both timer-based and PVE-attached jobs."""
+    import glob
+    try:
+        env_files = sorted(glob.glob(f'{_BACKUP_JOBS_DIR}/*.env'))
+    except OSError:
+        env_files = []
+    return jsonify({'jobs': [_backup_job_summary(f) for f in env_files]})
+
+
+@app.route('/api/host-backups/jobs/<job_id>/run', methods=['POST'])
+@require_auth
+def api_host_backups_job_run(job_id):
+    """Trigger a scheduled host backup job immediately (background).
+    The runner writes its own log + .status file; the UI polls /jobs to
+    pick up the new status."""
+    if not _JOB_ID_RE.match(job_id):
+        return jsonify({'error': 'invalid job id'}), 400
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    if not os.path.exists(env_file):
+        return jsonify({'error': 'job not found'}), 404
+    if not os.path.exists(_BACKUP_RUNNER):
+        return jsonify({'error': 'runner script not installed'}), 500
+    try:
+        subprocess.Popen(
+            ['bash', _BACKUP_RUNNER, job_id],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            close_fds=True,
+            start_new_session=True,
+        )
+    except OSError as e:
+        return jsonify({'error': f'failed to start: {e}'}), 500
+    return jsonify({'status': 'started', 'job_id': job_id}), 202
+
+
+@app.route('/api/host-backups/jobs/<job_id>/toggle', methods=['POST'])
+@require_auth
+def api_host_backups_job_toggle(job_id):
+    """Flip enabled/disabled. Attached jobs are toggled by rewriting
+    ENABLED= in the .env (no timer exists). Timer-based jobs use
+    systemctl --now enable/disable. Body may include {"enabled": bool}
+    to set an explicit target; otherwise the current state is inverted."""
+    if not _JOB_ID_RE.match(job_id):
+        return jsonify({'error': 'invalid job id'}), 400
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    if not os.path.exists(env_file):
+        return jsonify({'error': 'job not found'}), 404
+
+    job = _parse_job_env(env_file)
+    is_attached = bool(job.get('PVE_STORAGE'))
+
+    payload = request.get_json(silent=True) or {}
+    target = payload.get('enabled')
+
+    if is_attached:
+        current = (job.get('ENABLED', '1') == '1')
+        new_state = (not current) if target is None else bool(target)
+        new_val = '1' if new_state else '0'
+        try:
+            with open(env_file, 'r') as f:
+                lines = f.readlines()
+            tmp_path = f'{env_file}.tmp.{os.getpid()}'
+            with open(tmp_path, 'w') as tmp:
+                found = False
+                for line in lines:
+                    if line.startswith('ENABLED='):
+                        tmp.write(f'ENABLED={new_val}\n')
+                        found = True
+                    else:
+                        tmp.write(line)
+                if not found:
+                    tmp.write(f'ENABLED={new_val}\n')
+            os.replace(tmp_path, env_file)
+            os.chmod(env_file, 0o600)
+        except OSError as e:
+            return jsonify({'error': f'could not update .env: {e}'}), 500
+        return jsonify({'status': 'ok', 'enabled': new_state, 'attached': True})
+
+    timer_unit = f'proxmenux-backup-{job_id}.timer'
+    current = subprocess.run(
+        ['systemctl', 'is-enabled', '--quiet', timer_unit],
+        capture_output=True
+    ).returncode == 0
+    new_state = (not current) if target is None else bool(target)
+    cmd = ['systemctl', '--now', 'enable' if new_state else 'disable', timer_unit]
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+    if r.returncode != 0:
+        return jsonify({'error': f'systemctl failed: {r.stderr.strip()}'}), 500
+    return jsonify({'status': 'ok', 'enabled': new_state, 'attached': False})
+
+
+@app.route('/api/host-backups/jobs/<job_id>', methods=['DELETE'])
+@require_auth
+def api_host_backups_job_delete(job_id):
+    """Remove a scheduled host backup job. Mirrors _job_delete in
+    backup_scheduler.sh: for attached jobs we only drop the .env/.paths
+    (the PVE vzdump job stays intact); for timer-based jobs we also
+    stop+disable the timer, remove the unit files and reload systemd."""
+    if not _JOB_ID_RE.match(job_id):
+        return jsonify({'error': 'invalid job id'}), 400
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    if not os.path.exists(env_file):
+        return jsonify({'error': 'job not found'}), 404
+
+    job = _parse_job_env(env_file)
+    is_attached = bool(job.get('PVE_STORAGE'))
+
+    paths_file = f'{_BACKUP_JOBS_DIR}/{job_id}.paths'
+    service_file = f'/etc/systemd/system/proxmenux-backup-{job_id}.service'
+    timer_file = f'/etc/systemd/system/proxmenux-backup-{job_id}.timer'
+
+    if not is_attached:
+        timer_unit = f'proxmenux-backup-{job_id}.timer'
+        subprocess.run(
+            ['systemctl', '--now', 'disable', timer_unit],
+            capture_output=True, timeout=10
+        )
+
+    removed = []
+    for f in (env_file, paths_file, service_file, timer_file):
+        try:
+            if os.path.exists(f):
+                os.remove(f)
+                removed.append(os.path.basename(f))
+        except OSError:
+            pass
+
+    # Drop all runner logs for this job — when the job is gone there's
+    # no archive these logs belong to. Keeps /var/log/proxmenux clean.
+    import glob as _glob
+    log_removed = 0
+    for log_f in _glob.glob(f'{_BACKUP_LOG_DIR}/{job_id}-*.log') + \
+                 _glob.glob(f'{_BACKUP_LOG_DIR}/{job_id}-last.status'):
+        try:
+            os.remove(log_f)
+            log_removed += 1
+        except OSError:
+            pass
+
+    if not is_attached:
+        subprocess.run(['systemctl', 'daemon-reload'], capture_output=True, timeout=10)
+
+    return jsonify({
+        'status': 'ok',
+        'job_id': job_id,
+        'attached': is_attached,
+        'removed': removed,
+        'log_files_removed': log_removed,
+    })
+
+
+_BACKUP_LIB_SH = '/usr/local/share/proxmenux/scripts/backup_restore/lib_host_backup_common.sh'
+_BACKUP_STATE_DIR = '/usr/local/share/proxmenux'
+_PVE_LOCAL_STORAGE_TYPES = ('dir', 'nfs', 'cifs', 'lvm', 'lvmthin', 'btrfs', 'zfs', 'zfspool')
+
+
+def _pve_storage_types_map() -> dict:
+    """Parse /etc/pve/storage.cfg into {storage_id: type}."""
+    result: dict = {}
+    cfg_path = '/etc/pve/storage.cfg'
+    if not os.path.exists(cfg_path):
+        return result
+    try:
+        with open(cfg_path) as f:
+            for raw in f:
+                line = raw.rstrip()
+                if not line or line.startswith('#'):
+                    continue
+                m = re.match(r'^([a-z]+):\s+(\S+)', line)
+                if m:
+                    result[m.group(2)] = m.group(1)
+    except OSError:
+        pass
+    return result
+
+
+def _list_pve_vzdump_jobs() -> list:
+    """Parse /etc/pve/jobs.cfg into a list of dicts. Same fields as
+    hb_pve_list_vzdump_jobs in lib_host_backup_common.sh, plus the
+    storage type resolved from storage.cfg."""
+    cfg_path = '/etc/pve/jobs.cfg'
+    if not os.path.exists(cfg_path):
+        return []
+    storage_types = _pve_storage_types_map()
+    jobs: list = []
+    current: dict | None = None
+    try:
+        with open(cfg_path) as f:
+            for raw in f:
+                line = raw.rstrip('\n')
+                if not line.strip():
+                    continue
+                if line.startswith('vzdump:'):
+                    if current:
+                        jobs.append(current)
+                    current = {
+                        'id': line.split(':', 1)[1].strip(),
+                        'storage': None,
+                        'storage_type': None,
+                        'schedule': None,
+                        'prune': None,
+                        'enabled': True,
+                    }
+                    continue
+                if re.match(r'^[a-z]+:', line) and current is not None:
+                    # Different block type encountered → close current
+                    jobs.append(current)
+                    current = None
+                    continue
+                if current is None:
+                    continue
+                m = re.match(r'^\s+(\S+)\s+(.*)$', line)
+                if not m:
+                    continue
+                key, val = m.group(1), m.group(2).strip()
+                if key == 'storage':
+                    current['storage'] = val
+                    current['storage_type'] = storage_types.get(val)
+                elif key == 'schedule':
+                    current['schedule'] = val
+                elif key == 'prune-backups':
+                    current['prune'] = val
+                elif key == 'enabled':
+                    current['enabled'] = (val == '1')
+        if current:
+            jobs.append(current)
+    except OSError:
+        pass
+    return jobs
+
+
+@app.route('/api/host-backups/pve-vzdump-jobs', methods=['GET'])
+@require_auth
+def api_host_backups_pve_vzdump_jobs():
+    """List PVE vzdump jobs the operator can attach a host backup to.
+    Optional ?backend=pbs|local filters by storage family."""
+    backend = (request.args.get('backend') or '').strip().lower()
+    jobs = _list_pve_vzdump_jobs()
+    if backend == 'pbs':
+        jobs = [j for j in jobs if j.get('storage_type') == 'pbs']
+    elif backend == 'local':
+        jobs = [j for j in jobs if j.get('storage_type') in _PVE_LOCAL_STORAGE_TYPES]
+    return jsonify({'jobs': jobs})
+
+
+@app.route('/api/host-backups/default-paths', methods=['GET'])
+@require_auth
+def api_host_backups_default_paths():
+    """Return the default backup profile path list, sourced from
+    lib_host_backup_common.sh so there is one source of truth."""
+    if not os.path.exists(_BACKUP_LIB_SH):
+        return jsonify({'paths': []})
+    try:
+        r = subprocess.run(
+            ['bash', '-c',
+             f'source {_BACKUP_LIB_SH}; declare -a paths=(); '
+             f'hb_select_profile_paths default paths >/dev/null 2>&1; '
+             f'printf "%s\\n" "${{paths[@]}}"'],
+            capture_output=True, text=True, timeout=10
+        )
+        if r.returncode != 0:
+            return jsonify({'paths': [], 'error': r.stderr.strip()}), 500
+        paths = [p for p in r.stdout.splitlines() if p.strip()]
+        return jsonify({'paths': paths})
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return jsonify({'paths': [], 'error': str(e)}), 500
+
+
+def _list_pbs_destinations() -> list:
+    """PBS repos available: from /etc/pve/storage.cfg + the proxmenux
+    manual list ($HB_STATE_DIR/pbs-manual-configs.txt). Same layout
+    hb_collect_pbs_configs uses."""
+    repos: list = []
+    seen: set = set()
+
+    # From PVE storage.cfg
+    cfg_path = '/etc/pve/storage.cfg'
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path) as f:
+                current_name = None
+                current_type = None
+                current_server = None
+                current_datastore = None
+                current_username = None
+                current_fingerprint = None
+                for raw in f:
+                    line = raw.rstrip('\n')
+                    m = re.match(r'^([a-z]+):\s+(\S+)', line)
+                    if m:
+                        if current_type == 'pbs' and current_name:
+                            repo = f"{current_username or 'root@pam'}@{current_server}:{current_datastore}"
+                            if (current_name, repo) not in seen:
+                                repos.append({
+                                    'name': current_name,
+                                    'repository': repo,
+                                    'fingerprint': current_fingerprint,
+                                    'source': 'proxmox',
+                                })
+                                seen.add((current_name, repo))
+                        current_type = m.group(1)
+                        current_name = m.group(2) if current_type == 'pbs' else None
+                        current_server = current_datastore = current_username = current_fingerprint = None
+                        continue
+                    if current_type != 'pbs' or current_name is None:
+                        continue
+                    sm = re.match(r'^\s+(\S+)\s+(.*)$', line)
+                    if not sm:
+                        continue
+                    key, val = sm.group(1), sm.group(2).strip()
+                    if key == 'server':
+                        current_server = val
+                    elif key == 'datastore':
+                        current_datastore = val
+                    elif key == 'username':
+                        current_username = val
+                    elif key == 'fingerprint':
+                        current_fingerprint = val
+                if current_type == 'pbs' and current_name and current_server and current_datastore:
+                    repo = f"{current_username or 'root@pam'}@{current_server}:{current_datastore}"
+                    if (current_name, repo) not in seen:
+                        repos.append({
+                            'name': current_name,
+                            'repository': repo,
+                            'fingerprint': current_fingerprint,
+                            'source': 'proxmox',
+                        })
+                        seen.add((current_name, repo))
+        except OSError:
+            pass
+
+    # From proxmenux manual list
+    manual_path = f'{_BACKUP_STATE_DIR}/pbs-manual-configs.txt'
+    if os.path.exists(manual_path):
+        try:
+            with open(manual_path) as f:
+                for raw in f:
+                    line = raw.strip()
+                    if not line or '|' not in line:
+                        continue
+                    name, repo = line.split('|', 1)
+                    if (name, repo) not in seen:
+                        repos.append({
+                            'name': name,
+                            'repository': repo,
+                            'fingerprint': None,
+                            'source': 'manual',
+                        })
+                        seen.add((name, repo))
+        except OSError:
+            pass
+    # Annotate each repo with the jobs that currently depend on it so
+    # the UI can warn before deleting a destination that's in use.
+    for r in repos:
+        r['jobs_using'] = _jobs_using_pbs(r['repository'])
+    return repos
+
+
+def _list_borg_destinations() -> list:
+    """borg-targets.txt has 4 pipe-separated fields per line:
+    name|repo|ssh_key|encrypt_mode
+
+    Legacy lines from the shell installer only carry the first three
+    fields — those targets default to `repokey` (what the shell wizard
+    has always written). `has_passphrase` reports whether a sibling
+    `borg-pass-<name>.txt` exists, so the UI can skip the passphrase
+    prompt when the credential is already saved server-side."""
+    targets: list = []
+    cfg = f'{_BACKUP_STATE_DIR}/borg-targets.txt'
+    if not os.path.exists(cfg):
+        return targets
+    try:
+        with open(cfg) as f:
+            for raw in f:
+                line = raw.strip()
+                if not line or '|' not in line:
+                    continue
+                parts = line.split('|', 3)
+                name = parts[0]
+                repo = parts[1] if len(parts) > 1 else ''
+                ssh_key = parts[2] if len(parts) > 2 else ''
+                encrypt_mode = (parts[3] if len(parts) > 3 else '').strip() or 'repokey'
+                pass_file = f'{_BACKUP_STATE_DIR}/borg-pass-{name}.txt'
+                has_passphrase = os.path.isfile(pass_file)
+                targets.append({
+                    'name': name,
+                    'repository': repo,
+                    'ssh_key': ssh_key,
+                    'ssh_key_path': ssh_key,
+                    'encrypt_mode': encrypt_mode,
+                    'has_passphrase': has_passphrase,
+                    'jobs_using': _jobs_using_borg(repo),
+                })
+    except OSError:
+        pass
+    return targets
+
+
+def _resolve_borg_passphrase(name: str) -> str:
+    """Return the passphrase saved for borg destination `name`, or ''."""
+    if not name:
+        return ''
+    pf = f'{_BACKUP_STATE_DIR}/borg-pass-{name}.txt'
+    if not os.path.isfile(pf):
+        return ''
+    try:
+        with open(pf) as f:
+            return f.read().strip()
+    except OSError:
+        return ''
+
+
+def _delete_job_internal(job_id: str) -> None:
+    """Tear down a backup job — used both by the individual DELETE
+    endpoint and by the cascade when removing a destination. Drops
+    .env / .paths / systemd unit + timer (with disable + reload),
+    plus all of the job's logs and status sidecar. Idempotent:
+    missing files are silently skipped."""
+    if not _JOB_ID_RE.match(job_id):
+        return
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    if not os.path.exists(env_file):
+        return
+    try:
+        job = _parse_job_env(env_file)
+    except OSError:
+        job = {}
+    is_attached = bool(job.get('PVE_STORAGE'))
+    paths_file = f'{_BACKUP_JOBS_DIR}/{job_id}.paths'
+    service_file = f'/etc/systemd/system/proxmenux-backup-{job_id}.service'
+    timer_file = f'/etc/systemd/system/proxmenux-backup-{job_id}.timer'
+    if not is_attached:
+        try:
+            subprocess.run(
+                ['systemctl', '--now', 'disable', f'proxmenux-backup-{job_id}.timer'],
+                capture_output=True, timeout=10,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            pass
+    for f in (env_file, paths_file, service_file, timer_file):
+        try:
+            if os.path.exists(f):
+                os.remove(f)
+        except OSError:
+            pass
+    if not is_attached:
+        try:
+            subprocess.run(['systemctl', 'daemon-reload'], capture_output=True, timeout=10)
+        except (subprocess.TimeoutExpired, OSError):
+            pass
+    import glob as _glob
+    for log_f in _glob.glob(f'{_BACKUP_LOG_DIR}/{job_id}-*.log') + \
+                 _glob.glob(f'{_BACKUP_LOG_DIR}/{job_id}-last.status'):
+        try:
+            os.remove(log_f)
+        except OSError:
+            pass
+
+
+def _jobs_using_pbs(repo: str) -> list:
+    """Return the list of job_ids whose .env points at this PBS
+    repository. Used by the DELETE-destination confirm flow so the
+    operator sees what gets cascade-removed."""
+    if not repo or not os.path.isdir(_BACKUP_JOBS_DIR):
+        return []
+    out: list = []
+    for fname in os.listdir(_BACKUP_JOBS_DIR):
+        if not fname.endswith('.env'):
+            continue
+        try:
+            env = _parse_job_env(f'{_BACKUP_JOBS_DIR}/{fname}')
+        except OSError:
+            continue
+        if env.get('BACKEND') == 'pbs' and env.get('PBS_REPOSITORY') == repo:
+            out.append(fname[:-4])
+    return out
+
+
+def _jobs_using_borg(repo: str) -> list:
+    """Same as _jobs_using_pbs but for Borg destinations."""
+    if not repo or not os.path.isdir(_BACKUP_JOBS_DIR):
+        return []
+    out: list = []
+    for fname in os.listdir(_BACKUP_JOBS_DIR):
+        if not fname.endswith('.env'):
+            continue
+        try:
+            env = _parse_job_env(f'{_BACKUP_JOBS_DIR}/{fname}')
+        except OSError:
+            continue
+        if env.get('BACKEND') == 'borg' and env.get('BORG_REPO') == repo:
+            out.append(fname[:-4])
+    return out
+
+
+def _jobs_using_local(path: str) -> list:
+    """Jobs whose LOCAL_DEST_DIR is this local destination path."""
+    if not path or not os.path.isdir(_BACKUP_JOBS_DIR):
+        return []
+    out: list = []
+    target = path.rstrip('/')
+    for fname in os.listdir(_BACKUP_JOBS_DIR):
+        if not fname.endswith('.env'):
+            continue
+        try:
+            env = _parse_job_env(f'{_BACKUP_JOBS_DIR}/{fname}')
+        except OSError:
+            continue
+        if env.get('BACKEND') == 'local' and (env.get('LOCAL_DEST_DIR') or '').rstrip('/') == target:
+            out.append(fname[:-4])
+    return out
+
+
+def _resolve_borg_destination_for_repo(repo: str) -> dict | None:
+    """Find the borg destination dict (from _list_borg_destinations)
+    whose `repository` matches. Used to inherit passphrase + encryption
+    from the destination when a job/manual-run doesn't provide them."""
+    if not repo:
+        return None
+    for d in _list_borg_destinations():
+        if d.get('repository') == repo:
+            return d
+    return None
+
+
+_LOCAL_DEFAULT_PATH = '/var/lib/vz/dump'
+
+
+def _read_local_target_paths() -> list:
+    """Read the operator-configured local backup paths from
+    local-target.conf. The file is one path per line — historically it
+    only ever held one entry, but the new multi-path UI lets the
+    operator stack several. Empty lines and duplicates are dropped."""
+    cfg = f'{_BACKUP_STATE_DIR}/local-target.conf'
+    out: list = []
+    if not os.path.exists(cfg):
+        return out
+    seen: set = set()
+    try:
+        with open(cfg) as f:
+            for raw in f:
+                p = raw.strip()
+                if not p or p.startswith('#'):
+                    continue
+                if p in seen:
+                    continue
+                seen.add(p)
+                out.append(p)
+    except OSError:
+        pass
+    return out
+
+
+def _list_local_targets() -> list:
+    """One entry per local destination the operator can target. The
+    /var/lib/vz/dump default is always present and not removable; any
+    custom path stacked by the operator gets source=custom + removable.
+    Each entry carries `jobs_using` so the UI can warn before delete."""
+    entries: list = [{
+        'path': _LOCAL_DEFAULT_PATH,
+        'source': 'default',
+        'removable': False,
+        'jobs_using': _jobs_using_local(_LOCAL_DEFAULT_PATH),
+    }]
+    for p in _read_local_target_paths():
+        if p == _LOCAL_DEFAULT_PATH:
+            # Operator re-added the default — collapse silently.
+            continue
+        entries.append({
+            'path': p,
+            'source': 'custom',
+            'removable': True,
+            'jobs_using': _jobs_using_local(p),
+        })
+    return entries
+
+
+def _get_local_target() -> dict:
+    """Backwards-compatible accessor used by the scheduler runner +
+    the historical single-path UI. `effective` is the first custom
+    path if any, otherwise the default — matching the previous
+    behavior. New code should call _list_local_targets() instead."""
+    customs = _read_local_target_paths()
+    configured = customs[0] if customs else None
+    return {
+        'configured': configured,
+        'default': _LOCAL_DEFAULT_PATH,
+        'effective': configured or _LOCAL_DEFAULT_PATH,
+        'entries': _list_local_targets(),
+    }
+
+
+@app.route('/api/host-backups/destinations', methods=['GET'])
+@require_auth
+def api_host_backups_destinations():
+    """Pre-configured backup destinations the operator picks from when
+    creating a new job: PBS repos, Borg targets, and the local target
+    list (always includes the /var/lib/vz/dump default plus any custom
+    paths the operator stacked on top)."""
+    return jsonify({
+        'pbs': _list_pbs_destinations(),
+        'borg': _list_borg_destinations(),
+        'local': _get_local_target(),
+    })
+
+
+def _is_usb_mount(path: str) -> bool:
+    """Heuristic: true if `path` lives under one of the typical USB
+    mount roots ProxMenux uses for backup media. The naming pattern
+    `/mnt/proxmenux-backup-disk-*` is set by the USB drive section
+    of the host-backup UI; we also detect anything mounted in
+    /media/. Used only to display a `USB` badge — not for any
+    permissions decision."""
+    if not path:
+        return False
+    p = os.path.abspath(path)
+    if p.startswith('/mnt/proxmenux-backup-disk-'):
+        return True
+    if p.startswith('/media/'):
+        return True
+    return False
+
+
+def _capacity_local(path: str) -> dict:
+    """Capacity via statvfs(path). Walks up the path tree until it
+    finds an existing directory so we can answer even for a
+    destination dir that hasn't been created yet."""
+    if not path or not path.startswith('/'):
+        return {'error': 'invalid path'}
+    probe = path
+    while probe and not os.path.exists(probe):
+        parent = os.path.dirname(probe)
+        if parent == probe:
+            break
+        probe = parent
+    if not probe or not os.path.exists(probe):
+        return {'error': 'path not found'}
+    try:
+        st = os.statvfs(probe)
+    except OSError as e:
+        return {'error': str(e)}
+    block = st.f_frsize
+    total = st.f_blocks * block
+    avail = st.f_bavail * block
+    used = total - (st.f_bfree * block)
+    return {
+        'total': total,
+        'available': avail,
+        'used': used,
+        'is_usb': _is_usb_mount(path),
+    }
+
+
+def _capacity_borg_ssh(host: str, user: str, remote_path: str, key_path: str = '') -> dict:
+    """Run `df -B1 --output=size,used,avail` over ssh against the
+    remote borg repo path. Times out fast — failure is just rendered
+    as a missing capacity badge in the UI, not a hard error."""
+    if not host or not user or not remote_path:
+        return {'error': 'incomplete ssh target'}
+    ssh_target = f'{user}@{host}'
+    cmd = ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5',
+           '-o', 'StrictHostKeyChecking=accept-new']
+    if key_path:
+        cmd += ['-i', key_path]
+    cmd += [ssh_target, f'df -B1 --output=size,used,avail {shlex.quote(remote_path)}']
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return {'error': f'ssh timed out: {e}'}
+    if r.returncode != 0:
+        return {'error': (r.stderr.strip().splitlines()[-1] if r.stderr.strip() else 'df failed')[:200]}
+    lines = [ln.strip() for ln in r.stdout.splitlines() if ln.strip()]
+    if len(lines) < 2:
+        return {'error': 'unexpected df output'}
+    cols = lines[-1].split()
+    if len(cols) < 3:
+        return {'error': 'unexpected df output'}
+    try:
+        total = int(cols[0])
+        used = int(cols[1])
+        avail = int(cols[2])
+    except ValueError:
+        return {'error': 'unparseable df output'}
+    return {'total': total, 'used': used, 'available': avail, 'remote': True}
+
+
+# Shared PBS encryption keyfile — mirrors the shell flow's single
+# `$HB_STATE_DIR/pbs-key.conf`. One host-wide keyfile reused across
+# every encrypted PBS backup. chmod 0600 is the protection (no KDF
+# passphrase, matching `proxmox-backup-client key create --kdf none`).
+_PBS_KEYFILE_PATH = f'{_BACKUP_STATE_DIR}/pbs-key.conf'
+# Optional escrow: an openssl-encrypted copy of the keyfile that the
+# runner uploads to every PBS backup. Lets the operator recover the
+# keyfile on a fresh host using just the passphrase. Mirrors the
+# shell's hb_pbs_setup_recovery flow byte-for-byte (AES-256-CBC +
+# PBKDF2 600k iterations).
+_PBS_RECOVERY_ENC_PATH = f'{_BACKUP_STATE_DIR}/pbs-key.recovery.enc'
+# Passphrase used to unlock the keyfile itself when it was created with
+# `--kdf scrypt`. Written by the "Import existing keyfile" flow when
+# the operator provides one; empty file (or missing) means the keyfile
+# is kdf=none and no passphrase is needed. Read at backup time by the
+# runner and exported as PBS_ENCRYPTION_PASSWORD so
+# proxmox-backup-client can decrypt the key without prompting.
+# Same trust boundary as the keyfile itself: chmod 600, next to it.
+_PBS_KEYFILE_PASS_PATH = f'{_BACKUP_STATE_DIR}/pbs-key.pass'
+# Escrow-mode state file: one line, 'none'|'local'|'full'. Mirrors the
+# shell's $HB_STATE_DIR/pbs-key.mode. Missing file = legacy install =
+# 'full' (the pre-3-mode behaviour) so upgrades are silent.
+_PBS_ESCROW_MODE_PATH = f'{_BACKUP_STATE_DIR}/pbs-key.mode'
+_PBS_ESCROW_MODES = ('none', 'local', 'full')
+# PVE stores per-storage encryption keyfiles here when the operator
+# enables `encryption-key` on a PBS storage entry. Same JSON keyfile
+# format as `proxmox-backup-client key create --kdf none` — usable
+# verbatim with --keyfile. Reusing it avoids duplicating a secret
+# across the PVE config and ProxMenux state.
+_PVE_STORAGE_KEY_DIR = '/etc/pve/priv/storage'
+_PVE_STORAGE_CFG = '/etc/pve/storage.cfg'
+
+
+def _pbs_read_escrow_mode() -> str:
+    """Read the current escrow mode ('none'|'local'|'full'). Falls back
+    to 'full' for legacy installs where the mode file doesn't exist —
+    that matches the pre-feature behaviour."""
+    try:
+        with open(_PBS_ESCROW_MODE_PATH, 'r') as f:
+            v = f.read(32).strip()
+        if v in _PBS_ESCROW_MODES:
+            return v
+    except OSError:
+        pass
+    return 'full'
+
+
+def _pbs_write_escrow_mode(mode: str) -> bool:
+    if mode not in _PBS_ESCROW_MODES:
+        return False
+    try:
+        os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+        fd = os.open(
+            _PBS_ESCROW_MODE_PATH,
+            os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+            0o600,
+        )
+        with os.fdopen(fd, 'w') as f:
+            f.write(mode + '\n')
+    except OSError:
+        return False
+    return True
+
+
+def _pbs_discover_pve_keyfiles() -> list:
+    """List PVE-managed PBS storage entries that carry an encryption
+    keyfile at /etc/pve/priv/storage/<NAME>.enc. Returns
+    [{name, server, datastore, path}] for each matching entry. Empty
+    list on any read error — this is best-effort discovery.
+    """
+    if not (os.path.isfile(_PVE_STORAGE_CFG) and os.path.isdir(_PVE_STORAGE_KEY_DIR)):
+        return []
+    entries = []
+    current = None
+    try:
+        with open(_PVE_STORAGE_CFG, 'r') as f:
+            for raw_line in f:
+                line = raw_line.rstrip('\n')
+                if not line.strip():
+                    continue
+                # Non-indented block start: "<type>: <name>"
+                if not line[0].isspace():
+                    if current and current.get('type') == 'pbs':
+                        entries.append(current)
+                    stripped = line.strip()
+                    if ':' in stripped:
+                        typ, _, name = stripped.partition(':')
+                        name = name.strip()
+                        current = {'type': typ.strip(), 'name': name}
+                    else:
+                        current = None
+                    continue
+                # Indented body line: "    key value"
+                if current is None:
+                    continue
+                parts = line.strip().split(None, 1)
+                if len(parts) == 2:
+                    current[parts[0]] = parts[1]
+        if current and current.get('type') == 'pbs':
+            entries.append(current)
+    except OSError:
+        return []
+
+    result = []
+    for e in entries:
+        name = e.get('name') or ''
+        if not name:
+            continue
+        kf = os.path.join(_PVE_STORAGE_KEY_DIR, f'{name}.enc')
+        if not os.path.isfile(kf):
+            continue
+        result.append({
+            'name': name,
+            'server': e.get('server', ''),
+            'datastore': e.get('datastore', ''),
+            'path': kf,
+        })
+    return result
+
+
+def _pbs_pve_keyfile_for_repository(repository: str) -> dict:
+    """Given a PBS repository string 'user@realm@host:datastore', return
+    the matching PVE-storage keyfile entry (dict) or {} if none matches.
+    """
+    if not repository or ':' not in repository or '@' not in repository:
+        return {}
+    # Split repo on last '@' and last ':' — user/realm may contain '@'
+    # in the token form.
+    host_and_ds = repository.rsplit('@', 1)[-1]
+    host, _, datastore = host_and_ds.rpartition(':')
+    if not host or not datastore:
+        return {}
+    for e in _pbs_discover_pve_keyfiles():
+        if e.get('server') == host and e.get('datastore') == datastore:
+            return e
+    return {}
+
+
+def _pbs_do_finalize_recovery(passphrase: str, mode: str) -> tuple:
+    """Wrap the on-disk keyfile with the operator's passphrase (writes
+    _PBS_RECOVERY_ENC_PATH) and persist the escrow mode. Called by
+    both import and set-mode flows.
+
+    - mode 'full' or 'local' → envelope written + mode file updated.
+    - mode 'none' should never reach here — the caller must skip the
+      call entirely. Guarded by an assert for safety.
+
+    Every artefact ProxMenux writes lives under _BACKUP_STATE_DIR
+    (usually /usr/local/share/proxmenux/). No copies leak into /root/
+    — the operator uses the Monitor's Download button when they want
+    the keyfile offsite. Returns (ok, '') — the second slot is kept
+    for API compatibility with older callers that expected an offsite
+    path there.
+    """
+    assert mode in ('local', 'full'), 'finalize_recovery called with invalid mode'
+    if not shutil.which('openssl'):
+        return False, ''
+    if not os.path.isfile(_PBS_KEYFILE_PATH):
+        return False, ''
+    if not _pbs_recovery_encrypt(passphrase, _PBS_KEYFILE_PATH, _PBS_RECOVERY_ENC_PATH):
+        return False, ''
+    _pbs_write_escrow_mode(mode)
+    return True, ''
+
+
+def _pbs_install_pve_keyfile(src_path: str) -> bool:
+    """Copy a PVE-storage keyfile into the ProxMenux canonical location.
+    Atomic: writes to a temp path in the same directory, chmods, then
+    renames. Returns True on success."""
+    if not (src_path and os.path.isfile(src_path)):
+        return False
+    try:
+        os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(
+            prefix='pbs-key.', suffix='.pve', dir=_BACKUP_STATE_DIR,
+        )
+        try:
+            with os.fdopen(fd, 'wb') as fout, open(src_path, 'rb') as fin:
+                fout.write(fin.read())
+            os.chmod(tmp, 0o600)
+            os.replace(tmp, _PBS_KEYFILE_PATH)
+        except OSError:
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+            return False
+    except OSError:
+        return False
+    return True
+
+
+def _pbs_keyfile_get_or_create(create_if_missing: bool = True) -> str:
+    """Return the path to the shared PBS keyfile, generating it on
+    demand if requested. Returns "" when no keyfile exists and the
+    caller didn't ask to create one."""
+    if os.path.isfile(_PBS_KEYFILE_PATH):
+        return _PBS_KEYFILE_PATH
+    if not create_if_missing:
+        return ''
+    try:
+        os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+        r = subprocess.run(
+            ['proxmox-backup-client', 'key', 'create', '--kdf', 'none', _PBS_KEYFILE_PATH],
+            capture_output=True, text=True, timeout=15,
+        )
+        if r.returncode != 0 or not os.path.isfile(_PBS_KEYFILE_PATH):
+            return ''
+        os.chmod(_PBS_KEYFILE_PATH, 0o600)
+        return _PBS_KEYFILE_PATH
+    except (OSError, subprocess.TimeoutExpired):
+        return ''
+
+
+def _pbs_keyfile_fingerprint(path: str = '') -> str:
+    """Return the fingerprint of a PBS keyfile as reported by
+    `proxmox-backup-client key info`, or '' if the file is missing or
+    the tool is unavailable. Fingerprints look like
+    `AA:BB:CC:DD:EE:FF:GG:HH` and identify the exact key used to encrypt
+    a backup — displaying them next to a manifest's expected fingerprint
+    is what tells an operator whether they have the right key or a
+    different-but-similar one."""
+    kf = path or _PBS_KEYFILE_PATH
+    if not os.path.isfile(kf) or not shutil.which('proxmox-backup-client'):
+        return ''
+    try:
+        r = subprocess.run(
+            ['proxmox-backup-client', 'key', 'show', '--output-format', 'json', kf],
+            capture_output=True, text=True, timeout=10,
+        )
+        if r.returncode != 0 or not r.stdout:
+            return ''
+        info = json.loads(r.stdout)
+        return (info.get('fingerprint') or '').strip()
+    except (subprocess.TimeoutExpired, OSError, json.JSONDecodeError, ValueError):
+        return ''
+
+
+def _pbs_recovery_encrypt(passphrase: str, in_path: str, out_path: str) -> bool:
+    """openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt < passphrase.
+    Mirrors hb_pbs_encrypt_recovery in the shell so a blob produced
+    here can be decrypted by the shell's restore flow, and vice versa."""
+    if not os.path.isfile(in_path) or not passphrase:
+        return False
+    try:
+        r = subprocess.run(
+            ['openssl', 'enc', '-aes-256-cbc', '-pbkdf2', '-iter', '600000',
+             '-salt', '-in', in_path, '-out', out_path, '-pass', 'stdin'],
+            input=passphrase, text=True,
+            capture_output=True, timeout=30,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return False
+    if r.returncode != 0 or not os.path.isfile(out_path):
+        return False
+    try:
+        os.chmod(out_path, 0o600)
+    except OSError:
+        pass
+    return True
+
+
+def _pbs_recovery_decrypt(passphrase: str, in_path: str, out_path: str) -> bool:
+    """Inverse of _pbs_recovery_encrypt. Used by the restore flow when
+    the operator has lost the local keyfile and wants to pull it back
+    from a PBS escrow snapshot."""
+    if not os.path.isfile(in_path) or not passphrase:
+        return False
+    try:
+        r = subprocess.run(
+            ['openssl', 'enc', '-d', '-aes-256-cbc', '-pbkdf2', '-iter', '600000',
+             '-in', in_path, '-out', out_path, '-pass', 'stdin'],
+            input=passphrase, text=True,
+            capture_output=True, timeout=30,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return False
+    if r.returncode != 0 or not os.path.isfile(out_path):
+        return False
+    try:
+        os.chmod(out_path, 0o600)
+    except OSError:
+        pass
+    return True
+
+
+@app.route('/api/host-backups/pbs-encryption/keyfile-info', methods=['GET'])
+@require_auth
+def api_pbs_encryption_keyfile_info():
+    """Snapshot of the installed keyfile for the "Manage keyfile" panel.
+    Extends /pbs-recovery/status with metadata that only makes sense
+    when a keyfile is actually installed (installed_at, kdf hint).
+    Returns 200 with `installed: false` when no keyfile is present so
+    the panel can render a neutral empty state without special-casing
+    404s in the caller."""
+    installed = os.path.isfile(_PBS_KEYFILE_PATH)
+    if not installed:
+        return jsonify({
+            'installed': False,
+            'path': _PBS_KEYFILE_PATH,
+        })
+    installed_at = ''
+    try:
+        installed_at = time.strftime(
+            '%Y-%m-%dT%H:%M:%SZ',
+            time.gmtime(os.path.getmtime(_PBS_KEYFILE_PATH)),
+        )
+    except OSError:
+        pass
+    # Best-effort KDF hint from the JSON keyfile body itself. `key info`
+    # would be the authoritative source but refuses scrypt keyfiles
+    # without their passphrase, so parsing the JSON manually gives us
+    # a hint even for imported scrypt keys the operator brought their
+    # own passphrase for.
+    # KDF detection covers all three shapes proxmox-backup-client
+    # writes across versions:
+    #   - modern kdf=none  → JSON `null`  → Python None
+    #   - legacy kdf=none  → string "None"
+    #   - kdf=scrypt       → object {"Scrypt": {...}}
+    kdf_hint = 'unknown'
+    try:
+        with open(_PBS_KEYFILE_PATH, 'r') as f:
+            raw = f.read(4096)
+        body = json.loads(raw)
+        # `body.get('kdf', 'MISSING')` distinguishes "field explicitly
+        # null" (present with JSON null → we want 'none') from "field
+        # absent" (unlikely but treat as unknown to be safe).
+        _sentinel = object()
+        kdf_raw = body.get('kdf', _sentinel)
+        if kdf_raw is None:
+            kdf_hint = 'none'
+        elif isinstance(kdf_raw, str):
+            # "None" → "none", any other string mirrors verbatim.
+            kdf_hint = kdf_raw.lower()
+        elif isinstance(kdf_raw, dict):
+            kdf_hint = next(iter(kdf_raw)).lower() if kdf_raw else 'unknown'
+    except (OSError, json.JSONDecodeError, ValueError, StopIteration):
+        pass
+    return jsonify({
+        'installed': True,
+        'path': _PBS_KEYFILE_PATH,
+        'fingerprint': _pbs_keyfile_fingerprint(),
+        'kdf_hint': kdf_hint,
+        'installed_at': installed_at,
+        'has_keyfile_passphrase': (
+            os.path.isfile(_PBS_KEYFILE_PASS_PATH)
+            and os.path.getsize(_PBS_KEYFILE_PASS_PATH) > 0
+        ),
+        'has_recovery': os.path.isfile(_PBS_RECOVERY_ENC_PATH),
+        'escrow_mode': _pbs_read_escrow_mode(),
+    })
+
+
+@app.route('/api/host-backups/pbs-encryption/remove', methods=['POST'])
+@require_auth
+def api_pbs_encryption_remove():
+    """Remove the installed keyfile + its paired local artifacts
+    (passphrase file, recovery blob). Optionally backs the three up to
+    /root under a timestamped prefix so the operator can still decrypt
+    or rebuild them later. Never touches the recovery blob(s) already
+    uploaded to PBS — those stay recoverable with their original
+    passphrase and are the safe way to reach any pre-existing backup
+    encrypted with the removed key.
+
+    Deleting is destructive and unconditional — the operator is
+    expected to click Download first if they want a copy. ProxMenux
+    never scatters files under /root/ any more.
+    """
+    if not os.path.isfile(_PBS_KEYFILE_PATH):
+        return jsonify({'error': 'no keyfile installed'}), 404
+
+    backed_up: list = []
+
+    # Wipe order: recovery blob first so a mid-flight failure leaves us
+    # in a clean, backup-still-decryptable-with-blob state. The escrow
+    # mode file goes last because it's the smallest side-effect and
+    # missing = 'full' (legacy default), which is a safe fallback.
+    removed = []
+    for path in (
+        _PBS_RECOVERY_ENC_PATH,
+        _PBS_KEYFILE_PASS_PATH,
+        _PBS_KEYFILE_PATH,
+        _PBS_ESCROW_MODE_PATH,
+    ):
+        try:
+            os.remove(path)
+            removed.append(path)
+        except FileNotFoundError:
+            pass
+        except OSError as e:
+            return jsonify({
+                'error': f'remove failed for {path}: {e}',
+                'backed_up': backed_up,
+                'removed': removed,
+            }), 500
+    return jsonify({
+        'status': 'ok',
+        'backed_up': backed_up,
+        'removed': removed,
+    })
+
+
+@app.route('/api/host-backups/pbs-encryption/passphrase', methods=['POST'])
+@require_auth
+def api_pbs_encryption_passphrase():
+    """Update ONLY the stored keyfile passphrase (pbs-key.pass) without
+    touching the keyfile itself. Useful when the operator rotates the
+    passphrase on their own PBS setup and needs ProxMenux to catch up.
+    Body: `{new_passphrase}`. Empty value wipes the file — the runner
+    then treats the keyfile as kdf=none.
+    """
+    payload = request.get_json(silent=True) or {}
+    new_pass = payload.get('new_passphrase') or ''
+    if not os.path.isfile(_PBS_KEYFILE_PATH):
+        return jsonify({'error': 'no keyfile installed'}), 404
+    if not new_pass:
+        try:
+            os.remove(_PBS_KEYFILE_PASS_PATH)
+        except FileNotFoundError:
+            pass
+        except OSError as e:
+            return jsonify({'error': f'cannot remove passphrase file: {e}'}), 500
+        return jsonify({'status': 'ok', 'has_keyfile_passphrase': False})
+    try:
+        fd = os.open(_PBS_KEYFILE_PASS_PATH,
+                     os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, 'w') as f:
+            f.write(new_pass)
+    except OSError as e:
+        return jsonify({'error': f'cannot write passphrase file: {e}'}), 500
+    return jsonify({'status': 'ok', 'has_keyfile_passphrase': True})
+
+
+@app.route('/api/host-backups/pbs-recovery/status', methods=['GET'])
+@require_auth
+def api_pbs_recovery_status():
+    """Whether the host has a PBS keyfile + whether an escrow blob is
+    saved alongside it. Used by the wizard to decide whether to show
+    the 'set recovery passphrase' input."""
+    return jsonify({
+        'has_keyfile': os.path.isfile(_PBS_KEYFILE_PATH),
+        'has_recovery': os.path.isfile(_PBS_RECOVERY_ENC_PATH),
+        # True only when a non-empty passphrase file exists next to the
+        # keyfile. Lets the UI skip re-prompting the operator for the
+        # scrypt-unlock passphrase during subsequent job creations.
+        'has_keyfile_passphrase': (
+            os.path.isfile(_PBS_KEYFILE_PASS_PATH)
+            and os.path.getsize(_PBS_KEYFILE_PASS_PATH) > 0
+        ),
+        'keyfile_path': _PBS_KEYFILE_PATH,
+        'recovery_path': _PBS_RECOVERY_ENC_PATH,
+        # Fingerprint of the installed keyfile — empty when no keyfile
+        # is present. Exposed so the Web UI can render it next to the
+        # manifest's expected fingerprint after a download error
+        # ("missing key — manifest was created with key XX:XX:...").
+        'keyfile_fingerprint': _pbs_keyfile_fingerprint(),
+        # Current escrow model: 'none' | 'local' | 'full'. Missing on
+        # legacy hosts (pre-3-mode feature) — the reader falls back to
+        # 'full' silently, matching the pre-feature behaviour.
+        'escrow_mode': _pbs_read_escrow_mode(),
+    })
+
+
+# ─── Restore progress state (written by apply_cluster_postboot.sh) ──
+# The postboot script maintains /var/lib/proxmenux/restore-state.json
+# with a `running|complete|failed` status plus milestone counters,
+# per-component results, sanity warnings and a rollback delta. The
+# Backups tab polls status() to render a live card while the restore
+# is running and a summary once it's done; dismiss() flips the
+# `acknowledged` flag so the card collapses; history() lists archived
+# runs; log() returns a filtered tail of the postboot log.
+
+_RESTORE_STATE_FILE = '/var/lib/proxmenux/restore-state.json'
+_RESTORE_HISTORY_DIR = '/var/lib/proxmenux/restore-history'
+_RESTORE_LOG_DIR = '/var/log/proxmenux'
+
+
+def _read_restore_state(path):
+    try:
+        with open(path, 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return None
+
+
+@app.route('/api/host-backups/restore/status', methods=['GET'])
+@require_auth
+def api_host_backups_restore_status():
+    """Current restore-state.json content — empty response means no
+    restore has ever run on this host (or the state dir is missing)."""
+    state = _read_restore_state(_RESTORE_STATE_FILE)
+    if state is None:
+        return jsonify({'state': None})
+    return jsonify({'state': state})
+
+
+@app.route('/api/host-backups/restore/dismiss', methods=['POST'])
+@require_auth
+def api_host_backups_restore_dismiss():
+    """Flip acknowledged=true on the current state file so the Backups
+    tab card collapses. The state file itself is preserved until the
+    next restore overwrites it — the operator can still open the
+    history modal to review this run's details later."""
+    state = _read_restore_state(_RESTORE_STATE_FILE)
+    if state is None:
+        return jsonify({'error': 'no restore state to dismiss'}), 404
+    state['acknowledged'] = True
+    try:
+        tmp = _RESTORE_STATE_FILE + '.tmp'
+        with open(tmp, 'w') as f:
+            json.dump(state, f)
+        os.replace(tmp, _RESTORE_STATE_FILE)
+    except OSError as e:
+        return jsonify({'error': f'cannot persist state: {e}'}), 500
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/host-backups/restore/history', methods=['GET'])
+@require_auth
+def api_host_backups_restore_history():
+    """List archived restore runs (newest first). Each entry carries
+    just the summary metadata; the detail modal fetches the full
+    payload on demand via ?file=<name>."""
+    file_arg = request.args.get('file')
+    if file_arg:
+        # Reject anything that could climb out of the history dir.
+        # Filenames are always <YYYYmmdd_HHMMSS>-<complete|failed>.json.
+        if '/' in file_arg or '..' in file_arg or not file_arg.endswith('.json'):
+            return jsonify({'error': 'invalid file name'}), 400
+        full = os.path.join(_RESTORE_HISTORY_DIR, file_arg)
+        payload = _read_restore_state(full)
+        if payload is None:
+            return jsonify({'error': 'not found'}), 404
+        return jsonify({'state': payload})
+
+    entries = []
+    try:
+        for name in os.listdir(_RESTORE_HISTORY_DIR):
+            if not name.endswith('.json'):
+                continue
+            full = os.path.join(_RESTORE_HISTORY_DIR, name)
+            try:
+                mtime = os.stat(full).st_mtime
+            except OSError:
+                continue
+            payload = _read_restore_state(full) or {}
+            entries.append({
+                'file': name,
+                'mtime': mtime,
+                'status': payload.get('status', 'unknown'),
+                'started_at': payload.get('started_at'),
+                'finished_at': payload.get('finished_at'),
+                'duration': (payload.get('summary') or {}).get('duration'),
+            })
+    except FileNotFoundError:
+        pass
+    entries.sort(key=lambda e: e['mtime'], reverse=True)
+    return jsonify({'entries': entries})
+
+
+@app.route('/api/host-backups/restore/log', methods=['GET'])
+@require_auth
+def api_host_backups_restore_log():
+    """Return a tail of the postboot log — optionally filtered to just
+    error/warning lines. Path is taken from the state file's log_path
+    (or from ?path=… for a history entry) and validated to live under
+    /var/log/proxmenux so an operator can't read arbitrary files."""
+    path = request.args.get('path')
+    filter_mode = request.args.get('filter', 'all')  # all | issues
+    try:
+        tail_lines = min(int(request.args.get('tail', '400')), 4000)
+    except ValueError:
+        tail_lines = 400
+
+    if not path:
+        state = _read_restore_state(_RESTORE_STATE_FILE) or {}
+        path = state.get('log_path')
+    if not path:
+        return jsonify({'lines': [], 'path': None})
+
+    # Resolve to guard against traversal; the log MUST live inside
+    # /var/log/proxmenux for the endpoint to expose it.
+    real = os.path.realpath(path)
+    if not real.startswith(_RESTORE_LOG_DIR + os.sep) and real != _RESTORE_LOG_DIR:
+        return jsonify({'error': 'log path outside allowed directory'}), 400
+    if not os.path.isfile(real):
+        return jsonify({'lines': [], 'path': path}), 200
+
+    try:
+        with open(real, 'r', errors='replace') as f:
+            # Simple tail: read the whole file (postboot logs are
+            # small — a few hundred KB at worst) and slice.
+            data = f.readlines()
+    except OSError as e:
+        return jsonify({'error': f'cannot read log: {e}'}), 500
+
+    if filter_mode == 'issues':
+        needle = re.compile(r'(error|warning|failed|✗|✘|traceback)', re.IGNORECASE)
+        data = [ln for ln in data if needle.search(ln)]
+
+    return jsonify({
+        'path': path,
+        'total_lines': len(data),
+        'lines': [ln.rstrip('\n') for ln in data[-tail_lines:]],
+        'filter': filter_mode,
+    })
+
+
+@app.route('/api/host-backups/pbs-encryption/import', methods=['POST'])
+@require_auth
+def api_pbs_encryption_import():
+    """Install a PBS keyfile at the canonical shared path and set the
+    escrow mode in one atomic step.
+
+    Body (all fields optional except as noted):
+
+        source: "content" (default) | "pve-storage"
+        content_b64: <base64 bytes>          # source=content
+        pve_storage_name: "<storage-name>"   # source=pve-storage
+        keyfile_passphrase: <scrypt kdf>     # source=content only
+        escrow_mode: "none" | "local" | "full"   # default "full"
+        escrow_passphrase: <str>             # required unless escrow_mode='none'
+
+    Behaviour by escrow_mode:
+      - none:  keyfile installed, no envelope, no /root copy, no upload
+      - local: envelope written + copied to /root, no PBS upload
+      - full:  envelope written + copied to /root, runner uploads to PBS
+
+    Any prior recovery blob at the canonical path is dropped — it was
+    encrypted for the old key. The escrow mode file is updated to
+    reflect the new choice; downstream runs (both shell and runner)
+    read it back.
+    """
+    payload = request.get_json(silent=True) or {}
+    source = (payload.get('source') or 'content').strip().lower()
+    if source not in ('content', 'pve-storage', 'generate', 'path'):
+        return jsonify({'error': "source must be 'content', 'pve-storage', 'generate' or 'path'"}), 400
+
+    escrow_mode = (payload.get('escrow_mode') or 'full').strip().lower()
+    if escrow_mode not in _PBS_ESCROW_MODES:
+        return jsonify({'error': f'escrow_mode must be one of {_PBS_ESCROW_MODES}'}), 400
+    escrow_pass = payload.get('escrow_passphrase') or ''
+    if escrow_mode != 'none' and not escrow_pass:
+        return jsonify({'error': 'escrow_passphrase is required when escrow_mode is not "none"'}), 400
+    if escrow_mode != 'none' and not shutil.which('openssl'):
+        return jsonify({'error': 'openssl is not installed; cannot build the recovery envelope'}), 500
+
+    if not shutil.which('proxmox-backup-client'):
+        return jsonify({'error': 'proxmox-backup-client is not installed on this host'}), 500
+
+    try:
+        os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+    except OSError as e:
+        return jsonify({'error': f'cannot create state directory: {e}'}), 500
+
+    # ── Resolve the keyfile bytes based on source ──────────────────
+    keyfile_pass = ''
+    if source == 'generate':
+        # Fresh keyfile generated server-side via proxmox-backup-client.
+        # We short-circuit the "load bytes → atomic install" pipeline
+        # below because the tool already writes the file at the
+        # canonical path.
+        stale_recovery = _PBS_RECOVERY_ENC_PATH
+        try:
+            os.remove(stale_recovery)
+        except FileNotFoundError:
+            pass
+        except OSError:
+            pass
+        # Wipe any zero-byte residue so the "already installed" branch
+        # in _pbs_keyfile_get_or_create doesn't misfire.
+        try:
+            if os.path.isfile(_PBS_KEYFILE_PATH) and os.path.getsize(_PBS_KEYFILE_PATH) == 0:
+                os.remove(_PBS_KEYFILE_PATH)
+        except OSError:
+            pass
+        # If a keyfile is already present the operator must remove it
+        # first — silent replacement here would drop backups they still
+        # need to decrypt.
+        if os.path.isfile(_PBS_KEYFILE_PATH):
+            return jsonify({
+                'error': "a keyfile is already installed at "
+                         f"{_PBS_KEYFILE_PATH}. Remove it first via /pbs-encryption/remove.",
+            }), 409
+        if not _pbs_keyfile_get_or_create(True):
+            return jsonify({'error': 'failed to generate the encryption keyfile'}), 500
+        keyfile_pass = ''
+        offsite_copy = ''
+        if escrow_mode == 'none':
+            _pbs_write_escrow_mode('none')
+        else:
+            ok, offsite_copy = _pbs_do_finalize_recovery(escrow_pass, escrow_mode)
+            if not ok:
+                return jsonify({'error': 'openssl encryption of the recovery envelope failed'}), 500
+        return jsonify({
+            'status': 'ok',
+            'source': 'generate',
+            'keyfile_path': _PBS_KEYFILE_PATH,
+            'keyfile_pass_stored': False,
+            'escrow_mode': escrow_mode,
+            'recovery_ready': escrow_mode != 'none',
+            'offsite_copy': offsite_copy,
+        })
+
+    if source == 'path':
+        # Read a keyfile from an absolute path on this host. Mirrors
+        # the shell wizard's "import from path" branch — the operator
+        # dropped the file somewhere on disk (via scp, USB, etc.) and
+        # types the path. Same size cap + BOM strip as source=content.
+        src_path = (payload.get('keyfile_path') or '').strip()
+        if not src_path:
+            return jsonify({'error': "keyfile_path is required when source is 'path'"}), 400
+        if not os.path.isabs(src_path):
+            return jsonify({'error': 'keyfile_path must be an absolute path'}), 400
+        if not os.path.isfile(src_path):
+            return jsonify({'error': f'no file at {src_path}'}), 404
+        try:
+            with open(src_path, 'rb') as f:
+                content = f.read(8192 + 1)
+        except OSError as e:
+            return jsonify({'error': f'cannot read {src_path}: {e}'}), 500
+        if not content or len(content) > 8192:
+            return jsonify({'error': 'keyfile size out of expected range (1..8192 bytes)'}), 400
+        if content.startswith(b'\xef\xbb\xbf'):
+            content = content[3:]
+        keyfile_pass = ''  # keyfile passphrase never used by this branch
+
+    elif source == 'content':
+        content_b64 = payload.get('content_b64') or ''
+        if not content_b64:
+            return jsonify({'error': "content_b64 is required when source is 'content'"}), 400
+        import base64
+        try:
+            content = base64.b64decode(content_b64, validate=True)
+        except Exception:
+            return jsonify({'error': 'content_b64 is not valid base64'}), 400
+        if not content or len(content) > 8192:
+            return jsonify({'error': 'keyfile size out of expected range (1..8192 bytes)'}), 400
+        # Strip a leading UTF-8 BOM if the operator's editor added one.
+        if content.startswith(b'\xef\xbb\xbf'):
+            content = content[3:]
+        # Optional keyfile passphrase (scrypt KDF).
+        keyfile_pass = payload.get('keyfile_passphrase') or ''
+    else:
+        # source == 'pve-storage'
+        pve_name = (payload.get('pve_storage_name') or '').strip()
+        if not pve_name:
+            return jsonify({'error': "pve_storage_name is required when source is 'pve-storage'"}), 400
+        pve_path = os.path.join(_PVE_STORAGE_KEY_DIR, f'{pve_name}.enc')
+        if not os.path.isfile(pve_path):
+            return jsonify({
+                'error': f'no PVE-managed keyfile at {pve_path}',
+            }), 404
+        try:
+            with open(pve_path, 'rb') as f:
+                content = f.read(8192 + 1)
+        except OSError as e:
+            return jsonify({'error': f'cannot read PVE keyfile: {e}'}), 500
+        if not content or len(content) > 8192:
+            return jsonify({'error': 'PVE keyfile out of expected size range (1..8192 bytes)'}), 400
+        # PVE-managed keyfiles are always --kdf none by construction.
+        keyfile_pass = ''
+
+    # ── Atomic install to _PBS_KEYFILE_PATH ────────────────────────
+    tmp_fd, tmp_path = tempfile.mkstemp(prefix='pbs-key.import.', dir=_BACKUP_STATE_DIR)
+    try:
+        try:
+            with os.fdopen(tmp_fd, 'wb') as f:
+                f.write(content)
+            os.chmod(tmp_path, 0o600)
+        except OSError as e:
+            return jsonify({'error': f'cannot write tmp keyfile: {e}'}), 500
+
+        # The old recovery blob was encrypted with the old key — drop it.
+        # The paired passphrase file goes too; the new source drives it.
+        for stale in (_PBS_RECOVERY_ENC_PATH, _PBS_KEYFILE_PASS_PATH):
+            try:
+                os.remove(stale)
+            except FileNotFoundError:
+                pass
+            except OSError:
+                pass
+
+        try:
+            os.replace(tmp_path, _PBS_KEYFILE_PATH)
+            os.chmod(_PBS_KEYFILE_PATH, 0o600)
+        except OSError as e:
+            return jsonify({'error': f'cannot promote keyfile: {e}'}), 500
+
+        # Persist the keyfile passphrase (if any). Same trust boundary
+        # as the keyfile itself.
+        if keyfile_pass:
+            try:
+                fd = os.open(_PBS_KEYFILE_PASS_PATH,
+                             os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+                with os.fdopen(fd, 'w') as f:
+                    f.write(keyfile_pass)
+            except OSError as e:
+                return jsonify({'error': f'cannot store keyfile passphrase: {e}'}), 500
+
+        # ── Finalize per escrow mode ───────────────────────────────
+        offsite_copy = ''
+        if escrow_mode == 'none':
+            _pbs_write_escrow_mode('none')
+        else:
+            ok, offsite_copy = _pbs_do_finalize_recovery(escrow_pass, escrow_mode)
+            if not ok:
+                return jsonify({'error': 'openssl encryption of the recovery envelope failed'}), 500
+
+        return jsonify({
+            'status': 'ok',
+            'source': source,
+            'keyfile_path': _PBS_KEYFILE_PATH,
+            'keyfile_pass_stored': bool(keyfile_pass),
+            'escrow_mode': escrow_mode,
+            'recovery_ready': escrow_mode != 'none',
+            'offsite_copy': offsite_copy,
+        })
+    finally:
+        try:
+            if os.path.exists(tmp_path) and tmp_path != _PBS_KEYFILE_PATH:
+                os.remove(tmp_path)
+        except OSError:
+            pass
+
+
+@app.route('/api/host-backups/pbs-encryption/download-keyfile', methods=['GET'])
+@require_auth
+def api_pbs_encryption_download_keyfile():
+    """Send the installed PBS keyfile as a downloadable attachment.
+    This is how the operator gets an offsite copy without exposing
+    the file over shell — they hit Download, save it somewhere safe
+    (USB, password manager, another host), and can later re-import
+    it on a reinstalled host via the same Import flow. Returns 404
+    when no keyfile is installed."""
+    if not os.path.isfile(_PBS_KEYFILE_PATH):
+        return jsonify({'error': 'no keyfile installed'}), 404
+    filename = f'pbs-key.conf'
+    try:
+        # send_file handles the streaming + Content-Disposition header;
+        # forcing as_attachment makes the browser show a save dialog
+        # instead of rendering the JSON inline.
+        return send_file(
+            _PBS_KEYFILE_PATH,
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=filename,
+        )
+    except OSError as e:
+        return jsonify({'error': f'cannot read keyfile: {e}'}), 500
+
+
+@app.route('/api/host-backups/pbs-encryption/discover-pve-keyfiles', methods=['GET'])
+@require_auth
+def api_pbs_discover_pve_keyfiles():
+    """List PBS storage entries in /etc/pve/storage.cfg that carry an
+    encryption keyfile at /etc/pve/priv/storage/<NAME>.enc. When a
+    `repository` query param is provided, the entry (if any) whose
+    server + datastore match that repository is flagged with
+    `matches_repository: true` so the frontend can pre-select it as
+    the recommended import source.
+
+    Response:
+        {
+          entries: [
+            {name, server, datastore, path, matches_repository (bool)}
+          ]
+        }
+    """
+    repo = (request.args.get('repository') or '').strip()
+    matched = _pbs_pve_keyfile_for_repository(repo) if repo else {}
+    matched_path = matched.get('path', '') if matched else ''
+    entries = []
+    for e in _pbs_discover_pve_keyfiles():
+        entries.append({
+            **e,
+            'matches_repository': (bool(matched_path) and e['path'] == matched_path),
+        })
+    return jsonify({'entries': entries})
+
+
+@app.route('/api/host-backups/pbs-encryption/set-escrow-mode', methods=['POST'])
+@require_auth
+def api_pbs_set_escrow_mode():
+    """Change the escrow mode for an already-installed keyfile without
+    touching the keyfile itself.
+
+    Body:
+        escrow_mode: "none" | "local" | "full"
+        escrow_passphrase: <str>     # required when going to local/full
+                                     # or when current mode is 'none'
+
+    Transitions:
+      any → none:  drops the local envelope + /root offsite copy;
+                   writes mode='none'. Uploaded PBS envelopes are NOT
+                   touched (they stay recoverable with their original
+                   passphrase).
+      any → local/full:  encrypts a fresh envelope from the current
+                         keyfile with the provided passphrase. When
+                         going from 'none' the passphrase is mandatory;
+                         when just switching between local/full it is
+                         also required because we always rebuild the
+                         envelope so both modes stay consistent.
+    """
+    if not os.path.isfile(_PBS_KEYFILE_PATH):
+        return jsonify({'error': 'no keyfile installed'}), 404
+    payload = request.get_json(silent=True) or {}
+    new_mode = (payload.get('escrow_mode') or '').strip().lower()
+    if new_mode not in _PBS_ESCROW_MODES:
+        return jsonify({'error': f'escrow_mode must be one of {_PBS_ESCROW_MODES}'}), 400
+
+    if new_mode == 'none':
+        # Wipe local envelope + best-effort /root copies. Uploaded PBS
+        # blobs stay — the operator may still recover the old key via
+        # its old passphrase using the keyrecovery snapshot group.
+        for p in (_PBS_RECOVERY_ENC_PATH,):
+            try:
+                os.remove(p)
+            except FileNotFoundError:
+                pass
+            except OSError as e:
+                return jsonify({'error': f'cannot remove {p}: {e}'}), 500
+        _pbs_write_escrow_mode('none')
+        return jsonify({
+            'status': 'ok',
+            'escrow_mode': 'none',
+            'recovery_ready': False,
+        })
+
+    # new_mode is 'local' or 'full' → rebuild the envelope from scratch.
+    passphrase = payload.get('escrow_passphrase') or ''
+    if not passphrase:
+        return jsonify({'error': 'escrow_passphrase is required for local/full modes'}), 400
+    ok, offsite = _pbs_do_finalize_recovery(passphrase, new_mode)
+    if not ok:
+        return jsonify({'error': 'openssl encryption of the recovery envelope failed'}), 500
+    return jsonify({
+        'status': 'ok',
+        'escrow_mode': new_mode,
+        'recovery_ready': True,
+        'offsite_copy': offsite,
+    })
+
+
+@app.route('/api/host-backups/pbs-recovery/setup', methods=['POST'])
+@require_auth
+def api_pbs_recovery_setup():
+    """Create the escrow blob from the host keyfile, encrypted with
+    the operator's recovery passphrase. Body: {passphrase}. Idempotent
+    — re-running it with a new passphrase replaces the escrow.
+
+    If no keyfile is installed yet, one is generated on the spot before
+    the escrow is built. This lets the Create-job / Manual-backup Web
+    flow call this endpoint the moment the operator confirms the
+    passphrase (prompt-first, matching the CLI wizard): keyfile plus
+    recovery blob are both created atomically, so a valid job can be
+    stored right after with pbs_encrypt_mode='existing'. Previously
+    the endpoint 400'd with 'no PBS keyfile present' because the
+    keyfile was only materialised later, during job creation.
+
+    The blob is uploaded to PBS by the runner after every successful
+    encrypted backup (see _sb_run_pbs / hb_pbs_upload_recovery_blob),
+    so the operator can rebuild the keyfile from any host with just
+    the passphrase."""
+    payload = request.get_json(silent=True) or {}
+    passphrase = payload.get('passphrase') or ''
+    if not passphrase:
+        return jsonify({'error': 'passphrase is required'}), 400
+    if not shutil.which('openssl'):
+        return jsonify({'error': 'openssl is not installed; cannot create recovery blob'}), 500
+
+    # Materialise the keyfile if it isn't already there. A pre-existing
+    # keyfile is trusted and reused — we never rotate it silently.
+    if not os.path.isfile(_PBS_KEYFILE_PATH):
+        if not shutil.which('proxmox-backup-client'):
+            return jsonify({'error': 'proxmox-backup-client is not installed on this host'}), 500
+        if not _pbs_keyfile_get_or_create(True):
+            return jsonify({'error': 'failed to create PBS encryption keyfile'}), 500
+
+    if not _pbs_recovery_encrypt(passphrase, _PBS_KEYFILE_PATH, _PBS_RECOVERY_ENC_PATH):
+        return jsonify({'error': 'openssl encryption failed'}), 500
+    # Legacy setup implies the operator wants the full escrow behaviour
+    # (envelope uploaded to PBS by the runner). New callers should use
+    # /pbs-encryption/set-escrow-mode with an explicit mode, but this
+    # endpoint remains for compatibility with older Monitor builds.
+    _pbs_write_escrow_mode('full')
+    return jsonify({'status': 'ok', 'recovery_path': _PBS_RECOVERY_ENC_PATH})
+
+
+def _is_pbs_keyrecovery_backup_id(bid: str) -> bool:
+    """Match both the current `hostcfg-<host>-keyrecovery` naming
+    and the legacy `proxmenux-keyrecovery-<host>` naming so escrow
+    blobs uploaded by pre-1.2.2.2 builds remain discoverable and
+    stay hidden from the main host-backup list."""
+    if not bid:
+        return False
+    if bid.startswith('proxmenux-keyrecovery-'):
+        return True
+    return bid.startswith('hostcfg-') and bid.endswith('-keyrecovery')
+
+
+def _pbs_keyrecovery_source_host(bid: str) -> str:
+    """Extract the source hostname from either keyrecovery naming."""
+    if bid.startswith('hostcfg-') and bid.endswith('-keyrecovery'):
+        return bid[len('hostcfg-'):-len('-keyrecovery')]
+    if bid.startswith('proxmenux-keyrecovery-'):
+        return bid[len('proxmenux-keyrecovery-'):]
+    return bid
+
+
+@app.route('/api/host-backups/pbs-recovery/available', methods=['GET'])
+@require_auth
+def api_pbs_recovery_available():
+    """List keyrecovery backup groups across every configured PBS
+    repository. Two naming patterns are surfaced: the current
+    `hostcfg-<host>-keyrecovery` (paired with the main backup group
+    for visual adjacency in the PBS UI) and the legacy
+    `proxmenux-keyrecovery-<host>` used by pre-1.2.2.2 builds. The
+    restore flow uses this when the local keyfile is missing — the
+    operator picks a backup, types the recovery passphrase, and the
+    keyfile is rebuilt from the decrypted blob. Returns the freshest
+    backup per backup-id + repo so multi-host environments don't
+    bury each other."""
+    out: list = []
+    errors: list = []
+    for repo in _list_pbs_destinations():
+        pwd = _resolve_pbs_password(repo['name'])
+        if not pwd:
+            errors.append({'repo_name': repo['name'], 'error': 'no password available'})
+            continue
+        env = dict(os.environ)
+        env['PBS_PASSWORD'] = pwd
+        fp = _resolve_pbs_fingerprint(repo['name'])
+        if fp:
+            env['PBS_FINGERPRINT'] = fp
+        try:
+            r = subprocess.run(
+                ['proxmox-backup-client', 'snapshot', 'list',
+                 '--repository', repo['repository'], '--output-format', 'json'],
+                capture_output=True, text=True, timeout=30, env=env,
+            )
+        except (subprocess.TimeoutExpired, OSError) as e:
+            errors.append({'repo_name': repo['name'], 'error': str(e)})
+            continue
+        if r.returncode != 0:
+            errors.append({'repo_name': repo['name'], 'error': (r.stderr.strip() or r.stdout.strip())[:200]})
+            continue
+        try:
+            items = json.loads(r.stdout)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        # Group by backup-id (per source host) and keep the newest.
+        latest: dict = {}
+        for it in items:
+            if it.get('backup-type') != 'host':
+                continue
+            bid = it.get('backup-id') or ''
+            if not _is_pbs_keyrecovery_backup_id(bid):
+                continue
+            t = it.get('backup-time', 0)
+            # ISO timestamp — proxmox-backup-client rejects the
+            # raw epoch with "unable to parse backup snapshot path".
+            from datetime import datetime, timezone
+            try:
+                iso = datetime.fromtimestamp(int(t), tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+            except (ValueError, OSError):
+                iso = str(t)
+            if bid not in latest or t > latest[bid]['backup_time']:
+                latest[bid] = {
+                    'repo_name': repo['name'],
+                    'repo_repository': repo['repository'],
+                    'backup_id': bid,
+                    'source_host': _pbs_keyrecovery_source_host(bid),
+                    'backup_time': t,
+                    'snapshot': f"host/{bid}/{iso}",
+                }
+        out.extend(latest.values())
+    out.sort(key=lambda x: x['backup_time'], reverse=True)
+    return jsonify({'snapshots': out, 'errors': errors})
+
+
+@app.route('/api/host-backups/pbs-recovery/restore', methods=['POST'])
+@require_auth
+def api_pbs_recovery_restore():
+    """Download a keyrecovery blob, decrypt with the operator's
+    passphrase, write the resulting key to /usr/local/share/proxmenux/
+    pbs-key.conf (chmod 0600). Body: {repo_name, snapshot, passphrase}.
+    Symmetric with the shell's hb_pbs_try_keyfile_recovery."""
+    payload = request.get_json(silent=True) or {}
+    repo_name = (payload.get('repo_name') or '').strip()
+    snapshot = (payload.get('snapshot') or '').strip()
+    passphrase = payload.get('passphrase') or ''
+    if not repo_name or not snapshot or not passphrase:
+        return jsonify({'error': 'repo_name, snapshot and passphrase are required'}), 400
+    if not shutil.which('openssl'):
+        return jsonify({'error': 'openssl is not installed'}), 500
+    # Resolve the PBS repository entry
+    repo = None
+    for r in _list_pbs_destinations():
+        if r.get('name') == repo_name:
+            repo = r
+            break
+    if not repo:
+        return jsonify({'error': f'PBS repository "{repo_name}" not found'}), 404
+    pwd = _resolve_pbs_password(repo_name)
+    if not pwd:
+        return jsonify({'error': f'no password available for PBS "{repo_name}"'}), 400
+    env = dict(os.environ)
+    env['PBS_PASSWORD'] = pwd
+    fp = _resolve_pbs_fingerprint(repo_name)
+    if fp:
+        env['PBS_FINGERPRINT'] = fp
+    # Download the blob to a temp file (NOT --keyfile; the blob is
+    # openssl-encrypted, not chunk-encrypted with PBS keyfile).
+    import tempfile
+    tmp_dir = tempfile.mkdtemp(prefix='pmnx_keyrec_')
+    blob_path = os.path.join(tmp_dir, 'keyrecovery.enc')
+    try:
+        r = subprocess.run(
+            ['proxmox-backup-client', 'restore', snapshot,
+             'keyrecovery.conf', blob_path,
+             '--repository', repo['repository']],
+            capture_output=True, text=True, timeout=60, env=env,
+        )
+        if r.returncode != 0:
+            return jsonify({'error': f'PBS restore failed: {(r.stderr.strip() or r.stdout.strip())[:200]}'}), 500
+        if not os.path.isfile(blob_path):
+            return jsonify({'error': 'PBS restore did not produce a blob'}), 500
+        # Decrypt to a temp file first; only rename onto the real
+        # keyfile path once decryption succeeds, so a failed attempt
+        # never overwrites a working keyfile.
+        tmp_key = os.path.join(tmp_dir, 'pbs-key.conf')
+        if not _pbs_recovery_decrypt(passphrase, blob_path, tmp_key):
+            return jsonify({'error': 'decryption failed — wrong passphrase, or the blob is corrupt'}), 400
+        try:
+            os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+            shutil.move(tmp_key, _PBS_KEYFILE_PATH)
+            os.chmod(_PBS_KEYFILE_PATH, 0o600)
+        except OSError as e:
+            return jsonify({'error': f'failed to persist keyfile: {e}'}), 500
+        # Also re-create the local recovery blob so the operator
+        # doesn't immediately end up in the same state if they wipe
+        # this host again — the existing passphrase is reused.
+        _pbs_recovery_encrypt(passphrase, _PBS_KEYFILE_PATH, _PBS_RECOVERY_ENC_PATH)
+        return jsonify({'status': 'ok', 'keyfile_path': _PBS_KEYFILE_PATH})
+    finally:
+        try:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+        except OSError:
+            pass
+
+
+@app.route('/api/host-backups/pbs-recovery/setup', methods=['DELETE'])
+@require_auth
+def api_pbs_recovery_teardown():
+    """Drop the local escrow blob. Doesn't touch the copies already
+    uploaded to PBS — those stay until the operator prunes them on
+    the server side."""
+    if os.path.isfile(_PBS_RECOVERY_ENC_PATH):
+        try:
+            os.remove(_PBS_RECOVERY_ENC_PATH)
+        except OSError as e:
+            return jsonify({'error': str(e)}), 500
+    return jsonify({'status': 'ok'})
+
+
+def _resolve_pbs_password(repo_name: str) -> str:
+    """Return the PBS password for `repo_name`, looking in both the
+    proxmenux manual sidecar (`pbs-pass-<name>.txt`) and Proxmox's
+    own per-storage password file (`/etc/pve/priv/storage/<name>.pw`).
+
+    Manual configs win because they're explicitly typed by the operator;
+    Proxmox-managed PBS storages fall back to the second location which
+    is where `pvesm` and `pbs-client` write the credential for an
+    auto-discovered repo. Returns "" if neither file exists."""
+    sidecar = f'{_BACKUP_STATE_DIR}/pbs-pass-{repo_name}.txt'
+    if os.path.isfile(sidecar):
+        try:
+            with open(sidecar) as f:
+                pw = f.read().strip()
+                if pw:
+                    return pw
+        except OSError:
+            pass
+    pve_pw = f'/etc/pve/priv/storage/{repo_name}.pw'
+    if os.path.isfile(pve_pw):
+        try:
+            with open(pve_pw) as f:
+                return f.read().strip()
+        except OSError:
+            pass
+    return ''
+
+
+def _resolve_pbs_fingerprint(repo_name: str) -> str:
+    """Return the PBS fingerprint for `repo_name`. Symmetric to
+    _resolve_pbs_password: first the proxmenux manual sidecar
+    (`pbs-fingerprint-<name>.txt`), then the `fingerprint` line in
+    the matching `pbs:` block of /etc/pve/storage.cfg. Without this
+    fallback, `proxmox-backup-client` rejects the TLS handshake for
+    auto-discovered PBS storages with "Certificate fingerprint was
+    not confirmed."""
+    sidecar = f'{_BACKUP_STATE_DIR}/pbs-fingerprint-{repo_name}.txt'
+    if os.path.isfile(sidecar):
+        try:
+            with open(sidecar) as f:
+                fp = f.read().strip()
+                if fp:
+                    return fp
+        except OSError:
+            pass
+    # Walk storage.cfg looking for a `pbs: <repo_name>` block.
+    cfg_path = '/etc/pve/storage.cfg'
+    if not os.path.isfile(cfg_path):
+        return ''
+    try:
+        with open(cfg_path) as f:
+            in_block = False
+            for raw in f:
+                line = raw.rstrip('\n')
+                m = re.match(r'^([a-z]+):\s+(\S+)', line)
+                if m:
+                    in_block = (m.group(1) == 'pbs' and m.group(2) == repo_name)
+                    continue
+                if not in_block:
+                    continue
+                fm = re.match(r'^\s+fingerprint\s+(\S+)', line)
+                if fm:
+                    return fm.group(1).strip()
+    except OSError:
+        pass
+    return ''
+
+
+def _capacity_pbs(repo_name: str, repository: str) -> dict:
+    """`proxmox-backup-client status --output-format json` against the
+    datastore. Password resolution walks both the proxmenux sidecar
+    AND Proxmox's own `/etc/pve/priv/storage/<name>.pw` so PBS storages
+    auto-discovered from the Datacenter work out of the box."""
+    if not repository:
+        return {'error': 'no repository'}
+    env = dict(os.environ)
+    pw = _resolve_pbs_password(repo_name)
+    if pw:
+        env['PBS_PASSWORD'] = pw
+    fp = _resolve_pbs_fingerprint(repo_name)
+    if fp:
+        env['PBS_FINGERPRINT'] = fp
+    try:
+        # 30 s — `proxmox-backup-client status` is consistently fast
+        # against a healthy datastore but can stall on TLS handshake
+        # when the PBS server is under heavy GC / verify load. We'd
+        # rather make the operator wait than report a false "client
+        # error (Connect)" the way a tight 15 s timeout did.
+        r = subprocess.run(
+            ['proxmox-backup-client', 'status',
+             '--repository', repository, '--output-format', 'json'],
+            capture_output=True, text=True, timeout=30, env=env,
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return {'error': f'pbs status: {e}'}
+    if r.returncode != 0:
+        msg = (r.stderr.strip() or r.stdout.strip()).splitlines()
+        return {'error': (msg[-1] if msg else 'pbs status failed')[:200]}
+    try:
+        data = json.loads(r.stdout)
+    except (json.JSONDecodeError, ValueError):
+        return {'error': 'pbs json parse failed'}
+    total = data.get('total')
+    used = data.get('used')
+    avail = data.get('avail')
+    if not isinstance(total, (int, float)):
+        return {'error': 'pbs status missing fields'}
+    return {
+        'total': int(total),
+        'used': int(used) if isinstance(used, (int, float)) else None,
+        'available': int(avail) if isinstance(avail, (int, float)) else None,
+        'remote': True,
+    }
+
+
+@app.route('/api/host-backups/destinations/capacity', methods=['POST'])
+@require_auth
+def api_host_backups_dest_capacity():
+    """Capacity probe for a batch of destinations. Body:
+    {
+      targets: [
+        {id, kind: "local",      path},
+        {id, kind: "borg-local", path},
+        {id, kind: "borg-ssh",   host, user, remote_path, key_path?},
+        {id, kind: "pbs",        name, repository},
+      ]
+    }
+    Returns the same `id` back paired with the capacity payload so the
+    UI doesn't need to figure out which entry maps to which result.
+
+    Failures per-entry are not 500s — the whole call still returns 200
+    with `{error: "..."}` for the entries we couldn't measure."""
+    payload = request.get_json(silent=True) or {}
+    targets = payload.get('targets') or []
+    if not isinstance(targets, list):
+        return jsonify({'error': 'targets must be a list'}), 400
+    results: list = []
+    for t in targets:
+        if not isinstance(t, dict):
+            continue
+        tid = t.get('id')
+        kind = (t.get('kind') or '').strip()
+        cap: dict
+        if kind == 'local' or kind == 'borg-local':
+            cap = _capacity_local((t.get('path') or '').strip())
+        elif kind == 'borg-ssh':
+            cap = _capacity_borg_ssh(
+                (t.get('host') or '').strip(),
+                (t.get('user') or '').strip(),
+                (t.get('remote_path') or '').strip(),
+                (t.get('key_path') or '').strip(),
+            )
+        elif kind == 'pbs':
+            cap = _capacity_pbs(
+                (t.get('name') or '').strip(),
+                (t.get('repository') or '').strip(),
+            )
+        else:
+            cap = {'error': f'unknown kind: {kind}'}
+        results.append({'id': tid, **cap})
+    return jsonify({'results': results})
+
+
+@app.route('/api/host-backups/calendar-preview', methods=['POST'])
+@require_auth
+def api_host_backups_calendar_preview():
+    """Validate a systemd OnCalendar expression and return its
+    normalized form + next elapse, so the operator gets live feedback
+    while building the schedule in the UI."""
+    payload = request.get_json(silent=True) or {}
+    expr = (payload.get('expr') or '').strip()
+    if not expr:
+        return jsonify({'valid': False, 'error': 'empty expression'}), 200
+    try:
+        r = subprocess.run(
+            ['systemd-analyze', 'calendar', '--iterations=1', expr],
+            capture_output=True, text=True, timeout=5
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return jsonify({'valid': False, 'error': str(e)}), 200
+    if r.returncode != 0:
+        return jsonify({
+            'valid': False,
+            'error': (r.stderr.strip() or r.stdout.strip() or 'invalid expression'),
+        }), 200
+    normalized: str | None = None
+    next_elapse: str | None = None
+    from_now: str | None = None
+    for line in r.stdout.splitlines():
+        line = line.strip()
+        if line.startswith('Normalized form:'):
+            normalized = line.split(':', 1)[1].strip()
+        elif line.startswith('Next elapse:'):
+            next_elapse = line.split(':', 1)[1].strip()
+        elif line.startswith('From now:'):
+            from_now = line.split(':', 1)[1].strip()
+    return jsonify({
+        'valid': True,
+        'normalized': normalized,
+        'next_elapse': next_elapse,
+        'from_now': from_now,
+    }), 200
+
+
+_KEEP_FIELD_MAP = {
+    'keep_last': 'KEEP_LAST',
+    'keep_hourly': 'KEEP_HOURLY',
+    'keep_daily': 'KEEP_DAILY',
+    'keep_weekly': 'KEEP_WEEKLY',
+    'keep_monthly': 'KEEP_MONTHLY',
+    'keep_yearly': 'KEEP_YEARLY',
+}
+
+
+def _validate_on_calendar(expr: str) -> str | None:
+    """Validate a systemd OnCalendar expression. Returns None on success
+    or an error message describing why systemd rejected it."""
+    if not expr:
+        return 'on_calendar is required'
+    try:
+        r = subprocess.run(
+            ['systemd-analyze', 'calendar', expr],
+            capture_output=True, text=True, timeout=5
+        )
+        if r.returncode != 0:
+            return r.stderr.strip() or r.stdout.strip() or 'invalid OnCalendar expression'
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return f'systemd-analyze failed: {e}'
+    return None
+
+
+def _write_systemd_units(job_id: str, on_calendar: str) -> tuple[bool, str]:
+    """Write the .service + .timer units exactly as _write_job_units in
+    backup_scheduler.sh does, then daemon-reload. Returns (ok, error)."""
+    service_path = f'/etc/systemd/system/proxmenux-backup-{job_id}.service'
+    timer_path = f'/etc/systemd/system/proxmenux-backup-{job_id}.timer'
+    try:
+        with open(service_path, 'w') as f:
+            f.write(
+                f'[Unit]\n'
+                f'Description=ProxMenux Scheduled Backup Job ({job_id})\n'
+                f'After=network-online.target\n'
+                f'Wants=network-online.target\n'
+                f'\n'
+                f'[Service]\n'
+                f'Type=oneshot\n'
+                f'ExecStart={_BACKUP_RUNNER} {job_id}\n'
+                f'Nice=10\n'
+                f'IOSchedulingClass=best-effort\n'
+                f'IOSchedulingPriority=7\n'
+            )
+        with open(timer_path, 'w') as f:
+            f.write(
+                f'[Unit]\n'
+                f'Description=ProxMenux Scheduled Backup Timer ({job_id})\n'
+                f'\n'
+                f'[Timer]\n'
+                f'OnCalendar={on_calendar}\n'
+                f'Persistent=true\n'
+                f'RandomizedDelaySec=120\n'
+                f'Unit=proxmenux-backup-{job_id}.service\n'
+                f'\n'
+                f'[Install]\n'
+                f'WantedBy=timers.target\n'
+            )
+        subprocess.run(['systemctl', 'daemon-reload'], capture_output=True, timeout=10)
+        return True, ''
+    except OSError as e:
+        return False, str(e)
+
+
+@app.route('/api/host-backups/jobs', methods=['POST'])
+@require_auth
+def api_host_backups_job_create():
+    """Create a new host backup job. Supports both modes that
+    backup_scheduler.sh exposes:
+      - attached=true → inherits schedule + retention from a PVE
+        vzdump parent, no own timer (the vzdump hook fires it).
+      - attached=false → standalone systemd timer with the operator's
+        own OnCalendar + retention, runs via the same runner script."""
+    payload = request.get_json(silent=True) or {}
+
+    job_id = (payload.get('id') or '').strip()
+    backend = (payload.get('backend') or '').strip().lower()
+    attached = bool(payload.get('attached'))
+    profile_mode = (payload.get('profile_mode') or 'default').strip().lower()
+    paths = payload.get('paths') or []
+    enabled = payload.get('enabled')
+    if enabled is None:
+        enabled = True
+
+    if not _JOB_ID_RE.match(job_id):
+        return jsonify({'error': 'invalid id (use letters, digits, _ or -)'}), 400
+    if backend not in ('pbs', 'local', 'borg'):
+        return jsonify({'error': 'backend must be pbs, local or borg'}), 400
+    if profile_mode not in ('default', 'custom'):
+        return jsonify({'error': 'profile_mode must be default or custom'}), 400
+    if attached and backend == 'borg':
+        return jsonify({'error': 'borg is not a valid backend for attached jobs (PVE vzdump only writes to pbs/local storages)'}), 400
+
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    if os.path.exists(env_file):
+        return jsonify({'error': f'job already exists: {job_id}'}), 409
+
+    # Mode-specific required fields
+    pve_parent = pve_storage = ''
+    on_calendar = ''
+    if attached:
+        pve_parent = (payload.get('pve_parent_job_id') or '').strip()
+        pve_storage = (payload.get('pve_storage') or '').strip()
+        if not pve_parent or not pve_storage:
+            return jsonify({'error': 'pve_parent_job_id and pve_storage are required for attached'}), 400
+    else:
+        on_calendar = (payload.get('on_calendar') or '').strip()
+        calendar_err = _validate_on_calendar(on_calendar)
+        if calendar_err:
+            return jsonify({'error': f'invalid on_calendar: {calendar_err}'}), 400
+
+    parent: dict | None = None
+    if attached:
+        # Verify the PVE job exists and matches the declared storage
+        pve_jobs = _list_pve_vzdump_jobs()
+        parent = next((j for j in pve_jobs if j['id'] == pve_parent), None)
+        if not parent:
+            return jsonify({'error': f'PVE vzdump job not found: {pve_parent}'}), 404
+        if parent.get('storage') != pve_storage:
+            return jsonify({'error': f"PVE job storage mismatch (job uses {parent.get('storage')}, payload says {pve_storage})"}), 400
+
+    # Resolve custom paths if requested, otherwise pull the default list
+    # from the shell so there is one source of truth.
+    if profile_mode == 'custom':
+        if not isinstance(paths, list) or not all(isinstance(p, str) and p.startswith('/') for p in paths):
+            return jsonify({'error': 'paths must be a list of absolute paths'}), 400
+        if not paths:
+            return jsonify({'error': 'custom profile needs at least one path'}), 400
+        resolved_paths = paths
+    else:
+        try:
+            r = subprocess.run(
+                ['bash', '-c',
+                 f'source {_BACKUP_LIB_SH}; declare -a paths=(); '
+                 f'hb_select_profile_paths default paths >/dev/null 2>&1; '
+                 f'printf "%s\\n" "${{paths[@]}}"'],
+                capture_output=True, text=True, timeout=10
+            )
+            resolved_paths = [p for p in r.stdout.splitlines() if p.strip()]
+        except (subprocess.TimeoutExpired, OSError):
+            resolved_paths = []
+        if not resolved_paths:
+            return jsonify({'error': 'could not resolve default profile paths'}), 500
+
+    # Build the canonical .env (same field names as backup_scheduler.sh)
+    lines = [
+        f'JOB_ID={job_id}',
+        f'BACKEND={backend}',
+    ]
+    if attached:
+        lines.append(f'PVE_PARENT_JOB={pve_parent}')
+        lines.append(f'PVE_STORAGE={pve_storage}')
+    else:
+        lines.append(f'ON_CALENDAR={on_calendar}')
+    lines.append(f'PROFILE_MODE={profile_mode}')
+    lines.append(f'ENABLED={"1" if enabled else "0"}')
+
+    # Retention
+    if attached:
+        # Inherited from the parent PVE job's prune-backups string
+        if parent and parent.get('prune'):
+            shell_mapping = {
+                'keep-last': 'KEEP_LAST',
+                'keep-hourly': 'KEEP_HOURLY',
+                'keep-daily': 'KEEP_DAILY',
+                'keep-weekly': 'KEEP_WEEKLY',
+                'keep-monthly': 'KEEP_MONTHLY',
+                'keep-yearly': 'KEEP_YEARLY',
+            }
+            for part in parent['prune'].split(','):
+                part = part.strip()
+                if '=' not in part:
+                    continue
+                k, v = part.split('=', 1)
+                if k in shell_mapping:
+                    lines.append(f'{shell_mapping[k]}={v}')
+    else:
+        # From operator-supplied retention object {keep_last, keep_daily, ...}
+        retention = payload.get('retention') or {}
+        if not isinstance(retention, dict):
+            return jsonify({'error': 'retention must be an object'}), 400
+        for key, env_key in _KEEP_FIELD_MAP.items():
+            v = retention.get(key)
+            if v is None or v == '':
+                continue
+            try:
+                n = int(v)
+            except (TypeError, ValueError):
+                return jsonify({'error': f'retention.{key} must be an integer'}), 400
+            if n < 0:
+                return jsonify({'error': f'retention.{key} must be non-negative'}), 400
+            if n > 0:
+                lines.append(f'{env_key}={n}')
+
+    # Backend-specific fields
+    if backend == 'pbs':
+        pbs_repo = (payload.get('pbs_repository') or '').strip()
+        pbs_pass = payload.get('pbs_password') or ''
+        if not pbs_repo:
+            return jsonify({'error': 'pbs_repository is required'}), 400
+        # When the operator picked an existing PBS destination from the
+        # dropdown the password isn't typed again — auto-resolve it from
+        # the saved configs (proxmenux manual sidecar OR /etc/pve/priv/
+        # storage/<name>.pw for PVE-managed PBS storages). Without this
+        # the runner ends up calling proxmox-backup-client with no
+        # PBS_PASSWORD and dies with "no password input mechanism".
+        if not pbs_pass:
+            for dest in _list_pbs_destinations():
+                if dest.get('repository') == pbs_repo:
+                    pbs_pass = _resolve_pbs_password(dest.get('name') or '')
+                    if pbs_pass:
+                        break
+        pbs_backup_id = (payload.get('pbs_backup_id') or '').strip()
+        if not pbs_backup_id:
+            import socket
+            pbs_backup_id = f'hostcfg-{socket.gethostname()}'
+        pbs_fingerprint = (payload.get('pbs_fingerprint') or '').strip()
+        # Client-side encryption. Three modes:
+        #   - "none"     — no --keyfile flag, plain backup
+        #   - "new"      — generate a fresh per-host keyfile (default,
+        #                  matches legacy `pbs_encrypt: true`)
+        #   - "existing" — reuse whatever keyfile is already installed
+        #                  at _PBS_KEYFILE_PATH (typical after the
+        #                  operator uploaded their own via
+        #                  /api/host-backups/pbs-encryption/import)
+        # Legacy compat: a truthy `pbs_encrypt` bool with no
+        # `pbs_encrypt_mode` maps to "new".
+        pbs_encrypt_mode = (payload.get('pbs_encrypt_mode') or '').strip().lower()
+        if not pbs_encrypt_mode:
+            pbs_encrypt_mode = 'new' if bool(payload.get('pbs_encrypt')) else 'none'
+        if pbs_encrypt_mode not in ('none', 'new', 'existing'):
+            return jsonify({'error': "pbs_encrypt_mode must be 'none', 'new' or 'existing'"}), 400
+
+        lines.append(f'PBS_REPOSITORY={pbs_repo}')
+        lines.append(f'PBS_PASSWORD={pbs_pass}')
+        lines.append(f'PBS_BACKUP_ID={pbs_backup_id}')
+        if pbs_fingerprint:
+            lines.append(f'PBS_FINGERPRINT={pbs_fingerprint}')
+
+        if pbs_encrypt_mode == 'new':
+            kf = _pbs_keyfile_get_or_create(True)
+            if not kf:
+                return jsonify({'error': 'failed to create PBS encryption keyfile (is proxmox-backup-client installed?)'}), 500
+            lines.append(f'PBS_KEYFILE={kf}')
+        elif pbs_encrypt_mode == 'existing':
+            # The keyfile must already be present — either from a
+            # previous run or from a fresh import via the dedicated
+            # endpoint. Fail loudly rather than silently generating
+            # a new one that would leave the user's own key unused.
+            if not os.path.isfile(_PBS_KEYFILE_PATH):
+                return jsonify({
+                    'error': (
+                        "pbs_encrypt_mode='existing' but no keyfile is installed at "
+                        f"{_PBS_KEYFILE_PATH} — import one first with "
+                        "POST /api/host-backups/pbs-encryption/import"
+                    ),
+                }), 400
+            lines.append(f'PBS_KEYFILE={_PBS_KEYFILE_PATH}')
+    elif backend == 'local':
+        explicit = (payload.get('local_dest_dir') or '').strip()
+        if explicit:
+            dest_dir = explicit.rstrip('/')
+        elif attached:
+            # Derive from the parent PVE storage path
+            dest_dir = None
+            try:
+                with open('/etc/pve/storage.cfg') as f:
+                    in_block = False
+                    for raw in f:
+                        line = raw.rstrip('\n')
+                        if re.match(rf'^[a-z]+:\s+{re.escape(pve_storage)}\s*$', line):
+                            in_block = True
+                            continue
+                        if in_block:
+                            if re.match(r'^[a-z]+:', line):
+                                break
+                            sp = re.match(r'^\s+path\s+(.+)$', line)
+                            if sp:
+                                dest_dir = f'{sp.group(1).rstrip("/")}/dump'
+                                break
+            except OSError:
+                pass
+            if not dest_dir:
+                dest_dir = '/var/lib/vz/dump'
+        else:
+            # Standalone: use the configured single local target
+            dest_dir = _get_local_target()['effective']
+        archive_ext = (payload.get('local_archive_ext') or 'tar.zst').strip()
+        lines.append(f'LOCAL_DEST_DIR={dest_dir}')
+        lines.append(f'LOCAL_ARCHIVE_EXT={archive_ext}')
+    elif backend == 'borg':
+        # Borg is timer-only — the attached check earlier rejected this combo.
+        # Passphrase + encrypt_mode now live on the destination: when the
+        # operator picks a saved borg destination, we inherit both from it
+        # instead of asking again per-job. The body can still override
+        # (typed-in passphrase / explicit encrypt_mode) for the case where
+        # the destination doesn't have those saved yet.
+        borg_repo = (payload.get('borg_repo') or '').strip()
+        if not borg_repo:
+            return jsonify({'error': 'borg_repo is required'}), 400
+        dest = _resolve_borg_destination_for_repo(borg_repo)
+        borg_pass = payload.get('borg_passphrase') or ''
+        if not borg_pass and dest:
+            borg_pass = _resolve_borg_passphrase(dest.get('name') or '')
+        borg_encrypt_raw = payload.get('borg_encrypt_mode')
+        if borg_encrypt_raw is None or borg_encrypt_raw == '':
+            borg_encrypt = (dest.get('encrypt_mode') if dest else None) or 'none'
+        else:
+            borg_encrypt = borg_encrypt_raw.strip().lower()
+        if borg_encrypt not in ('none', 'repokey', 'keyfile', 'authenticated'):
+            return jsonify({'error': 'borg_encrypt_mode must be one of: none, repokey, keyfile, authenticated'}), 400
+        if borg_encrypt != 'none' and not borg_pass:
+            return jsonify({'error': 'borg_passphrase is required when encryption is enabled (save it on the destination or pass one in the request)'}), 400
+        lines.append(f'BORG_REPO={borg_repo}')
+        lines.append(f'BORG_PASSPHRASE={borg_pass}')
+        lines.append(f'BORG_ENCRYPT_MODE={borg_encrypt}')
+
+    # Persist .env (rwx --- ---) and .paths
+    try:
+        os.makedirs(_BACKUP_JOBS_DIR, exist_ok=True)
+        with open(env_file, 'w') as f:
+            for ln in lines:
+                f.write(ln + '\n')
+        os.chmod(env_file, 0o600)
+        with open(f'{_BACKUP_JOBS_DIR}/{job_id}.paths', 'w') as f:
+            for p in resolved_paths:
+                f.write(p + '\n')
+        os.chmod(f'{_BACKUP_JOBS_DIR}/{job_id}.paths', 0o644)
+    except OSError as e:
+        return jsonify({'error': f'failed to write job files: {e}'}), 500
+
+    if attached:
+        # Idempotent hook install — preserves any pre-existing third-party hook.
+        if os.path.exists(_BACKUP_LIB_SH):
+            try:
+                subprocess.run(
+                    ['bash', '-c',
+                     f'source {_BACKUP_LIB_SH}; hb_install_vzdump_hook'],
+                    capture_output=True, timeout=10
+                )
+            except (subprocess.TimeoutExpired, OSError):
+                pass
+    else:
+        # Standalone timer: write units, daemon-reload, and enable the timer
+        # if the operator asked for it.
+        ok, err = _write_systemd_units(job_id, on_calendar)
+        if not ok:
+            try:
+                os.remove(env_file)
+                os.remove(f'{_BACKUP_JOBS_DIR}/{job_id}.paths')
+            except OSError:
+                pass
+            return jsonify({'error': f'failed to write systemd units: {err}'}), 500
+        if enabled:
+            r = subprocess.run(
+                ['systemctl', '--now', 'enable', f'proxmenux-backup-{job_id}.timer'],
+                capture_output=True, text=True, timeout=10
+            )
+            if r.returncode != 0:
+                return jsonify({
+                    'status': 'created-but-not-enabled',
+                    'job': _backup_job_summary(env_file),
+                    'warning': f'systemctl enable failed: {r.stderr.strip()}',
+                }), 201
+
+    return jsonify({
+        'status': 'ok',
+        'job': _backup_job_summary(env_file),
+    }), 201
+
+
+_BACKUP_SENSITIVE_FIELDS = ('PBS_PASSWORD', 'BORG_PASSPHRASE')
+
+
+def _backup_job_detail(env_file: str) -> dict:
+    """Full job info for the Edit dialog. Returns everything in the
+    .env (passwords censored as `has_password: bool`) plus the paths
+    listed in the matching .paths file. Mirrors what the CreateJob
+    wizard needs to pre-populate every field."""
+    summary = _backup_job_summary(env_file)
+    raw = _parse_job_env(env_file)
+    job_id = summary['id']
+
+    paths_file = f'{_BACKUP_JOBS_DIR}/{job_id}.paths'
+    paths: list = []
+    if os.path.exists(paths_file):
+        try:
+            with open(paths_file) as f:
+                paths = [ln.strip() for ln in f if ln.strip()]
+        except OSError:
+            pass
+
+    retention = {
+        'keep_last': raw.get('KEEP_LAST'),
+        'keep_hourly': raw.get('KEEP_HOURLY'),
+        'keep_daily': raw.get('KEEP_DAILY'),
+        'keep_weekly': raw.get('KEEP_WEEKLY'),
+        'keep_monthly': raw.get('KEEP_MONTHLY'),
+        'keep_yearly': raw.get('KEEP_YEARLY'),
+    }
+    # Find the most recent log for this job + a short tail. The runner
+    # writes per-run logs as `<job_id>-<ts>.log`. The Job detail modal
+    # needs the tail so the operator can see *why* a run failed without
+    # having to ssh into the host.
+    import glob as _glob
+    last_log_path: str | None = None
+    last_log_tail: list = []
+    last_log_size: int = 0
+    try:
+        candidates = sorted(
+            _glob.glob(f'{_BACKUP_LOG_DIR}/{job_id}-*.log'),
+            key=os.path.getmtime, reverse=True,
+        )
+        if candidates:
+            last_log_path = candidates[0]
+            last_log_size = os.path.getsize(last_log_path)
+            with open(last_log_path, 'r', errors='replace') as f:
+                lines = f.read().splitlines()
+            last_log_tail = lines[-80:]
+    except OSError:
+        pass
+
+    # Pull the canonical RESULT / RUN_AT out of the .status sidecar so
+    # the UI doesn't have to parse `last_status` itself just to show a
+    # green/red dot.
+    last_result: str | None = None
+    last_run_at: str | None = None
+    if summary.get('last_status'):
+        for ln in (summary['last_status'] or '').splitlines():
+            if ln.startswith('RESULT='):
+                last_result = ln.split('=', 1)[1].strip() or None
+            elif ln.startswith('RUN_AT='):
+                last_run_at = ln.split('=', 1)[1].strip() or None
+
+    detail = {
+        **summary,
+        'paths': paths,
+        'on_calendar_raw': raw.get('ON_CALENDAR') or None,
+        'pve_parent_job_id': raw.get('PVE_PARENT_JOB') or None,
+        'retention': {k: v for k, v in retention.items() if v is not None},
+        'pbs_repository': raw.get('PBS_REPOSITORY') or None,
+        'pbs_backup_id': raw.get('PBS_BACKUP_ID') or None,
+        'pbs_fingerprint': raw.get('PBS_FINGERPRINT') or None,
+        'has_pbs_password': bool(raw.get('PBS_PASSWORD')),
+        'pbs_encrypt': bool(raw.get('PBS_KEYFILE')),
+        # New: mode used the last time the job was created / edited.
+        # The .env only stores PBS_KEYFILE=<path>, so we can't tell
+        # "new" from "existing" after the fact — the edit flow just
+        # sees "encrypted" and defaults to "new" if the operator
+        # decides to reconfigure. Sending "new" whenever a keyfile is
+        # present matches the legacy pbs_encrypt bool: an edit that
+        # doesn't touch the mode dropdown produces the same .env.
+        'pbs_encrypt_mode': ('new' if raw.get('PBS_KEYFILE') else 'none'),
+        'local_dest_dir': raw.get('LOCAL_DEST_DIR') or None,
+        'local_archive_ext': raw.get('LOCAL_ARCHIVE_EXT') or None,
+        'borg_repo': raw.get('BORG_REPO') or None,
+        'borg_encrypt_mode': raw.get('BORG_ENCRYPT_MODE') or 'none',
+        'has_borg_passphrase': bool(raw.get('BORG_PASSPHRASE')),
+        'last_result': last_result,
+        'last_run_at': last_run_at,
+        'last_log_path': last_log_path,
+        'last_log_size': last_log_size,
+        'last_log_tail': last_log_tail,
+    }
+    return detail
+
+
+@app.route('/api/host-backups/jobs/<job_id>', methods=['GET'])
+@require_auth
+def api_host_backups_job_get(job_id):
+    """Fetch one job with all fields needed by the Edit dialog (paths,
+    full retention, backend-specific config). Passwords are NOT
+    returned; the UI only sees `has_pbs_password` / `has_borg_passphrase`
+    flags so the operator can choose to keep or replace them."""
+    if not _JOB_ID_RE.match(job_id):
+        return jsonify({'error': 'invalid job id'}), 400
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    if not os.path.exists(env_file):
+        return jsonify({'error': 'job not found'}), 404
+    return jsonify(_backup_job_detail(env_file))
+
+
+@app.route('/api/host-backups/jobs/<job_id>/log', methods=['GET'])
+@require_auth
+def api_host_backups_job_log(job_id):
+    """Return the full log of the most recent run for this job. The
+    detail endpoint already ships an 80-line tail; this one is for the
+    operator who needs the whole thing (debugging a fail). Accepts
+    ?path=<override> to read a non-default log path so the same handler
+    can serve the running-task log polled by the Run flow."""
+    if not _JOB_ID_RE.match(job_id):
+        return jsonify({'error': 'invalid job id'}), 400
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    if not os.path.exists(env_file):
+        return jsonify({'error': 'job not found'}), 404
+
+    override = (request.args.get('path') or '').strip()
+    log_path: str | None = None
+    if override:
+        # Constrain to /var/log/proxmenux to keep this from being an
+        # arbitrary-file-read primitive.
+        abs_o = os.path.abspath(override)
+        if abs_o.startswith('/var/log/proxmenux/') and os.path.isfile(abs_o):
+            log_path = abs_o
+    if not log_path:
+        import glob as _glob
+        cands = sorted(
+            _glob.glob(f'{_BACKUP_LOG_DIR}/{job_id}-*.log'),
+            key=os.path.getmtime, reverse=True,
+        )
+        if cands:
+            log_path = cands[0]
+    if not log_path:
+        return jsonify({'error': 'no log available for this job yet', 'log_path': None, 'content': ''})
+
+    try:
+        with open(log_path, 'r', errors='replace') as f:
+            content = f.read()
+    except OSError as e:
+        return jsonify({'error': str(e)}), 500
+    return jsonify({
+        'log_path': log_path,
+        'size': len(content),
+        'content': content,
+    })
+
+
+@app.route('/api/host-backups/jobs/<job_id>', methods=['PUT'])
+@require_auth
+def api_host_backups_job_update(job_id):
+    """Edit an existing job. The job id and attached/standalone mode
+    are immutable (operator must delete + recreate to change them).
+    Backend-specific passwords are kept if the payload omits them or
+    sends an empty string."""
+    if not _JOB_ID_RE.match(job_id):
+        return jsonify({'error': 'invalid job id'}), 400
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    if not os.path.exists(env_file):
+        return jsonify({'error': 'job not found'}), 404
+
+    payload = request.get_json(silent=True) or {}
+    existing = _parse_job_env(env_file)
+    existing_attached = bool(existing.get('PVE_STORAGE'))
+    existing_backend = (existing.get('BACKEND') or '').lower()
+
+    # The only truly immutable field is the job id — it's the name of
+    # the .env, the systemd unit, and how the operator refers to the
+    # job everywhere. Backend (pbs/local/borg) and mode (attached vs
+    # standalone) can be switched on an existing job; the writer below
+    # builds the .env from scratch and reconciles unit files / hook.
+    if 'id' in payload and payload['id'] != job_id:
+        return jsonify({'error': 'job name cannot be changed (delete + recreate to rename)'}), 400
+
+    requested_backend = (payload.get('backend') or existing_backend).lower()
+    if requested_backend not in ('pbs', 'local', 'borg'):
+        return jsonify({'error': 'backend must be pbs, local or borg'}), 400
+    requested_attached = bool(payload['attached']) if 'attached' in payload else existing_attached
+    if requested_attached and requested_backend == 'borg':
+        return jsonify({'error': 'borg cannot be attached (PVE vzdump only writes to pbs/local storages)'}), 400
+
+    backend = requested_backend
+    attached = requested_attached
+    profile_mode = (payload.get('profile_mode') or existing.get('PROFILE_MODE') or 'default').strip().lower()
+    if profile_mode not in ('default', 'custom'):
+        return jsonify({'error': 'profile_mode must be default or custom'}), 400
+
+    enabled_raw = payload.get('enabled')
+    enabled = bool(enabled_raw) if enabled_raw is not None else (existing.get('ENABLED', '1') == '1')
+
+    on_calendar = ''
+    parent: dict | None = None
+    if attached:
+        pve_parent = (payload.get('pve_parent_job_id') or existing.get('PVE_PARENT_JOB') or '').strip()
+        pve_storage = (payload.get('pve_storage') or existing.get('PVE_STORAGE') or '').strip()
+        if not pve_parent or not pve_storage:
+            return jsonify({'error': 'pve_parent_job_id and pve_storage are required for attached'}), 400
+        pve_jobs = _list_pve_vzdump_jobs()
+        parent = next((j for j in pve_jobs if j['id'] == pve_parent), None)
+        if not parent:
+            return jsonify({'error': f'PVE vzdump job not found: {pve_parent}'}), 404
+        if parent.get('storage') != pve_storage:
+            return jsonify({'error': f"PVE job storage mismatch (job uses {parent.get('storage')}, payload says {pve_storage})"}), 400
+    else:
+        on_calendar = (payload.get('on_calendar') or existing.get('ON_CALENDAR') or '').strip()
+        calendar_err = _validate_on_calendar(on_calendar)
+        if calendar_err:
+            return jsonify({'error': f'invalid on_calendar: {calendar_err}'}), 400
+
+    # Resolve paths (same shape as POST)
+    paths = payload.get('paths')
+    if profile_mode == 'custom':
+        if paths is not None:
+            if not isinstance(paths, list) or not all(isinstance(p, str) and p.startswith('/') for p in paths):
+                return jsonify({'error': 'paths must be a list of absolute paths'}), 400
+            if not paths:
+                return jsonify({'error': 'custom profile needs at least one path'}), 400
+            resolved_paths = paths
+        else:
+            paths_file = f'{_BACKUP_JOBS_DIR}/{job_id}.paths'
+            if os.path.exists(paths_file):
+                try:
+                    with open(paths_file) as f:
+                        resolved_paths = [ln.strip() for ln in f if ln.strip()]
+                except OSError:
+                    resolved_paths = []
+            else:
+                resolved_paths = []
+            if not resolved_paths:
+                return jsonify({'error': 'custom profile needs at least one path'}), 400
+    else:
+        try:
+            r = subprocess.run(
+                ['bash', '-c',
+                 f'source {_BACKUP_LIB_SH}; declare -a paths=(); '
+                 f'hb_select_profile_paths default paths >/dev/null 2>&1; '
+                 f'printf "%s\\n" "${{paths[@]}}"'],
+                capture_output=True, text=True, timeout=10
+            )
+            resolved_paths = [p for p in r.stdout.splitlines() if p.strip()]
+        except (subprocess.TimeoutExpired, OSError):
+            resolved_paths = []
+        if not resolved_paths:
+            return jsonify({'error': 'could not resolve default profile paths'}), 500
+
+    # Build the new .env from scratch using the canonical field order.
+    lines = [
+        f'JOB_ID={job_id}',
+        f'BACKEND={backend}',
+    ]
+    if attached:
+        lines.append(f"PVE_PARENT_JOB={(payload.get('pve_parent_job_id') or existing.get('PVE_PARENT_JOB'))}")
+        lines.append(f"PVE_STORAGE={(payload.get('pve_storage') or existing.get('PVE_STORAGE'))}")
+    else:
+        lines.append(f'ON_CALENDAR={on_calendar}')
+    lines.append(f'PROFILE_MODE={profile_mode}')
+    lines.append(f'ENABLED={"1" if enabled else "0"}')
+
+    # Retention
+    if attached:
+        if parent and parent.get('prune'):
+            shell_mapping = {
+                'keep-last': 'KEEP_LAST',
+                'keep-hourly': 'KEEP_HOURLY',
+                'keep-daily': 'KEEP_DAILY',
+                'keep-weekly': 'KEEP_WEEKLY',
+                'keep-monthly': 'KEEP_MONTHLY',
+                'keep-yearly': 'KEEP_YEARLY',
+            }
+            for part in parent['prune'].split(','):
+                part = part.strip()
+                if '=' not in part:
+                    continue
+                k, v = part.split('=', 1)
+                if k in shell_mapping:
+                    lines.append(f'{shell_mapping[k]}={v}')
+    else:
+        retention = payload.get('retention')
+        if retention is None:
+            # Keep existing retention if the operator didn't touch the form
+            for env_key in _KEEP_FIELD_MAP.values():
+                v = existing.get(env_key)
+                if v and str(v) != '0':
+                    lines.append(f'{env_key}={v}')
+        else:
+            if not isinstance(retention, dict):
+                return jsonify({'error': 'retention must be an object'}), 400
+            for key, env_key in _KEEP_FIELD_MAP.items():
+                v = retention.get(key)
+                if v is None or v == '':
+                    continue
+                try:
+                    n = int(v)
+                except (TypeError, ValueError):
+                    return jsonify({'error': f'retention.{key} must be an integer'}), 400
+                if n < 0:
+                    return jsonify({'error': f'retention.{key} must be non-negative'}), 400
+                if n > 0:
+                    lines.append(f'{env_key}={n}')
+
+    # Backend-specific
+    if backend == 'pbs':
+        pbs_repo = (payload.get('pbs_repository') or existing.get('PBS_REPOSITORY') or '').strip()
+        if not pbs_repo:
+            return jsonify({'error': 'pbs_repository is required'}), 400
+        # Empty-string password means "keep the existing one"; missing
+        # password key also means keep. Replacement only happens when
+        # the operator typed something new. If the stored password is
+        # ALSO empty (e.g. job created against a PVE-managed PBS where
+        # the password lives in /etc/pve/priv/storage/<name>.pw), fall
+        # through to _resolve_pbs_password so the runner doesn't choke.
+        new_pass = payload.get('pbs_password')
+        if new_pass is None or new_pass == '':
+            pbs_pass = existing.get('PBS_PASSWORD', '')
+        else:
+            pbs_pass = new_pass
+        if not pbs_pass:
+            for dest in _list_pbs_destinations():
+                if dest.get('repository') == pbs_repo:
+                    pbs_pass = _resolve_pbs_password(dest.get('name') or '')
+                    if pbs_pass:
+                        break
+        pbs_backup_id = (payload.get('pbs_backup_id') or existing.get('PBS_BACKUP_ID') or '').strip()
+        if not pbs_backup_id:
+            import socket
+            pbs_backup_id = f'hostcfg-{socket.gethostname()}'
+        pbs_fingerprint = (payload.get('pbs_fingerprint') or existing.get('PBS_FINGERPRINT') or '').strip()
+        # Encryption: matches job-create + manual-run. The Web sends
+        # `pbs_encrypt_mode` ("none" / "new" / "existing"); older
+        # clients may still send the legacy `pbs_encrypt` bool.
+        # Absent field on edit means "keep the current state" — so
+        # a partial payload doesn't accidentally turn encryption off.
+        # Before this fix the endpoint only looked at `pbs_encrypt`
+        # and defaulted to `bool(existing PBS_KEYFILE)` when absent,
+        # which meant unchecking the box in the Edit dialog was a
+        # no-op because the new UI sends `pbs_encrypt_mode` instead.
+        pbs_encrypt_mode = (payload.get('pbs_encrypt_mode') or '').strip().lower()
+        if not pbs_encrypt_mode:
+            if 'pbs_encrypt' in payload:
+                pbs_encrypt_mode = 'new' if bool(payload.get('pbs_encrypt')) else 'none'
+            else:
+                pbs_encrypt_mode = 'existing' if existing.get('PBS_KEYFILE') else 'none'
+        if pbs_encrypt_mode not in ('none', 'new', 'existing'):
+            return jsonify({'error': "pbs_encrypt_mode must be 'none', 'new' or 'existing'"}), 400
+        lines.append(f'PBS_REPOSITORY={pbs_repo}')
+        lines.append(f'PBS_PASSWORD={pbs_pass}')
+        lines.append(f'PBS_BACKUP_ID={pbs_backup_id}')
+        if pbs_encrypt_mode == 'new':
+            kf = _pbs_keyfile_get_or_create(True)
+            if not kf:
+                return jsonify({'error': 'failed to create PBS encryption keyfile'}), 500
+            lines.append(f'PBS_KEYFILE={kf}')
+        elif pbs_encrypt_mode == 'existing':
+            if not os.path.isfile(_PBS_KEYFILE_PATH):
+                return jsonify({
+                    'error': (
+                        "pbs_encrypt_mode='existing' but no keyfile is installed at "
+                        f"{_PBS_KEYFILE_PATH} — import one first with "
+                        "POST /api/host-backups/pbs-encryption/import"
+                    ),
+                }), 400
+            lines.append(f'PBS_KEYFILE={_PBS_KEYFILE_PATH}')
+        # else 'none' → no PBS_KEYFILE line written → job runs unencrypted
+        if pbs_fingerprint:
+            lines.append(f'PBS_FINGERPRINT={pbs_fingerprint}')
+    elif backend == 'local':
+        explicit = (payload.get('local_dest_dir') or '').strip()
+        if explicit:
+            dest_dir = explicit.rstrip('/')
+        else:
+            dest_dir = existing.get('LOCAL_DEST_DIR') or _get_local_target()['effective']
+        archive_ext = (payload.get('local_archive_ext') or existing.get('LOCAL_ARCHIVE_EXT') or 'tar.zst').strip()
+        lines.append(f'LOCAL_DEST_DIR={dest_dir}')
+        lines.append(f'LOCAL_ARCHIVE_EXT={archive_ext}')
+    elif backend == 'borg':
+        borg_repo = (payload.get('borg_repo') or existing.get('BORG_REPO') or '').strip()
+        if not borg_repo:
+            return jsonify({'error': 'borg_repo is required'}), 400
+        dest = _resolve_borg_destination_for_repo(borg_repo)
+        # Encryption mode: payload > existing .env > destination > "none".
+        borg_encrypt = (payload.get('borg_encrypt_mode')
+                        or existing.get('BORG_ENCRYPT_MODE')
+                        or (dest.get('encrypt_mode') if dest else None)
+                        or 'none').strip().lower()
+        if borg_encrypt not in ('none', 'repokey', 'keyfile', 'authenticated'):
+            return jsonify({'error': 'borg_encrypt_mode must be one of: none, repokey, keyfile, authenticated'}), 400
+        new_pass = payload.get('borg_passphrase')
+        if new_pass is None or new_pass == '':
+            borg_pass = existing.get('BORG_PASSPHRASE', '')
+        else:
+            borg_pass = new_pass
+        if not borg_pass and dest:
+            borg_pass = _resolve_borg_passphrase(dest.get('name') or '')
+        if borg_encrypt != 'none' and not borg_pass:
+            return jsonify({'error': 'borg_passphrase is required when encryption is enabled (save it on the destination or pass one in the request)'}), 400
+        lines.append(f'BORG_REPO={borg_repo}')
+        lines.append(f'BORG_PASSPHRASE={borg_pass}')
+        lines.append(f'BORG_ENCRYPT_MODE={borg_encrypt}')
+
+    # Atomically rewrite .env (rwx --- ---) and .paths
+    try:
+        tmp_env = f'{env_file}.tmp.{os.getpid()}'
+        with open(tmp_env, 'w') as f:
+            for ln in lines:
+                f.write(ln + '\n')
+        os.chmod(tmp_env, 0o600)
+        os.replace(tmp_env, env_file)
+        paths_file = f'{_BACKUP_JOBS_DIR}/{job_id}.paths'
+        tmp_paths = f'{paths_file}.tmp.{os.getpid()}'
+        with open(tmp_paths, 'w') as f:
+            for p in resolved_paths:
+                f.write(p + '\n')
+        os.chmod(tmp_paths, 0o644)
+        os.replace(tmp_paths, paths_file)
+    except OSError as e:
+        return jsonify({'error': f'failed to write job files: {e}'}), 500
+
+    if attached:
+        # If the job used to be standalone, its .service + .timer are
+        # now obsolete. Disable + remove them before installing the hook
+        # so the operator doesn't have a stale timer firing alongside.
+        if not existing_attached:
+            timer_unit = f'proxmenux-backup-{job_id}.timer'
+            subprocess.run(
+                ['systemctl', '--now', 'disable', timer_unit],
+                capture_output=True, timeout=10
+            )
+            for f in (
+                f'/etc/systemd/system/proxmenux-backup-{job_id}.service',
+                f'/etc/systemd/system/proxmenux-backup-{job_id}.timer',
+            ):
+                try:
+                    if os.path.exists(f):
+                        os.remove(f)
+                except OSError:
+                    pass
+            subprocess.run(['systemctl', 'daemon-reload'], capture_output=True, timeout=10)
+        if os.path.exists(_BACKUP_LIB_SH):
+            try:
+                subprocess.run(
+                    ['bash', '-c', f'source {_BACKUP_LIB_SH}; hb_install_vzdump_hook'],
+                    capture_output=True, timeout=10
+                )
+            except (subprocess.TimeoutExpired, OSError):
+                pass
+    else:
+        # Rewrite the timer (schedule may have changed) and reconcile
+        # the timer state with `enabled`. If the job used to be
+        # attached, no units existed yet — _write_systemd_units creates
+        # both fresh and daemon-reloads.
+        ok, err = _write_systemd_units(job_id, on_calendar)
+        if not ok:
+            return jsonify({'error': f'failed to update systemd units: {err}'}), 500
+        timer_unit = f'proxmenux-backup-{job_id}.timer'
+        action = 'enable' if enabled else 'disable'
+        subprocess.run(
+            ['systemctl', '--now', action, timer_unit],
+            capture_output=True, timeout=10
+        )
+
+    return jsonify({
+        'status': 'ok',
+        'job': _backup_job_summary(env_file),
+    })
+
+
+@app.route('/api/host-backups/manual-run', methods=['POST'])
+@require_auth
+def api_host_backups_manual_run():
+    """Fire a one-shot host backup. Reuses the same .env + runner the
+    scheduler uses — the only difference is the job is born disabled,
+    has no schedule, no retention, and is flagged with MANUAL_RUN=1 so
+    the UI can render it differently. The .env is left on disk so the
+    operator can see the result and decide when to clean it up."""
+    payload = request.get_json(silent=True) or {}
+
+    backend = (payload.get('backend') or '').strip().lower()
+    if backend not in ('pbs', 'local', 'borg'):
+        return jsonify({'error': 'backend must be pbs, local or borg'}), 400
+    profile_mode = (payload.get('profile_mode') or 'default').strip().lower()
+    if profile_mode not in ('default', 'custom'):
+        return jsonify({'error': 'profile_mode must be default or custom'}), 400
+
+    # Resolve paths
+    if profile_mode == 'custom':
+        paths = payload.get('paths') or []
+        if not isinstance(paths, list) or not all(isinstance(p, str) and p.startswith('/') for p in paths):
+            return jsonify({'error': 'paths must be a list of absolute paths'}), 400
+        if not paths:
+            return jsonify({'error': 'custom profile needs at least one path'}), 400
+        resolved_paths = paths
+    else:
+        try:
+            r = subprocess.run(
+                ['bash', '-c',
+                 f'source {_BACKUP_LIB_SH}; declare -a paths=(); '
+                 f'hb_select_profile_paths default paths >/dev/null 2>&1; '
+                 f'printf "%s\\n" "${{paths[@]}}"'],
+                capture_output=True, text=True, timeout=10
+            )
+            resolved_paths = [p for p in r.stdout.splitlines() if p.strip()]
+        except (subprocess.TimeoutExpired, OSError):
+            resolved_paths = []
+        if not resolved_paths:
+            return jsonify({'error': 'could not resolve default profile paths'}), 500
+
+    # Auto-generate a non-colliding job id from the current time.
+    from datetime import datetime
+    base_id = f'manual-{datetime.now().strftime("%Y%m%d-%H%M%S")}'
+    job_id = base_id
+    suffix = 1
+    while os.path.exists(f'{_BACKUP_JOBS_DIR}/{job_id}.env'):
+        suffix += 1
+        job_id = f'{base_id}-{suffix}'
+
+    lines = [
+        f'JOB_ID={job_id}',
+        f'BACKEND={backend}',
+        f'PROFILE_MODE={profile_mode}',
+        'ENABLED=0',
+        'MANUAL_RUN=1',
+    ]
+
+    if backend == 'pbs':
+        pbs_repo = (payload.get('pbs_repository') or '').strip()
+        if not pbs_repo:
+            return jsonify({'error': 'pbs_repository is required'}), 400
+        pbs_pass = payload.get('pbs_password') or ''
+        pbs_backup_id = (payload.get('pbs_backup_id') or '').strip()
+        if not pbs_backup_id:
+            import socket
+            # Unified naming with scheduled/TUI runs (run_scheduled_backup.sh
+            # and backup_host.sh both default to `hostcfg-<host>`). Keeping
+            # the `-manual` suffix split snapshots into two PBS groups for
+            # the same host, breaking the dedup view and forcing restore to
+            # check both groups. Operators can still override the id in the
+            # form when they need a separate retention bucket.
+            pbs_backup_id = f'hostcfg-{socket.gethostname()}'
+        pbs_fingerprint = (payload.get('pbs_fingerprint') or '').strip()
+        # Encryption mode: matches the job-create endpoint exactly.
+        # Reads the modern `pbs_encrypt_mode` string ("none"/"new"/
+        # "existing") first, falls back to legacy `pbs_encrypt` bool
+        # only if the modern field is absent. Both dialogs on the
+        # front-end send the modern field — the older ManualBackup
+        # code path was ignoring it and silently downgrading every
+        # encrypted manual backup to plain because it only looked at
+        # the legacy `pbs_encrypt` boolean, which the front-end
+        # stopped sending.
+        pbs_encrypt_mode = (payload.get('pbs_encrypt_mode') or '').strip().lower()
+        if not pbs_encrypt_mode:
+            pbs_encrypt_mode = 'new' if bool(payload.get('pbs_encrypt')) else 'none'
+        if pbs_encrypt_mode not in ('none', 'new', 'existing'):
+            return jsonify({'error': "pbs_encrypt_mode must be 'none', 'new' or 'existing'"}), 400
+        lines.append(f'PBS_REPOSITORY={pbs_repo}')
+        lines.append(f'PBS_PASSWORD={pbs_pass}')
+        lines.append(f'PBS_BACKUP_ID={pbs_backup_id}')
+        if pbs_fingerprint:
+            lines.append(f'PBS_FINGERPRINT={pbs_fingerprint}')
+        if pbs_encrypt_mode == 'new':
+            kf = _pbs_keyfile_get_or_create(True)
+            if not kf:
+                return jsonify({'error': 'failed to create PBS encryption keyfile'}), 500
+            lines.append(f'PBS_KEYFILE={kf}')
+        elif pbs_encrypt_mode == 'existing':
+            if not os.path.isfile(_PBS_KEYFILE_PATH):
+                return jsonify({
+                    'error': (
+                        "pbs_encrypt_mode='existing' but no keyfile is installed at "
+                        f"{_PBS_KEYFILE_PATH} — import one first with "
+                        "POST /api/host-backups/pbs-encryption/import"
+                    ),
+                }), 400
+            lines.append(f'PBS_KEYFILE={_PBS_KEYFILE_PATH}')
+    elif backend == 'local':
+        explicit = (payload.get('local_dest_dir') or '').strip()
+        dest_dir = explicit.rstrip('/') if explicit else _get_local_target()['effective']
+        archive_ext = (payload.get('local_archive_ext') or 'tar.zst').strip()
+        lines.append(f'LOCAL_DEST_DIR={dest_dir}')
+        lines.append(f'LOCAL_ARCHIVE_EXT={archive_ext}')
+    elif backend == 'borg':
+        borg_repo = (payload.get('borg_repo') or '').strip()
+        if not borg_repo:
+            return jsonify({'error': 'borg_repo is required'}), 400
+        dest = _resolve_borg_destination_for_repo(borg_repo)
+        borg_encrypt_raw = payload.get('borg_encrypt_mode')
+        if borg_encrypt_raw is None or borg_encrypt_raw == '':
+            borg_encrypt = (dest.get('encrypt_mode') if dest else None) or 'none'
+        else:
+            borg_encrypt = borg_encrypt_raw.strip().lower()
+        if borg_encrypt not in ('none', 'repokey', 'keyfile', 'authenticated'):
+            return jsonify({'error': 'borg_encrypt_mode must be one of: none, repokey, keyfile, authenticated'}), 400
+        borg_pass = payload.get('borg_passphrase') or ''
+        if not borg_pass and dest:
+            borg_pass = _resolve_borg_passphrase(dest.get('name') or '')
+        if borg_encrypt != 'none' and not borg_pass:
+            return jsonify({'error': 'borg_passphrase is required when encryption is enabled (save it on the destination or pass one in the request)'}), 400
+        lines.append(f'BORG_REPO={borg_repo}')
+        lines.append(f'BORG_PASSPHRASE={borg_pass}')
+        lines.append(f'BORG_ENCRYPT_MODE={borg_encrypt}')
+
+    env_file = f'{_BACKUP_JOBS_DIR}/{job_id}.env'
+    paths_file = f'{_BACKUP_JOBS_DIR}/{job_id}.paths'
+    try:
+        os.makedirs(_BACKUP_JOBS_DIR, exist_ok=True)
+        with open(env_file, 'w') as f:
+            for ln in lines:
+                f.write(ln + '\n')
+        os.chmod(env_file, 0o600)
+        with open(paths_file, 'w') as f:
+            for p in resolved_paths:
+                f.write(p + '\n')
+        os.chmod(paths_file, 0o644)
+    except OSError as e:
+        return jsonify({'error': f'failed to write job files: {e}'}), 500
+
+    if not os.path.exists(_BACKUP_RUNNER):
+        return jsonify({'error': 'runner script not installed'}), 500
+    try:
+        subprocess.Popen(
+            ['bash', _BACKUP_RUNNER, job_id],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            close_fds=True,
+            start_new_session=True,
+        )
+    except OSError as e:
+        return jsonify({'error': f'failed to start: {e}'}), 500
+
+    return jsonify({'status': 'started', 'job_id': job_id}), 202
+
+
+# ── Sprint D: Backup destinations CRUD ─────────────────────────────
+#
+# All three persistence files live in $HB_STATE_DIR and follow the
+# exact format the shell scheduler reads/writes, so anything created
+# from the Monitor is visible to the shell menu and vice versa.
+
+_DEST_NAME_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
+
+
+def _safe_dest_name(s: str) -> str | None:
+    s = (s or '').strip()
+    if not s or not _DEST_NAME_RE.match(s):
+        return None
+    return s
+
+
+@app.route('/api/host-backups/destinations/local', methods=['POST'])
+@require_auth
+def api_host_backups_dest_local_set():
+    """Add a custom local destination path. Body: {path: string}.
+
+    Local destinations are append-only from the API — the new path is
+    stacked onto local-target.conf rather than replacing whatever was
+    there. The /var/lib/vz/dump default is always implicit and isn't
+    written into the file.
+
+    Returns 409 if the same path is already saved (default or custom)
+    so the UI can surface the conflict instead of silently no-op."""
+    payload = request.get_json(silent=True) or {}
+    path = (payload.get('path') or '').strip()
+    if not path:
+        return jsonify({'error': 'path is required'}), 400
+    if not path.startswith('/'):
+        return jsonify({'error': 'path must be absolute'}), 400
+    path = path.rstrip('/') or '/'
+    if path == _LOCAL_DEFAULT_PATH:
+        return jsonify({'error': f'{_LOCAL_DEFAULT_PATH} is the built-in default; no need to add it'}), 409
+    existing = _read_local_target_paths()
+    if path in existing:
+        return jsonify({'error': 'this path is already configured'}), 409
+    existing.append(path)
+    cfg = f'{_BACKUP_STATE_DIR}/local-target.conf'
+    try:
+        os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+        with open(cfg, 'w') as f:
+            for p in existing:
+                f.write(p + '\n')
+        os.chmod(cfg, 0o600)
+    except OSError as e:
+        return jsonify({'error': f'failed to write local-target.conf: {e}'}), 500
+    return jsonify({'status': 'ok', 'path': path, 'count': len(existing) + 1})
+
+
+@app.route('/api/host-backups/destinations/local', methods=['DELETE'])
+@require_auth
+def api_host_backups_dest_local_clear():
+    """Remove a custom local destination. Body or query: {path: string}.
+
+    With a `path`, only that entry is removed (404 if not custom). With
+    no path the file is wiped entirely, leaving only the built-in
+    /var/lib/vz/dump default — kept for backwards compat with the
+    earlier single-path UI."""
+    target = (request.args.get('path') or '').strip()
+    if not target:
+        payload = request.get_json(silent=True) or {}
+        target = (payload.get('path') or '').strip()
+    cfg = f'{_BACKUP_STATE_DIR}/local-target.conf'
+    if not target:
+        try:
+            if os.path.exists(cfg):
+                os.remove(cfg)
+        except OSError as e:
+            return jsonify({'error': str(e)}), 500
+        return jsonify({'status': 'ok', 'cleared_all': True})
+
+    target = target.rstrip('/') or '/'
+    if target == _LOCAL_DEFAULT_PATH:
+        return jsonify({'error': f'{_LOCAL_DEFAULT_PATH} is the built-in default and cannot be removed'}), 400
+    existing = _read_local_target_paths()
+    if target not in existing:
+        return jsonify({'error': 'path not found'}), 404
+    force = (request.args.get('force') or '').lower() in ('1', 'true', 'yes')
+    cascaded: list = []
+    if force:
+        for jid in _jobs_using_local(target):
+            _delete_job_internal(jid)
+            cascaded.append(jid)
+    remaining = [p for p in existing if p != target]
+    try:
+        if remaining:
+            with open(cfg, 'w') as f:
+                for p in remaining:
+                    f.write(p + '\n')
+            os.chmod(cfg, 0o600)
+        elif os.path.exists(cfg):
+            os.remove(cfg)
+    except OSError as e:
+        return jsonify({'error': str(e)}), 500
+    return jsonify({'status': 'ok', 'removed': target, 'jobs_removed': cascaded})
+
+
+@app.route('/api/host-backups/destinations/borg', methods=['POST'])
+@require_auth
+def api_host_backups_dest_borg_add():
+    """Add a Borg target. Body modes:
+      - mode="local": {name, repo}                — repo is an absolute
+        path on this host (covers USB-mounted directories too).
+      - mode="ssh":   {name, ssh_user, ssh_host,
+                       ssh_remote_path, ssh_key_path?} — builds
+        ssh://user@host/path and persists the ssh_key_path on the
+        3rd field of borg-targets.txt.
+    Replaces an existing entry with the same name."""
+    payload = request.get_json(silent=True) or {}
+    name = _safe_dest_name(payload.get('name'))
+    if not name:
+        return jsonify({'error': 'name is required (letters, digits, _ or -)'}), 400
+    mode = (payload.get('mode') or 'local').strip().lower()
+    ssh_key = ''
+    if mode == 'ssh':
+        user = (payload.get('ssh_user') or '').strip()
+        host = (payload.get('ssh_host') or '').strip()
+        rpath = (payload.get('ssh_remote_path') or '').strip().lstrip('/')
+        if not user or not host or not rpath:
+            return jsonify({'error': 'ssh_user, ssh_host and ssh_remote_path are required for ssh mode'}), 400
+        repo = f'ssh://{user}@{host}/{rpath}'
+        ssh_key = (payload.get('ssh_key_path') or '').strip()
+    elif mode == 'local':
+        repo = (payload.get('repo') or '').strip()
+        if not repo:
+            return jsonify({'error': 'repo is required'}), 400
+        ssh_key = (payload.get('ssh_key') or '').strip()
+    else:
+        return jsonify({'error': 'mode must be "local" or "ssh"'}), 400
+
+    # Encryption + passphrase live on the DESTINATION, not on each job.
+    # `encrypt_mode` is one of: none, repokey, keyfile, authenticated
+    # (the UI exposes only `none`/`repokey`; the others stay supported
+    # so existing shell-created configs aren't downgraded). The body
+    # may carry `passphrase`; if set and non-empty we persist it next
+    # to the config in `borg-pass-<name>.txt` (chmod 0600).
+    encrypt_mode = (payload.get('encrypt_mode') or 'repokey').strip().lower()
+    if encrypt_mode not in ('none', 'repokey', 'keyfile', 'authenticated'):
+        return jsonify({'error': 'encrypt_mode must be one of: none, repokey, keyfile, authenticated'}), 400
+    passphrase = payload.get('passphrase') or ''
+    # POST is upsert-by-name: in edit mode we keep the saved passphrase
+    # when the caller doesn't send a new one. Only required when there
+    # is no saved one AND encryption is enabled.
+    existing_pp = ''
+    pass_file_existing = f'{_BACKUP_STATE_DIR}/borg-pass-{name}.txt'
+    if os.path.isfile(pass_file_existing):
+        try:
+            with open(pass_file_existing) as f:
+                existing_pp = f.read().strip()
+        except OSError:
+            pass
+    if encrypt_mode != 'none' and not passphrase and not existing_pp:
+        return jsonify({'error': 'passphrase is required when encryption is enabled'}), 400
+    if encrypt_mode != 'none' and not passphrase:
+        passphrase = existing_pp
+
+    cfg = f'{_BACKUP_STATE_DIR}/borg-targets.txt'
+    try:
+        os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+        existing_lines: list = []
+        if os.path.exists(cfg):
+            with open(cfg) as f:
+                for ln in f:
+                    if ln.startswith(f'{name}|'):
+                        continue
+                    existing_lines.append(ln.rstrip('\n'))
+        existing_lines.append(f'{name}|{repo}|{ssh_key}|{encrypt_mode}')
+        with open(cfg, 'w') as f:
+            for ln in existing_lines:
+                f.write(ln + '\n')
+        os.chmod(cfg, 0o600)
+        # Persist or remove the passphrase sidecar, depending on mode.
+        pass_file = f'{_BACKUP_STATE_DIR}/borg-pass-{name}.txt'
+        if encrypt_mode == 'none':
+            if os.path.exists(pass_file):
+                try:
+                    os.remove(pass_file)
+                except OSError:
+                    pass
+        elif passphrase:
+            with open(pass_file, 'w') as f:
+                f.write(passphrase)
+            os.chmod(pass_file, 0o600)
+    except OSError as e:
+        return jsonify({'error': f'failed to write borg-targets.txt: {e}'}), 500
+    return jsonify({'status': 'ok', 'name': name, 'repo': repo, 'encrypt_mode': encrypt_mode})
+
+
+@app.route('/api/host-backups/destinations/borg/<name>', methods=['DELETE'])
+@require_auth
+def api_host_backups_dest_borg_remove(name):
+    """Remove a Borg target by name. Also drops its passphrase file
+    if present."""
+    safe = _safe_dest_name(name)
+    if not safe:
+        return jsonify({'error': 'invalid name'}), 400
+    force = (request.args.get('force') or '').lower() in ('1', 'true', 'yes')
+    cascaded: list = []
+    if force:
+        for d in _list_borg_destinations():
+            if d.get('name') == safe:
+                for jid in _jobs_using_borg(d.get('repository') or ''):
+                    _delete_job_internal(jid)
+                    cascaded.append(jid)
+                break
+    cfg = f'{_BACKUP_STATE_DIR}/borg-targets.txt'
+    if os.path.exists(cfg):
+        try:
+            with open(cfg) as f:
+                kept = [ln.rstrip('\n') for ln in f if not ln.startswith(f'{safe}|')]
+            with open(cfg, 'w') as f:
+                for ln in kept:
+                    f.write(ln + '\n')
+            os.chmod(cfg, 0o600)
+        except OSError as e:
+            return jsonify({'error': f'failed to update borg-targets.txt: {e}'}), 500
+    for f in (
+        f'{_BACKUP_STATE_DIR}/borg-pass-{safe}.txt',
+    ):
+        try:
+            if os.path.exists(f):
+                os.remove(f)
+        except OSError:
+            pass
+    return jsonify({'status': 'ok', 'name': safe, 'jobs_removed': cascaded})
+
+
+@app.route('/api/host-backups/destinations/pbs', methods=['POST'])
+@require_auth
+def api_host_backups_dest_pbs_add():
+    """Add a manual PBS configuration. Body: {name, server, datastore,
+    username, password, fingerprint?}. Writes name|repo to
+    pbs-manual-configs.txt, plus pbs-pass-<name>.txt and (optionally)
+    pbs-fingerprint-<name>.txt — the same layout hb_configure_pbs_manual
+    produces."""
+    payload = request.get_json(silent=True) or {}
+    name = _safe_dest_name(payload.get('name'))
+    if not name:
+        return jsonify({'error': 'name is required (letters, digits, _ or -)'}), 400
+    server = (payload.get('server') or '').strip()
+    datastore = (payload.get('datastore') or '').strip()
+    username = (payload.get('username') or 'root@pam').strip()
+    password = payload.get('password') or ''
+    fingerprint = (payload.get('fingerprint') or '').strip()
+    if not server or not datastore:
+        return jsonify({'error': 'server and datastore are required'}), 400
+    # POST is upsert-by-name: if `name` already exists and password
+    # is omitted, keep the saved one (the edit-destination flow uses
+    # this to update server/datastore/fingerprint without forcing
+    # the operator to re-type the password).
+    existing_pw = ''
+    pass_file = f'{_BACKUP_STATE_DIR}/pbs-pass-{name}.txt'
+    if os.path.isfile(pass_file):
+        try:
+            with open(pass_file) as f:
+                existing_pw = f.read()
+        except OSError:
+            pass
+    if not password and not existing_pw:
+        return jsonify({'error': 'password is required'}), 400
+    if not password:
+        password = existing_pw
+
+    repo = f'{username}@{server}:{datastore}'
+    cfg_line = f'{name}|{repo}'
+    cfg = f'{_BACKUP_STATE_DIR}/pbs-manual-configs.txt'
+    try:
+        os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+        # Replace any existing entry with the same name
+        existing: list = []
+        if os.path.exists(cfg):
+            with open(cfg) as f:
+                for ln in f:
+                    if ln.startswith(f'{name}|'):
+                        continue
+                    existing.append(ln.rstrip('\n'))
+        existing.append(cfg_line)
+        with open(cfg, 'w') as f:
+            for ln in existing:
+                f.write(ln + '\n')
+        os.chmod(cfg, 0o600)
+        # Password sidecar
+        pass_file = f'{_BACKUP_STATE_DIR}/pbs-pass-{name}.txt'
+        with open(pass_file, 'w') as f:
+            f.write(password)
+        os.chmod(pass_file, 0o600)
+        # Fingerprint sidecar (only if provided)
+        fp_file = f'{_BACKUP_STATE_DIR}/pbs-fingerprint-{name}.txt'
+        if fingerprint:
+            with open(fp_file, 'w') as f:
+                f.write(fingerprint)
+            os.chmod(fp_file, 0o600)
+        else:
+            try:
+                if os.path.exists(fp_file):
+                    os.remove(fp_file)
+            except OSError:
+                pass
+    except OSError as e:
+        return jsonify({'error': f'failed to persist PBS config: {e}'}), 500
+    return jsonify({'status': 'ok', 'name': name, 'repository': repo})
+
+
+@app.route('/api/host-backups/destinations/pbs/<name>', methods=['DELETE'])
+@require_auth
+def api_host_backups_dest_pbs_remove(name):
+    """Remove a manual PBS config by name. Auto-discovered PBS storages
+    from /etc/pve/storage.cfg are NOT removable from here (PVE owns
+    those — the operator manages them under Datacenter → Storage).
+
+    When `?force=true`, any jobs whose .env points at this PBS
+    repository are removed too (cascade). Backups on the PBS side
+    are NEVER touched — only the local job definitions go."""
+    safe = _safe_dest_name(name)
+    if not safe:
+        return jsonify({'error': 'invalid name'}), 400
+    force = (request.args.get('force') or '').lower() in ('1', 'true', 'yes')
+    cascaded: list = []
+    if force:
+        # Find the repo string for this name first, then look up the
+        # jobs that depend on it. We do this BEFORE deleting the
+        # config so the lookup still works.
+        for d in _list_pbs_destinations():
+            if d.get('name') == safe:
+                for jid in _jobs_using_pbs(d.get('repository') or ''):
+                    _delete_job_internal(jid)
+                    cascaded.append(jid)
+                break
+    cfg = f'{_BACKUP_STATE_DIR}/pbs-manual-configs.txt'
+    if not os.path.exists(cfg):
+        return jsonify({'error': 'no manual PBS configs file'}), 404
+    try:
+        with open(cfg) as f:
+            kept = [ln.rstrip('\n') for ln in f if not ln.startswith(f'{safe}|')]
+        with open(cfg, 'w') as f:
+            for ln in kept:
+                f.write(ln + '\n')
+        os.chmod(cfg, 0o600)
+    except OSError as e:
+        return jsonify({'error': f'failed to update pbs-manual-configs.txt: {e}'}), 500
+    for f in (
+        f'{_BACKUP_STATE_DIR}/pbs-pass-{safe}.txt',
+        f'{_BACKUP_STATE_DIR}/pbs-fingerprint-{safe}.txt',
+    ):
+        try:
+            if os.path.exists(f):
+                os.remove(f)
+        except OSError:
+            pass
+    return jsonify({'status': 'ok', 'name': safe, 'jobs_removed': cascaded})
+
+
+# ── Sprint D.2.c: SSH key generation for Borg remotes ──────────────
+
+
+@app.route('/api/host-backups/ssh-keys/generate', methods=['POST'])
+@require_auth
+def api_host_backups_ssh_key_generate():
+    """Generate (or fetch the public side of) an SSH key the operator
+    can drop into the Borg server's authorized_keys. Defaults: ed25519,
+    no passphrase, stored at /root/.ssh/proxmenux_borg. If the key
+    already exists we don't regenerate — we just hand back the public
+    half + a sensible authorized_keys line."""
+    payload = request.get_json(silent=True) or {}
+    key_path = (payload.get('key_path') or '/root/.ssh/proxmenux_borg').strip()
+    remote_path = (payload.get('remote_path') or '').strip()
+    if not key_path.startswith('/'):
+        return jsonify({'error': 'key_path must be absolute'}), 400
+
+    pub_path = f'{key_path}.pub'
+
+    if not os.path.exists(key_path):
+        try:
+            ssh_dir = os.path.dirname(key_path) or '/'
+            os.makedirs(ssh_dir, exist_ok=True)
+            os.chmod(ssh_dir, 0o700)
+        except OSError as e:
+            return jsonify({'error': f'cannot prepare ssh dir: {e}'}), 500
+        try:
+            import socket
+            comment = f'proxmenux@{socket.gethostname()}'
+            r = subprocess.run(
+                ['ssh-keygen', '-t', 'ed25519', '-f', key_path, '-N', '', '-C', comment],
+                capture_output=True, text=True, timeout=15
+            )
+            if r.returncode != 0:
+                return jsonify({'error': f'ssh-keygen failed: {r.stderr.strip()}'}), 500
+        except (subprocess.TimeoutExpired, OSError) as e:
+            return jsonify({'error': str(e)}), 500
+
+    if not os.path.exists(pub_path):
+        return jsonify({'error': f'public key not found after generation: {pub_path}'}), 500
+
+    try:
+        with open(pub_path) as f:
+            pub_text = f.read().strip()
+    except OSError as e:
+        return jsonify({'error': str(e)}), 500
+
+    # Build a restricted authorized_keys line if we know the remote path.
+    # Mirrors the line `hb_borg_generate_and_install_key` emits in the shell.
+    if remote_path:
+        rp = '/' + remote_path.lstrip('/')
+        authorized_line = f'command="borg serve --restrict-to-path {rp}",restrict {pub_text}'
+    else:
+        authorized_line = pub_text
+
+    return jsonify({
+        'key_path': key_path,
+        'pub_path': pub_path,
+        'public_key': pub_text,
+        'authorized_keys_line': authorized_line,
+    })
+
+
+# ── Sprint D.2.b: USB drives management ────────────────────────────
+#
+# Thin wrappers around hb_list_usb_partitions / hb_mount_usb_partition /
+# hb_format_usb_disk in lib_host_backup_common.sh so the Monitor and
+# the shell scheduler menu agree on what a USB drive looks like and
+# how it gets mounted.
+
+_USB_DEVICE_RE = re.compile(r'^/dev/[a-zA-Z0-9]+$')
+
+
+@app.route('/api/host-backups/usb-drives', methods=['GET'])
+@require_auth
+def api_host_backups_usb_drives():
+    """List USB partitions (mounted + unmounted with a filesystem) and
+    raw USB disks with no partition table. Each entry has a `state` of
+    "mounted", "unmounted" or "empty"."""
+    if not os.path.exists(_BACKUP_LIB_SH):
+        return jsonify({'drives': []})
+    try:
+        r = subprocess.run(
+            ['bash', '-c', f'source {_BACKUP_LIB_SH}; hb_list_usb_partitions'],
+            capture_output=True, text=True, timeout=10
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return jsonify({'error': str(e)}), 500
+    drives: list = []
+    for line in r.stdout.splitlines():
+        parts = line.split('\t')
+        if len(parts) < 2:
+            continue
+        # State + dev_or_mp are always present; the rest may be blank.
+        state = parts[0]
+        dev_or_mp = parts[1]
+        label = parts[2] if len(parts) > 2 else ''
+        size = parts[3] if len(parts) > 3 else ''
+        fstype = parts[4] if len(parts) > 4 else ''
+        uuid = parts[5] if len(parts) > 5 else ''
+        drives.append({
+            'state': state,
+            'path_or_device': dev_or_mp,
+            'label': label,
+            'size': size,
+            'fstype': fstype,
+            'uuid': uuid,
+        })
+    return jsonify({'drives': drives})
+
+
+@app.route('/api/host-backups/usb-drives/mount', methods=['POST'])
+@require_auth
+def api_host_backups_usb_mount():
+    """Mount an unmounted USB partition. Body: {device, label?, uuid?}.
+    Returns the mountpoint chosen by hb_usb_mountpoint_for."""
+    payload = request.get_json(silent=True) or {}
+    device = (payload.get('device') or '').strip()
+    if not _USB_DEVICE_RE.match(device):
+        return jsonify({'error': 'invalid device path'}), 400
+    if not os.path.exists(device):
+        return jsonify({'error': f'device does not exist: {device}'}), 404
+    label = (payload.get('label') or '').strip()
+    uuid = (payload.get('uuid') or '').strip()
+    try:
+        r = subprocess.run(
+            ['bash', '-c',
+             f'source {_BACKUP_LIB_SH}; hb_mount_usb_partition "$1" "$2" "$3"',
+             'mount-wrapper', device, label, uuid],
+            capture_output=True, text=True, timeout=30
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return jsonify({'error': str(e)}), 500
+    if r.returncode != 0:
+        # hb_mount_usb_partition writes mount stderr to /tmp/proxmenux-mount.log
+        err_tail = ''
+        try:
+            with open('/tmp/proxmenux-mount.log') as f:
+                err_tail = f.read().strip().splitlines()[-5:]
+                err_tail = '\n'.join(err_tail)
+        except OSError:
+            pass
+        return jsonify({'error': f'mount failed: {err_tail or r.stderr.strip()}'}), 500
+    mountpoint = r.stdout.strip()
+    return jsonify({'status': 'ok', 'mountpoint': mountpoint})
+
+
+@app.route('/api/host-backups/usb-drives/unmount', methods=['POST'])
+@require_auth
+def api_host_backups_usb_unmount():
+    """Unmount a USB mountpoint and remove the directory if empty."""
+    payload = request.get_json(silent=True) or {}
+    mountpoint = (payload.get('mountpoint') or '').strip()
+    if not mountpoint or not mountpoint.startswith('/'):
+        return jsonify({'error': 'absolute mountpoint required'}), 400
+    if not os.path.ismount(mountpoint):
+        return jsonify({'error': f'not a mountpoint: {mountpoint}'}), 400
+    r = subprocess.run(['umount', mountpoint], capture_output=True, text=True, timeout=15)
+    if r.returncode != 0:
+        return jsonify({'error': f'umount failed: {r.stderr.strip()}'}), 500
+    try:
+        os.rmdir(mountpoint)
+    except OSError:
+        pass
+    return jsonify({'status': 'ok', 'mountpoint': mountpoint})
+
+
+@app.route('/api/host-backups/usb-drives/format', methods=['POST'])
+@require_auth
+def api_host_backups_usb_format():
+    """DESTRUCTIVE — wipes the disk, lays a fresh GPT + ext4 partition,
+    and mounts it. The body MUST include `confirm_device` matching
+    `device` exactly; the UI is expected to ask the operator to type it
+    by hand before sending. Mirrors the double-confirmation the shell
+    flow imposes."""
+    payload = request.get_json(silent=True) or {}
+    device = (payload.get('device') or '').strip()
+    confirm = (payload.get('confirm_device') or '').strip()
+    if not _USB_DEVICE_RE.match(device):
+        return jsonify({'error': 'invalid device path'}), 400
+    if confirm != device:
+        return jsonify({'error': 'confirm_device must match device exactly (typo / safety check)'}), 400
+    if not os.path.exists(device):
+        return jsonify({'error': f'device does not exist: {device}'}), 404
+    label = (payload.get('label') or 'proxmenux-backup').strip()
+    try:
+        r = subprocess.run(
+            ['bash', '-c',
+             f'source {_BACKUP_LIB_SH}; hb_format_usb_disk "$1" "$2"',
+             'format-wrapper', device, label],
+            capture_output=True, text=True, timeout=180
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return jsonify({'error': str(e)}), 500
+    if r.returncode != 0:
+        err_tail = ''
+        try:
+            with open('/tmp/proxmenux-format.log') as f:
+                err_tail = '\n'.join(f.read().strip().splitlines()[-10:])
+        except OSError:
+            pass
+        return jsonify({'error': f'format failed: {err_tail or r.stderr.strip()}'}), 500
+    mountpoint = r.stdout.strip()
+    return jsonify({'status': 'ok', 'mountpoint': mountpoint, 'label': label})
+
+
+# ── Sprint C: Custom backup paths CRUD ─────────────────────────────
+#
+# Paths the operator added on top of the default profile. The runner
+# merges this list into every backup (manual + scheduled). One path
+# per line in backup-extra-paths.txt; # comments allowed.
+
+_BACKUP_EXTRA_PATHS_FILE = f'{_BACKUP_STATE_DIR}/backup-extra-paths.txt'
+
+
+def _read_extra_paths() -> list:
+    if not os.path.exists(_BACKUP_EXTRA_PATHS_FILE):
+        return []
+    try:
+        seen: set = set()
+        out: list = []
+        with open(_BACKUP_EXTRA_PATHS_FILE) as f:
+            for raw in f:
+                line = raw.split('#', 1)[0].strip()
+                if not line:
+                    continue
+                if line in seen:
+                    continue
+                seen.add(line)
+                out.append(line)
+        return sorted(out)
+    except OSError:
+        return []
+
+
+def _write_extra_paths(paths: list) -> tuple[bool, str]:
+    try:
+        os.makedirs(_BACKUP_STATE_DIR, exist_ok=True)
+        with open(_BACKUP_EXTRA_PATHS_FILE, 'w') as f:
+            for p in paths:
+                f.write(p + '\n')
+        os.chmod(_BACKUP_EXTRA_PATHS_FILE, 0o600)
+        return True, ''
+    except OSError as e:
+        return False, str(e)
+
+
+@app.route('/api/host-backups/extra-paths', methods=['GET'])
+@require_auth
+def api_host_backups_extra_paths_get():
+    """List the user-added paths included in every backup on top of
+    the default profile."""
+    paths = _read_extra_paths()
+    return jsonify({
+        'paths': [
+            {'path': p, 'exists': os.path.exists(p)}
+            for p in paths
+        ]
+    })
+
+
+@app.route('/api/host-backups/extra-paths', methods=['POST'])
+@require_auth
+def api_host_backups_extra_paths_add():
+    """Add a path. Body: {path: string}. Idempotent — duplicates are
+    silently ignored."""
+    payload = request.get_json(silent=True) or {}
+    path = (payload.get('path') or '').strip().rstrip('/')
+    if not path:
+        return jsonify({'error': 'path is required'}), 400
+    if not path.startswith('/'):
+        return jsonify({'error': 'path must be absolute'}), 400
+    if not os.path.exists(path):
+        return jsonify({'error': f'path does not exist on this host: {path}'}), 400
+    existing = _read_extra_paths()
+    if path not in existing:
+        existing.append(path)
+        existing = sorted(set(existing))
+        ok, err = _write_extra_paths(existing)
+        if not ok:
+            return jsonify({'error': f'failed to persist: {err}'}), 500
+    return jsonify({'status': 'ok', 'paths': existing})
+
+
+@app.route('/api/host-backups/extra-paths', methods=['DELETE'])
+@require_auth
+def api_host_backups_extra_paths_remove():
+    """Remove a path. The path is taken from ?path=<urlencoded> so
+    DELETE stays bodyless."""
+    path = (request.args.get('path') or '').strip().rstrip('/')
+    if not path:
+        return jsonify({'error': 'path query parameter is required'}), 400
+    existing = _read_extra_paths()
+    if path not in existing:
+        return jsonify({'status': 'ok', 'paths': existing})
+    existing = [p for p in existing if p != path]
+    ok, err = _write_extra_paths(existing)
+    if not ok:
+        return jsonify({'error': f'failed to persist: {err}'}), 500
+    return jsonify({'status': 'ok', 'paths': existing})
+
+
+# ── Sprint H: Remote backups (PBS / Borg) listed and exported on-demand ──
+#
+# Listing is cheap (snapshot metadata only — milliseconds, no payload
+# download). Export is on-demand: only when the operator clicks Download
+# do we extract the snapshot to a local staging dir and pack it as a
+# .tar.zst, so the PBS / Borg server sees no load while the operator is
+# just browsing.
+
+_REMOTE_EXPORT_DIR = '/var/lib/proxmenux/exports'
+_REMOTE_EXPORT_TTL = 3600  # auto-clean staging directories untouched for > 1h
+_remote_export_tasks: dict = {}
+_remote_export_lock = threading.Lock()
+
+
+def _pbs_secret_for(repo_name: str) -> tuple[str, str]:
+    """Return (password, fingerprint) for the named PBS repo, looking
+    first in the manual sidecars and falling back to /etc/pve/storage.cfg."""
+    pass_text = ''
+    fp_text = ''
+    pass_file = f'{_BACKUP_STATE_DIR}/pbs-pass-{repo_name}.txt'
+    if os.path.exists(pass_file):
+        try:
+            with open(pass_file) as f:
+                pass_text = f.read().strip()
+        except OSError:
+            pass
+    fp_file = f'{_BACKUP_STATE_DIR}/pbs-fingerprint-{repo_name}.txt'
+    if os.path.exists(fp_file):
+        try:
+            with open(fp_file) as f:
+                fp_text = f.read().strip()
+        except OSError:
+            pass
+    # If we don't have a sidecar, the manual config screen could have
+    # left only the storage.cfg entry — pull whatever PVE has.
+    if not pass_text or not fp_text:
+        for r in _list_pbs_destinations():
+            if r.get('name') == repo_name:
+                if not fp_text:
+                    fp_text = r.get('fingerprint') or ''
+                # PVE storage.cfg keeps the password in a separate file
+                # under /etc/pve/priv/storage/<name>.pw — read it if we
+                # have permission.
+                pw_path = f'/etc/pve/priv/storage/{repo_name}.pw'
+                if not pass_text and os.path.exists(pw_path):
+                    try:
+                        with open(pw_path) as f:
+                            pass_text = f.read().strip()
+                    except OSError:
+                        pass
+                break
+    return pass_text, fp_text
+
+
+def _list_pbs_snapshots_for_repo(repo: dict, timeout: int = 15) -> tuple[list, str | None]:
+    """Run proxmox-backup-client snapshot list for one PBS config and
+    return (snapshots, error). Snapshots come back as the raw JSON the
+    client emits, with the source repo name attached for the UI."""
+    pwd, fp = _pbs_secret_for(repo['name'])
+    if not pwd:
+        return [], f"no password available for PBS repo \"{repo['name']}\""
+    env = {**os.environ, 'PBS_PASSWORD': pwd}
+    if fp:
+        env['PBS_FINGERPRINT'] = fp
+    try:
+        r = subprocess.run(
+            ['proxmox-backup-client', 'snapshot', 'list',
+             '--repository', repo['repository'],
+             '--output-format', 'json'],
+            capture_output=True, text=True, timeout=timeout, env=env,
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return [], str(e)
+    if r.returncode != 0:
+        return [], (r.stderr.strip() or r.stdout.strip() or
+                    f'proxmox-backup-client exited {r.returncode}')
+    try:
+        items = json.loads(r.stdout)
+    except json.JSONDecodeError:
+        return [], 'snapshot list output was not valid JSON'
+    out: list = []
+    for it in items:
+        backup_type = it.get('backup-type', '')
+        # The host-backup tab lists ONLY backups taken with the
+        # ProxMenux host-backup flow (`backup-type: host`). PBS
+        # repositories often also carry vzdump-style VM/LXC snapshots
+        # (`vm` / `ct`) — those belong to the Virtual Machines / LXC
+        # views, not here.
+        if backup_type != 'host':
+            continue
+        backup_id = it.get('backup-id', '')
+        # Hide internal keyrecovery escrow backups — they're a
+        # ProxMenux implementation detail, not user-facing backups.
+        # See _PBS_RECOVERY_ENC_PATH and the runner upload step.
+        # Matches both current `hostcfg-<host>-keyrecovery` and
+        # legacy `proxmenux-keyrecovery-<host>` naming so escrow
+        # blobs from either build stay hidden from the main list.
+        if _is_pbs_keyrecovery_backup_id(backup_id):
+            continue
+        backup_time = it.get('backup-time', 0)
+        # proxmox-backup-client expects the timestamp portion as an
+        # ISO-8601 UTC string ("2026-06-20T20:23:17Z"), NOT the raw
+        # epoch — passing the epoch back makes it reject the path
+        # with "unable to parse backup snapshot path".
+        from datetime import datetime, timezone
+        try:
+            iso = datetime.fromtimestamp(int(backup_time), tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        except (ValueError, OSError):
+            iso = str(backup_time)
+        snapshot = f"{backup_type}/{backup_id}/{iso}"
+        # A snapshot is "encrypted" when ANY of its files reports a
+        # crypt-mode other than `none`. Used to render the lock badge.
+        files = it.get('files', []) or []
+        encrypted = any(
+            (f.get('crypt-mode') or 'none') != 'none'
+            for f in files if isinstance(f, dict)
+        )
+        out.append({
+            'backend': 'pbs',
+            'repo_name': repo['name'],
+            'repo_repository': repo['repository'],
+            'snapshot': snapshot,
+            'backup_type': backup_type,
+            'backup_id': backup_id,
+            'backup_time': backup_time,
+            'size_bytes': it.get('size', 0),
+            'owner': it.get('owner'),
+            'protected': it.get('protected', False),
+            'files': files,
+            'fingerprint': it.get('fingerprint'),
+            'encrypted': encrypted,
+        })
+    return out, None
+
+
+@app.route('/api/host-backups/remote-archives', methods=['GET'])
+@require_auth
+def api_host_backups_remote_archives():
+    """List backups living on remote backends (PBS, eventually Borg).
+    Optional ?backend=pbs|borg filter; default returns all. Cheap to
+    call: only metadata is fetched from the remote — no payload data
+    moves until the operator clicks Download."""
+    backend_filter = (request.args.get('backend') or '').strip().lower()
+    snapshots: list = []
+    errors: list = []
+
+    if backend_filter in ('', 'pbs'):
+        for repo in _list_pbs_destinations():
+            items, err = _list_pbs_snapshots_for_repo(repo)
+            if err:
+                errors.append({'backend': 'pbs', 'repo_name': repo['name'], 'error': err})
+            snapshots.extend(items)
+
+    if backend_filter in ('', 'borg'):
+        for target in _list_borg_destinations():
+            items, err = _list_borg_archives_for_target(target)
+            if err:
+                errors.append({'backend': 'borg', 'repo_name': target['name'], 'error': err})
+            snapshots.extend(items)
+
+    return jsonify({'snapshots': snapshots, 'errors': errors})
+
+
+@app.route('/api/host-backups/remote-archives', methods=['DELETE'])
+@require_auth
+def api_host_backups_remote_archive_delete():
+    """Forget/delete a single PBS snapshot or Borg archive.
+
+    Body: {"backend": "pbs"|"borg", "repo_name": "...", "snapshot": "..."}
+        - PBS snapshot:   "host/<backup-id>/<iso-ts>"  → invokes
+                          `proxmox-backup-client snapshot forget`.
+        - Borg archive:   "<archive-name>"             → invokes
+                          `borg delete <repo>::<archive>`.
+
+    Local archives have their own DELETE endpoint
+    (`/api/host-backups/archives/<id>`); this one only handles remotes.
+    Protected PBS snapshots and missing remotes surface a clear error.
+    """
+    payload = request.get_json(silent=True) or {}
+    backend  = (payload.get('backend')   or '').strip().lower()
+    repo_nm  = (payload.get('repo_name') or '').strip()
+    snapshot = (payload.get('snapshot')  or '').strip()
+
+    if backend not in ('pbs', 'borg'):
+        return jsonify({'error': "backend must be 'pbs' or 'borg'"}), 400
+    if not repo_nm:
+        return jsonify({'error': 'repo_name is required'}), 400
+    if not snapshot:
+        return jsonify({'error': 'snapshot is required'}), 400
+
+    if backend == 'pbs':
+        repo = next((r for r in _list_pbs_destinations() if r['name'] == repo_nm), None)
+        if not repo:
+            return jsonify({'error': f"PBS destination '{repo_nm}' not found"}), 404
+        pwd, fp = _pbs_secret_for(repo_nm)
+        if not pwd:
+            return jsonify({'error': f"no password available for PBS repo '{repo_nm}'"}), 400
+        env = {**os.environ, 'PBS_PASSWORD': pwd}
+        if fp:
+            env['PBS_FINGERPRINT'] = fp
+        try:
+            r = subprocess.run(
+                ['proxmox-backup-client', 'snapshot', 'forget',
+                 snapshot, '--repository', repo['repository']],
+                capture_output=True, text=True, timeout=30, env=env,
+            )
+        except (subprocess.TimeoutExpired, OSError) as e:
+            return jsonify({'error': str(e)}), 500
+        if r.returncode != 0:
+            msg = (r.stderr.strip() or r.stdout.strip() or
+                   f'proxmox-backup-client exited {r.returncode}')
+            # Surface PBS's own "protected" error as a 409 so the UI
+            # can show a clearer message than the generic 500.
+            status = 409 if 'protected' in msg.lower() else 500
+            return jsonify({'error': msg}), status
+        return jsonify({'status': 'ok', 'removed': snapshot})
+
+    # backend == 'borg'
+    target = next((t for t in _list_borg_destinations() if t['name'] == repo_nm), None)
+    if not target:
+        return jsonify({'error': f"Borg destination '{repo_nm}' not found"}), 404
+    repo = target.get('repository') or ''
+    if not repo:
+        return jsonify({'error': "target has no repository path"}), 400
+    env = _borg_env_for(target)
+    try:
+        r = subprocess.run(
+            ['borg', 'delete', f'{repo}::{snapshot}'],
+            capture_output=True, text=True, timeout=120, env=env,
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return jsonify({'error': str(e)}), 500
+    if r.returncode != 0:
+        msg = (r.stderr.strip() or r.stdout.strip() or
+               f'borg delete exited {r.returncode}')
+        return jsonify({'error': msg}), 500
+    return jsonify({'status': 'ok', 'removed': snapshot})
+
+
+# ── Borg helpers (mirrors the PBS pair above) ──────────────────────
+
+
+def _borg_passphrase_for(name: str) -> str:
+    pass_file = f'{_BACKUP_STATE_DIR}/borg-pass-{name}.txt'
+    if not os.path.exists(pass_file):
+        return ''
+    try:
+        with open(pass_file) as f:
+            return f.read().strip()
+    except OSError:
+        return ''
+
+
+def _borg_env_for(target: dict, extra: dict | None = None) -> dict:
+    """Build the env dict for invoking the borg client against `target`.
+    Sets BORG_PASSPHRASE from the saved sidecar, BORG_RSH when an SSH
+    key is configured, and a generous BORG_RELOCATED_REPO_ACCESS_IS_OK
+    so we don't bail when the repo was last touched from a different
+    mountpoint label."""
+    env = {**os.environ}
+    pw = _borg_passphrase_for(target['name'])
+    if pw:
+        env['BORG_PASSPHRASE'] = pw
+    ssh_key = target.get('ssh_key') or ''
+    if ssh_key:
+        env['BORG_RSH'] = f'ssh -i {ssh_key} -o StrictHostKeyChecking=accept-new'
+    # Non-interactive: if borg would prompt about a relocated repo, take
+    # the safe answer instead of hanging the request.
+    env['BORG_RELOCATED_REPO_ACCESS_IS_OK'] = 'yes'
+    env['BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK'] = 'yes'
+    if extra:
+        env.update(extra)
+    return env
+
+
+def _list_borg_archives_for_target(target: dict, timeout: int = 30) -> tuple[list, str | None]:
+    """Run `borg list --json` against one saved Borg target and shape
+    the output the same way PBS snapshots are shaped — same UnifiedArchive
+    contract for the UI."""
+    repo = target.get('repository') or ''
+    if not repo:
+        return [], 'target has no repository path'
+    env = _borg_env_for(target)
+    try:
+        r = subprocess.run(
+            ['borg', 'list', '--json', repo],
+            capture_output=True, text=True, timeout=timeout, env=env,
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return [], str(e)
+    if r.returncode != 0:
+        return [], (r.stderr.strip() or r.stdout.strip() or
+                    f'borg list exited {r.returncode}')
+    try:
+        data = json.loads(r.stdout)
+    except json.JSONDecodeError:
+        return [], 'borg list output was not valid JSON'
+
+    archives = data.get('archives', []) or []
+
+    # `borg list --json` only carries archive name + start time. Pull
+    # the per-archive size with a parallel batch of `borg info --json
+    # repo::name` calls so the UI can render a real number instead of
+    # "0 MB". 4-way concurrency keeps the wall-clock acceptable on
+    # repos with dozens of archives. Results are returned alongside
+    # the listing so callers don't have to re-issue per-row probes.
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _info_size(name: str) -> int:
+        if not name:
+            return 0
+        try:
+            ri = subprocess.run(
+                ['borg', 'info', '--json', f'{repo}::{name}'],
+                capture_output=True, text=True, timeout=15, env=env,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            return 0
+        if ri.returncode != 0:
+            return 0
+        try:
+            info = json.loads(ri.stdout)
+        except (json.JSONDecodeError, ValueError):
+            return 0
+        arcs = info.get('archives') or []
+        if not arcs:
+            return 0
+        stats = arcs[0].get('stats') or {}
+        # Prefer original (uncompressed, undeduplicated) — matches what
+        # users expect when comparing to PBS source-data size.
+        v = stats.get('original_size') or stats.get('compressed_size') or 0
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return 0
+
+    names = [a.get('name') or '' for a in archives]
+    sizes: dict[str, int] = {}
+    if names:
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            for nm, sz in zip(names, ex.map(_info_size, names)):
+                sizes[nm] = sz
+
+    out: list = []
+    for arc in archives:
+        name = arc.get('name') or ''
+        start_iso = arc.get('start') or arc.get('time') or ''
+        # Borg timestamps come as ISO-8601 with microseconds — convert
+        # to unix seconds so the unified UI can sort against the PBS
+        # entries (which use unix seconds natively).
+        backup_time = 0
+        if start_iso:
+            try:
+                from datetime import datetime
+                cleaned = start_iso.split('.')[0]
+                dt = datetime.strptime(cleaned, '%Y-%m-%dT%H:%M:%S')
+                backup_time = int(dt.timestamp())
+            except (ValueError, OSError):
+                pass
+        out.append({
+            'backend': 'borg',
+            'repo_name': target['name'],
+            'repo_repository': repo,
+            'snapshot': name,
+            'backup_type': 'archive',
+            'backup_id': name,
+            'backup_time': backup_time,
+            'size_bytes': sizes.get(name, 0),
+            'owner': arc.get('username'),
+            'protected': False,
+            'files': [],
+            'fingerprint': None,
+            'borg_id': arc.get('id'),
+            'borg_start_iso': start_iso,
+            'encrypted': (target.get('encrypt_mode') or 'repokey') != 'none',
+        })
+    return out, None
+
+
+def _run_borg_export(task_id: str, target: dict, archive_name: str, output_path: str):
+    """Background worker: `borg extract` one archive into a staging
+    directory and pack the result as a .tar.zst. Same shape and
+    progress states as _run_pbs_export so the UI can poll generically."""
+    import shutil, time
+    def _update(**kw):
+        with _remote_export_lock:
+            _remote_export_tasks[task_id].update(kw, updated_at=time.time())
+
+    staging = os.path.join(_REMOTE_EXPORT_DIR, f'staging-{task_id}')
+    try:
+        os.makedirs(staging, exist_ok=True)
+        os.chmod(staging, 0o700)
+        env = _borg_env_for(target)
+
+        # 1) Extract the archive. borg extract writes into cwd, so we
+        #    cd to a fresh subdirectory under staging.
+        target_tree = os.path.join(staging, 'tree')
+        os.makedirs(target_tree, exist_ok=True)
+        _update(state='restoring', message='Extracting from Borg repo')
+        r = subprocess.run(
+            ['borg', 'extract', f'{target["repository"]}::{archive_name}'],
+            capture_output=True, text=True, timeout=3600, env=env,
+            cwd=target_tree,
+        )
+        if r.returncode != 0:
+            _update(state='failed', error=(r.stderr.strip() or 'borg extract failed'))
+            return
+
+        # 2) Pack as .tar.zst.
+        _update(state='packing', message='Compressing as tar.zst')
+        with open(output_path, 'wb') as out:
+            tar_p = subprocess.Popen(
+                ['tar', '-C', target_tree, '-cf', '-', '.'],
+                stdout=subprocess.PIPE,
+            )
+            zstd_p = subprocess.Popen(
+                ['zstd', '-T0', '-19', '-q'],
+                stdin=tar_p.stdout,
+                stdout=out,
+            )
+            if tar_p.stdout:
+                tar_p.stdout.close()
+            zstd_rc = zstd_p.wait(timeout=3600)
+            tar_rc = tar_p.wait(timeout=60)
+        if zstd_rc != 0 or tar_rc != 0:
+            _update(state='failed', error=f'archive packing failed (tar={tar_rc}, zstd={zstd_rc})')
+            return
+
+        size = os.path.getsize(output_path)
+        _update(state='completed', message='Export ready', size_bytes=size, output_path=output_path)
+    except Exception as e:
+        _update(state='failed', error=str(e))
+    finally:
+        try:
+            if os.path.isdir(staging):
+                shutil.rmtree(staging)
+        except OSError:
+            pass
+
+
+def _safe_export_id() -> str:
+    """Generate a collision-free identifier for a single export run."""
+    from datetime import datetime
+    import secrets
+    return f'{datetime.now().strftime("%Y%m%d%H%M%S")}-{secrets.token_hex(3)}'
+
+
+def _cleanup_stale_exports():
+    """Drop staging dirs and finished tar files older than _REMOTE_EXPORT_TTL.
+    Called opportunistically on each new export request — no separate
+    cron is needed."""
+    if not os.path.isdir(_REMOTE_EXPORT_DIR):
+        return
+    import time
+    now = time.time()
+    for name in os.listdir(_REMOTE_EXPORT_DIR):
+        full = os.path.join(_REMOTE_EXPORT_DIR, name)
+        try:
+            st = os.stat(full)
+        except OSError:
+            continue
+        if now - st.st_mtime < _REMOTE_EXPORT_TTL:
+            continue
+        if os.path.isdir(full):
+            try:
+                import shutil
+                shutil.rmtree(full)
+            except OSError:
+                pass
+        else:
+            try:
+                os.remove(full)
+            except OSError:
+                pass
+    # Also forget completed task records older than the TTL so they
+    # don't pile up forever.
+    with _remote_export_lock:
+        for tid in list(_remote_export_tasks):
+            task = _remote_export_tasks[tid]
+            if task['state'] in ('completed', 'failed') and now - task.get('updated_at', 0) > _REMOTE_EXPORT_TTL:
+                _remote_export_tasks.pop(tid, None)
+
+
+def _run_pbs_export(task_id: str, repo: dict, snapshot: str, output_path: str):
+    """Background worker: pull a single PBS snapshot to a local staging
+    dir, then pack it as a .tar.zst at output_path. Updates the shared
+    task record in place so the poll endpoint can report progress."""
+    import shutil, time
+    def _update(**kw):
+        with _remote_export_lock:
+            _remote_export_tasks[task_id].update(kw, updated_at=time.time())
+
+    staging = os.path.join(_REMOTE_EXPORT_DIR, f'staging-{task_id}')
+    try:
+        os.makedirs(staging, exist_ok=True)
+        os.chmod(staging, 0o700)
+
+        pwd, fp = _pbs_secret_for(repo['name'])
+        if not pwd:
+            _update(state='failed', error=f"no password for PBS repo \"{repo['name']}\"")
+            return
+        env = {**os.environ, 'PBS_PASSWORD': pwd}
+        if fp:
+            env['PBS_FINGERPRINT'] = fp
+        # Load the scrypt-unlock passphrase stored during import. Without
+        # this env var proxmox-backup-client can't decrypt a scrypt
+        # keyfile at restore time and fails with "no password input
+        # mechanism available". kdf=none keyfiles don't need it (empty
+        # file → env stays empty). Matches how the scheduled runner
+        # resolves PBS_ENCRYPTION_PASSWORD in run_scheduled_backup.sh.
+        try:
+            if os.path.isfile(_PBS_KEYFILE_PASS_PATH) and os.path.getsize(_PBS_KEYFILE_PASS_PATH) > 0:
+                with open(_PBS_KEYFILE_PASS_PATH, 'r') as _pf:
+                    env['PBS_ENCRYPTION_PASSWORD'] = _pf.read()
+        except OSError:
+            pass
+
+        # 1) Pull the .pxar archive out of the snapshot. PBS stores the
+        # host backup as `hostcfg.pxar.didx`; restoring it as `hostcfg.pxar`
+        # writes the file tree under <target>/hostcfg/.
+        # If a local keyfile is installed we always pass --keyfile: PBS
+        # ignores it for unencrypted archives and needs it for encrypted
+        # ones. Without this flag an encrypted download fails with
+        # "missing key - manifest was created with key XX:XX:..." even
+        # when the operator has the correct key on disk.
+        _update(state='restoring', message='Pulling snapshot from PBS')
+        target_tree = os.path.join(staging, 'tree')
+        os.makedirs(target_tree, exist_ok=True)
+        cmd = ['proxmox-backup-client', 'restore',
+               '--repository', repo['repository']]
+        if os.path.isfile(_PBS_KEYFILE_PATH):
+            cmd.extend(['--keyfile', _PBS_KEYFILE_PATH])
+        cmd.extend([snapshot, 'hostcfg.pxar', target_tree])
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800, env=env)
+        if r.returncode != 0:
+            err = (r.stderr.strip() or 'pbs restore failed')
+            # Fingerprint mismatch is the most common encrypted-restore
+            # failure and the error message alone doesn't tell the
+            # operator whether the installed keyfile is the wrong one
+            # or PBS just isn't finding it. Include the local keyfile
+            # fingerprint so a side-by-side compare with the manifest's
+            # XX:XX:... value is possible without shell access.
+            if 'missing key' in err.lower() or 'was created with key' in err.lower():
+                local_fp = _pbs_keyfile_fingerprint()
+                if local_fp:
+                    err += f'\n\nLocal keyfile fingerprint: {local_fp}'
+                else:
+                    err += '\n\n(No local PBS keyfile installed at ' + _PBS_KEYFILE_PATH + ')'
+            _update(state='failed', error=err)
+            return
+
+        # 2) Pack the restored tree as a .tar.zst — same format the
+        # local-backend backups already use, so the rest of the Monitor
+        # treats both shapes uniformly.
+        _update(state='packing', message='Compressing as tar.zst')
+        with open(output_path, 'wb') as out:
+            tar_p = subprocess.Popen(
+                ['tar', '-C', target_tree, '-cf', '-', '.'],
+                stdout=subprocess.PIPE,
+            )
+            zstd_p = subprocess.Popen(
+                ['zstd', '-T0', '-19', '-q'],
+                stdin=tar_p.stdout,
+                stdout=out,
+            )
+            if tar_p.stdout:
+                tar_p.stdout.close()
+            zstd_rc = zstd_p.wait(timeout=1800)
+            tar_rc = tar_p.wait(timeout=60)
+        if zstd_rc != 0 or tar_rc != 0:
+            _update(state='failed', error=f'archive packing failed (tar={tar_rc}, zstd={zstd_rc})')
+            return
+
+        size = os.path.getsize(output_path)
+        _update(state='completed', message='Export ready', size_bytes=size, output_path=output_path)
+    except Exception as e:
+        _update(state='failed', error=str(e))
+    finally:
+        # Drop the staging tree once we're done — only the final tarball
+        # stays around until the operator downloads it.
+        try:
+            if os.path.isdir(staging):
+                shutil.rmtree(staging)
+        except OSError:
+            pass
+
+
+@app.route('/api/host-backups/remote-archives/export', methods=['POST'])
+@require_auth
+def api_host_backups_remote_archive_export():
+    """Kick off an on-demand export. Body:
+      {backend: 'pbs'|'borg', repo_name, snapshot}
+    Returns a task_id the UI polls for progress and uses to fetch the
+    resulting .tar.zst once ready."""
+    import time
+    _cleanup_stale_exports()
+    payload = request.get_json(silent=True) or {}
+    backend = (payload.get('backend') or '').strip().lower()
+    if backend not in ('pbs', 'borg'):
+        return jsonify({'error': 'backend must be pbs or borg'}), 400
+    repo_name = (payload.get('repo_name') or '').strip()
+    snapshot = (payload.get('snapshot') or '').strip()
+    if not repo_name or not snapshot:
+        return jsonify({'error': 'repo_name and snapshot are required'}), 400
+
+    repo: dict | None = None
+    if backend == 'pbs':
+        repo = next((r for r in _list_pbs_destinations() if r['name'] == repo_name), None)
+        if not repo:
+            return jsonify({'error': f'PBS repo not found: {repo_name}'}), 404
+    else:
+        repo = next((r for r in _list_borg_destinations() if r['name'] == repo_name), None)
+        if not repo:
+            return jsonify({'error': f'Borg target not found: {repo_name}'}), 404
+
+    os.makedirs(_REMOTE_EXPORT_DIR, exist_ok=True)
+    task_id = _safe_export_id()
+    safe_snap = snapshot.replace('/', '_')
+    output_path = os.path.join(
+        _REMOTE_EXPORT_DIR, f'{backend}-{repo_name}-{safe_snap}.tar.zst'
+    )
+    with _remote_export_lock:
+        _remote_export_tasks[task_id] = {
+            'task_id': task_id,
+            'backend': backend,
+            'repo_name': repo_name,
+            'snapshot': snapshot,
+            'state': 'queued',
+            'message': 'Queued',
+            'created_at': time.time(),
+            'updated_at': time.time(),
+            'output_path': None,
+            'size_bytes': 0,
+            'error': None,
+        }
+
+    worker = _run_pbs_export if backend == 'pbs' else _run_borg_export
+    t = threading.Thread(
+        target=worker,
+        args=(task_id, repo, snapshot, output_path),
+        daemon=True,
+    )
+    t.start()
+    return jsonify({'task_id': task_id, 'state': 'queued'}), 202
+
+
+@app.route('/api/host-backups/remote-archives/export/<task_id>', methods=['GET'])
+@require_auth
+def api_host_backups_remote_archive_export_status(task_id):
+    """Poll a running export. Returns the live task record; the UI uses
+    `state` to decide what to render (queued → progress, completed →
+    trigger download)."""
+    with _remote_export_lock:
+        task = _remote_export_tasks.get(task_id)
+        if not task:
+            return jsonify({'error': 'task not found or expired'}), 404
+        # Defensive copy — the worker keeps mutating the original.
+        return jsonify({k: v for k, v in task.items()})
+
+
+@app.route('/api/host-backups/remote-archives/export/<task_id>/download', methods=['GET'])
+@require_auth_or_ticket
+def api_host_backups_remote_archive_export_download(task_id):
+    """Stream the packed export to the browser. Same auth + send_file
+    pattern as the local archive download. Cleans up the tarball after
+    the response is dispatched so the staging area doesn't grow."""
+    with _remote_export_lock:
+        task = _remote_export_tasks.get(task_id)
+    if not task:
+        return jsonify({'error': 'task not found or expired'}), 404
+    if task['state'] != 'completed':
+        return jsonify({'error': f'task is in state "{task["state"]}", not completed'}), 409
+    output_path = task.get('output_path')
+    if not output_path or not os.path.isfile(output_path):
+        return jsonify({'error': 'output file missing'}), 500
+    download_name = os.path.basename(output_path)
+
+    @after_this_request
+    def _cleanup(response):
+        try:
+            if os.path.exists(output_path):
+                os.remove(output_path)
+        except OSError:
+            pass
+        with _remote_export_lock:
+            _remote_export_tasks.pop(task_id, None)
+        return response
+
+    return send_file(
+        output_path,
+        as_attachment=True,
+        download_name=download_name,
+        mimetype='application/x-zstd-compressed-tar',
+    )
+
+
+_BACKUP_TAR_SUFFIXES = ('.tar', '.tar.zst', '.tar.gz')
+
+
+@app.route('/api/host-backups/archives', methods=['GET'])
+@require_auth
+def api_host_backups_archives():
+    """List ProxMenux host-backup archives found on disk.
+
+    Scans /var/lib/vz/dump (PVE default — covers manual backups from
+    backup_host.sh options 1-6) plus every DEST_DIR registered by a
+    local_tar scheduled job. For each archive, _identify_host_backup()
+    decides whether it's really a ProxMenux backup using, in order of
+    confidence: (a) the .proxmenux.json sidecar dropped by the backup
+    scripts at completion (definitive — survives any future rename of
+    the .tar); (b) the filename conventions (`hostcfg-<host>-<ts>` for
+    manual, `<job_id>-<ts>` for scheduled with the job env still on
+    disk); (c) a tar-peek for the in-archive `metadata/run_info.env`
+    marker that every ProxMenux backup ships with (catches legacy
+    archives and ones copied in from another host).
+    PBS and Borg backups aren't surfaced in the UI yet."""
+    archives: list = []
+    seen: set = set()
+    hostname = socket.gethostname()
+    job_ids = _known_job_ids()
+
+    for d in _collect_backup_scan_dirs():
+        try:
+            entries = os.listdir(d)
+        except OSError:
+            continue
+        for name in entries:
+            if not name.endswith(_BACKUP_TAR_SUFFIXES):
+                continue
+            tar_path = os.path.join(d, name)
+            if tar_path in seen:
+                continue
+            seen.add(tar_path)
+            try:
+                st = os.stat(tar_path)
+            except OSError:
+                continue
+            info = _identify_host_backup(tar_path, st, hostname, job_ids)
+            if info is None:
+                continue
+            archives.append({
+                'id': name,
+                'path': tar_path,
+                'size_bytes': st.st_size,
+                'mtime': int(st.st_mtime),
+                **info,
+            })
+
+    archives.sort(key=lambda a: a['mtime'], reverse=True)
+    return jsonify({'archives': archives})
+
+
+# ──────────────────────────────────────────────────────────────
+# Snapshot inspection — extract + analyze backend
+# ──────────────────────────────────────────────────────────────
+# The "View contents" button in the Available Archives modal needs
+# to read manifest + restore plan + file list out of ANY backup —
+# PBS, Borg, or local. The trick is that PBS and Borg snapshots
+# aren't files: they have to be extracted to a staging directory
+# first. These helpers + endpoint do exactly that, reuse the four
+# restore-side shell scripts (parse_manifest / run_restore), and
+# clean the staging tree before returning.
+# Staging lives under /tmp/pmnx-inspect-XXX and is removed in the
+# `finally` block — there's nothing to leak even if the request
+# fails mid-flight.
+
+def _inspect_extract_to_staging(source: str, repo_dict: dict, snapshot: str, staging: str) -> tuple:
+    """Pull a snapshot into <staging>. Returns (ok, error_message).
+    PBS: pulls the `hostcfg.pxar` archive (the canonical name the
+    ProxMenux backup uses) and lets the client write straight into
+    staging — the pxar already wraps the rootfs/+metadata/ layout.
+    Borg: `borg extract` into staging; if the archive used absolute
+    paths, the wrapped tree is normalized by _inspect_normalize_layout.
+    Local: tar/zst/gz extract into staging."""
+    if source == 'pbs':
+        pwd = _resolve_pbs_password(repo_dict['name'])
+        if not pwd:
+            return False, f"no password for PBS repo \"{repo_dict['name']}\""
+        env = {**os.environ, 'PBS_PASSWORD': pwd}
+        fp = _resolve_pbs_fingerprint(repo_dict['name'])
+        if fp:
+            env['PBS_FINGERPRINT'] = fp
+        cmd = ['proxmox-backup-client', 'restore',
+               '--repository', repo_dict['repository'],
+               snapshot, 'hostcfg.pxar', staging]
+        if os.path.isfile(_PBS_KEYFILE_PATH):
+            cmd.extend(['--keyfile', _PBS_KEYFILE_PATH])
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=900, env=env)
+        except (subprocess.TimeoutExpired, OSError) as e:
+            return False, str(e)
+        if r.returncode != 0:
+            return False, (r.stderr.strip() or r.stdout.strip() or 'pbs restore failed')[:500]
+        return True, None
+
+    if source == 'borg':
+        env = _borg_env_for(repo_dict)
+        cmd = ['borg', 'extract', f"{repo_dict['repository']}::{snapshot}"]
+        try:
+            r = subprocess.run(cmd, cwd=staging, capture_output=True, text=True, timeout=900, env=env)
+        except (subprocess.TimeoutExpired, OSError) as e:
+            return False, str(e)
+        if r.returncode != 0:
+            return False, (r.stderr.strip() or r.stdout.strip() or 'borg extract failed')[:500]
+        return True, None
+
+    if source == 'local':
+        archive_path = repo_dict.get('path') or ''
+        if not os.path.isfile(archive_path):
+            return False, f'local archive not found: {archive_path}'
+        if archive_path.endswith('.tar.zst'):
+            cmd = ['tar', '--zstd', '-xf', archive_path, '-C', staging]
+        elif archive_path.endswith(('.tar.gz', '.tgz')):
+            cmd = ['tar', '-xzf', archive_path, '-C', staging]
+        elif archive_path.endswith('.tar'):
+            cmd = ['tar', '-xf', archive_path, '-C', staging]
+        else:
+            return False, f'unknown archive type: {archive_path}'
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+        except (subprocess.TimeoutExpired, OSError) as e:
+            return False, str(e)
+        if r.returncode != 0:
+            return False, (r.stderr.strip() or 'tar extract failed')[:500]
+        return True, None
+
+    return False, f'unknown source: {source}'
+
+
+def _inspect_normalize_layout(staging: str) -> bool:
+    """Coerce arbitrary backup layouts into the canonical
+    rootfs/+metadata/ structure that parse_manifest.sh / run_restore.sh
+    expect. Mirrors backup_host.sh::_rs_check_layout without the dialogs."""
+    if os.path.isdir(os.path.join(staging, 'rootfs')):
+        return True
+    # Case 2: rootfs/ nested one level deep (Borg with absolute paths).
+    try:
+        for entry in os.listdir(staging):
+            sub = os.path.join(staging, entry)
+            if not os.path.isdir(sub):
+                continue
+            inner_rootfs = os.path.join(sub, 'rootfs')
+            if os.path.isdir(inner_rootfs):
+                shutil.move(inner_rootfs, os.path.join(staging, 'rootfs'))
+                inner_meta = os.path.join(sub, 'metadata')
+                if os.path.isdir(inner_meta):
+                    shutil.move(inner_meta, os.path.join(staging, 'metadata'))
+                return True
+    except OSError:
+        return False
+    # Case 3: flat layout — etc/, var/, root/, usr/ extracted at top.
+    flat_indicators = ('etc', 'var', 'root', 'usr')
+    if any(os.path.isdir(os.path.join(staging, x)) for x in flat_indicators):
+        import tempfile
+        tmp = tempfile.mkdtemp(prefix='.rootfs_wrap.', dir=staging)
+        for entry in os.listdir(staging):
+            src = os.path.join(staging, entry)
+            if src == tmp:
+                continue
+            try:
+                shutil.move(src, os.path.join(tmp, entry))
+            except OSError:
+                pass
+        shutil.move(tmp, os.path.join(staging, 'rootfs'))
+        os.makedirs(os.path.join(staging, 'metadata'), exist_ok=True)
+        return True
+    return False
+
+
+def _inspect_compose_json(staging: str) -> dict:
+    """Run the restore-aware scripts against the normalized staging and
+    merge their JSON outputs into one dict the UI can render. Best-
+    effort: a failure in one section reports an error in that section
+    only, the rest of the report still comes back."""
+    scripts_dir = f'{_PROXMENUX_SCRIPTS_DIR}/backup_restore/restore'
+    out: dict = {}
+
+    # ── Manifest ──
+    # Many in-the-wild backups don't ship a manifest.json (the
+    # collectors that generate it are wired up but not invoked by
+    # the current backup_host.sh / run_scheduled_backup.sh). When
+    # that's the case, set `manifest_missing=True` so the UI shows
+    # a soft informational note instead of a red error — and skip
+    # run_restore.sh entirely since it would only repeat the
+    # "no manifest" message.
+    try:
+        r = subprocess.run(['bash', f'{scripts_dir}/parse_manifest.sh', staging],
+                           capture_output=True, text=True, timeout=30)
+        if r.returncode == 0 and r.stdout.strip():
+            try:
+                out['manifest'] = json.loads(r.stdout)
+            except json.JSONDecodeError:
+                out['manifest_error'] = 'parse_manifest output was not valid JSON'
+        else:
+            err = (r.stderr.strip() or 'parse_manifest failed')[:500]
+            if 'no manifest.json' in err.lower():
+                out['manifest_missing'] = True
+            else:
+                out['manifest_error'] = err
+    except (subprocess.TimeoutExpired, OSError) as e:
+        out['manifest_error'] = str(e)
+
+    # ── Full preflight (storage + network + drivers + plan) ──
+    # Only run when a manifest is actually present — run_restore.sh
+    # uses it as input, and without one the report is just a repeat
+    # of the parse_manifest failure (already surfaced above).
+    if out.get('manifest'):
+        run_script = f'{scripts_dir}/run_restore.sh'
+        try:
+            r = subprocess.run(['bash', run_script, staging, '--mode', 'full', '--json'],
+                               capture_output=True, text=True, timeout=180)
+            if r.stdout.strip():
+                try:
+                    out['plan'] = json.loads(r.stdout)
+                except json.JSONDecodeError:
+                    out['plan_raw_stderr'] = r.stderr[:1000]
+                    out['plan_error'] = 'run_restore output was not valid JSON'
+            else:
+                out['plan_error'] = (r.stderr.strip() or 'no report from run_restore')[:500]
+        except (subprocess.TimeoutExpired, OSError) as e:
+            out['plan_error'] = str(e)
+
+    # ── File listing (capped, for the Files tab) ──
+    rootfs = os.path.join(staging, 'rootfs')
+    metadata = os.path.join(staging, 'metadata')
+    if os.path.isdir(rootfs):
+        files: list = []
+        limit = 5000
+        truncated = False
+        for root, dirs, fnames in os.walk(rootfs):
+            rel_dir = os.path.relpath(root, rootfs)
+            if rel_dir == '.':
+                rel_dir = ''
+            depth = rel_dir.count(os.sep) + (1 if rel_dir else 0)
+            if depth > 6:
+                dirs[:] = []
+                continue
+            for fn in fnames:
+                full = os.path.join(root, fn)
+                try:
+                    sz = os.path.getsize(full)
+                except OSError:
+                    sz = 0
+                files.append({
+                    'path': ('/' + rel_dir + '/' + fn) if rel_dir else ('/' + fn),
+                    'size': sz,
+                })
+                if len(files) >= limit:
+                    truncated = True
+                    break
+            if truncated:
+                break
+        out['files'] = files
+        out['files_truncated'] = truncated
+        out['files_total_count'] = len(files)
+
+    # ── Rollback plan ──
+    # Compare backup state vs current host to surface VMs/LXCs that
+    # would be removed and components that would be uninstalled by
+    # a "restore to backup state" operation. Read-only here — the
+    # actual rollback is executed by apply_cluster_postboot.sh after
+    # the operator confirms in the Restore flow.
+    rollback_script = f'{scripts_dir}/compute_rollback_plan.sh'
+    if os.path.isfile(rollback_script):
+        try:
+            r = subprocess.run(['bash', rollback_script, staging],
+                               capture_output=True, text=True, timeout=20)
+            if r.returncode == 0 and r.stdout.strip():
+                out['rollback_plan'] = json.loads(r.stdout)
+        except (subprocess.TimeoutExpired, OSError, json.JSONDecodeError, ValueError):
+            pass
+
+    # ── Bundle the loose metadata sidecars for quick reference ──
+    if os.path.isdir(metadata):
+        meta_view: dict = {}
+        for fname in ('run_info.env', 'pveversion.txt', 'selected_paths.txt',
+                      'missing_paths.txt', 'sha256sums.txt'):
+            fp = os.path.join(metadata, fname)
+            if os.path.isfile(fp):
+                try:
+                    with open(fp, encoding='utf-8', errors='replace') as f:
+                        meta_view[fname] = f.read()
+                except OSError:
+                    pass
+        out['metadata_files'] = meta_view
+
+    return out
+
+
+@app.route('/api/host-backups/inspect-archive', methods=['POST'])
+@require_auth
+def api_host_backups_inspect_archive():
+    """One-shot 'View Contents' endpoint for any backend. Extracts the
+    snapshot to a temp staging dir, runs the restore-side tools, then
+    cleans up. Body:
+      {source: "pbs"|"borg"|"local", repo_name?, snapshot?, path?}
+    """
+    payload = request.get_json(silent=True) or {}
+    source = (payload.get('source') or '').strip()
+    if source not in ('pbs', 'borg', 'local'):
+        return jsonify({'error': 'source must be pbs, borg, or local'}), 400
+
+    repo_dict: dict = {}
+    snapshot = ''
+    if source == 'pbs':
+        repo_name = (payload.get('repo_name') or '').strip()
+        snapshot = (payload.get('snapshot') or '').strip()
+        if not repo_name or not snapshot:
+            return jsonify({'error': 'repo_name and snapshot are required for pbs'}), 400
+        for r in _list_pbs_destinations():
+            if r.get('name') == repo_name:
+                repo_dict = r
+                break
+        if not repo_dict:
+            return jsonify({'error': f'PBS repo "{repo_name}" not configured'}), 404
+    elif source == 'borg':
+        repo_name = (payload.get('repo_name') or '').strip()
+        snapshot = (payload.get('snapshot') or '').strip()
+        if not repo_name or not snapshot:
+            return jsonify({'error': 'repo_name and snapshot are required for borg'}), 400
+        for r in _list_borg_destinations():
+            if r.get('name') == repo_name:
+                repo_dict = r
+                break
+        if not repo_dict:
+            return jsonify({'error': f'Borg repo "{repo_name}" not configured'}), 404
+    else:  # local
+        path = (payload.get('path') or '').strip()
+        if not path or not os.path.isfile(path):
+            return jsonify({'error': f'local archive not found: {path}'}), 404
+        repo_dict = {'path': path}
+
+    import tempfile
+    staging = tempfile.mkdtemp(prefix='pmnx-inspect-')
+    try:
+        ok, err = _inspect_extract_to_staging(source, repo_dict, snapshot, staging)
+        if not ok:
+            return jsonify({'error': err}), 500
+        if not _inspect_normalize_layout(staging):
+            return jsonify({'error': 'archive layout not recognized — no rootfs/ found'}), 500
+        return jsonify(_inspect_compose_json(staging))
+    finally:
+        try:
+            shutil.rmtree(staging, ignore_errors=True)
+        except OSError:
+            pass
+
+
+# ──────────────────────────────────────────────────────────────
+# Restore prepare/cleanup — Monitor → shell TUI handoff
+# ──────────────────────────────────────────────────────────────
+# The "Restore" button in the Inspect modal goes through TWO steps:
+#   1. POST /restore/prepare → backend extracts the snapshot to a
+#      persistent staging dir under _RESTORE_STAGING_ROOT. Returns
+#      the staging path so the next step can find it.
+#   2. The frontend launches a ScriptTerminalModal pointing at
+#      restore/monitor_apply.sh with that staging path + selected
+#      mode/components. monitor_apply.sh sources backup_host.sh and
+#      calls _rs_run_complete_guided / _rs_run_custom_restore — the
+#      exact same apply path the TUI uses.
+#
+# Staging dirs auto-expire: every new prepare() removes any leftover
+# from previous runs older than _RESTORE_STAGING_TTL_SECONDS so a
+# crashed Monitor session doesn't accumulate gigabytes on /tmp.
+
+_RESTORE_STAGING_ROOT = '/tmp'
+_RESTORE_STAGING_PREFIX = 'pmnx-restore-'
+_RESTORE_STAGING_TTL_SECONDS = 6 * 3600  # 6 hours
+
+def _restore_staging_gc():
+    """Remove stale Monitor restore staging dirs. Best-effort; any
+    OSError silently skips the entry so a permission glitch on one
+    item doesn't block the new prepare."""
+    import time
+    now = time.time()
+    try:
+        entries = os.listdir(_RESTORE_STAGING_ROOT)
+    except OSError:
+        return
+    for entry in entries:
+        if not entry.startswith(_RESTORE_STAGING_PREFIX):
+            continue
+        full = os.path.join(_RESTORE_STAGING_ROOT, entry)
+        try:
+            age = now - os.path.getmtime(full)
+        except OSError:
+            continue
+        if age > _RESTORE_STAGING_TTL_SECONDS:
+            try:
+                shutil.rmtree(full, ignore_errors=True)
+            except OSError:
+                pass
+
+
+@app.route('/api/host-backups/restore/prepare', methods=['POST'])
+@require_auth
+def api_host_backups_restore_prepare():
+    """Extract a snapshot to a persistent staging directory. The
+    frontend follows up by launching monitor_apply.sh against that
+    staging via ScriptTerminalModal. Body is the same shape as
+    /inspect-archive: {source, repo_name?, snapshot?, path?}.
+    Returns: {staging_path}."""
+    payload = request.get_json(silent=True) or {}
+    source = (payload.get('source') or '').strip()
+    if source not in ('pbs', 'borg', 'local'):
+        return jsonify({'error': 'source must be pbs, borg, or local'}), 400
+
+    repo_dict: dict = {}
+    snapshot = ''
+    if source == 'pbs':
+        repo_name = (payload.get('repo_name') or '').strip()
+        snapshot = (payload.get('snapshot') or '').strip()
+        if not repo_name or not snapshot:
+            return jsonify({'error': 'repo_name and snapshot are required for pbs'}), 400
+        for r in _list_pbs_destinations():
+            if r.get('name') == repo_name:
+                repo_dict = r
+                break
+        if not repo_dict:
+            return jsonify({'error': f'PBS repo "{repo_name}" not configured'}), 404
+    elif source == 'borg':
+        repo_name = (payload.get('repo_name') or '').strip()
+        snapshot = (payload.get('snapshot') or '').strip()
+        if not repo_name or not snapshot:
+            return jsonify({'error': 'repo_name and snapshot are required for borg'}), 400
+        for r in _list_borg_destinations():
+            if r.get('name') == repo_name:
+                repo_dict = r
+                break
+        if not repo_dict:
+            return jsonify({'error': f'Borg repo "{repo_name}" not configured'}), 404
+    else:
+        path = (payload.get('path') or '').strip()
+        if not path or not os.path.isfile(path):
+            return jsonify({'error': f'local archive not found: {path}'}), 404
+        repo_dict = {'path': path}
+
+    _restore_staging_gc()
+
+    import tempfile
+    staging = tempfile.mkdtemp(prefix=_RESTORE_STAGING_PREFIX, dir=_RESTORE_STAGING_ROOT)
+    try:
+        ok, err = _inspect_extract_to_staging(source, repo_dict, snapshot, staging)
+        if not ok:
+            shutil.rmtree(staging, ignore_errors=True)
+            return jsonify({'error': err}), 500
+        if not _inspect_normalize_layout(staging):
+            shutil.rmtree(staging, ignore_errors=True)
+            return jsonify({'error': 'archive layout not recognized — no rootfs/ found'}), 500
+        # List the real backup paths so the Custom restore checklist
+        # only offers what's actually present (default profile + the
+        # operator's extras). Mirrors what _rs_select_component_paths
+        # in backup_host.sh now does after the paths-not-components
+        # refactor — perfect backup↔restore parity.
+        paths_available: list = []
+        list_script = f'{_PROXMENUX_SCRIPTS_DIR}/backup_restore/restore/list_paths.sh'
+        if os.path.isfile(list_script):
+            try:
+                r = subprocess.run(['bash', list_script, staging],
+                                   capture_output=True, text=True, timeout=30)
+                if r.returncode == 0 and r.stdout.strip():
+                    paths_available = json.loads(r.stdout.strip())
+            except (subprocess.TimeoutExpired, OSError, json.JSONDecodeError, ValueError):
+                pass
+
+        rollback_plan: dict = {}
+        rollback_script = f'{_PROXMENUX_SCRIPTS_DIR}/backup_restore/restore/compute_rollback_plan.sh'
+        if os.path.isfile(rollback_script):
+            try:
+                r = subprocess.run(['bash', rollback_script, staging],
+                                   capture_output=True, text=True, timeout=20)
+                if r.returncode == 0 and r.stdout.strip():
+                    rollback_plan = json.loads(r.stdout)
+            except (subprocess.TimeoutExpired, OSError, json.JSONDecodeError, ValueError):
+                pass
+
+        # Direction-aware cross-kernel signal for the Web restore UI.
+        # We source the same logic the CLI uses: read the backup's
+        # kernel from the staging's run_info.env, compare major.minor
+        # to the target's current kernel, and classify the direction.
+        # "bk_older" is the only mode that trims the picker; the
+        # blocked list mirrors hb_unsafe_paths_cross_version so both
+        # surfaces skip the exact same set. "bk_newer" and "same" send
+        # empty lists and the Web treats them as a normal restore.
+        cross_kernel: dict = {
+            'direction': 'same',
+            'backup_kernel': '',
+            'target_kernel': '',
+            'blocked_paths': [],
+        }
+        try:
+            bk_kernel = ''
+            run_info = os.path.join(staging, 'metadata', 'run_info.env')
+            if os.path.isfile(run_info):
+                with open(run_info, 'r') as f:
+                    for line in f:
+                        if line.startswith('kernel='):
+                            bk_kernel = line.strip().split('=', 1)[1]
+                            break
+            try:
+                tg_kernel = subprocess.check_output(['uname', '-r'], text=True).strip()
+            except (OSError, subprocess.CalledProcessError):
+                tg_kernel = ''
+            cross_kernel['backup_kernel'] = bk_kernel
+            cross_kernel['target_kernel'] = tg_kernel
+            def _mm(k: str) -> tuple:
+                parts = (k or '').split('.')
+                try:
+                    return (int(parts[0]), int(parts[1]))
+                except (ValueError, IndexError):
+                    return (0, 0)
+            if bk_kernel and tg_kernel:
+                bk_mm, tg_mm = _mm(bk_kernel), _mm(tg_kernel)
+                if bk_mm != tg_mm and bk_mm != (0, 0) and tg_mm != (0, 0):
+                    if bk_mm < tg_mm:
+                        cross_kernel['direction'] = 'bk_older'
+                        # Pull the exact list the CLI uses.
+                        lib_sh = f'{_PROXMENUX_SCRIPTS_DIR}/backup_restore/lib_host_backup_common.sh'
+                        if os.path.isfile(lib_sh):
+                            try:
+                                r = subprocess.run(
+                                    ['bash', '-c',
+                                     f'source "{lib_sh}"; hb_unsafe_paths_cross_version'],
+                                    capture_output=True, text=True, timeout=10)
+                                if r.returncode == 0:
+                                    blocked = []
+                                    for line in r.stdout.splitlines():
+                                        parts = line.split('\t', 1)
+                                        if parts and parts[0].strip():
+                                            blocked.append(parts[0].strip())
+                                    cross_kernel['blocked_paths'] = blocked
+                            except (subprocess.TimeoutExpired, OSError):
+                                pass
+                    else:
+                        cross_kernel['direction'] = 'bk_newer'
+        except (OSError, ValueError):
+            pass
+
+        # Hydration preview — only meaningful in bk_older direction.
+        # Runs the same phases the CLI runs in "plan" mode: no
+        # writes to the live target, just the list of would-be
+        # actions. Same code path as the shell dialog, so the Web
+        # banner and the CLI msgbox always list the same items.
+        hydration = {'applies': False, 'actions': []}
+        if cross_kernel['direction'] == 'bk_older':
+            backup_sh = (
+                f'{_PROXMENUX_SCRIPTS_DIR}/backup_restore/backup_host.sh'
+            )
+            if os.path.isfile(backup_sh):
+                try:
+                    # Source lib+backup_host in a subshell, set the
+                    # direction so any inner guard passes, run the
+                    # orchestrator in plan mode, print RS_HYDRATION_ACTIONS
+                    # one per line. HB_LIB_ONLY/HB_NO_MAIN etc. are not
+                    # needed: sourcing backup_host.sh only defines
+                    # functions; nothing runs until we call one.
+                    script = (
+                        f'set +e; '
+                        f'source "{_PROXMENUX_SCRIPTS_DIR}/backup_restore/lib_host_backup_common.sh"; '
+                        f'source "{backup_sh}" >/dev/null 2>&1; '
+                        f'HB_COMPAT_KERNEL_DIRECTION=bk_older '
+                        f'_rs_apply_bk_older_hydration "{staging}" plan >/dev/null 2>&1; '
+                        f'printf "%s\\n" "${{RS_HYDRATION_ACTIONS[@]}}"'
+                    )
+                    r = subprocess.run(
+                        ['bash', '-c', script],
+                        capture_output=True, text=True, timeout=15)
+                    if r.returncode == 0:
+                        actions = [
+                            ln.strip() for ln in r.stdout.splitlines()
+                            if ln.strip()
+                        ]
+                        hydration['actions'] = actions
+                        hydration['applies'] = bool(actions)
+                except (subprocess.TimeoutExpired, OSError):
+                    pass
+
+        return jsonify({
+            'staging_path': staging,
+            'paths_available': paths_available,
+            'rollback_plan': rollback_plan,
+            'cross_kernel': cross_kernel,
+            'hydration': hydration,
+        })
+    except Exception as e:
+        shutil.rmtree(staging, ignore_errors=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/host-backups/restore/cleanup', methods=['POST'])
+@require_auth
+def api_host_backups_restore_cleanup():
+    """Explicit cleanup for a staging dir. Called by the UI after the
+    ScriptTerminalModal closes. Best-effort: the GC in prepare() will
+    catch anything missed here within _RESTORE_STAGING_TTL_SECONDS."""
+    payload = request.get_json(silent=True) or {}
+    staging = (payload.get('staging_path') or '').strip()
+    # Defense in depth: only allow paths under the staging root with
+    # the expected prefix. Anything else could be the operator trying
+    # to coerce the endpoint into rm-ing arbitrary files.
+    if (not staging
+            or not staging.startswith(os.path.join(_RESTORE_STAGING_ROOT, _RESTORE_STAGING_PREFIX))
+            or '..' in staging.split(os.sep)):
+        return jsonify({'error': 'invalid staging_path'}), 400
+    try:
+        shutil.rmtree(staging, ignore_errors=True)
+    except OSError as e:
+        return jsonify({'error': str(e)}), 500
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/host-backups/archives/<path:archive_id>/manifest', methods=['GET'])
+@require_auth
+def api_host_backups_archive_manifest(archive_id):
+    """Extract the manifest.json embedded inside a backup archive,
+    using scripts/backup_restore/restore/parse_manifest.sh. Returns the
+    unwrapped manifest (i.e. without the proxmenux_backup_manifest key)."""
+    archive_path = _find_backup_archive_path(archive_id)
+    if not archive_path:
+        return jsonify({'error': 'archive not found'}), 404
+
+    parse_script = f'{_PROXMENUX_SCRIPTS_DIR}/backup_restore/restore/parse_manifest.sh'
+    if not os.path.exists(parse_script):
+        return jsonify({'error': 'restore tooling not installed on this host',
+                        'install_hint': 'Run the ProxMenux installer to deploy scripts/backup_restore/'}), 503
+
+    try:
+        r = subprocess.run(['bash', parse_script, archive_path],
+                           capture_output=True, text=True, timeout=30)
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return jsonify({'error': f'parser invocation failed: {e}'}), 500
+
+    if r.returncode != 0:
+        return jsonify({'error': r.stderr.strip() or 'parse_manifest exited non-zero'}), 422
+
+    try:
+        return jsonify(json.loads(r.stdout))
+    except json.JSONDecodeError:
+        return jsonify({'error': 'parser output was not valid JSON'}), 500
+
+
+@app.route('/api/host-backups/archives/<path:archive_id>/preflight', methods=['POST'])
+@require_auth
+def api_host_backups_archive_preflight(archive_id):
+    """Run the dry-run preflight + storage + network + driver-plan report
+    for this archive against the current host. Body: {"mode": "<mode>"}.
+    Modes match restore_modes.sh: full, storage_only, network_only, base,
+    custom. Returns the combined run_restore.sh JSON report."""
+    archive_path = _find_backup_archive_path(archive_id)
+    if not archive_path:
+        return jsonify({'error': 'archive not found'}), 404
+
+    body = request.get_json(silent=True) or {}
+    mode = body.get('mode', 'full')
+    if mode not in ('full', 'storage_only', 'network_only', 'base', 'custom'):
+        return jsonify({'error': f'unknown mode "{mode}"'}), 400
+
+    run_script = f'{_PROXMENUX_SCRIPTS_DIR}/backup_restore/restore/run_restore.sh'
+    if not os.path.exists(run_script):
+        return jsonify({'error': 'restore tooling not installed on this host',
+                        'install_hint': 'Run the ProxMenux installer to deploy scripts/backup_restore/'}), 503
+
+    try:
+        r = subprocess.run(
+            ['bash', run_script, archive_path, '--mode', mode, '--json'],
+            capture_output=True, text=True, timeout=120
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return jsonify({'error': f'preflight invocation failed: {e}'}), 500
+
+    # run_restore.sh exits non-zero when preflight has fails; we still
+    # want to surface the report so the UI can show what failed.
+    if not r.stdout.strip():
+        return jsonify({'error': r.stderr.strip() or 'no report emitted'}), 500
+    try:
+        return jsonify(json.loads(r.stdout))
+    except json.JSONDecodeError:
+        return jsonify({'error': 'run_restore output was not valid JSON',
+                        'raw_stderr': r.stderr[:2000]}), 500
+
+
+@app.route('/api/host-backups/archives/<path:archive_id>/prepare-restore', methods=['POST'])
+@require_auth
+def api_host_backups_archive_prepare_restore(archive_id):
+    """Produce the exact shell command the operator needs to run to
+    apply this archive on this host. Sprint G is "preview / preflight
+    in Monitor, apply on the CLI" — the runtime risk of restoring while
+    the Monitor itself is being overwritten is too high to swallow into
+    a single POST. So we hand back a copy-pasteable command plus the
+    menu path inside backup_host.sh."""
+    archive_path = _find_backup_archive_path(archive_id)
+    if not archive_path:
+        return jsonify({'error': 'archive not found'}), 404
+
+    body = request.get_json(silent=True) or {}
+    mode = (body.get('mode') or 'full').lower()
+    if mode not in ('full', 'storage_only', 'network_only', 'base', 'custom'):
+        return jsonify({'error': f'unknown mode "{mode}"'}), 400
+
+    backup_host_sh = '/usr/local/share/proxmenux/scripts/backup_restore/backup_host.sh'
+    archive_basename = os.path.basename(archive_path)
+
+    # Mode → human-readable menu hint inside backup_host.sh
+    mode_label_map = {
+        'full': 'Full restore',
+        'storage_only': 'Storage / hardware only',
+        'network_only': 'Network only',
+        'base': 'Base config only',
+        'custom': 'Custom — pick components',
+    }
+    mode_label = mode_label_map.get(mode, mode)
+
+    # Which restore modes typically need a reboot to take effect.
+    # `full` rewrites /etc/pve, /etc/network, kernel cmdline, etc.
+    # `base` and `network_only` touch host identity / interfaces too.
+    reboot_required = mode in ('full', 'base', 'network_only', 'storage_only')
+
+    menu_path = [
+        'Inside the menu opened by the command above:',
+        f'  1. Pick:  "{archive_basename}"',
+        f'  2. Choose: Restore action  →  {mode_label}',
+        '  3. Confirm when prompted.',
+    ]
+    if reboot_required:
+        menu_path.append(
+            "  4. After the restore finishes, reboot when the menu offers it — "
+            "some changes only land after the post-boot apply runs.",
+        )
+
+    notes: list = []
+    if mode == 'full':
+        notes.append(
+            "Full restore rewrites cluster, network and bootloader state. "
+            "Don't run it remotely without out-of-band access — if the "
+            "network config goes wrong you'll lose SSH.",
+        )
+    if mode == 'custom':
+        notes.append(
+            "Custom mode lets you tick / untick components. The Monitor's "
+            "preflight already shows the per-component plan above.",
+        )
+
+    return jsonify({
+        'archive_id': archive_id,
+        'archive_basename': archive_basename,
+        'mode': mode,
+        'mode_label': mode_label,
+        'shell_command': f'bash {backup_host_sh}',
+        'menu_path': menu_path,
+        'reboot_required': reboot_required,
+        'notes': notes,
+    })
+
+
+@app.route('/api/host-backups/archives/<path:archive_id>/download', methods=['GET'])
+@require_auth_or_ticket
+def api_host_backups_archive_download(archive_id):
+    """Stream the .tar.zst archive back to the operator with a sane
+    Content-Disposition. send_file handles range requests + streaming
+    so the Flask process doesn't hold the whole archive in memory —
+    important since these can be hundreds of MB."""
+    archive_path = _find_backup_archive_path(archive_id)
+    if not archive_path:
+        return jsonify({'error': 'archive not found'}), 404
+    if not os.path.isfile(archive_path):
+        return jsonify({'error': 'archive path is not a regular file'}), 500
+    return send_file(
+        archive_path,
+        as_attachment=True,
+        download_name=os.path.basename(archive_path),
+        mimetype='application/x-zstd-compressed-tar',
+    )
+
+
+@app.route('/api/host-backups/archives/<path:archive_id>', methods=['DELETE'])
+@require_auth
+def api_host_backups_archive_delete(archive_id):
+    """Delete a local archive plus everything tied to it: the
+    `.tar.zst`, its `.proxmenux.json` sidecar, and the matching runner
+    `<stem>.log`. Remote backups (PBS / Borg) are not handled here —
+    those are pruned from their own datastore."""
+    archive_path = _find_backup_archive_path(archive_id)
+    if not archive_path:
+        return jsonify({'error': 'archive not found'}), 404
+    if not os.path.isfile(archive_path):
+        return jsonify({'error': 'archive path is not a regular file'}), 500
+
+    removed = []
+    # Archive itself.
+    try:
+        os.remove(archive_path)
+        removed.append(os.path.basename(archive_path))
+    except OSError as e:
+        return jsonify({'error': f'failed to remove archive: {e}'}), 500
+    # Sidecar JSON (best effort — missing sidecar is OK).
+    sidecar = f'{archive_path}.proxmenux.json'
+    if os.path.exists(sidecar):
+        try:
+            os.remove(sidecar)
+            removed.append(os.path.basename(sidecar))
+        except OSError:
+            pass
+    # Runner log — same stem as the archive.
+    basename = os.path.basename(archive_path)
+    stem = basename
+    for ext in ('.tar.zst', '.tar.gz', '.tar.bz2', '.tar.xz', '.tar'):
+        if stem.endswith(ext):
+            stem = stem[:-len(ext)]
+            break
+    log_path = f'{_BACKUP_LOG_DIR}/{stem}.log'
+    if os.path.exists(log_path):
+        try:
+            os.remove(log_path)
+            removed.append(os.path.basename(log_path))
+        except OSError:
+            pass
+
+    return jsonify({'status': 'ok', 'removed': removed})
+
+
+@app.route('/api/host-backups/archives/<path:archive_id>/log', methods=['GET'])
+@require_auth
+def api_host_backups_archive_log(archive_id):
+    """Return the runner log that produced this specific local archive.
+
+    The runner names both files from the same `<job_id>-<ts>` stem —
+    `<stem>.tar.zst` for the archive, `<stem>.log` for the run log —
+    so we just strip the archive extension and look up the matching
+    .log under `/var/log/proxmenux/backup-jobs/`. Returns 80-line tail
+    + total content; the UI uses both (tail in the inspect modal, full
+    content if the operator clicks "Open full log")."""
+    basename = os.path.basename(archive_id)
+    # Strip the tar.* extension to recover the <job_id>-<ts> stem.
+    stem = basename
+    for ext in ('.tar.zst', '.tar.gz', '.tar.bz2', '.tar.xz', '.tar'):
+        if stem.endswith(ext):
+            stem = stem[:-len(ext)]
+            break
+    log_path = f'{_BACKUP_LOG_DIR}/{stem}.log'
+    if not os.path.isfile(log_path):
+        # Return 200 with empty fields instead of 404 so SWR doesn't
+        # have to special-case the "no log available" branch — the UI
+        # just checks `log_path === null`.
+        return jsonify({
+            'log_path': None,
+            'size': 0,
+            'content': '',
+            'tail': [],
+        })
+    try:
+        with open(log_path, 'r', errors='replace') as f:
+            content = f.read()
+    except OSError as e:
+        return jsonify({'error': str(e)}), 500
+    lines = content.splitlines()
+    return jsonify({
+        'log_path': log_path,
+        'size': len(content),
+        'content': content,
+        'tail': lines[-80:],
+    })
+
+
 if __name__ == '__main__':
     import sys
     import logging
+
+    # Regenerate /etc/cron.d/proxmenux-smart from the current schedule
+    # config on every Monitor start. Pre-existing installs may carry
+    # a cron file with the broken script path (without /storage/),
+    # left over from before the path-fix in this build. Rewriting it
+    # at startup is idempotent and silently heals those hosts on the
+    # first restart after the upgrade — no operator action needed.
+    try:
+        _update_smart_cron()
+    except Exception as _e:
+        print(f"[startup] smart cron regen failed: {_e}", file=sys.stderr)
     
     # Custom filter to suppress TLS handshake noise when running HTTP
     # (browsers may cache HTTPS and keep sending TLS ClientHello to an HTTP server)
@@ -11812,29 +18428,32 @@ if __name__ == '__main__':
     # ── Temperature & Latency history collector ──
     # Initialize SQLite DB and start background thread to record CPU temp + latency every 60s
     if init_temperature_db() and init_latency_db():
-        # Record initial readings immediately
-        _record_temperature()
-        _record_latency()
-        # Sprint 14: per-disk temperature history shares the same DB
-        # and the same 60s collector loop — initialize the table and
-        # take a baseline sample so the first chart draw isn't empty.
-        try:
-            import disk_temperature_history
-            if disk_temperature_history.init_disk_temperature_db():
-                disk_temperature_history.record_all_disk_temperatures()
-        except Exception as e:
-            print(f"[ProxMenux] Disk temperature history init failed: {e}")
-
-        # Sprint 14.7: managed-installs registry. Run a detection
-        # sweep at startup so manual NVIDIA/Tailscale installs that
-        # predated this build show up immediately — without waiting
-        # for the first 24h notification cycle to populate the file.
-        try:
-            import managed_installs
-            managed_installs.detect_and_register()
-            print("[ProxMenux] Managed-installs registry initialised")
-        except Exception as e:
-            print(f"[ProxMenux] managed_installs init failed: {e}")
+        # The heavy baseline-collection + detection sweeps below
+        # used to run inline here and added ~9 s of cold-start time
+        # (per-disk SMART scan + Tailscale/NVIDIA subprocess sweeps).
+        # Move them to a daemon thread so app.run() can start
+        # accepting requests immediately. The dashboard endpoints
+        # that read this data simply return empty/cached until the
+        # first cycle finishes a few seconds later.
+        def _deferred_startup_inits():
+            try:
+                _record_temperature()
+                _record_latency()
+            except Exception as e:
+                print(f"[ProxMenux] initial temp/latency record failed: {e}")
+            try:
+                import disk_temperature_history
+                if disk_temperature_history.init_disk_temperature_db():
+                    disk_temperature_history.record_all_disk_temperatures()
+            except Exception as e:
+                print(f"[ProxMenux] Disk temperature history init failed: {e}")
+            try:
+                import managed_installs
+                managed_installs.detect_and_register()
+                print("[ProxMenux] Managed-installs registry initialised")
+            except Exception as e:
+                print(f"[ProxMenux] managed_installs init failed: {e}")
+        threading.Thread(target=_deferred_startup_inits, daemon=True).start()
 
         # Self-healing maintenance run on every startup. Two passes, both
         # idempotent and safe to run repeatedly. They exist because issues
@@ -12065,14 +18684,14 @@ if __name__ == '__main__':
                 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
                 ssl_context.load_cert_chain(ssl_cert, ssl_key)
                 print("[ProxMenux] Starting Flask server with SSL (using flask-sock for WebSockets)...")
-                app.run(host='::', port=8008, debug=False, ssl_context=ssl_context)
+                app.run(host='::', port=8008, debug=False, ssl_context=ssl_context, threaded=True)
         else:
             # HTTP mode - use Flask dev server (simpler, works fine without SSL)
             print("[ProxMenux] Starting Flask server with HTTP...")
-            app.run(host='::', port=8008, debug=False)
+            app.run(host='::', port=8008, debug=False, threaded=True)
     except Exception as e:
         if ssl_ctx and not gevent_available:
             print(f"[ProxMenux] SSL startup failed ({e}), falling back to HTTP")
-            app.run(host='::', port=8008, debug=False)
+            app.run(host='::', port=8008, debug=False, threaded=True)
         else:
             raise e

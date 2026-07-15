@@ -40,13 +40,11 @@
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 CONFIG_FILE="$BASE_DIR/config.json"
-CACHE_FILE="$BASE_DIR/cache.json"
 UTILS_FILE="$BASE_DIR/utils.sh"
 LOCAL_VERSION_FILE="$BASE_DIR/version.txt"
 BETA_VERSION_FILE="$BASE_DIR/beta_version.txt"
 INSTALL_DIR="/usr/local/bin"
 MENU_SCRIPT="menu"
-VENV_PATH="/opt/googletrans-env"
 BACKTITLE="ProxMenux Configuration"
 
 REPO_MAIN="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
@@ -111,30 +109,6 @@ uninstall_proxmenux_monitor() {
     echo "==> Service ${MONITOR_SERVICE} uninstalled."
 
     
-}
-
-detect_installation_type() {
-    local has_venv=false
-    local has_language=false
-    
-    # Check if virtual environment exists
-    if [ -d "$VENV_PATH" ] && [ -f "$VENV_PATH/bin/activate" ]; then
-        has_venv=true
-    fi
-    
-    # Check if language is configured
-    if [ -f "$CONFIG_FILE" ]; then
-        local current_language=$(jq -r '.language // empty' "$CONFIG_FILE" 2>/dev/null)
-        if [[ -n "$current_language" && "$current_language" != "null" && "$current_language" != "empty" ]]; then
-            has_language=true
-        fi
-    fi
-    
-    if [ "$has_venv" = true ] && [ "$has_language" = true ]; then
-        echo "translation"
-    else
-        echo "normal"
-    fi
 }
 
 check_monitor_status() {
@@ -547,9 +521,6 @@ show_monitor_status() {
 
 # ==========================================================
 show_config_menu() {
-    local install_type
-    install_type=$(detect_installation_type)
-    
     while true; do
         local menu_options=()
         local option_actions=()
@@ -580,35 +551,22 @@ show_config_menu() {
         option_actions[$option_num]="change_release_channel"
         ((option_num++))
 
-        # Build menu based on installation type
-        if [ "$install_type" = "translation" ]; then
-            menu_options+=("$option_num" "$(translate "Change Language")")
-            option_actions[$option_num]="change_language"
-            ((option_num++))
-            
-            menu_options+=("$option_num" "$(translate "Show Version Information")")
-            option_actions[$option_num]="show_version_info"
-            ((option_num++))
-            
-            menu_options+=("$option_num" "$(translate "Uninstall ProxMenux")")
-            option_actions[$option_num]="uninstall_proxmenu"
-            ((option_num++))
-            
-            menu_options+=("$option_num" "$(translate "Return to Main Menu")")
-            option_actions[$option_num]="return_main"
-        else
-            # Normal version (English only)
-            menu_options+=("$option_num" "Show Version Information")
-            option_actions[$option_num]="show_version_info"
-            ((option_num++))
-            
-            menu_options+=("$option_num" "Uninstall ProxMenux")
-            option_actions[$option_num]="uninstall_proxmenu"
-            ((option_num++))
-            
-            menu_options+=("$option_num" "Return to Main Menu")
-            option_actions[$option_num]="return_main"
-        fi
+        # Translation/Normal split is gone — single menu now. Change Language
+        # is always available since every install ships the lang/*.json cache.
+        menu_options+=("$option_num" "$(translate "Change Language")")
+        option_actions[$option_num]="change_language"
+        ((option_num++))
+
+        menu_options+=("$option_num" "$(translate "Show Version Information")")
+        option_actions[$option_num]="show_version_info"
+        ((option_num++))
+
+        menu_options+=("$option_num" "$(translate "Uninstall ProxMenux")")
+        option_actions[$option_num]="uninstall_proxmenu"
+        ((option_num++))
+
+        menu_options+=("$option_num" "$(translate "Return to Main Menu")")
+        option_actions[$option_num]="return_main"
         
         # Show menu
         OPTION=$(dialog --clear --backtitle "ProxMenux Configuration" \
@@ -684,8 +642,7 @@ change_language() {
 
 # ==========================================================
 show_version_info() {
-    local version info_message install_type release_channel beta_version
-    install_type=$(detect_installation_type)
+    local version info_message release_channel beta_version
     release_channel=$(get_release_channel)
     
     if [ -f "$LOCAL_VERSION_FILE" ]; then
@@ -702,15 +659,8 @@ show_version_info() {
     fi
     info_message+="\n"
     
-    # Show installation type
-    info_message+="$(translate "Installation type:")\n"
-    if [ "$install_type" = "translation" ]; then
-        info_message+="✓ $(translate "Translation Version (Multi-language support)")\n"
-    else
-        info_message+="✓ $(translate "Normal Version (English only - Lightweight)")\n"
-    fi
-    info_message+="\n"
-    
+    # Translation/Normal split is gone — single install path now.
+    # Translation support is always present via the lang/*.json cache.
     info_message+="$(translate "Installed components:")\n"
     if [ -f "$CONFIG_FILE" ]; then
         while IFS=': ' read -r component value; do
@@ -745,23 +695,16 @@ show_version_info() {
     [ -f "$CONFIG_FILE" ] && info_message+="✓ config.json → $CONFIG_FILE\n" || info_message+="✗ config.json\n"
     [ -f "$LOCAL_VERSION_FILE" ] && info_message+="✓ version.txt → $LOCAL_VERSION_FILE\n" || info_message+="✗ version.txt\n"
     
-    # Show translation-specific files
-    if [ "$install_type" = "translation" ]; then
-        [ -f "$CACHE_FILE" ] && info_message+="✓ cache.json → $CACHE_FILE\n" || info_message+="✗ cache.json\n"
-        
-        info_message+="\n$(translate "Virtual Environment:")\n"
-        if [ -d "$VENV_PATH" ] && [ -f "$VENV_PATH/bin/activate" ]; then
-            info_message+="✓ $(translate "Installed") → $VENV_PATH\n"
-            [ -f "$VENV_PATH/bin/pip" ] && info_message+="✓ pip: $(translate "Installed") → $VENV_PATH/bin/pip\n" || info_message+="✗ pip: $(translate "Not installed")\n"
-        else
-            info_message+="✗ $(translate "Virtual Environment"): $(translate "Not installed")\n"
-            info_message+="✗ pip: $(translate "Not installed")\n"
-        fi
-        
-        current_language=$(jq -r '.language // "en"' "$CONFIG_FILE")
-        info_message+="\n$(translate "Current language:")\n$current_language\n"
+    # Language section: always present now that translations are static
+    # JSON lookups. Show the configured language and the lang/ directory
+    # so the operator can verify the cache is in place.
+    current_language=$(jq -r '.language // "en"' "$CONFIG_FILE" 2>/dev/null)
+    [[ -z "$current_language" || "$current_language" == "null" ]] && current_language="en"
+    info_message+="\n$(translate "Current language:")\n${current_language}\n"
+    if [ -d "$BASE_DIR/lang" ]; then
+        info_message+="✓ $(translate "Translation files:") $BASE_DIR/lang/\n"
     else
-        info_message+="\n$(translate "Language:")\nEnglish (Fixed)\n"
+        info_message+="✗ $(translate "Translation files:") $(translate "missing")\n"
     fi
     
     # Display information in a scrollable text box
@@ -775,9 +718,6 @@ show_version_info() {
 
 # ==========================================================
 uninstall_proxmenu() {
-    local install_type
-    install_type=$(detect_installation_type)
-    
     if ! dialog --clear --backtitle "ProxMenux Configuration" \
                 --title "Uninstall ProxMenux" \
                 --yesno "\n$(translate "Are you sure you want to uninstall ProxMenux?")" 8 60; then
@@ -785,40 +725,26 @@ uninstall_proxmenu() {
     fi
     
     local deps_to_remove=""
-    
-    # Show different dependency options based on installation type
-    if [ "$install_type" = "translation" ]; then
-        deps_to_remove=$(dialog --clear --backtitle "ProxMenux Configuration" \
-                               --title "Remove Dependencies" \
-                               --checklist "Select dependencies to remove:" 15 60 4 \
-                               "python3-venv" "Python virtual environment" OFF \
-                               "python3-pip" "Python package installer" OFF \
-                               "python3" "Python interpreter" OFF \
-                               "jq" "JSON processor" OFF \
-                               3>&1 1>&2 2>&3)
-    else
-        deps_to_remove=$(dialog --clear --backtitle "ProxMenux Configuration" \
-                               --title "Remove Dependencies" \
-                               --checklist "Select dependencies to remove:" 12 60 2 \
-                               "dialog" "Interactive dialog boxes" OFF \
-                               "jq" "JSON processor" OFF \
-                               3>&1 1>&2 2>&3)
-    fi
-    
+
+    deps_to_remove=$(dialog --clear --backtitle "ProxMenux Configuration" \
+                           --title "Remove Dependencies" \
+                           --checklist "Select dependencies to remove:" 12 60 2 \
+                           "dialog" "Interactive dialog boxes" OFF \
+                           "jq" "JSON processor" OFF \
+                           3>&1 1>&2 2>&3)
+
     # Perform uninstallation with progress bar
     (
         echo "10" ; echo "Removing ProxMenu files..."
         sleep 1
-        
-        # Remove googletrans and virtual environment if exists
-        if [ -f "$VENV_PATH/bin/activate" ]; then
-            echo "30" ; echo "Removing googletrans and virtual environment..."
-            source "$VENV_PATH/bin/activate"
-            pip uninstall -y googletrans >/dev/null 2>&1
-            deactivate
-            rm -rf "$VENV_PATH"
+
+        # Purge the legacy googletrans virtualenv if it was left over from
+        # a pre-static-translations install. Cheap idempotent check.
+        if [ -d "/opt/googletrans-env" ]; then
+            echo "30" ; echo "Removing legacy googletrans virtualenv..."
+            rm -rf "/opt/googletrans-env"
         fi
-        
+
         echo "50" ; echo "Removing ProxMenu files..."
         rm -f "$INSTALL_DIR/$MENU_SCRIPT"
         rm -rf "$BASE_DIR"

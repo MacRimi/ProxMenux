@@ -190,12 +190,13 @@ function select_nas_iso() {
     "7" "ZimaOS         VM          (Proxmox-zimaos)"
     ""  ""
     ""  "\Z4───────────────── Community Scripts ─────────────────\Zn"
-    "8" "Umbrel OS      VM          (Helper Scripts)"
+    ""  ""
+    "8" "Umbrel OS      VM          (Helper-Scripts)"
     "9" "$(translate "Return to Main Menu")"
   )
 
   local NAS_TYPE
-  NAS_TYPE=$(dialog --backtitle "ProxMenux" \
+  NAS_TYPE=$(dialog --colors --backtitle "ProxMenux" \
     --title "$(translate "NAS Systems")" \
     --menu "\n$(translate "Select the NAS system to install:")" 20 70 10 \
     "${NAS_OPTIONS[@]}" 3>&1 1>&2 2>&3)

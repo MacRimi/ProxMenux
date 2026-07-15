@@ -166,129 +166,54 @@ else
     echo "⚠️  config directory not found"
 fi
 
-echo "📋 Adding translation support..."
-cat > "$APP_DIR/usr/bin/translate_cli.py" << 'PYEOF'
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-ProxMenux translate CLI
-stdin JSON -> {"text":"...", "dest_lang":"es", "context":"...", "cache_file":"/usr/local/share/proxmenux/cache.json"}
-stdout JSON -> {"success":true,"text":"..."} or {"success":false,"error":"..."}
-"""
-import sys, json, re
-from pathlib import Path
+# Translation handling lives in scripts/utils.sh now. It reads
+# /usr/local/share/proxmenux/lang/<lang>.json (pre-built by the
+# build_translation_cache.py CI job) and falls back to the English
+# source string on miss. The Monitor AppImage no longer ships the
+# runtime translate_cli.py — the JSON files belong to the host install,
+# not to the Flask dashboard.
 
-# Ensure embedded site-packages are discoverable
-HERE = Path(__file__).resolve().parents[2]  # .../AppDir
-DIST = HERE / "usr" / "lib" / "python3" / "dist-packages"
-SITE = HERE / "usr" / "lib" / "python3" / "site-packages"
-for p in (str(DIST), str(SITE)):
-    if p not in sys.path:
-        sys.path.insert(0, p)
-
-# Python 3.13 compat: inline 'cgi' shim
-try:
-    import cgi
-except Exception:
-    import types, html
-    def _parse_header(value: str):
-        value = str(value or "")
-        parts = [p.strip() for p in value.split(";")]
-        if not parts:
-            return "", {}
-        key = parts[0].lower()
-        params = {}
-        for item in parts[1:]:
-            if not item:
-                continue
-            if "=" in item:
-                k, v = item.split("=", 1)
-                k = k.strip().lower()
-                v = v.strip().strip('"').strip("'")
-                params[k] = v
-            else:
-                params[item.strip().lower()] = ""
-        return key, params
-    cgi = types.SimpleNamespace(parse_header=_parse_header, escape=html.escape)
-
-try:
-    from googletrans import Translator
-except Exception as e:
-    print(json.dumps({"success": False, "error": f"ImportError: {e}"}))
-    sys.exit(0)
-
-def load_json_stdin():
-    try:
-        return json.load(sys.stdin)
-    except Exception as e:
-        print(json.dumps({"success": False, "error": f"Invalid JSON input: {e}"}))
-        sys.exit(0)
-
-def ensure_cache(path: Path):
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        if not path.exists():
-            path.write_text("{}", encoding="utf-8")
-        json.loads(path.read_text(encoding="utf-8") or "{}")
-    except Exception:
-        path.write_text("{}", encoding="utf-8")
-
-def read_cache(path: Path):
-    try:
-        return json.loads(path.read_text(encoding="utf-8") or "{}")
-    except Exception:
-        return {}
-
-def write_cache(path: Path, cache: dict):
-    tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
-    tmp.replace(path)
-
-def clean_translated(s: str) -> str:
-    s = re.sub(r'^.*?(Translate:|Traducir:|Traduire:|Übersetzen:|Tradurre:|Traduzir:|翻译:|翻訳:)', '', s, flags=re.IGNORECASE | re.DOTALL).strip()
-    s = re.sub(r'^.*?(Context:|Contexto:|Contexte:|Kontext:|Contesto:|上下文：|コンテキスト：).*?:', '', s, flags=re.IGNORECASE | re.DOTALL).strip()
-    return s.strip()
-
-def main():
-    req = load_json_stdin()
-    text = req.get("text", "")
-    dest = req.get("dest_lang", "en") or "en"
-    context = req.get("context", "")
-    cache_file = Path(req.get("cache_file", "")) if req.get("cache_file") else None
-
-    if dest == "en":
-        print(json.dumps({"success": True, "text": text}))
-        return
-
-    cache = {}
-    if cache_file:
-        ensure_cache(cache_file)
-        cache = read_cache(cache_file)
-        if text in cache and (dest in cache[text] or "notranslate" in cache[text]):
-            found = cache[text].get(dest) or cache[text].get("notranslate")
-            print(json.dumps({"success": True, "text": found}))
-            return
-
-    try:
-        full = (context + " " + text).strip() if context else text
-        tr = Translator()
-        result = tr.translate(full, dest=dest).text
-        result = clean_translated(result)
-
-        if cache_file:
-            cache.setdefault(text, {})
-            cache[text][dest] = result
-            write_cache(cache_file, cache)
-
-        print(json.dumps({"success": True, "text": result}))
-    except Exception as e:
-        print(json.dumps({"success": False, "error": str(e)}))
-
-if __name__ == "__main__":
-    main()
-PYEOF
-
-chmod +x "$APP_DIR/usr/bin/translate_cli.py"
+# ── Borg standalone binary ─────────────────────────────────────────
+# Ship the official borg standalone binary inside the AppImage so the
+# host-backup / restore workflows can run without an internet round-trip
+# at install time. Pinned to the same version that proxmenux's
+# hb_ensure_borg used to download on demand — kept in lockstep so both
+# code paths see the same version semantics. SHA256 is the upstream
+# release checksum; bump both together.
+BORG_VERSION="1.2.8"
+BORG_URL="https://github.com/borgbackup/borg/releases/download/${BORG_VERSION}/borg-linux64"
+BORG_SHA256="cfa50fb704a93d3a4fa258120966345fddb394f960dca7c47fcb774d0172f40b"
+echo "📦 Downloading borg ${BORG_VERSION} into AppImage..."
+BORG_TARGET="$APP_DIR/usr/bin/borg"
+# GitHub releases serve borg-linux64 via a 302 redirect to a signed
+# release-assets.githubusercontent.com URL. wget -qO silently dropped
+# the redirect once during the 2026-06-15 build, killing the AppImage
+# pipeline. curl -L --retry 3 is more robust and falls back to wget
+# only when curl is missing.
+if command -v curl >/dev/null 2>&1; then
+    DOWNLOAD_OK=0
+    if curl -sSL --retry 3 --retry-delay 2 --max-time 120 -o "$BORG_TARGET" "$BORG_URL"; then
+        DOWNLOAD_OK=1
+    fi
+else
+    DOWNLOAD_OK=0
+    if wget -qO "$BORG_TARGET" "$BORG_URL"; then
+        DOWNLOAD_OK=1
+    fi
+fi
+if [ "$DOWNLOAD_OK" = "1" ]; then
+    if echo "${BORG_SHA256}  ${BORG_TARGET}" | sha256sum -c - >/dev/null 2>&1; then
+        chmod +x "$BORG_TARGET"
+        echo "✅ borg ${BORG_VERSION} bundled (sha256 verified)"
+    else
+        echo "❌ borg sha256 verification failed — removing"
+        rm -f "$BORG_TARGET"
+        exit 1
+    fi
+else
+    echo "❌ borg download failed from $BORG_URL"
+    exit 1
+fi
 
 # Copy Next.js build
 echo "📋 Copying web dashboard..."
@@ -332,7 +257,7 @@ cat > "$APP_DIR/proxmenux-monitor.desktop" << EOF
 [Desktop Entry]
 Type=Application
 Name=ProxMenux Monitor
-Comment=Proxmox System Monitoring Dashboard with Translation Support
+Comment=Proxmox System Monitoring Dashboard
 Exec=AppRun
 Icon=proxmenux-monitor
 Categories=System;Monitor;
@@ -361,14 +286,12 @@ if [ -f "$APP_DIR/proxmenux-monitor.png" ]; then
 fi
 
 echo "📦 Installing Python dependencies..."
-# Phase 1: Install googletrans with its old dependencies
-pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" \
-    googletrans==4.0.0-rc1 \
-    httpx==0.13.3 \
-    httpcore==0.9.1 \
-    h11==0.9.0 || true
-
-# Phase 2: Install modern Flask/WebSocket dependencies (will upgrade h11 and related packages)
+# Flask/WebSocket dependencies for the Monitor dashboard. The previous
+# Phase-1 (googletrans==4.0.0-rc1 + httpx 0.13.3 + httpcore 0.9.1 +
+# h11 0.9.0) is gone — translation is now a static-lookup feature on
+# the host, so the AppImage no longer needs any runtime translator.
+# Removing those pins also unblocks the h11>=0.14.0 family without the
+# conflict workaround we used to ship.
 # Note: cryptography removed due to Python version compatibility issues (PyO3 modules)
 pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade --no-deps \
     flask \
@@ -380,7 +303,7 @@ pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade --no-de
     segno \
     beautifulsoup4
 
-# Phase 3: Install WebSocket with newer h11
+# WebSocket with modern h11 (no need for the legacy pin anymore)
 pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade \
     h11>=0.14.0 \
     wsproto>=1.2.0 \

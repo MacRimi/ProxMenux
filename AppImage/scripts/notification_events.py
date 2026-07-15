@@ -597,22 +597,50 @@ class JournalWatcher:
             if self._running:
                 time.sleep(5)  # Wait before restart
     
+    # Discard a saved cursor older than this many seconds — resuming
+    # from a stale cursor replays every event journald has produced
+    # since the file was last touched, which surfaces as duplicate
+    # notifications. 15 min comfortably covers graceful shutdowns,
+    # cron-restart loops and brief outages while keeping a multi-day
+    # downtime from spamming the operator. Reported on RimegraVE
+    # (.1.10): the service was last stopped 11 days before a restart;
+    # on respawn the JournalWatcher fired 16 backup_start notifs in
+    # 40 min for vzdump runs that PVE had logged hours-to-days
+    # earlier. source=journal in notification_history proved the
+    # event chain came from this replay path.
+    _CURSOR_STALE_AFTER_SEC = 15 * 60
+
     def _run_journalctl(self):
-        """Run journalctl -f and process output line by line."""
-        # Persist the cursor across watcher restarts so we don't lose events
-        # in the 5s gap between subprocess crash and respawn. journalctl
-        # writes the file with the latest seen cursor and on next start
-        # resumes from there. Falls back to -n 0 (start from now) only on
-        # the very first run when the cursor file doesn't exist yet.
+        """Run journalctl -f and process output line by line.
+
+        The cursor file lets us pick up after a short watcher crash
+        without dropping events, but we drop it before invoking
+        journalctl if it's older than _CURSOR_STALE_AFTER_SEC.
+        That forces journalctl back to `-n 0` (start from now)
+        instead of replaying days of history as if it were live.
+        """
         cursor_file = '/usr/local/share/proxmenux/journal_cursor.txt'
         try:
             Path(cursor_file).parent.mkdir(parents=True, exist_ok=True)
         except Exception:
             pass
+        cursor_path = Path(cursor_file)
+        if cursor_path.exists():
+            try:
+                age = time.time() - cursor_path.stat().st_mtime
+                if age > self._CURSOR_STALE_AFTER_SEC:
+                    cursor_path.unlink(missing_ok=True)
+                    print(
+                        f"[JournalWatcher] Cursor stale "
+                        f"({int(age)}s old) — restarting from now to "
+                        f"avoid replaying historical events"
+                    )
+            except OSError:
+                pass
         cmd = ['journalctl', '-f', '-o', 'json', '--no-pager',
                f'--cursor-file={cursor_file}']
-        if not Path(cursor_file).exists():
-            cmd.extend(['-n', '0'])  # First run: don't replay history
+        if not cursor_path.exists():
+            cmd.extend(['-n', '0'])  # First run (or stale): don't replay history
 
         self._process = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
@@ -2516,12 +2544,17 @@ class PollingCollector:
             if not error_key:
                 continue
             
+            # Keep the raw `details` blob in the tracker so recovery
+            # notifications later can name the same entity ("Storage
+            # 'Tuxis'") that the original alert did — without this, the
+            # resolved notification defaults to the bare category.
             current_keys[error_key] = {
                 'category': error.get('category', ''),
                 'severity': error.get('severity', 'WARNING'),
                 'reason': error.get('reason', ''),
                 'first_seen': error.get('first_seen', ''),
                 'error_key': error_key,
+                'details': error.get('details'),
             }
             category = error.get('category', '')
             severity = error.get('severity', 'WARNING')
@@ -2852,6 +2885,18 @@ class PollingCollector:
                 'duration': duration_label,
                 'is_recovery': True,
             }
+            # Spread the original details blob so the resolved notification
+            # can use the same {storage_name}/{vm_name}/{device} placeholders
+            # the alert did. Mirrors what the alert path does on line ~2718.
+            resolved_details = old_meta.get('details')
+            if isinstance(resolved_details, str):
+                try:
+                    resolved_details = json.loads(resolved_details)
+                except (json.JSONDecodeError, TypeError):
+                    resolved_details = None
+            if isinstance(resolved_details, dict):
+                for _k, _v in resolved_details.items():
+                    data.setdefault(_k, _v)
 
             self._queue.put(NotificationEvent(
                 'error_resolved', 'OK', data, source='health',
@@ -3475,13 +3520,20 @@ class PollingCollector:
         about the final shape."""
         item_type = item.get('type', '')
         update = item.get('update_check', {}) or {}
+        # Version fallbacks: if `latest` is missing (checker couldn't
+        # determine an upstream — network hiccup, or the app itself
+        # isn't in the update list because only sidecar packages need
+        # updating), anchor to the current version so template
+        # placeholders never render as "v" with nothing after.
+        _cur = item.get('current_version') or ''
+        _lat = update.get('latest') or _cur or 'unknown'
         common = {
             'hostname': self._hostname,
             'name': item.get('name') or item.get('id'),
             'menu_label': item.get('menu_label') or '',
             'menu_script': item.get('menu_script') or '',
-            'current_version': item.get('current_version') or '',
-            'latest_version': update.get('latest') or '',
+            'current_version': _cur or 'unknown',
+            'latest_version': _lat,
         }
 
         if item_type == 'oci_app':
@@ -3491,12 +3543,24 @@ class PollingCollector:
                 f" → {p.get('latest', '?')}"
                 for p in packages
             ]
+            # Decide the wording based on whether Tailscale itself moved.
+            # When current == latest, showing "v1.90 → v1.90" reads as a
+            # bug ("update to same version?"); switch to a neutral line
+            # that makes it clear only sidecar packages are updating.
+            if _cur and _lat and _cur == _lat:
+                update_title_suffix = f' — v{_cur} (packages only)'
+                version_line = f'🔹 Tailscale: v{_cur} (unchanged — only sidecar packages need updating)'
+            else:
+                update_title_suffix = f' — v{_lat}'
+                version_line = f'🔹 Current Tailscale: v{_cur or "unknown"}  →  🟢 Latest: v{_lat}'
             data = {
                 **common,
                 'app_id': item.get('id', '').removeprefix('oci:'),
                 'app_name': common['name'],
                 'package_count': len(packages),
                 'package_list': '\n'.join(pkg_lines) or '  (no detail)',
+                'update_title_suffix': update_title_suffix,
+                'version_line': version_line,
             }
             return 'secure_gateway_update_available', data
 
@@ -3827,6 +3891,30 @@ class ProxmoxHookWatcher:
             'title': title or event_type,
             'job_id': pve_job_id,
         }
+
+        # ProxMenux Host Backup: pull the extra fields that the runner
+        # packs into payload.fields so the host_backup_* templates can
+        # render backend, destination, sizes, etc. without falling back
+        # to '{field}' literals or empty placeholders.
+        if pve_type.startswith('proxmenux-host-backup-'):
+            backend = (fields.get('backend') or '').strip().lower()
+            backend_label_map = {
+                'pbs':   'Proxmox Backup Server',
+                'local': 'Local archive',
+                'borg':  'Borg repository',
+            }
+            data['backend']       = backend
+            data['backend_label'] = backend_label_map.get(backend, backend or 'unknown')
+            data['destination']   = fields.get('destination', '') or ''
+            data['profile_mode']  = fields.get('profile_mode', 'default') or 'default'
+            data['data_size']     = fields.get('data_size', '') or '-'
+            data['archive_size']  = fields.get('archive_size', '') or '-'
+            data['duration']      = fields.get('duration', '') or '-'
+            data['log_file']      = fields.get('log_file', '') or ''
+            # `reason` is what the body template substitutes for the
+            # failure case; fall back to the human message the runner
+            # sent so the operator never sees an empty Reason line.
+            data['reason']        = fields.get('reason', message) or message
         
         # ── Extract clean reason for system-mail events ──
         # smartd and other system mail contains verbose boilerplate.
@@ -3923,6 +4011,21 @@ class ProxmoxHookWatcher:
             if severity in ('error', 'err'):
                 return 'backup_fail', 'vm', ''
             return 'backup_complete', 'vm', ''
+
+        # ProxMenux Host Backups run as a standalone systemd timer +
+        # `run_scheduled_backup.sh` (or manually via `backup_host.sh`),
+        # NOT as PVE vzdump tasks. Routed to dedicated event types
+        # (`host_backup_*`) so the operator can toggle them separately
+        # from VM/CT backup events and the body can show host-backup
+        # specifics (backend, destination, data/archive size). Without
+        # this branch the Host Backup ran fine but never produced a
+        # notification — operator-reported.
+        if pve_type == 'proxmenux-host-backup-start':
+            return 'host_backup_start', 'node', ''
+        if pve_type == 'proxmenux-host-backup-complete':
+            return 'host_backup_complete', 'node', ''
+        if pve_type == 'proxmenux-host-backup-fail':
+            return 'host_backup_fail', 'node', ''
         
         if pve_type == 'fencing':
             return 'split_brain', 'node', ''

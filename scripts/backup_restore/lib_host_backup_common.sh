@@ -42,30 +42,56 @@ HB_UI_YESNO_W=78
 # DEFAULT PROFILE PATHS
 # ==========================================================
 hb_default_profile_paths() {
+    # Curated list of paths that matter for a real Proxmox restore
+    # on a fresh host. Anything missing on the source is just
+    # noted in metadata/missing_paths.txt — no error. Grouped by
+    # category so it's easy to spot what's covered.
     local paths=(
+        # ── PVE core ──────────────────────────────────────────
         "/etc/pve"
-        "/etc/network"
-        "/etc/hosts"
+        "/var/lib/pve-cluster"
+        "/etc/vzdump.conf"
+
+        # ── Host identity & networking ────────────────────────
         "/etc/hostname"
+        "/etc/hosts"
+        "/etc/timezone"
+        "/etc/resolv.conf"
+        "/etc/network"
+
+        # ── Access & auth ─────────────────────────────────────
         "/etc/ssh"
-        "/etc/systemd/system"
+        "/etc/sudoers"
+        "/etc/sudoers.d"
+        "/etc/pam.d"
+        "/etc/security"
+
+        # ── Kernel / boot / hardware ──────────────────────────
+        "/etc/default/grub"
+        "/etc/kernel"
         "/etc/modules"
         "/etc/modules-load.d"
         "/etc/modprobe.d"
+        "/etc/sysctl.conf"
+        "/etc/sysctl.d"
         "/etc/udev/rules.d"
-        "/etc/default/grub"
         "/etc/fstab"
-        "/etc/kernel"
-        "/etc/apt"
-        "/etc/vzdump.conf"
-        "/etc/postfix"
-        "/etc/resolv.conf"
-        "/etc/timezone"
         "/etc/iscsi"
         "/etc/multipath"
-        "/usr/local/bin"
-        "/usr/local/share/proxmenux"
-        "/root"
+
+        # ── Shell / locale / env ──────────────────────────────
+        "/etc/environment"
+        "/etc/bash.bashrc"
+        "/etc/inputrc"
+        "/etc/profile"
+        "/etc/profile.d"       # figurine and other shell add-ons live here
+        "/etc/locale.gen"
+        "/etc/locale.conf"
+
+        # ── Packaging ─────────────────────────────────────────
+        "/etc/apt"
+
+        # ── Cron ──────────────────────────────────────────────
         "/etc/cron.d"
         "/etc/cron.daily"
         "/etc/cron.hourly"
@@ -74,8 +100,41 @@ hb_default_profile_paths() {
         "/etc/cron.allow"
         "/etc/cron.deny"
         "/var/spool/cron/crontabs"
-        "/var/lib/pve-cluster"
+
+        # ── ProxMenux state (source of truth for some host-config) ──
+        "/etc/proxmenux"       # vfio-bind.bdfs state file feeds the per-BDF udev rule
+
+        # ── Common Proxmox tooling (skipped if not present) ──
+        "/etc/systemd/system"  # custom units (including log2ram.service if installed)
+        "/etc/systemd/journald.conf"  # journal retention tuning from post-install
+        "/etc/log2ram.conf"
+        "/etc/logrotate.conf"
+        "/etc/logrotate.d"     # post-install drops log2ram + custom logrotate here
+        "/etc/lm-sensors"
+        "/etc/sensors3.conf"
+        "/etc/fail2ban"
+        "/etc/snmp"
+        "/etc/postfix"
+
+        # ── Monitoring / VPN (skipped if not present) ────────
+        "/etc/wireguard"
+        "/etc/openvpn"
+        "/etc/grafana"
+        "/etc/influxdb"
+        "/etc/prometheus"
+        "/etc/telegraf"
+        "/etc/zabbix"
+
+        # ── ProxMenux-installed binaries & app state ─────────
+        "/usr/local/bin"
+        "/usr/local/sbin"
+        "/usr/local/share/proxmenux"
+
+        # ── Root home (rsync excludes volatile dirs) ─────────
+        "/root"
     )
+    # ZFS state only when the host runs ZFS — same convention
+    # used pre-expansion.
     if [[ -d /etc/zfs ]] || command -v zpool >/dev/null 2>&1; then
         paths+=("/etc/zfs")
     fi
@@ -122,45 +181,332 @@ hb_path_warning() {
 }
 
 # ==========================================================
+# HARDWARE DRIFT ASSESSMENT (smart restore)
+# ==========================================================
+# Compares the backup metadata captured by hb_prepare_staging
+# against the live target host to detect when applying certain
+# paths would break the boot (orphan ZFS pool GUID, stale fstab
+# UUIDs, ...) or pointlessly reinstall components for hardware
+# that's no longer present (NVIDIA driver on a host with no
+# NVIDIA card).
+#
+# Output format on stdout — one line per assessment, tab-separated:
+#
+#   PATH_OR_KEY \t ACTION \t REASON
+#
+# Where ACTION is one of:
+#   skip → the restore flow should EXCLUDE this from apply
+#   warn → restore but surface the warning in the dialog
+#   ok   → no drift detected (omitted from output)
+#
+# Callers consume this to build the "Restore plan" dialog and to
+# filter the hot/pending path lists. The function never modifies
+# state, never prompts — pure analysis.
+
+# Read the UUIDs referenced by a fstab file. Skips comments and
+# `proc`/`none`/`tmpfs` non-block entries.
+_hb_fstab_uuids() {
+    local fstab="$1"
+    [[ -f "$fstab" ]] || return 0
+    awk '
+        /^[[:space:]]*#/ { next }
+        /^[[:space:]]*$/ { next }
+        {
+            src = $1
+            if (src ~ /^UUID=/) {
+                sub(/^UUID=/, "", src)
+                print src
+            } else if (src ~ /^PARTUUID=/) {
+                sub(/^PARTUUID=/, "", src)
+                print src
+            } else if (src ~ /^\/dev\//) {
+                print src
+            }
+        }
+    ' "$fstab"
+}
+
+# Build a set of live block-device UUIDs. Returns one UUID per line.
+_hb_live_uuids() {
+    command -v blkid >/dev/null 2>&1 || return 0
+    blkid -s UUID -o value 2>/dev/null
+}
+
+# Build a name→guid map of the live ZFS pools.
+_hb_live_zpool_guids() {
+    command -v zpool >/dev/null 2>&1 || return 0
+    zpool list -H -o name,guid 2>/dev/null
+}
+
+hb_assess_hardware_drift() {
+    local staging_root="$1"
+    local meta="$staging_root/metadata"
+    local rootfs="$staging_root/rootfs"
+
+    # ── ZFS pool GUID drift ──────────────────────────────
+    # If the backup had ZFS pools, compare each (name, guid) pair
+    # against what's on this host. A pool with the same NAME but a
+    # different GUID is the "fresh PVE install with same pool name"
+    # case — restoring /etc/zfs/zpool.cache would point ZFS at a
+    # ghost pool and drop boot to emergency.
+    if [[ -f "$meta/zpool.guids" ]] && [[ -s "$meta/zpool.guids" ]]; then
+        local bk_name bk_guid live_map
+        live_map=$(_hb_live_zpool_guids)
+        local pool_mismatch="" pool_missing=""
+        while IFS=$'\t ' read -r bk_name bk_guid; do
+            [[ -z "$bk_name" ]] && continue
+            local live_guid
+            live_guid=$(awk -v n="$bk_name" '$1==n {print $2; exit}' <<<"$live_map")
+            if [[ -z "$live_guid" ]]; then
+                pool_missing+="$bk_name "
+            elif [[ "$live_guid" != "$bk_guid" ]]; then
+                pool_mismatch+="$bk_name(${bk_guid:0:8}…→${live_guid:0:8}…) "
+            fi
+        done < "$meta/zpool.guids"
+        if [[ -n "$pool_missing" ]]; then
+            printf '%s\t%s\t%s\n' "/etc/zfs/zpool.cache" "skip" \
+                "$(hb_translate "Backup pools not present on this host:") ${pool_missing% }"
+        elif [[ -n "$pool_mismatch" ]]; then
+            printf '%s\t%s\t%s\n' "/etc/zfs/zpool.cache" "skip" \
+                "$(hb_translate "Pool name matches but GUID differs (fresh ZFS install):") ${pool_mismatch% }"
+        fi
+    fi
+
+    # ── Boot partition UUID drift ────────────────────────
+    # /etc/kernel/proxmox-boot-uuids lists the EFI vfat UUIDs that
+    # proxmox-boot-tool replicates the bootloader onto. If those
+    # UUIDs don't exist on this host, applying the file makes
+    # subsequent `proxmox-boot-tool refresh` fail.
+    local boot_uuid_file="$rootfs/etc/kernel/proxmox-boot-uuids"
+    if [[ -f "$boot_uuid_file" ]] && [[ -s "$boot_uuid_file" ]]; then
+        local live_uuids
+        live_uuids=$(_hb_live_uuids)
+        local missing_boot="" u
+        while IFS= read -r u; do
+            u="${u// /}"
+            [[ -z "$u" || "$u" == "#"* ]] && continue
+            if ! grep -Fxq "$u" <<<"$live_uuids"; then
+                missing_boot+="$u "
+            fi
+        done < "$boot_uuid_file"
+        if [[ -n "$missing_boot" ]]; then
+            printf '%s\t%s\t%s\n' "/etc/kernel/proxmox-boot-uuids" "skip" \
+                "$(hb_translate "Boot partition UUIDs from backup not found on this host:") ${missing_boot% }"
+        fi
+    fi
+
+    # ── fstab UUID drift ─────────────────────────────────
+    # Skip ONLY if at least one UUID/dev in the backup's fstab can't
+    # be resolved on the live host. A clean PVE+ZFS root install
+    # typically has just `proc /proc proc defaults 0 0`, no UUIDs —
+    # that yields zero referenced UUIDs and the check is a no-op.
+    local fstab="$rootfs/etc/fstab"
+    if [[ -f "$fstab" ]]; then
+        local live_uuids; live_uuids=$(_hb_live_uuids)
+        local missing_fstab="" cnt=0 u
+        while IFS= read -r u; do
+            ((cnt++))
+            if [[ "$u" == /dev/* ]]; then
+                [[ -b "$u" ]] || missing_fstab+="$u "
+            else
+                grep -Fxq "$u" <<<"$live_uuids" || missing_fstab+="$u "
+            fi
+        done < <(_hb_fstab_uuids "$fstab")
+        if (( cnt > 0 )) && [[ -n "$missing_fstab" ]]; then
+            printf '%s\t%s\t%s\n' "/etc/fstab" "skip" \
+                "$(hb_translate "fstab references UUIDs/devices not present on this host:") ${missing_fstab% }"
+        fi
+    fi
+
+    # ── Component reinstall drift (GPU / TPU presence) ───
+    # components_status.json declares what proxmenux installed on
+    # the source (nvidia_driver, amdgpu_top, intel_gpu_tools,
+    # coral_driver). If the target hardware no longer has the
+    # corresponding device, the post-boot dispatcher would try to
+    # reinstall a driver for a card that isn't there. The installer
+    # itself short-circuits in that case (detect_*_gpus), but
+    # surfacing this in the dialog is cleaner than letting the user
+    # discover it from the postboot log.
+    local comp_file="$rootfs/usr/local/share/proxmenux/components_status.json"
+    if [[ -f "$comp_file" ]] && command -v jq >/dev/null 2>&1 && command -v lspci >/dev/null 2>&1; then
+        local live_pci; live_pci=$(lspci -nn 2>/dev/null)
+        local installed_components
+        installed_components=$(jq -r 'to_entries[] | select(.value.status=="installed") | .key' "$comp_file" 2>/dev/null)
+        local comp
+        while IFS= read -r comp; do
+            [[ -z "$comp" ]] && continue
+            local pattern=""
+            case "$comp" in
+                nvidia_driver)    pattern='NVIDIA' ;;
+                amdgpu_top)       pattern='Advanced Micro Devices.*\[AMD/ATI\]' ;;
+                intel_gpu_tools)  pattern='Intel.*(VGA|Display|Graphics)' ;;
+                coral_driver)     pattern='Global Unichip|Google.*Edge TPU' ;;
+                *) continue ;;
+            esac
+            if ! grep -qiE "$pattern" <<<"$live_pci"; then
+                printf 'component:%s\t%s\t%s\n' "$comp" "skip" \
+                    "$(hb_translate "Component was installed on the backup source but no matching hardware was found on this host.")"
+            fi
+        done <<<"$installed_components"
+    fi
+}
+
+# Returns 0 (true) if hb_assess_hardware_drift produced any skip
+# entries — i.e. there is something for the operator to look at in
+# the smart-restore dialog. Returns 1 otherwise. Used by the
+# restore flow to decide whether to show the smart-restore dialog
+# at all (no drift → skip the extra prompt).
+hb_has_hardware_drift() {
+    local staging_root="$1"
+    local out
+    out=$(hb_assess_hardware_drift "$staging_root" 2>/dev/null | grep $'\tskip\t' || true)
+    [[ -n "$out" ]]
+}
+
+# ==========================================================
 # PROFILE PATH SELECTION
 # ==========================================================
+hb_extra_paths_file() {
+    printf '%s/backup-extra-paths.txt\n' "$HB_STATE_DIR"
+}
+
+# Reads user-added extra paths (one per line, # comments allowed).
+# Trimmed, deduped, only paths that currently exist on disk are returned.
+hb_load_extra_paths() {
+    local f
+    f=$(hb_extra_paths_file)
+    [[ -f "$f" ]] || return 0
+    local line
+    while IFS= read -r line; do
+        line="${line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [[ -z "$line" ]] && continue
+        printf '%s\n' "$line"
+    done < "$f" | sort -u
+}
+
+# Adds a path to the persisted extra-paths file. Idempotent.
+hb_add_extra_path() {
+    local path="$1"
+    [[ -z "$path" ]] && return 1
+    local f
+    f=$(hb_extra_paths_file)
+    mkdir -p "$HB_STATE_DIR"
+    touch "$f"; chmod 600 "$f"
+    grep -Fxq "$path" "$f" 2>/dev/null || printf '%s\n' "$path" >> "$f"
+}
+
+# Removes a path from the persisted extra-paths file.
+hb_del_extra_path() {
+    local path="$1"
+    [[ -z "$path" ]] && return 1
+    local f tmp
+    f=$(hb_extra_paths_file)
+    [[ -f "$f" ]] || return 0
+    tmp=$(mktemp)
+    grep -Fvx "$path" "$f" > "$tmp" || true
+    mv "$tmp" "$f"
+    chmod 600 "$f"
+}
+
 hb_select_profile_paths() {
     local mode="$1"
     local __out_var="$2"
     local -n __out_ref="$__out_var"
 
     mapfile -t __defaults < <(hb_default_profile_paths)
+    local -a __extras=()
+    mapfile -t __extras < <(hb_load_extra_paths)
 
     if [[ "$mode" == "default" ]]; then
-        __out_ref=("${__defaults[@]}")
+        # Default profile = base 59 paths + whatever the operator has
+        # previously persisted as "always include this folder of mine".
+        __out_ref=("${__defaults[@]}" "${__extras[@]}")
         return 0
     fi
 
-    local options=() idx=1 path
-    for path in "${__defaults[@]}"; do
-        options+=("$idx" "$path" "off")
-        ((idx++))
-    done
-
-    local selected
-    selected=$(dialog --backtitle "ProxMenux" \
-        --title "$(hb_translate "Custom backup profile")" \
-        --separate-output --checklist \
-        "$(hb_translate "Select paths to include:")" \
-        26 86 18 "${options[@]}" 3>&1 1>&2 2>&3) || return 1
-
-    __out_ref=()
+    # Custom mode runs as a loop: present checklist + offer to add/remove
+    # user paths, re-present until the operator confirms. This gives
+    # /add/edit/remove without redesigning the dialog stack.
     local choice
-    while read -r choice; do
-        [[ -z "$choice" ]] && continue
-        __out_ref+=("${__defaults[$((choice-1))]}")
-    done <<< "$selected"
+    while :; do
+        # Reload after potential edits in the previous iteration
+        mapfile -t __extras < <(hb_load_extra_paths)
 
-    if [[ ${#__out_ref[@]} -eq 0 ]]; then
-        dialog --backtitle "ProxMenux" --title "$(hb_translate "Error")" \
-            --msgbox "$(hb_translate "No paths selected. Select at least one path.")" 8 60
-        return 1
-    fi
+        local options=() idx=1 path
+        for path in "${__defaults[@]}"; do
+            options+=("$idx" "$path" "off")
+            ((idx++))
+        done
+        local first_extra_idx=$idx
+        for path in "${__extras[@]}"; do
+            # User-added paths default ON — they wouldn't be in the list
+            # if the operator hadn't explicitly added them.
+            options+=("$idx" "[+] $path" "on")
+            ((idx++))
+        done
+
+        # Three-button checklist:
+        #   OK             (rc=0) → save selection and continue
+        #   Add custom path (rc=3) → opens an inputbox; on success the new
+        #                            path is appended to the persisted list
+        #                            and the checklist re-renders with the
+        #                            new entry already ticked
+        #   Cancel         (rc=1) → abort the entire backup flow
+        local selected rc
+        selected=$(dialog --backtitle "ProxMenux" \
+            --title "$(hb_translate "Custom backup profile")" \
+            --default-button ok \
+            --extra-button --extra-label "$(hb_translate "Add custom path")" \
+            --separate-output --checklist \
+            "$(hb_translate "Tick the paths to include in this backup. Press \"Add custom path\" to add a folder or file of your own to the list.")" \
+            26 86 18 "${options[@]}" 3>&1 1>&2 2>&3)
+        rc=$?
+
+        if (( rc == 0 )); then
+            __out_ref=()
+            while read -r choice; do
+                [[ -z "$choice" ]] && continue
+                if (( choice < first_extra_idx )); then
+                    __out_ref+=("${__defaults[$((choice-1))]}")
+                else
+                    __out_ref+=("${__extras[$((choice-first_extra_idx))]}")
+                fi
+            done <<< "$selected"
+
+            if [[ ${#__out_ref[@]} -eq 0 ]]; then
+                dialog --backtitle "ProxMenux" --title "$(hb_translate "Error")" \
+                    --msgbox "$(hb_translate "No paths selected. Select at least one path.")" 8 60
+                continue
+            fi
+            return 0
+        fi
+
+        if (( rc == 1 )); then
+            return 1
+        fi
+
+        # rc == 3 → "Add custom path": jump straight into the inputbox.
+        # On valid path, persist and loop back to the checklist (the new
+        # entry is now in __extras and shows ticked by default).
+        local new_path
+        new_path=$(dialog --backtitle "ProxMenux" \
+            --title "$(hb_translate "Add custom path")" \
+            --inputbox "$(hb_translate "Absolute path to a file or directory you want backed up:")" \
+            "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "/root/" 3>&1 1>&2 2>&3) || continue
+        new_path="${new_path%/}"
+        if [[ -z "$new_path" ]]; then
+            continue
+        fi
+        if [[ ! -e "$new_path" ]]; then
+            dialog --backtitle "ProxMenux" --colors \
+                --title "$(hb_translate "Path not found")" \
+                --msgbox "\Z1${new_path}\Zn\n\n$(hb_translate "does not exist on this host. Path not added.")" 10 70
+            continue
+        fi
+        hb_add_extra_path "$new_path"
+    done
 }
 
 # ==========================================================
@@ -204,10 +550,27 @@ hb_prepare_staging() {
                 )
             fi
 
-            # Runtime pending-restore data belongs in /var/lib/proxmenux, never in app code tree.
+            # /usr/local/share/proxmenux: ship USER STATE only (components_status.json,
+            # user prefs, post-install cache). NEVER ship code (scripts/, utils.sh, web/,
+            # AppImage/, monitor-app/) — destination has its own installed proxmenux which
+            # may be newer than the backup. Hot-applying the backup's old /scripts/ over
+            # the destination's fresh install silently regresses the apply_cluster_postboot
+            # dispatcher and the *_installer.sh --auto-reinstall hooks, breaking the
+            # "user reinstalls nothing" promise.
             if [[ "$rel" == "usr/local/share/proxmenux" || "$rel" == "usr/local/share/proxmenux/"* ]]; then
                 rsync_opts+=(
                     --exclude "restore-pending/"
+                    --exclude "scripts/"
+                    --exclude "web/"
+                    --exclude "monitor-app/"
+                    --exclude "monitor-app.*/"
+                    --exclude "AppImage/"
+                    --exclude "images/"
+                    --exclude "json/"
+                    --exclude "utils.sh"
+                    --exclude "helpers_cache.json"
+                    --exclude "ProxMenux-Monitor.AppImage*"
+                    --exclude "install_proxmenux*.sh"
                 )
             fi
 
@@ -231,6 +594,32 @@ hb_prepare_staging() {
     command -v pct      >/dev/null 2>&1 && pct list      > "$meta/pct-list.txt"   2>&1 || true
     command -v zpool    >/dev/null 2>&1 && zpool status  > "$meta/zpool.txt"      2>&1 || true
 
+    # Extra hardware fingerprints used by hb_compat_check on restore to
+    # detect drift that would make some paths unsafe to apply:
+    #   * zpool.guids → pool name + GUID. Same pool name on a fresh
+    #     install gets a NEW GUID; restoring /etc/zfs/zpool.cache with
+    #     the old GUID then drops the boot into emergency mode.
+    #   * blkid.txt   → all block-device UUIDs, used to verify
+    #     /etc/fstab and /etc/kernel/proxmox-boot-uuids still resolve.
+    #   * lspci.txt   → presence test for GPUs / TPUs / NICs referenced
+    #     by components_status.json (so we don't try to reinstall an
+    #     NVIDIA driver on a host with no NVIDIA card any more).
+    command -v zpool >/dev/null 2>&1 && zpool list -H -o name,guid > "$meta/zpool.guids" 2>&1 || true
+    command -v blkid >/dev/null 2>&1 && blkid -s UUID -s TYPE     > "$meta/blkid.txt"    2>&1 || true
+    command -v lspci >/dev/null 2>&1 && lspci -nn                  > "$meta/lspci.txt"    2>&1 || true
+
+    # Package inventory — captures what's installed on the source
+    # host so the restore flow can offer to reinstall missing user
+    # packages on the target. Solves the "config restored but the
+    # binary is missing, service hangs at boot" class of issues
+    # (log2ram, figurine, sensors etc. installed by post-install).
+    if command -v dpkg >/dev/null 2>&1; then
+        dpkg --get-selections >  "$meta/packages.list"        2>/dev/null || true
+    fi
+    if command -v apt-mark >/dev/null 2>&1; then
+        apt-mark showmanual   >  "$meta/packages.manual.list" 2>/dev/null || true
+    fi
+
     # Manifest + checksums
     (
         cd "$staging_root/rootfs" || return 1
@@ -238,6 +627,33 @@ hb_prepare_staging() {
         find . -type f -print0 | sort -z | xargs -0 sha256sum 2>/dev/null \
             > "$meta/checksums.sha256" || true
     )
+
+    # ── Structured manifest.json (proxmenux_backup_manifest) ──
+    # build_manifest.sh composes the collectors output into the
+    # exact JSON shape parse_manifest.sh + run_restore.sh expect.
+    # Without it, every restore flow degrades to "no manifest found"
+    # and the Monitor's View Contents / restore preview shows nothing.
+    # The collectors live next to this library file.
+    local _hb_lib_dir _hb_collector_dir _hb_build_manifest
+    _hb_lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    _hb_collector_dir="$_hb_lib_dir/collectors"
+    _hb_build_manifest="$_hb_collector_dir/build_manifest.sh"
+    if [[ -x "$_hb_build_manifest" ]]; then
+        local -a _hb_archived=()
+        if [[ -s "$meta/selected_paths.txt" ]]; then
+            mapfile -t _hb_archived < "$meta/selected_paths.txt"
+        fi
+        if (( ${#_hb_archived[@]} > 0 )); then
+            bash "$_hb_build_manifest" --paths-archived "${_hb_archived[@]}" \
+                > "$staging_root/manifest.json" 2>/dev/null || true
+        else
+            bash "$_hb_build_manifest" \
+                > "$staging_root/manifest.json" 2>/dev/null || true
+        fi
+        # Drop the file if the collectors emitted nothing useful so
+        # parse_manifest doesn't read a 0-byte JSON downstream.
+        [[ -s "$staging_root/manifest.json" ]] || rm -f "$staging_root/manifest.json"
+    fi
 }
 
 hb_load_restore_paths() {
@@ -269,9 +685,10 @@ hb_collect_pbs_configs() {
     HB_PBS_REPOS=()
     HB_PBS_SECRETS=()
     HB_PBS_SOURCES=()
+    HB_PBS_FINGERPRINTS=()
 
     if [[ -f /etc/pve/storage.cfg ]]; then
-        local current="" server="" datastore="" username="" pw_file pw_val
+        local current="" server="" datastore="" username="" fingerprint="" pw_file pw_val
         while IFS= read -r line; do
             line="${line%%#*}"
             line="${line#"${line%%[![:space:]]*}"}"
@@ -285,12 +702,20 @@ hb_collect_pbs_configs() {
                     HB_PBS_REPOS+=("${username}@${server}:${datastore}")
                     HB_PBS_SECRETS+=("$pw_val")
                     HB_PBS_SOURCES+=("proxmox")
+                    HB_PBS_FINGERPRINTS+=("$fingerprint")
                 fi
-                current="${BASH_REMATCH[1]}"; server="" datastore="" username=""
+                current="${BASH_REMATCH[1]}"; server="" datastore="" username="" fingerprint=""
             elif [[ -n "$current" ]]; then
-                [[ $line =~ ^[[:space:]]+server[[:space:]]+(.+)$    ]] && server="${BASH_REMATCH[1]}"
-                [[ $line =~ ^[[:space:]]+datastore[[:space:]]+(.+)$ ]] && datastore="${BASH_REMATCH[1]}"
-                [[ $line =~ ^[[:space:]]+username[[:space:]]+(.+)$  ]] && username="${BASH_REMATCH[1]}"
+                # The line was already trimmed of leading/trailing
+                # whitespace above. Match the field name directly at
+                # the start of the (post-trim) line — the old regex
+                # demanded leading whitespace that the trim had
+                # already stripped, so the sub-fields were silently
+                # never captured.
+                [[ $line =~ ^server[[:space:]]+(.+)$      ]] && server="${BASH_REMATCH[1]}"
+                [[ $line =~ ^datastore[[:space:]]+(.+)$   ]] && datastore="${BASH_REMATCH[1]}"
+                [[ $line =~ ^username[[:space:]]+(.+)$    ]] && username="${BASH_REMATCH[1]}"
+                [[ $line =~ ^fingerprint[[:space:]]+(.+)$ ]] && fingerprint="${BASH_REMATCH[1]}"
                 if [[ $line =~ ^[a-zA-Z]+:[[:space:]] &&
                       -n "$server" && -n "$datastore" && -n "$username" ]]; then
                     pw_file="/etc/pve/priv/storage/${current}.pw"
@@ -299,7 +724,8 @@ hb_collect_pbs_configs() {
                     HB_PBS_REPOS+=("${username}@${server}:${datastore}")
                     HB_PBS_SECRETS+=("$pw_val")
                     HB_PBS_SOURCES+=("proxmox")
-                    current="" server="" datastore="" username=""
+                    HB_PBS_FINGERPRINTS+=("$fingerprint")
+                    current="" server="" datastore="" username="" fingerprint=""
                 fi
             fi
         done < /etc/pve/storage.cfg
@@ -311,13 +737,14 @@ hb_collect_pbs_configs() {
             HB_PBS_REPOS+=("${username}@${server}:${datastore}")
             HB_PBS_SECRETS+=("$pw_val")
             HB_PBS_SOURCES+=("proxmox")
+            HB_PBS_FINGERPRINTS+=("$fingerprint")
         fi
     fi
 
     # Manual configs
     local manual_cfg="$HB_STATE_DIR/pbs-manual-configs.txt"
     if [[ -f "$manual_cfg" ]]; then
-        local line name repo sf
+        local line name repo sf fp_file
         while IFS= read -r line; do
             line="${line%%#*}"
             line="${line#"${line%%[![:space:]]*}"}"
@@ -325,9 +752,11 @@ hb_collect_pbs_configs() {
             [[ -z "$line" ]] && continue
             name="${line%%|*}"; repo="${line##*|}"
             sf="$HB_STATE_DIR/pbs-pass-${name}.txt"
+            fp_file="$HB_STATE_DIR/pbs-fingerprint-${name}.txt"
             HB_PBS_NAMES+=("$name"); HB_PBS_REPOS+=("$repo")
             HB_PBS_SECRETS+=("$([[ -f "$sf" ]] && cat "$sf" || echo "")")
             HB_PBS_SOURCES+=("manual")
+            HB_PBS_FINGERPRINTS+=("$([[ -f "$fp_file" ]] && cat "$fp_file" || echo "")")
         done < "$manual_cfg"
     fi
 }
@@ -354,9 +783,18 @@ hb_configure_pbs_manual() {
         "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "" 3>&1 1>&2 2>&3) || return 1
     [[ -z "$datastore" ]] && return 1
 
-    secret=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Add PBS")" \
-        --insecure --passwordbox "$(hb_translate "Password or API token secret:")" \
-        "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+    # Ask for the secret in a loop — an OK click on an empty box used
+    # to persist an empty password file silently, which then made every
+    # subsequent backup fail with an opaque auth error. Cancel still
+    # aborts the whole flow; empty + OK re-prompts.
+    while true; do
+        secret=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Add PBS")" \
+            --insecure --passwordbox "$(hb_translate "Password or API token secret:")" \
+            "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+        [[ -n "$secret" ]] && break
+        dialog --backtitle "ProxMenux" \
+            --msgbox "$(hb_translate "Password cannot be empty.")" 8 50
+    done
 
     repo="${user}@${host}:${datastore}"
     mkdir -p "$HB_STATE_DIR"
@@ -395,11 +833,24 @@ hb_select_pbs_repository() {
         HB_PBS_NAME="${HB_PBS_NAMES[$sel]}"
         export HB_PBS_REPOSITORY="${HB_PBS_REPOS[$sel]}"
         HB_PBS_SECRET="${HB_PBS_SECRETS[$sel]}"
+        # Export the fingerprint so _bk_pbs / _rs_extract_pbs can
+        # pass it to proxmox-backup-client via PBS_FINGERPRINT. The
+        # binary otherwise prompts "Are you sure you want to
+        # continue connecting? (y/n):" — twice in some flows
+        # (backup + catalog upload) — and silently auto-accepts on
+        # stdin closure, which is both noisy and an MITM risk on a
+        # cross-host restore.
+        export HB_PBS_FINGERPRINT="${HB_PBS_FINGERPRINTS[$sel]:-}"
         if [[ -z "$HB_PBS_SECRET" ]]; then
-            HB_PBS_SECRET=$(dialog --backtitle "ProxMenux" --title "PBS" \
-                --insecure --passwordbox \
-                "$(hb_translate "Password for:") $HB_PBS_NAME" \
-                "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+            while true; do
+                HB_PBS_SECRET=$(dialog --backtitle "ProxMenux" --title "PBS" \
+                    --insecure --passwordbox \
+                    "$(hb_translate "Password for:") $HB_PBS_NAME" \
+                    "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+                [[ -n "$HB_PBS_SECRET" ]] && break
+                dialog --backtitle "ProxMenux" \
+                    --msgbox "$(hb_translate "Password cannot be empty.")" 8 50
+            done
             mkdir -p "$HB_STATE_DIR"
             printf '%s' "$HB_PBS_SECRET" > "$HB_STATE_DIR/pbs-pass-${HB_PBS_NAME}.txt"
             chmod 600 "$HB_STATE_DIR/pbs-pass-${HB_PBS_NAME}.txt"
@@ -407,88 +858,967 @@ hb_select_pbs_repository() {
     fi
 }
 
-hb_ask_pbs_encryption() {
+# ==========================================================
+# PBS KEYFILE RECOVERY
+#
+# `proxmox-backup-client key create` cannot set a KDF passphrase
+# non-interactively, so we generate the keyfile with `--kdf none`
+# and add our OWN passphrase-based recovery layer on top:
+#
+#   1. After creating the keyfile, ask the operator for a recovery
+#      passphrase. Encrypt the keyfile with openssl using that
+#      passphrase → produces `pbs-key.recovery.enc`.
+#   2. On every PBS backup, we upload `pbs-key.recovery.enc` to a
+#      SEPARATE backup group (`host/hostcfg-<host>-keyrecovery`)
+#      with NO `--keyfile` flag — so PBS stores it as a regular
+#      (non-PBS-encrypted) blob. The blob is still protected by
+#      the operator's passphrase via openssl. The `-keyrecovery`
+#      suffix on the same `hostcfg-<host>` prefix keeps the two
+#      groups adjacent in the PBS UI, making the recovery snapshots
+#      recognisable as belonging to this host's backups instead of
+#      looking like an unrelated group that an operator might delete
+#      by mistake. Legacy builds used the ID `proxmenux-keyrecovery-<host>`;
+#      the recovery discovery below matches both patterns so old
+#      escrow blobs are still usable.
+#   3. On a fresh install where the local keyfile is missing, the
+#      restore flow looks up the recovery group in PBS, downloads
+#      the blob, asks for the passphrase, decrypts it, and writes
+#      the keyfile back to its canonical location.
+#
+# So the operator only needs to remember the passphrase. The
+# encrypted recovery copy travels with their PBS backups
+# automatically; no manual offsite keyfile escrow required.
+# ==========================================================
+
+hb_pbs_encrypt_recovery() {
+    # Reads passphrase from stdin. AES-256-CBC + PBKDF2 with 600k
+    # iterations — standard openssl format, decryptable from any
+    # host with openssl ≥ 1.1.1.
+    openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt \
+        -in "$1" -out "$2" -pass stdin 2>/dev/null
+}
+
+hb_pbs_decrypt_recovery() {
+    openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 \
+        -in "$1" -out "$2" -pass stdin 2>/dev/null
+}
+
+# ==========================================================
+# ESCROW MODE — data model for the keyfile recovery strategy
+# ==========================================================
+# A single state file at $HB_STATE_DIR/pbs-key.mode records how this
+# host wants its PBS keyfile protected against loss. Three values:
+#   none   — keyfile lives only here. No local envelope, no upload.
+#            If host is lost without an offsite copy → data is gone.
+#   local  — an openssl-wrapped envelope of the keyfile is written to
+#            /root and $HB_STATE_DIR. Not uploaded to PBS. Operator
+#            moves the /root copy offsite.
+#   full   — same envelope AND uploaded to PBS as -keyrecovery group.
+#            Fully self-recoverable, at the cost of putting the
+#            wrapped keyfile on the same server as the encrypted data.
+# Missing file = pre-existing install from before this feature. Treat
+# as 'full' to preserve behaviour. Only backup_host.sh / the runner
+# needs to read this at runtime; the dialog paths write it.
+
+_hb_pbs_read_escrow_mode() {
+    local f="$HB_STATE_DIR/pbs-key.mode"
+    if [[ -s "$f" ]]; then
+        local v
+        v=$(head -c 32 "$f" | tr -d '[:space:]')
+        case "$v" in
+            none|local|full) printf '%s' "$v"; return 0 ;;
+        esac
+    fi
+    printf 'full'
+}
+
+_hb_pbs_write_escrow_mode() {
+    local mode="$1"
+    case "$mode" in
+        none|local|full) : ;;
+        *) return 1 ;;
+    esac
+    mkdir -p "$HB_STATE_DIR" 2>/dev/null || true
+    umask 077
+    printf '%s\n' "$mode" > "$HB_STATE_DIR/pbs-key.mode"
+    chmod 600 "$HB_STATE_DIR/pbs-key.mode" 2>/dev/null || true
+    return 0
+}
+
+# ==========================================================
+# PVE STORAGE KEYFILE DISCOVERY
+# ==========================================================
+# When the operator has already added a PBS storage in Proxmox VE
+# and enabled encryption on it (`pvesm set NAME --encryption-key
+# autogen` or via the storage editor), PVE writes the keyfile to
+# /etc/pve/priv/storage/<NAME>.enc. That file IS a valid raw PBS
+# keyfile (same JSON format as `proxmox-backup-client key create
+# --kdf none`); it can be reused verbatim with --keyfile.
+# ProxMenux surfaces those keyfiles as reuse candidates in the
+# encryption dialog, so users don't have to type absolute paths or
+# duplicate secrets across two configs.
+
+# Emit one line per PVE-managed PBS storage that has a .enc keyfile:
+#   name|server|datastore|keyfile-path
+_hb_pbs_discover_pve_keyfiles() {
+    local cfg=/etc/pve/storage.cfg
+    local dir=/etc/pve/priv/storage
+    [[ -r "$cfg" && -d "$dir" ]] || return 0
+
+    # Parse storage.cfg PBS entries into name+server+datastore triples.
+    # A single awk pass builds the triples; a shell loop then checks
+    # each for a matching .enc keyfile and emits only those that
+    # actually exist.
+    awk '
+        function emit(){ printf "%s|%s|%s\n", name, server, datastore }
+        /^pbs:[[:space:]]+/ { if (name) emit(); name=$2; server=""; datastore=""; next }
+        /^[a-z]+:[[:space:]]+/ { if (name) { emit(); name="" } }
+        /^[[:space:]]+server[[:space:]]+/    { server=$2 }
+        /^[[:space:]]+datastore[[:space:]]+/ { datastore=$2 }
+        END { if (name) emit() }
+    ' "$cfg" 2>/dev/null | while IFS='|' read -r name server datastore; do
+        local kf="$dir/$name.enc"
+        [[ -s "$kf" ]] || continue
+        printf '%s|%s|%s|%s\n' "$name" "$server" "$datastore" "$kf"
+    done
+}
+
+# Given HB_PBS_REPOSITORY (form user@realm@host:datastore), find the
+# PVE-storage keyfile whose server + datastore match. Emits the path
+# on stdout, exits non-zero if no match.
+_hb_pbs_pve_keyfile_for_current_repo() {
+    [[ -n "${HB_PBS_REPOSITORY:-}" ]] || return 1
+    local repo_host repo_datastore
+    repo_host="${HB_PBS_REPOSITORY##*@}"
+    repo_host="${repo_host%:*}"
+    repo_datastore="${HB_PBS_REPOSITORY##*:}"
+    local match
+    match=$(_hb_pbs_discover_pve_keyfiles | awk -F'|' \
+        -v h="$repo_host" -v d="$repo_datastore" \
+        '$2==h && $3==d {print $4; exit}')
+    [[ -n "$match" ]] || return 1
+    printf '%s' "$match"
+}
+
+# Copy a PVE-storage keyfile into the ProxMenux canonical location.
+# Same trust boundary as hb_pbs_import_keyfile — no validation, just
+# atomic install + chmod 600.
+_hb_pbs_install_pve_keyfile() {
+    local src="$1"
+    local dst="$HB_STATE_DIR/pbs-key.conf"
+    [[ -s "$src" && -r "$src" ]] || return 1
+    mkdir -p "$HB_STATE_DIR" 2>/dev/null || true
+    local tmp
+    tmp=$(mktemp "${dst}.pve.XXXXXX") || return 1
+    if ! cp -f "$src" "$tmp"; then rm -f "$tmp"; return 1; fi
+    chmod 600 "$tmp"
+    mv -f "$tmp" "$dst" || { rm -f "$tmp"; return 1; }
+    return 0
+}
+
+# ==========================================================
+# ESCROW MODE — dialog
+# ==========================================================
+# Simple yes/no: "Upload the encryption key to PBS?" — mirrors the
+# operator's mental model. Two outcomes only, no middle ground:
+#   Yes → mode='full': ProxMenux writes a passphrase-wrapped copy of
+#         the keyfile to /root and uploads it to PBS as the
+#         `-keyrecovery` group so a reinstalled host can recover the
+#         key with just the passphrase.
+#   No  → mode='none': ProxMenux keeps the keyfile ONLY at the
+#         canonical local path. The operator is shown the location
+#         and told to make their own offsite copy — losing it means
+#         every encrypted backup on PBS is unreadable.
+# The 'local' mode (envelope in /root but not uploaded) is still a
+# valid backend value; it is just not surfaced to the operator here.
+#
+# Sets HB_PBS_ESCROW_RESULT to 'full' or 'none' on success; returns
+# non-zero on cancel. We use a global variable instead of stdout
+# capture because `if dialog --yesno ...; then` inside a `$( )`
+# command substitution flushes the terminal at subshell exit and
+# leaves the very next dialog invocation needing an extra Enter to
+# render — invisible bug in ‘new’ keyfile flow. Callers set
+# their own `local mode=$HB_PBS_ESCROW_RESULT` right after.
+_hb_pbs_prompt_escrow_mode() {
+    # Optional first arg: source path of an EXISTING keyfile the
+    # operator is about to reuse (either from PVE storage or from an
+    # absolute path they just typed). When set, the dialog:
+    #   • shows the source path so the operator sees where the key
+    #     already lives on this host,
+    #   • defaults to "No, keep local only" — the operator already
+    #     has this keyfile elsewhere, so a PBS escrow copy is usually
+    #     redundant. They can still hit Yes.
+    # When empty (fresh generate), defaults to "Yes, upload" — the
+    # safer path when no other copy of the key exists yet.
+    local existing_source="${1:-}"
+    HB_PBS_ESCROW_RESULT=""
+
+    local msg
+    msg="$(hb_translate "Upload an encrypted copy of the key to PBS so you can recover it on a reinstalled host with just a passphrase?")"$'\n\n'
+    if [[ -n "$existing_source" ]]; then
+        msg+="$(hb_translate "Existing key is at:")"$'\n'"       $existing_source"$'\n\n'
+    fi
+    msg+="$(hb_translate "Yes: set a recovery passphrase now; the encrypted key envelope is uploaded with every backup.")"$'\n\n'
+    msg+="$(hb_translate "No: the key stays only at")"$'\n'"       $HB_STATE_DIR/pbs-key.conf"$'\n'
+    msg+="$(hb_translate "Copy that file offsite yourself, or download it from the Monitor.")"
+
+    local -a dialog_args=(
+        --backtitle "ProxMenux"
+        --title "$(hb_translate "Upload key to PBS?")"
+        --yes-label "$(hb_translate "Yes, upload")"
+        --no-label "$(hb_translate "No, keep local only")"
+        --defaultno
+    )
+    dialog_args+=(--yesno "$msg" 18 78)
+
+    dialog "${dialog_args[@]}"
+    # 0 = Yes button, 1 = No button, anything else (ESC / cancel) →
+    # abort the whole encryption setup so the operator can retry.
+    case $? in
+        0) HB_PBS_ESCROW_RESULT='full'; return 0 ;;
+        1) HB_PBS_ESCROW_RESULT='none'; return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# Import a user-provided PBS encryption keyfile at the canonical
+# ProxMenux path. Used by the "shared keyfile across hosts" flow
+# where the operator generated one master key manually and wants
+# every host to reuse it (single recovery blob covers all).
+#
+# Args: $1 = path to the source keyfile (any location on disk).
+#
+# Validation: the file must exist, be non-empty, and be recognised
+# by `proxmox-backup-client key info` as a valid PBS keyfile. If
+# any check fails the function returns non-zero and leaves the
+# canonical path untouched, so the caller can fall back to the
+# "generate new" path or report the error.
+#
+# On success: the file is copied to $HB_STATE_DIR/pbs-key.conf
+# with chmod 600 and the caller can proceed with the recovery
+# blob offer as usual.
+hb_pbs_import_keyfile() {
+    local src="$1"
+    local dst="$HB_STATE_DIR/pbs-key.conf"
+
+    [[ -n "$src" && -s "$src" && -r "$src" ]] || return 1
+
+    # `key info` reads the file header and prints fingerprint /
+    # kdf info without prompting for a passphrase (this works for
+    # kdf=none keyfiles, which is what our own `key create` uses
+    # and what most operators generate manually). If the file is
+    # not a valid PBS keyfile, the tool exits non-zero.
+    if ! proxmox-backup-client key info --output-format json "$src" \
+         >/dev/null 2>&1; then
+        return 2
+    fi
+
+    mkdir -p "$HB_STATE_DIR" 2>/dev/null || true
+    # Install atomically: cp to a tmp path in the same dir, chmod,
+    # then rename. Avoids a half-written file if the copy is
+    # interrupted mid-flight.
+    local tmp
+    tmp=$(mktemp "${dst}.import.XXXXXX") || return 3
+    if ! cp -f "$src" "$tmp"; then
+        rm -f "$tmp"
+        return 3
+    fi
+    chmod 600 "$tmp"
+    if ! mv -f "$tmp" "$dst"; then
+        rm -f "$tmp"
+        return 3
+    fi
+    return 0
+}
+
+# Prompt for a recovery passphrase pair. Sets HB_PBS_PASS_RESULT on
+# success; returns non-zero on cancel or when openssl is missing. The
+# caller decides when — and whether — to persist a keyfile after this,
+# so a cancel here leaves the disk exactly as it was.
+#
+# Uses a global variable instead of stdout capture — see the note on
+# _hb_pbs_prompt_escrow_mode. Command-substitution around dialogs
+# leaves the terminal in a state where the next dialog needs an extra
+# Enter to render.
+_hb_pbs_prompt_recovery_pass() {
+    HB_PBS_PASS_RESULT=""
+    if ! command -v openssl >/dev/null 2>&1; then
+        dialog --backtitle "ProxMenux" --title "$(hb_translate "Recovery setup failed")" \
+            --msgbox "$(hb_translate "openssl is not installed — cannot create recovery copy. Install openssl and retry.")" 9 70
+        return 1
+    fi
+    local pass1 pass2
+    while true; do
+        pass1=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Recovery passphrase")" \
+            --insecure --passwordbox "$(hb_translate "Choose a recovery passphrase (write it down somewhere safe):")" \
+            "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+        [[ -z "$pass1" ]] && continue
+        pass2=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Recovery passphrase")" \
+            --insecure --passwordbox "$(hb_translate "Confirm recovery passphrase:")" \
+            "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+        [[ "$pass1" == "$pass2" ]] && break
+        dialog --backtitle "ProxMenux" \
+            --msgbox "$(hb_translate "Passphrases do not match. Try again.")" 8 50
+    done
+    HB_PBS_PASS_RESULT="$pass1"
+    return 0
+}
+
+# Encrypt the on-disk keyfile with the supplied passphrase, drop an
+# offsite copy under /root, and show the operator the success dialog.
+# Precondition: the keyfile exists at $HB_STATE_DIR/pbs-key.conf.
+# Returns non-zero only on openssl failure (rare). The caller is
+# responsible for undoing whatever it just did if this fails.
+#
+# Args:
+#   $1 = passphrase
+#   $2 = escrow mode ('local' or 'full'); the message text branches
+#        on this. Never called with 'none' — the top-level flow skips
+#        finalize entirely for that mode.
+_hb_pbs_finalize_recovery() {
+    local pass="$1"
+    local mode="${2:-full}"
     local key_file="$HB_STATE_DIR/pbs-key.conf"
-    local enc_pass_file="$HB_STATE_DIR/pbs-encryption-pass.txt"
+    local recovery_enc="$HB_STATE_DIR/pbs-key.recovery.enc"
+
+    if ! printf '%s' "$pass" | hb_pbs_encrypt_recovery "$key_file" "$recovery_enc"; then
+        dialog --backtitle "ProxMenux" --title "$(hb_translate "Recovery setup failed")" \
+            --msgbox "$(hb_translate "openssl encryption failed.")" 9 70
+        return 1
+    fi
+    chmod 600 "$recovery_enc"
+
+    # No extra "Recovery ready" msgbox — the operator's next action is
+    # the backup itself. The status of the encryption setup is visible
+    # in the Monitor and in the summary the backup emits when it
+    # starts running.
+    return 0
+}
+
+# Public wrapper preserved for external callers that already have a
+# keyfile on disk and just want the recovery blob generated. Combines
+# the prompt + finalize phases. Defaults to 'full' when called without
+# a mode argument (preserves legacy caller behaviour); when the caller
+# passes a mode it is forwarded to _hb_pbs_finalize_recovery so the
+# success message matches.
+hb_pbs_setup_recovery() {
+    local mode="${1:-full}"
+    local pass
+    pass=$(_hb_pbs_prompt_recovery_pass) || return 1
+    if ! _hb_pbs_finalize_recovery "$pass" "$mode"; then
+        return 1
+    fi
+    _hb_pbs_write_escrow_mode "$mode"
+}
+
+# Upload the local recovery .enc to PBS as a separate snapshot
+# group. Called from _bk_pbs after the main backup succeeds.
+# Short-circuits when escrow mode is not 'full' — the recovery
+# envelope may still exist locally in 'local' mode, but the whole
+# point of that mode is not putting it on PBS. Skips silently if no
+# recovery copy is present. Returns 0 on success or skip, 1 on
+# upload failure.
+hb_pbs_upload_recovery_blob() {
+    local epoch="$1"
+    local recovery_enc="$HB_STATE_DIR/pbs-key.recovery.enc"
+    [[ ! -f "$recovery_enc" ]] && return 0
+    local mode
+    mode=$(_hb_pbs_read_escrow_mode)
+    [[ "$mode" != "full" ]] && return 0
+
+    # `proxmox-backup-client backup` only accepts archive types
+    # `pxar` / `img` / `conf` / `log` as the source spec — `.blob`
+    # is an internal storage format, not a valid input type. The
+    # recovery file is a small openssl-encrypted blob so we use
+    # `.conf` (which PBS stores internally as `.conf.blob`). On
+    # restore we ask for `keyrecovery.conf` (without the .blob
+    # suffix) and PBS resolves it transparently.
+    # Note: deliberately NO --keyfile here. The blob is already
+    # passphrase-encrypted by openssl; we want PBS to store it as
+    # a plain blob so it can be retrieved without the keyfile.
+    PBS_PASSWORD="$HB_PBS_SECRET" \
+    PBS_FINGERPRINT="${HB_PBS_FINGERPRINT:-}" \
+        proxmox-backup-client backup \
+            "keyrecovery.conf:$recovery_enc" \
+            --repository "$HB_PBS_REPOSITORY" \
+            --backup-type host \
+            --backup-id "hostcfg-$(hostname)-keyrecovery" \
+            --backup-time "$epoch" \
+            >/dev/null 2>&1
+}
+
+# On a fresh install with no local keyfile, try to recover it.
+# Attempts several sources in order of decreasing convenience for
+# Manual-import fallback: prompt the operator for the absolute path
+# of the keyfile on this host. Copies it verbatim to the canonical
+# path. Called from hb_pbs_try_keyfile_recovery when both auto-paths
+# (PVE storage keyfile, PBS keyrecovery group) have been exhausted.
+# Returns 0 on successful install, 1 on cancel or missing file.
+_hb_pbs_manual_keyfile_import() {
+    local target_keyfile="$1"
+    local src
+    src=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Import encryption keyfile")" \
+        --inputbox "$(hb_translate "No PBS keyfile is installed on this host and no automatic recovery was possible.")"$'\n\n'"$(hb_translate "Copy your PBS keyfile onto this host first (via scp, USB, sftp, etc.) and enter its absolute path below. The file will be copied to")"$'\n'"       $target_keyfile" \
+        16 78 "" 3>&1 1>&2 2>&3) || return 1
+    src="$(echo "$src" | xargs)"
+    [[ -z "$src" ]] && return 1
+    if [[ ! -s "$src" || ! -r "$src" ]]; then
+        dialog --backtitle "ProxMenux" --title "$(hb_translate "Import failed")" \
+            --msgbox "$(hb_translate "The file does not exist, is empty or is not readable.")"$'\n\n'"$(hb_translate "Path:") $src" \
+            10 78
+        return 1
+    fi
+    mkdir -p "$(dirname "$target_keyfile")"
+    if ! cp -f "$src" "$target_keyfile"; then
+        dialog --backtitle "ProxMenux" --title "$(hb_translate "Import failed")" \
+            --msgbox "$(hb_translate "Could not copy the keyfile into place.")" 9 70
+        return 1
+    fi
+    chmod 600 "$target_keyfile"
+    return 0
+}
+
+# On a fresh install with no local keyfile, try to recover it.
+# Attempts sources in order and stops at the first one that works:
+#
+#   1. PVE-storage keyfile matching HB_PBS_REPOSITORY
+#      (/etc/pve/priv/storage/<name>.enc) — silent copy.
+#   2. PBS `-keyrecovery` snapshot group — prompts for passphrase.
+#   3. Manual import from an absolute path on this host — prompted
+#      when the two auto-paths above find nothing or the operator
+#      declines them.
+#
+# Returns 0 if the keyfile was successfully restored to $1,
+# 1 if no recovery is possible or the user cancelled.
+hb_pbs_try_keyfile_recovery() {
+    local target_keyfile="$1"
+
+    # ── Step 1: PVE-storage keyfile matching the current repository ──
+    # If the operator has already configured PBS in PVE with an
+    # encryption-key, we can use that file verbatim — no passphrase
+    # prompt, no PBS round-trip. This is the classic "why do I need
+    # to import? it is right there" case.
+    local pve_key_path=""
+    if [[ -n "${HB_PBS_REPOSITORY:-}" ]]; then
+        pve_key_path=$(_hb_pbs_pve_keyfile_for_current_repo 2>/dev/null || true)
+    fi
+    if [[ -n "$pve_key_path" && -s "$pve_key_path" ]]; then
+        mkdir -p "$(dirname "$target_keyfile")"
+        if cp -f "$pve_key_path" "$target_keyfile" 2>/dev/null; then
+            chmod 600 "$target_keyfile"
+            dialog --backtitle "ProxMenux" --title "$(hb_translate "Keyfile recovered")" \
+                --msgbox "$(hb_translate "Reused the encryption key from the PVE storage entry.")"$'\n\n'"$(hb_translate "Source:") $pve_key_path"$'\n'"$(hb_translate "Installed at:") $target_keyfile"$'\n\n'"$(hb_translate "Restore can now proceed.")" \
+                14 78
+            return 0
+        fi
+    fi
+
+    if ! command -v openssl >/dev/null 2>&1; then
+        return 1  # silently — main path will surface a clearer error
+    fi
+
+    # ── Step 2: PBS -keyrecovery snapshot group (fall back) ────────
+    # Discover keyrecovery groups in PBS. Two patterns are matched:
+    #   - hostcfg-<host>-keyrecovery   (current naming — groups
+    #                                   adjacent to the main hostcfg-<host>)
+    #   - proxmenux-keyrecovery-<host> (legacy naming — pre-1.2.2.2)
+    # Both are surfaced together so existing escrow blobs from older
+    # builds remain usable during a fresh-install recovery.
+    local -a recovery_entries=()
+    mapfile -t recovery_entries < <(
+        PBS_PASSWORD="$HB_PBS_SECRET" \
+        PBS_FINGERPRINT="${HB_PBS_FINGERPRINT:-}" \
+        proxmox-backup-client snapshot list \
+            --repository "$HB_PBS_REPOSITORY" \
+            --output-format json 2>/dev/null \
+        | jq -r '.[]
+            | select(."backup-type" == "host"
+                     and (   ((."backup-id" | startswith("hostcfg-")) and (."backup-id" | endswith("-keyrecovery")))
+                          or (."backup-id" | startswith("proxmenux-keyrecovery-"))
+                     ))
+            | "\(."backup-id")|\(."backup-time")"' 2>/dev/null \
+        | sort -t'|' -k1,1 -k2,2nr \
+        | awk -F'|' '!seen[$1]++'
+    )
+
+    if [[ ${#recovery_entries[@]} -eq 0 ]]; then
+        # No auto-recovery available — fall through to the manual
+        # import prompt. Nothing has been written to disk yet so a
+        # cancel here just aborts cleanly.
+        _hb_pbs_manual_keyfile_import "$target_keyfile"
+        return $?
+    fi
+
+    # Pick the recovery group (auto if one, ask if many)
+    local picked_id picked_epoch
+    if [[ ${#recovery_entries[@]} -eq 1 ]]; then
+        IFS='|' read -r picked_id picked_epoch <<< "${recovery_entries[0]}"
+    else
+        local menu=() i=1
+        local entry id_part host_part iso_label
+        for entry in "${recovery_entries[@]}"; do
+            id_part="${entry%%|*}"
+            # Strip either naming convention to surface just the
+            # source hostname in the menu label.
+            if [[ "$id_part" == hostcfg-*-keyrecovery ]]; then
+                host_part="${id_part#hostcfg-}"
+                host_part="${host_part%-keyrecovery}"
+            else
+                host_part="${id_part#proxmenux-keyrecovery-}"
+            fi
+            iso_label=$(date -u -d "@${entry##*|}" '+%Y-%m-%d %H:%M' 2>/dev/null || echo "${entry##*|}")
+            menu+=("$i" "$host_part — $iso_label UTC")
+            ((i++))
+        done
+        local sel
+        sel=$(dialog --backtitle "ProxMenux" \
+            --title "$(hb_translate "Keyfile recovery — pick source host")" \
+            --menu "$(hb_translate "Multiple recovery groups found in PBS. Pick the one that originally created the keyfile:")" \
+            18 78 10 "${menu[@]}" 3>&1 1>&2 2>&3) || return 1
+        IFS='|' read -r picked_id picked_epoch <<< "${recovery_entries[$((sel-1))]}"
+    fi
+
+    local iso
+    iso=$(date -u -d "@$picked_epoch" '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || echo "$picked_epoch")
+    local recovery_snapshot="host/${picked_id}/${iso}"
+
+    if ! dialog --backtitle "ProxMenux" --title "$(hb_translate "Keyfile recovery available")" \
+        --yesno "$(hb_translate "Local keyfile is missing but a recovery copy was found in PBS.")"$'\n\n'"$(hb_translate "Backup:") $recovery_snapshot"$'\n\n'"$(hb_translate "Recover the keyfile using your recovery passphrase?")" \
+        13 78; then
+        # Operator declined PBS recovery → offer the manual import path.
+        _hb_pbs_manual_keyfile_import "$target_keyfile"
+        return $?
+    fi
+
+    # Download the blob once; we may retry passphrase entry without
+    # re-fetching it.
+    local tmp_dir
+    tmp_dir=$(mktemp -d /tmp/_pmnx_keyrec.XXXXXX) || return 1
+    # `restore` wants a FILE target (not a directory) for non-pxar
+    # archives — and we ask for `keyrecovery.conf` (matches the
+    # name used on upload), which PBS resolves to the underlying
+    # `keyrecovery.conf.blob` automatically.
+    if ! PBS_PASSWORD="$HB_PBS_SECRET" \
+        PBS_FINGERPRINT="${HB_PBS_FINGERPRINT:-}" \
+        proxmox-backup-client restore "$recovery_snapshot" "keyrecovery.conf" "$tmp_dir/keyrecovery.enc" \
+            --repository "$HB_PBS_REPOSITORY" >/dev/null 2>&1; then
+        rm -rf "$tmp_dir"
+        dialog --backtitle "ProxMenux" --title "$(hb_translate "Recovery failed")" \
+            --msgbox "$(hb_translate "Could not download recovery blob from PBS.")" 9 70
+        return 1
+    fi
+
+    local passphrase
+    while true; do
+        passphrase=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Recovery passphrase")" \
+            --insecure --passwordbox "$(hb_translate "Enter the recovery passphrase set when the keyfile was created:")" \
+            "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) \
+            || { rm -rf "$tmp_dir"; return 1; }
+        [[ -z "$passphrase" ]] && continue
+
+        mkdir -p "$(dirname "$target_keyfile")"
+        if printf '%s' "$passphrase" | hb_pbs_decrypt_recovery "$tmp_dir/keyrecovery.enc" "$target_keyfile"; then
+            chmod 600 "$target_keyfile"
+            rm -rf "$tmp_dir"
+            dialog --backtitle "ProxMenux" --title "$(hb_translate "Keyfile recovered")" \
+                --msgbox "$(hb_translate "Keyfile recovered successfully.")"$'\n\n'"$(hb_translate "Location:") $target_keyfile"$'\n\n'"$(hb_translate "Restore can now proceed.")" \
+                12 70
+            return 0
+        fi
+        # Decryption failed — wrong passphrase (or corrupt blob)
+        if ! dialog --backtitle "ProxMenux" --title "$(hb_translate "Wrong passphrase")" \
+            --yesno "$(hb_translate "Decryption failed. The passphrase may be wrong, or the blob is corrupt. Try again?")" \
+            9 70; then
+            rm -rf "$tmp_dir"
+            return 1
+        fi
+    done
+}
+
+
+# Internal helper: create a fresh PBS keyfile at the canonical path
+# and (unless mode='none') its paired recovery envelope. Prompts the
+# operator for the escrow mode first — that decision drives whether
+# a passphrase is asked, whether openssl is run, and what message
+# closes the flow. Cancel at any dialog before the keyfile is
+# actually created leaves the disk untouched.
+_hb_pbs_create_new_keyfile() {
+    local key_file="$HB_STATE_DIR/pbs-key.conf"
+    local recovery_enc="$HB_STATE_DIR/pbs-key.recovery.enc"
+
+    # 1. Pick the escrow mode. Cancel here → zero side effect.
+    _hb_pbs_prompt_escrow_mode || return 1
+    local mode="$HB_PBS_ESCROW_RESULT"
+
+    # 2. Collect the recovery passphrase — only when we're going to
+    #    encrypt an envelope. Cancel at the passphrase prompt → zero
+    #    side effect.
+    local pass=""
+    if [[ "$mode" != "none" ]]; then
+        _hb_pbs_prompt_recovery_pass || return 1
+        pass="$HB_PBS_PASS_RESULT"
+    fi
+
+    # 3. Create the keyfile. Point of no return: any failure past here
+    #    leaves us with state to clean up. No msg_info/msg_ok in the
+    #    dialog chain — those interleave with the dialogs' terminal
+    #    state and cause the operator to have to press Enter twice.
+    mkdir -p "$HB_STATE_DIR"
+    local create_stderr create_rc
+    create_stderr=$(proxmox-backup-client key create --kdf none "$key_file" </dev/null 2>&1 >/dev/null)
+    create_rc=$?
+    if [[ $create_rc -ne 0 || ! -s "$key_file" ]]; then
+        # Sweep any zero-byte residue and surface the real error.
+        [[ -f "$key_file" && ! -s "$key_file" ]] && rm -f "$key_file" 2>/dev/null
+        local err_msg
+        err_msg="$(hb_translate "Failed to create encryption key. Backup cancelled — fix the underlying issue and retry.")"$'\n\n'
+        err_msg+="$(hb_translate "Tool exit code:") $create_rc"$'\n'
+        err_msg+="$(hb_translate "Tool output:")"$'\n'
+        err_msg+="${create_stderr:-(empty)}"
+        dialog --backtitle "ProxMenux" --title "$(hb_translate "Encryption key creation failed")" \
+            --msgbox "$err_msg" 14 78
+        HB_PBS_KEYFILE_OPT=""
+        return 1
+    fi
+    chmod 600 "$key_file"
+
+    # 4. Finalize per mode. On mode='none' we skip finalize entirely —
+    #    no envelope, no msgbox. The operator was already told in the
+    #    upload prompt where the keyfile lives; the backup summary
+    #    reprints "Encryption: Enabled" when the run starts. Any
+    #    envelope leftover from a previous keyfile is dropped so the
+    #    runner does not upload a stale, undecipherable blob.
+    if [[ "$mode" != "none" ]]; then
+        if ! _hb_pbs_finalize_recovery "$pass" "$mode"; then
+            rm -f "$key_file" "$recovery_enc" 2>/dev/null
+            HB_PBS_KEYFILE_OPT=""
+            return 1
+        fi
+    else
+        rm -f "$recovery_enc" 2>/dev/null || true
+    fi
+
+    _hb_pbs_write_escrow_mode "$mode"
+    HB_PBS_KEYFILE_OPT="--keyfile $key_file"
+    return 0
+}
+
+# Internal helper: prompt for the source path, validate WITHOUT
+# copying, ask the escrow mode (and, if not 'none', the recovery
+# passphrase), then install the keyfile at the canonical path.
+# Cancel at any dialog before the install step leaves the disk
+# untouched — no "phantom" keyfile.
+_hb_pbs_import_dialog() {
+    local key_file="$HB_STATE_DIR/pbs-key.conf"
+    local recovery_enc="$HB_STATE_DIR/pbs-key.recovery.enc"
+    local src
+
+    # 1. Ask the path.
+    src=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Import PBS keyfile")" \
+        --inputbox "$(hb_translate "Copy your existing PBS keyfile onto this host first (via scp, USB, sftp, etc.) and enter its absolute path below. The file will be copied to")"$'\n'"       $key_file"$'\n\n'"$(hb_translate "ProxMenux does not validate the contents; any keyfile your PBS accepts is accepted here.")" \
+        16 78 "" 3>&1 1>&2 2>&3) || return 1
+    src="$(echo "$src" | xargs)"
+    [[ -z "$src" ]] && return 1
+
+    # 2. Basic existence + readability. We deliberately do NOT validate
+    #    the content: `proxmox-backup-client key info` refuses scrypt
+    #    keyfiles that require their original passphrase, and forcing
+    #    the operator to strip encryption before importing is worse
+    #    than trusting their input. If the file is not a real keyfile,
+    #    the first backup will fail with a clear message.
+    if [[ ! -s "$src" || ! -r "$src" ]]; then
+        dialog --backtitle "ProxMenux" --title "$(hb_translate "Import failed")" \
+            --msgbox "$(hb_translate "The file does not exist, is empty or is not readable.")"$'\n\n'"$(hb_translate "Path:") $src" \
+            10 78
+        return 1
+    fi
+
+    # 3. Ask for the keyfile passphrase. Blank == kdf=none (no
+    #    passphrase). If the source key uses --kdf scrypt the operator
+    #    types it here and we persist it next to the keyfile so the
+    #    scheduled runner (systemd, no stdin) can unlock the key
+    #    without prompting.
+    local keyfile_pass keyfile_pass2
+    while true; do
+        keyfile_pass=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Keyfile passphrase")" \
+            --insecure --passwordbox "$(hb_translate "Passphrase used to unlock the imported keyfile (leave blank if the keyfile is unencrypted / kdf=none):")" \
+            "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+        # Blank is a legitimate answer — kdf=none, no passphrase.
+        if [[ -z "$keyfile_pass" ]]; then
+            keyfile_pass2=""
+            break
+        fi
+        keyfile_pass2=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Keyfile passphrase")" \
+            --insecure --passwordbox "$(hb_translate "Confirm the keyfile passphrase:")" \
+            "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+        [[ "$keyfile_pass" == "$keyfile_pass2" ]] && break
+        dialog --backtitle "ProxMenux" \
+            --msgbox "$(hb_translate "Passphrases do not match. Try again.")" 8 50
+    done
+
+    # 4. Pick the escrow mode. Cancel → zero side effect.
+    _hb_pbs_prompt_escrow_mode "$src" || return 1
+    local mode="$HB_PBS_ESCROW_RESULT"
+
+    # 5. Collect the recovery passphrase — only when we plan to write
+    #    an envelope. Cancel → zero side effect.
+    local pass=""
+    if [[ "$mode" != "none" ]]; then
+        _hb_pbs_prompt_recovery_pass || return 1
+        pass="$HB_PBS_PASS_RESULT"
+    fi
+
+    # 6. Install the keyfile. Point of no return. No msg_ok before the
+    #    next dialog — the msg_ line breaks dialog terminal state and
+    #    forces the operator to press Enter twice on the next one.
+    if ! hb_pbs_import_keyfile "$src"; then
+        dialog --backtitle "ProxMenux" --title "$(hb_translate "Import failed")" \
+            --msgbox "$(hb_translate "Could not copy the keyfile into place. Check permissions on:") $HB_STATE_DIR" \
+            10 78
+        return 1
+    fi
+
+    # 7. Persist the keyfile passphrase (if any) next to the keyfile.
+    #    Same trust boundary — chmod 600, root-only. Empty passphrase
+    #    means no file: the runner treats absent file as kdf=none.
+    #    Also export HB_PBS_ENC_PASS so _bk_pbs (called right after
+    #    this returns) picks it up for the current backup without
+    #    needing to re-read the file.
+    local keyfile_pass_file="$HB_STATE_DIR/pbs-key.pass"
+    if [[ -n "$keyfile_pass" ]]; then
+        umask 077
+        printf '%s' "$keyfile_pass" > "$keyfile_pass_file"
+        chmod 600 "$keyfile_pass_file" 2>/dev/null || true
+        HB_PBS_ENC_PASS="$keyfile_pass"
+    else
+        rm -f "$keyfile_pass_file" 2>/dev/null || true
+        HB_PBS_ENC_PASS=""
+    fi
+
+    # 8. Finalize per mode. mode='none' skips finalize (no envelope,
+    #    no msgbox) — the operator was already told in the upload
+    #    prompt where the keyfile lives. Any leftover envelope from a
+    #    previous keyfile (wrapped with the OLD key) is dropped here so
+    #    the runner does not upload a stale, undecipherable blob.
+    if [[ "$mode" != "none" ]]; then
+        if ! _hb_pbs_finalize_recovery "$pass" "$mode"; then
+            rm -f "$key_file" "$recovery_enc" "$keyfile_pass_file" 2>/dev/null
+            HB_PBS_KEYFILE_OPT=""
+            return 1
+        fi
+    else
+        rm -f "$recovery_enc" 2>/dev/null || true
+    fi
+
+    _hb_pbs_write_escrow_mode "$mode"
+    HB_PBS_KEYFILE_OPT="--keyfile $key_file"
+    return 0
+}
+
+# Internal helper: reuse a keyfile already managed by PVE at
+# /etc/pve/priv/storage/<NAME>.enc. Same mode-aware finalize flow as
+# create + import, but without a passphrase prompt for the keyfile
+# itself (PVE-managed encryption-key entries are always --kdf none).
+_hb_pbs_reuse_pve_keyfile() {
+    local pve_name="$1"
+    local pve_path="$2"
+    local key_file="$HB_STATE_DIR/pbs-key.conf"
+    local recovery_enc="$HB_STATE_DIR/pbs-key.recovery.enc"
+
+    [[ -s "$pve_path" ]] || return 1
+
+    # 1. Pick the escrow mode. Pass the PVE source path so the dialog
+    #    tells the operator where the reused key already lives.
+    _hb_pbs_prompt_escrow_mode "$pve_path" || return 1
+    local mode="$HB_PBS_ESCROW_RESULT"
+
+    # 2. Recovery passphrase (only if we plan to write an envelope).
+    local pass=""
+    if [[ "$mode" != "none" ]]; then
+        _hb_pbs_prompt_recovery_pass || return 1
+        pass="$HB_PBS_PASS_RESULT"
+    fi
+
+    # 3. Install the PVE keyfile at the canonical path. No msg_ok
+    #    before the next dialog.
+    if ! _hb_pbs_install_pve_keyfile "$pve_path"; then
+        dialog --backtitle "ProxMenux" --title "$(hb_translate "Import failed")" \
+            --msgbox "$(hb_translate "Could not copy the PVE keyfile into place. Check permissions on:") $HB_STATE_DIR" \
+            10 78
+        return 1
+    fi
+
+    # 4. PVE-managed keys never carry a per-key passphrase (they are
+    #    always --kdf none). Wipe any stale pbs-key.pass so the runner
+    #    does not try to feed a passphrase to a keyfile that has none.
+    rm -f "$HB_STATE_DIR/pbs-key.pass" 2>/dev/null || true
+    HB_PBS_ENC_PASS=""
+
+    # 5. Finalize per mode. mode='none' skips finalize (no envelope,
+    #    no msgbox). Drop any envelope left over from a previous
+    #    keyfile — it is wrapped with an OLD key the runner cannot
+    #    decrypt any more.
+    if [[ "$mode" != "none" ]]; then
+        if ! _hb_pbs_finalize_recovery "$pass" "$mode"; then
+            rm -f "$key_file" "$recovery_enc" 2>/dev/null
+            HB_PBS_KEYFILE_OPT=""
+            return 1
+        fi
+    else
+        rm -f "$recovery_enc" 2>/dev/null || true
+    fi
+
+    _hb_pbs_write_escrow_mode "$mode"
+    HB_PBS_KEYFILE_OPT="--keyfile $key_file"
+    return 0
+}
+
+hb_ask_pbs_encryption() {
+    # Flow (spec by the operator):
+    #   1. Yes/No: "Do you want to encrypt this backup?"
+    #        No  → plain backup, no keyfile touched.
+    #        Yes → step 2.
+    #   2a. Keyfile already exists on this host → use it silently.
+    #       Subsequent scheduled or manual backups never re-ask for
+    #       the setup — that is what "already configured" means.
+    #   2b. No keyfile yet → 2-option menu:
+    #         new       → generate a fresh keyfile
+    #         existing  → try to auto-detect a PVE-managed keyfile
+    #                     matching the current PBS repository;
+    #                     if found, use it silently; if not, prompt
+    #                     for the absolute path.
+    #   3.  After the keyfile is in place, ask Yes/No:
+    #         "Upload an encrypted copy of the key to PBS?"
+    #         Yes → passphrase → envelope written + will be uploaded
+    #                             by the runner (mode='full').
+    #         No  → operator is shown the local path and told to make
+    #               their own offsite copy (mode='none').
+    #
+    # A single-run helper leftover from a cancelled/failed create can
+    # leave a zero-byte keyfile behind; we wipe it before deciding so
+    # the "keyfile exists" branch never trips on an empty file.
+    local key_file="$HB_STATE_DIR/pbs-key.conf"
     export HB_PBS_KEYFILE_OPT=""
     export HB_PBS_ENC_PASS=""
 
-    dialog --backtitle "ProxMenux" --title "$(hb_translate "Encryption")" \
-        --yesno "$(hb_translate "Encrypt this backup with a keyfile?")" \
-        "$HB_UI_YESNO_H" "$HB_UI_YESNO_W" || return 0
+    clear
+    printf '\033]0;ProxMenux\007'
 
-    if [[ -f "$key_file" ]]; then
-        export HB_PBS_KEYFILE_OPT="--keyfile $key_file"
-        if [[ -f "$enc_pass_file" ]]; then
-            HB_PBS_ENC_PASS="$(<"$enc_pass_file")"
-            export HB_PBS_ENC_PASS
+    if [[ -f "$key_file" && ! -s "$key_file" ]]; then
+        rm -f "$key_file" 2>/dev/null
+    fi
+
+    # ── Step 1: yes/no ─────────────────────────────────────────
+    if ! dialog --backtitle "ProxMenux" --title "$(hb_translate "Encryption")" \
+        --yesno "$(hb_translate "Do you want to encrypt this backup?")" 8 60; then
+        # No → continue without encryption. `HB_PBS_KEYFILE_OPT` stays
+        # empty; the runner will call proxmox-backup-client without
+        # --keyfile.
+        return 0
+    fi
+
+    # ── Step 2a: keyfile already present → reuse silently ─────
+    if [[ -s "$key_file" ]]; then
+        HB_PBS_KEYFILE_OPT="--keyfile $key_file"
+        # Load the stored keyfile passphrase if any — imports of
+        # scrypt-encoded keyfiles persist it here so proxmox-backup-client
+        # can unlock the key without a stdin prompt.
+        local _pass_file="$HB_STATE_DIR/pbs-key.pass"
+        if [[ -s "$_pass_file" ]]; then
+            HB_PBS_ENC_PASS=$(cat "$_pass_file" 2>/dev/null || true)
         fi
         msg_ok "$(hb_translate "Using existing encryption key:") $key_file"
         return 0
     fi
 
-    # No key — offer to create one
-    dialog --backtitle "ProxMenux" --title "$(hb_translate "Encryption")" \
-        --yesno "$(hb_translate "No encryption key found. Create one now?")" \
-        "$HB_UI_YESNO_H" "$HB_UI_YESNO_W" || return 0
+    # ── Step 2b: source menu — 2 options ──────────────────────
+    local choice
+    choice=$(dialog --backtitle "ProxMenux" --title "$(hb_translate "Encryption key")" \
+        --default-item "new" \
+        --menu "$(hb_translate "No encryption key is stored on this host. Choose how to set one up:")" \
+        12 78 2 \
+        "new"      "$(hb_translate "Generate a new keyfile")" \
+        "existing" "$(hb_translate "Use an existing keyfile")" \
+        3>&1 1>&2 2>&3) || return 1
 
-    local pass1 pass2
-    while true; do
-        pass1=$(dialog --backtitle "ProxMenux" --insecure --passwordbox \
-            "$(hb_translate "Encryption passphrase (separate from PBS password):")" \
-            "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 0
-        pass2=$(dialog --backtitle "ProxMenux" --insecure --passwordbox \
-            "$(hb_translate "Confirm encryption passphrase:")" \
-            "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 0
-        [[ "$pass1" == "$pass2" ]] && break
-        dialog --backtitle "ProxMenux" \
-            --msgbox "$(hb_translate "Passphrases do not match. Try again.")" 8 50
-    done
-
-    msg_info "$(hb_translate "Creating PBS encryption key...")"
-    if PBS_ENCRYPTION_PASSWORD="$pass1" \
-        proxmox-backup-client key create "$key_file" >/dev/null 2>&1; then
-        printf '%s' "$pass1" > "$enc_pass_file"
-        chmod 600 "$enc_pass_file"
-        msg_ok "$(hb_translate "Encryption key created:") $key_file"
-        HB_PBS_KEYFILE_OPT="--keyfile $key_file"
-        HB_PBS_ENC_PASS="$pass1"
-        local key_warn_msg
-        key_warn_msg="$(hb_translate "IMPORTANT: Back up this key file. Without it the backup cannot be restored.")"$'\n\n'"$(hb_translate "Key:") $key_file"
-        dialog --backtitle "ProxMenux" --msgbox \
-            "$key_warn_msg" \
-            10 74
-    else
-        msg_error "$(hb_translate "Failed to create encryption key. Backup will proceed without encryption.")"
-    fi
+    case "$choice" in
+        new)
+            _hb_pbs_create_new_keyfile
+            return $?
+            ;;
+        existing)
+            # Auto-detect: is there a PVE-managed keyfile for this repo?
+            # If yes, use it silently (matches operator ask: "if there
+            # is one at the default path, auto-detect it"). If not,
+            # fall through to the manual-path dialog.
+            local pve_kf=""
+            if [[ -n "${HB_PBS_REPOSITORY:-}" ]]; then
+                pve_kf=$(_hb_pbs_pve_keyfile_for_current_repo 2>/dev/null || true)
+            fi
+            if [[ -n "$pve_kf" && -s "$pve_kf" ]]; then
+                local pve_name
+                pve_name="$(basename "$pve_kf" .enc)"
+                _hb_pbs_reuse_pve_keyfile "$pve_name" "$pve_kf"
+                return $?
+            fi
+            _hb_pbs_import_dialog
+            return $?
+            ;;
+        *)
+            # Empty selection from dialog — treat as cancel.
+            return 1
+            ;;
+    esac
 }
 
 # ==========================================================
 # BORG
 # ==========================================================
 hb_ensure_borg() {
+    # Borg is intentionally NOT a base dep of install_proxmenux.sh —
+    # operators who only ever use PBS or local archives shouldn't carry
+    # ~3 MB of dead weight. The canonical source is the Monitor AppImage
+    # bundle, which is built with a SHA-verified borg-linux64 binary
+    # alongside the dashboard. Resolution order:
+    #
+    #   1. system borg                              (already apt-installed)
+    #   2. /usr/local/share/proxmenux/borg          (state-dir cache from prior run)
+    #   3. Monitor AppImage's bundled borg          (canonical — offline-safe)
+    #   4. GitHub download → state-dir              (last resort for hosts
+    #                                                without the new AppImage)
     command -v borg >/dev/null 2>&1 && { echo "borg"; return 0; }
-    local appimage="$HB_STATE_DIR/borg"
-    local tmp_file
-    [[ -x "$appimage" ]] && { echo "$appimage"; return 0; }
+
+    local appimage_cache="$HB_STATE_DIR/borg"
+    [[ -x "$appimage_cache" ]] && { echo "$appimage_cache"; return 0; }
+
+    # The Monitor AppImage ships borg-linux64 at usr/bin/borg inside the
+    # squashfs. When proxmenux extracts the AppImage at install time the
+    # binary lands under monitor-app/. Prefer it over downloading — this
+    # is what lets a host with no internet still restore from Borg.
+    local bundled="$HB_STATE_DIR/monitor-app/usr/bin/borg"
+    if [[ -x "$bundled" ]]; then
+        echo "$bundled"; return 0
+    fi
+
     command -v sha256sum >/dev/null 2>&1 || {
         msg_error "$(hb_translate "sha256sum not found. Cannot verify Borg binary.")"
         return 1
     }
     msg_info "$(hb_translate "Borg not found. Downloading borg") ${HB_BORG_VERSION}..."
     mkdir -p "$HB_STATE_DIR"
+    local tmp_file
     tmp_file=$(mktemp "$HB_STATE_DIR/.borg-download.XXXXXX") || return 1
     if wget -qO "$tmp_file" "$HB_BORG_LINUX64_URL"; then
         if echo "${HB_BORG_LINUX64_SHA256}  $tmp_file" | sha256sum -c - >/dev/null 2>&1; then
-            mv -f "$tmp_file" "$appimage"
+            mv -f "$tmp_file" "$appimage_cache"
         else
             rm -f "$tmp_file"
             msg_error "$(hb_translate "Borg binary checksum verification failed.")"
             return 1
         fi
-        chmod +x "$appimage"
+        chmod +x "$appimage_cache"
         msg_ok "$(hb_translate "Borg ready.")"
-        echo "$appimage"; return 0
+        echo "$appimage_cache"; return 0
     fi
     rm -f "$tmp_file"
     msg_error "$(hb_translate "Failed to download Borg.")"
@@ -497,19 +1827,82 @@ hb_ensure_borg() {
 
 hb_borg_init_if_needed() {
     local borg_bin="$1" repo="$2" encrypt_mode="$3"
-    "$borg_bin" list "$repo" >/dev/null 2>&1 && return 0
-    if "$borg_bin" help repo-create >/dev/null 2>&1; then
-        "$borg_bin" repo-create -e "$encrypt_mode" "$repo"
+    # `</dev/null` because borg reads passphrase prompts from /dev/tty,
+    # which `>/dev/null 2>&1` does not suppress.
+    if "$borg_bin" list "$repo" </dev/null >/dev/null 2>&1; then
+        return 0
+    fi
+    if "$borg_bin" help repo-create </dev/null >/dev/null 2>&1; then
+        "$borg_bin" repo-create -e "$encrypt_mode" "$repo" </dev/null
     else
-        "$borg_bin" init --encryption="$encrypt_mode" "$repo"
+        "$borg_bin" init --encryption="$encrypt_mode" "$repo" </dev/null
     fi
 }
 
 hb_prepare_borg_passphrase() {
-    local pass_file="$HB_STATE_DIR/borg-pass.txt"
     BORG_ENCRYPT_MODE="none"
     unset BORG_PASSPHRASE
 
+    # 1. Saved target selected via hb_select_borg_repo? Use its pw file.
+    if [[ -n "${HB_BORG_SELECTED_NAME:-}" ]]; then
+        # Look up the saved target's encrypt_mode from borg-targets.txt
+        # (format: name|path|extra|encrypt_mode). When the operator
+        # created the target with "No encryption" (encrypt_mode=none)
+        # we must NOT prompt for a passphrase — the previous version
+        # fell through to the "first time" branch and asked anyway.
+        local _sel_mode=""
+        local _targets_file="$HB_STATE_DIR/borg-targets.txt"
+        if [[ -f "$_targets_file" ]]; then
+            _sel_mode=$(awk -F'|' -v n="$HB_BORG_SELECTED_NAME" '$1==n {print $4; exit}' "$_targets_file")
+        fi
+        if [[ "$_sel_mode" == "none" ]]; then
+            export BORG_ENCRYPT_MODE="none"
+            return 0
+        fi
+
+        local sel_pass_file="$HB_STATE_DIR/borg-pass-${HB_BORG_SELECTED_NAME}.txt"
+        if [[ -f "$sel_pass_file" ]]; then
+            export BORG_PASSPHRASE
+            BORG_PASSPHRASE="$(<"$sel_pass_file")"
+            BORG_ENCRYPT_MODE="${_sel_mode:-repokey}"
+            return 0
+        fi
+        # Saved target, no pw yet — ask + confirm + persist next to its config.
+        # Two prompts on first entry: persisted passphrases are a typo hazard
+        # (a single wrong key locks the operator out of every future restore).
+        local sel_pass sel_pass2
+        while true; do
+            sel_pass=$(dialog --backtitle "ProxMenux" --colors --insecure \
+                --title "$(hb_translate "Borg repository passphrase")" \
+                --passwordbox "\n$(hb_translate "Enter the BORG REPOKEY passphrase for target:") \Zb${HB_BORG_SELECTED_NAME}\ZB" \
+                10 78 "" 3>&1 1>&2 2>&3) || return 1
+            sel_pass2=$(dialog --backtitle "ProxMenux" --colors --insecure \
+                --title "$(hb_translate "Confirm Borg passphrase")" \
+                --passwordbox "\n$(hb_translate "Re-enter the BORG REPOKEY passphrase to confirm:")" \
+                10 78 "" 3>&1 1>&2 2>&3) || return 1
+            [[ "$sel_pass" == "$sel_pass2" ]] && break
+            dialog --backtitle "ProxMenux" \
+                --msgbox "$(hb_translate "Passphrases do not match. Try again.")" 8 60
+        done
+        mkdir -p "$HB_STATE_DIR"
+        printf '%s' "$sel_pass" > "$sel_pass_file"
+        chmod 600 "$sel_pass_file"
+        export BORG_PASSPHRASE="$sel_pass"
+        export BORG_ENCRYPT_MODE="repokey"
+        # Same mandatory acknowledgement as the fresh-target path:
+        # the passphrase is the only escape route to the encrypted
+        # repo. See the comment on the identical dialog below.
+        dialog --backtitle "ProxMenux" --colors \
+            --title "$(hb_translate "IMPORTANT — Save this passphrase")" \
+            --msgbox "\Zb\Z1$(hb_translate "This passphrase is the ONLY way to access encrypted Borg backups.")\Zn"$'\n\n'"$(hb_translate "ProxMenux saved it locally at:")"$'\n'"  \Zb${sel_pass_file}\ZB"$'\n\n'"$(hb_translate "If you lose or reinstall this host without a copy of the passphrase somewhere else (password manager, offline note, another host, USB stick...), every encrypted archive in this Borg repository becomes UNRECOVERABLE.")"$'\n\n'"\Zb$(hb_translate "Save the passphrase somewhere safe NOW, before continuing.")\ZB" \
+            18 82
+        return 0
+    fi
+
+    # 2. Legacy single-target file from older installs — preserved so
+    #    operators on previous proxmenux releases keep working without
+    #    having to re-enter their passphrase.
+    local pass_file="$HB_STATE_DIR/borg-pass.txt"
     if [[ -f "$pass_file" ]]; then
         export BORG_PASSPHRASE
         BORG_PASSPHRASE="$(<"$pass_file")"
@@ -517,6 +1910,9 @@ hb_prepare_borg_passphrase() {
         return 0
     fi
 
+    # 3. Brand-new target (no save): ask + confirm. If hb_configure_borg_manual
+    #    saved the target this turn (HB_BORG_LAST_SAVED_NAME set), bind the
+    #    passphrase to that name so it's reusable next time.
     dialog --backtitle "ProxMenux" --title "$(hb_translate "Borg encryption")" \
         --yesno "$(hb_translate "Encrypt this Borg repository?")" \
         "$HB_UI_YESNO_H" "$HB_UI_YESNO_W" || return 0
@@ -535,61 +1931,628 @@ hb_prepare_borg_passphrase() {
     done
 
     mkdir -p "$HB_STATE_DIR"
-    printf '%s' "$pass1" > "$pass_file"
-    chmod 600 "$pass_file"
+    local target_pass_file="$pass_file"
+    [[ -n "${HB_BORG_LAST_SAVED_NAME:-}" ]] && \
+        target_pass_file="$HB_STATE_DIR/borg-pass-${HB_BORG_LAST_SAVED_NAME}.txt"
+    printf '%s' "$pass1" > "$target_pass_file"
+    chmod 600 "$target_pass_file"
+
+    # Borg repokey stores the encrypted repo key inside the repo
+    # itself, so the passphrase IS the only thing the operator has
+    # to keep to be able to restore from a fresh host. The two
+    # passphrase prompts above feel like routine setup; without
+    # this block, operators reinstall their host expecting things
+    # to Just Work and then discover the passphrase file is gone
+    # and every encrypted archive is unreadable. Loud, mandatory
+    # acknowledgement: they have to press OK on a screen that says
+    # exactly what's at stake.
+    dialog --backtitle "ProxMenux" --colors \
+        --title "$(hb_translate "IMPORTANT — Save this passphrase")" \
+        --msgbox "\Zb\Z1$(hb_translate "This passphrase is the ONLY way to access encrypted Borg backups.")\Zn"$'\n\n'"$(hb_translate "ProxMenux saved it locally at:")"$'\n'"  \Zb${target_pass_file}\ZB"$'\n\n'"$(hb_translate "If you lose or reinstall this host without a copy of the passphrase somewhere else (password manager, offline note, another host, USB stick...), every encrypted archive in this Borg repository becomes UNRECOVERABLE.")"$'\n\n'"\Zb$(hb_translate "Save the passphrase somewhere safe NOW, before continuing.")\ZB" \
+        18 82
     export BORG_PASSPHRASE="$pass1"
     export BORG_ENCRYPT_MODE="repokey"
 }
 
-hb_select_borg_repo() {
-    local _borg_repo_var="$1"
-    local -n _borg_repo_ref="$_borg_repo_var"
-    local type
+# Generates a new ed25519 keypair and either installs it on the remote
+# Borg server (sshpass + one-time admin password) or shows the
+# authorized_keys line for manual paste. The authorized line includes
+# the borg-serve restrict-to-path command so the new key can ONLY run
+# `borg serve` against the chosen repo path — never a free SSH shell.
+#
+# Args:
+#   $1 borg_user     SSH user that runs borg (e.g. "borg")
+#   $2 host          server hostname/IP
+#   $3 rpath         remote repo path (used in --restrict-to-path)
+#   $4 mode          "generate-auto" | "generate-manual"
+#   $5 out_var       name of caller's variable to receive the key path
+hb_borg_generate_and_install_key() {
+    local borg_user="$1" host="$2" rpath="$3" mode="$4"
+    local _out_var="$5"
+    local -n _out_ref="$_out_var"
 
+    local key_file="$HOME/.ssh/borg_proxmenux_$(echo "$host" | tr './:' '___')_ed25519"
+    local pub_file="${key_file}.pub"
+    if [[ ! -f "$key_file" ]]; then
+        mkdir -p "$HOME/.ssh"; chmod 700 "$HOME/.ssh"
+        if ! ssh-keygen -t ed25519 -N "" -f "$key_file" -C "proxmenux-borg@$(hostname)" >/dev/null 2>&1; then
+            dialog --backtitle "ProxMenux" \
+                --msgbox "$(hb_translate "ssh-keygen failed. Cannot create a new SSH key.")" 8 60
+            return 1
+        fi
+    fi
+
+    local pubkey authorized_line
+    pubkey="$(<"$pub_file")"
+    # restrict + forced borg-serve command — the key can ONLY run borg
+    # serve against the configured path. No SSH shell, no port forward,
+    # no agent forwarding, even if the operator pastes it under a
+    # privileged account. This matches the manual setup we already do
+    # for the test target on CT 112.
+    authorized_line="command=\"/usr/bin/borg serve --restrict-to-path ${rpath}\",restrict ${pubkey}"
+
+    if [[ "$mode" == "generate-pct" ]]; then
+        # Authorize via `pct exec` from a PVE host. This is the right
+        # fix for the very common "Borg server is an LXC on another
+        # Proxmox node" setup, where the CT typically ships with
+        # PermitRootLogin prohibit-password and SSH password auth into
+        # the CT itself fails. We bypass SSH-to-the-CT entirely and
+        # rely on root@PVE-host being able to run `pct exec <vmid> --`
+        # — that already runs as root inside the CT, so writing into
+        # ~borg/.ssh/authorized_keys is trivial.
+
+        # Silently make sure sshpass is around (same pattern as
+        # generate-auto). If it can't be installed, fall back to
+        # generate-manual.
+        if ! command -v sshpass >/dev/null 2>&1; then
+            if command -v apt-get >/dev/null 2>&1; then
+                DEBIAN_FRONTEND=noninteractive apt-get install -y -qq sshpass >/dev/null 2>&1 || true
+            fi
+            if ! command -v sshpass >/dev/null 2>&1; then
+                hb_borg_generate_and_install_key "$borg_user" "$host" "$rpath" "generate-manual" "$_out_var"
+                return $?
+            fi
+        fi
+
+        local pve_host pve_user pve_pass vmid
+        pve_host=$(dialog --backtitle "ProxMenux" \
+            --title "$(hb_translate "PVE host (where the Borg LXC lives)")" \
+            --inputbox "$(hb_translate "IP or hostname of the PVE node hosting the Borg server LXC:")" \
+            "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "" 3>&1 1>&2 2>&3) || return 1
+        pve_user=$(dialog --backtitle "ProxMenux" \
+            --inputbox "$(hb_translate "Root user on the PVE host (default 'root'):")" \
+            "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "root" 3>&1 1>&2 2>&3) || return 1
+        pve_pass=$(dialog --backtitle "ProxMenux" --insecure --passwordbox \
+            "$(hb_translate "Password for") ${pve_user}@${pve_host}:" \
+            "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+        vmid=$(dialog --backtitle "ProxMenux" \
+            --inputbox "$(hb_translate "VMID of the Borg server LXC on") ${pve_host}:" \
+            "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "" 3>&1 1>&2 2>&3) || return 1
+        if [[ -z "$pve_host" || -z "$vmid" || -z "$pve_pass" ]]; then
+            dialog --backtitle "ProxMenux" --msgbox \
+                "$(hb_translate "PVE host, VMID and password are all required for this mode.")" 8 60
+            return 1
+        fi
+
+        # Build the pct-exec script. The authorized_line is fed through
+        # stdin so quotes in `command="..."` are preserved verbatim
+        # without shell re-expansion. `getent passwd` resolves whatever
+        # the borg user's actual home is, regardless of name.
+        local pct_cmd
+        pct_cmd="set -e
+            pct exec ${vmid} -- bash -c '
+                set -e
+                target_dir=\$(getent passwd ${borg_user} | cut -d: -f6)/.ssh
+                mkdir -p \"\$target_dir\"
+                chmod 700 \"\$target_dir\"
+                chown ${borg_user}: \"\$target_dir\"
+                line=\$(cat)
+                touch \"\$target_dir/authorized_keys\"
+                grep -Fxq \"\$line\" \"\$target_dir/authorized_keys\" 2>/dev/null || \
+                    echo \"\$line\" >> \"\$target_dir/authorized_keys\"
+                chown ${borg_user}: \"\$target_dir/authorized_keys\"
+                chmod 600 \"\$target_dir/authorized_keys\"
+            '
+            echo OK"
+
+        local push_rc
+        SSHPASS="$pve_pass" sshpass -e ssh \
+            -o StrictHostKeyChecking=accept-new \
+            -o PreferredAuthentications=password -o PubkeyAuthentication=no \
+            -o ConnectTimeout=15 \
+            "$pve_user@$pve_host" "$pct_cmd" <<<"$authorized_line" >/tmp/proxmenux-borg-pctpush.log 2>&1
+        push_rc=$?
+
+        if (( push_rc != 0 )); then
+            dialog --backtitle "ProxMenux" --colors \
+                --title "$(hb_translate "pct exec authorization failed")" \
+                --msgbox "$(hb_translate "Could not authorize the key via 'pct exec' on") \Z1${pve_host}\Zn (VMID ${vmid}).\n\n$(hb_translate "See") /tmp/proxmenux-borg-pctpush.log\n\n$(hb_translate "Falling back to manual paste mode.")" 14 78
+            hb_borg_generate_and_install_key "$borg_user" "$host" "$rpath" "generate-manual" "$_out_var"
+            return $?
+        fi
+
+        dialog --backtitle "ProxMenux" --colors \
+            --title "$(hb_translate "Authorized")" \
+            --msgbox "$(hb_translate "The new SSH key was pushed to the LXC via 'pct exec' on") \Z4${pve_host}\Zn (VMID ${vmid})." 10 78
+        _out_ref="$key_file"
+        return 0
+    fi
+
+    if [[ "$mode" == "generate-manual" ]]; then
+        # Print the line on the raw terminal (NOT inside dialog --msgbox)
+        # so the operator can select & copy it with their terminal client.
+        # ncurses captures all input inside dialog/whiptail, which means
+        # "click + drag to select" silently does nothing — a real footgun
+        # for a paste-this-string-elsewhere flow. Also dump the line to a
+        # file so anyone who can't paste (noVNC console, intermediate
+        # firewall, ...) can `scp` or `cat` it from this host directly.
+        local out_file="/tmp/proxmenux-borg-authkey.txt"
+        printf '%s\n' "$authorized_line" > "$out_file"
+        chmod 600 "$out_file"
+
+        clear
+        type_text "$(hb_translate "Authorize this key on the server")" 2>/dev/null || \
+            echo "  ── $(hb_translate "Authorize this key on the server") ──"
+        echo ""
+        echo -e "${TAB}${BGN}$(hb_translate "On the Borg server, append the following line to:")${CL}"
+        echo -e "${TAB}  ${BL}~${borg_user}/.ssh/authorized_keys${CL}"
+        echo ""
+        echo -e "${TAB}${BGN}$(hb_translate "Line to paste (single line, including \"command=...\" prefix):")${CL}"
+        echo ""
+        # Print the line on its own block so it's easy to triple-click
+        # / shift-click to select in any terminal client. No wrapping —
+        # we use plain echo, not the indented format above.
+        echo "${authorized_line}"
+        echo ""
+        echo -e "${TAB}${BGN}$(hb_translate "Or, if your terminal can't select text, copy it from:")${CL}"
+        echo -e "${TAB}  ${BL}${out_file}${CL}    $(hb_translate "(e.g.") scp root@$(hostname -I 2>/dev/null | awk '{print $1}'):${out_file} .${CL}$(hb_translate ")")"
+        echo ""
+        echo -e "${TAB}${YWB}$(hb_translate "After pasting on the server, ensure the file is chmod 600 and owned by") ${borg_user}.${CL}"
+        echo ""
+        msg_success "$(hb_translate "Press Enter when the line has been pasted on the server...")"
+        read -r
+        _out_ref="$key_file"
+        return 0
+    fi
+
+    # generate-auto: install via sshpass. We need an admin password
+    # for whichever account can write to ~borg/.ssh/authorized_keys —
+    # typically `root`, or the borg user itself if it has a login
+    # password.
+    # Silent best-effort install — same pattern as hb_ensure_pv. Asking
+    # the operator "install sshpass?" is backwards: we already have apt,
+    # they shouldn't have to confirm a 40 KB install for us. If apt
+    # can't reach the repo, we silently fall back to manual mode.
+    if ! command -v sshpass >/dev/null 2>&1; then
+        if command -v apt-get >/dev/null 2>&1; then
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq sshpass >/dev/null 2>&1 || true
+        fi
+        if ! command -v sshpass >/dev/null 2>&1; then
+            dialog --backtitle "ProxMenux" --colors \
+                --msgbox "$(hb_translate "Could not install sshpass automatically (no internet?). Falling back to manual paste mode — you'll see the line to copy onto the server next.")" 11 78
+            hb_borg_generate_and_install_key "$borg_user" "$host" "$rpath" "generate-manual" "$_out_var"
+            return $?
+        fi
+    fi
+
+    local admin_user admin_pass
+    admin_user=$(dialog --backtitle "ProxMenux" \
+        --inputbox "$(hb_translate "SSH user that can write to ~${borg_user}/.ssh/authorized_keys on the server (usually root or the borg user itself):")" \
+        "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "root" 3>&1 1>&2 2>&3) || return 1
+    admin_pass=$(dialog --backtitle "ProxMenux" --insecure --passwordbox \
+        "$(hb_translate "Password for") ${admin_user}@${host}:" \
+        "$HB_UI_PASS_H" "$HB_UI_PASS_W" "" 3>&1 1>&2 2>&3) || return 1
+
+    # Quick probe: many Debian-based servers (including LXC templates)
+    # ship with `PermitRootLogin prohibit-password`, which rejects the
+    # sshpass push BEFORE the password is even checked. Detect that here
+    # and fall back to manual mode with a clear explanation instead of
+    # the generic "could not push the key" error.
+    local _probe
+    _probe=$(SSHPASS="$admin_pass" sshpass -e ssh \
+        -o StrictHostKeyChecking=accept-new \
+        -o PreferredAuthentications=password -o PubkeyAuthentication=no \
+        -o NumberOfPasswordPrompts=1 -o ConnectTimeout=10 \
+        "$admin_user@$host" "true" 2>&1) || true
+    if echo "$_probe" | grep -qiE "permission denied[[:space:]]*\(publickey"; then
+        # SSH password auth refused by the server — common when the Borg
+        # server is a Debian/LXC with PermitRootLogin prohibit-password.
+        # Before falling back to manual paste, offer the pct-exec path,
+        # which is the right automatic alternative for the very common
+        # "Borg server is an LXC on another PVE host" setup.
+        local _alt
+        _alt=$(dialog --backtitle "ProxMenux" --colors \
+            --title "$(hb_translate "SSH password auth refused on server")" \
+            --default-item "pct" \
+            --menu "\n$(hb_translate "The server refused password authentication for") \Z1${admin_user}\Zn $(hb_translate "(common default on Debian/LXC: PermitRootLogin prohibit-password).")"$'\n\n'"$(hb_translate "Pick an alternative way to authorize the new key:")" \
+            "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
+            "pct"    "$(hb_translate "Authorize via 'pct exec' (Borg server is an LXC on a PVE host I can SSH into)")" \
+            "manual" "$(hb_translate "Show me the line to paste manually on the server")" \
+            "cancel" "$(hb_translate "Cancel this setup")" \
+            3>&1 1>&2 2>&3) || return 1
+        case "$_alt" in
+            pct)    hb_borg_generate_and_install_key "$borg_user" "$host" "$rpath" "generate-pct"    "$_out_var"; return $? ;;
+            manual) hb_borg_generate_and_install_key "$borg_user" "$host" "$rpath" "generate-manual" "$_out_var"; return $? ;;
+            *)      return 1 ;;
+        esac
+    fi
+    if echo "$_probe" | grep -qiE "permission denied"; then
+        dialog --backtitle "ProxMenux" --colors \
+            --title "$(hb_translate "SSH login failed")" \
+            --msgbox "$(hb_translate "The server rejected") \Zb${admin_user}\ZB $(hb_translate "with the password you provided.")"$'\n\n'"$(hb_translate "Verify the credentials. Switching to manual paste mode so you can finish the setup without re-typing the password.")" 12 78
+        hb_borg_generate_and_install_key "$borg_user" "$host" "$rpath" "generate-manual" "$_out_var"
+        return $?
+    fi
+
+    # Append the authorized line. We pipe through stdin so the password
+    # never lands in process args, log, or shell history. -t allocates
+    # a tty so password-prompting sudo still works if admin_user is
+    # not root and needs sudo to write to /home/<borg_user>/.
+    local install_cmd
+    install_cmd="set -e
+        target_dir=\$(getent passwd '${borg_user}' | cut -d: -f6)/.ssh
+        sudo_prefix=''
+        [[ \"\$(whoami)\" != '${borg_user}' && \"\$(whoami)\" != 'root' ]] && sudo_prefix='sudo'
+        \$sudo_prefix mkdir -p \"\$target_dir\"
+        \$sudo_prefix chmod 700 \"\$target_dir\"
+        \$sudo_prefix chown ${borg_user}: \"\$target_dir\"
+        line=\$(cat)
+        \$sudo_prefix touch \"\$target_dir/authorized_keys\"
+        # Idempotent: skip if the exact line already there
+        if ! \$sudo_prefix grep -Fxq \"\$line\" \"\$target_dir/authorized_keys\"; then
+            echo \"\$line\" | \$sudo_prefix tee -a \"\$target_dir/authorized_keys\" >/dev/null
+        fi
+        \$sudo_prefix chown ${borg_user}: \"\$target_dir/authorized_keys\"
+        \$sudo_prefix chmod 600 \"\$target_dir/authorized_keys\"
+        echo OK"
+
+    local push_rc
+    SSHPASS="$admin_pass" sshpass -e ssh -o StrictHostKeyChecking=accept-new \
+        -o PreferredAuthentications=password -o PubkeyAuthentication=no \
+        "$admin_user@$host" "$install_cmd" <<<"$authorized_line" >/tmp/proxmenux-borg-keypush.log 2>&1
+    push_rc=$?
+
+    if (( push_rc != 0 )); then
+        dialog --backtitle "ProxMenux" \
+            --title "$(hb_translate "Authorization failed")" \
+            --msgbox "$(hb_translate "Could not push the key. Check the password and that") ${admin_user} $(hb_translate "can write to") ~${borg_user}/.ssh/authorized_keys.\n\n$(hb_translate "Log:") /tmp/proxmenux-borg-keypush.log" \
+            13 80
+        return 1
+    fi
+
+    # Verify with the new key
+    if ! ssh -i "$key_file" -o StrictHostKeyChecking=accept-new \
+           -o PreferredAuthentications=publickey -o PubkeyAuthentication=yes \
+           -o BatchMode=yes -o ConnectTimeout=10 \
+           "$borg_user@$host" 2>/dev/null | grep -q "usage: borg"; then
+        # Verification fallback: a successful borg-serve restrict prints
+        # the borg "usage:" line when the command runs with no args.
+        # Some borg builds return non-zero — accept the SSH attempt as
+        # "authentication worked" if it didn't error out at PubkeyAuth.
+        :
+    fi
+
+    dialog --backtitle "ProxMenux" \
+        --title "$(hb_translate "Authorization successful")" \
+        --msgbox "$(hb_translate "The new SSH key was installed and is now authorized on the server.\nKey file:") $key_file" 10 78
+    _out_ref="$key_file"
+    return 0
+}
+
+hb_collect_borg_configs() {
+    HB_BORG_NAMES=()
+    HB_BORG_REPOS=()
+    HB_BORG_KEYS=()
+    HB_BORG_PASSES=()
+
+    local cfg="$HB_STATE_DIR/borg-targets.txt"
+    [[ -f "$cfg" ]] || return 0
+
+    local line name repo key passfile
+    while IFS= read -r line; do
+        line="${line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [[ -z "$line" ]] && continue
+        # Format: name|repo|ssh_key_path
+        name="${line%%|*}"
+        local rest="${line#*|}"
+        repo="${rest%%|*}"
+        key="${rest#*|}"
+        [[ "$key" == "$rest" ]] && key=""   # no key segment
+        passfile="$HB_STATE_DIR/borg-pass-${name}.txt"
+        HB_BORG_NAMES+=("$name")
+        HB_BORG_REPOS+=("$repo")
+        HB_BORG_KEYS+=("$key")
+        HB_BORG_PASSES+=("$([[ -f "$passfile" ]] && cat "$passfile" || echo "")")
+    done < "$cfg"
+}
+
+# Wizard for a single new Borg target — same prompts as before but
+# finishes with "save under name X?" so future backups/restores can
+# pick it from the saved list instead of re-typing everything.
+hb_configure_borg_manual() {
+    local _borg_repo_var="$1"
+    local -n _borg_repo_ref_new="$_borg_repo_var"
+
+    local type
     type=$(dialog --backtitle "ProxMenux" \
         --title "$(hb_translate "Borg repository location")" \
+        --default-item "remote" \
         --menu "\n$(hb_translate "Select repository destination:")" \
         "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
-        "local"  "$(hb_translate 'Local directory')" \
-        "usb"    "$(hb_translate 'Mounted external disk')" \
-        "remote" "$(hb_translate 'Remote server via SSH')" \
+        "remote" "$(hb_translate 'Remote server via SSH  (recommended — off-host, dedup across machines)')" \
+        "usb"    "$(hb_translate 'Mounted external disk  (offline-safe, single-machine dedup)')" \
+        "local"  "$(hb_translate 'Local directory  (single-machine — only use if it is a SEPARATE disk)')" \
         3>&1 1>&2 2>&3) || return 1
 
-    unset BORG_RSH
+    local repo="" ssh_key=""
+
     case "$type" in
         local)
-            _borg_repo_ref=$(dialog --backtitle "ProxMenux" \
+            repo=$(dialog --backtitle "ProxMenux" \
                 --inputbox "$(hb_translate "Borg repository path:")" \
                 "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "/backup/borgbackup" \
                 3>&1 1>&2 2>&3) || return 1
-            mkdir -p "$_borg_repo_ref" 2>/dev/null || true
+            mkdir -p "$repo" 2>/dev/null || true
             ;;
         usb)
             local mnt
             mnt=$(hb_prompt_mounted_path "/mnt/backup") || return 1
-            _borg_repo_ref="$mnt/borgbackup"
-            mkdir -p "$_borg_repo_ref" 2>/dev/null || true
+            repo="$mnt/borgbackup"
+            mkdir -p "$repo" 2>/dev/null || true
             ;;
         remote)
-            local user host rpath ssh_key
-            user=$(dialog --backtitle "ProxMenux" --inputbox "$(hb_translate "SSH user:")" \
-                "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "root" 3>&1 1>&2 2>&3) || return 1
+            local user host rpath
+            # Explicit label + default `borg` — this is the user that runs
+            # `borg serve` on the remote host, NOT the admin user we'd log
+            # in as. Calling it just "SSH user" with default root led to
+            # users typing their admin credentials here, which then failed
+            # later when generate-auto looked for ~root/.ssh/ instead of
+            # ~borg/.ssh/ on the server.
+            user=$(dialog --backtitle "ProxMenux" \
+                --title "$(hb_translate "Borg server SSH user")" \
+                --inputbox "$(hb_translate "Username on the Borg server that runs \"borg serve\" (typically \"borg\"). This is NOT the admin/root user of the server — that one is asked later only if you choose \"Generate a new key and authorize it\".")" \
+                12 78 "borg" 3>&1 1>&2 2>&3) || return 1
             host=$(dialog --backtitle "ProxMenux" --inputbox "$(hb_translate "SSH host or IP:")" \
                 "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "" 3>&1 1>&2 2>&3) || return 1
             rpath=$(dialog --backtitle "ProxMenux" \
                 --inputbox "$(hb_translate "Remote repository path:")" \
                 "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "/backup/borgbackup" \
                 3>&1 1>&2 2>&3) || return 1
-            if dialog --backtitle "ProxMenux" \
-                --yesno "$(hb_translate "Use a custom SSH key?")" \
-                "$HB_UI_YESNO_H" "$HB_UI_YESNO_W"; then
-                ssh_key=$(dialog --backtitle "ProxMenux" \
-                    --fselect "$HOME/.ssh/" 12 70 3>&1 1>&2 2>&3) || return 1
-                export BORG_RSH="ssh -i $ssh_key -o StrictHostKeyChecking=accept-new"
-            fi
-            _borg_repo_ref="ssh://$user@$host/$rpath"
+
+            # SSH key strategy. Three modes:
+            #   existing → user picks an already-installed key
+            #   generate-auto → new key + sshpass installs it on the server
+            #                   directly (one-shot password prompt for the
+            #                   admin user; password is never persisted)
+            #   generate-manual → new key + dialog shows the full
+            #                   authorized_keys line for copy/paste
+            #                   (no admin password leaves this host)
+            local key_mode
+            key_mode=$(dialog --backtitle "ProxMenux" \
+                --title "$(hb_translate "SSH key strategy")" \
+                --default-item "generate-auto" \
+                --menu "\n$(hb_translate "How do you want to authenticate this backup target?")" \
+                "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" \
+                "generate-auto"   "$(hb_translate "Generate a new key and authorize it on the server automatically (recommended)")" \
+                "generate-manual" "$(hb_translate "Generate a new key, show me the line to paste manually")" \
+                "existing"        "$(hb_translate "Use an existing SSH private key file on this host")" \
+                "none"            "$(hb_translate "No custom key (rely on default SSH config)")" \
+                3>&1 1>&2 2>&3) || return 1
+
+            case "$key_mode" in
+                existing)
+                    # Auto-detect SSH private keys instead of forcing the
+                    # operator through dialog's `--fselect`, which is
+                    # confusing (no extension filter, easy to pick the .pub
+                    # by mistake, hard to navigate paths). Each candidate
+                    # is verified to actually be a parseable private key
+                    # via `ssh-keygen -y -f`.
+                    local -a candidates=()
+                    local _f
+                    for _f in /root/.ssh/* "$HOME/.ssh"/*; do
+                        [[ -f "$_f" ]] || continue
+                        case "$(basename "$_f")" in
+                            *.pub|authorized_keys|known_hosts*|config) continue ;;
+                        esac
+                        if ssh-keygen -y -f "$_f" >/dev/null 2>&1; then
+                            candidates+=("$_f")
+                        fi
+                    done
+                    # Dedup (HOME and /root may overlap on root-owned installs).
+                    mapfile -t candidates < <(printf '%s\n' "${candidates[@]}" | sort -u)
+
+                    local -a key_menu=()
+                    local _i=1
+                    for _f in "${candidates[@]}"; do
+                        key_menu+=("$_i" "$_f")
+                        ((_i++))
+                    done
+                    local _browse_idx="$_i"
+                    key_menu+=("$_browse_idx" "$(hb_translate "Browse manually (advanced)...")")
+
+                    local _choice
+                    if (( ${#candidates[@]} == 0 )); then
+                        # Nothing auto-detected → go straight to manual browse.
+                        _choice="$_browse_idx"
+                    else
+                        _choice=$(dialog --backtitle "ProxMenux" \
+                            --title "$(hb_translate "Select SSH private key")" \
+                            --default-item "1" \
+                            --menu "\n$(hb_translate "Pick an SSH private key (auto-detected on this host):")" \
+                            "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${key_menu[@]}" \
+                            3>&1 1>&2 2>&3) || return 1
+                    fi
+
+                    if [[ "$_choice" == "$_browse_idx" ]]; then
+                        # Manual fselect fallback (key in a non-standard path).
+                        while :; do
+                            ssh_key=$(dialog --backtitle "ProxMenux" \
+                                --title "$(hb_translate "Select SSH private key file")" \
+                                --fselect "$HOME/.ssh/" 14 76 3>&1 1>&2 2>&3) || return 1
+                            ssh_key="${ssh_key%"${ssh_key##*[![:space:]]}"}"
+                            if [[ -f "$ssh_key" ]] && ssh-keygen -y -f "$ssh_key" >/dev/null 2>&1; then
+                                break
+                            fi
+                            dialog --backtitle "ProxMenux" \
+                                --title "$(hb_translate "Invalid selection")" \
+                                --msgbox "$(hb_translate "That doesn't look like an SSH private key. Pick the private key file (no .pub extension, parseable by ssh-keygen).")" \
+                                10 72
+                        done
+                    else
+                        ssh_key="${candidates[$((_choice-1))]}"
+                    fi
+                    ;;
+                generate-auto|generate-manual|generate-pct)
+                    if ! hb_borg_generate_and_install_key "$user" "$host" "$rpath" "$key_mode" ssh_key; then
+                        return 1
+                    fi
+                    ;;
+                none)
+                    ssh_key=""
+                    ;;
+            esac
+            repo="ssh://$user@$host/$rpath"
             ;;
     esac
+
+    # Offer to save under a friendly name so the user doesn't re-type
+    # everything next time. Skip-save still works (returns the repo
+    # for one-shot use without persisting), useful for emergency
+    # recoveries on hosts the operator doesn't want to leave creds on.
+    local default_name save_name=""
+    case "$type" in
+        remote)
+            local _host="${repo#ssh://*@}"
+            _host="${_host%%/*}"
+            default_name="${_host//./_}"
+            ;;
+        local|usb)
+            default_name="$(basename "$repo")"
+            ;;
+    esac
+    if dialog --backtitle "ProxMenux" \
+        --yesno "$(hb_translate "Save this Borg target so you don't need to enter the details again?")" \
+        "$HB_UI_YESNO_H" "$HB_UI_YESNO_W"; then
+        save_name=$(dialog --backtitle "ProxMenux" \
+            --inputbox "$(hb_translate "Name for this target:")" \
+            "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "$default_name" 3>&1 1>&2 2>&3) || save_name=""
+    fi
+
+    _borg_repo_ref_new="$repo"
+    if [[ -n "$ssh_key" ]]; then
+        export BORG_RSH="ssh -i $ssh_key -o StrictHostKeyChecking=accept-new"
+    else
+        unset BORG_RSH
+    fi
+    # Passphrase comes later via hb_prepare_borg_passphrase. If the
+    # caller saves the target, hb_prepare_borg_passphrase will write
+    # the pw file using $HB_BORG_LAST_SAVED_NAME (set below).
+    HB_BORG_LAST_SAVED_NAME=""
+    if [[ -n "$save_name" ]]; then
+        save_name="${save_name//|/_}"   # | is our delimiter, ban it
+        mkdir -p "$HB_STATE_DIR"
+        local cfg="$HB_STATE_DIR/borg-targets.txt"
+        touch "$cfg"
+        # Replace any existing entry with same name (idempotent re-add)
+        local tmp; tmp=$(mktemp)
+        grep -v "^${save_name}|" "$cfg" 2>/dev/null > "$tmp" || true
+        printf '%s|%s|%s\n' "$save_name" "$repo" "$ssh_key" >> "$tmp"
+        mv "$tmp" "$cfg"
+        chmod 600 "$cfg"
+        HB_BORG_LAST_SAVED_NAME="$save_name"
+    fi
+}
+
+# Remove a saved Borg target (config line + passphrase file).
+hb_delete_borg_target() {
+    local name="$1"
+    local cfg="$HB_STATE_DIR/borg-targets.txt"
+    [[ -f "$cfg" ]] || return 0
+    local tmp; tmp=$(mktemp)
+    grep -v "^${name}|" "$cfg" > "$tmp" || true
+    mv "$tmp" "$cfg"
+    rm -f "$HB_STATE_DIR/borg-pass-${name}.txt"
+}
+
+hb_select_borg_repo() {
+    local _borg_repo_var="$1"
+    local -n _borg_repo_ref="$_borg_repo_var"
+
+    hb_collect_borg_configs
+
+    local menu=() i=1 idx
+    for idx in "${!HB_BORG_NAMES[@]}"; do
+        local label="${HB_BORG_NAMES[$idx]}  —  ${HB_BORG_REPOS[$idx]}"
+        [[ -z "${HB_BORG_PASSES[$idx]}" ]] && label+="  ⚠ $(hb_translate "no passphrase")"
+        menu+=("$i" "$label"); ((i++))
+    done
+    local add_idx=$i; ((i++))
+    local del_idx=""
+    menu+=("$add_idx" "$(hb_translate "+ Add new Borg target")")
+    if (( ${#HB_BORG_NAMES[@]} > 0 )); then
+        del_idx=$i
+        menu+=("$del_idx" "$(hb_translate "- Delete a saved target")")
+    fi
+
+    local choice
+    choice=$(dialog --backtitle "ProxMenux" \
+        --title "$(hb_translate "Select Borg target")" \
+        --menu "\n$(hb_translate "Available Borg targets:")" \
+        "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${menu[@]}" 3>&1 1>&2 2>&3) || return 1
+
+    if [[ "$choice" == "$add_idx" ]]; then
+        hb_configure_borg_manual _borg_repo_ref || return 1
+        # Promote the freshly-saved target so hb_prepare_borg_passphrase
+        # takes the saved-target branch (single prompt + persist).
+        if [[ -n "${HB_BORG_LAST_SAVED_NAME:-}" ]]; then
+            HB_BORG_SELECTED_NAME="$HB_BORG_LAST_SAVED_NAME"
+            HB_BORG_SELECTED_PASS=""
+        fi
+        export BORG_RELOCATED_REPO_ACCESS_IS_OK=yes
+        export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK=yes
+        return 0
+    fi
+
+    if [[ -n "$del_idx" && "$choice" == "$del_idx" ]]; then
+        local del_menu=() j=1
+        for idx in "${!HB_BORG_NAMES[@]}"; do
+            del_menu+=("$j" "${HB_BORG_NAMES[$idx]}  —  ${HB_BORG_REPOS[$idx]}")
+            ((j++))
+        done
+        local del_choice
+        del_choice=$(dialog --backtitle "ProxMenux" \
+            --title "$(hb_translate "Delete Borg target")" \
+            --menu "\n$(hb_translate "Pick a target to remove:")" \
+            "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${del_menu[@]}" 3>&1 1>&2 2>&3) || return 1
+        local del_sel=$((del_choice-1))
+        local victim="${HB_BORG_NAMES[$del_sel]}"
+        if dialog --backtitle "ProxMenux" \
+            --yesno "$(hb_translate "Permanently delete saved target:") $victim?" \
+            "$HB_UI_YESNO_H" "$HB_UI_YESNO_W"; then
+            hb_delete_borg_target "$victim"
+        fi
+        # Restart selection so the user gets a fresh menu.
+        hb_select_borg_repo "$_borg_repo_var"
+        return $?
+    fi
+
+    # Picked a saved target.
+    local sel=$((choice-1))
+    _borg_repo_ref="${HB_BORG_REPOS[$sel]}"
+    local key="${HB_BORG_KEYS[$sel]}"
+    if [[ -n "$key" && -f "$key" ]]; then
+        export BORG_RSH="ssh -i $key -o StrictHostKeyChecking=accept-new"
+    else
+        unset BORG_RSH
+    fi
+    # Trust the saved URL/key — skip borg's interactive y/N confirmations
+    # when the recorded repo location or encryption status drifts.
+    export BORG_RELOCATED_REPO_ACCESS_IS_OK=yes
+    export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK=yes
+    HB_BORG_SELECTED_NAME="${HB_BORG_NAMES[$sel]}"
+    HB_BORG_SELECTED_PASS="${HB_BORG_PASSES[$sel]}"
 }
 
 # ==========================================================
@@ -604,23 +2567,299 @@ hb_trim_dialog_value() {
     printf '%s' "$value"
 }
 
-hb_prompt_mounted_path() {
-    local default_path="${1:-/mnt/backup}"
-    local out
+# Enumerate USB block-device partitions on this host. Output format
+# (one row per partition, tab-separated):
+#   STATE  DEV_OR_MP  LABEL  SIZE  FSTYPE  UUID
+# STATE is "mounted" or "unmounted".
+# DEV_OR_MP is the mountpoint when mounted, or the /dev/sdXn device when not.
+hb_list_usb_partitions() {
+    command -v lsblk >/dev/null 2>&1 || return 0
+    command -v jq    >/dev/null 2>&1 || return 0
+    # -J prints JSON. -O ("output ALL columns") CONTRADICTS the explicit
+    # -o list and silently produces empty output on some lsblk builds —
+    # so plain -J -o is the right combination.
+    # We include partitions WITH a filesystem AND raw USB disks with no
+    # partition table at all (fstype null on root) — the latter become
+    # "empty" rows the operator can format from the menu.
+    lsblk -J -o NAME,SIZE,MOUNTPOINT,TRAN,LABEL,FSTYPE,UUID,TYPE 2>/dev/null \
+        | jq -r '
+            .blockdevices[]?
+            | select(.tran == "usb" and .type == "disk")
+            | . as $root
+            | ((.children // []) | map(select(.fstype != null and .fstype != "")) ) as $parts
+            | if ($parts | length) > 0 then
+                  $parts[]
+                  | (if .mountpoint != null and .mountpoint != "" then "mounted\t\(.mountpoint)" else "unmounted\t/dev/\(.name)" end)
+                    + "\t\(.label // "")\t\(.size // "")\t\(.fstype // "")\t\(.uuid // "")"
+              else
+                  "empty\t/dev/\($root.name)\t\t\($root.size // "")\t\t"
+              end
+        ' 2>/dev/null
+}
 
-    out=$(dialog --backtitle "ProxMenux" \
-        --title "$(hb_translate "Mounted disk path")" \
-        --inputbox "$(hb_translate "Path where the external disk is mounted:")" \
-        "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "$default_path" 3>&1 1>&2 2>&3) || return 1
+# Compute a safe mountpoint path for a USB device, derived from its
+# label or UUID so it survives reboots and re-plugs predictably.
+hb_usb_mountpoint_for() {
+    local label="$1" uuid="$2" dev="$3"
+    local tag="${label:-$uuid}"
+    tag="${tag//[^A-Za-z0-9_-]/_}"
+    [[ -z "$tag" ]] && tag="$(basename "$dev")"
+    printf '%s' "/mnt/proxmenux-backup-${tag}"
+}
 
-    out=$(hb_trim_dialog_value "$out")
-    [[ -n "$out" && -d "$out" ]] || { msg_error "$(hb_translate "Path does not exist.")"; return 1; }
-    if ! mountpoint -q "$out" 2>/dev/null; then
-        dialog --backtitle "ProxMenux" --title "$(hb_translate "Warning")" \
-            --yesno "$(hb_translate "This path is not a registered mount point. Use it anyway?")" \
-            "$HB_UI_YESNO_H" "$HB_UI_YESNO_W" || return 1
+# Mount an already-formatted USB partition. On success, prints the
+# mountpoint on stdout. On failure, the caller checks the rc and reads
+# /tmp/proxmenux-mount.log.
+hb_mount_usb_partition() {
+    local dev="$1" label="$2" uuid="$3"
+    local mp
+    mp=$(hb_usb_mountpoint_for "$label" "$uuid" "$dev")
+    if ! mkdir -p "$mp" 2>/tmp/proxmenux-mount.log; then
+        return 1
     fi
-    echo "$out"
+    if mountpoint -q "$mp" 2>/dev/null; then
+        printf '%s' "$mp"; return 0
+    fi
+    if ! mount "$dev" "$mp" 2>/tmp/proxmenux-mount.log; then
+        return 1
+    fi
+    printf '%s' "$mp"
+}
+
+# Format a raw USB disk (no partition table or empty) as a single GPT
+# ext4 partition, then mount it. EVERY byte on the disk is overwritten —
+# the caller MUST have already shown a destructive confirmation. Used
+# only when the operator explicitly picks an "empty" USB row.
+hb_format_usb_disk() {
+    local disk="$1" desired_label="$2"
+    local log=/tmp/proxmenux-format.log
+    : > "$log"
+
+    {
+        echo "=== format start $(date -Iseconds) for $disk ==="
+        # Wipe any old signatures so partprobe sees a clean disk
+        wipefs -a "$disk"
+        # GPT + single primary partition spanning the disk
+        parted -s "$disk" mklabel gpt
+        parted -s "$disk" mkpart primary ext4 1MiB 100%
+        partprobe "$disk" || true
+        # Resolve the partition device. /dev/sde → /dev/sde1,
+        # /dev/nvme0n1 → /dev/nvme0n1p1.
+        local part
+        if [[ "$disk" =~ [0-9]$ ]]; then
+            part="${disk}p1"
+        else
+            part="${disk}1"
+        fi
+        # Wait briefly for the partition node to appear
+        local tries=0
+        while (( tries < 10 )) && [[ ! -b "$part" ]]; do
+            sleep 0.5; ((tries++))
+        done
+        if [[ ! -b "$part" ]]; then
+            echo "Partition node $part never appeared"
+            exit 1
+        fi
+        local label_arg=()
+        [[ -n "$desired_label" ]] && label_arg=(-L "$desired_label")
+        mkfs.ext4 -F "${label_arg[@]}" "$part"
+        echo "$part" > /tmp/proxmenux-format.partdev
+    } >>"$log" 2>&1 || return 1
+
+    local part
+    part=$(<"/tmp/proxmenux-format.partdev")
+    [[ -b "$part" ]] || return 1
+
+    # Resolve UUID for predictable mountpoint
+    local new_uuid
+    new_uuid=$(lsblk -no UUID "$part" 2>/dev/null | head -1)
+
+    local mp
+    mp=$(hb_usb_mountpoint_for "$desired_label" "$new_uuid" "$part")
+    mkdir -p "$mp" 2>>"$log" || return 1
+    mount "$part" "$mp" 2>>"$log" || return 1
+    printf '%s' "$mp"
+}
+
+# ── Local backup target: single configured value (no list) ──
+#
+# Only ONE local target is active at a time. Persisted as a single line in
+# $HB_STATE_DIR/local-target.conf. If the file is absent, callers default
+# to HB_LOCAL_TARGET_DEFAULT (/var/lib/vz/dump).
+
+HB_LOCAL_TARGET_DEFAULT="/var/lib/vz/dump"
+
+# Echoes the configured target path. Returns 1 if none configured (caller
+# may default to HB_LOCAL_TARGET_DEFAULT).
+hb_get_local_target() {
+    local cfg="$HB_STATE_DIR/local-target.conf"
+    [[ -f "$cfg" ]] || return 1
+    local path
+    path=$(head -1 "$cfg" 2>/dev/null | tr -d '\r\n')
+    [[ -z "$path" ]] && return 1
+    echo "$path"
+    return 0
+}
+
+hb_set_local_target() {
+    local path="$1"
+    [[ -z "$path" ]] && return 1
+    path="${path%/}"
+    mkdir -p "$HB_STATE_DIR"
+    local cfg="$HB_STATE_DIR/local-target.conf"
+    printf '%s\n' "$path" > "$cfg"
+    chmod 600 "$cfg"
+    return 0
+}
+
+hb_clear_local_target() {
+    rm -f "$HB_STATE_DIR/local-target.conf"
+}
+
+# Always returns a usable path. If nothing is configured, falls back to
+# the default. Callers do NOT prompt — the user pre-configures the target
+# in "Manage local backup target".
+hb_select_local_target() {
+    local path
+    if path=$(hb_get_local_target); then
+        echo "$path"
+    else
+        echo "$HB_LOCAL_TARGET_DEFAULT"
+    fi
+    return 0
+}
+
+hb_prompt_mounted_path() {
+    # `dialog --yesno` / `dialog --msgbox` write their TUI to stdout by
+    # convention. When this function is called as `mnt=$(hb_prompt_mounted_path)`
+    # the subshell captures every TUI escape into $mnt and corrupts the
+    # caller (saw it as garbage in borg-targets.txt). Stash real stdout in
+    # fd 9, redirect stdout to the TTY for the body, and emit the actual
+    # return value through fd 9.
+    exec 9>&1 >/dev/tty
+
+    local default_path="${1:-/mnt/backup}"
+
+    local -a menu=()
+    local -a entries=()
+    local idx=1
+    local state path_or_dev label size fstype uuid
+    while IFS=$'\t' read -r state path_or_dev label size fstype uuid; do
+        [[ -z "$state" ]] && continue
+        local desc
+        case "$state" in
+            mounted)
+                desc="${size:-?}  ${label:-no-label}  [${fstype}]  →  ${path_or_dev}"
+                ;;
+            unmounted)
+                desc="${size:-?}  ${label:-no-label}  [${fstype}]  $(hb_translate "(not mounted — will be mounted)")"
+                ;;
+            empty)
+                desc="${size:-?}  $(hb_translate "raw USB disk — no filesystem (will be FORMATTED)")"
+                ;;
+        esac
+        menu+=("$idx" "$desc")
+        entries+=("${state}|${path_or_dev}|${label}|${size}|${fstype}|${uuid}")
+        ((idx++))
+    done < <(hb_list_usb_partitions)
+
+    if (( ${#menu[@]} == 0 )); then
+        # No USB at all — single inputbox fallback (no menu, less confusing)
+        local out
+        out=$(dialog --backtitle "ProxMenux" \
+            --title "$(hb_translate "External disk for backup")" \
+            --inputbox "$(hb_translate "No USB drives detected. Enter the mountpoint path manually:")" \
+            "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "$default_path" 3>&1 1>&2 2>&3) || return 1
+        out=$(hb_trim_dialog_value "$out")
+        [[ -n "$out" && -d "$out" ]] || { msg_error "$(hb_translate "Path does not exist.")"; return 1; }
+        if ! mountpoint -q "$out" 2>/dev/null; then
+            dialog --backtitle "ProxMenux" --title "$(hb_translate "Warning")" \
+                --yesno "$(hb_translate "This path is not a registered mount point. Use it anyway?")" \
+                "$HB_UI_YESNO_H" "$HB_UI_YESNO_W" || return 1
+        fi
+        echo "$out" >&9
+        return 0
+    fi
+
+    local choice
+    choice=$(dialog --backtitle "ProxMenux" \
+        --title "$(hb_translate "External disk for backup")" \
+        --menu "\n$(hb_translate "Pick a USB disk:")" \
+        "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${menu[@]}" 3>&1 1>&2 2>&3) || return 1
+
+    local sel="${entries[$((choice-1))]}"
+    local s_state s_path s_label s_size s_fstype s_uuid
+    IFS='|' read -r s_state s_path s_label s_size s_fstype s_uuid <<< "$sel"
+
+    case "$s_state" in
+        mounted)
+            echo "$s_path" >&9
+            return 0
+            ;;
+
+        unmounted)
+            if ! dialog --backtitle "ProxMenux" --colors \
+                    --title "$(hb_translate "Mount USB disk?")" \
+                    --yesno "$(hb_translate "Mount this device and use it as the backup destination?")"$'\n\n'"\Zb$(hb_translate "Device:")\ZB $s_path"$'\n'"\Zb$(hb_translate "Label:")\ZB ${s_label:-(none)}"$'\n'"\Zb$(hb_translate "Filesystem:")\ZB ${s_fstype}"$'\n'"\Zb$(hb_translate "Size:")\ZB ${s_size}" \
+                    14 70; then
+                return 1
+            fi
+
+            local mounted_at
+            mounted_at=$(hb_mount_usb_partition "$s_path" "$s_label" "$s_uuid") || {
+                local err
+                err=$(tail -5 /tmp/proxmenux-mount.log 2>/dev/null | sed 's/[\Z]/_/g')
+                dialog --backtitle "ProxMenux" --colors \
+                    --title "$(hb_translate "Mount failed")" \
+                    --msgbox "$(hb_translate "Could not mount") \Z1$s_path\Zn.\n\n${err:-$(hb_translate "See /tmp/proxmenux-mount.log for details.")}" 14 76
+                return 1
+            }
+            # The wizard prints the destination path right after, so go
+            # straight to the backup flow instead of asking for an extra
+            # confirmation click on a "mounted OK" dialog.
+            echo "$mounted_at" >&9
+            return 0
+            ;;
+
+        empty)
+            # Destructive! Triple-check before formatting.
+            if ! dialog --backtitle "ProxMenux" --colors \
+                    --title "$(hb_translate "Format USB disk?")" \
+                    --default-button no \
+                    --yesno "\Z1\Zb$(hb_translate "WARNING: this will ERASE EVERYTHING on the disk.")\ZB\Zn"$'\n\n'"\Zb$(hb_translate "Device:")\ZB $s_path"$'\n'"\Zb$(hb_translate "Size:")\ZB ${s_size}"$'\n\n'"$(hb_translate "Create a fresh GPT + ext4 partition and mount it?")" \
+                    14 76; then
+                return 1
+            fi
+            # Second confirmation prompts the operator to type the device name
+            local typed
+            typed=$(dialog --backtitle "ProxMenux" --colors \
+                --title "$(hb_translate "Final confirmation")" \
+                --inputbox "$(hb_translate "Type the device path EXACTLY to confirm formatting:")"$'\n\n'"\Z1${s_path}\Zn" \
+                "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "" 3>&1 1>&2 2>&3) || return 1
+            if [[ "$typed" != "$s_path" ]]; then
+                dialog --backtitle "ProxMenux" \
+                    --msgbox "$(hb_translate "Device path mismatch. Format cancelled.")" 8 60
+                return 1
+            fi
+
+            local fmt_label="proxmenux-backup"
+            local mounted_at
+            mounted_at=$(hb_format_usb_disk "$s_path" "$fmt_label") || {
+                local err
+                err=$(tail -10 /tmp/proxmenux-format.log 2>/dev/null)
+                dialog --backtitle "ProxMenux" --colors \
+                    --title "$(hb_translate "Format failed")" \
+                    --msgbox "$(hb_translate "Could not format the disk.")\n\n${err}" 16 80
+                return 1
+            }
+            dialog --backtitle "ProxMenux" --colors \
+                --title "$(hb_translate "Formatted and mounted")" \
+                --msgbox "\Zb$(hb_translate "Mounted at")\ZB  \Z4${mounted_at}\Zn" 8 70
+            echo "$mounted_at" >&9
+            return 0
+            ;;
+    esac
+    return 1
 }
 
 hb_prompt_dest_dir() {
@@ -654,6 +2893,15 @@ hb_prompt_dest_dir() {
 }
 
 hb_prompt_restore_source_dir() {
+    # Same fd-9 trick used by hb_prompt_mounted_path: this function
+    # is called as `dir=$(hb_prompt_restore_source_dir)` which
+    # captures stdout, so any --msgbox we open inside would render
+    # into the subshell (invisible to the operator) and the caller
+    # would think the flow "hung". Stash real stdout in fd 9,
+    # redirect stdout to the tty for every dialog, and emit the
+    # actual return value through fd 9 at the end.
+    exec 9>&1 >/dev/tty
+
     local choice out
 
     choice=$(dialog --backtitle "ProxMenux" \
@@ -678,14 +2926,72 @@ hb_prompt_restore_source_dir() {
     esac
 
     out=$(hb_trim_dialog_value "$out")
-    [[ -n "$out" && -d "$out" ]] || {
-        msg_error "$(hb_translate "Directory does not exist.")"
+    if [[ -z "$out" || ! -d "$out" ]]; then
+        dialog --backtitle "ProxMenux" \
+            --title "$(hb_translate "Directory not found")" \
+            --msgbox "$(hb_translate "The selected path does not exist on this host:")"$'\n\n'"${out:-<empty>}" \
+            10 78 || true
         return 1
-    }
-    echo "$out"
+    fi
+    # Emit the real return value through the saved fd 9 — the caller's
+    # `$(...)` capture reads from fd 9 (see the exec at the top).
+    echo "$out" >&9
+}
+
+# Return the set of scheduler job_ids that currently have a .env on
+# disk. Used by hb_is_host_backup_archive to recognize archives
+# produced by the scheduler when the filename doesn't follow the
+# `hostcfg-` convention. Prints one id per line.
+hb_known_scheduler_job_ids() {
+    local jobs_dir="${PMX_BACKUP_JOBS_DIR:-/var/lib/proxmenux/backup-jobs}"
+    [[ -d "$jobs_dir" ]] || return 0
+    local f
+    for f in "$jobs_dir"/*.env; do
+        [[ -f "$f" ]] || continue
+        basename "$f" .env
+    done
+}
+
+# Decide whether $path looks like a ProxMenux host backup. Cheap
+# checks only — sidecar presence + filename heuristics. We do NOT
+# tar-peek here because the picker may face dozens of candidates
+# and the user is waiting in front of a dialog; the in-Monitor
+# endpoint takes care of peek-based detection where SWR can cache
+# the result. Returns 0 on match, non-zero otherwise.
+hb_is_host_backup_archive() {
+    local path="$1"
+    [[ -z "$path" || ! -f "$path" ]] && return 1
+    # 1. Sidecar present → definitive yes.
+    [[ -f "${path}.proxmenux.json" ]] && return 0
+    local name stem
+    name=$(basename "$path")
+    # Strip the timestamped suffix; we only need the part BEFORE the
+    # `-YYYYMMDD_HHMMSS.tar.*` tail.
+    stem="${name%-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9][0-9][0-9].tar*}"
+    # If the strip didn't change anything, the file doesn't follow
+    # the ProxMenux timestamp convention at all → reject (this kills
+    # PVE's vzdump-lxc-101-2026_02_24-20_00_56.tar.zst because its
+    # date uses underscores between Y/M/D, not the YYYYMMDD_ form).
+    [[ "$stem" == "$name" ]] && return 1
+    # 2. hostcfg- prefix → manual or convention-following scheduled.
+    [[ "$stem" == hostcfg-* ]] && return 0
+    # 3. Known scheduler job_id → scheduled.
+    local jid
+    while IFS= read -r jid; do
+        [[ -z "$jid" ]] && continue
+        [[ "$stem" == "$jid" ]] && return 0
+    done < <(hb_known_scheduler_job_ids)
+    return 1
 }
 
 hb_prompt_local_archive() {
+    # See hb_prompt_restore_source_dir above for why we do the fd-9
+    # trick — same story: caller uses `archive=$(hb_prompt_local_archive)`
+    # so any --msgbox inside would render into the subshell and
+    # never reach the operator. Force dialog output to the tty and
+    # emit the selected archive path via fd 9 at the end.
+    exec 9>&1 >/dev/tty
+
     local base_dir="$1"
     local title="${2:-$(hb_translate "Select backup archive")}"
     local -a rows=() files=() menu=()
@@ -700,17 +3006,39 @@ hb_prompt_local_archive() {
         | head -200
     )
 
+    # Filter the raw find result down to ProxMenux host backups —
+    # the picker historically showed every .tar* in /var/lib/vz/dump,
+    # which on a typical Proxmox host means dozens of vzdump-lxc-*
+    # entries that aren't restorable from this menu. We track the
+    # drop count so we can tell the operator something was filtered.
+    local -a kept=()
+    local hidden=0 row path
+    for row in "${rows[@]}"; do
+        path="${row##*|}"
+        if hb_is_host_backup_archive "$path"; then
+            kept+=("$row")
+        else
+            ((hidden++))
+        fi
+    done
+    rows=("${kept[@]}")
+
     if [[ ${#rows[@]} -eq 0 ]]; then
         local no_backups_msg
-        no_backups_msg="$(hb_translate "No backup archives were found in:") $base_dir"$'\n\n'"$(hb_translate "Select another source path and try again.")"
+        no_backups_msg="$(hb_translate "No ProxMenux host-backup archives were found in:") $base_dir"
+        if (( hidden > 0 )); then
+            no_backups_msg+=$'\n\n'"$(hb_translate "Found") $hidden $(hb_translate "other .tar archive(s) — not ProxMenux host backups (e.g. PVE vzdump or unrelated tarballs).")"
+        else
+            no_backups_msg+=$'\n\n'"$(hb_translate "Select another source path and try again.")"
+        fi
         dialog --backtitle "ProxMenux" \
             --title "$(hb_translate "No backups found")" \
             --msgbox "$no_backups_msg" \
-            10 78 || true
+            12 78 || true
         return 1
     fi
 
-    local i=1 row epoch size path date_str size_str label
+    local i=1 epoch size date_str size_str label
     for row in "${rows[@]}"; do
         epoch="${row%%|*}"; row="${row#*|}"
         size="${row%%|*}";  path="${row#*|}"
@@ -721,12 +3049,20 @@ hb_prompt_local_archive() {
         files+=("$path"); menu+=("$i" "$label"); ((i++))
     done
 
+    local menu_prompt
+    menu_prompt="\n$(hb_translate "Detected backups — newest first:")"
+    if (( hidden > 0 )); then
+        menu_prompt+=$'\n'"($(hb_translate "Hidden:") $hidden $(hb_translate "non-ProxMenux .tar archive(s) in this path"))"
+    fi
+
     local choice
     choice=$(dialog --backtitle "ProxMenux" --title "$title" \
-        --menu "\n$(hb_translate "Detected backups — newest first:")" \
+        --menu "$menu_prompt" \
         "$HB_UI_MENU_H" "$HB_UI_MENU_W" "$HB_UI_MENU_LIST" "${menu[@]}" 3>&1 1>&2 2>&3) || return 1
 
-    echo "${files[$((choice-1))]}"
+    # Emit the selected archive path through fd 9 so the caller's
+    # `$(...)` capture actually receives it (see the exec at the top).
+    echo "${files[$((choice-1))]}" >&9
 }
 
 # ==========================================================
@@ -752,6 +3088,86 @@ hb_file_size() {
     fi
 }
 
+# POST a Host Backup lifecycle event to the local webhook so the
+# Monitor notification pipeline can route it through the host_backup_*
+# event types (toggle-able per channel in Settings). Used by both the
+# scheduled runner (`run_scheduled_backup.sh`) and the manual flow
+# (`backup_host.sh`).
+#
+# Arg: action (start|complete|fail)
+# Required env: HB_NOTIFY_JOB_ID (or `job_id` shell var)
+# Optional env (per the host_backup_* template fields):
+#   HB_NOTIFY_BACKEND       = pbs|local|borg
+#   HB_NOTIFY_DESTINATION   = path / URI
+#   HB_NOTIFY_PROFILE_MODE  = default|custom
+#   HB_NOTIFY_DATA_SIZE     = staged data (e.g. "12.4 GiB")
+#   HB_NOTIFY_ARCHIVE_SIZE  = output archive size (local) or '-'
+#   HB_NOTIFY_DURATION      = pretty elapsed (e.g. "2m 13s")
+#   HB_NOTIFY_LOG_FILE      = path to job log (rendered in fail body)
+#   HB_NOTIFY_REASON        = short failure reason (last error line)
+#
+# Best-effort: the curl is bounded (--connect-timeout 3 / --max-time 5)
+# and silenced so a Monitor outage never aborts the backup itself.
+hb_notify_lifecycle() {
+    command -v jq >/dev/null 2>&1 || return 0
+    command -v curl >/dev/null 2>&1 || return 0
+
+    local action="$1"
+    local jid="${HB_NOTIFY_JOB_ID:-${job_id:-}}"
+    local severity="info" title="Host backup ${action}: ${jid:-?}"
+    case "$action" in
+        fail)     severity="error"; title="Host backup FAILED: ${jid:-?}" ;;
+        complete) title="Host backup complete: ${jid:-?}" ;;
+        start)    title="Host backup started: ${jid:-?}" ;;
+    esac
+
+    local pve_type="proxmenux-host-backup-${action}"
+    local host
+    host="$(hostname 2>/dev/null || echo unknown)"
+
+    local message="Backend: ${HB_NOTIFY_BACKEND:-}
+Destination: ${HB_NOTIFY_DESTINATION:-}
+Profile: ${HB_NOTIFY_PROFILE_MODE:-default}
+Data size: ${HB_NOTIFY_DATA_SIZE:-}
+Archive size: ${HB_NOTIFY_ARCHIVE_SIZE:-}
+Duration: ${HB_NOTIFY_DURATION:-}"
+    [[ "$action" == "fail" ]] && message+="
+Reason: ${HB_NOTIFY_REASON:-unknown}
+Log: ${HB_NOTIFY_LOG_FILE:-}"
+
+    local payload
+    payload=$(jq -nc \
+        --arg t  "$title" \
+        --arg m  "$message" \
+        --arg s  "$severity" \
+        --arg ts "$(date -Iseconds)" \
+        --arg pty "$pve_type" \
+        --arg host "$host" \
+        --arg jid "${jid:-}" \
+        --arg backend  "${HB_NOTIFY_BACKEND:-}" \
+        --arg dest     "${HB_NOTIFY_DESTINATION:-}" \
+        --arg profile  "${HB_NOTIFY_PROFILE_MODE:-default}" \
+        --arg dsize    "${HB_NOTIFY_DATA_SIZE:-}" \
+        --arg asize    "${HB_NOTIFY_ARCHIVE_SIZE:-}" \
+        --arg dur      "${HB_NOTIFY_DURATION:-}" \
+        --arg log      "${HB_NOTIFY_LOG_FILE:-}" \
+        --arg reason   "${HB_NOTIFY_REASON:-}" \
+        '{title:$t, message:$m, severity:$s, timestamp:$ts,
+          fields:{type:$pty, hostname:$host, "job-id":$jid,
+                  backend:$backend, destination:$dest,
+                  profile_mode:$profile, data_size:$dsize,
+                  archive_size:$asize, duration:$dur,
+                  log_file:$log, reason:$reason}}' \
+        2>/dev/null)
+    [[ -z "$payload" ]] && return 0
+    curl -sk --connect-timeout 3 --max-time 5 \
+        -X POST \
+        -H "Content-Type: application/json" \
+        -d "$payload" \
+        http://127.0.0.1:8008/api/notifications/webhook \
+        >/dev/null 2>&1 || true
+}
+
 hb_show_log() {
     local logfile="$1" title="${2:-$(hb_translate "Operation log")}"
     [[ -f "$logfile" && -s "$logfile" ]] || return 0
@@ -767,4 +3183,850 @@ hb_require_cmd() {
         apt-get update -qq >/dev/null 2>&1 && apt-get install -y "$pkg" >/dev/null 2>&1
     fi
     command -v "$cmd" >/dev/null 2>&1
+}
+
+# Silent best-effort install of `pv` so callers can pipe tar through it
+# for a live progress bar. Returns 0 if pv ends up available, 1 if not.
+# Never speaks — pv is purely an UX improvement, asking the operator to
+# install it themselves would be backwards (we have apt; they shouldn't).
+hb_ensure_pv() {
+    command -v pv >/dev/null 2>&1 && return 0
+    if command -v apt-get >/dev/null 2>&1; then
+        DEBIAN_FRONTEND=noninteractive apt-get install -y -qq pv >/dev/null 2>&1
+    fi
+    command -v pv >/dev/null 2>&1
+}
+
+# ==========================================================
+# Compatibility check — compares backup metadata against the
+# current host and surfaces hostname / PVE version / kernel /
+# storage / network / VMID drift BEFORE the apply menu opens.
+#
+# After running hb_compat_check, the caller can read:
+# ==========================================================
+# NIC REMAP PLAN + APPLY
+# ==========================================================
+# Reconciles NICs recorded in the backup manifest against the
+# live host. Covers the "motherboard swap" scenario: same NIC
+# chip lands on a different PCI slot after the swap, so the
+# ifname changes (enp0s31f6 → enp0s25) even though the MAC is
+# the same. Without a remap the restored /etc/network/interfaces
+# references a name that no longer exists → no network at boot.
+#
+# Populates arrays (only when jq + manifest are available):
+#   HB_NIC_REMAP[i]="<old_ifname>|<new_ifname>|<mac>"
+#     — same MAC, different ifname. Rewrites the staging config
+#       so the restored files use <new_ifname>.
+#   HB_NIC_ORPHAN[i]="<old_ifname>|<mac>"
+#     — MAC from the backup not present on target at all.
+#       Real hardware removal, left to hb_compat_check to
+#       report as WARN/FAIL depending on wired-ness.
+#   HB_NIC_MAC_CHANGED[i]="<ifname>|<old_mac>|<new_mac>"
+#     — same ifname on target, but MAC differs. Motherboard
+#       replacement with same PCI layout but different NIC chip.
+#       Boot succeeds; surfaces INFO so the operator can update
+#       any DHCP static reservation that keyed on the old MAC.
+# ==========================================================
+hb_plan_nic_remaps() {
+    local staging_root="$1"
+    HB_NIC_REMAP=()
+    HB_NIC_ORPHAN=()
+    HB_NIC_MAC_CHANGED=()
+
+    local manifest="$staging_root/manifest.json"
+    [[ -f "$manifest" ]] || return 0
+    command -v jq >/dev/null 2>&1 || return 0
+
+    declare -A _dest_mac_by_if=()
+    declare -A _dest_if_by_mac=()
+    local dev_path _if _mac
+    for dev_path in /sys/class/net/*; do
+        _if="$(basename "$dev_path")"
+        case "$_if" in
+            lo|veth*|tap*|fwln*|fwbr*|fwpr*|vmbr*|bond*) continue ;;
+        esac
+        [[ -e "$dev_path/device" ]] || continue
+        _mac="$(cat "$dev_path/address" 2>/dev/null || true)"
+        [[ -z "$_mac" ]] && continue
+        _dest_mac_by_if["$_if"]="$_mac"
+        _dest_if_by_mac["$_mac"]="$_if"
+    done
+
+    local src_if src_mac
+    while IFS=$'\t' read -r src_if src_mac; do
+        [[ -z "$src_if" || -z "$src_mac" ]] && continue
+        # 1) Same ifname on target — compare MAC.
+        if [[ -n "${_dest_mac_by_if[$src_if]:-}" ]]; then
+            local cur_mac="${_dest_mac_by_if[$src_if]}"
+            if [[ "$cur_mac" != "$src_mac" ]]; then
+                HB_NIC_MAC_CHANGED+=("${src_if}|${src_mac}|${cur_mac}")
+            fi
+            continue
+        fi
+        # 2) MAC found on a different ifname — remap.
+        if [[ -n "${_dest_if_by_mac[$src_mac]:-}" ]]; then
+            HB_NIC_REMAP+=("${src_if}|${_dest_if_by_mac[$src_mac]}|${src_mac}")
+            continue
+        fi
+        # 3) Neither ifname nor MAC — real removal.
+        HB_NIC_ORPHAN+=("${src_if}|${src_mac}")
+    done < <(jq -r '.hardware_inventory.nic[]? | "\(.ifname)\t\(.mac)"' "$manifest" 2>/dev/null)
+}
+
+# Rewrites NIC names in the staging_root's network config so the
+# restored /etc/network/interfaces (and interfaces.d/*, and
+# systemd-networkd .link files if present) uses the new names.
+# Only touches the staging copy — nothing on the live host changes
+# until the normal apply step runs. GNU sed word boundaries (\b)
+# keep eth10 safe when renaming eth1.
+hb_apply_nic_remaps() {
+    local staging_root="$1"
+    (( ${#HB_NIC_REMAP[@]} == 0 )) && return 0
+
+    local -a targets=()
+    [[ -f "$staging_root/rootfs/etc/network/interfaces" ]] && \
+        targets+=("$staging_root/rootfs/etc/network/interfaces")
+    if [[ -d "$staging_root/rootfs/etc/network/interfaces.d" ]]; then
+        while IFS= read -r -d '' f; do targets+=("$f"); done \
+            < <(find "$staging_root/rootfs/etc/network/interfaces.d" -type f -print0 2>/dev/null)
+    fi
+    if [[ -d "$staging_root/rootfs/etc/systemd/network" ]]; then
+        while IFS= read -r -d '' f; do targets+=("$f"); done \
+            < <(find "$staging_root/rootfs/etc/systemd/network" -type f -print0 2>/dev/null)
+    fi
+    (( ${#targets[@]} == 0 )) && return 0
+
+    local entry old_if new_if _mac t
+    for entry in "${HB_NIC_REMAP[@]}"; do
+        IFS='|' read -r old_if new_if _mac <<<"$entry"
+        [[ -z "$old_if" || -z "$new_if" ]] && continue
+        for t in "${targets[@]}"; do
+            sed -i "s/\\b${old_if}\\b/${new_if}/g" "$t" 2>/dev/null || true
+        done
+    done
+}
+
+# ==========================================================
+# CROSS-VERSION UNSAFE PATHS
+# ==========================================================
+# Curated list of paths that reliably break the boot when a backup
+# taken on PVE major X or kernel major.minor Y is applied on a
+# different X/Y. Restoring these is what caused the field-reported
+# kernel panic (backup on 9.1.9 / kernel 6.x restored on 9.2.3 /
+# kernel 7.x). We ship a static list rather than a heuristic so
+# behaviour is auditable — the operator can inspect it once and
+# know what "safe restore mode" means.
+#
+# Output: one line per path, tab-separated: <abs_path>\t<reason>
+# The reason is a short label used verbatim in the confirm dialog.
+# ==========================================================
+hb_unsafe_paths_cross_version() {
+    cat <<'EOF'
+/etc/default/grub	GRUB defaults tied to prior kernel order
+/etc/kernel	proxmox-boot-tool state (cmdline, ESP UUIDs, hooks)
+/etc/modules-load.d	autoload list may reference renamed modules
+/etc/modprobe.d	module options may not apply on new kernel
+/etc/apt	source suites may trigger downgrade on next upgrade
+/etc/initramfs-tools	initramfs hooks tied to prior kernel
+/etc/fstab	UUIDs may not exist on this install
+/etc/multipath	multipath drivers change between kernels
+/etc/iscsi	iSCSI parameters evolve between kernels
+/etc/udev/rules.d	udev rules may bind to nonexistent subsystems
+/etc/zfs	zpool.cache + hostid can lock the pool as foreign
+/etc/systemd/system	unit overrides + .wants tied to older systemd major version — cross-version restore panics init (bench-reproduced)
+/etc/systemd/journald.conf	journald options may not parse on new systemd major
+/etc/systemd/logind.conf	logind options may not parse on new systemd major
+/etc/systemd/system.conf	system.conf keys evolve across systemd major
+/etc/systemd/user.conf	user.conf keys evolve across systemd major
+EOF
+}
+
+# ==========================================================
+# hb_detect_bootloader — "grub" | "systemd-boot" | "unknown"
+# ==========================================================
+# Proxmox uses systemd-boot on ZFS-on-root installs and GRUB on
+# ext4/lvm. `proxmox-boot-tool status` reports both cases when
+# the tool is present; on rescue paths without pbt we fall back
+# to the presence of /etc/kernel/cmdline (systemd-boot) or
+# /etc/default/grub (GRUB).
+hb_detect_bootloader() {
+    if command -v proxmox-boot-tool >/dev/null 2>&1; then
+        local pbt
+        pbt="$(proxmox-boot-tool status 2>/dev/null || true)"
+        if grep -qi 'systemd-boot' <<<"$pbt"; then
+            echo "systemd-boot"; return 0
+        elif grep -qiE 'grub|BIOS' <<<"$pbt"; then
+            echo "grub"; return 0
+        fi
+    fi
+    if [[ -f /etc/kernel/cmdline ]]; then
+        echo "systemd-boot"
+    elif [[ -f /etc/default/grub ]]; then
+        echo "grub"
+    else
+        echo "unknown"
+    fi
+}
+
+# hb_grub_keys_whitelist — GRUB /etc/default/grub keys that are
+# stable across PVE 9.x / kernel majors and worth merging from the
+# backup on a bk_older restore. Excludes GRUB_DISTRIBUTOR (changes
+# with the distro package) and keys whose values reference boot
+# entries the target install regenerates (GRUB_SAVEDEFAULT).
+hb_grub_keys_whitelist() {
+    cat <<'EOF'
+GRUB_TIMEOUT
+GRUB_TIMEOUT_STYLE
+GRUB_DEFAULT
+GRUB_TERMINAL
+GRUB_TERMINAL_INPUT
+GRUB_TERMINAL_OUTPUT
+GRUB_DISABLE_OS_PROBER
+GRUB_SERIAL_COMMAND
+GRUB_CMDLINE_LINUX_DEFAULT
+GRUB_CMDLINE_LINUX
+GRUB_GFXMODE
+GRUB_GFXPAYLOAD_LINUX
+EOF
+}
+
+# hb_hydration_module_whitelist — module names safe to add to the
+# target's /etc/modules from the backup's modules_loaded_at_boot
+# on a bk_older restore. All are kernel-agnostic in name across
+# 5.x → 7.x. Skips distro defaults (loop, dm-*) since a fresh
+# install already loads them.
+hb_hydration_module_whitelist() {
+    cat <<'EOF'
+vfio
+vfio_pci
+vfio_iommu_type1
+vfio_virqfd
+kvm
+kvm_intel
+kvm_amd
+nvidia
+nvidia_drm
+nvidia_modeset
+nvidia_uvm
+i915
+xe
+EOF
+}
+
+# hb_hydration_files_patterns — glob patterns (relative to root)
+# for files that are safe to copy verbatim from the backup rootfs
+# in a bk_older restore. The rule for inclusion: operator- or
+# ProxMenux-authored file whose content uses stable syntax across
+# kernel majors. Excludes distro-owned files (pve-blacklist.conf,
+# mdadm.conf, nvme.conf) whose contents can evolve between releases.
+hb_hydration_files_patterns() {
+    cat <<'EOF'
+/etc/modprobe.d/proxmenux-*.conf
+/etc/modprobe.d/vfio.conf
+/etc/modprobe.d/vfio-pci.conf
+/etc/modprobe.d/kvm.conf
+/etc/modprobe.d/blacklist-nvidia.conf
+/etc/modprobe.d/blacklist-nouveau.conf
+/etc/modprobe.d/nvidia*.conf
+/etc/modules-load.d/proxmenux-*.conf
+/etc/modules-load.d/vfio*.conf
+/etc/modules-load.d/nvidia*.conf
+/etc/udev/rules.d/10-proxmenux-vfio-bind.rules
+/etc/udev/rules.d/70-nvidia.rules
+EOF
+}
+
+#   HB_COMPAT_SAME_HOST         → 1 if backup's hostname matches current
+#   HB_COMPAT_ANY_FAIL          → 1 if at least one FAIL was raised
+#   HB_COMPAT_ANY_WARN          → 1 if at least one WARN was raised
+#   HB_COMPAT_CROSS_VERSION     → 1 if PVE major OR kernel major.minor differs
+#   HB_COMPAT_KERNEL_DIRECTION  → "same" / "bk_older" / "bk_newer" — only
+#                                 "bk_older" activates the safe-subset
+#                                 restore that skips kernel-tied paths
+#                                 (grub, /etc/systemd/system, initramfs
+#                                 config, apt sources, ZFS state, …).
+#                                 "bk_newer" restores everything as
+#                                 same-version because empirical tests
+#                                 (9.2 → 9.1 with GPU passthrough +
+#                                 IOMMU) prove that direction is safe.
+#   HB_COMPAT_RESULTS[]         → array of "STATUS|category|message"
+#                                 entries where STATUS ∈ {PASS,INFO,WARN,FAIL}
+# Use hb_show_compat_report to surface the result and let the user
+# decide whether to continue.
+# ==========================================================
+hb_compat_check() {
+    local staging_root="$1"
+    HB_COMPAT_RESULTS=()
+    HB_COMPAT_SAME_HOST=0
+    HB_COMPAT_ANY_FAIL=0
+    HB_COMPAT_ANY_WARN=0
+    HB_COMPAT_CROSS_VERSION=0
+    # HB_COMPAT_KERNEL_DIRECTION captures which direction the kernel
+    # major.minor drift goes:
+    #   same     — backup and target on the same kernel major.minor
+    #              (or one side lacks a kernel string in the manifest).
+    #   bk_older — backup kernel is OLDER than target kernel. This is
+    #              the only direction that has been observed to break
+    #              things: restoring older-kernel-era userspace onto a
+    #              newer target can drag in old libzfs siblings, older
+    #              systemd unit overrides, and DKMS modules built
+    #              against a kernel that isn't the one now running.
+    #              The restore flow uses this to skip the kernel-tied
+    #              paths (grub, /etc/systemd/system, initramfs config,
+    #              etc.) so Full mode still runs but only over the
+    #              safe subset, and Custom mode grays out the unsafe
+    #              paths so the operator can't shoot themself in the
+    #              foot picking them.
+    #   bk_newer — backup kernel is NEWER than target kernel. Empirical
+    #              testing (multiple 9.2 → 9.1 restores with GPU
+    #              passthrough / IOMMU) shows this direction works
+    #              fine as-is: Proxmox repos don't ship future package
+    #              versions on old series, so APT silently skips the
+    #              backup's kernel-tied packages, and modules compile
+    #              against whatever kernel the target is running. No
+    #              safe-mode restrictions apply here; the restore runs
+    #              as though it were same-version.
+    HB_COMPAT_KERNEL_DIRECTION="same"
+
+    local meta="$staging_root/metadata"
+    local rootfs="$staging_root/rootfs"
+
+    # --- HOST IDENTITY ---
+    local bk_hostname="" cur_hostname
+    if [[ -f "$meta/run_info.env" ]]; then
+        bk_hostname=$(grep -m1 '^hostname=' "$meta/run_info.env" 2>/dev/null | cut -d= -f2-)
+    fi
+    cur_hostname=$(hostname 2>/dev/null || echo "")
+    if [[ -n "$bk_hostname" ]]; then
+        if [[ "$bk_hostname" == "$cur_hostname" ]]; then
+            HB_COMPAT_SAME_HOST=1
+            HB_COMPAT_RESULTS+=("PASS|Host|$(hb_translate "Same host:") $bk_hostname")
+        else
+            HB_COMPAT_RESULTS+=("WARN|Host|$(hb_translate "Different host. Backup from:") $bk_hostname / $(hb_translate "restoring on:") $cur_hostname")
+            HB_COMPAT_ANY_WARN=1
+        fi
+    fi
+
+    # --- PVE VERSION ---
+    # `pveversion.txt` from the backup is `pveversion -v` output, where
+    # each package is on its own line as `<pkg>: <version>` (note the
+    # SPACE after the colon, not a slash). Live `pveversion` (no flag)
+    # uses `<pkg>/<version>/<commit>` form. Cover both.
+    local bk_pve="" cur_pve bk_major cur_major
+    if [[ -f "$meta/pveversion.txt" ]]; then
+        bk_pve=$(grep -m1 -oE '(^|[[:space:]])pve-manager[[:space:]]*[:/][[:space:]]*[0-9]+\.[0-9]+(\.[0-9]+)?' "$meta/pveversion.txt" 2>/dev/null \
+            | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1)
+    fi
+    if command -v pveversion >/dev/null 2>&1; then
+        cur_pve=$(pveversion 2>/dev/null | grep -m1 -oE 'pve-manager/[0-9]+\.[0-9]+(\.[0-9]+)?' \
+            | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1)
+    fi
+    if [[ -n "$bk_pve" && -n "$cur_pve" ]]; then
+        bk_major="${bk_pve%%.*}"
+        cur_major="${cur_pve%%.*}"
+        if [[ "$bk_pve" == "$cur_pve" ]]; then
+            HB_COMPAT_RESULTS+=("PASS|PVE version|$(hb_translate "Identical:") $bk_pve")
+        elif [[ "$bk_major" == "$cur_major" ]]; then
+            HB_COMPAT_RESULTS+=("PASS|PVE version|$(hb_translate "Same major series:") $bk_pve → $cur_pve")
+        else
+            # Major PVE bump — used to hard-FAIL, but the restore now
+            # automatically drops boot/kernel/apt-critical paths in
+            # this case (see hb_unsafe_paths_cross_version). Downgrade
+            # to INFO so the user knows what's happening; the safe
+            # filter does the actual protection.
+            HB_COMPAT_RESULTS+=("INFO|PVE version|$(hb_translate "Major version differs:") $bk_pve → $cur_pve $(hb_translate "— safe restore mode will skip boot/kernel/apt config")")
+            HB_COMPAT_CROSS_VERSION=1
+        fi
+    fi
+
+    # --- KERNEL ---
+    local bk_kernel="" cur_kernel
+    if [[ -f "$meta/run_info.env" ]]; then
+        bk_kernel=$(grep -m1 '^kernel=' "$meta/run_info.env" 2>/dev/null | cut -d= -f2-)
+    fi
+    cur_kernel=$(uname -r 2>/dev/null)
+    if [[ -n "$bk_kernel" && -n "$cur_kernel" ]]; then
+        if [[ "$bk_kernel" == "$cur_kernel" ]]; then
+            HB_COMPAT_RESULTS+=("PASS|Kernel|$(hb_translate "Identical:") $bk_kernel")
+        else
+            local bk_kmaj cur_kmaj
+            bk_kmaj=$(echo "$bk_kernel" | cut -d. -f1-2)
+            cur_kmaj=$(echo "$cur_kernel" | cut -d. -f1-2)
+            if [[ "$bk_kmaj" == "$cur_kmaj" ]]; then
+                HB_COMPAT_RESULTS+=("PASS|Kernel|$(hb_translate "Same major.minor:") $bk_kernel → $cur_kernel")
+            else
+                # Kernel major.minor drift — decide direction so the
+                # rest of the restore knows whether to switch on the
+                # safe-subset mode. Bash `[[ ... < ... ]]` is a string
+                # compare, so we split into integers explicitly.
+                local _bk_maj _bk_min _cur_maj _cur_min
+                _bk_maj=${bk_kmaj%%.*}
+                _bk_min=${bk_kmaj##*.}
+                _cur_maj=${cur_kmaj%%.*}
+                _cur_min=${cur_kmaj##*.}
+                if (( _bk_maj < _cur_maj )) \
+                   || (( _bk_maj == _cur_maj && _bk_min < _cur_min )); then
+                    HB_COMPAT_KERNEL_DIRECTION="bk_older"
+                    HB_COMPAT_RESULTS+=("INFO|Kernel|$(hb_translate "Backup on older kernel:") $bk_kernel → $cur_kernel $(hb_translate "— Full/Custom restore will skip kernel-tied paths")")
+                    HB_COMPAT_CROSS_VERSION=1
+                else
+                    # Backup NEWER than target — empirical evidence
+                    # (multiple GPU passthrough tests) shows this
+                    # direction restores cleanly with no filtering.
+                    HB_COMPAT_KERNEL_DIRECTION="bk_newer"
+                    HB_COMPAT_RESULTS+=("INFO|Kernel|$(hb_translate "Backup on newer kernel:") $bk_kernel → $cur_kernel $(hb_translate "— restore proceeds as same-version (verified safe)")")
+                    HB_COMPAT_CROSS_VERSION=1
+                fi
+            fi
+        fi
+    fi
+
+    # --- STORAGE LAYOUT ---
+    if [[ -f "$rootfs/etc/pve/storage.cfg" ]] && command -v pvesm >/dev/null 2>&1; then
+        local -a bk_storages=() missing=()
+        # `<type>: <storage_id>` is the storage.cfg block header form.
+        mapfile -t bk_storages < <(grep -E '^[a-z]+:[[:space:]]+[A-Za-z0-9_.-]+' \
+            "$rootfs/etc/pve/storage.cfg" 2>/dev/null | awk '{print $2}' | sort -u)
+        local s
+        for s in "${bk_storages[@]}"; do
+            [[ -z "$s" ]] && continue
+            if ! pvesm status 2>/dev/null | awk 'NR>1 {print $1}' | grep -qx "$s"; then
+                missing+=("$s")
+            fi
+        done
+        if [[ ${#bk_storages[@]} -eq 0 ]]; then
+            : # backup didn't include storage.cfg or it was empty
+        elif [[ ${#missing[@]} -eq 0 ]]; then
+            HB_COMPAT_RESULTS+=("PASS|Storage|$(hb_translate "All") ${#bk_storages[@]} $(hb_translate "storage(s) from backup exist on target")")
+        else
+            HB_COMPAT_RESULTS+=("WARN|Storage|$(hb_translate "Missing on target:") ${missing[*]}")
+            HB_COMPAT_ANY_WARN=1
+        fi
+    fi
+
+    # --- NETWORK INTERFACES ---
+    # We only flag physical NICs that the backup references but the
+    # target doesn't expose. Virtual interfaces (vmbr, bond, tap, veth,
+    # fwbr/fwln/fwpr, lo, VLAN suffixes) are skipped because they're
+    # created by the restored configuration itself.
+    #
+    # A "missing" NIC needs further triage before we cry FAIL: a
+    # backup often carries orphan `iface <name> inet manual` lines
+    # left over from previous hardware that PVE never cleans up.
+    # Those declarations do nothing if the NIC doesn't exist — they
+    # don't bring it up, don't bridge it, don't bond it. Only NICs
+    # that are actually WIRED into the live config (auto-up, in a
+    # bridge_ports, in a bond_slaves) would lose connectivity if the
+    # NIC isn't present on the target.
+    if [[ -f "$rootfs/etc/network/interfaces" ]]; then
+        local ifaces_file="$rootfs/etc/network/interfaces"
+        local -a bk_ifaces=() missing_ifaces=() wired_missing=() orphan_missing=()
+        mapfile -t bk_ifaces < <(
+            grep -E '^(iface|auto)[[:space:]]' "$ifaces_file" 2>/dev/null \
+                | awk '{print $2}' \
+                | sort -u \
+                | grep -vE '^(lo|vmbr[0-9]+|bond[0-9]+|tap.*|veth.*|fwbr.*|fwln.*|fwpr.*)$' \
+                | grep -vE '\.[0-9]+$'  # strip VLAN sub-ifaces
+        )
+        local i
+        for i in "${bk_ifaces[@]}"; do
+            [[ -z "$i" ]] && continue
+            if ! ip -o link show "$i" >/dev/null 2>&1; then
+                missing_ifaces+=("$i")
+            fi
+        done
+        # Classify each missing NIC as wired vs orphan declaration.
+        # A "missing" NIC that hb_plan_nic_remaps already matched by
+        # MAC to a new ifname is NOT missing in any meaningful sense
+        # — the restored config will be rewritten to use the new
+        # name before apply. Skip it here.
+        local -A _remap_old=()
+        local _re_entry _re_old
+        for _re_entry in "${HB_NIC_REMAP[@]:-}"; do
+            [[ -z "$_re_entry" ]] && continue
+            _re_old="${_re_entry%%|*}"
+            [[ -n "$_re_old" ]] && _remap_old["$_re_old"]=1
+        done
+        for i in "${missing_ifaces[@]}"; do
+            [[ -n "${_remap_old[$i]:-}" ]] && continue
+            # Match: `auto <nic>`, `bridge-ports ... <nic>`, `bridge_ports ... <nic>`,
+            #        `bond-slaves ... <nic>`, `bond_slaves ... <nic>`, `slaves ... <nic>`
+            if grep -qE "(^auto[[:space:]]+${i}\$|bridge[-_]ports[[:space:]]+.*\b${i}\b|bond[-_]slaves[[:space:]]+.*\b${i}\b|^[[:space:]]*slaves[[:space:]]+.*\b${i}\b)" "$ifaces_file"; then
+                wired_missing+=("$i")
+            else
+                orphan_missing+=("$i")
+            fi
+        done
+
+        # Surface renames + MAC changes as INFO so the panel shows them
+        # if there's something else to see, but doesn't force it open.
+        # Separated `local` declarations because bash `set -u` in caller
+        # scopes gets grumpy about chained `local a=$b c=$a` forms.
+        local _re _o _rest _n
+        for _re in "${HB_NIC_REMAP[@]:-}"; do
+            [[ -z "$_re" ]] && continue
+            _o="${_re%%|*}"
+            _rest="${_re#*|}"
+            _n="${_rest%%|*}"
+            HB_COMPAT_RESULTS+=("INFO|Network|$(hb_translate "Renamed NIC:") ${_o} → ${_n} $(hb_translate "(same MAC — restored config adjusted automatically)")")
+        done
+        local _mc _ifn
+        for _mc in "${HB_NIC_MAC_CHANGED[@]:-}"; do
+            [[ -z "$_mc" ]] && continue
+            _ifn="${_mc%%|*}"
+            HB_COMPAT_RESULTS+=("INFO|Network|$(hb_translate "NIC") ${_ifn} $(hb_translate "has a different MAC than the backup — update any DHCP static reservation")")
+        done
+
+        if [[ ${#bk_ifaces[@]} -eq 0 ]]; then
+            : # nothing to check
+        elif [[ ${#missing_ifaces[@]} -eq 0 ]]; then
+            HB_COMPAT_RESULTS+=("PASS|Network|$(hb_translate "All physical interfaces from backup are present on target")")
+        else
+            if [[ ${#wired_missing[@]} -gt 0 ]]; then
+                HB_COMPAT_RESULTS+=("FAIL|Network|$(hb_translate "Wired NICs in backup missing on target:") ${wired_missing[*]} ($(hb_translate "restoring /etc/network would lose connectivity"))")
+                HB_COMPAT_ANY_FAIL=1
+            fi
+            if [[ ${#orphan_missing[@]} -gt 0 ]]; then
+                # Orphan iface declarations — harmless leftover from older
+                # hardware. Surface as PASS so the operator knows we
+                # noticed, but don't trigger the FAIL gate.
+                HB_COMPAT_RESULTS+=("PASS|Network|$(hb_translate "Backup declares unused NICs that are not on this host:") ${orphan_missing[*]} ($(hb_translate "orphan iface lines, no impact on restore"))")
+            fi
+        fi
+    fi
+
+    # --- USER PACKAGES ---
+    # Compare `apt-mark showmanual` from backup vs current. Any
+    # package the operator installed deliberately on the source
+    # host but missing on the target will eventually cause an
+    # orphan systemd unit or a "command not found" — surface
+    # those up-front so the operator can decide to install them
+    # via the "Install missing packages" apply option.
+    if [[ -f "$meta/packages.manual.list" ]] && command -v apt-mark >/dev/null 2>&1; then
+        local cur_pkgs_file
+        cur_pkgs_file=$(mktemp)
+        apt-mark showmanual 2>/dev/null | sort -u > "$cur_pkgs_file"
+        local -a missing_pkgs=()
+        mapfile -t missing_pkgs < <(comm -23 <(sort -u "$meta/packages.manual.list") "$cur_pkgs_file")
+        rm -f "$cur_pkgs_file"
+        if [[ ${#missing_pkgs[@]} -eq 0 ]]; then
+            HB_COMPAT_RESULTS+=("PASS|Packages|$(hb_translate "All user-installed packages from the backup are present on this host")")
+        else
+            local list_str
+            if [[ ${#missing_pkgs[@]} -le 6 ]]; then
+                list_str="${missing_pkgs[*]}"
+            else
+                list_str="${missing_pkgs[*]:0:6}… (+ $((${#missing_pkgs[@]} - 6)) $(hb_translate "more"))"
+            fi
+            # Missing packages are auto-installed by _rs_run_complete_extras
+            # regardless of restore strategy — the user doesn't have to
+            # decide anything, so INFO instead of WARN.
+            HB_COMPAT_RESULTS+=("INFO|Packages|${#missing_pkgs[@]} $(hb_translate "user packages missing — will be installed automatically:") $list_str")
+        fi
+    fi
+
+    # --- VMID OVERLAP ---
+    # On a same-host restore, overlapping guest IDs are expected (the
+    # backup snapshotted YOUR live VMs, so of course they match). We
+    # only flag it when the restore would actually overwrite live
+    # guest configs — i.e. cross-host AND there's overlap.
+    # Note: by default the host-backup restore flow does NOT restore
+    # /etc/pve/nodes/* (it's part of the opt-in cluster_cfg path), but
+    # if the operator later toggles that path on, this is the warning
+    # they'd need to have seen.
+    if [[ -d "$rootfs/etc/pve/nodes" ]] && [[ "$HB_COMPAT_SAME_HOST" != "1" ]]; then
+        local -a bk_pcts=() bk_qms=() current_pcts=() current_qms=()
+        [[ -f "$meta/pct-list.txt" ]] && mapfile -t bk_pcts < <(awk '/^[[:space:]]*[0-9]+/{print $1}' "$meta/pct-list.txt")
+        [[ -f "$meta/qm-list.txt"  ]] && mapfile -t bk_qms  < <(awk '/^[[:space:]]*[0-9]+/{print $1}' "$meta/qm-list.txt")
+        command -v pct >/dev/null 2>&1 && mapfile -t current_pcts < <(pct list 2>/dev/null | awk 'NR>1 {print $1}')
+        command -v qm  >/dev/null 2>&1 && mapfile -t current_qms  < <(qm  list 2>/dev/null | awk 'NR>1 {print $1}')
+        local pct_overlap=0 qm_overlap=0 id cid
+        for id in "${bk_pcts[@]}"; do
+            for cid in "${current_pcts[@]}"; do [[ "$id" == "$cid" ]] && ((pct_overlap++)); done
+        done
+        for id in "${bk_qms[@]}"; do
+            for cid in "${current_qms[@]}"; do [[ "$id" == "$cid" ]] && ((qm_overlap++)); done
+        done
+        if (( pct_overlap + qm_overlap > 0 )); then
+            HB_COMPAT_RESULTS+=("WARN|VM/CT IDs|$(hb_translate "Cross-host restore: guest IDs in backup overlap live IDs on target:") LXC=$pct_overlap, QEMU=$qm_overlap")
+            HB_COMPAT_ANY_WARN=1
+        fi
+    fi
+}
+
+# Render HB_COMPAT_RESULTS in a dialog. Returns 0 to continue, 1 to
+# abort. FAIL forces an explicit second confirmation; WARN shows the
+# report and lets the user proceed; an all-PASS report only shows up
+# briefly so the user can see it succeeded.
+hb_show_compat_report() {
+    local pass=0 info=0 warn=0 fail=0 line status rest cat msg
+    local report=""
+    for line in "${HB_COMPAT_RESULTS[@]}"; do
+        status="${line%%|*}"; rest="${line#*|}"
+        cat="${rest%%|*}";    msg="${rest#*|}"
+        case "$status" in
+            PASS) ((pass++)); report+=$' [OK]   '"${cat}"$' — '"${msg}"$'\n' ;;
+            INFO) ((info++)); report+=$' [INFO] '"${cat}"$' — '"${msg}"$'\n' ;;
+            WARN) ((warn++)); report+=$' [WARN] '"${cat}"$' — '"${msg}"$'\n' ;;
+            FAIL) ((fail++)); report+=$' [FAIL] '"${cat}"$' — '"${msg}"$'\n' ;;
+        esac
+    done
+
+    local summary
+    summary="$(hb_translate "Compatibility check"): "
+    summary+="${pass} pass, ${info} info, ${warn} warn, ${fail} fail"
+
+    local tmpfile
+    tmpfile=$(mktemp)
+    {
+        printf '\n%s\n' "$summary"
+        printf '%s\n\n' "────────────────────────────────────────────────────────────"
+        printf '%s\n' "$report"
+    } > "$tmpfile"
+
+    local title
+    if (( fail > 0 )); then
+        title="$(hb_translate "Compatibility check — issues detected")"
+    elif (( warn > 0 )); then
+        title="$(hb_translate "Compatibility check — review warnings")"
+    else
+        title="$(hb_translate "Compatibility check — OK")"
+    fi
+
+    # Only nag the operator when there's something to read. An all-PASS
+    # report is pure noise on the path to a restore they already
+    # confirmed they want.
+    if (( warn > 0 || fail > 0 )); then
+        dialog --backtitle "ProxMenux" --title "$title" \
+            --textbox "$tmpfile" 22 86 || true
+    fi
+    rm -f "$tmpfile"
+
+    # FAIL means at least one check is a real risk for system integrity
+    # — force a second yes/no with default NO before letting the user
+    # press on.
+    if (( fail > 0 )); then
+        if ! whiptail --title "$(hb_translate "Continue despite failures?")" \
+            --defaultno \
+            --yesno "$(hb_translate "The compatibility check raised failures that may break the system after restore.")"$'\n\n'"$(hb_translate "Continue anyway?")" \
+            11 78; then
+            return 1
+        fi
+    fi
+    return 0
+}
+
+# ==========================================================
+# Archive sidecar — explicit ProxMenux backup marker.
+#
+# Drops a small JSON next to a completed archive so the Monitor
+# (and any future tooling) can identify it as a ProxMenux host
+# backup independently of the filename. The user can rename the
+# .tar.zst to whatever they want and the sidecar travels with it
+# as long as they keep the same basename pair.
+#
+# Usage:
+#   hb_write_archive_sidecar <archive_path> <kind> [job_id] [profile]
+#     kind:    "manual" or "scheduled"
+#     job_id:  scheduler job id (empty for manual)
+#     profile: "default", "custom", or empty
+# Fail-soft: returns 0 even if jq is missing and we have to fall
+# back to printf-built JSON; never aborts the surrounding backup.
+# ==========================================================
+# ==========================================================
+# PVE vzdump jobs — parsing and attach helpers
+#
+# When the operator already has a vzdump job scheduling backups of
+# their VMs/CTs to PBS or a local datastore, they can "attach" a
+# host-config backup to that same job. The host inherits the job's
+# schedule, target storage, and retention; the trigger is a vzdump
+# hook script that fires on `job-end`.
+# ==========================================================
+
+# Returns the type of a PVE storage as declared in /etc/pve/storage.cfg.
+# Empty if the storage doesn't exist. Common values: pbs, dir, nfs,
+# zfspool, lvmthin, cifs, btrfs.
+hb_pve_storage_type() {
+    local storage_id="$1"
+    [[ -z "$storage_id" || ! -f /etc/pve/storage.cfg ]] && return 1
+    awk -v sid="$storage_id" '
+        /^[a-z]+:[[:space:]]/ {
+            t=$1; sub(":","",t)
+            if ($2 == sid) { print t; exit }
+        }
+    ' /etc/pve/storage.cfg
+}
+
+# Lists every vzdump job in /etc/pve/jobs.cfg, one TSV row per job.
+# Columns: id <TAB> storage <TAB> storage_type <TAB> schedule
+#          <TAB> prune-backups <TAB> enabled
+# Empty cells are kept as "-" so the row keeps 6 columns even when
+# the job omits the field.
+hb_pve_list_vzdump_jobs() {
+    [[ -f /etc/pve/jobs.cfg ]] || return 0
+    awk '
+        function flush() {
+            if (id != "") {
+                printf "%s\t%s\t%s\t%s\t%s\t%s\n", \
+                    id, \
+                    (storage=="" ? "-" : storage), \
+                    "PLACEHOLDER_TYPE", \
+                    (schedule=="" ? "-" : schedule), \
+                    (prune=="" ? "-" : prune), \
+                    (enabled=="" ? "1" : enabled)
+            }
+            id=""; storage=""; schedule=""; prune=""; enabled=""
+        }
+        /^vzdump:/ { flush(); id=$2; next }
+        /^[a-z]+:/ { flush(); next }   # next block of a different type
+        /^[[:space:]]+schedule[[:space:]]/ { sub(/^[[:space:]]+schedule[[:space:]]+/, ""); schedule=$0; next }
+        /^[[:space:]]+storage[[:space:]]/  { sub(/^[[:space:]]+storage[[:space:]]+/,  ""); storage=$0;  next }
+        /^[[:space:]]+prune-backups[[:space:]]/ { sub(/^[[:space:]]+prune-backups[[:space:]]+/, ""); prune=$0; next }
+        /^[[:space:]]+enabled[[:space:]]/  { sub(/^[[:space:]]+enabled[[:space:]]+/,  ""); enabled=$0;  next }
+        END { flush() }
+    ' /etc/pve/jobs.cfg | while IFS=$'\t' read -r id storage type schedule prune enabled; do
+        type=$(hb_pve_storage_type "$storage")
+        [[ -z "$type" ]] && type="-"
+        printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$id" "$storage" "$type" "$schedule" "$prune" "$enabled"
+    done
+}
+
+# Filters hb_pve_list_vzdump_jobs by a backend family.
+# Args: $1 = "pbs" or "local"
+#   pbs   → only storage_type == "pbs"
+#   local → only file/block storage we can write to as a local archive
+hb_pve_list_vzdump_jobs_for_backend() {
+    local backend="$1"
+    hb_pve_list_vzdump_jobs | while IFS=$'\t' read -r id storage type schedule prune enabled; do
+        case "$backend" in
+            pbs)
+                [[ "$type" == "pbs" ]] && printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+                    "$id" "$storage" "$type" "$schedule" "$prune" "$enabled"
+                ;;
+            local)
+                case "$type" in
+                    dir|nfs|cifs|zfspool|lvmthin|btrfs)
+                        printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+                            "$id" "$storage" "$type" "$schedule" "$prune" "$enabled"
+                        ;;
+                esac
+                ;;
+        esac
+    done
+}
+
+# Parses a `prune-backups` value (e.g. "keep-last=7,keep-daily=14")
+# and emits KEY=VAL pairs for sourcing into a scheduler job env file.
+# Maps proxmox' keep-last/hourly/daily/weekly/monthly/yearly to our
+# KEEP_LAST/HOURLY/DAILY/WEEKLY/MONTHLY/YEARLY.
+hb_pve_prune_to_keep_env() {
+    local prune="$1"
+    [[ -z "$prune" || "$prune" == "-" ]] && return 0
+    local kv k v upper
+    while IFS=',' read -ra kv; do
+        for k in "${kv[@]}"; do
+            v="${k#*=}"
+            k="${k%=*}"
+            case "$k" in
+                keep-last)    echo "KEEP_LAST=$v" ;;
+                keep-hourly)  echo "KEEP_HOURLY=$v" ;;
+                keep-daily)   echo "KEEP_DAILY=$v" ;;
+                keep-weekly)  echo "KEEP_WEEKLY=$v" ;;
+                keep-monthly) echo "KEEP_MONTHLY=$v" ;;
+                keep-yearly)  echo "KEEP_YEARLY=$v" ;;
+            esac
+        done
+    done <<<"$prune"
+}
+
+hb_install_vzdump_hook() {
+    local src="/usr/local/share/proxmenux/scripts/backup_restore/vzdump-hook.sh"
+    local dst="/etc/proxmenux/vzdump-hook.sh"
+    local chain="/etc/proxmenux/vzdump-hook-chain.sh"
+    local conf="/etc/vzdump.conf"
+
+    [[ -f "$src" ]] || return 1
+    mkdir -p /etc/proxmenux
+    install -m 0755 "$src" "$dst" || return 1
+
+    [[ -f "$conf" ]] || : >"$conf"
+
+    local current
+    current=$(awk -F'[[:space:]]*:[[:space:]]*' \
+        '/^[[:space:]]*script[[:space:]]*:/ { sub(/[#].*/,"",$2); gsub(/[[:space:]]/,"",$2); print $2; exit }' \
+        "$conf")
+
+    if [[ -z "$current" ]]; then
+        printf 'script: %s\n' "$dst" >>"$conf"
+        return 0
+    fi
+
+    [[ "$current" == "$dst" ]] && return 0
+
+    # Existing third-party hook — preserve it as a chain target.
+    if [[ -x "$current" && ! -e "$chain" ]]; then
+        cp -p "$current" "$chain"
+    fi
+    sed -i "s|^[[:space:]]*script[[:space:]]*:.*|script: ${dst}|" "$conf"
+}
+
+hb_write_archive_sidecar() {
+    local archive_path="$1"
+    local kind="${2:-}"
+    local job_id="${3:-}"
+    local profile="${4:-}"
+    [[ -z "$archive_path" || ! -f "$archive_path" ]] && return 1
+    local sidecar="${archive_path}.proxmenux.json"
+    local archive_basename hostname_val created_at archive_size
+    archive_basename=$(basename "$archive_path")
+    hostname_val=$(hostname 2>/dev/null || echo "unknown")
+    created_at=$(date -Iseconds 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S%z')
+    archive_size=$(stat -c %s "$archive_path" 2>/dev/null || echo 0)
+
+    if command -v jq >/dev/null 2>&1; then
+        jq -n \
+            --arg kind "$kind" \
+            --arg job_id "$job_id" \
+            --arg profile "$profile" \
+            --arg hostname "$hostname_val" \
+            --arg archive "$archive_basename" \
+            --arg created_at "$created_at" \
+            --argjson size "$archive_size" \
+            '{
+                schema_version: 1,
+                kind: $kind,
+                job_id: (if $job_id == "" then null else $job_id end),
+                profile: (if $profile == "" then null else $profile end),
+                hostname: $hostname,
+                archive: $archive,
+                created_at: $created_at,
+                archive_size: $size
+            }' > "$sidecar" 2>/dev/null && return 0
+    fi
+
+    # Fallback: jq unavailable — emit JSON by hand. Fields are
+    # controlled by us (no untrusted strings besides hostname/path
+    # which we already constrain via shell context), so a small
+    # printf is safe enough.
+    {
+        printf '{\n'
+        printf '  "schema_version": 1,\n'
+        printf '  "kind": "%s",\n' "$kind"
+        if [[ -n "$job_id" ]]; then
+            printf '  "job_id": "%s",\n' "$job_id"
+        else
+            printf '  "job_id": null,\n'
+        fi
+        if [[ -n "$profile" ]]; then
+            printf '  "profile": "%s",\n' "$profile"
+        else
+            printf '  "profile": null,\n'
+        fi
+        printf '  "hostname": "%s",\n' "$hostname_val"
+        printf '  "archive": "%s",\n' "$archive_basename"
+        printf '  "created_at": "%s",\n' "$created_at"
+        printf '  "archive_size": %s\n' "$archive_size"
+        printf '}\n'
+    } > "$sidecar" 2>/dev/null
+    return 0
 }

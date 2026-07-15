@@ -30,7 +30,6 @@ RETURN_SCRIPT="$LOCAL_SCRIPTS/menus/menu_post_install.sh"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 TOOLS_JSON="$BASE_DIR/installed_tools.json"
-VENV_PATH="/opt/googletrans-env"
 
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
@@ -642,6 +641,7 @@ uninstall_vfio_iommu() {
     msg_info "$(translate 'Updating initramfs (this may take a minute)...')"
 
     update-initramfs -u -k all >/dev/null 2>&1 || true
+    proxmox-boot-tool refresh >/dev/null 2>&1 || true
 
     msg_ok "$(translate "IOMMU/VFIO configuration reverted")"
     register_tool "vfio_iommu" false
@@ -718,6 +718,7 @@ uninstall_amd_fixes() {
             fi
 
             update-initramfs -u -k all >/dev/null 2>&1 || true
+    proxmox-boot-tool refresh >/dev/null 2>&1 || true
         else
             msg_ok "$(translate "KVM MSR options not present, nothing to revert")"
         fi

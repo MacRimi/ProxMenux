@@ -14,6 +14,7 @@ import { Settings } from "./settings"
 import { Security } from "./security"
 import { Profile } from "./profile"
 import { About } from "./about"
+import { HostBackup } from "./host-backup"
 import { OnboardingCarousel } from "./onboarding-carousel"
 import { HealthStatusModal } from "./health-status-modal"
 import { ReleaseNotesModal, useVersionCheck } from "./release-notes-modal"
@@ -30,17 +31,26 @@ import {
   LayoutDashboard,
   HardDrive,
   NetworkIcon,
-  Box,
+  Boxes,
   Cpu,
-  FileText,
+  ScrollText,
   SettingsIcon,
+  Settings2,
   Terminal,
   ShieldCheck,
   Info,
+  DatabaseBackup,
+  ChevronDown,
 } from "lucide-react"
 import Image from "next/image"
 import { ThemeToggle } from "./theme-toggle"
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu"
 
 interface SystemStatus {
   status: "healthy" | "warning" | "critical"
@@ -352,28 +362,19 @@ export function ProxmoxDashboard() {
 
   const getActiveTabLabel = () => {
     switch (activeTab) {
-      case "overview":
-        return "Overview"
-      case "storage":
-        return "Storage"
-      case "network":
-        return "Network"
-      case "vms":
-        return "VMs & LXCs"
-      case "hardware":
-        return "Hardware"
-      case "terminal":
-        return "Terminal"
-      case "logs":
-        return "System Logs"
-  case "security":
-  return "Security"
-  case "settings":
-  return "Settings"
-  case "profile":
-  return "Profile"
-      default:
-        return "Navigation Menu"
+      case "overview":  return "Overview"
+      case "vms":       return "VMs & LXCs"
+      case "storage":   return "Storage"
+      case "network":   return "Network"
+      case "hardware":  return "Hardware"
+      case "backup":    return "Backup"
+      case "terminal":  return "Terminal"
+      case "logs":      return "System Logs"
+      case "security":  return "Security"
+      case "settings":  return "Settings"
+      case "about":     return "About"
+      case "profile":   return "Profile"
+      default:          return "Navigation Menu"
     }
   }
 
@@ -565,71 +566,128 @@ export function ProxmoxDashboard() {
       >
         <div className="container mx-auto px-4 lg:px-6 pt-4 lg:pt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
-            {/* Issue #191: 10 tabs after adding About. The grid wraps via
-                Tabs primitives so the extra column doesn't push the
-                triggers off-screen on common laptop widths. */}
-            <TabsList className="hidden lg:grid w-full grid-cols-10 bg-card border border-border">
-              <TabsTrigger
-                value="overview"
-                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-              >
-                Overview
-              </TabsTrigger>
-              <TabsTrigger
-                value="storage"
-                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-              >
-                Storage
-              </TabsTrigger>
-              <TabsTrigger
-                value="network"
-                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-              >
-                Network
-              </TabsTrigger>
-              <TabsTrigger
-                value="vms"
-                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-              >
-                VMs & LXCs
-              </TabsTrigger>
-              <TabsTrigger
-                value="hardware"
-                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-              >
-                Hardware
-              </TabsTrigger>
-              <TabsTrigger
-                value="logs"
-                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-              >
-                System Logs
-              </TabsTrigger>
-              <TabsTrigger
-                value="terminal"
-                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-              >
-                Terminal
-              </TabsTrigger>
-              <TabsTrigger
-                value="security"
-                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-              >
-                Security
-              </TabsTrigger>
-              <TabsTrigger
-                value="settings"
-                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-              >
-                Settings
-              </TabsTrigger>
-              <TabsTrigger
-                value="about"
-                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-              >
-                About
-              </TabsTrigger>
-            </TabsList>
+            {/* Sprint 13D nav redesign — 6 top-level slots in usage order:
+                Overview · VMs & LXCs · Node ⌄ · Backup · Terminal · Admin ⌄
+                Node groups Storage / Network / Hardware (3 sub-items).
+                Admin groups System Logs / Security / Settings / About
+                (will split when RBAC arrives in 1.5.0).
+                Backup is direct now (only Host Backup); becomes a dropdown
+                when VM/LXC centralised backup ships. */}
+            {(() => {
+              const triggerActiveClass =
+                "data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
+              // Each dropdown lists its children in the order they
+              // render. When one of them is the active tab, the dropdown
+              // trigger swaps its label + icon to that child — same
+              // pattern macOS Settings uses inside a category: the
+              // crumb shows where you are, the chevron tells you the
+              // siblings are one click away.
+              const NODE_ITEMS = [
+                { value: "storage",  label: "Storage",  Icon: HardDrive,   default: false },
+                { value: "network",  label: "Network",  Icon: NetworkIcon, default: false },
+                { value: "hardware", label: "Hardware", Icon: Cpu,         default: false },
+              ]
+              const ADMIN_ITEMS = [
+                { value: "logs",     label: "System Logs", Icon: ScrollText,  default: false },
+                { value: "security", label: "Security",    Icon: ShieldCheck, default: false },
+                { value: "settings", label: "Settings",    Icon: SettingsIcon, default: false },
+                { value: "about",    label: "About",       Icon: Info,        default: false },
+              ]
+              const activeNodeItem  = NODE_ITEMS.find(i => i.value === activeTab)
+              const activeAdminItem = ADMIN_ITEMS.find(i => i.value === activeTab)
+              const isNodeActive    = activeNodeItem !== undefined
+              const isAdminActive   = activeAdminItem !== undefined
+              // The trigger label + icon shown on the bar. When a child
+              // is active we surface IT; otherwise the group default.
+              const NodeTriggerIcon  = activeNodeItem ? activeNodeItem.Icon  : Server
+              const NodeTriggerLabel = activeNodeItem ? activeNodeItem.label : "Node"
+              const AdminTriggerIcon  = activeAdminItem ? activeAdminItem.Icon  : Settings2
+              const AdminTriggerLabel = activeAdminItem ? activeAdminItem.label : "Admin"
+              // Dropdown trigger styling: parity with TabsTrigger so the
+              // parent visibly carries the "I'm the selected section"
+              // signal when any of its children is the active tab —
+              // same blue background + white text + rounded as a direct
+              // tab. Without this the user lands on Storage and the
+              // entire top bar looks idle.
+              const dropdownBtnClass = (active: boolean) =>
+                `inline-flex items-center justify-center whitespace-nowrap px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+                  active
+                    ? "bg-blue-500 text-white rounded-md"
+                    : "text-muted-foreground hover:text-foreground rounded-sm"
+                }`
+
+              return (
+                <TabsList className="hidden lg:grid w-full grid-cols-6 bg-card border border-border">
+                  {/* Direct: Overview */}
+                  <TabsTrigger value="overview" className={triggerActiveClass}>
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Overview
+                  </TabsTrigger>
+
+                  {/* Direct: VMs & LXCs — first-class because Proxmox IS
+                      a hypervisor; workloads belong at top level. */}
+                  <TabsTrigger value="vms" className={triggerActiveClass}>
+                    <Boxes className="mr-2 h-4 w-4" />
+                    VMs &amp; LXCs
+                  </TabsTrigger>
+
+                  {/* Dropdown: Node (Storage / Network / Hardware) */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className={dropdownBtnClass(isNodeActive)}>
+                      <NodeTriggerIcon className="mr-2 h-4 w-4" />
+                      {NodeTriggerLabel}
+                      <ChevronDown className="ml-1.5 h-3 w-3 opacity-70" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" className="min-w-[180px]">
+                      {NODE_ITEMS.map(({ value, label, Icon }) => (
+                        <DropdownMenuItem
+                          key={value}
+                          onClick={() => setActiveTab(value)}
+                          className={activeTab === value ? "bg-blue-500/10 text-blue-500" : ""}
+                        >
+                          <Icon className="mr-2 h-4 w-4" />
+                          {label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Direct: Backup (today: Host Backup only). When VM/LXC
+                      backup ships this becomes a dropdown. */}
+                  <TabsTrigger value="backup" className={triggerActiveClass}>
+                    <DatabaseBackup className="mr-2 h-4 w-4" />
+                    Backup
+                  </TabsTrigger>
+
+                  {/* Direct: Terminal */}
+                  <TabsTrigger value="terminal" className={triggerActiveClass}>
+                    <Terminal className="mr-2 h-4 w-4" />
+                    Terminal
+                  </TabsTrigger>
+
+                  {/* Dropdown: Admin (System Logs / Security / Settings / About) */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className={dropdownBtnClass(isAdminActive)}>
+                      <AdminTriggerIcon className="mr-2 h-4 w-4" />
+                      {AdminTriggerLabel}
+                      <ChevronDown className="ml-1.5 h-3 w-3 opacity-70" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" className="min-w-[180px]">
+                      {ADMIN_ITEMS.map(({ value, label, Icon }) => (
+                        <DropdownMenuItem
+                          key={value}
+                          onClick={() => setActiveTab(value)}
+                          className={activeTab === value ? "bg-blue-500/10 text-blue-500" : ""}
+                        >
+                          <Icon className="mr-2 h-4 w-4" />
+                          {label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TabsList>
+              )
+            })()}
 
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <div className="lg:hidden">
@@ -646,158 +704,74 @@ export function ProxmoxDashboard() {
                 </SheetTrigger>
               </div>
               <SheetContent side="top" className="bg-card border-border">
-                <div className="flex flex-col gap-2 mt-4">
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setActiveTab("overview")
-                      setMobileMenuOpen(false)
-                    }}
-                    className={`w-full justify-start gap-3 ${
-                      activeTab === "overview"
+                {(() => {
+                  // Sheet items mirror the desktop layout: 6 sections,
+                  // with two of them (Node, Admin) collapsing into a
+                  // header + nested items. Direct tabs (Overview, VMs,
+                  // Backup, Terminal) sit at the top level.
+                  const select = (v: string) => {
+                    setActiveTab(v)
+                    setMobileMenuOpen(false)
+                  }
+                  const itemClass = (active: boolean) =>
+                    `w-full justify-start gap-3 ${
+                      active
                         ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
                         : ""
-                    }`}
-                  >
-                    <LayoutDashboard className="h-5 w-5" />
-                    <span>Overview</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setActiveTab("storage")
-                      setMobileMenuOpen(false)
-                    }}
-                    className={`w-full justify-start gap-3 ${
-                      activeTab === "storage"
-                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
-                        : ""
-                    }`}
-                  >
-                    <HardDrive className="h-5 w-5" />
-                    <span>Storage</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setActiveTab("network")
-                      setMobileMenuOpen(false)
-                    }}
-                    className={`w-full justify-start gap-3 ${
-                      activeTab === "network"
-                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
-                        : ""
-                    }`}
-                  >
-                    <NetworkIcon className="h-5 w-5" />
-                    <span>Network</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setActiveTab("vms")
-                      setMobileMenuOpen(false)
-                    }}
-                    className={`w-full justify-start gap-3 ${
-                      activeTab === "vms"
-                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
-                        : ""
-                    }`}
-                  >
-                    <Box className="h-5 w-5" />
-                    <span>VMs & LXCs</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setActiveTab("hardware")
-                      setMobileMenuOpen(false)
-                    }}
-                    className={`w-full justify-start gap-3 ${
-                      activeTab === "hardware"
-                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
-                        : ""
-                    }`}
-                  >
-                    <Cpu className="h-5 w-5" />
-                    <span>Hardware</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setActiveTab("logs")
-                      setMobileMenuOpen(false)
-                    }}
-                    className={`w-full justify-start gap-3 ${
-                      activeTab === "logs"
-                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
-                        : ""
-                    }`}
-                  >
-                    <FileText className="h-5 w-5" />
-                    <span>System Logs</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setActiveTab("terminal")
-                      setMobileMenuOpen(false)
-                    }}
-                    className={`w-full justify-start gap-3 ${
-                      activeTab === "terminal"
-                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
-                        : ""
-                    }`}
-                  >
-                    <Terminal className="h-5 w-5" />
-                    <span>Terminal</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setActiveTab("security")
-                      setMobileMenuOpen(false)
-                    }}
-                    className={`w-full justify-start gap-3 ${
-                      activeTab === "security"
-                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
-                        : ""
-                    }`}
-                  >
-                    <ShieldCheck className="h-5 w-5" />
-                    <span>Security</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setActiveTab("settings")
-                      setMobileMenuOpen(false)
-                    }}
-                    className={`w-full justify-start gap-3 ${
-                      activeTab === "settings"
-                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
-                        : ""
-                    }`}
-                  >
-                    <SettingsIcon className="h-5 w-5" />
-                    <span>Settings</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setActiveTab("about")
-                      setMobileMenuOpen(false)
-                    }}
-                    className={`w-full justify-start gap-3 ${
-                      activeTab === "about"
-                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
-                        : ""
-                    }`}
-                  >
-                    <Info className="h-5 w-5" />
-                    <span>About</span>
-                  </Button>
-                </div>
+                    }`
+                  // Mobile sheet is a flat list (no section headers).
+                  // The desktop layout uses dropdowns to express the
+                  // Node/Admin grouping; here we just enumerate items
+                  // in the same visual order.
+                  return (
+                    <div className="flex flex-col gap-1 mt-4">
+                      <Button variant="ghost" onClick={() => select("overview")} className={itemClass(activeTab === "overview")}>
+                        <LayoutDashboard className="h-5 w-5" />
+                        <span>Overview</span>
+                      </Button>
+                      <Button variant="ghost" onClick={() => select("vms")} className={itemClass(activeTab === "vms")}>
+                        <Boxes className="h-5 w-5" />
+                        <span>VMs &amp; LXCs</span>
+                      </Button>
+                      <Button variant="ghost" onClick={() => select("storage")} className={itemClass(activeTab === "storage")}>
+                        <HardDrive className="h-5 w-5" />
+                        <span>Storage</span>
+                      </Button>
+                      <Button variant="ghost" onClick={() => select("network")} className={itemClass(activeTab === "network")}>
+                        <NetworkIcon className="h-5 w-5" />
+                        <span>Network</span>
+                      </Button>
+                      <Button variant="ghost" onClick={() => select("hardware")} className={itemClass(activeTab === "hardware")}>
+                        <Cpu className="h-5 w-5" />
+                        <span>Hardware</span>
+                      </Button>
+                      <Button variant="ghost" onClick={() => select("backup")} className={itemClass(activeTab === "backup")}>
+                        <DatabaseBackup className="h-5 w-5" />
+                        <span>Backup</span>
+                      </Button>
+                      <Button variant="ghost" onClick={() => select("terminal")} className={itemClass(activeTab === "terminal")}>
+                        <Terminal className="h-5 w-5" />
+                        <span>Terminal</span>
+                      </Button>
+                      <Button variant="ghost" onClick={() => select("logs")} className={itemClass(activeTab === "logs")}>
+                        <ScrollText className="h-5 w-5" />
+                        <span>System Logs</span>
+                      </Button>
+                      <Button variant="ghost" onClick={() => select("security")} className={itemClass(activeTab === "security")}>
+                        <ShieldCheck className="h-5 w-5" />
+                        <span>Security</span>
+                      </Button>
+                      <Button variant="ghost" onClick={() => select("settings")} className={itemClass(activeTab === "settings")}>
+                        <SettingsIcon className="h-5 w-5" />
+                        <span>Settings</span>
+                      </Button>
+                      <Button variant="ghost" onClick={() => select("about")} className={itemClass(activeTab === "about")}>
+                        <Info className="h-5 w-5" />
+                        <span>About</span>
+                      </Button>
+                    </div>
+                  )
+                })()}
               </SheetContent>
             </Sheet>
           </Tabs>
@@ -830,6 +804,10 @@ export function ProxmoxDashboard() {
             <SystemLogs key={`logs-${componentKey}`} />
           </TabsContent>
 
+          <TabsContent value="backup" className="space-y-4 md:space-y-6 mt-0">
+            <HostBackup key={`backup-${componentKey}`} />
+          </TabsContent>
+
           <TabsContent value="terminal" className="mt-0">
             <TerminalPanel key={`terminal-${componentKey}`} />
           </TabsContent>
@@ -858,7 +836,7 @@ export function ProxmoxDashboard() {
         </Tabs>
 
         <footer className="mt-8 md:mt-12 pt-4 md:pt-6 border-t border-border text-center text-xs md:text-sm text-muted-foreground">
-          <p className="font-medium mb-2">ProxMenux Monitor v1.2.2.1-beta</p>
+          <p className="font-medium mb-2">ProxMenux Monitor v1.2.3</p>
           <p>
             <a
               href="https://ko-fi.com/macrimi"

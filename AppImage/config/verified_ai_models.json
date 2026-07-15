@@ -1,30 +1,31 @@
 {
   "_description": "Verified AI models for ProxMenux notifications. Only models listed here will be shown to users. Models are tested to work with the chat/completions API format.",
-  "_updated": "2026-04-19",
+  "_updated": "2026-07-14",
   "_verifier": "Refreshed with tools/ai-models-verifier (private). Re-run before each ProxMenux release to keep the list current. The verifier and ProxMenux share the same reasoning/thinking-model handlers so their verdicts stay aligned with runtime behaviour.",
 
   "groq": {
     "models": [
       "llama-3.3-70b-versatile",
-      "llama-3.1-70b-versatile",
       "llama-3.1-8b-instant",
-      "llama3-70b-8192",
-      "llama3-8b-8192",
-      "mixtral-8x7b-32768",
-      "gemma2-9b-it"
+      "meta-llama/llama-4-scout-17b-16e-instruct",
+      "openai/gpt-oss-120b",
+      "openai/gpt-oss-20b"
     ],
     "recommended": "llama-3.3-70b-versatile",
-    "_note": "Not yet re-verified in 2026-04 refresh — kept from previous curation. Run the verifier with a Groq key to prune deprecated entries."
+    "_note": "Verified functionally 2026-07-14 with the Groq API (15 models discovered, 9 passed). Legacy llama-3.1-70b-versatile / llama3-70b-8192 / llama3-8b-8192 / mixtral-8x7b-32768 / gemma2-9b-it removed (retired upstream). llama-4-scout added (current-gen Llama 4, 0.47s). openai/gpt-oss-120b / gpt-oss-20b confirmed. Passing but excluded: allam-2-7b (Arabic-focused), qwen/qwen3-32b (Chinese-first, unreliable Spanish output), openai/gpt-oss-safeguard-20b (safety-classifier variant), groq/compound-mini (agentic system, wrong fit for notification translation)."
   },
 
   "gemini": {
     "models": [
+      "gemini-flash-lite-latest",
       "gemini-2.5-flash-lite",
       "gemini-2.5-flash",
-      "gemini-3-flash-preview"
+      "gemini-3.1-flash-lite",
+      "gemini-3-flash-preview",
+      "gemini-3.5-flash"
     ],
     "recommended": "gemini-2.5-flash-lite",
-    "_note": "flash-lite / flash pass the verifier consistently; pro variants reject thinkingBudget=0 and are overkill for notification translation anyway. 'latest' aliases (gemini-flash-latest, gemini-flash-lite-latest) are intentionally omitted because they resolved to different models across runs and produced timeouts in some regions.",
+    "_note": "Verified 2026-07-13. gemini-flash-lite-latest now passes consistently (1.6s) and is fastest, but gemini-2.5-flash-lite remains recommended because 'latest' aliases can drift over time. gemini-3.1-flash-lite is the stable successor to 3-flash-preview. Pro variants continue to reject thinkingBudget=0 and are overkill for notification translation.",
     "_deprecated": ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.0-pro", "gemini-pro"]
   },
 
@@ -36,21 +37,23 @@
       "gpt-4.1",
       "gpt-4o",
       "gpt-5-chat-latest",
-      "gpt-5.4-nano",
-      "gpt-5.4-mini"
+      "gpt-5-nano"
     ],
     "recommended": "gpt-4.1-nano",
-    "_note": "Reasoning models (o-series, gpt-5/5.1/5.2 non-chat variants) are supported by openai_provider.py via max_completion_tokens + reasoning_effort=minimal, but not listed here by default: their latency is higher than the chat models and they do not improve translation quality for notifications. Add specific reasoning IDs to this list only if a user explicitly wants them."
+    "_note": "Verified 2026-07-13. gpt-5.4-nano / gpt-5.4-mini removed (HTTP 400 — provider params rejected). gpt-5-nano added (2.0s, current-gen fast). Reasoning models (o-series, gpt-5/5.1/5.2 non-chat variants) are supported by openai_provider.py via max_completion_tokens + reasoning_effort=minimal, but not listed here: their latency is higher and they do not improve translation quality for notifications. Add specific reasoning IDs to this list only if a user explicitly wants them."
   },
 
   "anthropic": {
     "models": [
-      "claude-3-5-haiku-latest",
-      "claude-3-5-sonnet-latest",
-      "claude-3-opus-latest"
+      "claude-haiku-4-5",
+      "claude-sonnet-5",
+      "claude-opus-4-8",
+      "claude-sonnet-4-6",
+      "claude-opus-4-6",
+      "claude-fable-5"
     ],
-    "recommended": "claude-3-5-haiku-latest",
-    "_note": "Not re-verified in 2026-04 refresh — kept from previous curation. Add claude-4.x / claude-4.5 / claude-4.6 / claude-4.7 variants after running the verifier with an Anthropic key."
+    "recommended": "claude-haiku-4-5",
+    "_note": "Verified 2026-07-13 with all 10 discovered models passing after aligning the verifier with anthropic_provider.py (temperature omitted — newest generations reject it with 'temperature is deprecated for this model'). Legacy claude-3-5-haiku-latest / claude-3-5-sonnet-latest / claude-3-opus-latest removed (deprecated upstream, not in the Models API). haiku-4-5 is the sweet spot for notification translation (3.6s, $1/$5 per MTok); sonnet-5 for slightly richer output (3.1s, $3/$15); opus-4-8 / fable-5 for demanding cases."
   },
 
   "openrouter": {
@@ -58,15 +61,16 @@
       "meta-llama/llama-3.3-70b-instruct",
       "meta-llama/llama-3.1-70b-instruct",
       "meta-llama/llama-3.1-8b-instruct",
-      "anthropic/claude-3.5-haiku",
-      "anthropic/claude-3.5-sonnet",
-      "google/gemini-flash-1.5",
+      "meta-llama/llama-4-scout",
+      "anthropic/claude-haiku-4.5",
+      "anthropic/claude-sonnet-4.6",
+      "google/gemini-2.5-flash-lite",
+      "google/gemini-2.5-flash",
       "openai/gpt-4o-mini",
-      "mistralai/mistral-7b-instruct",
-      "mistralai/mixtral-8x7b-instruct"
+      "mistralai/mistral-small-3.2-24b-instruct"
     ],
     "recommended": "meta-llama/llama-3.3-70b-instruct",
-    "_note": "Not re-verified in 2026-04 refresh. google/gemini-flash-2.5-flash-lite was malformed in the previous entry and has been replaced with google/gemini-flash-1.5."
+    "_note": "Verified functionally 2026-07-14 with the OpenRouter API — all 10 curated candidates pass the Spanish-translation notification test. Fastest: llama-4-scout (0.51s), gemini-2.5-flash-lite (1.14s), gemini-2.5-flash (1.94s), llama-3.3-70b-instruct (2.29s), claude-haiku-4.5 (2.71s). Legacy anthropic/claude-3.5-* / google/gemini-flash-1.5 / mistralai/mistral-7b-instruct / mixtral-8x7b-instruct removed (GONE from catalog). Modern replacements added: llama-4-scout (Meta's current gen — dramatically fastest), claude-haiku-4.5 / claude-sonnet-4.6, gemini-2.5-flash / flash-lite, mistral-small-3.2-24b. recommended kept as llama-3.3-70b for capability/latency balance; llama-4-scout is a faster alternative worth considering as recommended after a broader release."
   },
 
   "ollama": {

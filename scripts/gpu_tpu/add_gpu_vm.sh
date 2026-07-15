@@ -1811,6 +1811,30 @@ sanitize_nvidia_host_stack_for_vfio() {
     else
         msg_ok "$(translate 'NVIDIA host services already aligned for VFIO mode')" | tee -a "$screen_capture"
     fi
+
+    # Sync components_status.json — the host driver stays on disk but is
+    # not in use for this GPU because it now belongs to a VM. Per-BDF
+    # model: on multi-GPU hosts where another NVIDIA card still uses the
+    # nvidia driver, keep the status as "installed" — the driver is
+    # genuinely in use elsewhere. Only flip to "vfio_passthrough" when no
+    # NVIDIA GPU is bound to the host driver anymore.
+    if declare -F update_component_status >/dev/null 2>&1; then
+        local _nvd_ver _nvd_new_status
+        _nvd_ver=$(jq -r '.nvidia_driver.version // ""' \
+            /usr/local/share/proxmenux/components_status.json 2>/dev/null)
+        _nvd_new_status="vfio_passthrough"
+        # Any NVIDIA PCI device still using the nvidia driver on the host?
+        if lspci -nnk 2>/dev/null | awk '
+            /NVIDIA/{gpu=1; next}
+            gpu && /Kernel driver in use: nvidia$/ {found=1; exit}
+            /^[^\t]/{gpu=0}
+            END{exit !found}
+        '; then
+            _nvd_new_status="installed"
+        fi
+        update_component_status "nvidia_driver" "$_nvd_new_status" \
+            "${_nvd_ver:-}" "gpu" '{"patched":false}' >>"$LOG_FILE" 2>&1 || true
+    fi
 }
 
 # Per-BDF VFIO binder + legacy NVIDIA blacklist migration are defined in
@@ -2197,6 +2221,9 @@ _configure_nvidia_kvm_hide() {
 update_initramfs_host() {
     msg_info "$(translate 'Updating initramfs (this may take a minute)...')"
     update-initramfs -u -k all >>"$LOG_FILE" 2>&1
+    # Copy the freshly-built initramfs to the EFI System Partition.
+    # Without this the bootloader keeps using the previous initramfs.
+    proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
     msg_ok "$(translate 'initramfs updated')" | tee -a "$screen_capture"
 }
 

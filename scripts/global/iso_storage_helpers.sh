@@ -133,14 +133,41 @@ iso_human_size() {
   [[ -n "$bytes" ]] && echo "${bytes}B" || echo "-"
 }
 
+iso_fast_path_from_volid() {
+  local volid="$1"
+  local storage rel file
+
+  storage=$(iso_storage_from_volid "$volid")
+  rel="${volid#*:}"
+  file="$(basename "${rel#iso/}")"
+
+  if [[ "$storage" == "local" ]]; then
+    echo "/var/lib/vz/template/iso/$file"
+  else
+    echo "/mnt/pve/$storage/template/iso/$file"
+  fi
+}
+
+iso_display_name() {
+  local name="$1"
+  local max_length="${2:-54}"
+
+  if [ ${#name} -gt "$max_length" ]; then
+    printf '%s...' "${name:0:$((max_length - 3))}"
+  else
+    printf '%-*s' "$max_length" "$name"
+  fi
+}
+
 iso_dialog_description() {
   local volid="$1"
-  local name storage path size
+  local storage path size
 
-  name=$(iso_name_from_volid "$volid")
   storage=$(iso_storage_from_volid "$volid")
-  path=$(iso_volid_to_path "$volid")
+  path=$(iso_fast_path_from_volid "$volid")
   size=$(iso_human_size "$path")
+  printf '%-10s | %s' "$storage" "$size"
+  return 0
 
   printf '%-42s │ %-14s │ %s' "$name" "$storage" "$size"
 }

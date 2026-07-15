@@ -135,8 +135,22 @@ check_updates_stable() {
     [[ -z "$LOCAL_VERSION" ]] && return 0
     [[ "$LOCAL_VERSION" = "$REMOTE_VERSION" ]] && return 0
 
-    if whiptail --title "$(translate 'Update Available')" \
-                --yesno "$(translate 'New version available') ($REMOTE_VERSION)\n\n$(translate 'Do you want to update now?')" \
+    # Extract the translated prompt strings into variables FIRST so the
+    # whiptail line below is trivially parseable. A user on the 1.2.2
+    # update path hit:
+    #   menu: line 138: syntax error near unexpected token `$REMOTE_VERSION'
+    # The original inline form was technically valid bash, but a
+    # translate() return that contains a stray quote or paren is enough
+    # to confuse a partially-rewritten file (race during update) or a
+    # corrupted download. Splitting the strings out closes the entire
+    # parsing-risk surface for zero behavioural change.
+    local PROMPT_TITLE PROMPT_AVAIL PROMPT_ASK
+    PROMPT_TITLE="$(translate 'Update Available')"
+    PROMPT_AVAIL="$(translate 'New version available')"
+    PROMPT_ASK="$(translate 'Do you want to update now?')"
+
+    if whiptail --title "$PROMPT_TITLE" \
+                --yesno "$PROMPT_AVAIL ($REMOTE_VERSION)\n\n$PROMPT_ASK" \
                 10 60 --defaultno; then
 
         msg_warn "$(translate 'Starting ProxMenux update...')"
@@ -188,6 +202,34 @@ main_menu() {
     local MAIN_MENU="$LOCAL_SCRIPTS/menus/main_menu.sh"
     exec bash "$MAIN_MENU"
 }
+
+# `menu -v` / `-h` print info and exit without opening the TUI so
+# admins can query the install over SSH (issue #240).
+case "${1:-}" in
+    -v|--version|-V)
+        local_ver="unknown"
+        [[ -f "$LOCAL_VERSION_FILE" ]] && local_ver="$(<"$LOCAL_VERSION_FILE")"
+        printf 'ProxMenux %s\n' "$local_ver"
+        if is_beta && [[ -f "$BETA_VERSION_FILE" ]]; then
+            printf 'Beta build: %s\n' "$(<"$BETA_VERSION_FILE")"
+        fi
+        exit 0
+        ;;
+    -h|--help)
+        cat <<'EOF'
+Usage: menu [OPTION]
+
+Interactive menu for Proxmox VE management.
+
+Options:
+  -v, --version   Print installed ProxMenux version and exit.
+  -h, --help      Show this help and exit.
+
+Run without arguments to launch the interactive menu.
+EOF
+        exit 0
+        ;;
+esac
 
 load_language
 initialize_cache

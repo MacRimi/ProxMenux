@@ -138,6 +138,12 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
       // return `{error: "..."}` on failure (e.g. /api/vms/<id>/control
       // includes the pvesh stderr — telling the user "no space left on
       // device" is infinitely more useful than the raw status text).
+      //
+      // We also attach the FULL parsed JSON body to the thrown Error
+      // as `.body` so callers that want the optional `details` /
+      // `suggestion` fields (e.g. /api/node/metrics) can render them
+      // without re-fetching. Callers that just read `err.message`
+      // keep working exactly as before.
       try {
         const ct = response.headers.get("content-type") || ""
         if (ct.includes("application/json")) {
@@ -145,14 +151,22 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
           const detail =
             (body && (body.error || body.message)) || ""
           if (detail) {
-            throw new Error(detail)
+            const e: Error & { body?: unknown; status?: number } = new Error(detail)
+            e.body = body
+            e.status = response.status
+            throw e
           }
         }
       } catch (parseErr) {
-        if (parseErr instanceof Error && parseErr.message.includes("API request failed")) {
+        // Backend-supplied detail (the explicit `throw new Error(detail)`
+        // above) MUST propagate so the UI shows "path does not exist…"
+        // instead of the generic "API request failed: 400 BAD REQUEST".
+        // Only swallow when the JSON itself failed to parse — that's a
+        // real SyntaxError and falling through to the generic message
+        // is the right behaviour there.
+        if (!(parseErr instanceof SyntaxError)) {
           throw parseErr
         }
-        // JSON parse failed — fall through to the generic message.
       }
       throw new Error(`API request failed: ${response.status} ${response.statusText}`)
     }

@@ -436,6 +436,24 @@ offer_lxc_updates_if_any() {
 # System preparation (repos, headers, etc.)
 # ==========================================================
 ensure_repos_and_headers() {
+  # Bootstrap APT repos FIRST. On a fresh Proxmox install the
+  # pve-no-subscription / debian repos aren't configured by default
+  # → `pve-headers-$(uname -r)` and `build-essential` come back as
+  # "Unable to locate package" and the NVIDIA install bails out with
+  # "no cc found". We delegate to the shared helper (same one the
+  # post-install flow uses), which owns its own spinner pair — that's
+  # why this block has to run BEFORE we open our own msg_info.
+  if ! declare -F ensure_repositories >/dev/null 2>&1; then
+    local _utils_install="$LOCAL_SCRIPTS/global/utils-install-functions.sh"
+    [[ ! -f "$_utils_install" ]] && _utils_install="/usr/local/share/proxmenux/scripts/global/utils-install-functions.sh"
+    # shellcheck source=/dev/null
+    [[ -f "$_utils_install" ]] && source "$_utils_install"
+  fi
+  if declare -F ensure_repositories >/dev/null 2>&1; then
+    ensure_repositories >>"$LOG_FILE" 2>&1 || true
+  fi
+
+  # Now own the spinner for the headers + build-tools check.
   msg_info "$(translate 'Checking kernel headers and build tools...')"
 
   local kver
@@ -467,8 +485,13 @@ blacklist nouveau
 options nouveau modeset=0
 EOF
 
-  # Attempt to unload nouveau if currently loaded
+  # Attempt to unload nouveau if currently loaded.
+  # Close the spinner from the opening msg_info before going further —
+  # otherwise the second msg_info below leaves the first one spinning
+  # forever (visible on fresh installs where nouveau is loaded; invisible
+  # on reinstalls where this branch is skipped).
   if grep -q "^nouveau " /proc/modules 2>/dev/null; then
+    msg_ok "$(translate 'nouveau driver has been blacklisted.')" | tee -a "$screen_capture"
 
     msg_info "$(translate 'Nouveau module is loaded, attempting to unload...')"
     modprobe -r nouveau 2>/dev/null || true
@@ -799,10 +822,19 @@ filter_option_c_branch() {
     return 0
   fi
 
+  # Accept the target branch AND any newer branch (major ≥ target).
+  # Historical behaviour was an exact-major match, which locked kernel
+  # 7.x users to 580.x only. When a 580.x build happens to fail to
+  # compile on a very recent kernel + toolchain combo (reproduced on
+  # kernel 7.0.14-4-pve — see issue #248), the operator had no
+  # in-menu escape. `MIN_DRIVER_VERSION` from get_kernel_compatibility_info
+  # still gates the floor, so this only opens the ceiling: newer stable
+  # branches like 590 / 595 / 600 that satisfy the min version become
+  # selectable, while ancient branches remain filtered out.
   while IFS= read -r ver; do
     [[ -z "$ver" ]] && continue
     local ver_major="${ver%%.*}"
-    if [[ "$ver_major" == "$target_branch" ]]; then
+    if (( 10#$ver_major >= 10#$target_branch )); then
       printf '%s\n' "$ver"
     fi
   done <<< "$versions_in"
@@ -1070,6 +1102,7 @@ run_nvidia_installer() {
   if [[ "${NOUVEAU_STILL_LOADED:-false}" == "true" ]]; then
     msg_info "$(translate 'Rebuilding initramfs to apply nouveau blacklist before installation...')"
     update-initramfs -u -k all >>"$LOG_FILE" 2>&1 || true
+    proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
     # Try one more time to unload nouveau after initramfs rebuild
     modprobe -r nouveau 2>/dev/null || true
     sleep 1
@@ -1150,12 +1183,24 @@ EOF
 }
 
 apply_nvidia_patch_if_needed() {
-  if ! hybrid_whiptail_yesno "$(translate 'NVIDIA Patch')" \
-    "\n$(translate 'Do you want to apply the optional NVIDIA patch to remove some GPU limitations?')"; then
-    msg_info2 "$(translate 'NVIDIA patch not applied.')"
-    update_component_status "nvidia_driver" "installed" "$CURRENT_DRIVER_VERSION" "gpu" '{"patched":false}'
-    return 0
-  fi
+  # NVIDIA_PATCH_AUTO=yes|no skips the yes/no prompt for non-interactive
+  # callers; unset preserves the interactive menu behavior.
+  case "${NVIDIA_PATCH_AUTO:-}" in
+    yes) : ;;
+    no)
+      msg_info2 "$(translate 'NVIDIA patch not applied.')"
+      update_component_status "nvidia_driver" "installed" "$CURRENT_DRIVER_VERSION" "gpu" '{"patched":false}'
+      return 0
+      ;;
+    *)
+      if ! hybrid_whiptail_yesno "$(translate 'NVIDIA Patch')" \
+        "\n$(translate 'Do you want to apply the optional NVIDIA patch to remove some GPU limitations?')"; then
+        msg_info2 "$(translate 'NVIDIA patch not applied.')"
+        update_component_status "nvidia_driver" "installed" "$CURRENT_DRIVER_VERSION" "gpu" '{"patched":false}'
+        return 0
+      fi
+      ;;
+  esac
 
   msg_info "$(translate 'Cloning and applying NVIDIA patch (keylase/nvidia-patch)...')"
   ensure_workdir
@@ -1476,10 +1521,6 @@ main() {
       stop_and_disable_nvidia_services
       unload_nvidia_modules
 
-      # No msg_info spinner here — it would clash with wget --show-progress,
-      # which writes its progress bar directly to /dev/tty from inside the
-      # download function. Stderr from the function is allowed through so
-      # warnings/errors reach the user.
       local installer
       installer=$(download_nvidia_installer "$DRIVER_VERSION")
       local download_result=$?
@@ -1512,6 +1553,7 @@ main() {
 
       msg_info "$(translate 'Updating initramfs for all kernels...')"
       update-initramfs -u -k all >>"$LOG_FILE" 2>&1 || true
+      proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
       msg_ok "$(translate 'initramfs updated.')"
 
       msg_info2 "$(translate 'Checking NVIDIA driver status with nvidia-smi')"
@@ -1554,6 +1596,7 @@ main() {
 
         msg_info "$(translate 'Updating initramfs for all kernels...')"
         update-initramfs -u -k all >>"$LOG_FILE" 2>&1 || true
+        proxmox-boot-tool refresh >>"$LOG_FILE" 2>&1 || true
         msg_ok "$(translate 'initramfs updated.')"
 
         restart_prompt
@@ -1565,6 +1608,139 @@ main() {
   esac
 }
 
+# ==========================================================
+# Non-interactive auto-reinstall entry point
+# ==========================================================
+# Invoked after a host-config restore by apply_cluster_postboot.sh
+# when components_status.json reports nvidia_driver as installed
+# but the kernel module isn't loaded on the live system (i.e. the
+# restore brought back the configs but not the binary driver from
+# /lib/modules/<kernel>/). Replays the install path the user
+# originally ran via `menu → 2`, using the recorded version, with
+# no dialogs.
+#
+# Exit codes:
+#   0  installed (or no-op — GPU absent / driver already present)
+#   1  state file unreadable or no nvidia_driver entry
+#   2  install failed
+auto_reinstall_from_state() {
+  : >"$LOG_FILE"
+  echo "=== auto_reinstall_from_state started $(date -Iseconds) ===" >>"$LOG_FILE"
+
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "jq not available — cannot read components_status.json" | tee -a "$LOG_FILE"
+    return 1
+  fi
+  if [[ ! -f "$COMPONENTS_STATUS_FILE" ]]; then
+    echo "No components_status.json at $COMPONENTS_STATUS_FILE" | tee -a "$LOG_FILE"
+    return 1
+  fi
+
+  local recorded_status recorded_version recorded_patched
+  recorded_status=$(jq -r '.nvidia_driver.status // ""'    "$COMPONENTS_STATUS_FILE" 2>/dev/null)
+  recorded_version=$(jq -r '.nvidia_driver.version // ""'  "$COMPONENTS_STATUS_FILE" 2>/dev/null)
+  recorded_patched=$(jq -r '.nvidia_driver.patched // false' "$COMPONENTS_STATUS_FILE" 2>/dev/null)
+
+  if [[ "$recorded_status" != "installed" ]]; then
+    echo "nvidia_driver not marked installed in state ($recorded_status) — nothing to do" | tee -a "$LOG_FILE"
+    return 0
+  fi
+  if [[ -z "$recorded_version" || "$recorded_version" == "null" ]]; then
+    echo "nvidia_driver marked installed but no version recorded — aborting" | tee -a "$LOG_FILE"
+    return 1
+  fi
+  echo "Recorded driver: $recorded_version (patched=$recorded_patched)" >>"$LOG_FILE"
+
+  detect_nvidia_gpus
+  if ! $NVIDIA_GPU_PRESENT; then
+    echo "No NVIDIA GPU detected on this host — skipping reinstall" | tee -a "$LOG_FILE"
+    return 0
+  fi
+  # Skip when the host is configured for VFIO passthrough. Two
+  # signals — config wins over runtime:
+  #
+  #   1. modprobe.d declares the nvidia* modules blacklisted (the
+  #      file ProxMenux drops when switching the GPU to VM mode is
+  #      `proxmenux-nvidia-vfio-blacklist.conf`, but any blacklist
+  #      file counts).
+  #   2. The PCI device is bound to vfio-pci.
+  #
+  # The config check has to come FIRST because right after a host
+  # restore + reboot, the binding may not yet be effective (the
+  # GPU temporarily shows "no driver" while udev/initramfs settle).
+  # Reinstalling NVIDIA in that window forces the module onto a
+  # PCI device vfio-pci has already reserved → "NVRM: Try unloading
+  # the conflicting kernel module" and exit 1.
+  if [[ -f /etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf ]] \
+     || grep -qrhE '^[[:space:]]*blacklist[[:space:]]+nvidia([[:space:]_]|$)' \
+          /etc/modprobe.d/ 2>/dev/null; then
+    echo "NVIDIA blacklisted (host is VFIO-configured) — skipping host driver reinstall" \
+      | tee -a "$LOG_FILE"
+    return 0
+  fi
+  local _vfio_dev
+  for _vfio_dev in /sys/bus/pci/devices/*; do
+    [[ "$(cat "$_vfio_dev/vendor" 2>/dev/null)" == "0x10de" ]] || continue
+    if [[ -L "$_vfio_dev/driver" ]] \
+       && [[ "$(basename "$(readlink "$_vfio_dev/driver")")" == "vfio-pci" ]]; then
+      echo "NVIDIA GPU bound to vfio-pci — skipping host driver reinstall" | tee -a "$LOG_FILE"
+      return 0
+    fi
+  done
+  detect_driver_status
+  if $CURRENT_DRIVER_INSTALLED && [[ "$CURRENT_DRIVER_VERSION" == "$recorded_version" ]]; then
+    echo "Driver $recorded_version already installed and matches state — no-op" | tee -a "$LOG_FILE"
+    return 0
+  fi
+
+  DRIVER_VERSION="$recorded_version"
+
+  # Same install path as the interactive main() flow, minus all
+  # dialogs and confirmations.
+  echo "Reinstalling NVIDIA driver $DRIVER_VERSION non-interactively..." | tee -a "$LOG_FILE"
+  ensure_workdir
+  ensure_repos_and_headers          >>"$LOG_FILE" 2>&1
+  blacklist_nouveau                 >>"$LOG_FILE" 2>&1
+  ensure_modules_config             >>"$LOG_FILE" 2>&1
+
+  if $CURRENT_DRIVER_INSTALLED; then
+    echo "Different version currently installed; cleaning up first..." | tee -a "$LOG_FILE"
+    complete_nvidia_uninstall       >>"$LOG_FILE" 2>&1
+  fi
+
+  local installer
+  installer=$(download_nvidia_installer "$DRIVER_VERSION" 2>>"$LOG_FILE")
+  if [[ -z "$installer" || ! -f "$installer" ]]; then
+    echo "Download failed — see $LOG_FILE" | tee -a "$LOG_FILE"
+    return 2
+  fi
+  echo "Installer ready: $installer" >>"$LOG_FILE"
+  if ! run_nvidia_installer "$installer" >>"$LOG_FILE" 2>&1; then
+    echo "Install failed — see $LOG_FILE" | tee -a "$LOG_FILE"
+    return 2
+  fi
+  install_udev_rules_and_persistenced >>"$LOG_FILE" 2>&1
+
+  # Preserve the recorded patched state across the reinstall. The patch
+  # helper writes its own update_component_status on success.
+  CURRENT_DRIVER_VERSION="$DRIVER_VERSION"
+  if [[ "$recorded_patched" == "true" ]]; then
+    echo "Recorded state had patched=true — re-applying NVIDIA patch..." | tee -a "$LOG_FILE"
+    NVIDIA_PATCH_AUTO=yes apply_nvidia_patch_if_needed >>"$LOG_FILE" 2>&1 || true
+  else
+    if declare -F update_component_status >/dev/null 2>&1; then
+      update_component_status "nvidia_driver" "installed" "$DRIVER_VERSION" "gpu" '{"patched":false}' >>"$LOG_FILE" 2>&1
+    fi
+  fi
+
+  echo "✓ NVIDIA driver $DRIVER_VERSION reinstalled" | tee -a "$LOG_FILE"
+  return 0
+}
+
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  if [[ "${1:-}" == "--auto-reinstall" ]]; then
+    auto_reinstall_from_state
+    exit $?
+  fi
   main
 fi

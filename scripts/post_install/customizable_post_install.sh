@@ -101,6 +101,32 @@ register_tool() {
 
 
 
+setup_proxmox_repositories() {
+    local FUNC_VERSION="1.1"
+    # Description: Configure Proxmox + Debian APT repositories (no-subscription)
+    # and set the correct file permissions.
+
+    msg_info2 "$(translate "Configuring Proxmox APT repositories...")"
+
+    if ! ensure_repositories; then
+        msg_error "$(translate "Failed to configure Proxmox repositories")"
+        register_tool "proxmox_repos" false "$FUNC_VERSION"
+        return 1
+    fi
+
+    local f
+    for f in /etc/apt/sources.list.d/proxmox.sources \
+             /etc/apt/sources.list.d/debian.sources \
+             /etc/apt/sources.list.d/pve-no-subscription.list \
+             /etc/apt/sources.list.d/pve-enterprise.list; do
+        [[ -f "$f" ]] && chmod 0644 "$f" 2>/dev/null
+    done
+
+    register_tool "proxmox_repos" true "$FUNC_VERSION"
+    msg_success "$(translate "Proxmox APT repositories configured")"
+}
+
+
 check_extremeshok_warning() {
     local marker_file="/etc/extremeshok"
 
@@ -988,6 +1014,7 @@ Suites: ${target_codename}
 Components: no-subscription
 Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
 EOF
+        chmod 0644 /etc/apt/sources.list.d/ceph.sources
         msg_ok "$(translate "Ceph repository configured for PVE 9")"
         
     else
@@ -2910,14 +2937,137 @@ install_system_utils() {
 
 
 
+custom_post_category_label() {
+  case "$1" in
+    "Basic Settings") translate "Basic Settings" ;;
+    "System") translate "System" ;;
+    "Hardware") translate "Hardware" ;;
+    "Virtualization") translate "Virtualization" ;;
+    "Network") translate "Network" ;;
+    "Storage") translate "Storage" ;;
+    "Security") translate "Security" ;;
+    "Customization") translate "Customization" ;;
+    "Monitoring") translate "Monitoring" ;;
+    "Performance") translate "Performance" ;;
+    "Optional") translate "Optional" ;;
+    *) echo "$1" ;;
+  esac
+}
+
+custom_post_description_label() {
+  case "$1" in
+    "Configure Proxmox APT repositories") translate "Configure Proxmox APT repositories" ;;
+    "Update and upgrade system") translate "Update and upgrade system" ;;
+    "Synchronize time automatically") translate "Synchronize time automatically" ;;
+    "Skip downloading additional languages") translate "Skip downloading additional languages" ;;
+    "Install common system utilities") translate "Install common system utilities" ;;
+    "Optimize journald") translate "Optimize journald" ;;
+    "Optimize logrotate") translate "Optimize logrotate" ;;
+    "Increase various system limits") translate "Increase various system limits" ;;
+    "Optimize Memory") translate "Optimize Memory" ;;
+    "Enable fast reboots") translate "Enable fast reboots" ;;
+    "Enable restart on kernel panic") translate "Enable restart on kernel panic" ;;
+    "Apply AMD CPU fixes") translate "Apply AMD CPU fixes" ;;
+    "Install relevant guest agent") translate "Install relevant guest agent" ;;
+    "Enable VFIO IOMMU support") translate "Enable VFIO IOMMU support" ;;
+    "Force APT to use IPv4") translate "Force APT to use IPv4" ;;
+    "Apply network optimizations") translate "Apply network optimizations" ;;
+    "Install Open vSwitch") translate "Install Open vSwitch" ;;
+    "Enable TCP BBR/Fast Open control") translate "Enable TCP BBR/Fast Open control" ;;
+    "Interface Names (persistent)") translate "Interface Names (persistent)" ;;
+    "Optimize ZFS ARC size") translate "Optimize ZFS ARC size" ;;
+    "Install ZFS auto-snapshot") translate "Install ZFS auto-snapshot" ;;
+    "Enable ZFS autotrim (SSD/NVMe pools)") translate "Enable ZFS autotrim (SSD/NVMe pools)" ;;
+    "Increase vzdump backup speed") translate "Increase vzdump backup speed" ;;
+    "Disable portmapper/rpcbind") translate "Disable portmapper/rpcbind" ;;
+    "Customize bashrc") translate "Customize bashrc" ;;
+    "Set up custom MOTD banner") translate "Set up custom MOTD banner" ;;
+    "Remove subscription banner") translate "Remove subscription banner" ;;
+    "Install OVH Real Time Monitoring") translate "Install OVH Real Time Monitoring" ;;
+    "Use pigz for faster gzip compression") translate "Use pigz for faster gzip compression" ;;
+    "Install and configure Fastfetch") translate "Install and configure Fastfetch" ;;
+    "Update Proxmox VE Appliance Manager") translate "Update Proxmox VE Appliance Manager" ;;
+    "Add latest Ceph support") translate "Add latest Ceph support" ;;
+    "Enable High Availability services") translate "Enable High Availability services" ;;
+    "Install Figurine") translate "Install Figurine" ;;
+    "Install and configure Log2RAM") translate "Install and configure Log2RAM" ;;
+    *) echo "$1" ;;
+  esac
+}
+
+format_custom_post_line() {
+  local description="$1"
+  local category="$2"
+  local max_description_length=52
+
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - "$description" "$category" "$max_description_length" <<'PY'
+import sys
+import unicodedata
+
+description = sys.argv[1]
+category = sys.argv[2]
+max_width = int(sys.argv[3])
+
+def display_width(text):
+    width = 0
+    for char in text:
+        if unicodedata.combining(char):
+            continue
+        width += 2 if unicodedata.east_asian_width(char) in ("F", "W") else 1
+    return width
+
+def fit_text(text, width):
+    result = ""
+    used = 0
+    for char in text:
+        char_width = 0 if unicodedata.combining(char) else (2 if unicodedata.east_asian_width(char) in ("F", "W") else 1)
+        if used + char_width > width:
+            break
+        result += char
+        used += char_width
+    return result, used
+
+if display_width(description) > max_width:
+    description, used_width = fit_text(description, max_width - 3)
+    description += "..."
+    used_width += 3
+else:
+    used_width = display_width(description)
+
+print(f"{description}{' ' * (max_width - used_width)} | {category}")
+PY
+    return
+  fi
+
+  if [ ${#description} -gt $max_description_length ]; then
+    description="${description:0:$((max_description_length - 3))}..."
+  fi
+  printf '%-*s | %s' "$max_description_length" "$description" "$category"
+}
+
+format_custom_post_header() {
+  local description_label
+  local category_label
+  local checklist_prefix="           "
+
+  description_label="$(translate "Description")"
+  category_label="$(translate "Category")"
+  printf '%s%s' "$checklist_prefix" "$(format_custom_post_line "$description_label" "$category_label")"
+}
+
 # Main menu function
 main_menu() {
+  local header_line
   local HEADER
   if [[ "$LANGUAGE" == "es" ]]; then
     HEADER="Seleccione las opciones a configurar:\n\n           Descripción                                  | Categoría"
   else
     HEADER="$(translate "Choose options to configure:")\n\n           Description                                | Category"
   fi
+
+  header_line="$(format_custom_post_header)"
+  HEADER="$(translate "Choose options to configure:")\n\n${header_line}"
 
   declare -A category_order=(
     ["Basic Settings"]=1 ["System"]=2 ["Hardware"]=3 ["Virtualization"]=4
@@ -2926,6 +3076,7 @@ main_menu() {
   )
 
   local options=(
+    "Basic Settings|Configure Proxmox APT repositories|REPOS"
     "Basic Settings|Update and upgrade system|APTUPGRADE"
     "Basic Settings|Synchronize time automatically|TIMESYNC"
     "Basic Settings|Skip downloading additional languages|NOAPTLANG"
@@ -2969,23 +3120,18 @@ main_menu() {
   done | sort -n | cut -d'|' -f2-))
   unset IFS
 
-  local max_desc_length=0
   local temp_descriptions=()
+  local temp_categories=()
   
   for option in "${sorted_options[@]}"; do
     IFS='|' read -r category description function_name <<< "$option"
-    local desc_translated="$(translate "$description")"
+    local desc_translated
+    local category_translated
+    desc_translated="$(custom_post_description_label "$description")"
+    category_translated="$(custom_post_category_label "$category")"
     temp_descriptions+=("$desc_translated")
-    
-    local desc_length=${#desc_translated}
-    if [ $desc_length -gt $max_desc_length ]; then
-      max_desc_length=$desc_length
-    fi
+    temp_categories+=("$category_translated")
   done
-  
-  if [ $max_desc_length -gt 50 ]; then
-    max_desc_length=50
-  fi
 
   local checklist_items=()
   local i=1
@@ -3001,21 +3147,11 @@ main_menu() {
     fi
     
     local desc_translated="${temp_descriptions[$desc_index]}"
+    local category_translated="${temp_categories[$desc_index]}"
     desc_index=$((desc_index + 1))
     
-
-    if [ ${#desc_translated} -gt $max_desc_length ]; then
-      desc_translated="${desc_translated:0:$((max_desc_length-3))}..."
-    fi
-    
-
-    local spaces_needed=$((max_desc_length - ${#desc_translated}))
-    local padding=""
-    for ((j=0; j<spaces_needed; j++)); do
-      padding+=" "
-    done
-    
-    local line="${desc_translated}${padding}      | ${category}"
+    local line
+    line="$(format_custom_post_line "$desc_translated" "$category_translated")"
 
     checklist_items+=("$i" "$line" "off")
     i=$((i + 1))
@@ -3026,7 +3162,7 @@ main_menu() {
   selected_indices=$(dialog --clear \
     --backtitle "ProxMenux" \
     --title "$(translate "Post-Installation Options")" \
-    --checklist "$HEADER" 22 80 15 \
+    --checklist "$HEADER" 22 88 15 \
     "${checklist_items[@]}" \
     2>&1 1>&3)
 
@@ -3076,6 +3212,7 @@ done
     IFS='|' read -r _ description function_name <<< "$option"
     if [[ ${selected_functions[$function_name]} -eq 1 ]]; then
       case $function_name in
+        REPOS) setup_proxmox_repositories ;;
         APTUPGRADE) apt_upgrade ;;
         TIMESYNC) configure_time_sync ;;
         NOAPTLANG) skip_apt_languages ;;

@@ -15,12 +15,21 @@ class AnthropicProvider(AIProvider):
     API_URL = "https://api.anthropic.com/v1/messages"
     API_VERSION = "2023-06-01"
     
-    # Known stable model aliases (Anthropic doesn't have a public models list API)
-    # These use "-latest" which auto-updates to the newest version
+    # Anthropic model aliases that resolve to pinned snapshots (per docs
+    # at platform.claude.com/docs/en/docs/about-claude/models). Kept as a
+    # runtime fallback for the `/api/notifications/provider-models`
+    # intersection with `verified_ai_models.json`; the JSON is the
+    # authoritative UI-facing list. Refreshed 2026-07-13 to drop the
+    # deprecated claude-3-5-* aliases (retired upstream, no longer in the
+    # Models API response) and add the current-generation IDs. Ordered
+    # cheapest → most capable so the first entry is a safe default.
     KNOWN_MODELS = [
-        "claude-3-5-haiku-latest",
-        "claude-3-5-sonnet-latest", 
-        "claude-3-opus-latest",
+        "claude-haiku-4-5",
+        "claude-sonnet-5",
+        "claude-sonnet-4-6",
+        "claude-opus-4-8",
+        "claude-opus-4-6",
+        "claude-fable-5",
     ]
     
     def list_models(self) -> List[str]:

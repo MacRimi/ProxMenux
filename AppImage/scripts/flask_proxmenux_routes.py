@@ -40,6 +40,12 @@ TOOL_METADATA = {
     'vfio_iommu':           {'name': 'VFIO/IOMMU Passthrough',                'function': 'enable_vfio_iommu',            'version': '1.0'},
     'lvm_repair':           {'name': 'LVM PV Headers Repair',                 'function': 'repair_lvm_headers',           'version': '1.0'},
     'repo_cleanup':         {'name': 'Repository Cleanup',                    'function': 'cleanup_repos',                'version': '1.0'},
+    # 1.1 = setup_proxmox_repositories now re-applies chmod 0644 to existing
+    # .sources/.list files. Legacy users (repos created with old 0640 perms
+    # but no entry in installed_tools.json) are surfaced as v1.0 via the
+    # legacy detector in get_installed_tools() below, so the Settings page
+    # shows them an "Update available" they can apply without touching apt.
+    'proxmox_repos':        {'name': 'Proxmox APT Repositories',              'function': 'setup_proxmox_repositories',   'version': '1.1'},
     # ── Legacy / Deprecated entries ──
     # These optimizations were applied by previous ProxMenux versions but are
     # no longer needed or have been removed from the current scripts. We still
@@ -226,8 +232,15 @@ def get_installed_tools():
                 'message': 'No ProxMenux optimizations installed yet'
             })
 
-        with open(installed_tools_path, 'r') as f:
-            raw = json.load(f)
+        # Use the shared loader so both update detection and this
+        # endpoint see the same set of entries — including any
+        # synthetic v1.0 entries injected by `_apply_legacy_detectors`
+        # for tools that the host has configured but were never
+        # recorded in installed_tools.json (e.g. `proxmox_repos` on a
+        # pre-1.2.2 install). Without this, the update detector would
+        # surface a fix as available but the Settings endpoint
+        # wouldn't list the row, leaving the user nothing to click.
+        loaded = post_install_versions.load_installed_tools()
 
         # Sprint 12A: index update list by tool key for has_update lookup.
         try:
@@ -237,20 +250,11 @@ def get_installed_tools():
         update_by_key = {u['key']: u for u in piv_snapshot.get('updates', [])}
 
         tools = []
-        for tool_key, value in raw.items():
-            # Normalize legacy bool vs new structured entry.
-            if isinstance(value, bool):
-                if not value:
-                    continue
-                installed_version = '1.0'
-                source = ''
-            elif isinstance(value, dict):
-                if not value.get('installed', False):
-                    continue
-                installed_version = str(value.get('version', '1.0')) or '1.0'
-                source = str(value.get('source', '') or '')
-            else:
+        for tool_key, value in loaded.items():
+            if not value.get('installed', False):
                 continue
+            installed_version = str(value.get('version', '1.0')) or '1.0'
+            source = str(value.get('source', '') or '')
 
             # Hard-coded display metadata (display name, deprecated flag).
             meta = TOOL_METADATA.get(tool_key, {})

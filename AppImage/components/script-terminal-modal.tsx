@@ -49,6 +49,12 @@ interface ScriptTerminalModalProps {
   description: string
   scriptName?: string
   params?: Record<string, string>
+  // Optional callback fired when the script's WebSocket closes
+  // (script_runner sends an exit code and then closes). Lets the
+  // parent auto-dismiss the modal — used by host-backup's Restore
+  // flow so "Press Enter to close" in the bash script actually
+  // closes the modal without an extra click. Other callers ignore.
+  onComplete?: () => void
 }
 
 export function ScriptTerminalModal({
@@ -58,6 +64,7 @@ export function ScriptTerminalModal({
   title,
   description,
   params = { EXECUTION_MODE: "web" },
+  onComplete,
 }: ScriptTerminalModalProps) {
   const termRef = useRef<any>(null)
   const wsRef = useRef<WebSocket | null>(null)
@@ -94,6 +101,13 @@ export function ScriptTerminalModal({
   useEffect(() => {
     paramsRef.current = params
   }, [params])
+
+  // Same trick for onComplete — we want the latest callback inside
+  // the ws.onclose handler without re-running the connection effect.
+  const onCompleteRef = useRef<(() => void) | undefined>(undefined)
+  useEffect(() => {
+    onCompleteRef.current = onComplete
+  }, [onComplete])
 
   const attemptReconnect = useCallback(() => {
     if (!isOpen || isComplete || reconnectAttemptsRef.current >= 3) {
@@ -195,6 +209,7 @@ const initMessage = {
             reconnectTimeoutRef.current = setTimeout(attemptReconnect, 2000)
           } else {
             setIsComplete(true)
+            onCompleteRef.current?.()
           }
         }
       }
@@ -284,6 +299,11 @@ const initMessage = {
     setTimeout(() => {
       if (fitAddonRef.current && termRef.current) {
         fitAddonRef.current.fit()
+        // Send the keyboard to the xterm instance so any --yesno /
+        // --menu the script opens receives Enter / arrow keys
+        // directly. Without this the modal's Close button (or any
+        // other focusable descendant) intercepts the keystrokes.
+        termRef.current.focus()
       }
     }, 100)
 
@@ -382,6 +402,7 @@ const initMessage = {
 
       if (!isComplete) {
         setIsComplete(true)
+        onCompleteRef.current?.()
       }
     }
 
@@ -666,6 +687,13 @@ const initMessage = {
           }}
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
+          // Radix defaults to focusing the first focusable descendant
+          // when a Dialog opens — that used to land on the Close button
+          // and every Enter/Space keystroke intended for the shell
+          // dialogs INSIDE the terminal would close the modal instead.
+          // Preempting the auto-focus lets the xterm focus() call in
+          // initializeTerminal below own the keyboard from the start.
+          onOpenAutoFocus={(e) => e.preventDefault()}
           hideClose
         >
           <DialogTitle className="sr-only">{title}</DialogTitle>

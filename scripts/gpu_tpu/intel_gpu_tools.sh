@@ -194,7 +194,29 @@ main() {
   fi
 }
 
-# Run main function
+# ==========================================================
+# Non-interactive auto-reinstall (post-restore hook)
+# ==========================================================
+auto_reinstall_from_state() {
+  : >"$LOG_FILE"
+  echo "=== intel_gpu_tools auto_reinstall $(date -Iseconds) ===" >>"$LOG_FILE"
+  command -v jq >/dev/null 2>&1 || return 1
+  [[ -f "$COMPONENTS_STATUS_FILE" ]] || return 1
+  local s
+  s=$(jq -r '.intel_gpu_tools.status // ""' "$COMPONENTS_STATUS_FILE" 2>/dev/null)
+  [[ "$s" == "installed" ]] || { echo "not installed in state ($s)" >>"$LOG_FILE"; return 0; }
+  if dpkg -s intel-gpu-tools >/dev/null 2>&1; then
+    echo "already present — no-op" >>"$LOG_FILE"; return 0
+  fi
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update -qq >>"$LOG_FILE" 2>&1
+  install_intel_gpu_tools
+}
+
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  if [[ "${1:-}" == "--auto-reinstall" ]]; then
+    auto_reinstall_from_state
+    exit $?
+  fi
   main
 fi

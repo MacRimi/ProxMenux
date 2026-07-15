@@ -266,6 +266,74 @@ def save_notification_settings():
         return jsonify({'error': f'Internal error ({type(e).__name__})'}), 500
 
 
+@notification_bp.route('/api/notifications/reveal-secret', methods=['POST'])
+@require_auth
+def reveal_notification_secret():
+    """Return one sensitive config value in cleartext.
+
+    Backs the "eye" toggle in the Settings UI. The settings GET masks
+    every entry in SENSITIVE_KEYS with `'************'` so the secret
+    never leaves the server just because someone loaded the page; this
+    endpoint lets an authenticated operator explicitly request the
+    real value for a single key when they need to inspect it.
+
+    Body schema (one of):
+        {"ai_provider": "groq" | "anthropic" | …}
+        {"channel": "telegram", "field": "bot_token"}
+        {"key": "webhook_secret"}
+
+    Returns ``{"value": "<cleartext>"}`` or 404 when nothing is stored.
+    400 on a malformed request, 403 if the requested key isn't on the
+    whitelist (i.e. the UI is asking for something we never agreed to
+    expose — defence against a future bug binding the eye to a
+    non-secret field).
+    """
+    try:
+        from notification_manager import SENSITIVE_KEYS
+        nm = notification_manager  # singleton already imported at module top
+
+        payload = request.get_json(silent=True) or {}
+
+        # Resolve the requested config key from the three accepted
+        # body shapes. Whitelist-checked below before we touch the DB.
+        cfg_key = None
+        provider = (payload.get('ai_provider') or '').strip().lower()
+        channel = (payload.get('channel') or '').strip().lower()
+        field = (payload.get('field') or '').strip().lower()
+        raw_key = (payload.get('key') or '').strip()
+
+        if provider:
+            cfg_key = f'ai_api_key_{provider}'
+        elif channel and field:
+            cfg_key = f'{channel}.{field}'
+        elif raw_key:
+            cfg_key = raw_key
+
+        if not cfg_key:
+            return jsonify({'error': 'missing_target'}), 400
+
+        # Whitelist enforcement — never reveal a value the rest of the
+        # system doesn't recognise as a secret. Stops a hypothetical
+        # future bug where the UI passes a non-secret config key and
+        # we hand back something we shouldn't.
+        if cfg_key not in SENSITIVE_KEYS:
+            return jsonify({'error': 'forbidden_key'}), 403
+
+        # Read the raw value through notification_manager (loads + caches
+        # the config). Mask placeholder is the same string the GET would
+        # return — treat that as "not stored" so we don't echo it back.
+        if not nm._config:
+            nm._load_config()
+        value = nm._config.get(cfg_key, '') or ''
+        if not value or value == '************':
+            return jsonify({'value': ''}), 200
+
+        return jsonify({'value': value}), 200
+    except Exception as e:
+        print(f"[notification_routes] {request.path} failed: {type(e).__name__}: {e}")
+        return jsonify({'error': f'Internal error ({type(e).__name__})'}), 500
+
+
 @notification_bp.route('/api/notifications/test', methods=['POST'])
 @require_auth
 def test_notification():
@@ -721,23 +789,108 @@ _PVE_OUR_HEADERS = {
 }
 
 
-def _pve_webhook_url() -> str:
-    """Return http:// or https:// based on the current SSL config.
+def _ssl_cert_hostname(cert_path: str) -> str:
+    """Pull the most useful hostname out of an x509 cert.
 
-    Hardcoded `http://...` previously broke webhook delivery whenever the
-    user enabled SSL — Flask only listened on HTTPS, so PVE got connection
-    refused and notifications stopped. Issue #194. PVE may still need
-    `update-ca-certificates` if the cert is self-signed; that's a doc
-    step on the user side.
+    Preference order: first DNS SAN → CN. Returns '' on any failure.
+    Used to build a webhook URL that won't fail PVE's TLS verification
+    (issue #239 — PVE has no `--insecure` flag and the user's ACME cert
+    is bound to a hostname, not to `127.0.0.1`).
+    """
+    try:
+        import subprocess
+        out = subprocess.run(
+            ['openssl', 'x509', '-in', cert_path, '-noout',
+             '-ext', 'subjectAltName', '-subject'],
+            capture_output=True, text=True, timeout=5,
+        )
+        if out.returncode != 0:
+            return ''
+        text = out.stdout or ''
+        # SAN line example: "    DNS:pve.example.com, DNS:pve, IP Address:..."
+        import re
+        for line in text.splitlines():
+            m = re.search(r'DNS:([A-Za-z0-9.\-]+)', line)
+            if m:
+                return m.group(1)
+        # CN fallback. "subject= CN = pve.example.com" or "...CN=pve.example.com"
+        m = re.search(r'CN\s*=\s*([A-Za-z0-9.\-]+)', text)
+        if m:
+            return m.group(1)
+    except Exception:
+        pass
+    return ''
+
+
+def _hostname_resolves_locally(hostname: str) -> bool:
+    """True when `hostname` resolves to one of this host's own IPs.
+
+    Anti-misconfig: refuse to build a webhook URL that points
+    elsewhere (a stale DNS entry pointing at the previous host, a CN
+    that names a different node in the cluster, etc.). PVE delivers
+    webhooks from the same node, so the URL has to round-trip to
+    ourselves.
+    """
+    try:
+        import socket
+        import ipaddress
+        target_ips = set()
+        for info in socket.getaddrinfo(hostname, None):
+            ip = info[4][0]
+            target_ips.add(ipaddress.ip_address(ip).compressed)
+        # Collect our own IPs from /proc/net/fib_trie isn't portable; use
+        # psutil if available, otherwise fall back to socket on the
+        # hostname itself.
+        local_ips = {'127.0.0.1', '::1'}
+        try:
+            import psutil
+            for _iface, addrs in psutil.net_if_addrs().items():
+                for a in addrs:
+                    if a.family in (socket.AF_INET, socket.AF_INET6):
+                        local_ips.add(ipaddress.ip_address(a.address.split('%')[0]).compressed)
+        except Exception:
+            pass
+        return bool(target_ips & local_ips)
+    except Exception:
+        return False
+
+
+def _pve_webhook_url() -> str:
+    """Return the URL we register with PVE as our webhook target.
+
+    Three branches:
+      1. SSL off → http://127.0.0.1:8008 (always works, no cert).
+      2. SSL on + cert hostname extractable and resolves locally →
+         https://<cert-hostname>:8008. This is what PVE's TLS layer
+         actually validates against. Without this, PVE rejects the
+         self/ACME cert with "IP address mismatch" (issue #239).
+      3. SSL on but hostname extraction/check failed → fall back to
+         https://127.0.0.1:8008 and accept that the user may still
+         hit the cert-mismatch error. We log so the operator can
+         diagnose. Better than silently emitting a wrong URL.
     """
     try:
         from auth_manager import load_ssl_config
         cfg = load_ssl_config() or {}
-        if cfg.get('enabled'):
-            return 'https://127.0.0.1:8008/api/notifications/webhook'
+        if not cfg.get('enabled'):
+            return 'http://127.0.0.1:8008/api/notifications/webhook'
+
+        cert_path = cfg.get('cert_path') or ''
+        if cert_path:
+            host = _ssl_cert_hostname(cert_path)
+            if host and _hostname_resolves_locally(host):
+                return f'https://{host}:8008/api/notifications/webhook'
+            if host:
+                print(
+                    f"[ProxMenux] webhook URL fallback to 127.0.0.1: "
+                    f"cert hostname '{host}' does not resolve to a local "
+                    f"IP — PVE will likely report a TLS verification "
+                    f"error. Fix by ensuring the FQDN resolves on this "
+                    f"host (e.g. /etc/hosts entry)."
+                )
+        return 'https://127.0.0.1:8008/api/notifications/webhook'
     except Exception:
-        pass
-    return 'http://127.0.0.1:8008/api/notifications/webhook'
+        return 'http://127.0.0.1:8008/api/notifications/webhook'
 
 
 # Backward-compat alias for callers that read this at import time. Most
@@ -1405,5 +1558,74 @@ def internal_shutdown_event():
         )
         
         return jsonify({'success': True, 'event_type': event_type}), 200
+    except Exception as e:
+        return jsonify({'error': 'internal_error', 'detail': str(e)}), 500
+
+
+# ─── Internal Restore Event Endpoint ─────────────────────────────
+
+@notification_bp.route('/api/internal/restore-event', methods=['POST'])
+def internal_restore_event():
+    """
+    Internal endpoint called by apply_cluster_postboot.sh when the post-boot
+    dispatcher finishes. Tells the user the backgrounded restore tasks
+    (DKMS compile, apt installs, cluster apply, ...) are done so commands
+    like nvidia-smi now work.
+
+    Only accepts requests from localhost (127.0.0.1) for security.
+    """
+    # Flask bound to 0.0.0.0 receives loopback connections as the
+    # IPv4-mapped IPv6 form (`::ffff:127.0.0.1`) on dual-stack hosts,
+    # not as bare `127.0.0.1`. Unwrap the mapped IPv4 before asking the
+    # stdlib classifier so every loopback representation (v4, v6,
+    # IPv4-mapped) is accepted.
+    remote_addr = request.remote_addr or ''
+    try:
+        import ipaddress
+        addr = ipaddress.ip_address(remote_addr.split('%')[0])
+        if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped is not None:
+            addr = addr.ipv4_mapped
+        is_loopback = addr.is_loopback
+    except (ValueError, TypeError):
+        is_loopback = remote_addr in ('127.0.0.1', '::1', 'localhost')
+    if not is_loopback:
+        return jsonify({'error': 'forbidden', 'detail': 'localhost only'}), 403
+
+    try:
+        data = request.get_json(silent=True) or {}
+        hostname = data.get('hostname', 'unknown')
+        guests = data.get('guests', '0')
+        stubs = data.get('stubs', '0')
+        stale_nodes = data.get('stale_nodes', '0')
+        components = data.get('components', 'none')
+        duration = data.get('duration', 'unknown')
+        # Boot sanity-check warnings surfaced by apply_cluster_postboot.sh.
+        # Empty on a clean restore; populated on the cross-version path
+        # when the sanity check found something the operator should know
+        # about (missing /lib/modules for the default kernel, no ESP
+        # configured, dangling /vmlinuz, ...).
+        warnings = data.get('warnings', '').strip()
+        severity = 'WARNING' if warnings else 'INFO'
+        warnings_block = f'\n⚠️  Boot sanity: {warnings}\n' if warnings else ''
+
+        notification_manager.emit_event(
+            event_type='system_restore_completed',
+            severity=severity,
+            data={
+                'hostname': hostname,
+                'guests': guests,
+                'stubs': stubs,
+                'stale_nodes': stale_nodes,
+                'components': components,
+                'duration': duration,
+                'warnings': warnings,
+                'warnings_block': warnings_block,
+            },
+            source='proxmenux',
+            entity='node',
+            entity_id='',
+        )
+
+        return jsonify({'success': True, 'event_type': 'system_restore_completed'}), 200
     except Exception as e:
         return jsonify({'error': 'internal_error', 'detail': str(e)}), 500

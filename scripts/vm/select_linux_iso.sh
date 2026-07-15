@@ -64,7 +64,7 @@ function select_linux_iso() {
                   --menu "\nSeleccione el tipo de instalación de Linux:\n\n$header" \
                   20 70 10 \
                   1 "$(printf '%-35s│ %s' 'Instalar con metodo tradicional' 'Desde ISO oficial')" \
-                  2 "$(printf '%-35s│ %s' 'Instalar con script Cloud-Init' 'Helper Scripts')" \
+                  2 "$(printf '%-35s│ %s' 'Instalar con script Cloud-Init' 'Helper-Scripts')" \
                   3 "$(printf '%-35s│ %s' 'Instalar con ISO personal' 'Almacenamiento ISO')" \
                   4 "Volver al menú principal" \
                   3>&1 1>&2 2>&3)
@@ -171,13 +171,13 @@ function select_linux_iso_official() {
 
 function select_linux_cloudinit() {
   local CLOUDINIT_OPTIONS=(
-    "1" "Arch Linux   (Cloud-Init automated)   │ Helper Scripts"
-    "2" "Debian 13    (Cloud-Init automated)   │ Helper Scripts"
-    "3" "Debian 12    (Cloud-Init automated)   │ Helper Scripts"
-    "4" "Ubuntu 22.04 (Cloud-Init automated)   │ Helper Scripts"
-    "5" "Ubuntu 24.04 (Cloud-Init automated)   │ Helper Scripts"
-    "6" "Ubuntu 24.10 (Cloud-Init automated)   │ Helper Scripts"
-    "7" "Ubuntu 25.04 (Cloud-Init automated)   │ Helper Scripts"
+    "1" "Arch Linux   (Cloud-Init automated)   │ Helper-Scripts"
+    "2" "Debian 13    (Cloud-Init automated)   │ Helper-Scripts"
+    "3" "Debian 12    (Cloud-Init automated)   │ Helper-Scripts"
+    "4" "Ubuntu 22.04 (Cloud-Init automated)   │ Helper-Scripts"
+    "5" "Ubuntu 24.04 (Cloud-Init automated)   │ Helper-Scripts"
+    "6" "Ubuntu 24.10 (Cloud-Init automated)   │ Helper-Scripts"
+    "7" "Ubuntu 25.04 (Cloud-Init automated)   │ Helper-Scripts"
     "8" "$(translate "Return to Main Menu")"
   )
 
@@ -230,10 +230,21 @@ function select_linux_cloudinit() {
 
 function select_linux_custom_iso() {
   local volid
+  local name display_name tag storage
+  local selected_tag
+  declare -A ISO_VOLID_BY_TAG=()
   ISO_LIST=()
   while read -r volid; do
     [[ -z "$volid" ]] && continue
-    ISO_LIST+=("$volid" "$(iso_dialog_description "$volid")")
+    name=$(iso_name_from_volid "$volid")
+    display_name=$(iso_display_name "$name" 58)
+    storage=$(iso_storage_from_volid "$volid")
+    tag="$display_name"
+    if [[ -n "${ISO_VOLID_BY_TAG[$tag]:-}" ]]; then
+      tag="$(iso_display_name "$name ($storage)" 58)"
+    fi
+    ISO_VOLID_BY_TAG["$tag"]="$volid"
+    ISO_LIST+=("$tag" "$(iso_dialog_description "$volid")")
   done < <(iso_list_volids "all")
 
   if [[ ${#ISO_LIST[@]} -eq 0 ]]; then
@@ -243,15 +254,16 @@ function select_linux_custom_iso() {
     return 1
   fi
 
-  ISO_VOLID=$(dialog --backtitle "ProxMenux" --title "$(translate "Available ISO Images")" \
-    --menu "$(translate "Select a custom ISO to use:")\n\n$(printf '%-42s │ %-14s │ %s' "$(translate "ISO")" "$(translate "Storage")" "$(translate "Size")")" 22 86 12 \
+  selected_tag=$(dialog --backtitle "ProxMenux" --title "$(translate "Available ISO Images")" \
+    --menu "$(translate "Select a custom ISO to use:")\n\n$(printf '%-58s %-10s %s' "$(translate "ISO")" "$(translate "Storage")" "$(translate "Size")")" 22 86 12 \
     "${ISO_LIST[@]}" 3>&1 1>&2 2>&3)
 
-  if [[ -z "$ISO_VOLID" ]]; then
+  if [[ -z "$selected_tag" ]]; then
     header_info
     msg_warn "$(translate "No ISO selected.")"
     return 1
   fi
+  ISO_VOLID="${ISO_VOLID_BY_TAG[$selected_tag]}"
 
   ISO_FILE=$(iso_name_from_volid "$ISO_VOLID")
   ISO_PATH=$(iso_volid_to_path "$ISO_VOLID")
@@ -266,9 +278,9 @@ function select_linux_custom_iso() {
 
 function select_linux_other_scripts() {
 local OTHER_OPTIONS=(
-  "1" "Home Assistant OS VM (HAOS)       │ Helper Scripts"
-  "2" "Docker VM (Debian + SSH + Docker) │ Helper Scripts"
-  "3" "Nextcloud                         │ Helper Scripts"
+  "1" "Home Assistant OS VM (HAOS)       │ Helper-Scripts"
+  "2" "Docker VM (Debian + SSH + Docker) │ Helper-Scripts"
+  "3" "Nextcloud                         │ Helper-Scripts"
   "4" "$(translate "Return to Main Menu")"
 )
 
@@ -313,5 +325,3 @@ whiptail --title "Proxmox VE Helper-Scripts" \
 return 1
 
 }
-
-

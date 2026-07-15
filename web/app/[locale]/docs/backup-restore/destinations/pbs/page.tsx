@@ -225,7 +225,7 @@ export default async function PbsDestinationPage({
       </h3>
 
       <p className="mb-4 text-gray-800 leading-relaxed">
-        {t.rich("encryption.blobUploadBody1", { code, strong })}
+        {t.rich("encryption.blobUploadBody1", { code, strong, em })}
       </p>
 
       <figure className="my-6">

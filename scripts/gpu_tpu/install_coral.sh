@@ -749,4 +749,57 @@ main() {
   esac
 }
 
+# ==========================================================
+# Non-interactive auto-reinstall (post-restore hook)
+# ==========================================================
+# Called from apply_cluster_postboot.sh when components_status
+# says coral_driver was installed on the source. Coral has two
+# install branches that are independent: the PCIe/M.2 gasket+apex
+# DKMS modules (kernel-level) and the USB libedgetpu user-space
+# runtime. We replay both if either was previously installed and
+# the corresponding hardware is now present — the hardware
+# detection in detect_coral_hardware naturally short-circuits if
+# the user moved the card to a different host or it's not in
+# this slot any more.
+auto_reinstall_from_state() {
+  : >"$LOG_FILE"
+  echo "=== install_coral auto_reinstall $(date -Iseconds) ===" >>"$LOG_FILE"
+  command -v jq >/dev/null 2>&1 || return 1
+  [[ -f "$COMPONENTS_STATUS_FILE" ]] || return 1
+  local s
+  s=$(jq -r '.coral_driver.status // ""' "$COMPONENTS_STATUS_FILE" 2>/dev/null)
+  [[ "$s" == "installed" ]] || { echo "not installed in state ($s)" >>"$LOG_FILE"; return 0; }
+
+  detect_coral_hardware
+  detect_coral_install_state
+
+  # No Coral hardware on this host? Skip — nothing to install.
+  if (( CORAL_PCIE_COUNT == 0 && CORAL_USB_COUNT == 0 )); then
+    echo "no Coral hardware on this host — skipping" >>"$LOG_FILE"
+    return 0
+  fi
+  # Already healthy on every branch that has matching hardware → bail out.
+  if { (( CORAL_PCIE_COUNT == 0 )) || $CORAL_PCIE_INSTALLED; } \
+      && { (( CORAL_USB_COUNT == 0 )) || $CORAL_USB_INSTALLED; }; then
+    echo "already healthy — no-op" >>"$LOG_FILE"
+    return 0
+  fi
+
+  export DEBIAN_FRONTEND=noninteractive
+
+  if (( CORAL_PCIE_COUNT > 0 )) && ! $CORAL_PCIE_INSTALLED; then
+    echo "Installing gasket+apex DKMS modules..." >>"$LOG_FILE"
+    install_gasket_apex_dkms >>"$LOG_FILE" 2>&1 || echo "PCIe branch failed" >>"$LOG_FILE"
+  fi
+  if (( CORAL_USB_COUNT > 0 )) && ! $CORAL_USB_INSTALLED; then
+    echo "Installing libedgetpu USB runtime..." >>"$LOG_FILE"
+    install_libedgetpu_runtime >>"$LOG_FILE" 2>&1 || echo "USB branch failed" >>"$LOG_FILE"
+  fi
+}
+
+if [[ "${1:-}" == "--auto-reinstall" ]]; then
+  auto_reinstall_from_state
+  exit $?
+fi
+
 main

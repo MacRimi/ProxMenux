@@ -1184,6 +1184,56 @@ format_menu_item() {
     echo "${description}${spacing}${source}"
 }
 
+network_menu_label() {
+    case "$1" in
+        "Real-time network usage (iftop)")
+            translate "Real-time network usage (iftop)"
+            ;;
+        "Network monitoring tool (iptraf-ng)")
+            translate "Network monitoring tool (iptraf-ng)"
+            ;;
+        "Bandwidth test (iperf3)")
+            translate "Bandwidth test (iperf3)"
+            ;;
+        "Show Routing Table")
+            translate "Show Routing Table"
+            ;;
+        "Test Connectivity")
+            translate "Test Connectivity"
+            ;;
+        "Advanced Diagnostics")
+            translate "Advanced Diagnostics"
+            ;;
+        "Analyze Bridge Configuration")
+            translate "Analyze Bridge Configuration"
+            ;;
+        "Analyze Network Configuration")
+            translate "Analyze Network Configuration"
+            ;;
+        "Setup Persistent Network Names")
+            translate "Setup Persistent Network Names"
+            ;;
+        "Restart Network Service")
+            translate "Restart Network Service"
+            ;;
+        "Show Network Config File")
+            translate "Show Network Config File"
+            ;;
+        "Create Network Backup")
+            translate "Create Network Backup"
+            ;;
+        "Restore Network Backup")
+            translate "Restore Network Backup"
+            ;;
+        "Disable NIC Offloading (Intel e1000e)")
+            translate "Disable NIC Offloading (Intel e1000e)"
+            ;;
+        *)
+            translate "$1"
+            ;;
+    esac
+}
+
 # ==========================================================
 show_menu() {
     while true; do
@@ -1195,7 +1245,8 @@ show_menu() {
 
         for script in "${PROXMENUX_SCRIPTS[@]}"; do
             IFS='|' read -r name source command <<< "$script"
-            local translated_name="$(translate "$name")"
+            local translated_name
+            translated_name="$(network_menu_label "$name")"
             local formatted_item
             formatted_item=$(format_menu_item "$translated_name" "$source")
             menu_items+=("$counter" "$formatted_item")
@@ -1205,13 +1256,12 @@ show_menu() {
         
 
         menu_items+=("" "")
-        menu_items+=("-" "───────────────────── $(translate "Community Scripts") ──────────────────────")
-        menu_items+=("" "")
-        
+        menu_items+=("" "\Z4───────────────────── Community Scripts ──────────────────────\Zn")
 
         for script in "${COMMUNITY_SCRIPTS[@]}"; do
             IFS='|' read -r name source command <<< "$script"
-            local translated_name="$(translate "$name")"
+            local translated_name
+            translated_name="$(network_menu_label "$name")"
             local formatted_item
             formatted_item=$(format_menu_item "$translated_name" "$source")
             menu_items+=("$counter" "$formatted_item")
@@ -1225,11 +1275,11 @@ show_menu() {
         
 
         exec 3>&1
-        script_selection=$(dialog --clear \
+        script_selection=$(dialog --clear --colors \
                                  --backtitle "ProxMenux" \
                                  --title "$(translate "Network Management")" \
                                  --menu "\n$(translate "Select a network management option:"):\n" \
-                                 28 78 19 \
+                                 28 82 19 \
                                  "${menu_items[@]}" 2>&1 1>&3)
         exit_status=$?
         exec 3>&-

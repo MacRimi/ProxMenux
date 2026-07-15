@@ -17,7 +17,6 @@
 # Configuration ============================================
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
-VENV_PATH="/opt/googletrans-env"
 BACKUP_DIR="/var/backups/proxmenux"
 
 if [[ -f "$UTILS_FILE" ]]; then

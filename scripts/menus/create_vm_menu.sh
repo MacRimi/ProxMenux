@@ -39,7 +39,6 @@ MENU_REPO="$LOCAL_SCRIPTS/menus"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$LOCAL_SCRIPTS/utils.sh"
 [[ ! -f "$UTILS_FILE" ]] && UTILS_FILE="$BASE_DIR/utils.sh"
-VENV_PATH="/opt/googletrans-env"
 
 # Source utilities and required scripts
 if [[ -f "$UTILS_FILE" ]]; then

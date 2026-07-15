@@ -27,22 +27,21 @@ initialize_cache
 while true; do
     OPTION=$(dialog --colors --backtitle "ProxMenux" \
         --title "$(translate "GPUs and Coral-TPU Menu")" \
-        --menu "\n$(translate "Select an option:")" 26 78 16 \
-            ""  "\Z4──────────────────────── HOST ─────────────────────────\Zn" \
+        --menu "\n$(translate "Select an option:")" 26 80 16 \
+            ""  "\Zb\Z4                         HOST\Zn" \
             "1"         "$(translate "Install/Update NVIDIA Drivers (Host + LXC)")" \
             "2"         "$(translate "Install/Update Coral TPU on Host")" \
-            ""          "" \
-            ""  "\Z4──────────────────────── LXC ──────────────────────────\Zn" \
+            ""  "\Zb\Z4                          LXC\Zn" \
             "3"         "$(translate "Add GPU to LXC   (Intel | AMD | NVIDIA)")  \Zb\Z4Switch Mode\Zn" \
             "4"         "$(translate "Add Coral TPU to LXC")" \
-            ""          "" \
-            ""  "\Z4──────────────────────── VM ───────────────────────────\Zn" \
+            ""  "\Zb\Z4                          VM\Zn" \
             "5"         "$(translate "Add GPU to VM    (Intel | AMD | NVIDIA)")  \Zb\Z4Switch Mode\Zn" \
             ""          "" \
             ""  "\Z4──────────────────── SWICHT MODE ───────────────────────\Zn" \
+            ""          "" \
             "6"         "$(translate "Switch GPU Mode  (VM <-> LXC)")" \
             ""  "" \
-            ""  "\Z4────────────────────── Utilities ───────────────────────\Zn" \
+            ""  "\Z4───────────────────── Utilities ────────────────────────\Zn" \
             "7"         "$(translate "Manual CLI Guide (GPU/TPU)")" \
             "0"         "$(translate "Return to Main Menu")" \
             2>&1 >/dev/tty

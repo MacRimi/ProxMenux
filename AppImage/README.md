@@ -27,19 +27,97 @@ A modern, responsive dashboard for monitoring Proxmox VE systems built with Next
 
 ## Overview
 
-**ProxMenux Monitor** is a comprehensive, real-time monitoring dashboard for Proxmox VE environments. Built with modern web technologies, it provides an intuitive interface to monitor system resources, virtual machines, containers, storage, network traffic, and system logs.
+**ProxMenux Monitor** is a comprehensive, real-time monitoring dashboard for Proxmox VE environments. Built with modern web technologies, it provides an intuitive interface to monitor system resources, virtual machines, containers, storage, network traffic, backups, health status and system logs — all from a single browser tab.
 
 The application runs as a standalone AppImage on your Proxmox server and serves a web interface accessible from any device on your network.
+
+**Full documentation:** [proxmenux.com/docs/monitor](https://proxmenux.com/docs/monitor) — per-feature walkthroughs, API reference and integration guides.
 
 
 ## Screenshots
 
-Get a quick overview of ProxMenux Monitor's main features:
+A tour of the Monitor's main areas. See the [public documentation](https://proxmenux.com/docs/monitor) for the full walkthrough.
+
+### Dashboard overview
 
 <p align="center">
-  <img src="public/images/onboarding/imagen1.png" alt="Overview Dashboard" width="800"/>
+  <img src="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/monitor/dashboard-home.png" alt="Dashboard home" width="900"/>
   <br/>
-  <em>System Overview - Monitor CPU, memory, temperature, and uptime in real-time</em>
+  <em>Real-time CPU, memory, temperature, storage and network activity on one glance-optimised page.</em>
+</p>
+
+### Backup & Restore
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/images/docs/backup-restore/scheduled-backup-monitor.png" alt="Scheduled backup jobs" width="900"/>
+  <br/>
+  <em>Integrated host backup & restore — Local, PBS or Borg destinations; own timer or attached to a PVE vzdump job with live-inherited retention; PBS encryption with paired recovery blobs; direction-aware cross-kernel restore.</em>
+</p>
+
+### Storage & SMART
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/monitor/storage-top-row.png" alt="Storage top row" width="900"/>
+  <br/>
+  <em>Per-disk cards with capacity palette shared across Storage and Backups. USB-NVMe enclosures (ASMedia / JMicron / Realtek) show the drive's real identity and temperature, not the bridge.</em>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/monitor/disk-modal-smart.png" alt="Disk SMART modal" width="900"/>
+  <br/>
+  <em>Per-disk detail modal — SMART attributes, temperature history, observations and downloadable PDF report.</em>
+</p>
+
+### Network — live topology
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/monitor/network-flow-overview.png" alt="Network Flow diagram" width="900"/>
+  <br/>
+  <em>Network Flow — live view of NICs → host → bridges → guests with animated rx / tx pulses on every link. Bridges without active guests are hidden.</em>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/monitor/network-latency-historical.png" alt="Network latency historical" width="900"/>
+  <br/>
+  <em>Latency modal — historical view and real-time ping test against Gateway / Cloudflare / Google, with a downloadable PDF report.</em>
+</p>
+
+### Virtual machines & LXCs
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/monitor/vms-top-row.png" alt="VMs & LXCs overview" width="900"/>
+  <br/>
+  <em>Inventory of running VMs and containers with resource usage and per-guest controls.</em>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/monitor/vms-modal-status.png" alt="VM detail modal — status" width="900"/>
+  <br/>
+  <em>Per-guest modal with status, backups, mounts and (for LXC) apt / apk / community-scripts update inventory.</em>
+</p>
+
+### Health Monitor
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/monitor/health-monitor.png" alt="Health Monitor" width="900"/>
+  <br/>
+  <em>Ten categories of proactive health checks with hysteresis, per-error dismiss (24 h / 7 d / permanent) and an Active Suppressions panel to revoke.</em>
+</p>
+
+### System overview — top processes
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/monitor/system-overview-top-processes.png" alt="Top processes" width="900"/>
+  <br/>
+  <em>Per-process CPU / memory / I/O sorted by consumer, with a click-through detail modal.</em>
+</p>
+
+### Mobile
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/monitor/mobile-home.png" alt="Mobile responsive layout" width="360"/>
+  <br/>
+  <em>Fully responsive — every panel adapts to phone and tablet layouts.</em>
 </p>
 
 
@@ -47,18 +125,21 @@ Get a quick overview of ProxMenux Monitor's main features:
 
 ## Features
 
-- **System Overview**: Real-time monitoring of CPU, memory, temperature, and system uptime
-- **Storage Management**: Visual representation of storage distribution, disk health, and SMART data
-- **Network Monitoring**: Network interface statistics, real-time traffic graphs, and bandwidth usage
-- **Virtual Machines & LXC**: Comprehensive view of all VMs and containers with resource usage and controls
-- **Hardware Information**: Detailed hardware specifications including CPU, GPU, PCIe devices, and disks
-- **System Logs**: Real-time system log monitoring with filtering and search capabilities
-- **Health Monitoring**: Proactive system health checks with persistent error tracking
-- **Authentication & 2FA**: Optional password protection with TOTP-based two-factor authentication
-- **RESTful API**: Complete API access for integrations with Homepage, Home Assistant, and custom dashboards
-- **Dark/Light Theme**: Toggle between themes with Proxmox-inspired design
-- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
-- **Release Notes**: Automatic notifications of new features and improvements
+- **Host Backup & Restore** — integrated section covering Local, PBS and Borg destinations; schedule with a systemd timer or attach to an existing PVE vzdump job; PBS encryption with paired recovery blobs; direction-aware cross-kernel restore with kernel-agnostic hydration (IOMMU / VFIO / GRUB), cascade-safe package replay, and NIC auto-remap by MAC after a motherboard swap
+- **System Overview** — real-time CPU / memory / temperature / uptime with a per-process drill-down (Top Processes view) and click-through detail modal
+- **Storage & SMART** — per-disk cards in a responsive grid; temperature history, SMART attributes and a downloadable PDF SMART report per drive. USB-NVMe bridges (ASMedia / JMicron / Realtek) show the real drive's identity and temperature instead of the enclosure's
+- **Network** — live topology (Network Flow) with animated rx / tx pulses, per-interface RRD charts, latency modal against Gateway / Cloudflare / Google with a downloadable PDF report
+- **Virtual Machines & LXCs** — inventory, per-guest metrics and controls, per-LXC update inventory (apt / apk / community-scripts), backup state, mount inspection
+- **Hardware** — CPU / GPU / PCIe / disks / NICs, with correct SSD vs HDD classification even behind USB-SATA bridges
+- **System Logs** — journalctl with severity / since / free-text filters and a download-as-text action
+- **Health Monitor** — ten categories of proactive checks with hysteresis and configurable thresholds; per-error dismiss (24 h / 7 d / permanent) and an Active Suppressions panel to revoke
+- **Notifications** — five channels (Telegram, Discord, Gotify, Email, Apprise for ~80 endpoints), per-event toggles, Quiet Hours, Daily Digest, optional AI enrichment (Groq / OpenAI / Ollama / Gemini / Anthropic / OpenRouter)
+- **Authentication & 2FA** — optional password protection with TOTP-based two-factor authentication and long-lived API tokens (365 days) for integrations
+- **RESTful API** — complete access with JWT auth; ready-made recipes for Homepage, Home Assistant and custom dashboards; Prometheus scrape endpoint
+- **Reports (PDF)** — SMART report per-disk and Network Latency report per-target, ready to send to a vendor or an ISP
+- **Dark / Light Theme** — Proxmox-inspired palette with live switch
+- **Responsive Design** — desktop, tablet and mobile layouts
+- **Release Notes** — automatic notification of new features on each Monitor upgrade
 
 ## Technology Stack
 
@@ -106,7 +187,7 @@ On first launch, you'll be presented with three options:
 2. **Enable 2FA** - Add TOTP-based two-factor authentication for enhanced security
 3. **Skip** - Continue without authentication (not recommended for production environments)
 
-![Authentication Setup](AppImage/public/images/docs/auth-setup.png)
+![Authentication Setup](https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/monitor/auth-setup.png)
 
 ### Two-Factor Authentication (2FA)
 
@@ -118,7 +199,7 @@ After setting up your password, you can enable 2FA using any TOTP authenticator 
 4. Enter the 6-digit code to verify
 5. Save your backup codes in a secure location
 
-![2FA Setup](AppImage/public/images/docs/2fa-setup.png)
+![2FA Setup](https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/monitor/2fa-setup.png)
 
 ### Security Best Practices for API Tokens
 
@@ -254,7 +335,7 @@ The easiest way to generate an API token is through the ProxMenux Monitor web in
 6. Click **Generate Token**
 7. Copy the token immediately - it will not be shown again
 
-![Generate API Token](AppImage/public/images/docs/generate-api-token.png)
+![Generate API Token](https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/monitor/api-tokens.png)
 
 The token will be valid for **365 days** (1 year) and can be used for integrations with Homepage, Home Assistant, or any custom application.
 
@@ -643,8 +724,6 @@ Finally, reference the secret in your `services.yaml`:
           format: bytes
 ```
 
-![Homepage Integration Example](AppImage/public/images/docs/homepage-integration.png)
-
 ### Home Assistant Integration
 
 [Home Assistant](https://www.home-assistant.io/) is an open-source home automation platform.
@@ -727,24 +806,13 @@ entities:
     icon: mdi:clock-outline
 ```
 
-![Home Assistant Integration Example](AppImage/public/images/docs/homeassistant-integration.png)
-
-
 ---
 
 ## License
 
-This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0)**.
+This project is licensed under the **GNU General Public License, version 3 (GPL-3.0)**.
 
-You are free to:
-- Share — copy and redistribute the material in any medium or format
-- Adapt — remix, transform, and build upon the material
-
-Under the following terms:
-- Attribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made
-- NonCommercial — You may not use the material for commercial purposes
-
-For more details, see the [full license](https://creativecommons.org/licenses/by-nc/4.0/).
+You are free to use, study, share and modify the software under the terms of the licence. Any distributed derivative work must be licensed under the same terms and include the full source code — see the [full licence text](https://www.gnu.org/licenses/gpl-3.0.html) or the [`LICENSE`](https://github.com/MacRimi/ProxMenux/blob/main/LICENSE) file at the repository root.
 
 
 

@@ -487,7 +487,55 @@ class HealthPersistence:
 
         conn.close()
     
-    def record_error(self, error_key: str, category: str, severity: str, 
+    @staticmethod
+    def _entity_from_details(details: Optional[Dict]) -> str:
+        """Derive a short display identifier for the affected object from
+        the details blob so notification titles can name it. Returns ''
+        when no per-object identity is available (aggregate-only checks).
+
+        Order of preference matches what users actually recognize:
+        friendly name first, then id-with-name, then bare id, then path.
+        """
+        if not details:
+            return ''
+        d = details
+        # Storage / mounts / pools
+        if d.get('storage_name'):
+            st = d.get('storage_type') or d.get('type')
+            return f"{d['storage_name']} ({st})" if st else d['storage_name']
+        if d.get('pool_name'):
+            return d['pool_name']
+        if d.get('mount_point'):
+            return d['mount_point']
+        if d.get('mount_target'):
+            return d['mount_target']
+        # VMs / CTs
+        if d.get('vm_name') and d.get('vmid'):
+            return f"{d['vm_name']} ({d['vmid']})"
+        if d.get('ct_name') and d.get('vmid'):
+            return f"{d['ct_name']} ({d['vmid']})"
+        if d.get('vmid'):
+            return str(d['vmid'])
+        # Disks / devices
+        if d.get('device'):
+            return d['device']
+        if d.get('disk'):
+            return d['disk']
+        # Network / services
+        if d.get('interface'):
+            return d['interface']
+        if d.get('iface'):
+            return d['iface']
+        if d.get('service_name'):
+            return d['service_name']
+        if d.get('service'):
+            return d['service']
+        # Generic fallback
+        if d.get('name'):
+            return str(d['name'])
+        return ''
+
+    def record_error(self, error_key: str, category: str, severity: str,
                     reason: str, details: Optional[Dict] = None) -> Dict[str, Any]:
         """
         Record or update an error.
@@ -601,6 +649,8 @@ class HealthPersistence:
                     event_info = {'type': 'new', 'needs_notification': True}
                     self._record_event(cursor, 'new', error_key,
                                       {'severity': severity, 'reason': reason,
+                                       'entity': self._entity_from_details(details),
+                                       'details': details,
                                        'note': 'Re-triggered after suppression expired'})
                     conn.commit()
                     return event_info
@@ -653,9 +703,15 @@ class HealthPersistence:
                                 conn.commit()
                                 return event_info
 
-            # Record event
+            # Record event with the caller-supplied `details` so downstream
+            # notification templates can render the affected object's name
+            # (storage_name, vm_name, mount_point, …) in the title/body
+            # via `_SafeDict`. Without this, only the aggregate `reason`
+            # travels and titles fall back to bare category labels.
             self._record_event(cursor, event_info['type'], error_key,
-                              {'severity': severity, 'reason': reason})
+                              {'severity': severity, 'reason': reason,
+                               'entity': self._entity_from_details(details),
+                               'details': details})
 
             conn.commit()
         finally:
@@ -690,7 +746,26 @@ class HealthPersistence:
             ''', (now, reason, error_key))
 
             if cursor.rowcount > 0:
-                self._record_event(cursor, 'resolved', error_key, {'reason': reason})
+                # Reload the resolved error's details so the resolution
+                # event can name the same entity that was named when it
+                # was created — otherwise "Storage 'Tuxis' unavailable"
+                # comes back as "Resolved - Storage" with no identity.
+                cursor.execute(
+                    'SELECT details FROM errors WHERE error_key = ? ORDER BY id DESC LIMIT 1',
+                    (error_key,),
+                )
+                row = cursor.fetchone()
+                stored_details = None
+                if row and row[0]:
+                    try:
+                        stored_details = json.loads(row[0])
+                    except Exception:
+                        stored_details = None
+                self._record_event(cursor, 'resolved', error_key, {
+                    'reason': reason,
+                    'entity': self._entity_from_details(stored_details),
+                    'details': stored_details or {},
+                })
 
             conn.commit()
     

@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
-import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell } from "lucide-react"
+import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 
-const APP_VERSION = "1.2.2.1-beta" // Sync with AppImage/package.json
+const APP_VERSION = "1.2.3" // Sync with AppImage/package.json
 
 interface ReleaseNote {
   date: string
@@ -217,16 +217,28 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 
 const CURRENT_VERSION_FEATURES = [
   {
-    icon: <Activity className="h-5 w-5" />,
-    text: "Header Critical badge now respects dismissals (#228) - Permanently silencing every critical alert in a category used to leave the badge stuck on Critical even though the popup correctly reported 0 critical. The rollup that drives /api/system-info now runs a dismiss-aware pass over every category, so the badge, the popup and any API consumer all see the same view",
+    icon: <DatabaseBackup className="h-5 w-5" />,
+    text: "Backups integrated in the Monitor — a new first-class section to create, schedule and restore host backups against Local, PBS or Borg destinations from the Web dashboard. Jobs run on a proper systemd timer or attach to an existing PVE vzdump job with retention live-inherited from the parent. Encrypted PBS backups store a paired recovery blob next to each snapshot so a fresh install can always get the key back. After a reboot the tab shows a real-time restore progress card with milestones, per-component status (NVIDIA, Intel GPU tools, Coral, AMD tools), boot sanity warnings and a rollback delta listing anything on the host that wasn't in the backup.",
   },
   {
-    icon: <RefreshCw className="h-5 w-5" />,
-    text: "Auto-reconcile of stale alerts - Errors for resources that no longer exist now auto-clear within the regular cleanup cycle. New cases: a PVE storage removed via pvesm, an NFS/CIFS share whose mount target is no longer in /proc/mounts (the lazy-umount case reported in the field), and LXC mount-capacity alerts whose CT has been deleted",
+    icon: <Activity className="h-5 w-5" />,
+    text: "Network Flow diagram — a new live topology view on the Network tab showing NICs → host → bridges → LXCs / VMs with animated rx / tx pulses on every internal link, so the operator can see in real time how traffic distributes inside the host and which guests are pulling or pushing data.",
+  },
+  {
+    icon: <Sparkles className="h-5 w-5" />,
+    text: "Redesigned cards across Overview, VM / LXC, Storage and Network — layouts reworked for faster reading and denser, more practical information: key numbers surface at a glance, grouped by relevance, and the responsive grid now behaves cleanly from a phone up to an ultrawide.",
+  },
+  {
+    icon: <HardDrive className="h-5 w-5" />,
+    text: "Physical Disks and Physical Interfaces cards redesigned — clearer per-item presentation on the Storage and Network tabs. USB-NVMe / USB-SATA enclosures reporting removable=0 (ASMedia, JMicron, Realtek, ASM105x) now walk sysfs to detect USB attachment, so the -d snt* pass-through is tried and the drive's real model, serial, temperature, power-on hours and health surface — instead of the bridge's chatter.",
+  },
+  {
+    icon: <Sliders className="h-5 w-5" />,
+    text: "Health Monitor Thresholds — the Settings panel that controls per-category Warning and Critical levels (CPU, memory, temperature, storage, disks, ...) was reworked with clearer visual grouping and inline hints, so tuning a threshold now takes a couple of clicks instead of scrolling through a wall of numbers.",
   },
   {
     icon: <Bell className="h-5 w-5" />,
-    text: "Notification Send Test buttons unified (#226) - All five channel Send Test buttons (Telegram, Gotify, Discord, Email, Apprise) now sit on the left side and carry their channel's brand colour with white text, instead of Apprise being the right-aligned cyan outlier",
+    text: "Richer notifications out of the box — for users not running an AI agent, the templated body now identifies the affected object (which storage, which interface, which container), surfaces the top offenders with an \"…and N more\" tail when the list is long, and preserves the same identity in the recovery message. Users with AI enrichment enabled continue to get their tailored rewrite on top of this improved base.",
   },
 ]
 

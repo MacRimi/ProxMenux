@@ -92,33 +92,59 @@ export function TwoFactorSetup({ open, onClose, onSuccess }: TwoFactorSetupProps
   const copyToClipboard = async (text: string, type: "secret" | "codes") => {
     let ok = false
 
-    // Preferred path (HTTPS / localhost). On plain HTTP the Promise rejects,
-    // so we catch and fall through to the textarea fallback.
+    // Path 1: modern Clipboard API. Only works on HTTPS / localhost.
     try {
-      if (navigator.clipboard && window.isSecureContext) {
+      if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text)
         ok = true
       }
     } catch {
-      // fall through to execCommand fallback
+      // fall through
     }
 
+    // Path 2: legacy execCommand. Picky — some browsers (iOS Safari
+    // especially) refuse to copy from an element placed off-screen
+    // (`left: -9999px`), which is the previous version's mistake.
+    // Keep the textarea inside the viewport but visually invisible.
     if (!ok) {
+      const textarea = document.createElement("textarea")
+      textarea.value = text
+      textarea.style.position = "fixed"
+      textarea.style.top = "0"
+      textarea.style.left = "0"
+      textarea.style.width = "2em"
+      textarea.style.height = "2em"
+      textarea.style.padding = "0"
+      textarea.style.border = "none"
+      textarea.style.outline = "none"
+      textarea.style.boxShadow = "none"
+      textarea.style.background = "transparent"
+      textarea.style.opacity = "0"
+      textarea.setAttribute("readonly", "")
+      textarea.setAttribute("aria-hidden", "true")
+      document.body.appendChild(textarea)
       try {
-        const textarea = document.createElement("textarea")
-        textarea.value = text
-        textarea.style.position = "fixed"
-        textarea.style.left = "-9999px"
-        textarea.style.top = "-9999px"
-        textarea.style.opacity = "0"
-        textarea.readOnly = true
-        document.body.appendChild(textarea)
         textarea.focus()
         textarea.select()
+        textarea.setSelectionRange(0, text.length)
         ok = document.execCommand("copy")
-        document.body.removeChild(textarea)
       } catch {
         ok = false
+      } finally {
+        document.body.removeChild(textarea)
+      }
+    }
+
+    // Path 3: last-resort window.prompt — ugly but unblockable. The
+    // user can select+copy from the prompt manually. This guarantees
+    // they can finish the 2FA setup even on plain-HTTP Monitor where
+    // both the Clipboard API and execCommand may be locked down.
+    if (!ok) {
+      try {
+        window.prompt("Copy this value:", text)
+        ok = true
+      } catch {
+        // ignore
       }
     }
 

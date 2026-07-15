@@ -70,7 +70,10 @@ const getStatusInfo = (temp: number) => {
 }
 
 export function TemperatureDetailModal({ open, onOpenChange, liveTemperature }: TemperatureDetailModalProps) {
-  const [timeframe, setTimeframe] = useState("hour")
+  // Default to 24 h — matches the disk temperature modal and is the
+  // useful timeframe for spotting trends; the 1-h view rarely tells
+  // you anything that the live reading doesn't already show.
+  const [timeframe, setTimeframe] = useState("day")
   const [data, setData] = useState<TempHistoryPoint[]>([])
   const [stats, setStats] = useState<TempStats>({ min: 0, max: 0, avg: 0, current: 0 })
   const [loading, setLoading] = useState(true)

@@ -35,11 +35,15 @@
 INSTALL_DIR="/usr/local/bin"
 BASE_DIR="/usr/local/share/proxmenux"
 CONFIG_FILE="$BASE_DIR/config.json"
-CACHE_FILE="$BASE_DIR/cache.json"
 UTILS_FILE="$BASE_DIR/utils.sh"
 LOCAL_VERSION_FILE="$BASE_DIR/version.txt"
 BETA_VERSION_FILE="$BASE_DIR/beta_version.txt"
 MENU_SCRIPT="menu"
+
+# Legacy path that existed during the Python+googletrans era. Purged on
+# install if present — the current translate flow uses pre-built JSON
+# files in lang/ and has no runtime venv dependency.
+LEGACY_VENV_PATH="/opt/googletrans-env"
 
 MONITOR_INSTALL_DIR="$BASE_DIR"
 MONITOR_RUNTIME_DIR="$BASE_DIR/monitor-app"
@@ -304,9 +308,6 @@ cleanup_corrupted_files() {
     if [ -f "$CONFIG_FILE" ] && ! jq empty "$CONFIG_FILE" >/dev/null 2>&1; then
         rm -f "$CONFIG_FILE"
     fi
-    if [ -f "$CACHE_FILE" ] && ! jq empty "$CACHE_FILE" >/dev/null 2>&1; then
-        rm -f "$CACHE_FILE"
-    fi
 }
 
 detect_latest_appimage() {
@@ -541,15 +542,78 @@ EOF
 }
 
 # ── Main install ───────────────────────────────────────────
+select_language() {
+    if [ -f "$CONFIG_FILE" ] && jq empty "$CONFIG_FILE" >/dev/null 2>&1; then
+        local existing_language=$(jq -r '.language // empty' "$CONFIG_FILE" 2>/dev/null)
+        if [[ -n "$existing_language" && "$existing_language" != "null" && "$existing_language" != "empty" ]]; then
+            LANGUAGE="$existing_language"
+            msg_ok "Using existing language configuration: $LANGUAGE"
+            return 0
+        fi
+    fi
+
+    LANGUAGE=$(whiptail --title "Select Language" --menu "Choose a language for the menu:" 20 60 12 \
+        "en" "English" \
+        "es" "Spanish" \
+        "fr" "French" \
+        "de" "German" \
+        "it" "Italian" \
+        "pt" "Portuguese" 3>&1 1>&2 2>&3)
+
+    if [ -z "$LANGUAGE" ]; then
+        msg_error "No language selected. Exiting."
+        exit 1
+    fi
+
+    mkdir -p "$(dirname "$CONFIG_FILE")"
+
+    if [ ! -f "$CONFIG_FILE" ] || ! jq empty "$CONFIG_FILE" >/dev/null 2>&1; then
+        echo '{}' > "$CONFIG_FILE"
+    fi
+
+    local tmp_file
+    tmp_file=$(mktemp)
+    if jq --arg lang "$LANGUAGE" '. + {language: $lang}' "$CONFIG_FILE" > "$tmp_file" 2>/dev/null; then
+        mv "$tmp_file" "$CONFIG_FILE"
+    else
+        echo "{\"language\": \"$LANGUAGE\"}" > "$CONFIG_FILE"
+    fi
+
+    [ -f "$tmp_file" ] && rm -f "$tmp_file"
+
+    msg_ok "Language set to: $LANGUAGE"
+}
+
 install_beta() {
-    local total_steps=4
+    local total_steps=5
     local current_step=1
 
-    # ── Step 1: Dependencies ──────────────────────────────
+    # ── Step 1: Language selection ────────────────────────
+    # Pre-built translations in lang/<locale>.json make every beta install
+    # multilingual-capable. Ask the operator once up front; subsequent
+    # update runs reuse the saved choice without re-prompting.
+    show_progress $current_step $total_steps "Language selection"
+    select_language
+    ((current_step++))
+
+    # Purge the legacy googletrans virtualenv if a previous install left it
+    # behind. Runtime translation is now a static JSON lookup — the venv
+    # is dead weight on disk now.
+    if [[ -d "$LEGACY_VENV_PATH" ]]; then
+        msg_info "Removing legacy translation virtualenv at $LEGACY_VENV_PATH..."
+        rm -rf "$LEGACY_VENV_PATH"
+        msg_ok "Legacy translation virtualenv removed."
+    fi
+
+    # ── Step 2: Dependencies ──────────────────────────────
     show_progress $current_step $total_steps "Installing system dependencies"
 
+    msg_info "Refreshing apt cache..."
+    apt-get update -y > /dev/null 2>&1 || true
+    msg_ok "apt cache refreshed."
+
+    msg_info "Installing jq..."
     if ! command -v jq > /dev/null 2>&1; then
-        apt-get update > /dev/null 2>&1
         if apt-get install -y jq > /dev/null 2>&1 && command -v jq > /dev/null 2>&1; then
             update_config "jq" "installed"
         else
@@ -566,18 +630,13 @@ install_beta() {
     else
         update_config "jq" "already_installed"
     fi
+    msg_ok "jq ready."
 
     local BASIC_DEPS=("dialog" "curl" "git")
-    if [ -z "${APT_UPDATED:-}" ]; then
-        apt-get update -y > /dev/null 2>&1 || true
-        APT_UPDATED=1
-    fi
-
     for pkg in "${BASIC_DEPS[@]}"; do
-        # Strict per-package check — `dpkg -l | grep -qw python3` falsely
-        # matches `python3-pip` (the `-` is a word boundary), so dpkg-query
-        # for the EXACT package name is the only reliable test.
-        # Issue #205.
+        msg_info "Installing $pkg..."
+        # dpkg-query for the EXACT package name — `dpkg -l | grep -qw python3`
+        # falsely matches `python3-pip`. Issue #205.
         if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed"; then
             if apt-get install -y "$pkg" > /dev/null 2>&1; then
                 update_config "$pkg" "installed"
@@ -589,11 +648,12 @@ install_beta() {
         else
             update_config "$pkg" "already_installed"
         fi
+        msg_ok "$pkg ready."
     done
 
     msg_ok "Dependencies installed: jq, dialog, curl, git."
 
-    # ── Step 2: Clone develop branch ─────────────────────
+    # ── Step 3: Clone develop branch ─────────────────────
     ((current_step++))
     show_progress $current_step $total_steps "Cloning ProxMenux develop branch"
 
@@ -612,7 +672,7 @@ install_beta() {
 
     cd "$TEMP_DIR"
 
-    # ── Step 3: Files ─────────────────────────────────────
+    # ── Step 4: Files ─────────────────────────────────────
     ((current_step++))
     show_progress $current_step $total_steps "Creating directories and copying files"
 
@@ -623,7 +683,11 @@ install_beta() {
     mkdir -p "$BASE_DIR/oci"
 
     cp "./scripts/utils.sh" "$UTILS_FILE"
-    cp "./menu" "$INSTALL_DIR/$MENU_SCRIPT"
+    # Atomic install of /usr/local/bin/menu — see install_proxmenux.sh
+    # for the rationale (prevents partial-file reads during mid-update
+    # parsing).
+    cp "./menu" "$INSTALL_DIR/${MENU_SCRIPT}.new"
+    mv -f "$INSTALL_DIR/${MENU_SCRIPT}.new" "$INSTALL_DIR/$MENU_SCRIPT"
     cp "./version.txt" "$LOCAL_VERSION_FILE" 2>/dev/null || true
 
     # Store beta version marker
@@ -636,11 +700,23 @@ install_beta() {
     cp "./install_proxmenux.sh" "$BASE_DIR/install_proxmenux.sh" 2>/dev/null || true
     cp "./install_proxmenux_beta.sh" "$BASE_DIR/install_proxmenux_beta.sh" 2>/dev/null || true
 
+    # Pre-built translation cache. The runtime translate() in utils.sh
+    # reads $BASE_DIR/lang/<lang>.json — these files ship with the repo
+    # (one per supported language) so every beta install is multilingual
+    # without any runtime download or Python dependency. Refresh the
+    # whole dir on every install so a language that was renamed or
+    # dropped upstream disappears here too.
+    if [ -d "./lang" ]; then
+        rm -rf "$BASE_DIR/lang"
+        mkdir -p "$BASE_DIR/lang"
+        cp -r "./lang/"* "$BASE_DIR/lang/" 2>/dev/null || true
+    fi
+
     # Wipe the scripts tree before copying so any file removed upstream
     # (renamed, consolidated, deprecated) disappears from the user install.
-    # Only $BASE_DIR/scripts/ is cleared; config.json, cache.json,
-    # components_status.json, version.txt, beta_version.txt, monitor.db,
-    # smart/, oci/ and the AppImage live outside this path and are preserved.
+    # Only $BASE_DIR/scripts/ is cleared; config.json, components_status.json,
+    # version.txt, beta_version.txt, monitor.db, smart/, oci/ and the
+    # AppImage live outside this path and are preserved.
     rm -rf "$BASE_DIR/scripts"
     mkdir -p "$BASE_DIR/scripts"
     cp -r "./scripts/"* "$BASE_DIR/scripts/"
@@ -663,7 +739,7 @@ install_beta() {
 
     msg_ok "Files installed. Beta version: ${beta_version}."
 
-    # ── Step 4: Monitor ───────────────────────────────────
+    # ── Step 5: Monitor ───────────────────────────────────
     ((current_step++))
     show_progress $current_step $total_steps "Installing ProxMenux Monitor (beta)"
 
@@ -698,6 +774,14 @@ check_stable_available() {
 }
 
 # ── Entry point ────────────────────────────────────────────
+# Parse --update before any work so the welcome banner can be skipped
+# and the relaunch hand-off can fire at the end. The flag arrives from
+# `menu`'s check_updates_beta() → `exec bash $INSTALL_SCRIPT --update`.
+UPDATE_MODE=0
+if [[ "${1:-}" == "--update" ]]; then
+    UPDATE_MODE=1
+fi
+
 if [ "$(id -u)" -ne 0 ]; then
     echo -e "${RD}[ERROR] This script must be run as root.${CL}"
     exit 1
@@ -705,9 +789,13 @@ fi
 
 cleanup_corrupted_files
 show_proxmenux_logo
-show_beta_welcome
 
-msg_title "Installing ProxMenux Beta — branch: develop"
+if [[ "$UPDATE_MODE" == "1" ]]; then
+    msg_title "Updating ProxMenux Beta — branch: develop"
+else
+    show_beta_welcome
+    msg_title "Installing ProxMenux Beta — branch: develop"
+fi
 install_beta
 
 # Load utils if available
@@ -722,6 +810,17 @@ install_beta
 if [ -x "$BASE_DIR/scripts/global/cleanup_gpu_hookscripts.sh" ]; then
     bash "$BASE_DIR/scripts/global/cleanup_gpu_hookscripts.sh" || true
 fi
+
+# UPDATE_MODE used to `exec "$INSTALL_DIR/$MENU_SCRIPT"` here to
+# auto-relaunch the freshly-installed menu. That produced visible
+# "line: syntax" errors when bash tried to read the just-rewritten
+# /usr/local/bin/menu (or a shared utils.sh sourced by it) under its
+# feet. Fall through to the standard end-of-run message instead —
+# the operator types `menu` when ready and the terminal is stable.
+#
+# `change_release_channel` in scripts/menus/config_menu.sh is
+# unaffected: it invokes the installer without `--update`
+# (UPDATE_MODE=0) so it never went through this branch.
 
 msg_title "ProxMenux Beta installed successfully"
 

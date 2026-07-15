@@ -58,6 +58,88 @@ def _perf_log(section: str, elapsed_ms: float):
     if DEBUG_PERF:
         print(f"[PERF] {section} = {elapsed_ms:.1f}ms")
 
+
+# Cap notification `reason` strings so a spike (e.g. 40 CTs above 85%
+# rootfs) can't blow past Telegram's 4096-byte cap or truncate the
+# subject line in email clients. First 8 names + a tail count keeps
+# the message actionable without listing every offender.
+_NAME_LIST_LIMIT = 8
+
+def _fmt_name_list(items, limit: int = _NAME_LIST_LIMIT, sep: str = ", ") -> str:
+    """Join up to `limit` items into a comma-separated list; when the
+    input is longer, append " …and N more" so the reader sees both a
+    concrete sample AND that the list is truncated.
+
+    items: iterable of strings.
+    """
+    seq = list(items)
+    if len(seq) <= limit:
+        return sep.join(seq)
+    head = sep.join(seq[:limit])
+    return f"{head} …and {len(seq) - limit} more"
+
+
+def _fmt_entity_and_summary(items, singular: str, plural: str, limit: int = _NAME_LIST_LIMIT):
+    """Return a (title_entity, reason_summary) tuple for a list of
+    affected entities. Used by health checks that want to surface both
+    a headline entity in the notification title AND a full summary in
+    the body.
+
+    - 1 item  → ("Foo", "Foo <singular>")
+    - 2 items → ("Foo +1", "2 <plural>: Foo, Bar")
+    - N items → ("Foo +N-1", "N <plural>: Foo, Bar, … …and M more")
+    """
+    seq = list(items)
+    n = len(seq)
+    if n == 0:
+        return "", ""
+    if n == 1:
+        return seq[0], f"{seq[0]} {singular}"
+    title_entity = f"{seq[0]} +{n - 1}"
+    reason = f"{n} {plural}: {_fmt_name_list(seq, limit)}"
+    return title_entity, reason
+
+
+# USB-NVMe bridges (ASMedia, JMicron, Realtek) answer plain smartctl with
+# the *bridge* identity — model shows as "ASMT 2462 NVME" and there is no
+# temperature. Only `-d snt*` passes through to the actual NVMe controller
+# behind the bridge. For removable disks we try the snt* variants first
+# so both identity and health reflect the drive, not the enclosure.
+_USB_NVME_DRIVERS = ('sntasmedia', 'sntjmicron', 'sntrealtek')
+
+
+def _disk_base_for_sysfs(name: str) -> str:
+    """Normalize `/dev/sda` / `sda` to just `sda` for `/sys/block/<name>` lookups."""
+    if name.startswith('/dev/'):
+        return name[5:]
+    return name
+
+
+def _is_disk_removable(disk_name: str) -> bool:
+    """True if `/sys/block/<disk>/removable` reads 1. USB-attached storage."""
+    try:
+        base = _disk_base_for_sysfs(disk_name)
+        with open(f'/sys/block/{base}/removable') as f:
+            return f.read().strip() == '1'
+    except Exception:
+        return False
+
+
+def _is_disk_usb(disk_name: str) -> bool:
+    """True if the disk sits behind a USB bus. Reads the resolved sysfs
+    device path — reliable for USB-NVMe bridges and USB-attached HDDs
+    that report `removable=0` even though they ARE USB (so the older
+    `_is_disk_removable` heuristic skipped snt* driver probes and left
+    NVMe-behind-a-bridge disks with the bridge's own chatter cached
+    forever)."""
+    try:
+        base = _disk_base_for_sysfs(disk_name)
+        real = os.path.realpath(f'/sys/block/{base}')
+        return any(seg.startswith('usb') and (len(seg) == 3 or seg[3:].isdigit())
+                   for seg in real.split('/'))
+    except Exception:
+        return False
+
 class HealthMonitor:
     """
     Monitors system health across multiple components with minimal impact.
@@ -1107,16 +1189,16 @@ class HealthMonitor:
         # Severity: CRITICAL > WARNING > UNKNOWN (capped at WARNING) > INFO > OK
         if critical_issues:
             overall = 'CRITICAL'
-            summary = '; '.join(critical_issues[:3])
+            summary = _fmt_name_list(critical_issues, sep='; ')
         elif warning_issues:
             overall = 'WARNING'
-            summary = '; '.join(warning_issues[:3])
+            summary = _fmt_name_list(warning_issues, sep='; ')
         elif unknown_issues:
             overall = 'WARNING'  # UNKNOWN caps at WARNING, never escalates to CRITICAL
-            summary = '; '.join(unknown_issues[:3])
+            summary = _fmt_name_list(unknown_issues, sep='; ')
         elif info_issues:
             overall = 'OK'  # INFO statuses don't degrade overall health
-            summary = '; '.join(info_issues[:3])
+            summary = _fmt_name_list(info_issues, sep='; ')
         else:
             overall = 'OK'
             summary = 'All systems operational'
@@ -1143,15 +1225,24 @@ class HealthMonitor:
                 cat_status = cat_data.get('status', 'OK')
                 prev_status = previous_details.get(cat_key, 'OK')
                 if prev_status != cat_status and cat_status in ('WARNING', 'CRITICAL'):
+                    # `entity` gives the notification title a concrete
+                    # subject (e.g. "Tuxis (dir)") instead of the bare
+                    # category name. Checks that surface a single
+                    # affected object populate it in _check_XXX; the
+                    # rest just fall through and the template renders
+                    # without the placeholder thanks to _SafeDict.
+                    event_data = {
+                        'previous': prev_status,
+                        'current': cat_status,
+                        'reason': cat_data.get('reason', ''),
+                    }
+                    if cat_data.get('entity'):
+                        event_data['entity'] = cat_data['entity']
                     health_persistence.emit_event(
                         event_type='state_change',
                         category=cat_key,
                         severity=cat_status,
-                        data={
-                            'previous': prev_status,
-                            'current': cat_status,
-                            'reason': cat_data.get('reason', '')
-                        }
+                        data=event_data,
                     )
             
             self._last_overall_status = overall
@@ -1219,6 +1310,16 @@ class HealthMonitor:
             WARNING_MIN_SAMPLES = 25   # ~250s of sustained elevated CPU
             RECOVERY_MIN_SAMPLES = 10  # ~100s of recovery
             
+            # Build the `details` payload the cpu_high notification
+            # template (notification_templates.py) expects: `value`
+            # (already-formatted percent), `cores` (CPU count) and a
+            # human-readable `details` line. The previous payload only
+            # carried `cpu_percent`/`duration`, which left the template
+            # placeholders blank — the user got "High CPU usage — %"
+            # and "CPU usage has reached % on  cores." with no values.
+            cpu_count = os.cpu_count() or 1
+            value_str = f"{cpu_percent:.0f}"
+
             if len(critical_samples) >= CRITICAL_MIN_SAMPLES:
                 # Calculate actual duration from oldest to newest sample
                 oldest = min(s['time'] for s in critical_samples)
@@ -1231,7 +1332,13 @@ class HealthMonitor:
                     category='cpu',
                     severity='CRITICAL',
                     reason=reason,
-                    details={'cpu_percent': cpu_percent, 'duration': actual_duration}
+                    details={
+                        'value': value_str,
+                        'cores': cpu_count,
+                        'details': f'Sustained for {actual_duration}s above {self.CPU_CRITICAL}%.',
+                        'cpu_percent': cpu_percent,
+                        'duration': actual_duration,
+                    },
                 )
             elif len(warning_samples) >= WARNING_MIN_SAMPLES and len(recovery_samples) < RECOVERY_MIN_SAMPLES:
                 oldest = min(s['time'] for s in warning_samples)
@@ -1244,7 +1351,13 @@ class HealthMonitor:
                     category='cpu',
                     severity='WARNING',
                     reason=reason,
-                    details={'cpu_percent': cpu_percent, 'duration': actual_duration}
+                    details={
+                        'value': value_str,
+                        'cores': cpu_count,
+                        'details': f'Sustained for {actual_duration}s above {self.CPU_WARNING}%.',
+                        'cpu_percent': cpu_percent,
+                        'duration': actual_duration,
+                    },
                 )
             else:
                 status = 'OK'
@@ -1283,7 +1396,9 @@ class HealthMonitor:
                 t_status = temp_status.get('status', 'OK')
                 checks['cpu_temperature'] = {
                     'status': t_status,
-                    'detail': 'Temperature elevated' if t_status != 'OK' else 'Normal'
+                    'detail': 'Temperature elevated' if t_status != 'OK' else 'Normal',
+                    'error_key': 'cpu_temperature',
+                    'dismissable': True,
                 }
             else:
                 checks['cpu_temperature'] = {
@@ -1378,7 +1493,7 @@ class HealthMonitor:
                         category='temperature',
                         severity='WARNING',
                         reason=reason,
-                        details={'temperature': max_temp, 'duration': actual_duration, 'dismissable': False}
+                        details={'temperature': max_temp, 'duration': actual_duration, 'dismissable': True}
                     )
                 elif len(recovery_samples) >= 3:
                     # Temperature has been ≤80°C for 30 seconds - clear the error
@@ -1579,6 +1694,17 @@ class HealthMonitor:
                     error_key = f'disk_space_{mount_point}'
                     if fs_status['status'] != 'OK':
                         issues.append(f"{mount_point}: {fs_status['reason']}")
+                        # Carry error_key + dismissable into the check
+                        # dict — the frontend gates the Dismiss dropdown
+                        # on `dismissable === true` strictly, and the
+                        # spread at the consumer (`storage_details →
+                        # checks[key]`) only forwards fields actually
+                        # present on fs_status. Without these two lines,
+                        # /mnt/* fullness rows reach the UI as plain
+                        # CRITICAL/WARNING with no Dismiss button — the
+                        # same gap the operator hit on stable 1.2.2.
+                        fs_status['error_key'] = error_key
+                        fs_status['dismissable'] = True
                         storage_details[mount_point] = fs_status
                         # Record persistent error for notifications
                         usage = psutil.disk_usage(mount_point)
@@ -1596,7 +1722,7 @@ class HealthMonitor:
                                 'mount': mount_point,
                                 'used': str(round(usage.percent, 1)),
                                 'available': avail_str,
-                                'dismissable': False,
+                                'dismissable': True,
                             }
                         )
                     else:
@@ -1610,10 +1736,19 @@ class HealthMonitor:
         if zfs_pool_issues:
             for pool_name, pool_info in zfs_pool_issues.items():
                 issues.append(f'{pool_name}: {pool_info["reason"]}')
-                storage_details[pool_name] = pool_info
-                
-                # Record error for notification system
+                # Carry error_key + dismissable BEFORE pushing — same
+                # rationale as the disk_space path above: the frontend
+                # gates the Dismiss button on `dismissable === true`
+                # strictly, and the splat at the consumer only forwards
+                # what pool_info already has. real_pool gets computed
+                # twice (here + below) but both paths land on the same
+                # key.
                 real_pool = pool_info.get('pool_name', pool_name)
+                pool_info['error_key'] = f'zfs_pool_{real_pool}'
+                pool_info['dismissable'] = True
+                storage_details[pool_name] = pool_info
+
+                # Record error for notification system
                 zfs_error_key = f'zfs_pool_{real_pool}'
                 zfs_reason = f'ZFS pool {real_pool}: {pool_info["reason"]}'
                 try:
@@ -1627,7 +1762,7 @@ class HealthMonitor:
                                 'pool_name': real_pool,
                                 'health': pool_info.get('health', ''),
                                 'device': f'zpool:{real_pool}',
-                                'dismissable': False,
+                                'dismissable': True,
                             }
                         )
                 except Exception:
@@ -1999,22 +2134,22 @@ class HealthMonitor:
                 # persistent WARNING after user has acknowledged.
                 return {
                     'status': 'OK',
-                    'reason': '; '.join(issues[:3]),
+                    'reason': _fmt_name_list(issues, sep='; '),
                     'details': storage_details,
                     'checks': checks,
                     'all_dismissed': True,
                 }
         except Exception:
             pass
-        
+
         # Determine overall status
         has_critical = any(
             d.get('status') == 'CRITICAL' for d in storage_details.values()
         )
-        
+
         return {
             'status': 'CRITICAL' if has_critical else 'WARNING',
-            'reason': '; '.join(issues[:3]),
+            'reason': _fmt_name_list(issues, sep='; '),
             'details': storage_details,
             'checks': checks
         }
@@ -2361,15 +2496,36 @@ class HealthMonitor:
         result = {'serial': '', 'model': '', '_fp': fp}
         try:
             dev_path = f'/dev/{disk_name}' if not disk_name.startswith('/') else disk_name
-            proc = subprocess.run(
-                ['smartctl', '-i', '-j', dev_path],
-                capture_output=True, text=True, timeout=5
-            )
-            if proc.returncode in (0, 4):
-                import json as _json
-                data = _json.loads(proc.stdout)
-                result['serial'] = data.get('serial_number', '')
-                result['model'] = data.get('model_name', '') or data.get('model_family', '')
+
+            # USB-attached disks may sit behind an NVMe bridge: try the
+            # snt* driver variants first so identity reflects the drive
+            # (Samsung 990 PRO) rather than the enclosure (ASMT 2462 NVME).
+            # If all snt* fail, fall through to the plain call — that's
+            # still correct for USB-SATA sticks and non-USB devices.
+            # USB detection is by sysfs path (`_is_disk_usb`) rather than
+            # the `removable` flag, since USB-NVMe and USB-HDD both report
+            # `removable=0` even though they ARE USB.
+            attempts = []
+            if _is_disk_usb(disk_name) or _is_disk_removable(disk_name):
+                for drv in _USB_NVME_DRIVERS:
+                    attempts.append(['smartctl', '-i', '-j', '-d', drv, dev_path])
+            attempts.append(['smartctl', '-i', '-j', dev_path])
+
+            import json as _json
+            for cmd in attempts:
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+                if proc.returncode not in (0, 4):
+                    continue
+                try:
+                    data = _json.loads(proc.stdout)
+                except Exception:
+                    continue
+                serial = data.get('serial_number', '')
+                model = data.get('model_name', '') or data.get('model_family', '')
+                if serial or model:
+                    result['serial'] = serial
+                    result['model'] = model
+                    break
         except Exception:
             pass
 
@@ -2402,20 +2558,51 @@ class HealthMonitor:
         
         try:
             dev_path = f'/dev/{disk_name}' if not disk_name.startswith('/') else disk_name
-            result = subprocess.run(
-                ['smartctl', '--health', '-j', dev_path],
-                capture_output=True, text=True, timeout=5
-            )
+            # `-n standby` skips the command (exit code 2, no disk I/O)
+            # when the drive is parked, preventing the health poller
+            # from spinning up HDDs that hdparm / hd-idle just put to
+            # sleep — issue #232. The "UNKNOWN" branch below correctly
+            # keeps the previous cached result alive on exit code 2.
+            #
+            # USB-attached disks may sit behind an NVMe bridge: try snt*
+            # drivers first so health reflects the actual NVMe controller.
+            # A bridge that fakes "PASSED" while the drive behind it is
+            # failing is exactly the false-negative we want to avoid.
+            # USB detection uses the sysfs path so USB-NVMe bridges (which
+            # report removable=0) are caught too.
+            attempts = []
+            if _is_disk_usb(disk_name) or _is_disk_removable(disk_name):
+                for drv in _USB_NVME_DRIVERS:
+                    attempts.append(['smartctl', '-n', 'standby', '--health', '-j', '-d', drv, dev_path])
+            attempts.append(['smartctl', '-n', 'standby', '--health', '-j', dev_path])
+
             import json as _json
-            data = _json.loads(result.stdout)
-            passed = data.get('smart_status', {}).get('passed', None)
-            if passed is True:
-                smart_result = 'PASSED'
-            elif passed is False:
-                smart_result = 'FAILED'
-            else:
+            smart_result = None
+            for cmd in attempts:
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+                if result.returncode == 2:
+                    # Drive in standby — reuse the previous health state
+                    # if we have one, otherwise report UNKNOWN. Either way,
+                    # don't refresh the cache TTL so we retry on the next
+                    # cycle (a drive can come out of standby at any time).
+                    if cached:
+                        return cached['result']
+                    return 'UNKNOWN'
+                try:
+                    data = _json.loads(result.stdout)
+                except Exception:
+                    continue
+                passed = data.get('smart_status', {}).get('passed', None)
+                if passed is True:
+                    smart_result = 'PASSED'
+                    break
+                if passed is False:
+                    smart_result = 'FAILED'
+                    break
+                # No opinion yet — next attempt (fallthrough to plain).
+            if smart_result is None:
                 smart_result = 'UNKNOWN'
-            
+
             # Cache the result with the device fingerprint for hot-swap invalidation
             self._smart_cache[cache_key] = {'result': smart_result, 'time': current_time, 'fp': fp}
             return smart_result
@@ -2725,7 +2912,7 @@ class HealthMonitor:
                                 'device': disk,
                                 'error_count': error_count,
                                 'smart_status': smart_health,
-                                'dismissable': False,
+                                'dismissable': True,
                                 'error_key': error_key,
                             }
                         elif smart_ok:
@@ -2744,7 +2931,7 @@ class HealthMonitor:
                                 'device': disk,
                                 'error_count': error_count,
                                 'smart_status': smart_health,
-                                'dismissable': False,
+                                'dismissable': True,
                                 'error_key': error_key,
                             }
                         elif smart_health == 'FAILED':
@@ -2764,7 +2951,7 @@ class HealthMonitor:
                                          'serial': resolved_serial or '',
                                          'error_count': error_count,
                                          'smart_status': smart_health,
-                                         'sample': sample, 'dismissable': False}
+                                         'sample': sample, 'dismissable': True}
                             )
                             disk_results[display] = {
                                 'status': severity,
@@ -2772,7 +2959,7 @@ class HealthMonitor:
                                 'device': disk,
                                 'error_count': error_count,
                                 'smart_status': smart_health,
-                                'dismissable': False,
+                                'dismissable': True,
                                 'error_key': error_key,
                             }
                         else:
@@ -2894,10 +3081,17 @@ class HealthMonitor:
                 }
             
             has_critical = any(d.get('status') == 'CRITICAL' for d in active_results.values())
-            
+
+            # Surface disk names in the reason so notifications identify
+            # which device(s) took the hit rather than just a count.
+            disk_names = sorted(active_results.keys())
+            entity, summary = _fmt_entity_and_summary(
+                disk_names, singular='has errors', plural='disks with errors',
+            )
             return {
                 'status': 'CRITICAL' if has_critical else 'WARNING',
-                'reason': f"{len(active_results)} disk(s) with errors",
+                'reason': summary,
+                'entity': entity,
                 'details': disk_results
             }
         
@@ -2991,13 +3185,14 @@ class HealthMonitor:
                             category='network',
                             severity='CRITICAL',
                             reason=alert_reason or 'Interface DOWN',
-                            details={'interface': interface, 'dismissable': False}
+                            details={'interface': interface, 'dismissable': True}
                         )
                         
                         interface_details[interface] = {
                             'status': 'CRITICAL',
                             'reason': alert_reason or 'Interface DOWN',
-                            'dismissable': False
+                            'dismissable': True,
+                            'error_key': error_key,
                         }
                 else:
                     active_interfaces.add(interface)
@@ -3028,7 +3223,8 @@ class HealthMonitor:
                     checks[iface] = {
                         'status': detail.get('status', 'OK'),
                         'detail': detail.get('reason', 'DOWN'),
-                        'dismissable': detail.get('dismissable', False)
+                        'dismissable': detail.get('dismissable', True),
+                        'error_key': detail.get('error_key') or iface,
                     }
             checks['connectivity'] = connectivity_check
             
@@ -3039,11 +3235,11 @@ class HealthMonitor:
             
             return {
                 'status': 'CRITICAL' if has_critical else 'WARNING',
-                'reason': '; '.join(issues[:2]),
+                'reason': _fmt_name_list(issues, sep='; '),
                 'details': interface_details,
                 'checks': checks
             }
-        
+
         except Exception as e:
             print(f"[HealthMonitor] Network check failed: {e}")
             return {'status': 'UNKNOWN', 'reason': f'Network check unavailable: {str(e)}', 'checks': {}, 'dismissable': True}
@@ -3383,10 +3579,10 @@ class HealthMonitor:
             
             return {
                 'status': 'CRITICAL' if has_critical else 'WARNING',
-                'reason': '; '.join(issues[:3]),
+                'reason': _fmt_name_list(issues, sep='; '),
                 'details': vm_details
             }
-        
+
         except Exception as e:
             print(f"[HealthMonitor] VMs/CTs check failed: {e}")
             return {'status': 'UNKNOWN', 'reason': f'VM/CT check unavailable: {str(e)}', 'checks': {}, 'dismissable': True}
@@ -3613,11 +3809,11 @@ class HealthMonitor:
             
             return {
                 'status': 'CRITICAL' if has_critical else 'WARNING',
-                'reason': '; '.join(issues[:3]),
+                'reason': _fmt_name_list(issues, sep='; '),
                 'details': vm_details,
                 'checks': checks
             }
-            
+
         except Exception as e:
             print(f"[HealthMonitor] VMs/CTs persistence check failed: {e}")
             return {'status': 'UNKNOWN', 'reason': f'VM/CT check unavailable: {str(e)}', 'checks': {}, 'dismissable': True}
@@ -4228,7 +4424,12 @@ class HealthMonitor:
                     'log_persistent_errors': {'active': persistent_count > 0, 'severity': 'WARNING',
                         'reason': f'{persistent_count} recurring pattern(s) over 15+ min:\n' + '\n'.join(f'  - {s}' for s in persist_samples) if persistent_count else ''},
                     'log_critical_errors': {'active': unique_critical_count > 0, 'severity': 'CRITICAL',
-                        'reason': f'{unique_critical_count} critical error(s) found', 'dismissable': False},
+                        'reason': (
+                            self._enrich_critical_log_reason(next(iter(critical_errors_found.values())))
+                            if unique_critical_count == 1
+                            else f'{unique_critical_count} critical errors:\n' + self._enrich_critical_log_reason(next(iter(critical_errors_found.values())))
+                        ) if unique_critical_count > 0 else '',
+                        'dismissable': True},
                 }
                 
                 # Track which sub-checks were dismissed
@@ -4298,7 +4499,7 @@ class HealthMonitor:
                     'log_critical_errors': {
                         'status': _log_check_status('log_critical_errors', unique_critical_count > 0, 'CRITICAL'),
                         'detail': reason if unique_critical_count > 0 else 'No critical errors',
-                        'dismissable': False,
+                        'dismissable': True,
                         'error_key': 'log_critical_errors'
                     }
                 }
@@ -4318,7 +4519,7 @@ class HealthMonitor:
                         detail = v.get('detail', '')
                         if detail:
                             active_reasons.append(detail)
-                    reason = '; '.join(active_reasons[:3]) if active_reasons else None
+                    reason = _fmt_name_list(active_reasons, sep='; ') if active_reasons else None
                 
                 log_result = {'status': status, 'checks': log_checks}
                 if reason:
@@ -4623,7 +4824,7 @@ class HealthMonitor:
                     health_persistence.record_error(
                         error_key='system_age', category='updates',
                         severity='CRITICAL', reason=reason,
-                        details={'days': last_update_days, 'update_count': update_count, 'dismissable': False}
+                        details={'days': last_update_days, 'update_count': update_count, 'dismissable': True}
                     )
                 elif last_update_days and last_update_days >= 365:
                     status = 'WARNING'
@@ -5071,7 +5272,7 @@ class HealthMonitor:
                 overall_status = 'CRITICAL' if has_critical else 'WARNING'
                 return {
                     'status': overall_status,
-                    'reason': '; '.join(active_issues[:2]),
+                    'reason': _fmt_name_list(active_issues, sep='; '),
                     'checks': checks
                 }
             
@@ -5557,7 +5758,7 @@ class HealthMonitor:
                             'storage_name': storage_name,
                             'storage_type': storage.get('type', 'unknown'),
                             'status_detail': status_detail,
-                            'dismissable': False
+                            'dismissable': True
                         }
                     )
                 
@@ -5566,7 +5767,7 @@ class HealthMonitor:
                     'reason': reason,
                     'type': storage.get('type', 'unknown'),
                     'status': status_detail,
-                    'dismissable': False
+                    'dismissable': True
                 }
             
             # Build checks from storage_details
@@ -5577,14 +5778,14 @@ class HealthMonitor:
                     checks[st_name] = {
                         'status': 'INFO',
                         'detail': f"[Startup] {st_info.get('reason', 'Unavailable')} (checking...)",
-                        'dismissable': False,
+                        'dismissable': True,
                         'grace_period': True
                     }
                 else:
                     checks[st_name] = {
                         'status': 'CRITICAL',
                         'detail': st_info.get('reason', 'Unavailable'),
-                        'dismissable': False
+                        'dismissable': True
                     }
             
             # Add excluded unavailable storages as INFO (not as errors)
@@ -5609,11 +5810,22 @@ class HealthMonitor:
             
             # Determine overall status based on non-excluded issues only
             if real_unavailable:
+                # Build a name list like "Tuxis (dir), backups-nfs (nfs)"
+                # so both the notification body and the (headline) title
+                # can tell the user which storages actually went down —
+                # the previous "N storage(s) unavailable" wording forced
+                # them to open the UI to find out.
+                labels = [f"{s['name']} ({s.get('type', 'unknown')})" for s in real_unavailable]
+                entity, summary = _fmt_entity_and_summary(
+                    labels, singular='unavailable', plural='Proxmox storages unavailable',
+                )
                 # During grace period, return INFO instead of CRITICAL
                 if in_grace_period:
+                    grace_summary = f"{summary} (startup)" if len(labels) > 1 else f"{labels[0]} not yet available (startup)"
                     return {
                         'status': 'INFO',
-                        'reason': f'{len(real_unavailable)} storage(s) not yet available (startup)',
+                        'reason': grace_summary,
+                        'entity': entity,
                         'details': storage_details,
                         'checks': checks,
                         'grace_period': True
@@ -5621,7 +5833,8 @@ class HealthMonitor:
                 else:
                     return {
                         'status': 'CRITICAL',
-                        'reason': f'{len(real_unavailable)} Proxmox storage(s) unavailable',
+                        'reason': summary,
+                        'entity': entity,
                         'details': storage_details,
                         'checks': checks
                     }
@@ -5802,15 +6015,23 @@ class HealthMonitor:
                 health_persistence.clear_error(ek)
 
         if critical_targets:
+            entity, summary = _fmt_entity_and_summary(
+                critical_targets, singular='is stale', plural='remote mounts stale',
+            )
             return {
                 'status': 'CRITICAL',
-                'reason': f'{len(critical_targets)} remote mount(s) stale: {", ".join(critical_targets[:3])}',
+                'reason': summary,
+                'entity': entity,
                 'checks': checks,
             }
         if warning_targets:
+            entity, summary = _fmt_entity_and_summary(
+                warning_targets, singular='is read-only', plural='remote mounts read-only',
+            )
             return {
                 'status': 'WARNING',
-                'reason': f'{len(warning_targets)} remote mount(s) read-only: {", ".join(warning_targets[:3])}',
+                'reason': summary,
+                'entity': entity,
                 'checks': checks,
             }
         return {
@@ -5943,15 +6164,19 @@ class HealthMonitor:
         if not checks:
             return None
         if critical_cts:
+            entity, _ = _fmt_entity_and_summary(critical_cts, 'x', 'x')
             return {
                 'status': 'CRITICAL',
-                'reason': f'{len(critical_cts)} CT(s) at >{CRIT_PCT}% rootfs: {", ".join(critical_cts[:3])}',
+                'reason': f'{len(critical_cts)} CT(s) at >{CRIT_PCT}% rootfs: {_fmt_name_list(critical_cts)}',
+                'entity': entity,
                 'checks': checks,
             }
         if warning_cts:
+            entity, _ = _fmt_entity_and_summary(warning_cts, 'x', 'x')
             return {
                 'status': 'WARNING',
-                'reason': f'{len(warning_cts)} CT(s) at >{WARN_PCT}% rootfs: {", ".join(warning_cts[:3])}',
+                'reason': f'{len(warning_cts)} CT(s) at >{WARN_PCT}% rootfs: {_fmt_name_list(warning_cts)}',
+                'entity': entity,
                 'checks': checks,
             }
         return {
@@ -6065,15 +6290,19 @@ class HealthMonitor:
                 health_persistence.clear_error(ek)
 
         if critical_labels:
+            entity, _ = _fmt_entity_and_summary(critical_labels, 'x', 'x')
             return {
                 'status': 'CRITICAL',
-                'reason': f'{len(critical_labels)} CT mount(s) ≥{crit_pct:.0f}%: {", ".join(critical_labels[:3])}',
+                'reason': f'{len(critical_labels)} CT mount(s) ≥{crit_pct:.0f}%: {_fmt_name_list(critical_labels)}',
+                'entity': entity,
                 'checks': checks,
             }
         if warning_labels:
+            entity, _ = _fmt_entity_and_summary(warning_labels, 'x', 'x')
             return {
                 'status': 'WARNING',
-                'reason': f'{len(warning_labels)} CT mount(s) ≥{warn_pct:.0f}%: {", ".join(warning_labels[:3])}',
+                'entity': entity,
+                'reason': f'{len(warning_labels)} CT mount(s) ≥{warn_pct:.0f}%: {_fmt_name_list(warning_labels)}',
                 'checks': checks,
             }
         return {
@@ -6184,15 +6413,19 @@ class HealthMonitor:
         if not checks:
             return None  # No block storages on this host
         if critical_labels:
+            entity, _ = _fmt_entity_and_summary(critical_labels, 'x', 'x')
             return {
                 'status': 'CRITICAL',
-                'reason': f'{len(critical_labels)} PVE storage(s) ≥{crit_pct:.0f}%: {", ".join(critical_labels[:3])}',
+                'reason': f'{len(critical_labels)} PVE storage(s) ≥{crit_pct:.0f}%: {_fmt_name_list(critical_labels)}',
+                'entity': entity,
                 'checks': checks,
             }
         if warning_labels:
+            entity, _ = _fmt_entity_and_summary(warning_labels, 'x', 'x')
             return {
                 'status': 'WARNING',
-                'reason': f'{len(warning_labels)} PVE storage(s) ≥{warn_pct:.0f}%: {", ".join(warning_labels[:3])}',
+                'reason': f'{len(warning_labels)} PVE storage(s) ≥{warn_pct:.0f}%: {_fmt_name_list(warning_labels)}',
+                'entity': entity,
                 'checks': checks,
             }
         return {
@@ -6292,15 +6525,19 @@ class HealthMonitor:
                 health_persistence.clear_error(ek)
 
         if critical_labels:
+            entity, _ = _fmt_entity_and_summary(critical_labels, 'x', 'x')
             return {
                 'status': 'CRITICAL',
-                'reason': f'{len(critical_labels)} ZFS pool(s) ≥{crit_pct:.0f}%: {", ".join(critical_labels[:3])}',
+                'reason': f'{len(critical_labels)} ZFS pool(s) ≥{crit_pct:.0f}%: {_fmt_name_list(critical_labels)}',
+                'entity': entity,
                 'checks': checks,
             }
         if warning_labels:
+            entity, _ = _fmt_entity_and_summary(warning_labels, 'x', 'x')
             return {
                 'status': 'WARNING',
-                'reason': f'{len(warning_labels)} ZFS pool(s) ≥{warn_pct:.0f}%: {", ".join(warning_labels[:3])}',
+                'reason': f'{len(warning_labels)} ZFS pool(s) ≥{warn_pct:.0f}%: {_fmt_name_list(warning_labels)}',
+                'entity': entity,
                 'checks': checks,
             }
         return {

@@ -66,7 +66,7 @@
       "El menú de diálogo lista los 6 códigos; eliges uno.",
       "Si <code>config.json</code> existe: <code>jq --arg lang \"$new_language\" '.language = $lang'</code> actualiza el campo en sitio.",
       "Si <code>config.json</code> no existe: se crea uno nuevo con el código de idioma en un objeto de un solo campo.",
-      "Diálogo de confirmación: <em>\"Idioma cambiado a &lt;code&gt;\"</em>.",
+      "Diálogo de confirmación: <em>\"Idioma cambiado a [code]\"</em>.",
       "<code>exec bash config_menu.sh</code> recarga el menú Settings con el nuevo idioma activo."
     ]
   },

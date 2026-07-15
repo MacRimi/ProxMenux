@@ -7,7 +7,6 @@
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
-VENV_PATH="/opt/googletrans-env"
 TOOLS_JSON="/usr/local/share/proxmenux/installed_tools.json"
 APT_ENV="env DEBIAN_FRONTEND=noninteractive LC_ALL=C LANG=C"
 
@@ -130,6 +129,7 @@ Suites: ${TARGET_CODENAME}
 Components: pve-no-subscription
 Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
 EOF
+    chmod 0644 /etc/apt/sources.list.d/proxmox.sources
     msg_ok "$(translate "Proxmox VE 9.x no-subscription repository created")" | tee -a "$screen_capture"
     changes_made=true
 
@@ -147,6 +147,7 @@ Suites: ${TARGET_CODENAME}-security
 Components: main contrib non-free non-free-firmware
 Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 EOF
+    chmod 0644 /etc/apt/sources.list.d/debian.sources
 
     msg_ok "$(translate "Debian repositories configured for $TARGET_CODENAME")"
 

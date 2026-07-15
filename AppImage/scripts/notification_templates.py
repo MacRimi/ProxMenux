@@ -448,35 +448,44 @@ TEMPLATES = {
     # status oscillation (OK->WARNING->OK) which creates noise.
     # The health_persistent and new_error templates cover this better.
     'state_change': {
-        'title': '{hostname}: {category} changed to {current}',
+        'title': '{hostname}: {category} changed to {current}{entity_suffix}',
         'body': '{category} status changed from {previous} to {current}.\n{reason}',
         'label': 'Health state changed',
         'group': 'health',
         'default_enabled': False,
     },
     'new_error': {
-        'title': '{hostname}: New {severity} - {category}',
+        'title': '{hostname}: New {severity} - {category}{entity_suffix}',
         'body': '{reason}',
         'label': 'New health issue',
         'group': 'health',
         'default_enabled': True,
     },
     'error_resolved': {
-        'title': '{hostname}: Resolved - {category}',
+        # `{entity}` is populated by health_persistence.resolve_error()
+        # (via _entity_from_details) and by PollingCollector's spread of
+        # the original details blob. When absent, _SafeDict elides the
+        # placeholder and the title collapses back to "Resolved - <cat>"
+        # without a trailing dash.
+        'title': '{hostname}: Resolved - {category}{entity_suffix}',
         'body': 'The {category} issue has been resolved.\n{reason}\n\U0001F6A6 Previous severity: {original_severity}\n\u23F1\uFE0F Duration: {duration}',
         'label': 'Recovery notification',
         'group': 'health',
         'default_enabled': True,
     },
     'error_escalated': {
-        'title': '{hostname}: Escalated to {severity} - {category}',
+        'title': '{hostname}: Escalated to {severity} - {category}{entity_suffix}',
         'body': '{reason}',
         'label': 'Health issue escalated',
         'group': 'health',
         'default_enabled': True,
     },
     'health_degraded': {
-        'title': '{hostname}: Health check degraded',
+        # flask_server._health_collector already builds the rich title
+        # (e.g. "prox: Storage CRITICAL — Tuxis (dir)") and passes it in
+        # data['title']. Fall back to the constant when absent so hand-
+        # rolled callers keep working.
+        'title': '{title_or_default}',
         'body': '{reason}',
         'label': 'Health check degraded',
         'group': 'health',
@@ -657,6 +666,37 @@ TEMPLATES = {
         'group': 'backup',
         'default_enabled': True,
     },
+
+    # ── ProxMenux Host Backup events ──
+    # Distinct event types from `backup_*` (which are for vzdump VM/CT
+    # backups). The runner — both `run_scheduled_backup.sh` (timer) and
+    # the manual flow from `backup_host.sh` — POSTs to the local webhook
+    # with these explicit pve_type values, so the operator can toggle
+    # Host Backup notifications separately from VM/CT backup ones.
+    # Backend label (PBS / local / Borg) is highlighted in the title so
+    # the operator can tell at a glance where the data went.
+    'host_backup_start': {
+        'title': '{hostname}: Host backup started → {backend_label}',
+        'body': 'Job: {job_id}\nBackend: {backend_label}\nDestination: {destination}\nProfile: {profile_mode}',
+        'label': 'Host backup started',
+        'group': 'backup',
+        'default_enabled': False,
+    },
+    'host_backup_complete': {
+        'title': '{hostname}: Host backup complete → {backend_label}',
+        'body': 'Job: {job_id}\nBackend: {backend_label}\nDestination: {destination}\nData size: {data_size}\nArchive size: {archive_size}\nDuration: {duration}',
+        'label': 'Host backup complete',
+        'group': 'backup',
+        'default_enabled': True,
+    },
+    'host_backup_fail': {
+        'title': '{hostname}: Host backup FAILED → {backend_label}',
+        'body': 'Job: {job_id}\nBackend: {backend_label}\nDestination: {destination}\nDuration before failure: {duration}\nReason: {reason}\nLog: {log_file}',
+        'label': 'Host backup FAILED',
+        'group': 'backup',
+        'default_enabled': True,
+    },
+
     'snapshot_complete': {
         'title': '{hostname}: Snapshot created — {vmname} ({vmid})',
         'body': 'Snapshot "{snapshot_name}" created for {vmname} (ID: {vmid}).',
@@ -756,7 +796,7 @@ TEMPLATES = {
         'default_enabled': True,
     },
     'pci_passthrough_conflict': {
-        'title': '{hostname}: PCIe device conflict detected',
+        'title': '{hostname}: PCIe device conflict detected — {device_pci}',
         'body': (
             'A PCIe device is assigned to multiple guests.\n'
             'Device: {device_pci}\n'
@@ -778,7 +818,7 @@ TEMPLATES = {
     
     # ── Network events ──
     'network_down': {
-        'title': '{hostname}: Network connectivity lost',
+        'title': '{hostname}: Network connectivity lost{entity_suffix}',
         'body': 'The node has lost network connectivity.\nReason: {reason}',
         'label': 'Network connectivity lost',
         'group': 'network',
@@ -808,7 +848,7 @@ TEMPLATES = {
         'default_enabled': True,
     },
     'firewall_issue': {
-        'title': '{hostname}: Firewall issue detected',
+        'title': '{hostname}: Firewall issue detected{entity_suffix}',
         'body': 'A firewall configuration issue has been detected.\nReason: {reason}',
         'label': 'Firewall issue detected',
         'group': 'security',
@@ -868,8 +908,24 @@ TEMPLATES = {
         'group': 'services',
         'default_enabled': True,
     },
+    'system_restore_completed': {
+        'title': '{hostname}: Host restore finished',
+        'body': (
+            'Post-restore tasks completed in background.\n\n'
+            'Guests applied: {guests}\n'
+            'Bind-mount stubs: {stubs}\n'
+            'Stale node dirs removed: {stale_nodes}\n'
+            'Components reinstalled: {components}\n'
+            'Duration: {duration}\n'
+            '{warnings_block}\n'
+            'The node is now fully ready to use.'
+        ),
+        'label': 'Host restore completed',
+        'group': 'services',
+        'default_enabled': True,
+    },
     'system_problem': {
-        'title': '{hostname}: System problem detected',
+        'title': '{hostname}: System problem detected{entity_suffix}',
         'body': 'A system-level problem has been detected.\nReason: {reason}',
         'label': 'System problem detected',
         'group': 'services',
@@ -892,7 +948,7 @@ TEMPLATES = {
     
     # ── Hidden internal templates (not shown in UI) ──
     'service_fail_batch': {
-        'title': '{hostname}: {service_count} services failed',
+        'title': '{hostname}: {service_count} services failed{entity_suffix}',
         'body': '{reason}',
         'label': 'Service fail batch',
         'group': 'services',
@@ -957,31 +1013,31 @@ TEMPLATES = {
         'hidden': True,
     },
     'unknown_persistent': {
-        'title': '{hostname}: Check unavailable - {category}',
+        'title': '{hostname}: Check unavailable - {category}{entity_suffix}',
         'body': 'Health check for {category} has been unavailable for 3+ cycles.\n{reason}',
         'label': 'Check unavailable',
         'group': 'health',
         'default_enabled': False,
         'hidden': True,
     },
-    
+
     # ── Health Monitor events ──
     'health_persistent': {
-        'title': '{hostname}: {count} active health issue(s)',
+        'title': '{hostname}: {count} active health issue(s){entity_suffix}',
         'body': 'The following health issues remain unresolved:\n{issue_list}\n\nThis digest is sent once every 24 hours while issues persist.',
         'label': 'Active health issues (daily)',
         'group': 'health',
         'default_enabled': True,
     },
     'health_issue_new': {
-        'title': '{hostname}: New health issue — {category}',
+        'title': '{hostname}: New health issue — {category}{entity_suffix}',
         'body': 'New {severity} issue detected in: {category}\nDetails: {reason}',
         'label': 'New health issue',
         'group': 'health',
         'default_enabled': True,
     },
     'health_issue_resolved': {
-        'title': '{hostname}: Resolved - {category}',
+        'title': '{hostname}: Resolved - {category}{entity_suffix}',
         'body': '{category} issue has been resolved.\n{reason}\nDuration: {duration}',
         'label': 'Health issue resolved',
         'group': 'health',
@@ -1091,7 +1147,7 @@ TEMPLATES = {
         'title': '{hostname}: CT {vmid} rootfs at {usage_percent}%',
         'body': (
             'CT {vmid} ({name}) rootfs is at {usage_percent}% '
-            '({disk_bytes} / {maxdisk_bytes}).\n\n'
+            '({disk_bytes_human} / {maxdisk_bytes_human}).\n\n'
             'A full LXC rootfs prevents the container from booting cleanly. '
             'Either expand the rootfs (pct resize {vmid} rootfs +1G) or free '
             'space inside the container.'
@@ -1177,11 +1233,19 @@ TEMPLATES = {
     # bullet list make sure the operator sees exactly what's moving
     # without opening the dashboard first.
     'secure_gateway_update_available': {
-        'title': '{hostname}: {app_name} update available — v{latest_version}',
+        # `{update_title_suffix}` and `{version_line}` are computed in
+        # `_build_managed_install_event` so the same template can render
+        # both scenarios cleanly:
+        # - Tailscale itself moved: "— v<new>" + "current → latest" line
+        # - Only sidecar packages moved: "— v<current> (packages only)" +
+        #   single-line "Tailscale unchanged" body
+        # Prevents the confusing "v1.90.9-r6 → v1.90.9-r6" render when
+        # Tailscale is stable and only alpine libs are updating.
+        'title': '{hostname}: {app_name} update available{update_title_suffix}',
         'body': (
             '{app_name} (managed by ProxMenux) has 📦 {package_count} package update(s) '
             'pending in its container.\n'
-            '🔹 Current Tailscale: v{current_version}  →  🟢 Latest: v{latest_version}\n\n'
+            '{version_line}\n\n'
             '💡 Open ProxMenux Monitor > Settings > Secure Gateway and click '
             '"Update" to apply.\n\n'
             '🗂️ Packages:\n{package_list}'
@@ -1338,6 +1402,28 @@ def _get_hostname() -> str:
             return 'proxmox'
 
 
+def _format_bytes_human(n: Any) -> str:
+    """Compact human-readable size (base 1024): '35.3 GiB', '4.8 TiB'.
+
+    Matches what `df -h` and the Proxmox UI show, so operators reading a
+    notification aren't asked to translate a 12-digit byte count.
+    """
+    try:
+        size = float(n)
+    except (TypeError, ValueError):
+        return ''
+    if size <= 0:
+        return '0 B'
+    units = ('B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB')
+    i = 0
+    while size >= 1024.0 and i < len(units) - 1:
+        size /= 1024.0
+        i += 1
+    if i == 0:
+        return f'{int(size)} B'
+    return f'{size:.1f} {units[i]}'
+
+
 def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
     """Render a template into a structured notification object.
     
@@ -1381,12 +1467,54 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
         'issue_list': '', 'error_key': '',
         'storage_name': '', 'storage_type': '',
         'important_list': 'none',
+        # Host Backup specifics (run_scheduled_backup.sh + backup_host.sh).
+        'job_id': '', 'backend': '', 'backend_label': '',
+        'destination': '', 'profile_mode': '',
+        'data_size': '', 'archive_size': '',
+        'log_file': '',
     }
     variables.update(data)
-    
+
+    # Humanise raw-byte fields so templates can render '35.3 GiB' instead
+    # of '37952020480'. Producers keep emitting raw ints (needed by APIs
+    # and the dashboard); the humanised twin is derived on the fly here.
+    for _byte_key in ('disk_bytes', 'maxdisk_bytes'):
+        if _byte_key in data:
+            variables[f'{_byte_key}_human'] = _format_bytes_human(data[_byte_key])
+
     # Ensure important_list is never blank (fallback to 'none')
     if not variables.get('important_list', '').strip():
         variables['important_list'] = 'none'
+
+    # Derive the affected object's display name for titles that use it.
+    # Priority: caller-supplied `entity` (health_monitor.emit_event) →
+    # per-detail fields spread in from `record_error`'s details blob.
+    # `entity_suffix` gives templates a way to render "…- Storage 'Tuxis'"
+    # without the trailing " - " when the field is empty.
+    _ent = str(variables.get('entity', '')).strip()
+    if not _ent:
+        _ent = (
+            variables.get('storage_name')
+            or variables.get('mount_point')
+            or variables.get('device')
+            or variables.get('interface')
+            or variables.get('vm_name')
+            or ''
+        )
+        _ent = str(_ent).strip()
+    variables['entity'] = _ent
+    variables['entity_suffix'] = f' — {_ent}' if _ent else ''
+
+    # `title_or_default` lets a template surface a caller-computed title
+    # when the caller already knows the entity context (e.g.
+    # flask_server's health collector), and fall back to a stock string
+    # otherwise. Prevents empty subject lines when the caller forgot to
+    # populate `title`.
+    _caller_title = str(variables.get('title', '')).strip()
+    if not _caller_title:
+        hn = variables.get('hostname', '')
+        _caller_title = f'{hn}: Health check degraded' if hn else 'Health check degraded'
+    variables['title_or_default'] = _caller_title
     
     # `format_map` with a SafeDict avoids the KeyError → "show raw template
     # with `{placeholder}` literal" failure mode. If a template gets a new
@@ -1567,6 +1695,9 @@ EVENT_EMOJI = {
     'replication_complete': '\u2705',
     # Backups
     'backup_start':         '\U0001F4BE\U0001F680',  # 💾🚀 floppy + rocket
+    'host_backup_start':    '\U0001F5C4️\U0001F680',     # 🗄️🚀 cabinet + rocket
+    'host_backup_complete': '\U0001F5C4️✅',         # 🗄️✅ cabinet + check
+    'host_backup_fail':     '\U0001F5C4️❌',         # 🗄️❌ cabinet + cross
     'backup_complete':      '\U0001F4BE\u2705',       # 💾✅ floppy + check
     'backup_warning':       '\U0001F4BE\u26A0\uFE0F', # 💾⚠️ floppy + warning
     'backup_fail':          '\U0001F4BE\u274C',       # 💾❌ floppy + cross
@@ -1604,6 +1735,7 @@ EVENT_EMOJI = {
     'system_startup':       '\U0001F680',         # rocket (startup)
     'system_shutdown':      '\u23FB\uFE0F',       # power symbol (Unicode)
     'system_reboot':        '\U0001F504',
+    'system_restore_completed': '✅',          # check mark
     'system_problem':       '\u26A0\uFE0F',
     'service_fail':         '\u274C',
     'oom_kill':             '\U0001F4A3',         # bomb
