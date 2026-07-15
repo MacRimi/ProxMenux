@@ -266,16 +266,36 @@ _create_job_attached() {
   case "$backend" in
     pbs)
       hb_select_pbs_repository || return 1
+      # Attached-mode PBS jobs were being written without ever asking
+      # about encryption — the runner then invoked
+      # `proxmox-backup-client backup` with no `--keyfile`, so every
+      # attached-mode backup landed on PBS unencrypted regardless of
+      # what the operator would have picked. Same encryption prompt as
+      # `_create_job_new`: hb_ask_pbs_encryption sets
+      # HB_PBS_KEYFILE_OPT / HB_PBS_ENC_PASS which we translate into
+      # PBS_KEYFILE / PBS_ENCRYPTION_PASSWORD env lines the runner
+      # reads. Cancel from the encryption dialog aborts the wizard
+      # (return 1) so no half-configured job is saved.
+      hb_ask_pbs_encryption || return 1
       local bid
       bid="hostcfg-$(hostname)"
       bid=$(dialog --backtitle "ProxMenux" --title "PBS" \
         --inputbox "$(translate "Backup ID for this job:")" \
         "$HB_UI_INPUT_H" "$HB_UI_INPUT_W" "$bid" 3>&1 1>&2 2>&3) || return 1
       bid=$(echo "$bid" | tr -cs '[:alnum:]_-' '-' | sed 's/-*$//')
+      # Same derivation as _create_job_new: HB_PBS_KEYFILE_OPT is the
+      # full "--keyfile /path" string when encryption is accepted,
+      # empty otherwise. Non-empty → write PBS_KEYFILE to the canonical
+      # path so the Monitor Web (which detects encryption from a
+      # non-empty PBS_KEYFILE line) shows the job as encrypted.
+      local pbs_kf_val=""
+      [[ -n "${HB_PBS_KEYFILE_OPT:-}" ]] && pbs_kf_val="$HB_STATE_DIR/pbs-key.conf"
       lines+=(
         "PBS_REPOSITORY=${HB_PBS_REPOSITORY}"
         "PBS_PASSWORD=${HB_PBS_SECRET}"
         "PBS_BACKUP_ID=${bid}"
+        "PBS_KEYFILE=${pbs_kf_val}"
+        "PBS_ENCRYPTION_PASSWORD=${HB_PBS_ENC_PASS:-}"
       )
       ;;
     local)
@@ -330,11 +350,15 @@ _create_job() {
     return 1
   }
 
+  # Order: recommended backend first (PBS gets chunk-based dedup, native
+  # PVE integration and paired keyfile recovery), then Borg, then plain
+  # local archive. Matches the "recommended → alternatives" ordering used
+  # elsewhere in the UI so a first-time user lands on the best default.
   backend=$(dialog --backtitle "ProxMenux" --title "$(translate "Backend")" \
     --menu "\n$(translate "Select backup backend:")" 14 70 6 \
-    "local" "Local archive" \
+    "pbs"   "Proxmox Backup Server (recommended)" \
     "borg"  "Borg repository" \
-    "pbs"   "Proxmox Backup Server" \
+    "local" "Local archive" \
     3>&1 1>&2 2>&3) || return 1
 
   # Offer attach-mode for backends that map to a PVE storage. The
