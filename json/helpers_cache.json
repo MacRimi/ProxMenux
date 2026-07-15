@@ -16,7 +16,8 @@
     ],
     "notes": [
       "Database credentials: `cat ~/2FAuth.creds`",
-      "The very first account created is automatically set up as an administrator account."
+      "The very first account created is automatically set up as an administrator account.",
+      "Users should register with http://<LXC_IP>/register"
     ],
     "warnings": [],
     "port": 80,
@@ -25,7 +26,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/2fauth.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -56,7 +57,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/actual-budget.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -93,7 +94,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -163,7 +164,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tailscale.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -196,7 +197,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/adguard-home.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -229,7 +230,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/adguard-home.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -336,7 +337,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/adventurelog.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -360,6 +361,7 @@
       "Documents & Notes"
     ],
     "notes": [
+      "Admin Login under http://$IP:3010/admin/, credentials can be found with cat /root/affine.creds",
       "Initial build takes 20-30 minutes due to native module compilation."
     ],
     "warnings": [
@@ -372,7 +374,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -402,7 +404,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/agent-dvr.webp",
     "updateable": true,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -514,7 +516,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -612,7 +614,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/alpine-linux.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -650,7 +652,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/borg.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -668,12 +670,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000",
-      "scriptcat00004"
+      "scriptcat00018"
     ],
     "category_names": [
-      "Miscellaneous",
-      "Network & Firewall"
+      "MQTT & Messaging"
     ],
     "notes": [
       "To see config: `cat /opt/cinny/config.json`"
@@ -685,8 +685,8 @@
     "logo": "https://cinny.in/assets/cinny.svg",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
+    "has_arm": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -716,7 +716,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/it-tools.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -727,7 +727,7 @@
   {
     "name": "Alpine-Nextcloud",
     "slug": "alpine-nextcloud",
-    "desc": "NextCloudPi is a popular self-hosted solution for file collaboration and data storage. It is built on the NextCloud software, which is an open-source platform for data management.",
+    "desc": "<p>NextCloud for Alpine is a popular self-hosted solution for file collaboration and data storage.</p>",
     "script": "ct/alpine-nextcloud.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/alpine-nextcloud.sh",
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/alpine-nextcloud.sh",
@@ -743,18 +743,22 @@
     "warnings": [
       "Only Alpine: To get the username and password, run the script again inside the LXC shell."
     ],
-    "port": 4443,
-    "website": "https://github.com/nextcloud/nextcloudpi",
-    "documentation": "https://docs.nextcloudpi.com/",
+    "port": 443,
+    "website": "https://github.com/nextcloud/server",
+    "documentation": "https://docs.nextcloud.com/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextcloud.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
     ],
     "config_path": "",
+    "default_credentials": {
+      "username": "ncAdmin",
+      "password": ""
+    },
     "os": "alpine"
   },
   {
@@ -782,7 +786,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ntfy.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -813,7 +817,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/redlib.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -847,7 +851,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/valkey.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -880,7 +884,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wakapi.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [],
     "config_path": "/opt/wakapi/config.yml",
@@ -913,7 +917,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ampache.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -947,7 +951,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/anchor-notes.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -983,7 +987,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/anytype.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1014,7 +1018,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/apache-cassandra.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -1047,7 +1051,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/couchdb.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1078,7 +1082,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/apache-guacamole.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1115,7 +1119,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/apache-tika.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1148,7 +1152,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/apache-tomcat.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1182,7 +1186,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/apprise.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -1213,7 +1217,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/linux.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1282,7 +1286,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/archivebox.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1350,7 +1354,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/argus.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -1383,7 +1387,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/aria2.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1395,11 +1399,11 @@
     "name": "ARR-Stack",
     "slug": "arr-stack",
     "desc": "Proxmox VE Helper Scripts for setting up a stack of applications for use with Prowlarr, Sonarr, Radarr, Lidarr, Seerr, and qBittorrent.",
-    "script": "tools/pve/arr-stack.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/arr-stack.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/pve/arr-stack.sh",
-    "type": "pve",
-    "type_id": "1uyjfno0fpf5buh",
+    "script": "tools/addon/arr-stack.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/arr-stack.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/addon/arr-stack.sh",
+    "type": "addon",
+    "type_id": "88xtxy57q80v38v",
     "categories": [
       "scriptcat00012"
     ],
@@ -1447,7 +1451,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/asterisk.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1511,7 +1515,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/authelia.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1539,11 +1543,11 @@
       "Authentication & Security"
     ],
     "notes": [
-      "You will get a Not Found error if initial setup URL doesn't include the trailing forward slash /. Make sure you use the complete url (http://<your server's IP or hostname>:9000/if/flow/initial-setup/) including the trailing forward slash.",
+      "Main config /etc/authentik/config.yml. The configuration files for individual services such as server, worker, outposts are located in the /etc/default/ directory and their names start with 'authentik-*'",
       "If you want automatic GeoIP updates, create a free account at https://www.maxmind.com/en/geolite2/signup, then edit the /usr/local/etc/GeoIP.conf file with your credentials and remove the # in front of the geoipupdate line in the crontab."
     ],
     "warnings": [],
-    "port": 9000,
+    "port": 9443,
     "website": "https://goauthentik.io/",
     "documentation": "https://docs.goauthentik.io/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/authentik.webp",
@@ -1580,7 +1584,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/autobrr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1648,7 +1652,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/baby-buddy.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1685,7 +1689,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/backrest.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1716,7 +1720,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/baikal.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1753,7 +1757,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bambuddy.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -1784,7 +1788,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bar-assistant.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1821,7 +1825,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -1851,12 +1855,46 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bazarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
     ],
     "config_path": "/opt/bazarr/data/config/config.yaml",
+    "os": "debian"
+  },
+  {
+    "name": "BeaverHabits",
+    "slug": "beaverhabits",
+    "desc": "BeaverHabits is a self-hosted habit tracking app without goals. Track streaks, view heatmaps, and manage your daily habits through a clean web interface powered by NiceGUI and Python.",
+    "script": "ct/beaverhabits.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/beaverhabits.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/beaverhabits.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00000"
+    ],
+    "category_names": [
+      "Miscellaneous"
+    ],
+    "notes": [
+      "Habit data is stored in /opt/beaverhabits/.user.",
+      "Set TRUSTED_LOCAL_EMAIL in the service environment to skip authentication for a specific email."
+    ],
+    "warnings": [],
+    "port": 8080,
+    "website": "https://beaverhabits.com",
+    "documentation": "https://github.com/daya0576/beaverhabits/wiki",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/beaverhabits.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -1882,7 +1920,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bentopdf.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1913,7 +1951,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/beszel.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1948,7 +1986,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bichon.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -1988,7 +2026,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/birdnet-analyzer.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -2022,7 +2060,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bitfocus-companion.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -2055,7 +2093,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bitmagnet.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -2088,46 +2126,13 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bitmagnet.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
     ],
     "config_path": "`/opt/bitmagnet/config.yml` or `/opt/bitmagnet/.env`",
     "os": "alpine"
-  },
-  {
-    "name": "Blinko",
-    "slug": "blinko",
-    "desc": "Blinko is an AI-powered card note-taking tool designed for capturing and organizing fleeting thoughts with natural language search powered by RAG technology.",
-    "script": "ct/blinko.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/blinko.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/blinko.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00012"
-    ],
-    "category_names": [
-      "Documents & Notes"
-    ],
-    "notes": [
-      "Create your account on first access via the web interface."
-    ],
-    "warnings": [],
-    "port": 1111,
-    "website": "https://blinko.space/",
-    "documentation": "https://docs.blinko.space/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/blinko.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
-    "execute_in": [
-      "lxc"
-    ],
-    "config_path": "",
-    "os": "debian"
   },
   {
     "name": "Blocky",
@@ -2152,7 +2157,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/blocky.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -2194,6 +2199,40 @@
     "os": "debian"
   },
   {
+    "name": "BookOrbit",
+    "slug": "bookorbit",
+    "desc": "Self-hosted digital library and reading platform for ebooks, PDFs, audiobooks, and comics with metadata enrichment and Kobo/KOReader sync.",
+    "script": "ct/bookorbit.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/bookorbit.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/bookorbit.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Open http://YOUR_IP:3000 and finish the initial setup using SETUP_BOOTSTRAP_TOKEN. The token is shown at the end of /root/bookorbit.creds",
+      "Default data path is /opt/bookorbit-data and default books path is /opt/bookorbit-books."
+    ],
+    "warnings": [],
+    "port": 3000,
+    "website": "https://bookorbit.app/",
+    "documentation": "https://bookorbit.app/installation.html",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bookorbit.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "BookStack",
     "slug": "bookstack",
     "desc": "BookStack is a user-friendly documentation platform that offers a simple and intuitive experience. New users should be able to create content with basic word-processing skills. While the platform provides advanced features, they do not interfere with the core simplicity of the user experience.",
@@ -2220,7 +2259,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bookstack.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -2257,7 +2296,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bunkerweb.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -2319,7 +2358,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bytestash.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -2356,7 +2395,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/caddy.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -2393,7 +2432,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/caddy.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -2426,7 +2465,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/calibre-web.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -2464,7 +2503,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/casaos.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -2497,7 +2536,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/certimate.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -2532,7 +2571,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/changedetection.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -2565,7 +2604,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/channels-dvr.webp",
     "updateable": false,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -2666,7 +2705,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -2699,7 +2738,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -2730,7 +2769,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cleanuparr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -2765,8 +2804,8 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/clickhouse.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
+    "has_arm": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -2793,10 +2832,10 @@
       "AI / Coding & Dev-Tools"
     ],
     "notes": [
-      "Generated credentials (API Key, Management Password) are stored in `/opt/cliproxyapi/config.yaml` inside the LXC."
+      "Use `cat ~/cliproxy.creds` inside LXC to see management password."
     ],
     "warnings": [
-      "After setup, authenticate your AI providers via the built-in management panel at port 8317."
+      "After setup, authenticate your AI providers via the built-in management panel at port 8317/management.html."
     ],
     "port": 8317,
     "website": "https://github.com/router-for-me/CLIProxyAPI",
@@ -2804,7 +2843,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openai.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -2839,7 +2878,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cloudflare.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -2873,7 +2912,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cloudflare.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -2904,7 +2943,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cloudreve.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -2939,7 +2978,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cockpit.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -3050,7 +3089,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/comfyui.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -3081,7 +3120,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/commafeed.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -3118,7 +3157,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/configarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -3151,12 +3190,46 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/convertx.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
     ],
     "config_path": "/opt/convertx/.env",
+    "os": "debian"
+  },
+  {
+    "name": "CookCLI",
+    "slug": "cookcli",
+    "desc": "CookCLI is a recipe management CLI and embedded web server in a single binary. It serves a Cooklang recipe collection as a web interface with shopping lists, pantry tracking, and meal planning.",
+    "script": "ct/cookcli.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/cookcli.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/cookcli.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Recipes are stored in /opt/cookcli/recipes. Sample recipes are added on first install.",
+      "Add your own .cook recipe files to /opt/cookcli/recipes and restart the service."
+    ],
+    "warnings": [],
+    "port": 9080,
+    "website": "https://cooklang.org",
+    "documentation": "https://github.com/cooklang/cookcli/blob/main/docs/server.md",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cooklang.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -3188,7 +3261,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/coolify.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc",
@@ -3261,7 +3334,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/coredns.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -3294,7 +3367,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/coredns.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -3331,7 +3404,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cosmos-server.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -3364,7 +3437,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/crafty-controller.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -3394,7 +3467,8 @@
     "notes": [
       "Downloads and installs the update script locally to `/usr/local/bin/update-lxcs.sh`. Cron runs the local copy — no remote code execution at runtime.",
       "To exclude containers from updating, edit `/etc/update-lxcs.conf` and add their CTIDs: `EXCLUDE=100,101,102`",
-      "Logs are written to `/var/log/update-lxcs-cron.log`."
+      "Logs are written to `/var/log/update-lxcs-cron.log`.",
+      "You can watch the source of local updater here: `https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/update-lxcs-cron.sh`."
     ],
     "warnings": [],
     "port": 0,
@@ -3403,7 +3477,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -3436,7 +3510,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cronicle.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -3508,7 +3582,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cross-seed.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -3574,7 +3648,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cryptpad.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -3607,7 +3681,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cyberchef.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -3638,7 +3712,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/dagu.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -3671,7 +3745,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/dashy.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -3705,7 +3779,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/databasus.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -3742,7 +3816,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/dawarich.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -3780,7 +3854,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ddclient.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -3813,7 +3887,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ddns-updater.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -3844,7 +3918,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/debian.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -3948,7 +4022,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/phoscon.webp",
     "updateable": true,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -4014,7 +4088,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/deluge.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -4054,7 +4128,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": true,
     "execute_in": [
       "pve"
@@ -4085,7 +4159,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/discopanel.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -4134,6 +4208,39 @@
     "os": "debian"
   },
   {
+    "name": "PVE Disk Health Tool",
+    "slug": "disk-health",
+    "desc": "<p>A PVE host tool that reports drive health for all physical disks. It installs smartmontools and nvme-cli on demand, enumerates physical disks (skipping loop, zram, and device-mapper devices), and prints an overall SMART verdict plus key indicators. Optionally, it can start a non-destructive short SMART self-test on a selected disk.</p>",
+    "script": "tools/pve/disk-health.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/disk-health.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/pve/disk-health.sh",
+    "type": "pve",
+    "type_id": "1uyjfno0fpf5buh",
+    "categories": [
+      "scriptcat00001"
+    ],
+    "category_names": [
+      "Proxmox & Virtualization"
+    ],
+    "notes": [
+      "Execute within the Proxmox shell"
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "",
+    "documentation": "",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": false,
+    "execute_in": [
+      "pve"
+    ],
+    "config_path": "",
+    "os": ""
+  },
+  {
     "name": "Dispatcharr",
     "slug": "dispatcharr",
     "desc": "Dispatcharr is an open-source powerhouse for managing IPTV streams and EPG data with elegance and control. Born from necessity and built with passion, it started as a personal project by OkinawaBoss and evolved with contributions from legends like dekzter, SergeantPanda and Bucatini.",
@@ -4156,7 +4263,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/dispatcharr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -4189,7 +4296,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/docker.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -4222,7 +4329,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/docker.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -4299,7 +4406,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/dockge.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc",
@@ -4333,7 +4440,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/docmost.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -4368,7 +4475,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/docuseal.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -4405,7 +4512,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons/png/dokploy.png",
     "updateable": true,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc",
@@ -4439,7 +4546,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/dolibarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -4504,7 +4611,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons/png/domain-monitor.png",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -4535,7 +4642,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/donetick.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -4568,7 +4675,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/asp-net-core.webp",
     "updateable": true,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -4599,7 +4706,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -4626,11 +4733,11 @@
     "warnings": [],
     "port": 8080,
     "website": "https://www.drawio.com/",
-    "documentation": "https://www.drawio.com/doc/",
+    "documentation": "https://www.drawio.com/docs/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/draw-io.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -4663,7 +4770,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/duplicati.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -4697,7 +4804,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/dynacat.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -4730,7 +4837,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ebusd.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -4802,7 +4909,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/emby.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -4835,7 +4942,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/emqx.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -4872,7 +4979,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/endurain.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -4946,7 +5053,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/frappe-erpnext.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -4981,7 +5088,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ersatztv.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -5018,7 +5125,7 @@
     "logo": "https://avatars.githubusercontent.com/u/127616157?s=200&v=4",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -5049,7 +5156,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/esphome.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -5084,8 +5191,8 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/etherpad.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
+    "has_arm": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -5117,7 +5224,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/evcc.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -5141,7 +5248,8 @@
       "Documents & Notes"
     ],
     "notes": [
-      "Create your admin account on first visit at the web UI."
+      "Create your admin account on first visit at the web UI.",
+      "To get your ONE-TIME SETUP CODE, type `journalctl --no-pager -a | grep -i \"BOOTSTRAP SETUP\"` inside LXC"
     ],
     "warnings": [
       "ExcaliDash is in BETA. Back up your data regularly."
@@ -5153,7 +5261,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -5183,7 +5291,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/excalidraw.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -5214,7 +5322,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -5243,6 +5351,41 @@
     "website": "https://ezbookkeeping.mayswind.net",
     "documentation": "https://ezbookkeeping.mayswind.net/installation/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ezbookkeeping.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Feishin",
+    "slug": "feishin",
+    "desc": "Modern self-hosted music player web client for Navidrome, Jellyfin, and OpenSubsonic-compatible servers.",
+    "script": "ct/feishin.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/feishin.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/feishin.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Feishin is a client only. Configure your music backend URL (SERVER_URL) in /opt/feishin/.env, then restart nginx.",
+      "Default web URL is http://YOUR_IP:9180.",
+      "If you need a subpath deployment, set PUBLIC_PATH in /opt/feishin/.env and restart nginx."
+    ],
+    "warnings": [],
+    "port": 9180,
+    "website": "https://feishin.vercel.app",
+    "documentation": "https://github.com/jeffvli/feishin",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/feishin.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": false,
@@ -5278,7 +5421,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/fhem.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -5386,8 +5529,8 @@
     "notes": [],
     "warnings": [],
     "port": 8080,
-    "website": "https://github.com/gtsteffaniak/filebrowser",
-    "documentation": "https://github.com/gtsteffaniak/filebrowser/wiki/Getting-Started",
+    "website": "https://filebrowserquantum.com/en/",
+    "documentation": "https://filebrowserquantum.com/en/docs/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/filebrowser-quantum.webp",
     "updateable": true,
     "privileged": false,
@@ -5424,8 +5567,8 @@
     "notes": [],
     "warnings": [],
     "port": 8080,
-    "website": "https://github.com/gtsteffaniak/filebrowser",
-    "documentation": "https://github.com/gtsteffaniak/filebrowser/wiki/Getting-Started",
+    "website": "https://filebrowserquantum.com/en/",
+    "documentation": "https://filebrowserquantum.com/en/docs/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/filebrowser-quantum.webp",
     "updateable": true,
     "privileged": false,
@@ -5460,14 +5603,16 @@
     "notes": [
       "With Privileged/Unprivileged Hardware Acceleration Support"
     ],
-    "warnings": [],
+    "warnings": [
+      "WARNING [ARM64]: Installation sources scripts outside of Community Scripts repo. Please check the source before installing."
+    ],
     "port": 19200,
     "website": "https://fileflows.com/",
     "documentation": "https://fileflows.com/docs",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/fileflows.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -5501,7 +5646,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/firefly-iii.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -5537,7 +5682,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/fireshare.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -5568,12 +5713,45 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/fladder.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
     ],
     "config_path": "/opt/fladder/assets/config/config.json",
+    "os": "debian"
+  },
+  {
+    "name": "Flame",
+    "slug": "flame",
+    "desc": "Flame is a self-hosted startpage for your server. Easily manage your apps and bookmarks with built-in editors, integrated search, weather widget, and Docker integration.",
+    "script": "ct/flame.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/flame.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/flame.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00010"
+    ],
+    "category_names": [
+      "Dashboards & Frontends"
+    ],
+    "notes": [
+      "Set a password by editing PASSWORD= in /opt/flame/.env and restarting the service."
+    ],
+    "warnings": [],
+    "port": 5005,
+    "website": "https://github.com/pawelmalak/flame",
+    "documentation": "https://github.com/pawelmalak/flame/wiki",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/flame.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -5663,7 +5841,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/flowise.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -5698,12 +5876,43 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/fluidcalendar.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
     ],
     "config_path": "/opt/fluid-calendar/.env",
+    "os": "debian"
+  },
+  {
+    "name": "FMD-Server",
+    "slug": "fmd-server",
+    "desc": "FMD allows you to locate and remotely control your Android device. This is useful if you have lost or misplaced it. FMD is decentralised, and users remain in full control of their data. With FMD, you can send commands to your phone: to locate it via GPS, to locate it via nearby cell towers, to take a picture, to lock it, to let it ring, or to factory-reset it.",
+    "script": "ct/fmd-server.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/fmd-server.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/fmd-server.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00009"
+    ],
+    "category_names": [
+      "Monitoring & Analytics"
+    ],
+    "notes": [],
+    "warnings": [],
+    "port": 8443,
+    "website": "https://fmd-foss.org/",
+    "documentation": "https://fmd-foss.org/docs/overview",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/fmd.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -5729,7 +5938,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/foldergram.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -5760,7 +5969,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/forgejo.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -5791,7 +6000,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/forgejo.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -5814,16 +6023,20 @@
     "category_names": [
       "AI / Coding & Dev-Tools"
     ],
-    "notes": [],
-    "warnings": [],
+    "notes": [
+      "For Autodeployment you can use var_forgejo_instance (Forgejo Instance URL (e.g. https://codeberg.org)) | var_forgejo_runner_uuid (Forgejo Runner UUID) | var_forgejo_runner_token (Forgejo Runner Token) before bash call"
+    ],
+    "warnings": [
+      "Warning: This app requires user input! Full automation is at your own risk."
+    ],
     "port": 0,
     "website": "https://forgejo.org/docs/latest/admin/actions/runner-installation/",
     "documentation": "https://forgejo.org/docs/latest/admin/actions/runner-installation/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/forgejo.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
+    "has_arm": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -5889,7 +6102,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/freshrss.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -5912,7 +6125,9 @@
     "category_names": [
       "NVR & Cameras"
     ],
-    "notes": [],
+    "notes": [
+      "Frigate is pinned to an tested version, dont create Issues, we are working on a new version, if we have time for this tool"
+    ],
     "warnings": [],
     "port": 5000,
     "website": "https://frigate.video/",
@@ -5955,7 +6170,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -5986,7 +6201,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/fumadocs.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6022,7 +6237,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/garage.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6058,7 +6273,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/garage.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6124,7 +6339,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gatus.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6155,7 +6370,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gatus.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6188,7 +6403,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/geopulse.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -6221,7 +6436,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ghost.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6258,7 +6473,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ghostfolio.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6291,7 +6506,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gitea.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6324,7 +6539,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gitea.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6355,7 +6570,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gitea-mirror.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6390,7 +6605,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/github.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -6421,7 +6636,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/glance.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6454,7 +6669,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/glances.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc",
@@ -6486,7 +6701,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/globaleaks.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -6517,7 +6732,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/glpi.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6552,7 +6767,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gluetun.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [],
     "config_path": "/opt/gluetun-data/.env",
@@ -6581,7 +6796,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/go2rtc.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6614,7 +6829,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gogs.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -6645,7 +6860,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gokapi.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6676,7 +6891,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gotify.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6711,7 +6926,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/grafana.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6746,7 +6961,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/grafana.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6785,12 +7000,49 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gramps.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
     ],
     "config_path": "/opt/gramps-web/config/config.cfg",
+    "os": "debian"
+  },
+  {
+    "name": "Grav",
+    "slug": "grav",
+    "desc": "Grav is an open source, flat-file NoDB CMS written for PHP 7.3.6+ that is focused on being crazy fast, easy to learn and use, with powerful features to enable it be easily extended.",
+    "script": "ct/grav.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/grav.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/grav.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00021"
+    ],
+    "category_names": [
+      "Webservers & Proxies"
+    ],
+    "notes": [
+      "Nginx is setup with pretty much default settings. The root is /opt/grav."
+    ],
+    "warnings": [],
+    "port": 80,
+    "website": "https://getgrav.org/",
+    "documentation": "https://getgrav.org/download",
+    "logo": "https://getgrav.org/user/pages/media/grav-symbol.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "Admin",
+      "password": ""
+    },
     "os": "debian"
   },
   {
@@ -6810,7 +7062,8 @@
     ],
     "notes": [
       "Initial Setup credentials: `tail /var/log/graylog-server/server.log` after the server starts for the first time.",
-      "Type `cat ~/graylog.creds` to get admin password that you use to log in AFTER the Initial Setup"
+      "Type `cat ~/graylog.creds` to get admin password that you use to log in AFTER the Initial Setup",
+      "Application uses MongoDB which currently doesn't play well with Linux Kernel v7.x. If you use that version of kernel, you will have to downgrade before using this application"
     ],
     "warnings": [],
     "port": 9000,
@@ -6819,7 +7072,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/graylog.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6850,7 +7103,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/grist.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6881,7 +7134,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/grocy.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -6916,7 +7169,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/guardian-plex.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7018,7 +7271,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/headscale.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7052,7 +7305,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/healthchecks.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7087,7 +7340,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/heimdall.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7125,7 +7378,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hermes-agent.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -7158,12 +7411,46 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hev.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
     ],
     "config_path": "/opt/hivemq/conf/config.xml",
+    "os": "debian"
+  },
+  {
+    "name": "Hister",
+    "slug": "hister",
+    "desc": "Hister is a privacy-focused personal search engine that indexes the websites you visit via a browser extension. It stores your browsing history locally with full-text search, advanced query language, and optional semantic search.",
+    "script": "ct/hister.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/hister.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/hister.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Install the Hister browser extension (Chrome or Firefox) and set the server URL to http://YOUR_IP:4433.",
+      "Search index and data are stored in /opt/hister/data. Disk usage grows as more pages are indexed."
+    ],
+    "warnings": [],
+    "port": 4433,
+    "website": "https://hister.org",
+    "documentation": "https://hister.org/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hister.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7191,7 +7478,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hivemq.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -7222,7 +7509,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/homarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7260,7 +7547,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/home-assistant.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7291,7 +7578,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/homebox.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7358,7 +7645,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/homebridge.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7397,7 +7684,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/homelable.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -7435,7 +7722,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/homepage.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7468,7 +7755,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/homer.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7501,7 +7788,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hortusfox.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7535,7 +7822,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7566,7 +7853,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hyperhdr.webp",
     "updateable": true,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7597,7 +7884,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hyperion.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7630,7 +7917,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gotify.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -7669,7 +7956,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/immich.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7730,14 +8017,16 @@
     "notes": [
       "After installation, edit `/opt/immichframe/Config/Settings.yml` and set ImmichServerUrl and ApiKey. Then restart the service with `systemctl restart immichframe`."
     ],
-    "warnings": [],
+    "warnings": [
+      "WARNING [ARM64]: Installation sources scripts outside of Community Scripts repo. Please check the source before installing."
+    ],
     "port": 8080,
     "website": "",
     "documentation": "",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/immich-frame.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7802,7 +8091,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/influxdb.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7903,7 +8192,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/investbrain.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -7972,7 +8261,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/invoice-ninja.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8005,7 +8294,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/invoiceshelf.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -8038,7 +8327,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/iobroker.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8072,7 +8361,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ironclaw.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -8106,7 +8395,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ironclaw.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -8140,7 +8429,7 @@
     "logo": "https://raw.githubusercontent.com/ajayyy/SponsorBlock/master/public/icons/IconSponsorBlocker512px.png",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8184,6 +8473,39 @@
     "os": "debian"
   },
   {
+    "name": "iVentoy",
+    "slug": "iventoy",
+    "desc": "iVentoy is an upgraded PXE server that allows simultaneous OS booting and installation on multiple machines via network. It is user-friendly, requiring only the placement of ISO files in a designated folder and selecting PXE boot on the client machine. iVentoy supports x86 Legacy BIOS, IA32 UEFI, x86_64 UEFI, and ARM64 UEFI modes. It is compatible with over 110 OS types, including Windows, WinPE, Linux, and VMware.",
+    "script": "ct/iventoy.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/iventoy.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/iventoy.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems"
+    ],
+    "notes": [],
+    "warnings": [
+      "Container must be privileged."
+    ],
+    "port": 26000,
+    "website": "https://www.iventoy.com/",
+    "documentation": "https://www.iventoy.com/en/doc_news.html",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/iventoy.webp",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Jackett",
     "slug": "jackett",
     "desc": "Jackett supports a wide range of trackers, including popular ones like The Pirate Bay, RARBG, and Torrentz2, as well as many private trackers. It can be integrated with several BitTorrent clients, including qBittorrent, Deluge, and uTorrent, among others.",
@@ -8206,7 +8528,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jackett.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8241,7 +8563,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jeedom.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8281,13 +8603,13 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jellyfin.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
     ],
     "config_path": "/etc/jellyfin/",
-    "os": "debian"
+    "os": "ubuntu"
   },
   {
     "name": "Jellystat",
@@ -8348,7 +8670,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jenkins.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8384,7 +8706,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jitsi-meet.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -8418,7 +8740,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/joplin.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8453,7 +8775,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jotty.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8486,7 +8808,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jupyter.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8521,7 +8843,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kan.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -8552,7 +8874,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kapowarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8583,7 +8905,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/karakeep.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8615,11 +8937,11 @@
     ],
     "port": 443,
     "website": "https://www.kasmweb.com/",
-    "documentation": "https://www.kasmweb.com/docs/",
+    "documentation": "https://docs.kasm.com/docs",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kasm-workspaces.webp",
     "updateable": true,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8652,7 +8974,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kavita.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8685,7 +9007,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8718,7 +9040,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8753,7 +9075,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/keycloak.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8824,7 +9146,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kimai.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8859,13 +9181,48 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kitchenowl.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
     ],
     "config_path": "/opt/kitchenowl/kitchenowl.env",
     "os": "debian"
+  },
+  {
+    "name": "Kiwix",
+    "slug": "kiwix",
+    "desc": "Offline content browser serving Wikipedia, Project Gutenberg, and more from ZIM archives",
+    "script": "ct/kiwix.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/kiwix.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/kiwix.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00000"
+    ],
+    "category_names": [
+      "Miscellaneous"
+    ],
+    "notes": [
+      "Place your .zim files in /data inside the container (local files work out of the box). Optional: you can bind-mount a host directory to /data if you want external storage."
+    ],
+    "warnings": [
+      "Ensure ZIM files are readable by the service user (for host mounts, for example: chmod -R a+rX /your/zims)."
+    ],
+    "port": 8080,
+    "website": "https://www.kiwix.org",
+    "documentation": "https://wiki.kiwix.org",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kiwix.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "ubuntu"
   },
   {
     "name": "Koel",
@@ -8894,7 +9251,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/koel-light.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -8926,13 +9283,13 @@
     ],
     "warnings": [],
     "port": 3000,
-    "website": "",
-    "documentation": "",
+    "website": "https://github.com/PanSalut/Koffan",
+    "documentation": "https://github.com/PanSalut/Koffan/wiki",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/koffan.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
+    "has_arm": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -8966,7 +9323,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/koillection.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9000,7 +9357,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kometa.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9033,7 +9390,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/komga.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9069,7 +9426,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/komodo.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc",
@@ -9101,7 +9458,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ipfs.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -9134,47 +9491,12 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kutt.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
     ],
     "config_path": "/opt/kutt/.env",
-    "os": "debian"
-  },
-  {
-    "name": "LabCA",
-    "slug": "labca",
-    "desc": "LabCA is a standalone web GUI for managing ACME certificate authorities like step-ca, providing dashboard, certificate overview, and admin management.",
-    "script": "ct/labca.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/labca.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/labca.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00006"
-    ],
-    "category_names": [
-      "Authentication & Security"
-    ],
-    "notes": [
-      "On first access, you will be prompted to create an admin account and configure the database connection to your step-ca instance."
-    ],
-    "warnings": [
-      "LabCA standalone requires a MySQL-backed step-ca instance to connect to."
-    ],
-    "port": 3000,
-    "website": "https://github.com/hakwerk/labca",
-    "documentation": "https://github.com/hakwerk/labca",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
-    "execute_in": [
-      "lxc"
-    ],
-    "config_path": "/etc/labca/config.json",
     "os": "debian"
   },
   {
@@ -9202,7 +9524,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/languagetool.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9233,12 +9555,50 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/lazylibrarian.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
     ],
     "config_path": "/opt/LazyLibrarian/config.ini",
+    "os": "debian"
+  },
+  {
+    "name": "LeafWiki",
+    "slug": "leafwiki",
+    "desc": "LeafWiki is a self-hosted wiki built as a single Go binary with SQLite and Markdown stored on disk. No Node.js, no Redis, no Postgres — just a binary and a data directory.",
+    "script": "ct/leafwiki.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/leafwiki.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/leafwiki.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Admin password is stored in /etc/leafwiki/.env.",
+      "Wiki data and Markdown files are stored in /opt/leafwiki/data."
+    ],
+    "warnings": [],
+    "port": 8080,
+    "website": "https://leafwiki.com",
+    "documentation": "https://github.com/perber/leafwiki",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/leafwiki.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": "auto-generated"
+    },
     "os": "debian"
   },
   {
@@ -9264,7 +9624,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/leantime.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9300,7 +9660,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/librechat.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -9333,7 +9693,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/librenms.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9364,7 +9724,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/librespeed.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9398,7 +9758,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/libretranslate.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9429,7 +9789,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/lidarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9462,7 +9822,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/limesurvey.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9495,7 +9855,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/linkding.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9533,7 +9893,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/linkstack.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9564,7 +9924,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/linkwarden.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9595,7 +9955,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/listmonk.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9665,7 +10025,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/livebook.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9736,7 +10096,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/lobehub.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -9773,7 +10133,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -9805,7 +10165,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/loki.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9838,7 +10198,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/loki.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9902,7 +10262,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -9936,7 +10296,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/lychee.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -9967,7 +10327,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/lyrion-music-server.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10000,7 +10360,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mafl.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10033,7 +10393,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/magicmirror2.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10064,7 +10424,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mail-archiver.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10099,7 +10459,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/manage-my-damn-life.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10132,7 +10492,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/manyfold.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10156,7 +10516,6 @@
       "Databases"
     ],
     "notes": [
-      "This script requires some extra steps after the installation, Please checkout the 'documentation'",
       "Access Adminer Web UI at `http://<CONTAINER_IP>/adminer.php`"
     ],
     "warnings": [],
@@ -10166,7 +10525,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mariadb.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10190,7 +10549,6 @@
       "Databases"
     ],
     "notes": [
-      "This script requires some extra steps after the installation, Please checkout the 'documentation'",
       "Access Adminer Web UI at `http://<CONTAINER_IP>/adminer.php`"
     ],
     "warnings": [],
@@ -10200,7 +10558,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mariadb.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10233,7 +10591,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/matomo.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -10268,7 +10626,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/home-assistant.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -10303,7 +10661,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/matterbridge.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10338,7 +10696,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/matter.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -10389,20 +10747,20 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00013"
+      "scriptcat00012"
     ],
     "category_names": [
-      "Media & Streaming"
+      "Documents & Notes"
     ],
     "notes": [],
     "warnings": [],
     "port": 9000,
     "website": "https://mealie.io/",
-    "documentation": "https://mealie.io/",
+    "documentation": "https://docs.mealie.io/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mealie.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10438,7 +10796,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mediamanager.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10473,7 +10831,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mediamtx.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10504,7 +10862,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/py-medusa.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10537,7 +10895,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/meilisearch.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10568,7 +10926,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/memos.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10599,7 +10957,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/meshcentral.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10630,7 +10988,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/metabase.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10661,7 +11019,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/metube.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10798,7 +11156,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mini-qr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -10831,7 +11189,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/miniflux-light.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10905,7 +11263,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/minthcm.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -10940,7 +11298,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mongodb.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -10971,7 +11329,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/monica.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -11016,7 +11374,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -11047,7 +11405,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/motioneye.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -11084,7 +11442,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mqtt.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -11120,7 +11478,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/musicseerr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -11151,7 +11509,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/myip.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -11182,7 +11540,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mylar3.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -11213,7 +11571,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/myspeed.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -11246,7 +11604,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/n8n.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -11281,7 +11639,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nagios.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -11318,7 +11676,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nametag.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -11351,7 +11709,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/navidrome.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -11386,7 +11744,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/neko.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -11421,7 +11779,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/neo4j.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -11461,7 +11819,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/netbird.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -11497,7 +11855,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/netboot-xyz.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -11530,7 +11888,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/netbox.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -11569,6 +11927,40 @@
       "pve"
     ],
     "config_path": "/etc/netdata/netdata.conf",
+    "os": "debian"
+  },
+  {
+    "name": "Newt",
+    "slug": "newt",
+    "desc": "Newt is a lightweight, headless, fully user-space WireGuard tunnel client and TCP/UDP proxy for Pangolin. It connects a site to a Pangolin server to securely expose private resources without port forwarding or opening inbound firewall ports.",
+    "script": "ct/newt.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/newt.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/newt.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00004"
+    ],
+    "category_names": [
+      "Network & Firewall"
+    ],
+    "notes": [
+      "Requires a running Pangolin server to connect to.",
+      "Requires a Newt ID, Newt Secret and Pangolin endpoint, which can be obtained by creating a site/node in your Pangolin dashboard."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://pangolin.net",
+    "documentation": "https://docs.pangolin.net/manage/sites/install-site",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pangolin.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -11659,13 +12051,13 @@
     "warnings": [
       "WARNING: Installation sources scripts outside of Community Scripts repo. Please check the source before installing."
     ],
-    "port": 4443,
+    "port": 443,
     "website": "https://github.com/nextcloud/nextcloudpi",
     "documentation": "https://docs.nextcloudpi.com/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextcloud.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -11696,8 +12088,8 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nexterm.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
+    "has_arm": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -11731,7 +12123,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextexplorer.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -11762,7 +12154,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nextpvr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -11841,7 +12233,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nginx-ui.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -11875,7 +12267,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nginx-proxy-manager.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -11945,7 +12337,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nightscout.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -11976,7 +12368,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nocodb.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12009,7 +12401,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/node-red.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12042,7 +12434,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/node-red.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12121,6 +12513,45 @@
     "os": "debian"
   },
   {
+    "name": "NoteDiscovery",
+    "slug": "notediscovery",
+    "desc": "NoteDiscovery is a lightweight, self-hosted knowledge base and note-taking platform. Write Markdown notes, build a graph of linked knowledge, and search full-text across your entire vault — all stored as plain files.",
+    "script": "ct/notediscovery.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/notediscovery.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/notediscovery.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Notes are stored as plain Markdown files in /opt/notediscovery/data."
+    ],
+    "warnings": [
+      "Authentication is disabled by default. Enable it in /opt/notediscovery/config.yaml and change the default password."
+    ],
+    "port": 8000,
+    "website": "https://www.notediscovery.com",
+    "documentation": "https://github.com/gamosoft/NoteDiscovery/tree/main/documentation",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/notediscovery.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "",
+      "password": "admin"
+    },
+    "os": "debian"
+  },
+  {
     "name": "Notifiarr",
     "slug": "notifiarr",
     "desc": "Notifiarr is a purpose built system to bring many applications together to manage and customize notifications via Discord. You can monitor many aspects of your network(s), be notified of downtime, be notified of health issues, etc",
@@ -12145,7 +12576,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/notifiarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12179,7 +12610,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nginx-proxy-manager.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12214,7 +12645,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ntfy.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12245,7 +12676,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ntfy.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12276,7 +12707,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nx-witness.webp",
     "updateable": true,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12307,7 +12738,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nzbget.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12347,7 +12778,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/oauth2-proxy.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12378,7 +12809,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/octoprint.webp",
     "updateable": true,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12411,7 +12842,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/odoo.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12480,7 +12911,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ollama.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12511,12 +12942,16 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/omada.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
     ],
     "config_path": "",
+    "default_credentials": {
+      "username": "root",
+      "password": ""
+    },
     "os": "debian"
   },
   {
@@ -12542,7 +12977,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ombi.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12575,7 +13010,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openmediavault.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12610,7 +13045,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/onedev.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12643,7 +13078,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/onlyoffice.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12680,7 +13115,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/open-archiver.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12720,7 +13155,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/opencloud.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12755,7 +13190,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/opengist.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -12786,7 +13221,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openhab.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12819,7 +13254,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openobserve.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12892,7 +13327,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp",
     "updateable": true,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -12927,7 +13362,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/open-webui.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -12995,7 +13430,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openziti.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13029,7 +13464,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openziti.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13101,7 +13536,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ots.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -13135,7 +13570,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/outline.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13166,7 +13601,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/owncast.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13242,7 +13677,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ownfoil.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -13306,7 +13741,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pairdrop.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13343,7 +13778,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pangolin.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13378,8 +13813,8 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/paperclip-ai.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
+    "has_arm": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -13411,7 +13846,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/paperless-ai.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13444,7 +13879,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/paperless-ngx-light.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13479,7 +13914,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/paperless-ngx.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13517,7 +13952,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/papra.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13550,7 +13985,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/part-db.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13584,7 +14019,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/passbolt.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13615,7 +14050,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/patchmon.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13648,7 +14083,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/paymenter.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13754,7 +14189,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/peanut.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13788,7 +14223,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pelican-panel.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13821,7 +14256,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pelican-panel.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13854,7 +14289,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/photoprism.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13925,7 +14360,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pi-alert.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -13962,7 +14397,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pi-hole.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14095,8 +14530,8 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pinchflat.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
+    "has_arm": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -14169,8 +14604,8 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/plane.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
+    "has_arm": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -14202,7 +14637,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/planka.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14236,7 +14671,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/plant-it.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14269,7 +14704,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/plex.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14302,7 +14737,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pocketbase.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14335,7 +14770,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pocket-id.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14368,7 +14803,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/podman.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14404,7 +14839,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/home-assistant.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14439,7 +14874,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pbs"
@@ -14509,7 +14944,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14543,7 +14978,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/postgresql.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14577,7 +15012,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/postgresql.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14613,7 +15048,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -14645,12 +15080,50 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/powerdns.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
     ],
     "config_path": "/opt/poweradmin/config/settings.php",
+    "os": "debian"
+  },
+  {
+    "name": "Poznote",
+    "slug": "poznote",
+    "desc": "Poznote is a personal note-taking and documentation platform built with PHP 8.4 and SQLite. Features include Markdown editing, OIDC/SSO support, MCP server integration, and a clean web interface served via nginx.",
+    "script": "ct/poznote.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/poznote.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/poznote.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Notes and the SQLite database are stored in /var/www/html/data.",
+      "OIDC/SSO and settings-page password can be configured via the .env file (see .env.template in the repo)."
+    ],
+    "warnings": [],
+    "port": 8040,
+    "website": "https://github.com/timothepoznanski/poznote",
+    "documentation": "https://github.com/timothepoznanski/poznote",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/poznote.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin_change_me",
+      "password": "admin"
+    },
     "os": "debian"
   },
   {
@@ -14676,7 +15149,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/privatebin.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14707,7 +15180,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/profilarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14740,7 +15213,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/projectsend.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14771,7 +15244,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/prometheus.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14802,7 +15275,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/prometheus.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14833,7 +15306,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/prometheus.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14868,7 +15341,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/prometheus.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -14935,7 +15408,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15001,7 +15474,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/prowlarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15035,7 +15508,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15142,7 +15615,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ps5-mqtt.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -15175,7 +15648,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pterodactyl.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15208,7 +15681,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pterodactyl.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15239,7 +15712,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pulse.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15275,7 +15748,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15306,7 +15779,7 @@
     "logo": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE-Local/refs/heads/main/.github/logo.png",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15337,7 +15810,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/qbittorrent.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15436,7 +15909,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/qdrant.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15467,7 +15940,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/qui.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15498,7 +15971,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/rabbitmq.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15508,6 +15981,39 @@
       "username": "proxmox",
       "password": "proxmox"
     },
+    "os": "debian"
+  },
+  {
+    "name": "Rackula",
+    "slug": "rackula",
+    "desc": "Rackula is a drag-and-drop rack layout designer for homelabbers. Visualize your server rack with an offline-ready, mobile-friendly interface. Includes persistence API for cross-browser syncing.",
+    "script": "ct/rackula.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/rackula.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/rackula.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00010"
+    ],
+    "category_names": [
+      "Dashboards & Frontends"
+    ],
+    "notes": [
+      "API write token is auto-generated during install. Find it in /opt/rackula/data/.env"
+    ],
+    "warnings": [],
+    "port": 80,
+    "website": "https://count.racku.la",
+    "documentation": "https://github.com/RackulaLives/Rackula",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/rackula.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -15533,7 +16039,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/radarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15567,7 +16073,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/radicale.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15601,7 +16107,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/rclone.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15635,7 +16141,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/rclone.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15666,7 +16172,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/real-debrid.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15730,7 +16236,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/readeck.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15765,7 +16271,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/recyclarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15798,7 +16304,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/redis.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15831,7 +16337,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/redis.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15862,7 +16368,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/reitti.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15899,7 +16405,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/resilio-sync.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -15932,7 +16438,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/reveal-js.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16031,7 +16537,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/runtipi.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc",
@@ -16068,7 +16574,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/rustdesk.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16104,7 +16610,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/rustdesk.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16201,7 +16707,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/sabnzbd.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16232,12 +16738,48 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/salt.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
     ],
     "config_path": "/opt/salt/.env",
+    "os": "debian"
+  },
+  {
+    "name": "Satisfactory",
+    "slug": "satisfactory",
+    "desc": "Host a persistent Satisfactory world for PC players using the official Linux dedicated server and SteamCMD.",
+    "script": "ct/satisfactory.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/satisfactory.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/satisfactory.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00024"
+    ],
+    "category_names": [
+      "Gaming & Leisure"
+    ],
+    "notes": [
+      "Open or forward ports 7777 TCP/UDP and 8888 TCP. External and internal port 7777 must match.",
+      "The server is managed and claimed from the in-game Server Manager."
+    ],
+    "warnings": [
+      "Updates stop and restart the game server; schedule them when no players are connected."
+    ],
+    "port": 7777,
+    "website": "https://www.satisfactorygame.com/",
+    "documentation": "https://satisfactory.wiki.gg/wiki/Dedicated_servers",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/satisfactory.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -16265,7 +16807,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16299,7 +16841,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/scanopy.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16332,7 +16874,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/scraparr-dark.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16363,7 +16905,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/searxng.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16398,7 +16940,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/seaweedfs.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16431,7 +16973,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/seelf.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -16462,7 +17004,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/seerr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16496,7 +17038,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/semaphore-ui.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16506,7 +17048,7 @@
       "username": "admin@community-scripts.org",
       "password": ""
     },
-    "os": "debian"
+    "os": "ubuntu"
   },
   {
     "name": "SFTPGo",
@@ -16531,7 +17073,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/sftpgo.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16565,7 +17107,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/shelfmark.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16595,8 +17137,8 @@
     "documentation": "https://docs.shinobi.video/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/shinobi.webp",
     "updateable": true,
-    "privileged": false,
-    "has_arm": false,
+    "privileged": true,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16675,7 +17217,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/shlink.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -16708,7 +17250,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/signoz.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16739,7 +17281,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/silverbullet.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16806,7 +17348,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/slskd.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16841,7 +17383,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/smokeping.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16877,7 +17419,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -16913,7 +17455,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/snipe-it.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16944,7 +17486,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/png/snowshare.png",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -16977,7 +17519,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/solidtime.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -17010,7 +17552,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/sonarqube.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -17045,7 +17587,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/sonarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -17078,7 +17620,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/sonobarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -17113,7 +17655,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/soulsync.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -17144,7 +17686,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/sparkyfitness.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -17207,7 +17749,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/speedtest-tracker.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -17245,7 +17787,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -17279,7 +17821,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/splitpro.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -17346,7 +17888,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/spoolman.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -17379,7 +17921,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/sportarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -17486,8 +18028,8 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/squid.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
+    "has_arm": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -17519,7 +18061,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/step-ca.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -17554,7 +18096,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/stirling-pdf.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -17592,7 +18134,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/storybook.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -17628,7 +18170,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/storyteller.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -17664,7 +18206,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/strapi.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -17697,7 +18239,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/streamlink.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -17732,7 +18274,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/stylus.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -17763,7 +18305,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/sure-finance.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -17838,12 +18380,52 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/swizzin.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
     ],
     "config_path": "/etc/swizzin/",
+    "os": "debian"
+  },
+  {
+    "name": "Sync-in",
+    "slug": "sync-in",
+    "desc": "Sync-in is a self-hosted platform for file storage, synchronization, and team collaboration. Features include drag-and-drop uploads, OIDC/LDAP authentication, WebDAV support, full-text search, and online document editing with OnlyOffice or Collabora.",
+    "script": "ct/sync-in.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/sync-in.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/sync-in.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00011"
+    ],
+    "category_names": [
+      "Files & Downloads"
+    ],
+    "notes": [
+      "Configuration and generated secrets are stored in /opt/sync-in/environment.yaml.",
+      "Files are stored in /opt/sync-in/data. Increase disk size accordingly."
+    ],
+    "warnings": [
+      "Change the default credentials (sync-in / sync-in) immediately after first login."
+    ],
+    "port": 8080,
+    "website": "https://sync-in.com",
+    "documentation": "https://sync-in.com/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/sync-in.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "sync-in",
+      "password": "sync-in"
+    },
     "os": "debian"
   },
   {
@@ -17869,7 +18451,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/syncthing.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -17900,7 +18482,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/syncthing.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -17933,7 +18515,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tandoor-recipes.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -17964,7 +18546,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tasmoadmin.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -17995,7 +18577,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tasmocompiler.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18026,7 +18608,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tautulli.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18059,7 +18641,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tdarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18094,7 +18676,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/teable.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -18193,7 +18775,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/technitium.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18257,7 +18839,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/telegraf.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18290,7 +18872,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/teleport.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -18323,7 +18905,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/termix.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18356,7 +18938,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/the-lounge.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18392,7 +18974,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/thingsboard.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18427,7 +19009,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/threadfin.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18458,7 +19040,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tianji.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18495,7 +19077,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tinyauth.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18528,7 +19110,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tinyauth.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18559,8 +19141,8 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tolgee.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
+    "has_arm": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -18625,7 +19207,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/traccar.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18656,7 +19238,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tracearr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18689,7 +19271,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tracktor.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18724,7 +19306,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/traefik.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18755,7 +19337,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/traefik.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18789,7 +19371,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/transmission.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18827,7 +19409,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/transmission.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18864,7 +19446,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/transmute.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -18897,7 +19479,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/trek.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -18932,7 +19514,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/trilium-notes.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -18963,7 +19545,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/trip.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -19033,7 +19615,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tube-archivist.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -19071,7 +19653,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tududi.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -19102,7 +19684,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tunarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -19172,8 +19754,8 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/twenty-crm.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
+    "has_arm": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -19206,7 +19788,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/twingate.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -19237,7 +19819,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ubuntu.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -19373,7 +19955,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/uhf.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -19406,7 +19988,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/umami.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -19545,7 +20127,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/unbound.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -19576,7 +20158,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ubiquiti-unifi.webp",
     "updateable": true,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -19607,7 +20189,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/unmanic.webp",
     "updateable": true,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -19643,7 +20225,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -19678,7 +20260,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -19711,7 +20293,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp",
     "updateable": false,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -19745,7 +20327,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/upgopher.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -19780,7 +20362,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/upsnap.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -19811,7 +20393,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/uptime-kuma.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -19845,7 +20427,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/urbackup.webp",
     "updateable": true,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -19879,7 +20461,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/valkey.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -19913,7 +20495,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/valkey.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -19948,7 +20530,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/vaultwarden.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -19983,7 +20565,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/vaultwarden.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20018,7 +20600,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/versity.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -20051,7 +20633,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/victoriametrics.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20115,7 +20697,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wallabag.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20146,7 +20728,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wallos.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20179,7 +20761,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wanderer.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20212,7 +20794,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/warracker.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20243,7 +20825,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wastebin.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20274,7 +20856,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/watcharr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20305,7 +20887,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/watchyourlan.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20338,7 +20920,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wavelog.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -20373,7 +20955,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wazuh.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20445,7 +21027,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/web-check.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20554,7 +21136,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wger.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20589,7 +21171,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/whisparr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20622,7 +21204,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/whodb.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -20653,7 +21235,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wiki-js.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20687,7 +21269,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wireguard.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20725,7 +21307,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wireguard.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20762,7 +21344,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cmintey-wishlist.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20795,7 +21377,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wizarr.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20826,7 +21408,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wordpress.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20859,7 +21441,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/writefreely-light.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -20893,8 +21475,8 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/xyops.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
+    "has_arm": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -20921,7 +21503,8 @@
       "Media & Streaming"
     ],
     "notes": [
-      "Set API keys (TMDB_API, MAL_API, IGDB_ID, IGDB_SECRET) in /opt/yamtrack/src/.env to enable media search from external providers."
+      "Set API keys (TMDB_API, MAL_API, IGDB_ID, IGDB_SECRET) in /opt/yamtrack/src/.env to enable media search from external providers.",
+      "If you need to access the python console of Yamtrack (e.g.  creating a user) with the console), you can call  `/opt/yamtrack/.venv/bin/python manage.py shell`"
     ],
     "warnings": [
       "If using a reverse proxy, set the URLS variable in .env to your external URL (e.g., URLS=https://yamtrack.example.com)."
@@ -20932,7 +21515,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/yamtrack.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -20966,7 +21549,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/yourls.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -21005,7 +21588,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/youtube-dl.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -21040,7 +21623,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/yubal.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -21073,10 +21656,45 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/yunohost.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Yuvomi",
+    "slug": "yuvomi",
+    "desc": "Yuvomi is a self-hosted family planner covering tasks, calendars, shopping lists, meals, and budget tracking. Data is stored in an encrypted SQLite database (SQLCipher) with optional WebDAV backup and OIDC support.",
+    "script": "ct/yuvomi.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/yuvomi.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/yuvomi.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00000"
+    ],
+    "category_names": [
+      "Miscellaneous"
+    ],
+    "notes": [
+      "Data is stored in /opt/yuvomi/data. Backups go to /opt/yuvomi/backups."
+    ],
+    "warnings": [
+      "Database encryption key and session secret are auto-generated and stored in /opt/yuvomi/.env. Do not lose the DB_ENCRYPTION_KEY — without it the database is unrecoverable."
+    ],
+    "port": 3000,
+    "website": "https://yuvomi.cloud/",
+    "documentation": "https://github.com/ulsklyc/yuvomi",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/yuvomi.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": false,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -21109,7 +21727,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/zabbix.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -21177,7 +21795,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/zerobyte.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -21208,7 +21826,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/zerotier.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -21245,7 +21863,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/zigbee2mqtt.webp",
     "updateable": true,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -21278,7 +21896,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/zigbee2mqtt.webp",
     "updateable": true,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -21309,7 +21927,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/zipline.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -21347,7 +21965,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/zitadel.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "lxc"
@@ -21382,7 +22000,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/zoraxy.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -21413,7 +22031,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/zot-registry.webp",
     "updateable": true,
     "privileged": false,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
@@ -21444,7 +22062,7 @@
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/z-wave-js-ui.webp",
     "updateable": true,
     "privileged": true,
-    "has_arm": false,
+    "has_arm": true,
     "is_dev": false,
     "execute_in": [
       "pve"
