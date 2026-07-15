@@ -16,6 +16,12 @@
     "title": "What it is, in one paragraph",
     "body": "A ProxMenux backup captures the complete state of a Proxmox host: <strong>the filesystem</strong> (relevant directories under <code>/etc</code>, <code>/root</code>, <code>/var/lib/pve-cluster</code>, plus optional custom paths), <strong>a structured manifest</strong> (JSON with the detected hardware, kernel parameters, network layout, ZFS state, users and cron entries), and <strong>an application inventory</strong> (all packages marked as manually installed by APT, plus the list of components installed by ProxMenux with their exact versions). Any of the three supported destinations — local archive, Proxmox Backup Server (recommended) or Borg — receives the same self-contained payload, and any of them can hydrate the target host without depending on the source being reachable at restore time."
   },
+  "video": {
+    "heading": "Video walkthrough",
+    "intro": "Prefer watching Backup & Restore in action before configuring it? This walkthrough covers a full end-to-end demo of the feature in ProxMenux.",
+    "title": "ProxMenux — Backup & Restore walkthrough",
+    "caption": "External video on YouTube. Plays in privacy-enhanced mode (no cookies until you press play)."
+  },
   "whatItIsNot": {
     "heading": "What it is not",
     "intro": "The section covers <strong>host-level</strong> backup and restore: the Proxmox installation itself, not the workloads running on top of it.",

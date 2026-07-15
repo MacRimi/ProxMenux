@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Instalar ProxMenux | ProxMenux Documentation",
-    "description": "Instalador de una línea para ProxMenux en hosts Proxmox VE 8+. Elige entre el sabor con traducción (multi-idioma) o normal (ligero, solo inglés). Canal beta también disponible para acceso temprano a nuevas funciones.",
+    "description": "Instalador de una línea para ProxMenux en hosts Proxmox VE 8+. Incluye ficheros de traducción pre-generados para seis idiomas (inglés, español, francés, alemán, italiano, portugués) — el idioma se elige una vez durante la instalación. Canal beta también disponible para acceso temprano a nuevas funciones.",
     "ogTitle": "Instalar ProxMenux | ProxMenux Documentation",
     "ogDescription": "Instala ProxMenux en Proxmox VE 8+ con un comando. Canales estable y beta disponibles."
   },
@@ -85,7 +85,7 @@
   "requirements": {
     "heading": "Requisitos y buenas prácticas",
     "reqTitle": "Requisitos",
-    "reqBody": "Proxmox VE <strong>8.x o posterior</strong>. PVE 7 y anteriores no están soportados. Acceso a internet desde el host (el instalador descarga scripts, dependencias y — en la instalación con traducción — paquetes de Python desde PyPI). Ejecuta como <strong>root</strong> en el host Proxmox.",
+    "reqBody": "Proxmox VE <strong>8.x o posterior</strong>. PVE 7 y anteriores no están soportados. Acceso a internet desde el host (el instalador descarga scripts, dependencias y la AppImage de ProxMenux Monitor). Ejecuta como <strong>root</strong> en el host Proxmox.",
     "inspectTitle": "Revisa siempre los scripts que ejecutas desde internet",
     "inspectReview": "<sourcelink>Revisa la fuente del instalador</sourcelink> antes de ejecutarlo.",
     "inspectCoc": "Todos los enlaces ejecutables siguen el <coclink>código de conducta de ProxMenux</coclink>."

@@ -97,7 +97,7 @@ export default async function InstallationPage({ params }: { params: Promise<{ l
       <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("during.outro", { code, strong })}</p>
 
       <Image
-        src="https://macrimi.github.io/ProxMenux/install/install.png"
+        src="/install/install.png"
         alt={t("during.imageAlt")}
         width={900}
         height={500}
