@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import { DataFlowDiagram } from "@/components/ui/data-flow-diagram"
+import { YouTubeEmbed } from "@/components/ui/youtube-embed"
 
 export async function generateMetadata({
   params,
@@ -80,6 +81,19 @@ export default async function BackupRestoreOverviewPage({
       <Callout variant="info" title={t("intro.title")}>
         {t.rich("intro.body", { code, strong })}
       </Callout>
+
+      <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">
+        {t("video.heading")}
+      </h2>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t("video.intro")}
+      </p>
+
+      <YouTubeEmbed
+        videoId="K7A1KtOe4IQ"
+        title={t("video.title")}
+        caption={t("video.caption")}
+      />
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">
         {t("whatItIsNot.heading")}

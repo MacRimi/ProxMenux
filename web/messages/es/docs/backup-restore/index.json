@@ -16,6 +16,12 @@
     "title": "Qué es, en un párrafo",
     "body": "Una copia de ProxMenux captura el estado completo de un host Proxmox: <strong>el sistema de ficheros</strong> (directorios relevantes bajo <code>/etc</code>, <code>/root</code>, <code>/var/lib/pve-cluster</code>, más rutas personalizadas opcionales), <strong>un manifiesto estructurado</strong> (JSON con el hardware detectado, los parámetros del kernel, la topología de red, el estado de ZFS, los usuarios y las entradas de cron) y <strong>un inventario de aplicaciones</strong> (todos los paquetes marcados como instalados manualmente por APT, más la lista de componentes instalados por ProxMenux con sus versiones exactas). Cualquiera de los tres destinos soportados — archivo local, Proxmox Backup Server (recomendado) o Borg — recibe el mismo contenido autocontenido, y cualquiera de ellos puede hidratar el host de destino sin depender de que el origen esté accesible en el momento de la restauración."
   },
+  "video": {
+    "heading": "Vídeo demostración",
+    "intro": "¿Prefieres ver Backup & Restore en acción antes de configurarlo? Este vídeo cubre una demo end-to-end de la funcionalidad en ProxMenux.",
+    "title": "ProxMenux — Demostración de Backup & Restore",
+    "caption": "Vídeo externo en YouTube. Se reproduce en modo mejorado de privacidad (sin cookies hasta pulsar play)."
+  },
   "whatItIsNot": {
     "heading": "Qué no es",
     "intro": "La sección cubre copia y restauración <strong>a nivel de host</strong>: la instalación de Proxmox en sí, no las cargas de trabajo que se ejecutan sobre ella.",
