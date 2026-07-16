@@ -214,6 +214,41 @@ def _is_loopback_addr(value: str) -> bool:
         return value == 'localhost'
 
 
+def _is_own_host_ip(value: str) -> bool:
+    """Return True when ``value`` is loopback OR an IP bound to any local iface.
+
+    ``_pve_webhook_url()`` may register a URL that resolves to the host's
+    LAN/VPN IP when SSL is on and a hostname cert is loaded (issue #239).
+    In that case PVE POSTs to e.g. ``https://<fqdn>:8008`` and — on Linux —
+    the connection is routed to the local interface holding that IP; the
+    Flask socket sees the peer as the interface IP, NOT ``127.0.0.1``. The
+    request is still coming from THIS host, so the loopback trust path
+    should extend to any of this host's own interface IPs (Tailscale/Zerotier
+    CGNAT, WireGuard, LAN, IPv6 GUA…). Without this, PVE hits the layer 3
+    ``X-ProxMenux-Timestamp`` check — a header PVE cannot inject dynamically —
+    and every notification target test returns ``401 missing_timestamp``.
+    """
+    if _is_loopback_addr(value):
+        return True
+    try:
+        import ipaddress
+        import socket
+        import psutil
+        client = ipaddress.ip_address(value).compressed
+        for _iface, addrs in psutil.net_if_addrs().items():
+            for a in addrs:
+                if a.family in (socket.AF_INET, socket.AF_INET6):
+                    ip_str = a.address.split('%')[0]  # strip IPv6 zone id
+                    try:
+                        if ipaddress.ip_address(ip_str).compressed == client:
+                            return True
+                    except ValueError:
+                        continue
+    except Exception:
+        pass
+    return False
+
+
 def _validate_event_type(value: str) -> bool:
     return isinstance(value, str) and bool(_EVENT_TYPE_RE.match(value))
 
@@ -1407,7 +1442,10 @@ def proxmox_webhook():
     _reject = lambda code, error, status: (jsonify({'accepted': False, 'error': error}), status)
 
     client_ip = request.remote_addr or ''
-    is_localhost = _is_loopback_addr(client_ip)
+    # Trust loopback AND any IP bound to a local interface — see
+    # `_is_own_host_ip` for the FQDN/CGNAT rationale. Layer 1 rate
+    # limiting still applies to every request.
+    is_localhost = _is_own_host_ip(client_ip)
 
     # CSRF defence-in-depth: reject `application/x-www-form-urlencoded`
     # bodies. PVE always sends `application/json`; form-encoded bodies
