@@ -1879,6 +1879,7 @@
       "Miscellaneous"
     ],
     "notes": [
+      "Register your User in Frontend: `http://LXC_IP:8080/register`",
       "Habit data is stored in /opt/beaverhabits/.user.",
       "Set TRUSTED_LOCAL_EMAIL in the service environment to skip authentication for a specific email."
     ],
@@ -1890,7 +1891,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -4135,6 +4136,47 @@
     ],
     "config_path": "/etc/default/pve-auto-hook",
     "os": ""
+  },
+  {
+    "name": "Directus",
+    "slug": "directus",
+    "desc": "Directus is a data platform that provides instant REST and GraphQL APIs plus a visual data studio for SQL databases.",
+    "script": "ct/directus.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/directus.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/directus.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "The generated initial administrator password is in /opt/directus/.env."
+    ],
+    "warnings": [
+      "Set PUBLIC_URL in /opt/directus/.env to your public HTTPS URL before configuring OAuth, email links or external integrations.",
+      "Uploaded files are stored in /opt/directus/uploads. Include that directory and the PostgreSQL database in regular container backups.",
+      "Review Directus release breaking changes before updating production instances."
+    ],
+    "port": 8055,
+    "website": "https://directus.com/",
+    "documentation": "https://directus.com/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/directus.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin@directus.local",
+      "password": ""
+    },
+    "os": "debian"
   },
   {
     "name": "DiscoPanel",
@@ -8537,6 +8579,40 @@
     "os": "debian"
   },
   {
+    "name": "JDownloader",
+    "slug": "jdownloader",
+    "desc": "JDownloader is a free, open-source download management tool that simplifies downloading files from one-click hosting sites. It runs headless on servers and is managed remotely via the MyJDownloader cloud web interface at my.jdownloader.org.",
+    "script": "ct/jdownloader.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/jdownloader.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/jdownloader.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00011"
+    ],
+    "category_names": [
+      "Files & Downloads"
+    ],
+    "notes": [
+      "MyJDownloader cloud access is disabled by default. To enable it, edit /opt/jdownloader/cfg/org.jdownloader.api.myjdownloader.MyJDownloaderSettings.json, replace the placeholder email/password with your my.jdownloader.org credentials, set autoconnectenabledv2 to true, and restart the service.",
+      "JDownloader self-updates automatically on every restart. The 'Update' button in the UI simply restarts the service to trigger this process."
+    ],
+    "warnings": [],
+    "port": 3129,
+    "website": "https://jdownloader.org/",
+    "documentation": "https://jdownloader.org/knowledge/wiki/setup",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jdownloader.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Jeedom",
     "slug": "jeedom",
     "desc": "Jeedom is a home automation system that is free, open, and cloudless. It allows users to manage and automate various aspects of their homes by creating objects, installing plugins for added functionalities, and connecting to a Market account for services. It also supports direct access URLs and user management.",
@@ -10567,6 +10643,49 @@
     "os": "alpine"
   },
   {
+    "name": "Mastodon",
+    "slug": "mastodon",
+    "desc": "Mastodon is a decentralized, open-source social network (ActivityPub/Fediverse). Self-host your own instance to publish short posts, follow people across the Fediverse, and federate with thousands of other servers.",
+    "script": "ct/mastodon.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/mastodon.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/mastodon.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00000"
+    ],
+    "category_names": [
+      "Miscellaneous"
+    ],
+    "notes": [
+      "Installation compiles Ruby 4.0.5 and ffmpeg from source — this takes 15–30 minutes.",
+      "Admin credentials (email + password) are saved to ~/mastodon.creds.",
+      "SMTP is not configured by default. Set SMTP_SERVER, SMTP_LOGIN, and SMTP_PASSWORD in .env.production for email notifications.",
+      "New account registrations require Owner approval by default.",
+      "Media uploads are stored in /opt/mastodon/public/system. Increase disk size if you expect heavy media usage."
+    ],
+    "warnings": [
+      "This installation uses the container IP and HTTP, so it is suitable only for LAN or testing. LOCAL_DOMAIN must not be changed after initial setup; reinstall with a public domain and TLS before enabling federation."
+    ],
+    "port": 80,
+    "website": "https://joinmastodon.org",
+    "documentation": "https://docs.joinmastodon.org",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mastodon.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": "auto-generated"
+    },
+    "os": "debian"
+  },
+  {
     "name": "Matomo",
     "slug": "matomo",
     "desc": "Matomo is the leading free and open-source web analytics platform, providing a privacy-respecting alternative to Google Analytics with full data ownership.",
@@ -12540,7 +12659,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -12986,6 +13105,40 @@
     "os": "debian"
   },
   {
+    "name": "OmniTools",
+    "slug": "omnitools",
+    "desc": "OmniTools is a self-hosted collection of browser-based tools for working with PDFs, images, video, audio, text, data, dates, mathematics, and other everyday file and conversion tasks.",
+    "script": "ct/omnitools.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/omnitools.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/omnitools.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00000"
+    ],
+    "category_names": [
+      "Miscellaneous"
+    ],
+    "notes": [
+      "Files are processed locally in the user's browser and are not uploaded to the OmniTools LXC.",
+      "OmniTools is served as a static web application through Nginx on port 80."
+    ],
+    "warnings": [],
+    "port": 80,
+    "website": "https://omnitools.app",
+    "documentation": "https://github.com/iib0011/omni-tools#self-hostrun",
+    "logo": "https://cdn.jsdelivr.net/gh/iib0011/omni-tools@main/src/assets/logo.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "OpenMediaVault",
     "slug": "omv",
     "desc": "OpenMediaVault is a next-generation network-attached storage (NAS) solution based on Debian Linux. It provides a web-based interface for managing and storing digital data, making it easy to use and set up. OpenMediaVault supports various storage protocols, including SMB/CIFS, NFS, and FTP, and provides a wide range of features for data management, such as user and group management, disk quotas, and data backup and recovery. The software is designed to be flexible and scalable, making it a valuable solution for both personal and enterprise use. OpenMediaVault provides a stable and reliable platform for managing and storing digital data, making it a popular choice for those who want to host their own data and ensure its security and privacy. With OpenMediaVault, users can access their data from anywhere and easily share it with others, making it a valuable tool for collaboration and data management.",
@@ -13051,6 +13204,42 @@
       "pve"
     ],
     "config_path": "/opt/onedev/conf",
+    "os": "debian"
+  },
+  {
+    "name": "Onetime Secret",
+    "slug": "onetimesecret",
+    "desc": "Onetime Secret is a self-hosted secret sharing app that creates self-destructing links for passwords, API keys, and other sensitive text.",
+    "script": "ct/onetimesecret.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/onetimesecret.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/onetimesecret.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "Configure SMTP settings in /opt/onetimesecret/.env if you want email notifications or account verification features."
+    ],
+    "warnings": [
+      "Update HOST and set SSL=true in /opt/onetimesecret/.env when using a domain or TLS-terminating reverse proxy.",
+      "Back up /opt/onetimesecret/.env because it contains the root SECRET used to derive the app's other cryptographic keys."
+    ],
+    "port": 80,
+    "website": "https://onetimesecret.com/",
+    "documentation": "https://docs.onetimesecret.com/en/self-hosting/installation/",
+    "logo": "https://onetimesecret.com/favicon.svg",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -14025,6 +14214,43 @@
       "pve"
     ],
     "config_path": "/etc/passbolt/passbolt.php",
+    "os": "debian"
+  },
+  {
+    "name": "PasswordPusher",
+    "slug": "passwordpusher",
+    "desc": "PasswordPusher is an open-source app for securely sharing passwords, notes, files, and URLs via self-deleting links. Links expire after a set number of views or time, with full audit logs.",
+    "script": "ct/passwordpusher.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/passwordpusher.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/passwordpusher.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "Installation compiles Ruby 4.0.5 from source — this takes several minutes.",
+      "SQLite database and file uploads are stored in /opt/passwordpusher/storage.",
+      "On first start, retrieve the one-time boot code with `journalctl -u passwordpusher -o cat --no-pager | grep 'Boot Code:'` to create the first administrator account."
+    ],
+    "warnings": [
+      "SECRET_KEY_BASE and PWPUSH_MASTER_KEY are auto-generated and stored in /opt/passwordpusher/.env.production. Keep a backup of these keys."
+    ],
+    "port": 5100,
+    "website": "https://pwpush.com",
+    "documentation": "https://docs.pwpush.com",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pwpush.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -17495,6 +17721,39 @@
     "os": "debian"
   },
   {
+    "name": "SolidInvoice",
+    "slug": "solidinvoice",
+    "desc": "SolidInvoice is an open-source invoicing application that helps small businesses and freelancers manage clients, create professional invoices, track payments, and handle recurring billing.",
+    "script": "ct/solidinvoice.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/solidinvoice.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/solidinvoice.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00023"
+    ],
+    "category_names": [
+      "Finance & Budgeting"
+    ],
+    "notes": [
+      "App startup could be slow. Once the app has started, complete the setup wizard via the web interface on first access."
+    ],
+    "warnings": [],
+    "port": 8765,
+    "website": "https://solidinvoice.co",
+    "documentation": "https://solidinvoice.co/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/solidinvoice.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "SolidTime",
     "slug": "solidtime",
     "desc": "SolidTime is a modern open-source time tracking application for freelancers and agencies, featuring project management, task tracking, billable rates, and multiple organizations.",
@@ -18109,6 +18368,43 @@
     "os": "debian"
   },
   {
+    "name": "Stoatchat",
+    "slug": "stoatchat",
+    "desc": "A self-hostable open-source chat platform and community server. Stoatchat is a fork of Revolt, featuring real-time messaging, voice channels, file sharing, and a full-featured web client. Built with Rust (backend) and SolidJS (frontend).",
+    "script": "ct/stoatchat.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/stoatchat.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/stoatchat.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00022"
+    ],
+    "category_names": [
+      "Bots & ChatOps"
+    ],
+    "notes": [
+      "The first account registered becomes the instance administrator. Registration is open by default; set invite_only = true in /Revolt.toml to restrict it.",
+      "Voice and video calls require additional LiveKit setup. See https://github.com/stoatchat/self-hosted for details."
+    ],
+    "warnings": [
+      "Initial setup takes 30-60 minutes due to Rust compilation and frontend build. Do not interrupt the process.",
+      "The files encryption key in /Revolt.toml is generated during installation. Back it up — losing it will make all uploaded files unreadable."
+    ],
+    "port": 80,
+    "website": "https://stoat.chat",
+    "documentation": "https://github.com/stoatchat/self-hosted",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/stoatchat.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Storybook",
     "slug": "storybook",
     "desc": "Storybook is a frontend workshop for building UI components and pages in isolation. It's used for UI development, testing, and documentation.",
@@ -18417,7 +18713,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
