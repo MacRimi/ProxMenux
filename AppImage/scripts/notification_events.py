@@ -3892,6 +3892,20 @@ class ProxmoxHookWatcher:
             'job_id': pve_job_id,
         }
 
+        # `system_problem` is the generic fallback of `_classify_pve` for
+        # unknown/empty pve_type. Without a populated `reason`, the template
+        # renders "Reason: " (empty) and `_summarize_event` falls back to
+        # printing the raw event_type ("problema_del_sistema") in every
+        # `burst_system` aggregate, producing the useless
+        # "🔵 constructor: Problema del sistema detectado" / "+1 problema
+        # más del sistema (Problemas adicionales: - problema_del_sistema)"
+        # messages the operator sees on Telegram. Preserve the PVE payload
+        # as `reason` so both surfaces have concrete text to render.
+        if event_type == 'system_problem':
+            reason_text = (message or title or '').strip()
+            if reason_text:
+                data['reason'] = reason_text[:500]
+
         # ProxMenux Host Backup: pull the extra fields that the runner
         # packs into payload.fields so the host_backup_* templates can
         # render backend, destination, sizes, etc. without falling back
