@@ -227,6 +227,14 @@ def _is_own_host_ip(value: str) -> bool:
     CGNAT, WireGuard, LAN, IPv6 GUA…). Without this, PVE hits the layer 3
     ``X-ProxMenux-Timestamp`` check — a header PVE cannot inject dynamically —
     and every notification target test returns ``401 missing_timestamp``.
+
+    IMPORTANT: Flask bound to ``*:8008`` (dual-stack) reports IPv4 peers
+    in v4-mapped IPv6 form (``::ffff:192.168.0.55``). psutil reports the
+    same interface as plain IPv4 (``192.168.0.55``). Without unmapping,
+    literal comparison fails and the fix effectively does nothing in
+    production — reproduced end-to-end on 192.168.0.55: passing the raw
+    literal returned True, but ``::ffff:192.168.0.55`` returned False,
+    which is what Flask actually hands us at runtime.
     """
     if _is_loopback_addr(value):
         return True
@@ -234,7 +242,11 @@ def _is_own_host_ip(value: str) -> bool:
         import ipaddress
         import socket
         import psutil
-        client = ipaddress.ip_address(value).compressed
+        addr = ipaddress.ip_address(value)
+        mapped = getattr(addr, 'ipv4_mapped', None)
+        if mapped is not None:
+            addr = mapped
+        client = addr.compressed
         for _iface, addrs in psutil.net_if_addrs().items():
             for a in addrs:
                 if a.family in (socket.AF_INET, socket.AF_INET6):
