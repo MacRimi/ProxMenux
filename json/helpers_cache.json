@@ -2554,6 +2554,42 @@
     "os": "debian"
   },
   {
+    "name": "Castopod",
+    "slug": "castopod",
+    "desc": "Castopod is a free and open-source podcast hosting platform with Podcasting 2.0, analytics and ActivityPub federation features.",
+    "script": "ct/castopod.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/castopod.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/castopod.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Complete the initial setup at http://IP/cp-install, then sign in through http://IP/cp-admin."
+    ],
+    "warnings": [
+      "Set a public HTTPS domain in /opt/castopod/.env before publishing podcasts or enabling ActivityPub federation.",
+      "Podcast media is stored in /opt/castopod/public/media. Include it and the MariaDB database in regular container backups."
+    ],
+    "port": 80,
+    "website": "https://castopod.org/",
+    "documentation": "https://docs.castopod.org/main/en/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/castopod.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Certimate",
     "slug": "certimate",
     "desc": "Certimate is an open-source SSL certificate management tool that automates the application, deployment, and renewal of SSL certificates, supporting integration with various cloud providers and deployment targets.",
@@ -4529,6 +4565,42 @@
       "pve"
     ],
     "config_path": "/opt/docmost/.env",
+    "os": "debian"
+  },
+  {
+    "name": "Docspell",
+    "slug": "docspell",
+    "desc": "Docspell is a document management system that organizes, processes, OCRs and indexes documents from scanners, email and file uploads.",
+    "script": "ct/docspell.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/docspell.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/docspell.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Create the first account at http://IP:7880. For the initial local signup, use the same value for the collective and username."
+    ],
+    "warnings": [
+      "Signup is open by default. Configure a reverse proxy with TLS and change the signup mode before exposing Docspell to the internet.",
+      "Documents and metadata are stored in PostgreSQL. Back up the Docspell database before upgrades and include it in regular container backups."
+    ],
+    "port": 7880,
+    "website": "https://docspell.org/",
+    "documentation": "https://docspell.org/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/docspell.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -14051,7 +14123,7 @@
     "warnings": [],
     "port": 8086,
     "website": "https://github.com/DioCrafts/OxiCloud",
-    "documentation": "https://github.com/DioCrafts/OxiCloud/tree/main/doc",
+    "documentation": "https://atalayalabs.github.io/OxiCloud/guide/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/oxicloud.webp",
     "updateable": true,
     "privileged": false,
