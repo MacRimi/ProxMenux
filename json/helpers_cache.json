@@ -960,6 +960,46 @@
     "os": "debian"
   },
   {
+    "name": "Anki Sync Server",
+    "slug": "anki-sync-server",
+    "desc": "The official self-hosted sync server for Anki flashcards, suitable for individual and family use.",
+    "script": "ct/anki-sync-server.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/anki-sync-server.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/anki-sync-server.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "The generated username and password are stored in /opt/anki-sync-server/.env. Add additional SYNC_USER variables there for more users, then restart the service."
+    ],
+    "warnings": [
+      "The server uses unencrypted HTTP. Restrict access to a trusted local network or place a VPN or HTTPS reverse proxy in front of it before exposing it publicly.",
+      "Keep the server version aligned with your Anki clients, as newer clients can require a newer sync protocol."
+    ],
+    "port": 8080,
+    "website": "https://apps.ankiweb.net/",
+    "documentation": "https://docs.ankiweb.net/sync-server.html",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/anki-sync-server.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "anki",
+      "password": "Generated during installation"
+    },
+    "os": "debian"
+  },
+  {
     "name": "Anytype Server",
     "slug": "anytype-server",
     "desc": "Anytype is a local-first, privacy-focused alternative to Notion. This script deploys the any-sync-bundle which provides a self-hosted sync server for Anytype clients with external MongoDB and Redis Stack.",
@@ -1506,7 +1546,8 @@
       "Authentication & Security"
     ],
     "notes": [
-      "During installation, you will have to input your domain (ex. domain.com). Authelia will use auth.domain.com"
+      "During installation, you will have to input your domain (ex. domain.com). Authelia will use auth.domain.com",
+      "After installation, change your password to one of your own choosing."
     ],
     "warnings": [],
     "port": 443,
@@ -8268,7 +8309,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -11605,6 +11646,46 @@
     "os": "debian"
   },
   {
+    "name": "Mumble",
+    "slug": "mumble",
+    "desc": "Mumble is an open-source, encrypted, low-latency voice chat server for communities, gaming, and teams.",
+    "script": "ct/mumble.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/mumble.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/mumble.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00022"
+    ],
+    "category_names": [
+      "Bots & ChatOps"
+    ],
+    "notes": [
+      "Allow both TCP and UDP traffic on port 64738 through any firewall or router.",
+      "The Ice administration endpoint is restricted to localhost and protected with a generated secret."
+    ],
+    "warnings": [
+      "The generated SuperUser password is displayed once during installation. Reset it later with: mumble-server -ini /etc/mumble/mumble-server.ini -supw <password>"
+    ],
+    "port": 64738,
+    "website": "https://www.mumble.info/",
+    "documentation": "https://www.mumble.info/documentation/administration/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mumble.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "SuperUser",
+      "password": "Generated during installation"
+    },
+    "os": "debian"
+  },
+  {
     "name": "MusicSeerr",
     "slug": "musicseerr",
     "desc": "MusicSeerr is a self-hosted music request and discovery app for Lidarr. Search MusicBrainz, request albums, stream from Jellyfin, Navidrome, Plex, or local files, and scrobble to ListenBrainz and Last.fm.",
@@ -12941,6 +13022,46 @@
     "os": "debian"
   },
   {
+    "name": "Obsidian LiveSync",
+    "slug": "obsidian-livesync",
+    "desc": "A CouchDB server configured for synchronising Obsidian vaults with the Self-hosted LiveSync plugin.",
+    "script": "ct/obsidian-livesync.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/obsidian-livesync.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/obsidian-livesync.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Install the Self-hosted LiveSync plugin in Obsidian. The GitHub release ZIP is a client plugin, not server software.",
+      "Enable end-to-end encryption and path obfuscation in the plugin before synchronising sensitive notes."
+    ],
+    "warnings": [
+      "Connection details are stored in /opt/obsidian-livesync/.env. Use HTTPS through a reverse proxy for mobile Obsidian clients."
+    ],
+    "port": 5984,
+    "website": "https://github.com/vrtmrz/obsidian-livesync",
+    "documentation": "https://github.com/vrtmrz/obsidian-livesync/blob/main/docs/setup_own_server.md",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/obsidian.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "OctoPrint",
     "slug": "octoprint",
     "desc": "OctoPrint is a free and open-source web-based 3D printer control software that allows you to remotely control and monitor your 3D printer from a web interface. It was designed to be compatible with a wide range of 3D printers.",
@@ -13935,7 +14056,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -20524,6 +20645,41 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Unpackerr",
+    "slug": "unpackerr",
+    "desc": "Unpackerr is a daemon that extracts completed archives for Sonarr, Radarr, Lidarr, Readarr and watched folders.",
+    "script": "ct/unpackerr.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/unpackerr.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/unpackerr.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00011"
+    ],
+    "category_names": [
+      "Files & Downloads"
+    ],
+    "notes": [
+      "Configure at least one Sonarr, Radarr, Lidarr, Readarr or folder watch section in /etc/unpackerr/unpackerr.conf before Unpackerr can process archives."
+    ],
+    "warnings": [
+      "Mount or otherwise make the same download paths available to Unpackerr and your download client or *arr applications."
+    ],
+    "port": 0,
+    "website": "https://unpackerr.zip/",
+    "documentation": "https://unpackerr.zip/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/unpackerr.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
