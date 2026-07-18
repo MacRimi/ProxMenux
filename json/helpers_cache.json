@@ -8376,7 +8376,7 @@
     "warnings": [],
     "port": 3000,
     "website": "https://invidious.io",
-    "documentation": "https:/docs.invidious.io",
+    "documentation": "https://docs.invidious.io",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/invidious.webp",
     "updateable": true,
     "privileged": false,
