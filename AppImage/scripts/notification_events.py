@@ -3142,7 +3142,8 @@ class PollingCollector:
             'system_startup', severity, data, source='polling',
             entity='node', entity_id='',
         ))
-    
+        startup_grace.mark_startup_aggregated()
+
     # ── Update check (enriched) ────────────────────────────────
     
     # Proxmox-related package prefixes used for categorisation

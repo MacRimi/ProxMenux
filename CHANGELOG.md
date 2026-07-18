@@ -40,6 +40,7 @@ This release adds two in-dashboard improvements — a one-click Proxmox update t
 
 - **Dismiss silently failed on storage alerts** — clicking Dismiss on a `storage_unavailable`, `mount_stale`, `mount_readonly`, `lxc_disk_low`, `lxc_mount_low`, `pve_storage_full` or `zfs_pool_full` error persisted the ack in the database but never invalidated the Monitor's cache because the event was tagged with category `general` instead of `storage`. The error stayed visible after dismiss. Both the category inference and the cache invalidation map fixed.
 - **VMs & Containers stuck on `UNKNOWN` with `'NoneType' object has no attribute 'get'`** (#255) — any persisted error with a `NULL` `details` column crashed the entire VM/CT check on every scan. The category stayed UNKNOWN permanently and Dismiss couldn't silence it because there was no specific `error_key` to acknowledge. Fixed by explicit `error.get('details') or {}` coalescing in both persistence loops.
+- **Duplicate `system_startup` notifications after every polling tick** — `_check_startup_aggregation` emitted the boot summary but never marked aggregation as done, so the next polling iteration re-emitted the same event over and over until the service restarted. On a host that stays up for hours after boot this produced up to one duplicate every polling interval. Now the aggregated flag is set right after the notification is queued.
 
 ---
 
