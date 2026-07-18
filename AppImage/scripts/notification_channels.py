@@ -983,6 +983,10 @@ class EmailChannel(NotificationChannel):
         elif group == 'backup':
             _add('VM/CT ID', data.get('vmid'), 'code')
             _add('Name', data.get('vmname'), 'bold')
+            # Storage / destination — the piece a multi-PBS operator needs to
+            # tell which target the backup ran against. Reported gap: emails
+            # showed no way to distinguish which PBS failed with 2+ configured.
+            _add('Storage', data.get('storage') or data.get('storage_name'), 'code')
             _add('Status', 'Failed' if 'fail' in event_type else 'Completed' if 'complete' in event_type else 'Started',
                  'severity' if 'fail' in event_type else '')
             _add('Size', data.get('size'))
@@ -1082,7 +1086,11 @@ class EmailChannel(NotificationChannel):
                     )
                     rows.append((esc('Important Packages'), pkg_html))
             _add('Current Version', data.get('current_version'), 'code')
-            _add('New Version', data.get('new_version'), 'code')
+            # `new_version` is the field used by generic package-update events;
+            # driver-update templates (nvidia, coral) populate `latest_version`.
+            # Read both so the tabular row is never empty when the template's
+            # title/body already printed the new version.
+            _add('New Version', data.get('new_version') or data.get('latest_version'), 'code')
 
         # ── Other / unknown ──
         else:

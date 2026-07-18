@@ -1,4 +1,62 @@
 
+## 2026-07-17
+
+### New version ProxMenux v1.2.4
+
+This release adds two in-dashboard improvements — a one-click Proxmox update trigger from the Health Monitor and a mobile PWA install prompt — and closes seven notification content/delivery fixes, the mobile dashboard freeze over HTTPS + reverse proxy that slipped into 1.2.3, and two Health panel bugs reported within hours of that release.
+
+---
+
+## 🩺 Update Now button in Health Monitor
+
+- New **Update Now** button inside the Health Monitor modal, under the **System Updates** section.
+- Runs the standard Proxmox update flow (`apt update` + `dist-upgrade` + post-update cleanup) in an in-dashboard terminal — no need to open a shell.
+- Only appears when updates are pending; when the system is up to date the button stays hidden.
+- On close, the Health Monitor refreshes so the pending-update count and kernel row update immediately.
+- The underlying script is context-aware: on an already-configured production host it respects the operator's custom repositories (never disables enterprise/ceph, never deletes legacy sources, never purges alternate NTP, never force-installs zfsutils/chrony); on a bare host it lays down only the missing base repos. It also detects a newly installed kernel that isn't the running one and prompts for reboot at the end.
+- During the upgrade, `service_fail` notifications for PVE services (pve-cluster, pveproxy, corosync…) are suppressed — their restart is a normal part of the upgrade cycle. Suppression extends 60 s past apt exit so the trailing restart events don't leak through.
+
+---
+
+## 📱 In-app Install prompt for mobile
+
+- First-time visitors on **Android** (Chrome / Brave) and **iOS Safari** now see a bottom-sheet with clear instructions for adding the Monitor as a PWA to their home screen.
+- Two dismissal levels: **Not now** (temporary, reappears in 30 days) and **Don't show again** (permanent, stored in `localStorage`).
+- Never shown on desktop, or once the Monitor is already running standalone.
+
+---
+
+## 🔔 Notification content — five rendering fixes
+
+- **Backup destination now visible** — VM/CT backup emails and Telegram messages include the storage / PBS target in both the title and body row, so operators with multiple backup destinations can tell at a glance which one succeeded or failed.
+- **Migration bodies no longer render `migrated to node .`** — the actual target node is pulled from the PVE task log for `qmigrate` / `vzmigrate` events.
+- **Snapshot bodies no longer render `Snapshot "" created`** — the real snapshot name is pulled from the PVE task log for `qmsnapshot` / `vzsnapshot`.
+- **Generic `system_problem` notifications carry the real reason** — PVE messages that fall into the generic bucket include the original payload body, replacing the useless *"A system-level problem has been detected."*
+- **NVIDIA / Coral driver update emails show the new version** — the *New Version* row in the HTML body used to render empty due to a template/renderer field-name mismatch (`latest_version` vs `new_version`). Fixed.
+
+---
+
+## 🩹 Health panel fixes
+
+- **Dismiss silently failed on storage alerts** — clicking Dismiss on a `storage_unavailable`, `mount_stale`, `mount_readonly`, `lxc_disk_low`, `lxc_mount_low`, `pve_storage_full` or `zfs_pool_full` error persisted the ack in the database but never invalidated the Monitor's cache because the event was tagged with category `general` instead of `storage`. The error stayed visible after dismiss. Both the category inference and the cache invalidation map fixed.
+- **VMs & Containers stuck on `UNKNOWN` with `'NoneType' object has no attribute 'get'`** (#255) — any persisted error with a `NULL` `details` column crashed the entire VM/CT check on every scan. The category stayed UNKNOWN permanently and Dismiss couldn't silence it because there was no specific `error_key` to acknowledge. Fixed by explicit `error.get('details') or {}` coalescing in both persistence loops.
+
+---
+
+## 🛠 Mobile & webhook fixes
+
+- **Mobile dashboard freeze over HTTPS + reverse proxy** — the Service Worker introduced in v1.2.3 (`sw.js`, needed for PWA installability) interacted with mobile browsers' battery-saving background throttling and caused polling fetches to stop firing after a page refresh. Dashboard values (CPU / RAM / temperature) froze at their last reading until a hard cache wipe. Fixed by auto-cleaning any registered Service Worker on load. PWA installability is now driven entirely by the new in-app install prompt above.
+- **Webhook auth extended to VPN / CGNAT interface IPs** — the internal webhook (`/api/notifications/webhook`) previously trusted only requests from `127.0.0.1` / `::1`. Users with a Tailscale, WireGuard, LAN or IPv6 FQDN pointing at the host saw PVE Test buttons return `401 missing_timestamp`. The webhook now treats any of the host's own interface IPs as trusted local-loopback, including IPv4-mapped-in-IPv6 form (`::ffff:100.x.x.x`) which Flask reports on dual-stack binds.
+
+---
+
+## 🙏 Acknowledgments
+
+- **@pepenai** — reported the mobile dashboard freeze on his HTTPS + reverse proxy setup that led to the Service Worker cleanup path.
+- **Pepo** — reported the `401 missing_timestamp` on his PVE Test button that led to the webhook self-IP allowlist and the v4-mapped fix.
+- **@ash34** (#255) — reported the `VM/CT check unavailable: 'NoneType' object has no attribute 'get'` that led to the defensive coalescing of the `details` column.
+
+
 ## 2026-07-14
 
 ### New version ProxMenux v1.2.3

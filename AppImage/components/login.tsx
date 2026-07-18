@@ -271,7 +271,7 @@ export function Login({ onLogin }: LoginProps) {
           </form>
         </div>
 
-        <p className="text-center text-sm text-muted-foreground">ProxMenux Monitor v1.2.3</p>
+        <p className="text-center text-sm text-muted-foreground">ProxMenux Monitor v1.2.4</p>
       </div>
     </div>
   )

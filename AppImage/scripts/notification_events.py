@@ -396,6 +396,74 @@ def is_vzdump_active_on_host() -> bool:
     return found
 
 
+# ─── APT / dpkg activity gate ────────────────────────────────────
+# PVE services (pve-cluster, pveproxy, pvedaemon, corosync…) are
+# routinely killed and restarted as part of a package upgrade, so
+# every full-upgrade produces a burst of `service_fail` events that
+# are entirely expected. We gate `_check_service_failure` on this
+# helper so those events are silently dropped while apt is running
+# (plus a short grace window after it exits).
+
+_APT_ACTIVE_MARKER = '/var/run/proxmenux-update-in-progress'
+_APT_FINISHED_MARKER = '/var/run/proxmenux-update-just-finished'
+_APT_GRACE_SECONDS = 60
+_DPKG_LOCK_FILE = '/var/lib/dpkg/lock-frontend'
+_APT_ACTIVE_CACHE_TTL = 3.0
+_apt_active_cache_ts = 0.0
+_apt_active_cache_value = False
+
+
+def is_apt_active_on_host() -> bool:
+    """Return True while apt/dpkg is running on this host.
+
+    Sources checked, in order:
+      1. `/var/run/proxmenux-update-in-progress` — created by
+         `scripts/utilities/proxmox_update.sh` around its full-upgrade
+         call so ProxMenux-driven updates are always covered.
+      2. `fuser` on `/var/lib/dpkg/lock-frontend` — covers a manual
+         `apt`/`dpkg`/`apt-get` invocation by the operator, or any
+         other tool holding the lock.
+      3. Grace window (60 s) after `/var/run/proxmenux-update-just-finished`
+         was touched — catches the tail of service_fail events that
+         only reach the journal shortly after apt itself exits.
+
+    Cached 3 s so a burst of journal events doesn't spawn a fuser
+    subprocess per line. Caller-safe: returns False on any error.
+    """
+    global _apt_active_cache_ts, _apt_active_cache_value
+    now = time.time()
+    if now - _apt_active_cache_ts < _APT_ACTIVE_CACHE_TTL:
+        return _apt_active_cache_value
+
+    active = False
+    try:
+        if os.path.exists(_APT_ACTIVE_MARKER):
+            active = True
+        elif os.path.exists(_APT_FINISHED_MARKER):
+            try:
+                if now - os.path.getmtime(_APT_FINISHED_MARKER) < _APT_GRACE_SECONDS:
+                    active = True
+            except OSError:
+                pass
+
+        if not active:
+            try:
+                result = subprocess.run(
+                    ['fuser', _DPKG_LOCK_FILE],
+                    capture_output=True, timeout=2,
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    active = True
+            except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+                pass
+    except Exception:
+        active = False
+
+    _apt_active_cache_ts = now
+    _apt_active_cache_value = active
+    return active
+
+
 # ─── Journal Watcher (Real-time) ─────────────────────────────────
 
 class JournalWatcher:
@@ -801,7 +869,7 @@ class JournalWatcher:
             if re.search(pattern, msg, re.IGNORECASE):
                 entity = 'node'
                 entity_id = ''
-                
+
                 # Build a context-rich reason from the journal message.
                 enriched = reason
                 
@@ -959,7 +1027,7 @@ class JournalWatcher:
                     enriched = f"{reason}\n{msg[:300]}"
                 
                 data = {'reason': enriched, 'hostname': self._hostname}
-                
+
                 self._emit(event_type, severity, data, entity=entity, entity_id=entity_id)
                 return
     
@@ -1051,6 +1119,14 @@ class JournalWatcher:
     
     def _check_service_failure(self, msg: str, unit: str):
         """Detect critical service failures with enriched context."""
+        # Skip while apt/dpkg is running. PVE services (pve-cluster,
+        # pveproxy, pvedaemon, corosync…) get killed and restarted as a
+        # normal part of every package upgrade, so their `service_fail`
+        # events during that window are expected noise, not real
+        # failures. See `is_apt_active_on_host()` for detection details.
+        if is_apt_active_on_host():
+            return
+
         # Filter out noise -- these are normal systemd transient units,
         # not real service failures worth alerting about.
         _NOISE_PATTERNS = [
@@ -1800,7 +1876,51 @@ class TaskWatcher:
         except Exception as e:
             # Log error for debugging but return status as fallback
             return status
-    
+
+    def _get_task_context(self, upid: str, task_type: str) -> dict:
+        """Extract task-type-specific fields from a task log.
+
+        For snapshots and migrations the interesting metadata (snapshot
+        name, target node) lives inside the task log body — not in the
+        UPID itself. Without it, `snapshot_complete` bodies render as
+        `Snapshot "" created` and `migration_complete` as `... migrated
+        to node .` — both real rendering bugs.
+        """
+        wanted = None
+        if task_type in ('qmsnapshot', 'vzsnapshot'):
+            wanted = 'snapshot'
+        elif task_type in ('qmigrate', 'vzmigrate'):
+            wanted = 'migration'
+        if wanted is None:
+            return {}
+        try:
+            parts = upid.split(':')
+            if len(parts) < 5:
+                return {}
+            starttime_hex = parts[4]
+            if not starttime_hex:
+                return {}
+            subdir = starttime_hex[-1].upper()
+            log_path = os.path.join(self.TASK_DIR, subdir, upid)
+            if not os.path.exists(log_path):
+                return {}
+            with open(log_path, 'r', errors='replace') as f:
+                head = ''.join(f.readline() for _ in range(30))
+            ctx: dict = {}
+            if wanted == 'snapshot':
+                m = (re.search(r"snapshot\s+['\"]([^'\"\n]{1,80})['\"]", head, re.IGNORECASE)
+                     or re.search(r"snapshot(?:\s+name)?\s+([A-Za-z0-9._\-]{1,80})", head, re.IGNORECASE))
+                if m:
+                    ctx['snapshot_name'] = m.group(1).strip()
+            elif wanted == 'migration':
+                m = (re.search(r"to\s+node\s+([A-Za-z0-9._\-]{1,60})", head, re.IGNORECASE)
+                     or re.search(r"migration to\s+(?:node\s+)?([A-Za-z0-9._\-]{1,60})", head, re.IGNORECASE))
+                if m:
+                    ctx['target_node'] = m.group(1).strip()
+            return ctx
+        except Exception:
+            return {}
+
     # Map PVE task types to our event types
     TASK_MAP = {
         'qmstart':    ('vm_start',    'INFO'),
@@ -2111,16 +2231,21 @@ class TaskWatcher:
             reason = self._get_task_log_reason(upid, status)
         else:
             reason = ''
-        
+
+        # Populate task-type-specific fields (target_node for migrations,
+        # snapshot_name for snapshots) so the corresponding template bodies
+        # don't render "to node ." or `Snapshot ""`.
+        ctx = self._get_task_context(upid, task_type)
+
         data = {
             'vmid': vmid,
             'vmname': vmname or f'ID {vmid}',
             'hostname': self._hostname,
             'user': user,
             'reason': reason,
-            'target_node': '',
+            'target_node': ctx.get('target_node', ''),
             'size': '',
-            'snapshot_name': '',
+            'snapshot_name': ctx.get('snapshot_name', ''),
         }
         
         # Determine entity type from task type
@@ -3977,7 +4102,14 @@ class ProxmoxHookWatcher:
             dur_m = re.search(r'Total running time:\s*(.+?)(?:\n|$)', message)
             if dur_m:
                 data['duration'] = dur_m.group(1).strip()
-        
+            # Extract storage / destination from the "starting new backup job" line
+            # so the notification (email HTML, Telegram title) can show which
+            # PBS / storage the backup landed on. Operators with multiple PBS
+            # targets need this to diagnose which destination failed.
+            storage_m = re.search(r'--storage\s+(\S+)', message)
+            if storage_m:
+                data['storage'] = storage_m.group(1).strip()
+
         # Capture journal context for critical/warning events (helps AI provide better context)
         if severity in ('CRITICAL', 'WARNING') and event_type not in ('backup_complete', 'update_available'):
             # Build keywords from available data for journal search

@@ -1,4 +1,61 @@
 
+## 2026-07-17
+
+### Nueva versión ProxMenux v1.2.4
+
+Esta versión suma dos mejoras visibles en el propio dashboard — un botón para lanzar la actualización de Proxmox desde el Monitor de Salud, y un prompt para invitar a los usuarios móviles a instalar el Monitor como PWA — y cierra siete correcciones de contenido y entrega de notificaciones, el bloqueo del dashboard móvil sobre HTTPS + reverse proxy.
+---
+
+## 🩺 Botón Update Now en el Monitor de Salud
+
+- Nuevo botón **Update Now** dentro del modal del Monitor de Salud, en la sección **System Updates**.
+- Ejecuta el flujo estándar de actualización de Proxmox (`apt update` + `dist-upgrade` + limpieza posterior) en una terminal dentro del dashboard — sin necesidad de abrir una shell.
+- Solo aparece cuando hay actualizaciones pendientes; si el sistema está al día, el botón queda oculto.
+- Al cerrar, el Monitor de Salud se refresca automáticamente para que el contador de actualizaciones pendientes y la fila del kernel se actualicen al instante.
+- El script subyacente distingue el contexto: si se ejecuta sobre un host ya en producción, respeta los repositorios personalizados del operador (no desactiva enterprise/ceph, no borra sources legacy, no purga NTP alternativos ni fuerza instalar zfsutils/chrony); si detecta un servidor virgen crea los repos base necesarios. Detecta también si hay un kernel nuevo instalado distinto del que está corriendo y pide el reboot al terminar.
+- Durante la actualización se suprimen las notificaciones de `service_fail` de servicios PVE (pve-cluster, pveproxy, corosync…) porque su reinicio es parte normal del upgrade; volvían a notificarse hasta 60 s después de que apt termine.
+
+---
+
+## 📱 Prompt de instalación en la app para móvil
+
+- Los visitantes por primera vez en **Android** (Chrome / Brave) e **iOS Safari** ven ahora una bottom-sheet con instrucciones claras para añadir el Monitor a su pantalla de inicio como PWA.
+- Dos niveles de descarte: **Not now** (temporal, reaparece a los 30 días) y **Don't show again** (permanente, almacenado en `localStorage`).
+- No se muestra en escritorio, ni cuando el Monitor ya se está ejecutando como aplicación instalada.
+
+---
+
+## 🔔 Contenido de notificaciones — cinco correcciones de renderizado
+
+- **Destino de backup ahora visible** — los correos y mensajes de Telegram de backup de VM/CT incluyen el storage / destino PBS tanto en el título como en la tabla del cuerpo, para que los operadores con varios destinos de backup puedan saber de un vistazo cuál funcionó o falló.
+- **Los cuerpos de migración ya no muestran `migrated to node .`** — el nodo destino real se extrae del log de la tarea PVE para eventos `qmigrate` / `vzmigrate`.
+- **Los cuerpos de snapshot ya no muestran `Snapshot "" created`** — el nombre real del snapshot se extrae del log de la tarea PVE para `qmsnapshot` / `vzsnapshot`.
+- **Las notificaciones genéricas `system_problem` llevan la razón real** — los mensajes PVE que caen en el bucket genérico incluyen el cuerpo original del payload, reemplazando el inútil *"Se ha detectado un problema a nivel del sistema."*
+- **Los correos de actualización de driver NVIDIA / Coral muestran la nueva versión** — la fila *New Version* en el cuerpo HTML aparecía vacía por un desajuste de nombres entre el template y el renderer (`latest_version` vs `new_version`). Corregido.
+
+---
+
+## 🩹 Correcciones del panel de salud
+
+- **Dismiss silencioso sobre alertas de storage** — al pulsar Dismiss en un error tipo `storage_unavailable`, `mount_stale`, `mount_readonly`, `lxc_disk_low`, `lxc_mount_low`, `pve_storage_full` o `zfs_pool_full`, la acción se persistía en la DB pero el caché del Monitor no se invalidaba porque el evento se catalogaba como categoría `general` en lugar de `storage`. Resultado: el error seguía visible tras el descarte. Corregidos ambos, la inferencia de categoría y el mapa de invalidación de caché.
+- **VMs & Containers atascado en `UNKNOWN` con `'NoneType' object has no attribute 'get'`** (#255) — cualquier error persistido con la columna `details` a `NULL` en la DB provocaba que el chequeo completo de VM/CT lanzara excepción en cada scan. La categoría se quedaba UNKNOWN permanentemente y el Dismiss no podía silenciarla porque no había un `error_key` específico al que reaccionar. Corregido con coalescing explícito `error.get('details') or {}` en los dos bucles de persistencia.
+
+---
+
+## 🛠 Correcciones en móvil y webhook
+
+- **Dashboard congelado en móvil sobre HTTPS + reverse proxy** — el Service Worker introducido en v1.2.3 (`sw.js`, necesario para la instalabilidad PWA) interactuaba con la limitación en segundo plano de los navegadores móviles para ahorrar batería y hacía que las peticiones de polling dejaran de dispararse tras un refresh. Los valores del dashboard (CPU / RAM / temperatura) se congelaban en la última lectura hasta que se limpiara la caché manualmente. Corregido auto-limpiando cualquier Service Worker registrado al cargar. La instalabilidad PWA se gestiona ahora íntegramente desde el nuevo prompt in-app descrito arriba.
+- **Autenticación de webhook extendida a IPs de VPN / CGNAT** — el webhook interno (`/api/notifications/webhook`) confiaba anteriormente solo en peticiones desde `127.0.0.1` / `::1`. Los usuarios con un FQDN de Tailscale, WireGuard, LAN o IPv6 apuntando al host veían botones Test de PVE devolver `401 missing_timestamp`. El webhook ahora trata cualquier IP de una interfaz local del host como local-loopback de confianza, incluyendo la forma IPv4 mapeada en IPv6 (`::ffff:100.x.x.x`) que Flask reporta en bindings dual-stack.
+
+---
+
+## 🙏 Agradecimientos
+
+- **@pepenai** — reportó el bloqueo del dashboard en móvil en su setup con HTTPS + reverse proxy, lo que llevó al path de limpieza del Service Worker.
+- **Pepo** — reportó el `401 missing_timestamp` en su botón Test de PVE, lo que llevó al allowlist de IPs propias del host y a la corrección v4-mapped.
+- **@ash34** (#255) — reportó el `VM/CT check unavailable: 'NoneType' object has no attribute 'get'` que llevó al coalescing defensivo de la columna `details`.
+
+
 ## 2026-07-14
 
 ### Nueva versión ProxMenux v1.2.3

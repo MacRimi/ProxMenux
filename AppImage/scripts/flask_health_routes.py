@@ -101,7 +101,14 @@ def acknowledge_error():
                 'security': 'security_check',
                 'temperature': 'cpu_check',
                 'network': 'network_check',
+                # Both 'disks' (kept for compat) and 'storage' land on the
+                # same cache — the two categories share `storage_check` in
+                # health_monitor. Without the 'storage' entry, dismissing
+                # a storage_unavailable / mount_stale / lxc_mount_low
+                # error persisted but never invalidated the cache, so the
+                # error stayed visible in the next fetch.
                 'disks': 'storage_check',
+                'storage': 'storage_check',
                 'vms': 'vms_check',
             }
             cache_key = cache_key_map.get(category)
