@@ -18633,6 +18633,39 @@
     "os": "debian"
   },
   {
+    "name": "Storage-Share-Helper",
+    "slug": "storage-share-helper",
+    "desc": "Interactive Proxmox VE storage management utility for testing and configuring SMB/CIFS, NFS and iSCSI storage, managing LXC bind mountpoints, and creating optional SMB or NFS shares directly on the Proxmox host.",
+    "script": "tools/pve/storage-share-helper.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/storage-share-helper.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/pve/storage-share-helper.sh",
+    "type": "pve",
+    "type_id": "1uyjfno0fpf5buh",
+    "categories": [
+      "scriptcat00001"
+    ],
+    "category_names": [
+      "Proxmox & Virtualization"
+    ],
+    "notes": [
+      "Visit for full guide with all vars our docs: `https://community-scripts.org/docs/tools/pve/storage-share-helper`"
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://community-scripts.org/",
+    "documentation": "https://community-scripts.org/docs/tools/pve/storage-share-helper",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "pve"
+    ],
+    "config_path": "",
+    "os": ""
+  },
+  {
     "name": "Storybook",
     "slug": "storybook",
     "desc": "Storybook is a frontend workshop for building UI components and pages in isolation. It's used for UI development, testing, and documentation.",
