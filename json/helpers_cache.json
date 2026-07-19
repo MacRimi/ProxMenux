@@ -15220,7 +15220,7 @@
     ],
     "port": 1411,
     "website": "https://github.com/pocket-id/pocket-id",
-    "documentation": "https://pocket-id.org/docs/",
+    "documentation": "https://pocket-id.org/docs/introduction",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pocket-id.webp",
     "updateable": true,
     "privileged": false,
