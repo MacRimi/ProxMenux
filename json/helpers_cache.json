@@ -5776,6 +5776,42 @@
     "os": "debian"
   },
   {
+    "name": "Firecrawl",
+    "slug": "firecrawl",
+    "desc": "API service that turns websites into clean data for AI applications, scraping, crawling, and extraction workflows.",
+    "script": "ct/firecrawl.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/firecrawl.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/firecrawl.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "The installer configures nftables to allow inbound SSH on port 22 and Firecrawl API access on port 3002 only. Adjust /etc/nftables.conf if your deployment requires different inbound access.",
+      "AI provider credentials are optional and can be added later in /opt/firecrawl/.env."
+    ],
+    "warnings": [
+      "Firecrawl's API is unauthenticated by default. Expose port 3002 only to trusted clients or protect it with external access controls."
+    ],
+    "port": 3002,
+    "website": "https://www.firecrawl.dev/",
+    "documentation": "https://docs.firecrawl.dev/",
+    "logo": "https://raw.githubusercontent.com/firecrawl/firecrawl/main/img/firecrawl_logo.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Firefly III",
     "slug": "firefly",
     "desc": "Firefly III is a free, self-hosted tool for managing your finances. Track expenses, plan budgets, and get detailed reports.",
@@ -10653,6 +10689,41 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Maintainerr",
+    "slug": "maintainerr",
+    "desc": "Maintainerr automates media-library cleanup by building rule-based collections of unwatched or unrequested titles, applying a grace period, then removing them from Plex/Jellyfin/Emby and the connected Radarr, Sonarr and Seerr apps.",
+    "script": "ct/maintainerr.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/maintainerr.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/maintainerr.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013",
+      "scriptcat00014"
+    ],
+    "category_names": [
+      "Media & Streaming",
+      "*Arr Suite"
+    ],
+    "notes": [
+      "Complete the setup wizard via the web interface on first access, then connect Maintainerr to your media servers (Plex/Jellyfin/Emby) and to Radarr/Sonarr/Seerr."
+    ],
+    "warnings": [],
+    "port": 6246,
+    "website": "https://maintainerr.info",
+    "documentation": "https://docs.maintainerr.info",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/maintainerr.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
     "is_dev": true,
     "execute_in": [
       "lxc"
@@ -17167,6 +17238,46 @@
       "pve"
     ],
     "config_path": "/.sabnzbd/sabnzbd.ini",
+    "os": "debian"
+  },
+  {
+    "name": "Safebucket",
+    "slug": "safebucket",
+    "desc": "Open-source file sharing where files bypass the server via presigned URLs to a local Garage (S3-compatible) object store.",
+    "script": "ct/safebucket.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/safebucket.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/safebucket.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00011"
+    ],
+    "category_names": [
+      "Files & Downloads"
+    ],
+    "notes": [
+      "Garage S3 API on port 3900 must remain reachable from clients for uploads/downloads to work"
+    ],
+    "warnings": [
+      "Admin password is generated at install and stored in /opt/safebucket/config.yaml",
+      "The container IP is baked into config.yaml and the bucket CORS policy at install. If the IP changes, update api_url, web_url and allowed_origins in config.yaml plus the bucket CORS origin, then restart the service."
+    ],
+    "port": 8080,
+    "website": "https://github.com/safebucket/safebucket",
+    "documentation": "https://docs.safebucket.io",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/safebucket.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin@safebucket.io",
+      "password": ""
+    },
     "os": "debian"
   },
   {
