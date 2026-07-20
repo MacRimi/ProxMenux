@@ -51,11 +51,18 @@ This release adds two in-dashboard improvements — a one-click Proxmox update t
 
 ---
 
+## 🗄 Backup restore — ZFS data pools imported automatically
+
+- **Separate ZFS data pools listed in the backup are now imported automatically at restore time.** Previously the restore flow correctly protected the root pool (rpool) from a stale `zpool.cache`, but any other ZFS pool a user had (for VMs, LXCs or plain data) was left up to `zfs-import-scan.service` to import at next boot — which fails when the fresh install has a different `hostid` than the one written on the pool's on-disk label. The pool would show as `FAILED Failed to start zfs-import-scan.service` and stay unavailable until the user ran `zpool import -f` manually. Now the restore iterates the backup's `storage_inventory.zfs_pools[]`, skips the root pool (already imported by the system), and runs `zpool import <name>` for every non-root pool whose disks are all present on `/dev/disk/by-id/`. If ZFS rejects the import as *foreign*, it retries with `-f` and reports the pool as forced so the operator knows the new hostid was grabbed onto the label. Pools with any missing disks are skipped with a clear warning instead of a silent import that would rebuild the pool without the missing vdev.
+
+---
+
 ## 🙏 Acknowledgments
 
 - **@pepenai** — reported the mobile dashboard freeze on his HTTPS + reverse proxy setup that led to the Service Worker cleanup path.
 - **Pepo** — reported the `401 missing_timestamp` on his PVE Test button that led to the webhook self-IP allowlist and the v4-mapped fix.
 - **@ash34** (#255) — reported the `VM/CT check unavailable: 'NoneType' object has no attribute 'get'` that led to the defensive coalescing of the `details` column.
+- **Juan C.** — reported the post-restore `zfs-import-scan.service FAILED` on a fresh install with a separate data pool, which led to the auto-import step above.
 
 
 ## 2026-07-14

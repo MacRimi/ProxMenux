@@ -50,11 +50,18 @@ Esta versión suma dos mejoras visibles en el propio dashboard — un botón par
 
 ---
 
+## 🗄 Restauración de backup — importación automática de pools ZFS de datos
+
+- **Los pools ZFS de datos listados en el backup ahora se importan automáticamente durante la restauración.** Anteriormente el flujo protegía correctamente el pool raíz (rpool) de un `zpool.cache` obsoleto, pero cualquier otro pool ZFS que un usuario tuviera (para VMs, LXCs o simplemente datos) quedaba a merced de `zfs-import-scan.service` para importarse en el siguiente arranque — y ese servicio falla cuando la instalación fresh tiene un `hostid` distinto al que está grabado en la etiqueta on-disk del pool. El pool aparecía como `FAILED Failed to start zfs-import-scan.service` y quedaba indisponible hasta que el usuario ejecutara de manera manual `zpool import -f` Ahora la restauración itera el `storage_inventory.zfs_pools[]` del backup, excluye el pool raíz (ya montado por el sistema) y ejecuta `zpool import <nombre>` para cada pool no-raíz cuyos discos estén todos presentes en `/dev/disk/by-id/`. Si ZFS rechaza el import por *foreign*, se reintenta con `-f` y se reporta el pool como forzado para que el operador sepa que el nuevo hostid quedó grabado en la etiqueta. Los pools a los que les falta algún disco se omiten con un aviso claro, en lugar de un import silencioso que reconstruiría el pool sin el vdev ausente.
+
+---
+
 ## 🙏 Agradecimientos
 
 - **@pepenai** — reportó el bloqueo del dashboard en móvil en su setup con HTTPS + reverse proxy, lo que llevó al path de limpieza del Service Worker.
 - **Pepo** — reportó el `401 missing_timestamp` en su botón Test de PVE, lo que llevó al allowlist de IPs propias del host y a la corrección v4-mapped.
 - **@ash34** (#255) — reportó el `VM/CT check unavailable: 'NoneType' object has no attribute 'get'` que llevó al coalescing defensivo de la columna `details`.
+- **Juan C.** — reportó el `zfs-import-scan.service FAILED` post-restauración en una instalación fresh con un pool de datos separado, lo que llevó al paso de auto-import descrito arriba.
 
 
 ## 2026-07-14
