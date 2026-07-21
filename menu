@@ -160,7 +160,7 @@ $(translate 'This session is running in the Monitor terminal. Updating from here
 
 $(translate 'Run the update from an SSH session or the Proxmox host console with:')
 
-  bash <(curl -fsSL ${INSTALL_URL}) --update
+  bash -c \"\$(wget -qLO - ${INSTALL_URL})\"
 
 $(translate 'You can keep using ProxMenux from this terminal.')"
         whiptail --title "$PROMPT_TITLE" --msgbox "$WS_INFO" 20 78
@@ -206,7 +206,7 @@ This session is running in the Monitor terminal. Updating from here would restar
 
 Run the update from an SSH session or the Proxmox host console with:
 
-  bash <(curl -fsSL $REPO_DEVELOP/install_proxmenux_beta.sh) --update
+  bash -c \"\$(wget -qLO - $REPO_DEVELOP/install_proxmenux_beta.sh)\"
 
 You can keep using ProxMenux from this terminal." 20 78
         return 0

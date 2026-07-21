@@ -243,9 +243,37 @@ EOF
 
 apply_release_channel() {
     local target_channel="$1"
-    local current_channel installer_file installer_status
+    local current_channel installer_file installer_status installer_url
 
     current_channel=$(get_release_channel)
+
+    if [ "$target_channel" = "beta" ]; then
+        installer_url="$BETA_INSTALLER_URL"
+    else
+        installer_url="$STABLE_INSTALLER_URL"
+    fi
+
+    # Running inside the Monitor's WebSocket terminal: the installer stops
+    # the Monitor service, which kills this shell mid-install and leaves
+    # the channel switch broken. Inform and route to SSH / host console.
+    if [[ "${PROXMENUX_TERMINAL:-}" == "monitor" ]]; then
+        show_proxmenux_logo
+        msg_title "$(translate "Changing Release Channel")"
+        whiptail --title "$(translate "Release Channel")" --msgbox "\
+$(translate "Switching to") $(release_channel_label "$target_channel") $(translate "requires running the official installer, which restarts the Monitor service.")
+
+$(translate "This session is running in the Monitor terminal. Running it from here would cut the connection mid-install and leave the switch in a broken state.")
+
+$(translate "Run the release-channel switch from an SSH session or the Proxmox host console with:")
+
+  bash -c \"\$(wget -qLO - ${installer_url})\"
+
+$(translate "You can keep using ProxMenux from this terminal.")" 22 78
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
+        exec bash "$LOCAL_SCRIPTS/menus/config_menu.sh"
+    fi
+
     installer_file=$(mktemp /tmp/proxmenux-${target_channel}-installer.XXXXXX) || return 1
 
     show_proxmenux_logo
