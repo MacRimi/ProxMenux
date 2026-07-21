@@ -262,6 +262,10 @@ def terminal_websocket(ws):
     _term_env.setdefault('COLORTERM', 'truecolor')
     _term_env.setdefault('LANG', 'C.UTF-8')
     _term_env.setdefault('LC_ALL', 'C.UTF-8')
+    # Inherited by every child of this shell (including `menu`), so the
+    # update path can tell it's running inside a WebSocket-backed session
+    # that would be cut mid-install if the Monitor service restarted.
+    _term_env['PROXMENUX_TERMINAL'] = 'monitor'
     _term_env.pop('PS1', None)
     _home = _term_env.get('HOME') or os.path.expanduser('~') or '/root'
 

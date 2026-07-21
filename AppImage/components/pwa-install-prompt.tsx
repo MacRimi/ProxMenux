@@ -1,21 +1,21 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Plus, Share, X } from "lucide-react"
+import { Download, Plus, Share, X } from "lucide-react"
 
 // ==========================================================
 // PwaInstallPrompt
 // ==========================================================
 // Bottom-sheet shown on mobile when the Monitor is opened in
 // a browser (not launched as an installed PWA). Two variants:
-//   iOS Safari  → manual 3-step instructions
-//   Android     → generic "browser menu → Add to Home Screen"
+//   iOS Safari  → manual 3-step instructions (no browser API)
+//   Android     → native install prompt when the browser
+//                 fires `beforeinstallprompt` (Chromium 89+
+//                 delivers it based on manifest validity alone,
+//                 no Service Worker required), with the manual
+//                 "browser menu → Add to Home Screen" steps
+//                 always shown below as a fallback.
 //
-// No `beforeinstallprompt` handling: the Monitor no longer
-// registers a Service Worker (see `pwa-register.tsx`), so
-// Chromium never fires it. Installation is always manual.
-//
-// Never shown on desktop, or when already running standalone.
 // Dismissal options:
 //   "Not now"          → temporary, hidden for 30 days
 //   "Don't show again" → permanent (no expiry)
@@ -26,6 +26,13 @@ import { Plus, Share, X } from "lucide-react"
 const DISMISSED_FOREVER_KEY = "proxmenux-install-dismissed"
 const DISMISSED_UNTIL_KEY = "proxmenux-install-dismissed-until"
 const NOT_NOW_DAYS = 30
+
+// `BeforeInstallPromptEvent` isn't in the TS DOM lib yet.
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[]
+  readonly userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>
+  prompt(): Promise<void>
+}
 
 function isMobileDevice(): boolean {
   if (typeof window === "undefined") return false
@@ -57,6 +64,7 @@ function isIOS(): boolean {
 export function PwaInstallPrompt() {
   const [open, setOpen] = useState(false)
   const [platform, setPlatform] = useState<"ios" | "android" | null>(null)
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -77,6 +85,28 @@ export function PwaInstallPrompt() {
 
     setPlatform(isIOS() ? "ios" : "android")
     setOpen(true)
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const onBeforeInstall = (e: Event) => {
+      // Suppress the browser's own mini-infobar so the Install button
+      // in the bottom sheet is the primary path.
+      e.preventDefault()
+      setDeferredPrompt(e as BeforeInstallPromptEvent)
+    }
+    const onInstalled = () => {
+      // The browser confirms the install landed on the home screen —
+      // close the sheet and drop the deferred event.
+      setDeferredPrompt(null)
+      setOpen(false)
+    }
+    window.addEventListener("beforeinstallprompt", onBeforeInstall)
+    window.addEventListener("appinstalled", onInstalled)
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBeforeInstall)
+      window.removeEventListener("appinstalled", onInstalled)
+    }
   }, [])
 
   const handleNotNow = useCallback(() => {
@@ -106,6 +136,25 @@ export function PwaInstallPrompt() {
     // silence it for longer must use "Not now" (30 d) or "Don't show again".
     setOpen(false)
   }, [])
+
+  const handleInstall = useCallback(async () => {
+    if (!deferredPrompt) return
+    try {
+      await deferredPrompt.prompt()
+      const { outcome } = await deferredPrompt.userChoice
+      // A `beforeinstallprompt` event can only be used once; drop the
+      // reference either way so the button hides.
+      setDeferredPrompt(null)
+      if (outcome === "accepted") {
+        setOpen(false)
+      }
+    } catch {
+      // Browser refused to run the prompt (already handled, race with
+      // appinstalled, etc.) — leave the sheet open so the operator can
+      // fall back to the manual steps rendered below.
+      setDeferredPrompt(null)
+    }
+  }, [deferredPrompt])
 
   if (!open || !platform) return null
 
@@ -187,11 +236,33 @@ export function PwaInstallPrompt() {
               </li>
             </ol>
           ) : (
-            <div className="mb-4 rounded-lg border border-border bg-muted/50 px-3.5 py-3 text-[13px] leading-relaxed text-muted-foreground">
-              Open the browser menu <b className="text-foreground">⋮</b> →{" "}
-              <b className="text-foreground">Add to Home Screen</b> → confirm by tapping{" "}
-              <b className="text-foreground">Install</b>.
-            </div>
+            <>
+              {deferredPrompt && (
+                <button
+                  type="button"
+                  onClick={handleInstall}
+                  className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-[14px] font-semibold text-primary-foreground shadow-sm hover:opacity-90 active:opacity-80 transition-opacity"
+                >
+                  <Download className="h-4 w-4" aria-hidden="true" />
+                  Install
+                </button>
+              )}
+              <div className="mb-4 rounded-lg border border-border bg-muted/50 px-3.5 py-3 text-[13px] leading-relaxed text-muted-foreground">
+                {deferredPrompt ? (
+                  <>
+                    Or install manually: browser menu <b className="text-foreground">⋮</b> →{" "}
+                    <b className="text-foreground">Add to Home Screen</b> → confirm by tapping{" "}
+                    <b className="text-foreground">Install</b>.
+                  </>
+                ) : (
+                  <>
+                    Open the browser menu <b className="text-foreground">⋮</b> →{" "}
+                    <b className="text-foreground">Add to Home Screen</b> → confirm by tapping{" "}
+                    <b className="text-foreground">Install</b>.
+                  </>
+                )}
+              </div>
+            </>
           )}
 
           <div className="mt-1 flex flex-col gap-1 border-t border-border pt-3">

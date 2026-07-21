@@ -3398,15 +3398,8 @@ _rs_run_custom_restore() {
 # user-installed packages is a prerequisite for the restored
 # systemd units and config files to actually do anything.
 
-# ─── _rs_import_data_pools ─────────────────────────────────────
-# Imports the ZFS data pools that were present in the backup but
-# aren't yet imported on this host — typical scenario is a fresh
-# PVE install onto new boot disks while the data-pool disks stay
-# in place. Never touches the root pool (already imported by the
-# system), never forces an import that's missing disks. Retries
-# with -f when the pool imports as foreign (hostid mismatch after
-# a fresh install regrabs the label) and reports which pools were
-# forced so the operator has traceability.
+# Import non-root ZFS pools from the backup manifest whose disks are
+# all present on this host. Retry with -f on foreign hostid.
 _rs_import_data_pools() {
     local staging_root="$1"
     local manifest="$staging_root/manifest.json"
@@ -3414,7 +3407,6 @@ _rs_import_data_pools() {
     command -v zpool >/dev/null 2>&1 || return 0
     command -v jq    >/dev/null 2>&1 || return 0
 
-    # Root pool → skip (mounted at / by the system).
     local root_pool=""
     if command -v zfs >/dev/null 2>&1; then
         local root_dataset
@@ -3423,7 +3415,6 @@ _rs_import_data_pools() {
         root_pool="${root_dataset%%/*}"
     fi
 
-    # Live pools already imported.
     local live_pools
     live_pools=$(zpool list -H -o name 2>/dev/null || true)
 
@@ -3437,15 +3428,21 @@ _rs_import_data_pools() {
             continue
         fi
 
-        local devs_all devs_total=0 devs_present=0 devs_missing=0 dev
+        local devs_all devs_total=0 devs_present=0 devs_missing=0 dev dev_path
         devs_all=$(jq -r --arg n "$pool_name" \
             '.storage_inventory.zfs_pools[]? | select(.name==$n) | .devices_by_id[]?' \
             "$manifest" 2>/dev/null)
         [[ -z "$devs_all" ]] && continue
+        # devices_by_id entries can be a by-id basename or an absolute path.
         while IFS= read -r dev; do
             [[ -z "$dev" ]] && continue
             ((devs_total++))
-            if [[ -e "/dev/disk/by-id/$dev" ]]; then
+            if [[ "$dev" == /* ]]; then
+                dev_path="$dev"
+            else
+                dev_path="/dev/disk/by-id/$dev"
+            fi
+            if [[ -e "$dev_path" ]]; then
                 ((devs_present++))
             else
                 ((devs_missing++))
@@ -3483,7 +3480,6 @@ _rs_import_data_pools() {
     fi
     if (( ${#forced[@]} > 0 )); then
         msg_ok "$(translate 'Imported (foreign hostid, forced):') ${forced[*]}"
-        echo -e "${TAB}${BL}$(translate "New hostid grabbed onto the pool label — next boot imports clean.")${CL}"
     fi
     if (( ${#partial[@]} > 0 )); then
         msg_warn "$(translate 'Skipped (some disks missing):') ${partial[*]}"
@@ -3495,22 +3491,15 @@ _rs_import_data_pools() {
         msg_error "$(translate 'Import failed — inspect with `zpool import`:') ${failed[*]}"
     fi
 
-    # Persist so the post-restore card can show the summary after the
-    # reboot. The Monitor's ScriptTerminalModal loses its buffer on
-    # close, and monitor_apply.sh doesn't tee to disk — without this
-    # the operator has no trace once they dismiss the terminal.
     _rs_persist_datapool_import "${ok[@]}" "|FORCED|" "${forced[@]}" \
         "|PARTIAL|" "${partial[@]}" "|MISSING|" "${missing[@]}" \
         "|FAILED|" "${failed[@]}"
 }
 
-# Serialise the auto-import result to restore-state.json (Monitor UI)
-# and to a raw log under /var/log/proxmenux. The state file is the
-# same one apply_cluster_postboot.sh manages — jq `*` merge preserves
-# our section when postboot later seeds its own fields. If the file
-# doesn't exist yet (operator hasn't rebooted, or restore ran without
-# a pending-reboot step) we seed placeholder fields so the UI can
-# still render just our section without crashing on undefined keys.
+# Write the data_pools_import section into restore-state.json (which
+# the Backups tab polls) and an append-only log under /var/log/proxmenux.
+# Seeds the state file with placeholder fields when it doesn't exist yet
+# so the UI can render just this section without crashing on undefined keys.
 _rs_persist_datapool_import() {
     command -v jq >/dev/null 2>&1 || return 0
     local mode="OK"
@@ -3540,7 +3529,6 @@ _rs_persist_datapool_import() {
     local log_file="$log_dir/restore-datapools-$(date +%Y%m%d_%H%M%S).log"
     mkdir -p "$state_dir" "$log_dir" 2>/dev/null || true
 
-    # Raw log — appended one line per pool with the resolved action.
     {
         echo "=== ProxMenux data-pool auto-import at $(date -Iseconds) ==="
         local p
@@ -3551,9 +3539,8 @@ _rs_persist_datapool_import() {
         for p in "${failed[@]}";  do echo "FAILED   $p (zpool import failed — inspect manually)"; done
     } >>"$log_file" 2>/dev/null || true
 
-    # State-file JSON section. `jq -sR` reads each array from a
-    # newline-separated stdin so pool names with spaces (partial
-    # entries include a count fragment) round-trip intact.
+    # jq -sR reads each array from newline-separated stdin so entries
+    # containing spaces (partial pools carry a count fragment) round-trip.
     local ok_json forced_json partial_json missing_json failed_json section
     ok_json=$(printf '%s\n'      "${ok[@]:-}"      | jq -Rsc 'split("\n") | map(select(length>0))')
     forced_json=$(printf '%s\n'  "${forced[@]:-}"  | jq -Rsc 'split("\n") | map(select(length>0))')
@@ -3578,16 +3565,12 @@ _rs_persist_datapool_import() {
     local tmp
     tmp=$(mktemp "${state_file}.XXXXXX") || return 0
     if [[ -f "$state_file" ]]; then
-        # Merge into whatever's already there.
         if jq -c ". * $section" "$state_file" > "$tmp" 2>/dev/null; then
             mv -f "$tmp" "$state_file"
         else
             rm -f "$tmp"
         fi
     else
-        # Seed with placeholders so the card renders without crashing
-        # if the operator never triggers the postboot flow (hot-only
-        # restore or a restore path where no reboot is scheduled).
         local seed
         seed=$(jq -n \
             --arg started    "$(date -Iseconds)" \
@@ -3832,14 +3815,9 @@ _rs_run_complete_extras() {
     fi
 
     # ─ Data ZFS pools — auto-import ───────────────────────────
-    # Import ZFS pools that were present in the backup and whose
-    # disks are still on this host. Skips the root pool (already
-    # imported by the system) and any pool missing disks. When a
-    # pool imports but ZFS marks it foreign (hostid mismatch from
-    # a fresh install), retries with -f and flags it for the
-    # operator. Field-reported by Juan C.: fresh PVE install →
-    # restore → separate data pool stayed unavailable because
-    # zfs-import-scan.service failed on hostid mismatch.
+    # Skips the root pool and any pool whose disks aren't all present.
+    # Retries with -f when ZFS rejects the import as foreign and flags
+    # the pool as forced in the report.
     _rs_import_data_pools "$staging_root"
 
     # ─ Guest configs — only in full strategies ────────────────

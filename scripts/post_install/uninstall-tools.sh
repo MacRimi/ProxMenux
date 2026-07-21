@@ -455,11 +455,14 @@ uninstall_network_optimization() {
 
     systemctl disable --now proxmenux-fwbr-tune.service >/dev/null 2>&1 || true
     rm -f /etc/systemd/system/proxmenux-fwbr-tune.service
+    rm -f /usr/local/sbin/proxmenux-fwbr-tune
+    rm -f /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
+    udevadm control --reload-rules >/dev/null 2>&1 || true
 
     systemctl daemon-reload >/dev/null 2>&1 || true
     sysctl --system >/dev/null 2>&1 || true
 
-    
+
     msg_ok "$(translate "Network optimizations removed")"
     register_tool "network_optimization" false
 }
@@ -573,22 +576,28 @@ uninstall_log2ram() {
 ################################################################
 
 uninstall_persistent_network() {
-    local LINK_DIR="/etc/systemd/network"
-    
-    msg_info "$(translate "Removing all .link files from") $LINK_DIR"
-    sleep 2
-    
-    if ! ls "$LINK_DIR"/*.link >/dev/null 2>&1; then
-        msg_warn "$(translate "No .link files found in") $LINK_DIR"
-        return 0
+    msg_info "$(translate "Removing ProxMenux persistent NIC .link files...")"
+    sleep 1
+
+    if ! type pmx_uninstall_persistent_network &>/dev/null; then
+        if [[ -f "$LOCAL_SCRIPTS/global/utils-install-functions.sh" ]]; then
+            source "$LOCAL_SCRIPTS/global/utils-install-functions.sh"
+        fi
     fi
 
-    rm -f "$LINK_DIR"/*.link
+    local removed=0
+    while IFS='=' read -r key value; do
+        [[ "$key" == "REMOVED" ]] && removed="$value"
+    done < <(pmx_uninstall_persistent_network)
 
-    msg_ok "$(translate "Removed all .link files from") $LINK_DIR"
-    msg_info "$(translate "Interface names will return to default systemd behavior.")"
+    if (( removed > 0 )); then
+        msg_ok "$(translate "Removed") $removed $(translate "ProxMenux-managed .link file(s). User-authored .link files were left in place.")"
+        msg_info "$(translate "Interface names will return to default systemd behavior.")"
+        NECESSARY_REBOOT=1
+    else
+        msg_warn "$(translate "No ProxMenux-managed .link files found — nothing to remove.")"
+    fi
     register_tool "persistent_network" false
-    NECESSARY_REBOOT=1
 }
 
 
@@ -905,6 +914,10 @@ uninstall_zfs_arc() {
     else
         rm -f /etc/modprobe.d/99-zfsarc.conf
         msg_ok "$(translate 'ZFS ARC config removed (kernel defaults will apply on reboot)')"
+    fi
+    update-initramfs -u -k all >/dev/null 2>&1 || true
+    if command -v proxmox-boot-tool >/dev/null 2>&1; then
+        proxmox-boot-tool refresh >/dev/null 2>&1 || true
     fi
     register_tool "zfs_arc" false
 }

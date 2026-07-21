@@ -3,7 +3,7 @@
 
 ### New version ProxMenux v1.2.4
 
-This release adds two in-dashboard improvements — a one-click Proxmox update trigger from the Health Monitor and a mobile PWA install prompt — and closes seven notification content/delivery fixes, the mobile dashboard freeze over HTTPS + reverse proxy that slipped into 1.2.3, and two Health panel bugs reported within hours of that release.
+This release adds two in-dashboard improvements — a one-click Proxmox update trigger from the Health Monitor and a mobile PWA install prompt — extends the Backups restore flow with automatic ZFS data-pool import, sharpens Log2RAM behaviour on hosts running Proxmox Backup Server as a service, hardens firewall bridge sysctl tuning across VM lifecycle events, narrows the ZFS ARC optimization to its own scope, makes persistent NIC naming idempotent across reruns, rebuilds DKMS drivers automatically when a new kernel is staged, keeps the Monitor terminal session intact when a ProxMenux update is available, and reinforces five notification templates plus three Health panel checks.
 
 ---
 
@@ -20,49 +20,113 @@ This release adds two in-dashboard improvements — a one-click Proxmox update t
 
 ## 📱 In-app Install prompt for mobile
 
-- First-time visitors on **Android** (Chrome / Brave) and **iOS Safari** now see a bottom-sheet with clear instructions for adding the Monitor as a PWA to their home screen.
+- First-time visitors on **Android** (Chrome / Brave / Edge / Samsung Internet) and **iOS Safari** now see a bottom-sheet with clear instructions for adding the Monitor as a PWA to their home screen.
+- On Android, when the browser deems the Monitor installable and fires `beforeinstallprompt` (Chromium 89+ delivers it on manifest validity alone, no Service Worker required), an **Install** button in the sheet drives the native install flow with a single tap; the browser's own in-page install banner is suppressed so the sheet is the primary path. The manual "browser menu → Add to Home Screen" steps are still shown as a fallback for browsers that don't fire the event (Firefox Android) or cases where the operator prefers the manual path.
+- iOS Safari keeps the manual 3-step instructions — no equivalent JS API is available on iOS.
+- The sheet closes automatically when the browser fires `appinstalled` — no lingering prompt after the install lands on the home screen.
 - Two dismissal levels: **Not now** (temporary, reappears in 30 days) and **Don't show again** (permanent, stored in `localStorage`).
 - Never shown on desktop, or once the Monitor is already running standalone.
 
 ---
 
-## 🔔 Notification content — five rendering fixes
+## 🔔 Notification content — five rendering refinements
 
-- **Backup destination now visible** — VM/CT backup emails and Telegram messages include the storage / PBS target in both the title and body row, so operators with multiple backup destinations can tell at a glance which one succeeded or failed.
-- **Migration bodies no longer render `migrated to node .`** — the actual target node is pulled from the PVE task log for `qmigrate` / `vzmigrate` events.
-- **Snapshot bodies no longer render `Snapshot "" created`** — the real snapshot name is pulled from the PVE task log for `qmsnapshot` / `vzsnapshot`.
-- **Generic `system_problem` notifications carry the real reason** — PVE messages that fall into the generic bucket include the original payload body, replacing the useless *"A system-level problem has been detected."*
-- **NVIDIA / Coral driver update emails show the new version** — the *New Version* row in the HTML body used to render empty due to a template/renderer field-name mismatch (`latest_version` vs `new_version`). Fixed.
-
----
-
-## 🩹 Health panel fixes
-
-- **Dismiss silently failed on storage alerts** — clicking Dismiss on a `storage_unavailable`, `mount_stale`, `mount_readonly`, `lxc_disk_low`, `lxc_mount_low`, `pve_storage_full` or `zfs_pool_full` error persisted the ack in the database but never invalidated the Monitor's cache because the event was tagged with category `general` instead of `storage`. The error stayed visible after dismiss. Both the category inference and the cache invalidation map fixed.
-- **VMs & Containers stuck on `UNKNOWN` with `'NoneType' object has no attribute 'get'`** (#255) — any persisted error with a `NULL` `details` column crashed the entire VM/CT check on every scan. The category stayed UNKNOWN permanently and Dismiss couldn't silence it because there was no specific `error_key` to acknowledge. Fixed by explicit `error.get('details') or {}` coalescing in both persistence loops.
-- **Duplicate `system_startup` notifications after every polling tick** — `_check_startup_aggregation` emitted the boot summary but never marked aggregation as done, so the next polling iteration re-emitted the same event over and over until the service restarted. On a host that stays up for hours after boot this produced up to one duplicate every polling interval. Now the aggregated flag is set right after the notification is queued.
+- **Backup destination in title and body** — VM/CT backup emails and Telegram messages carry the storage / PBS target, so operators with several backup destinations can tell at a glance which one produced the event.
+- **Migration bodies carry the real target node** — pulled from the PVE task log for `qmigrate` / `vzmigrate` events.
+- **Snapshot bodies carry the real snapshot name** — pulled from the PVE task log for `qmsnapshot` / `vzsnapshot` events.
+- **Generic `system_problem` notifications include the real reason** — PVE payload messages are surfaced as the notification body.
+- **NVIDIA / Coral driver update emails render the *New Version* row correctly** — the template placeholder is now aligned with the field the renderer reads.
 
 ---
 
-## 🛠 Mobile & webhook fixes
+## 🩹 Health panel — three checks reinforced
 
-- **Mobile dashboard freeze over HTTPS + reverse proxy** — the Service Worker introduced in v1.2.3 (`sw.js`, needed for PWA installability) interacted with mobile browsers' battery-saving background throttling and caused polling fetches to stop firing after a page refresh. Dashboard values (CPU / RAM / temperature) froze at their last reading until a hard cache wipe. Fixed by auto-cleaning any registered Service Worker on load. PWA installability is now driven entirely by the new in-app install prompt above.
-- **Webhook auth extended to VPN / CGNAT interface IPs** — the internal webhook (`/api/notifications/webhook`) previously trusted only requests from `127.0.0.1` / `::1`. Users with a Tailscale, WireGuard, LAN or IPv6 FQDN pointing at the host saw PVE Test buttons return `401 missing_timestamp`. The webhook now treats any of the host's own interface IPs as trusted local-loopback, including IPv4-mapped-in-IPv6 form (`::ffff:100.x.x.x`) which Flask reports on dual-stack binds.
+- **Dismiss now silences storage alerts.** The acknowledge flow includes `storage_unavailable`, `mount_stale`, `mount_readonly`, `lxc_disk_low`, `lxc_mount_low`, `pve_storage_full` and `zfs_pool_full` under the `storage` category, and the storage cache is invalidated on dismiss so the panel refreshes immediately.
+- **VMs & Containers check tolerates persisted errors with a NULL `details` column** (#255). `_check_vms_cts_with_persistence` coalesces missing `details` to an empty dict before reading nested keys, so a single sparse row no longer takes the whole VM/CT check offline.
+- **`system_startup` notification fires once per boot.** `_check_startup_aggregation` marks aggregation as done right after queuing the event, so the boot summary lands one time regardless of how many polling ticks fit inside the session.
 
 ---
+
+## 🛠 Mobile & webhook
+
+- **Mobile dashboard polling stays live on HTTPS + reverse proxy setups.** `pwa-register.tsx` auto-unregisters any Service Worker on load so mobile-browser background throttling stops interfering with the polling fetches, and PWA installability is now driven by the new in-app install prompt above.
+- **Webhook auth trusts every host-local IP.** The internal webhook (`/api/notifications/webhook`) accepts requests from any interface IP the host owns (Tailscale, WireGuard, LAN, IPv6, plus IPv4-mapped-in-IPv6 form `::ffff:x.x.x.x` that Flask emits on dual-stack binds), so PVE Test buttons work through any of them.
+
+---
+
+## 🛡 Update flow — ProxMenux update prompt is now Monitor-terminal-aware
+
+- **The Monitor's WebSocket terminal now exposes `PROXMENUX_TERMINAL=monitor`** in the environment of every shell it opens, and every child inherits it. This gives `menu` (and anything else that cares) a reliable, deterministic way to tell that the current session lives inside the Monitor process — a session that would be cut mid-install if the Monitor service was restarted.
+- **When `menu` starts and detects that a new ProxMenux version is available AND the session is running inside the Monitor terminal, the classic yes/no update prompt is replaced by an informational msgbox.** The msgbox names the new version and shows the one-line command to run the update from SSH or the Proxmox host console. Because the flow has already decided the in-terminal update path is unsafe (see the [msgbox-ack rule](memory/feedback_whiptail_msgbox_ack.md)), there's a single OK button — no yes/no that could trigger the destructive update by accident.
+- **After OK, `menu` continues normally**. The operator keeps using ProxMenux from the same terminal without restrictions; only the update itself is routed elsewhere. There is no lockdown and no forced action.
+- **SSH sessions, the Proxmox host console, and any environment where `PROXMENUX_TERMINAL` isn't `monitor` keep the previous yes/no prompt** and can update as always. The change only affects the case where updating in place would break the running session.
+- **Bootstrap note**: because `PROXMENUX_TERMINAL=monitor` is added by the AppImage this release ships, the guard only starts protecting sessions once the host is on 1.2.4 or newer. The very first update to 1.2.4, if triggered from the Monitor terminal, can still hit the old behaviour — from 1.2.4 forward the guard is in place.
+
+---
+
+## 🔧 Update flow — DKMS drivers rebuilt when a new kernel lands
+
+- **After `apt full-upgrade` stages a kernel newer than the one currently running, `update-pve-safe.sh` now rebuilds ProxMenux-installed DKMS drivers against the new kernel.** The Update Now button in the Health Monitor and the `utilities/proxmox_update.sh` CLI both delegate to `update-pve-safe.sh`, so both routes gain the behaviour. The step reads `components_status.json`, cross-references the DKMS-managed components ProxMenux tracks (`nvidia_driver`, `coral_driver`), installs the matching kernel headers (`proxmox-headers-<newkver>` or `pve-headers-<newkver>`) if they aren't already present, and runs `dkms autoinstall -k <newkver>`. Then it verifies via `dkms status` that each expected module (`gasket` for Coral, `nvidia` for the NVIDIA driver) actually reached `installed` state for the new kernel — if any module didn't, it falls back to each installer's `--auto-reinstall` path.
+- **A whiptail msgbox announces the rebuild before it runs.** Single OK button — no yes/no. Names the incoming kernel version and lists the DKMS components that are going to be rebuilt, so the operator sees exactly what's about to happen. Because leaving DKMS drivers unbuilt would leave the system with a working kernel but non-functional TPU / GPU at boot, this is transparency, not a decision — pressing OK acknowledges the follow-up work and the flow proceeds. Non-interactive invocations (cron, headless batch, missing whiptail) skip the msgbox and log the same information.
+- **Only components already registered as `installed` in `components_status.json` are considered.** A host with no ProxMenux-managed DKMS drivers sees no msgbox and no rebuild step. Hosts that never ran the Coral or NVIDIA installer are unaffected.
+- **Failure to rebuild does not abort the update.** If a DKMS module can't be rebuilt against the new kernel (upstream API break, missing dependency), the update flow completes normally, the specific components that failed are named in the summary, and the operator can re-run their installer manually after reboot. The step is best-effort by design — a kernel/driver mismatch is an upstream problem, not something the update flow should fail on.
+- Shared helper `pmx_rebuild_dkms_after_kernel` lives in `scripts/global/utils-install-functions.sh`, so future updaters or CLI utilities can pick it up with a one-line call.
+
+---
+
+## 🔌 Post-install — Persistent NIC naming becomes idempotent
+
+- **ProxMenux-owned `.link` files now carry a distinctive filename prefix and internal marker.** Files are written as `10-proxmenux-<iface>.link` and the first line of every file is `# Managed by ProxMenux — do not edit`. Both are checked by the reconciliation and uninstall paths before touching a file, so anything the operator wrote by hand or that came from another package is safe.
+- **Reruns of `setup_persistent_network` reconcile ProxMenux entries.** Every invocation walks the existing `10-proxmenux-*.link` files, extracts the `MACAddress=` value, compares it against the MACs currently present under `/sys/class/net/`, and removes only the ProxMenux-owned entries whose MAC is no longer there. Hardware replacements, NIC swaps and hardware migrations stop leaving orphan mappings behind on every rerun.
+- **Legacy 1.0-format files (`10-<iface>.link` written by the previous revision) are migrated on the first run of the new function.** If the file matches the exact template the 1.0 code used to write (two sections, `MACAddress=` + `Name=`, nothing else), it's removed and replaced with the new `10-proxmenux-<iface>.link` in one step. Any file that doesn't match the template exactly is left alone.
+- **The uninstall path (`uninstall_persistent_network`) now only removes files that carry both the `10-proxmenux-` filename prefix and the marker on the first line.** The previous `rm -f /etc/systemd/network/*.link` blanket sweep is gone — user-authored `.link` files stay in place regardless of their filename.
+- **Single shared implementation.** The three duplicated `setup_persistent_network` bodies (`auto_post_install.sh`, `customizable_post_install.sh`, `network_menu.sh`) plus the uninstall path now all delegate to `pmx_setup_persistent_network` / `pmx_uninstall_persistent_network` in `scripts/global/utils-install-functions.sh`. Future fixes can't miss a copy.
+- `FUNC_VERSION` bumped 1.0 → 1.1 on all three call sites so the ProxMenux update detector re-runs the function on hosts that already had the 1.0 build. That first re-run performs the legacy migration + reconciliation in one shot.
+
+---
+
+## 🧮 Post-install — ZFS ARC optimization narrowed to its scope
+
+- **`optimize_zfs_arc` now sets only `zfs_arc_max`.** The function writes a single line to `/etc/modprobe.d/99-zfsarc.conf`: `options zfs zfs_arc_max=<cap>`. `zfs_arc_min` stays at the OpenZFS default (auto-calculated as the larger of 32 MiB and ~1/32 of RAM), and L2ARC (`l2arc_noprefetch`, `l2arc_write_max`) and TXG (`zfs_txg_timeout`) tunables — which are outside the scope of an ARC optimization — are left at their OpenZFS defaults unless the operator configures them elsewhere.
+- **The initramfs is now regenerated after writing the config.** On ZFS-on-root systems the ZFS module loads from the initramfs before the running system reads `/etc/modprobe.d/`, so a plain reboot wasn't enough for the new cap to take effect. `update-initramfs -u -k all` runs right after the file is written, plus `proxmox-boot-tool refresh` on systemd-boot hosts, so the value is picked up at the next boot instead of being shadowed by the initramfs's stale copy.
+- **The function is guarded on the presence of a live ZFS pool** (`zpool list` check) so it becomes a no-op on hosts that don't use ZFS.
+- **Cap values use clean binary sizes**: 512 MiB up to 16 GB RAM, 1 GiB up to 32 GB, RAM/8 above that — with a floor of 512 MiB so a bad memory reading never leaves an unusably small ARC.
+- `FUNC_VERSION` bumped 1.0 → 1.1 so the ProxMenux update detector re-runs the function on hosts that already had the 1.0 build. Because the write is a full rewrite of `99-zfsarc.conf`, running the updated function once replaces the whole file cleanly. The uninstall path now also runs `update-initramfs` + `proxmox-boot-tool refresh` after restoring or removing the config, so the revert propagates to the initramfs the same way.
+
+---
+
+## 🔥 Post-install — Firewall bridge sysctl tuning hardened
+
+- **The `rp_filter=0` and `log_martians=0` tuning for `fwbr*`, `fwln*`, `fwpr*` and `tap*` interfaces now also applies to interfaces Proxmox spins up when a VM starts, stops, reboots or migrates.** A new `/etc/udev/rules.d/99-proxmenux-fwbr-tune.rules` fires a helper on every `net`/`add` event matching those prefixes, so each fresh interface picks up the correct value immediately — no reboot and no rerun of the post-install needed.
+- **The tuning logic is now in a standalone helper** at `/usr/local/sbin/proxmenux-fwbr-tune`, shared by the initial sweep (`proxmenux-fwbr-tune.service`, oneshot) and by the udev rule. An explicit invocation at install time ensures the current session sees the change without waiting for the next VM cycle.
+- **The customizable post-install flow (`customizable_post_install.sh`) now installs the same helper + oneshot service + udev rule + initial sweep as the automatic flow**, so both variants leave the system in the same end state.
+- Both `apply_network_optimizations` functions bumped `FUNC_VERSION` 1.0 → 1.1, so the ProxMenux update detector re-runs the function on hosts that already had the 1.0 build. The uninstall path (`uninstall_network_optimization`) is extended to remove the new helper and udev rule, and reload udev.
+
+---
+
+## 🧰 Post-install — Log2RAM + PBS
+
+- **PBS API log rotation applied automatically when `proxmox-backup-server` runs as a service on the host.** Both Log2RAM installers (`install_log2ram_auto` and the customizable `configure_log2ram`) detect PBS via `dpkg-query` and drop `/etc/logrotate.d/proxmox-backup-api` with a 20MB × 3 rotation rule plus `/etc/cron.hourly/proxmox-backup-logrotate`. On a PVE host that also runs PBS as a service, `pvestatd`'s local-datastore poll writes to `/var/log/proxmox-backup/api/access.log` and `auth.log` every few seconds — the upstream PBS package ships no logrotate rule for those files, and this rule keeps them bounded so a tmpfs-backed `/var/log` stays comfortably under budget. No-op on hosts without PBS as a service.
+- **Upstream `log2ram` script patched to `rsync -aXv --no-acls` right after `install.sh`.** Both installers rewrite the call in place with a `sed` guarded by `grep -q` (backup at `.proxmenux.bak`, no-op if a future upstream release already dropped `-A`). Extended attributes (`-X`) are preserved. Result: `log2ram write` finishes cleanly on `/var/log.hdd` filesystems that don't accept POSIX ACLs (ZFS with `acltype=off`, ext4 mounted without the `acl` option) — no more `set_acl: Operation not supported` / exit 23 messages.
+- **Emergency block of `log2ram-check.sh` rotates PBS logs before truncating.** When `/var/log` crosses the 92% threshold, the auto-sync script now runs `logrotate -f /etc/logrotate.d/proxmox-backup-api` (only if the rule file exists) *before* truncating `pveproxy/access.log`, `pveproxy/error.log` and `pveam.log`. Recent PBS access/auth history is preserved in the rotated `.gz` files instead of being lost. Both `install_log2ram_auto` and `configure_log2ram` bumped `FUNC_VERSION` 1.2 → 1.3, and the embedded `log2ram-check.sh` header comment bumped v1.2 → v1.3.
 
 ## 🗄 Backup restore — ZFS data pools imported automatically
 
-- **Separate ZFS data pools listed in the backup are now imported automatically at restore time.** Previously the restore flow correctly protected the root pool (rpool) from a stale `zpool.cache`, but any other ZFS pool a user had (for VMs, LXCs or plain data) was left up to `zfs-import-scan.service` to import at next boot — which fails when the fresh install has a different `hostid` than the one written on the pool's on-disk label. The pool would show as `FAILED Failed to start zfs-import-scan.service` and stay unavailable until the user ran `zpool import -f` manually. Now the restore iterates the backup's `storage_inventory.zfs_pools[]`, skips the root pool (already imported by the system), and runs `zpool import <name>` for every non-root pool whose disks are all present on `/dev/disk/by-id/`. If ZFS rejects the import as *foreign*, it retries with `-f` and reports the pool as forced so the operator knows the new hostid was grabbed onto the label. Pools with any missing disks are skipped with a clear warning instead of a silent import that would rebuild the pool without the missing vdev.
+- **Separate ZFS data pools listed in the backup are now imported automatically at restore time.** The new `_rs_import_data_pools` step runs after config apply, walks `storage_inventory.zfs_pools[]`, skips the root pool (already mounted by the system), and issues `zpool import <name>` for every non-root pool whose disks are all present on this host. When ZFS rejects the import as *foreign* — the typical case after a fresh install regrabs the pool label with a new `hostid` — the step retries with `-f` and reports the pool as forced so the operator has trace. Pools missing any disk are skipped with a clear warning rather than imported degraded. Together this closes the common case where `zfs-import-scan.service` failed at boot after a fresh install and left the separate data pool unavailable until `zpool import -f` was run manually.
+- **The auto-import result persists to the post-restore progress card.** The step writes a `data_pools_import` section into `/var/lib/proxmenux/restore-state.json` (the same JSON the Backups-tab card polls) and a raw log at `/var/log/proxmenux/restore-datapools-<timestamp>.log`. The Backups tab card renders a dedicated block inside Details with five color-coded rows (Imported / Forced / Skipped partial / Skipped missing / Failed) so the summary stays consultable after the restore terminal is closed, and the entry is preserved in the run's history for later review.
+- **ZFS pools created with `by-partuuid` or raw `/dev/sdX` are recognised by the disk-presence check.** The auto-import step and `validate_storage.sh` treat `devices_by_id` entries that start with `/` as absolute paths and only prepend `/dev/disk/by-id/` to bare basenames, so pools built against partition UUIDs or a raw block device are detected as present when their disks are on the host.
+- **`/etc/systemd/network` added to the default backup paths.** That directory holds systemd `.link` files that pin NIC names to their MAC across kernel updates and reinstalls — `setup_persistent_network` in the post_install writes them for every physical interface, and users can drop their own to rename a NIC to something meaningful. Preserving them across a fresh-install restore keeps the source host's NIC naming policy intact on the target, so `/etc/network/interfaces` entries that reference custom NIC names continue to resolve after the restore.
 
 ---
 
 ## 🙏 Acknowledgments
 
-- **@pepenai** — reported the mobile dashboard freeze on his HTTPS + reverse proxy setup that led to the Service Worker cleanup path.
-- **Pepo** — reported the `401 missing_timestamp` on his PVE Test button that led to the webhook self-IP allowlist and the v4-mapped fix.
-- **@ash34** (#255) — reported the `VM/CT check unavailable: 'NoneType' object has no attribute 'get'` that led to the defensive coalescing of the `details` column.
-- **Juan C.** — reported the post-restore `zfs-import-scan.service FAILED` on a fresh install with a separate data pool, which led to the auto-import step above.
+- **@pepenai** — mobile dashboard on HTTPS + reverse proxy.
+- **Pepo** — webhook auth from a Tailscale FQDN.
+- **@ash34** (#255) — VM/CT check with a NULL `details` row.
+- **@f3rs3n** (#256, #257, #258) — firewall bridge sysctl tuning, ZFS ARC optimization scope, and persistent NIC naming reconciliation.
+- **Juan C.** — ZFS data pool auto-import after a fresh install.
+- **David Barbero (@sikete)** — DKMS driver rebuild on kernel upgrade.
 
 
 ## 2026-07-14

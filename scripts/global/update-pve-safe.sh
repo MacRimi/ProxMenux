@@ -241,7 +241,12 @@ update_pve_safe() {
         lvm_repair_check
     fi
 
-    # ── 9. Final cleanup ──
+    # ── 9. DKMS driver rebuild if a new kernel was staged ──
+    if declare -f pmx_rebuild_dkms_after_kernel >/dev/null 2>&1; then
+        pmx_rebuild_dkms_after_kernel
+    fi
+
+    # ── 10. Final cleanup ──
     apt-get -y autoremove >/dev/null 2>&1 || true
     apt-get -y autoclean >/dev/null 2>&1 || true
     msg_ok "$(translate "Cleanup finished")"

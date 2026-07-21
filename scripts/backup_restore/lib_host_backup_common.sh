@@ -107,6 +107,7 @@ hb_default_profile_paths() {
         # ── Common Proxmox tooling (skipped if not present) ──
         "/etc/systemd/system"  # custom units (including log2ram.service if installed)
         "/etc/systemd/journald.conf"  # journal retention tuning from post-install
+        "/etc/systemd/network"  # .link files that pin NIC names to MAC
         "/etc/log2ram.conf"
         "/etc/logrotate.conf"
         "/etc/logrotate.d"     # post-install drops log2ram + custom logrotate here

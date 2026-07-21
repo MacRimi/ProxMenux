@@ -405,14 +405,8 @@ const RestoreDetailModal: React.FC<{
   )
 }
 
-// ── Data-pools auto-import block ──────────────────────────────
-// Rendered inside the RestoreDetailModal (and the compact header
-// badge on the card) so the operator sees which ZFS data pools
-// were imported automatically during the restore, which ones ZFS
-// took with -f because the on-disk hostid didn't match the fresh
-// install, and which ones were skipped and need manual attention.
-// The section is populated by backup_host.sh:_rs_persist_datapool_import
-// and survives the ScriptTerminalModal being closed.
+// Rendered inside RestoreDetailModal — one row per outcome category
+// (imported / forced / partial skip / missing skip / failed).
 const DataPoolsBlock: React.FC<{ section: DataPoolsImport }> = ({ section }) => {
   const total =
     section.ok.length +

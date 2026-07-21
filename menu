@@ -149,6 +149,24 @@ check_updates_stable() {
     PROMPT_AVAIL="$(translate 'New version available')"
     PROMPT_ASK="$(translate 'Do you want to update now?')"
 
+    # Running inside the Monitor's WebSocket terminal: the installer will
+    # restart the Monitor service, which kills this shell mid-install and
+    # leaves the update broken. Inform and route to SSH / host console.
+    if [[ "${PROXMENUX_TERMINAL:-}" == "monitor" ]]; then
+        local WS_INFO
+        WS_INFO="$(translate 'A new ProxMenux version is available:') ${REMOTE_VERSION}
+
+$(translate 'This session is running in the Monitor terminal. Updating from here would restart the Monitor service and cut the connection mid-install, leaving the update in a broken state.')
+
+$(translate 'Run the update from an SSH session or the Proxmox host console with:')
+
+  bash <(curl -fsSL ${INSTALL_URL}) --update
+
+$(translate 'You can keep using ProxMenux from this terminal.')"
+        whiptail --title "$PROMPT_TITLE" --msgbox "$WS_INFO" 20 78
+        return 0
+    fi
+
     if whiptail --title "$PROMPT_TITLE" \
                 --yesno "$PROMPT_AVAIL ($REMOTE_VERSION)\n\n$PROMPT_ASK" \
                 10 60 --defaultno; then
@@ -179,6 +197,20 @@ check_updates_beta() {
     LOCAL_BETA="$(head -n 1 "$BETA_VERSION_FILE" 2>/dev/null)"
     [[ -z "$REMOTE_BETA" || -z "$LOCAL_BETA" || "$LOCAL_BETA" = "$REMOTE_BETA" ]] && return 0
     [[ "$(printf '%s\n%s\n' "$LOCAL_BETA" "$REMOTE_BETA" | sort -V | tail -1)" = "$REMOTE_BETA" ]] || return 0
+
+    if [[ "${PROXMENUX_TERMINAL:-}" == "monitor" ]]; then
+        whiptail --title "Beta Update Available" --msgbox "\
+A new beta build is available: $REMOTE_BETA
+
+This session is running in the Monitor terminal. Updating from here would restart the Monitor service and cut the connection mid-install, leaving the update in a broken state.
+
+Run the update from an SSH session or the Proxmox host console with:
+
+  bash <(curl -fsSL $REPO_DEVELOP/install_proxmenux_beta.sh) --update
+
+You can keep using ProxMenux from this terminal." 20 78
+        return 0
+    fi
 
     if whiptail --title "Beta Update Available" \
                 --yesno "A new beta build is available!\n\nInstalled beta : $LOCAL_BETA\nNew beta build : $REMOTE_BETA\n\nDo you want to update now?" \
