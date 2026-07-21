@@ -11,7 +11,7 @@ Esta versión suma dos mejoras visibles en el propio dashboard — un botón par
 - Nuevo botón **Update Now** dentro del modal del Monitor de Salud, en la sección **System Updates**.
 - Ejecuta el flujo estándar de actualización de Proxmox (`apt update` + `dist-upgrade` + limpieza posterior) en una terminal dentro del dashboard — sin necesidad de abrir una shell.
 - Solo aparece cuando hay actualizaciones pendientes; si el sistema está al día, el botón queda oculto.
-- Al cerrar, el Monitor de Salud se refresca automáticamente para que el contador de actualizaciones pendientes y la fila del kernel se actualicen al instante.
+- Al cerrar, el Monitor de Salud fuerza un refresh con invalidación de caché (`/api/health/full?refresh=1`) para que el contador de actualizaciones pendientes y la fila del kernel reflejen el estado post-actualización al instante, en lugar del valor pre-actualización que la caché de fondo había guardado justo antes de la ejecución.
 - El script subyacente distingue el contexto: si se ejecuta sobre un host ya en producción, respeta los repositorios personalizados del operador (no desactiva enterprise/ceph, no borra sources legacy, no purga NTP alternativos ni fuerza instalar zfsutils/chrony); si detecta un servidor virgen crea los repos base necesarios. Detecta también si hay un kernel nuevo instalado distinto del que está corriendo y pide el reboot al terminar.
 - Durante la actualización se suprimen las notificaciones de `service_fail` de servicios PVE (pve-cluster, pveproxy, corosync…) porque su reinicio es parte normal del upgrade; volvían a notificarse hasta 60 s después de que apt termine.
 

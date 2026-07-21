@@ -126,13 +126,13 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [showUpdateTerminal, setShowUpdateTerminal] = useState(false)
 
-  const fetchHealthDetails = useCallback(async () => {
+  const fetchHealthDetails = useCallback(async (force = false) => {
     setLoading(true)
     setError(null)
 
     try {
       let newOverallStatus = "OK"
-      
+
       // Use the new combined endpoint for fewer round-trips
       const token = getAuthToken()
       const authHeaders: Record<string, string> = {}
@@ -140,7 +140,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
         authHeaders["Authorization"] = `Bearer ${token}`
       }
 
-      const response = await fetch(getApiUrl("/api/health/full"), { headers: authHeaders })
+      const response = await fetch(getApiUrl(force ? "/api/health/full?refresh=1" : "/api/health/full"), { headers: authHeaders })
       let infoCount = 0
       
       if (!response.ok) {
@@ -222,7 +222,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     if (open) {
       fetchHealthDetails()
       // Auto-refresh every 5 minutes while modal is open
-      const refreshInterval = setInterval(fetchHealthDetails, 300000)
+      const refreshInterval = setInterval(() => fetchHealthDetails(), 300000)
       return () => clearInterval(refreshInterval)
     }
   }, [open, fetchHealthDetails])
@@ -872,10 +872,10 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
         open={showUpdateTerminal}
         onClose={() => {
           setShowUpdateTerminal(false)
-          // Refresh health checks so the "System Updates" row updates
-          // (pending count / kernel version) without waiting for the
-          // next polling tick after the update finishes.
-          fetchHealthDetails().catch(() => {})
+          // Force a fresh read (cache-busting via ?refresh=1) so the
+          // "System Updates" row reflects the state right after the
+          // update finished, instead of the pre-update cached value.
+          fetchHealthDetails(true).catch(() => {})
         }}
         scriptPath="/usr/local/share/proxmenux/scripts/utilities/proxmox_update.sh"
         scriptName="proxmox_update"

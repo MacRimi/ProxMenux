@@ -12,7 +12,7 @@ This release adds two in-dashboard improvements — a one-click Proxmox update t
 - New **Update Now** button inside the Health Monitor modal, under the **System Updates** section.
 - Runs the standard Proxmox update flow (`apt update` + `dist-upgrade` + post-update cleanup) in an in-dashboard terminal — no need to open a shell.
 - Only appears when updates are pending; when the system is up to date the button stays hidden.
-- On close, the Health Monitor refreshes so the pending-update count and kernel row update immediately.
+- On close, the Health Monitor forces a cache-busting refresh (`/api/health/full?refresh=1`) so the pending-update count and kernel row reflect the post-update state right away, instead of the pre-update value that the background cache had stored moments before the run.
 - The underlying script is context-aware: on an already-configured production host it respects the operator's custom repositories (never disables enterprise/ceph, never deletes legacy sources, never purges alternate NTP, never force-installs zfsutils/chrony); on a bare host it lays down only the missing base repos. It also detects a newly installed kernel that isn't the running one and prompts for reboot at the end.
 - During the upgrade, `service_fail` notifications for PVE services (pve-cluster, pveproxy, corosync…) are suppressed — their restart is a normal part of the upgrade cycle. Suppression extends 60 s past apt exit so the trailing restart events don't leak through.
 
