@@ -372,7 +372,7 @@ extract_appimage_to_runtime_dir() {
 
     rm -f "$appimage_path"
 
-    msg_ok "AppImage runtime extracted (no FUSE mount; bypasses Wazuh rule 521)."
+    msg_ok "AppImage runtime extracted."
     return 0
 }
 
