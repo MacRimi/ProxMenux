@@ -848,7 +848,7 @@ install_normal_version() {
         create_monitor_service
     fi
     
-    msg_ok "ProxMenux Normal Version installation completed successfully."
+    msg_ok "ProxMenux installation completed successfully."
 }
 
 show_installation_options() {
