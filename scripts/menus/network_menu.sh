@@ -751,57 +751,45 @@ guided_configuration_cleanup() {
 
 
 setup_persistent_network() {
-    local LINK_DIR="/etc/systemd/network"
-    local BACKUP_DIR="/etc/systemd/network/backup-$(date +%Y%m%d-%H%M%S)"
-    
     if ! dialog --title "$(translate "Network Interface Setup")" \
          --yesno "\n$(translate "Create persistent network interface names?")" 8 60; then
         return 1
     fi
-    show_proxmenux_logo    
+    show_proxmenux_logo
     msg_info "$(translate "Setting up persistent network interfaces")"
     sleep 2
-    # Create directory
-    mkdir -p "$LINK_DIR"
-    
-    # Backup existing files
-    if ls "$LINK_DIR"/*.link >/dev/null 2>&1; then
-        mkdir -p "$BACKUP_DIR"
-        cp "$LINK_DIR"/*.link "$BACKUP_DIR"/ 2>/dev/null || true
-    fi
-    
-    # Process physical interfaces
-    local count=0
-    for iface in $(ls /sys/class/net/ | grep -vE "lo|docker|veth|br-|vmbr|tap|fwpr|fwln|virbr|bond|cilium|zt|wg"); do
-        if [[ -e "/sys/class/net/$iface/device" ]] || [[ -e "/sys/class/net/$iface/phy80211" ]]; then
-            local MAC=$(cat /sys/class/net/$iface/address 2>/dev/null)
-            
-            if [[ "$MAC" =~ ^([a-fA-F0-9]{2}:){5}[a-fA-F0-9]{2}$ ]]; then
-                local LINK_FILE="$LINK_DIR/10-$iface.link"
-                
-                cat > "$LINK_FILE" <<EOF
-[Match]
-MACAddress=$MAC
 
-[Link]
-Name=$iface
-EOF
-                chmod 644 "$LINK_FILE"
-                ((count++))
-            fi
+    if ! type pmx_setup_persistent_network &>/dev/null; then
+        if [[ -f "$LOCAL_SCRIPTS/global/utils-install-functions.sh" ]]; then
+            source "$LOCAL_SCRIPTS/global/utils-install-functions.sh"
         fi
-    done
-    
-    if [[ $count -gt 0 ]]; then
+    fi
+
+    local count=0 removed_stale=0 removed_legacy=0
+    while IFS='=' read -r key value; do
+        case "$key" in
+            COUNT)          count="$value" ;;
+            REMOVED_STALE)  removed_stale="$value" ;;
+            REMOVED_LEGACY) removed_legacy="$value" ;;
+        esac
+    done < <(pmx_setup_persistent_network)
+
+    if (( removed_legacy > 0 )); then
+        msg_ok "$(translate "Migrated") $removed_legacy $(translate "legacy .link file(s) to the ProxMenux-managed format")"
+    fi
+    if (( removed_stale > 0 )); then
+        msg_ok "$(translate "Reconciled") $removed_stale $(translate "stale entry/entries for interfaces no longer present")"
+    fi
+    if (( count > 0 )); then
         msg_ok "$(translate "Created persistent names for") $count $(translate "interfaces")"
         msg_ok "$(translate "Changes will apply after reboot.")"
     else
         msg_warn "$(translate "No physical interfaces found")"
     fi
-        register_tool "persistent_network" true
-        echo -e
-        msg_success "$(translate "Press ENTER to continue...")"
-        read -r
+    register_tool "persistent_network" true
+    echo -e
+    msg_success "$(translate "Press ENTER to continue...")"
+    read -r
 }
 
 

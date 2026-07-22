@@ -1648,6 +1648,13 @@ fi
 if [[ -d "\$RECOVERY_ROOT/var/lib/pve-cluster" ]]; then
   mkdir -p /var/lib/pve-cluster
   cp -a "\$RECOVERY_ROOT/var/lib/pve-cluster/." /var/lib/pve-cluster/ || true
+  # If the backup only carried the raw-fallback (no sqlite3 dump), promote
+  # it to config.db so pve-cluster picks it up on start.
+  if [[ ! -f /var/lib/pve-cluster/config.db && -f /var/lib/pve-cluster/config.db.raw-fallback ]]; then
+    mv -f /var/lib/pve-cluster/config.db.raw-fallback /var/lib/pve-cluster/config.db
+  else
+    rm -f /var/lib/pve-cluster/config.db.raw-fallback
+  fi
 fi
 
 systemctl start pve-cluster || true
@@ -3397,6 +3404,202 @@ _rs_run_custom_restore() {
 # and missing on this host, regardless of strategy — installing
 # user-installed packages is a prerequisite for the restored
 # systemd units and config files to actually do anything.
+
+# Import non-root ZFS pools from the backup manifest whose disks are
+# all present on this host. Retry with -f on foreign hostid.
+_rs_import_data_pools() {
+    local staging_root="$1"
+    local manifest="$staging_root/manifest.json"
+    [[ -f "$manifest" ]] || return 0
+    command -v zpool >/dev/null 2>&1 || return 0
+    command -v jq    >/dev/null 2>&1 || return 0
+
+    local root_pool=""
+    if command -v zfs >/dev/null 2>&1; then
+        local root_dataset
+        root_dataset=$(zfs get -Ho value name / 2>/dev/null | head -1)
+        [[ "$root_dataset" == "-" ]] && root_dataset=""
+        root_pool="${root_dataset%%/*}"
+    fi
+
+    local live_pools
+    live_pools=$(zpool list -H -o name 2>/dev/null || true)
+
+    local -a ok=() forced=() partial=() missing=() failed=()
+    local pool_name
+
+    while IFS= read -r pool_name; do
+        [[ -z "$pool_name" ]] && continue
+        [[ "$pool_name" == "$root_pool" ]] && continue
+        if grep -qFx "$pool_name" <<<"$live_pools"; then
+            continue
+        fi
+
+        local devs_all devs_total=0 devs_present=0 devs_missing=0 dev dev_path
+        devs_all=$(jq -r --arg n "$pool_name" \
+            '.storage_inventory.zfs_pools[]? | select(.name==$n) | .devices_by_id[]?' \
+            "$manifest" 2>/dev/null)
+        [[ -z "$devs_all" ]] && continue
+        # devices_by_id entries can be a by-id basename or an absolute path.
+        while IFS= read -r dev; do
+            [[ -z "$dev" ]] && continue
+            ((devs_total++))
+            if [[ "$dev" == /* ]]; then
+                dev_path="$dev"
+            else
+                dev_path="/dev/disk/by-id/$dev"
+            fi
+            if [[ -e "$dev_path" ]]; then
+                ((devs_present++))
+            else
+                ((devs_missing++))
+            fi
+        done <<<"$devs_all"
+
+        if (( devs_present == 0 )); then
+            missing+=("$pool_name")
+            continue
+        fi
+        if (( devs_missing > 0 )); then
+            partial+=("$pool_name (${devs_present}/${devs_total} $(translate 'disks present'))")
+            continue
+        fi
+
+        if zpool import "$pool_name" 2>/dev/null; then
+            ok+=("$pool_name")
+        elif zpool import -f "$pool_name" 2>/dev/null; then
+            forced+=("$pool_name")
+        else
+            failed+=("$pool_name")
+        fi
+    done < <(jq -r '.storage_inventory.zfs_pools[]?.name' "$manifest" 2>/dev/null)
+
+    if (( ${#ok[@]} == 0 && ${#forced[@]} == 0 && ${#partial[@]} == 0 && \
+          ${#missing[@]} == 0 && ${#failed[@]} == 0 )); then
+        return 0
+    fi
+
+    echo
+    msg_info "$(translate 'Auto-importing ZFS data pools from backup...')"
+    stop_spinner
+    if (( ${#ok[@]} > 0 )); then
+        msg_ok "$(translate 'Imported:') ${ok[*]}"
+    fi
+    if (( ${#forced[@]} > 0 )); then
+        msg_ok "$(translate 'Imported (foreign hostid, forced):') ${forced[*]}"
+    fi
+    if (( ${#partial[@]} > 0 )); then
+        msg_warn "$(translate 'Skipped (some disks missing):') ${partial[*]}"
+    fi
+    if (( ${#missing[@]} > 0 )); then
+        msg_warn "$(translate 'Skipped (no disks of the pool are present on this host):') ${missing[*]}"
+    fi
+    if (( ${#failed[@]} > 0 )); then
+        msg_error "$(translate 'Import failed — inspect with `zpool import`:') ${failed[*]}"
+    fi
+
+    _rs_persist_datapool_import "${ok[@]}" "|FORCED|" "${forced[@]}" \
+        "|PARTIAL|" "${partial[@]}" "|MISSING|" "${missing[@]}" \
+        "|FAILED|" "${failed[@]}"
+}
+
+# Write the data_pools_import section into restore-state.json (which
+# the Backups tab polls) and an append-only log under /var/log/proxmenux.
+# Seeds the state file with placeholder fields when it doesn't exist yet
+# so the UI can render just this section without crashing on undefined keys.
+_rs_persist_datapool_import() {
+    command -v jq >/dev/null 2>&1 || return 0
+    local mode="OK"
+    local -a ok=() forced=() partial=() missing=() failed=()
+    local arg
+    for arg in "$@"; do
+        case "$arg" in
+            "|FORCED|")  mode="FORCED"  ;;
+            "|PARTIAL|") mode="PARTIAL" ;;
+            "|MISSING|") mode="MISSING" ;;
+            "|FAILED|")  mode="FAILED"  ;;
+            *)
+                case "$mode" in
+                    OK)      ok+=("$arg")      ;;
+                    FORCED)  forced+=("$arg")  ;;
+                    PARTIAL) partial+=("$arg") ;;
+                    MISSING) missing+=("$arg") ;;
+                    FAILED)  failed+=("$arg")  ;;
+                esac
+                ;;
+        esac
+    done
+
+    local state_dir="/var/lib/proxmenux"
+    local state_file="$state_dir/restore-state.json"
+    local log_dir="/var/log/proxmenux"
+    local log_file="$log_dir/restore-datapools-$(date +%Y%m%d_%H%M%S).log"
+    mkdir -p "$state_dir" "$log_dir" 2>/dev/null || true
+
+    {
+        echo "=== ProxMenux data-pool auto-import at $(date -Iseconds) ==="
+        local p
+        for p in "${ok[@]}";      do echo "OK       $p"; done
+        for p in "${forced[@]}";  do echo "FORCED   $p (foreign hostid, imported with -f)"; done
+        for p in "${partial[@]}"; do echo "PARTIAL  $p (some vdev disks missing — not imported)"; done
+        for p in "${missing[@]}"; do echo "MISSING  $p (no disks of the pool are present on this host)"; done
+        for p in "${failed[@]}";  do echo "FAILED   $p (zpool import failed — inspect manually)"; done
+    } >>"$log_file" 2>/dev/null || true
+
+    # jq -sR reads each array from newline-separated stdin so entries
+    # containing spaces (partial pools carry a count fragment) round-trip.
+    local ok_json forced_json partial_json missing_json failed_json section
+    ok_json=$(printf '%s\n'      "${ok[@]:-}"      | jq -Rsc 'split("\n") | map(select(length>0))')
+    forced_json=$(printf '%s\n'  "${forced[@]:-}"  | jq -Rsc 'split("\n") | map(select(length>0))')
+    partial_json=$(printf '%s\n' "${partial[@]:-}" | jq -Rsc 'split("\n") | map(select(length>0))')
+    missing_json=$(printf '%s\n' "${missing[@]:-}" | jq -Rsc 'split("\n") | map(select(length>0))')
+    failed_json=$(printf '%s\n'  "${failed[@]:-}"  | jq -Rsc 'split("\n") | map(select(length>0))')
+
+    section=$(jq -n \
+        --arg finished_at "$(date -Iseconds)" \
+        --arg log_path    "$log_file" \
+        --argjson ok      "$ok_json" \
+        --argjson forced  "$forced_json" \
+        --argjson partial "$partial_json" \
+        --argjson missing "$missing_json" \
+        --argjson failed  "$failed_json" \
+        '{data_pools_import: {
+            ok:$ok, forced:$forced, partial:$partial,
+            missing:$missing, failed:$failed,
+            finished_at:$finished_at, log_path:$log_path
+        }}')
+
+    local tmp
+    tmp=$(mktemp "${state_file}.XXXXXX") || return 0
+    if [[ -f "$state_file" ]]; then
+        if jq -c ". * $section" "$state_file" > "$tmp" 2>/dev/null; then
+            mv -f "$tmp" "$state_file"
+        else
+            rm -f "$tmp"
+        fi
+    else
+        local seed
+        seed=$(jq -n \
+            --arg started    "$(date -Iseconds)" \
+            --arg log_path   "$log_file" \
+            --argjson section "$section" \
+            '{status:"complete",
+              started_at:$started,
+              finished_at:$started,
+              current_step:"Data pools imported",
+              steps_done:1,
+              steps_total:1,
+              log_path:$log_path,
+              components:[],
+              rollback_delta:{},
+              sanity_warnings:[],
+              summary:null,
+              acknowledged:false} * $section')
+        printf '%s\n' "$seed" > "$tmp"
+        mv -f "$tmp" "$state_file"
+    fi
+}
+
 _rs_run_complete_extras() {
     local staging_root="$1"
     local include_guests="${2:-1}"
@@ -3617,6 +3820,12 @@ _rs_run_complete_extras() {
             fi
         fi
     fi
+
+    # ─ Data ZFS pools — auto-import ───────────────────────────
+    # Skips the root pool and any pool whose disks aren't all present.
+    # Retries with -f when ZFS rejects the import as foreign and flags
+    # the pool as forced in the report.
+    _rs_import_data_pools "$staging_root"
 
     # ─ Guest configs — only in full strategies ────────────────
     if [[ "$include_guests" == "1" ]]; then

@@ -107,6 +107,7 @@ hb_default_profile_paths() {
         # ── Common Proxmox tooling (skipped if not present) ──
         "/etc/systemd/system"  # custom units (including log2ram.service if installed)
         "/etc/systemd/journald.conf"  # journal retention tuning from post-install
+        "/etc/systemd/network"  # .link files that pin NIC names to MAC
         "/etc/log2ram.conf"
         "/etc/logrotate.conf"
         "/etc/logrotate.d"     # post-install drops log2ram + custom logrotate here
@@ -524,6 +525,30 @@ hb_prepare_staging() {
     : > "$selected_file"
     : > "$missing_file"
 
+    # pmxcfs (/etc/pve) is served from this SQLite DB with pve-cluster
+    # running. A plain rsync of the raw file can catch it mid-WAL
+    # checkpoint. sqlite3's `.backup` is the canonical way to grab a
+    # consistent snapshot with the DB in use, matching Proxmox's own
+    # documented advice. The raw file is also kept as `.raw-fallback`
+    # for environments without sqlite3.
+    if [[ -f /var/lib/pve-cluster/config.db ]]; then
+        mkdir -p "$staging_root/rootfs/var/lib/pve-cluster"
+        if command -v sqlite3 >/dev/null 2>&1; then
+            if sqlite3 /var/lib/pve-cluster/config.db \
+                ".backup '$staging_root/rootfs/var/lib/pve-cluster/config.db'" 2>/dev/null; then
+                echo "pmxcfs_config_db=sqlite_backup" >> "$staging_root/metadata/run_info.env.tmp"
+            else
+                cp -a /var/lib/pve-cluster/config.db \
+                    "$staging_root/rootfs/var/lib/pve-cluster/config.db.raw-fallback" 2>/dev/null || true
+                echo "pmxcfs_config_db=raw_fallback" >> "$staging_root/metadata/run_info.env.tmp"
+            fi
+        else
+            cp -a /var/lib/pve-cluster/config.db \
+                "$staging_root/rootfs/var/lib/pve-cluster/config.db.raw-fallback" 2>/dev/null || true
+            echo "pmxcfs_config_db=raw_fallback" >> "$staging_root/metadata/run_info.env.tmp"
+        fi
+    fi
+
     local p rel target
     for p in "${paths[@]}"; do
         rel="${p#/}"
@@ -539,6 +564,19 @@ hb_prepare_staging() {
                 --exclude "tmp/"
                 --exclude "*.log"
             )
+
+            # /var/lib/pve-cluster: skip the raw config.db and its WAL/SHM
+            # sidecars — they were already captured atomically above via
+            # sqlite3 .backup (or as raw-fallback when sqlite3 isn't
+            # available). Everything else in the directory (backup subdir,
+            # auxiliary state) is safe to rsync live.
+            if [[ "$rel" == "var/lib/pve-cluster" || "$rel" == "var/lib/pve-cluster/"* ]]; then
+                rsync_opts+=(
+                    --exclude "config.db"
+                    --exclude "config.db-wal"
+                    --exclude "config.db-shm"
+                )
+            fi
 
             # /root is included by default for easier recovery, but avoid volatile/sensitive noise.
             if [[ "$rel" == "root" || "$rel" == "root/"* ]]; then
@@ -587,7 +625,11 @@ hb_prepare_staging() {
         echo "generated_at=$(date -Iseconds)"
         echo "hostname=$(hostname)"
         echo "kernel=$(uname -r)"
+        if [[ -f "$meta/run_info.env.tmp" ]]; then
+            cat "$meta/run_info.env.tmp"
+        fi
     } > "$meta/run_info.env"
+    rm -f "$meta/run_info.env.tmp"
     command -v pveversion >/dev/null 2>&1 && pveversion -v > "$meta/pveversion.txt" 2>&1 || true
     command -v lsblk    >/dev/null 2>&1 && lsblk -f     > "$meta/lsblk.txt"      2>&1 || true
     command -v qm       >/dev/null 2>&1 && qm list       > "$meta/qm-list.txt"    2>&1 || true

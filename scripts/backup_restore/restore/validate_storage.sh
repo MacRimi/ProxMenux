@@ -30,9 +30,16 @@ while IFS= read -r pool_json; do
   needed_devs="$(printf '%s' "$pool_json" | jq -r '.devices_by_id[]?')"
   present=()
   missing=()
+  # devices_by_id entries can be a by-id basename or an absolute path.
+  dev_path=""
   while IFS= read -r dev; do
     [[ -z "$dev" ]] && continue
-    if [[ -e "/dev/disk/by-id/$dev" ]]; then
+    if [[ "$dev" == /* ]]; then
+      dev_path="$dev"
+    else
+      dev_path="/dev/disk/by-id/$dev"
+    fi
+    if [[ -e "$dev_path" ]]; then
       present+=("$dev")
     else
       missing+=("$dev")

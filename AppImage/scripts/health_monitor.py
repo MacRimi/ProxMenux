@@ -3614,26 +3614,32 @@ class HealthMonitor:
                     if health_persistence.check_vm_running(vm_id):
                         continue  # Error auto-resolved if VM is now running
                 
-                # Still active, add to details
+                # Still active, add to details. `details` may be persisted
+                # as SQL NULL / JSON null → deserializes to Python None, and
+                # `dict.get('details', {})` returns None (not `{}`) in that
+                # case. Coalesce explicitly to avoid `NoneType has no
+                # attribute 'get'` (issue #255 in 1.2.3).
+                details = error.get('details') or {}
                 vm_details[error_key] = {
                     'status': error['severity'],
                     'reason': error['reason'],
-                    'id': error.get('details', {}).get('id', 'unknown'),
-                    'type': error.get('details', {}).get('type', 'VM/CT'),
+                    'id': details.get('id', 'unknown'),
+                    'type': details.get('type', 'VM/CT'),
                     'first_seen': error['first_seen'],
                     'dismissed': False,
                 }
-                issues.append(f"{error.get('details', {}).get('type', 'VM')} {error.get('details', {}).get('id', '')}: {error['reason']}")
-            
+                issues.append(f"{details.get('type', 'VM')} {details.get('id', '')}: {error['reason']}")
+
             # Process dismissed errors (show as INFO)
             for error in dismissed_vm_errors:
                 error_key = error['error_key']
                 if error_key not in vm_details:  # Don't overwrite active errors
+                    details = error.get('details') or {}
                     vm_details[error_key] = {
                         'status': 'INFO',
                         'reason': error['reason'],
-                        'id': error.get('details', {}).get('id', 'unknown'),
-                        'type': error.get('details', {}).get('type', 'VM/CT'),
+                        'id': details.get('id', 'unknown'),
+                        'type': details.get('type', 'VM/CT'),
                         'first_seen': error['first_seen'],
                         'dismissed': True,
                     }

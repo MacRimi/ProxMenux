@@ -101,7 +101,14 @@ def acknowledge_error():
                 'security': 'security_check',
                 'temperature': 'cpu_check',
                 'network': 'network_check',
+                # Both 'disks' (kept for compat) and 'storage' land on the
+                # same cache — the two categories share `storage_check` in
+                # health_monitor. Without the 'storage' entry, dismissing
+                # a storage_unavailable / mount_stale / lxc_mount_low
+                # error persisted but never invalidated the cache, so the
+                # error stayed visible in the next fetch.
                 'disks': 'storage_check',
+                'storage': 'storage_check',
                 'vms': 'vms_check',
             }
             cache_key = cache_key_map.get(category)
@@ -223,14 +230,25 @@ def get_full_health():
     Get complete health data in a single request: detailed status + active errors + dismissed.
     Uses background-cached results if fresh (< 6 min) for instant response,
     otherwise runs a fresh check.
+
+    ?refresh=1 busts the background + per-check caches for updates/services/
+    security before returning, so an event that just changed underlying state
+    (Update Now finished, dismiss action) sees the new value immediately
+    instead of waiting for the next polling tick.
     """
     import time as _time
     try:
+        if request.args.get('refresh') == '1':
+            for ck in ('updates_check', 'pve_services', 'security_check',
+                       '_bg_detailed', '_bg_overall', 'overall_health'):
+                health_monitor.last_check_times.pop(ck, None)
+                health_monitor.cached_results.pop(ck, None)
+
         # Try to use the background-cached detailed result for instant response
         bg_key = '_bg_detailed'
         bg_last = health_monitor.last_check_times.get(bg_key, 0)
         bg_age = _time.time() - bg_last
-        
+
         if bg_age < 360 and bg_key in health_monitor.cached_results:
             # Use cached result (at most ~5 min old)
             details = health_monitor.cached_results[bg_key]

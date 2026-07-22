@@ -4,6 +4,7 @@ import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { ThemeProvider } from "../components/theme-provider"
 import { PwaRegister } from "../components/pwa-register"
+import { PwaInstallPrompt } from "../components/pwa-install-prompt"
 import { Suspense } from "react"
 import "./globals.css"
 
@@ -48,6 +49,7 @@ export default function RootLayout({
           </ThemeProvider>
         </Suspense>
         <PwaRegister />
+        <PwaInstallPrompt />
       </body>
     </html>
   )

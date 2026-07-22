@@ -918,11 +918,22 @@ class HealthPersistence:
                 # Try to infer category from the error_key prefix.
                 category = ''
                 # Order matters: more specific prefixes MUST come before shorter ones
-                # e.g. 'security_updates' (updates) before 'security_' (security)
+                # e.g. 'security_updates' (updates) before 'security_' (security),
+                # and 'lxc_disk_low_' / 'zfs_pool_full_' (storage) before the shorter
+                # 'disk_' / 'zfs_pool_' fallbacks that map to 'disks'.
                 for cat, prefix in [('updates', 'security_updates'), ('updates', 'system_age'),
                                     ('updates', 'pending_updates'), ('updates', 'kernel_pve'),
                                     ('security', 'security_'),
                                     ('pve_services', 'pve_service_'), ('vms', 'vmct_'), ('vms', 'vm_'), ('vms', 'ct_'),
+                                    # ── Storage keys — HealthMonitor emits these under `storage` category
+                                    # but they used to fall through to 'general' here because no prefix
+                                    # matched, breaking the Dismiss flow (the acknowledge would persist
+                                    # but the storage cache wouldn't be invalidated because the ack was
+                                    # tagged with the wrong category).
+                                    ('storage', 'storage_unavailable_'), ('storage', 'mount_stale'),
+                                    ('storage', 'mount_readonly'), ('storage', 'lxc_disk_low_'),
+                                    ('storage', 'lxc_mount_low_'), ('storage', 'pve_storage_full_'),
+                                    ('storage', 'zfs_pool_full_'),
                                     ('disks', 'disk_smart_'), ('disks', 'disk_'), ('disks', 'smart_'), ('disks', 'zfs_pool_'),
                                     ('logs', 'log_'), ('network', 'net_'),
                                     ('temperature', 'temp_')]:

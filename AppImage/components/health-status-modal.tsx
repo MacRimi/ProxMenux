@@ -32,6 +32,7 @@ import {
   FileText,
   RefreshCw,
   Shield,
+  Download,
   X,
   Clock,
   BellOff,
@@ -39,6 +40,7 @@ import {
   Settings2,
   HelpCircle,
 } from "lucide-react"
+import { ScriptTerminalModal } from "./script-terminal-modal"
 
 interface CategoryCheck {
   status: string
@@ -122,14 +124,15 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
   const [error, setError] = useState<string | null>(null)
   const [dismissingKey, setDismissingKey] = useState<string | null>(null)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+  const [showUpdateTerminal, setShowUpdateTerminal] = useState(false)
 
-  const fetchHealthDetails = useCallback(async () => {
+  const fetchHealthDetails = useCallback(async (force = false) => {
     setLoading(true)
     setError(null)
 
     try {
       let newOverallStatus = "OK"
-      
+
       // Use the new combined endpoint for fewer round-trips
       const token = getAuthToken()
       const authHeaders: Record<string, string> = {}
@@ -137,7 +140,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
         authHeaders["Authorization"] = `Bearer ${token}`
       }
 
-      const response = await fetch(getApiUrl("/api/health/full"), { headers: authHeaders })
+      const response = await fetch(getApiUrl(force ? "/api/health/full?refresh=1" : "/api/health/full"), { headers: authHeaders })
       let infoCount = 0
       
       if (!response.ok) {
@@ -219,7 +222,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     if (open) {
       fetchHealthDetails()
       // Auto-refresh every 5 minutes while modal is open
-      const refreshInterval = setInterval(fetchHealthDetails, 300000)
+      const refreshInterval = setInterval(() => fetchHealthDetails(), 300000)
       return () => clearInterval(refreshInterval)
     }
   }, [open, fetchHealthDetails])
@@ -722,6 +725,23 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                             No issues detected
                           </div>
                         )}
+                        {/* Only offer "Update Now" when the category is not
+                            already OK — hiding it when there's nothing
+                            pending prevents the operator from spawning a
+                            terminal that would only report "System is
+                            already up to date". */}
+                        {key === "updates" && status?.toUpperCase() !== "OK" && (
+                          <div className="flex justify-end px-3 py-2 pt-1">
+                            <Button
+                              size="sm"
+                              onClick={() => setShowUpdateTerminal(true)}
+                              className="bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 hover:text-purple-200"
+                            >
+                              <Download className="h-4 w-4 mr-1.5" />
+                              Update Now
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -848,6 +868,23 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
           </div>
         )}
       </DialogContent>
+      <ScriptTerminalModal
+        open={showUpdateTerminal}
+        onClose={() => {
+          setShowUpdateTerminal(false)
+          // Force a fresh read (cache-busting via ?refresh=1) so the
+          // "System Updates" row reflects the state right after the
+          // update finished, instead of the pre-update cached value.
+          fetchHealthDetails(true).catch(() => {})
+        }}
+        scriptPath="/usr/local/share/proxmenux/scripts/utilities/proxmox_update.sh"
+        scriptName="proxmox_update"
+        params={{
+          EXECUTION_MODE: "web",
+        }}
+        title="Proxmox System Update"
+        description="Runs apt-get update + dist-upgrade and post-update cleanup on the host."
+      />
     </Dialog>
   )
 }

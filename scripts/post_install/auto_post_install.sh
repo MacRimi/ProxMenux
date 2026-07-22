@@ -497,7 +497,7 @@ force_apt_ipv4() {
 # ==========================================================
 
 apply_network_optimizations() {
-  local FUNC_VERSION="1.0"
+  local FUNC_VERSION="1.1"
   # description: Tune TCP buffers, somaxconn, IPv4 hardening and disable rp_filter on fw bridges (PVE 9 compatible).
   msg_info "$(translate "Optimizing network settings...")"
   NECESSARY_REBOOT=1
@@ -548,8 +548,38 @@ EOF
 
   sysctl --system > /dev/null 2>&1
 
+  cat > /usr/local/sbin/proxmenux-fwbr-tune <<'EOF'
+#!/usr/bin/env bash
+# Set rp_filter=0 and log_martians=0 on Proxmox fw bridge interfaces.
+# No arg → sweep every interface currently under /proc/sys/net/ipv4/conf/.
+# One arg → tune only that interface (used by the udev rule).
+set -u
 
-  cat >/etc/systemd/system/proxmenux-fwbr-tune.service <<'EOF'
+tune_interface() {
+    local iface="$1"
+    local sysctl_path="/proc/sys/net/ipv4/conf/${iface}"
+    case "$iface" in
+        fwbr*|fwln*|fwpr*|tap*)
+            [[ -d "$sysctl_path" ]] || return 0
+            [[ -w "$sysctl_path/rp_filter"    ]] && printf '0\n' > "$sysctl_path/rp_filter"
+            [[ -w "$sysctl_path/log_martians" ]] && printf '0\n' > "$sysctl_path/log_martians"
+            ;;
+    esac
+}
+
+if [[ $# -gt 0 ]]; then
+    tune_interface "$1"
+else
+    for sysctl_path in /proc/sys/net/ipv4/conf/*; do
+        [[ -d "$sysctl_path" ]] || continue
+        tune_interface "${sysctl_path##*/}"
+    done
+fi
+EOF
+  chmod 0755 /usr/local/sbin/proxmenux-fwbr-tune
+  chown root:root /usr/local/sbin/proxmenux-fwbr-tune
+
+  cat > /etc/systemd/system/proxmenux-fwbr-tune.service <<'EOF'
 [Unit]
 Description=ProxMenux - Tune rp_filter/log_martians on virtual fw bridges
 After=network-online.target
@@ -557,14 +587,26 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -c 'for i in /proc/sys/net/ipv4/conf/*; do n=${i##*/}; case "$n" in fwbr*|fwln*|fwpr*|tap*) echo 0 > /proc/sys/net/ipv4/conf/$n/rp_filter; echo 0 > /proc/sys/net/ipv4/conf/$n/log_martians; esac; done'
+ExecStart=/usr/local/sbin/proxmenux-fwbr-tune
+RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-  systemctl daemon-reload
+  cat > /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules <<'EOF'
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwbr*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwln*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwpr*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="tap*",  RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
+EOF
+  chmod 0644 /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
+  chown root:root /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
+
+  systemctl daemon-reload >/dev/null 2>&1 || true
+  udevadm control --reload-rules >/dev/null 2>&1 || true
   systemctl enable --now proxmenux-fwbr-tune.service >/dev/null 2>&1 || true
+  /usr/local/sbin/proxmenux-fwbr-tune >/dev/null 2>&1 || true
 
 
   local interfaces_file="/etc/network/interfaces"
@@ -638,7 +680,7 @@ EOF
 
 
 install_log2ram_auto() {
-    local FUNC_VERSION="1.2"
+    local FUNC_VERSION="1.3"
 
     # description: Install Log2RAM with size auto-tuned to host RAM (128M/256M/512M); SSD/M.2 detection skips on rotational disks.
 
@@ -727,6 +769,52 @@ install_log2ram_auto() {
         return 1
     fi
 
+    # Drop ACL preservation from the upstream rsync call: some
+    # /var/log.hdd filesystems reject POSIX ACLs and log2ram write
+    # exits 23 with `set_acl: Operation not supported`. xattrs stay.
+    local _l2r_bin
+    for _l2r_bin in \
+        "$(command -v log2ram 2>/dev/null)" \
+        /usr/local/bin/log2ram \
+        /usr/sbin/log2ram \
+        /usr/bin/log2ram
+    do
+        [[ -n "$_l2r_bin" && -f "$_l2r_bin" ]] || continue
+        if grep -q 'rsync -aAXv ' "$_l2r_bin" 2>/dev/null; then
+            cp -a "$_l2r_bin" "${_l2r_bin}.proxmenux.bak"
+            sed -i 's/rsync -aAXv /rsync -aXv --no-acls /g' "$_l2r_bin"
+        fi
+        break
+    done
+
+    # Size-based rotation for the PBS API logs — the upstream package
+    # ships no logrotate rule and pvestatd's local-datastore poll fills
+    # them fast enough to saturate a tmpfs /var/log.
+    if dpkg-query -W -f='${Status}' proxmox-backup-server 2>/dev/null \
+        | grep -q 'install ok installed'; then
+        mkdir -p /var/log/proxmox-backup/api 2>/dev/null || true
+        cat > /etc/logrotate.d/proxmox-backup-api <<'EOF'
+/var/log/proxmox-backup/api/access.log /var/log/proxmox-backup/api/auth.log {
+    size 20M
+    rotate 3
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}
+EOF
+        chmod 0644 /etc/logrotate.d/proxmox-backup-api
+        chown root:root /etc/logrotate.d/proxmox-backup-api
+        cat > /etc/cron.hourly/proxmox-backup-logrotate <<'EOF'
+#!/bin/sh
+/usr/sbin/logrotate /etc/logrotate.d/proxmox-backup-api >/dev/null 2>&1
+EOF
+        chmod 0755 /etc/cron.hourly/proxmox-backup-logrotate
+        chown root:root /etc/cron.hourly/proxmox-backup-logrotate
+        msg_ok "$(translate "PBS API log rotation configured (hourly, size-based)")"
+    fi
+
     systemctl enable --now log2ram >/dev/null 2>&1 || true
     systemctl daemon-reload >/dev/null 2>&1 || true
 
@@ -766,13 +854,10 @@ EOF
 
     cat > /usr/local/bin/log2ram-check.sh <<'EOF'
 #!/usr/bin/env bash
-# v1.2 — `log2ram write` only copies tmpfs→disk; it does NOT shrink
-# the tmpfs. When journald or pveproxy/access.log grow past their
-# limits the tmpfs hit 100% and PVE crashed with "No space left on
-# device" on Shell open (community-reported: JC Miñarro, Nicolás P.
-# de A., 17-18/05). We now vacuum the journal and truncate the
-# non-rotating logs that actually consume the tmpfs before calling
-# `log2ram write`.
+# Watch /var/log usage on Log2RAM's tmpfs and act at two thresholds:
+#   > 80% → vacuum journald down to ~30% of SIZE, then log2ram write
+#   > 92% → aggressive: journal to ~5%, rotate PBS API logs if present,
+#           truncate pveproxy/pveam, then log2ram write
 PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 CONF_FILE="/etc/log2ram.conf"
@@ -793,15 +878,13 @@ LOCK="/run/log2ram-check.lock"
 exec 9>"$LOCK" 2>/dev/null || exit 0
 flock -n 9 || exit 0
 
-# `log2ram write` alone leaves the tmpfs full. Real recovery requires:
-# (a) journal vacuum — journald respects --vacuum-size unconditionally,
-#     unlike SystemMaxUse which only enforces on rotation boundaries;
-# (b) truncating logs that aren't rotated by logrotate (pveproxy, pveam);
-# (c) THEN syncing to disk so the persistent copy reflects reality.
 if (( USED_BYTES > EMERGENCY_BYTES )); then
     SAFE_JOURNAL_MB=$(( SIZE_MiB * 5 / 100 ))
     [[ "$SAFE_JOURNAL_MB" -lt 16 ]] && SAFE_JOURNAL_MB=16
     journalctl --vacuum-size="${SAFE_JOURNAL_MB}M" >/dev/null 2>&1 || true
+    if [[ -x /usr/sbin/logrotate && -f /etc/logrotate.d/proxmox-backup-api ]]; then
+        /usr/sbin/logrotate -f /etc/logrotate.d/proxmox-backup-api >/dev/null 2>&1 || true
+    fi
     : > /var/log/pveproxy/access.log 2>/dev/null || true
     : > /var/log/pveproxy/error.log 2>/dev/null || true
     : > /var/log/pveam.log 2>/dev/null || true
@@ -820,8 +903,7 @@ EOF
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 MAILTO=""
-# Runs every 10 min starting at :03 to avoid overlap with debian-sa1 (:00/:10/:20...)
-# nice -n 19 + ionice -c 3 ensures minimum CPU/IO priority (no visible spikes)
+# nice/ionice keep the check off the priority queue for scheduled tasks.
 3-59/10 * * * * root nice -n 19 ionice -c 3 /usr/local/bin/log2ram-check.sh >/dev/null 2>&1
 EOF
     chmod 0644 /etc/cron.d/log2ram-auto-sync
@@ -1011,57 +1093,37 @@ enable_zfs_autotrim() {
 
 
 setup_persistent_network() {
-    local FUNC_VERSION="1.0"
+    local FUNC_VERSION="1.1"
     # description: Pin NIC names to MAC addresses via systemd .link files so kernel updates don't shuffle interface names.
-    local LINK_DIR="/etc/systemd/network"
-    local BACKUP_DIR="/etc/systemd/network/backup-$(date +%Y%m%d-%H%M%S)"
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
 
     msg_info "$(translate "Setting up persistent network interfaces")"
     sleep 2
 
-    # Same legacy-conflict warning as in customizable_post_install.sh.
     if [[ -f /etc/network/interfaces ]]; then
         if grep -qE '^[[:space:]]*allow-hotplug[[:space:]]' /etc/network/interfaces 2>/dev/null; then
             msg_warn "$(translate '/etc/network/interfaces uses allow-hotplug. Renaming interfaces via systemd .link can break that flow — review the file after reboot.')"
         fi
     fi
 
-    mkdir -p "$LINK_DIR"
+    local count=0 removed_stale=0 removed_legacy=0
+    while IFS='=' read -r key value; do
+        case "$key" in
+            COUNT)          count="$value" ;;
+            REMOVED_STALE)  removed_stale="$value" ;;
+            REMOVED_LEGACY) removed_legacy="$value" ;;
+        esac
+    done < <(pmx_setup_persistent_network)
 
-    if ls "$LINK_DIR"/*.link >/dev/null 2>&1; then
-        mkdir -p "$BACKUP_DIR"
-        cp "$LINK_DIR"/*.link "$BACKUP_DIR"/ 2>/dev/null || true
+    if (( removed_legacy > 0 )); then
+        msg_ok "$(translate "Migrated") $removed_legacy $(translate "legacy .link file(s) to the ProxMenux-managed format")"
     fi
-
-    local count=0
-    for iface in $(ls /sys/class/net/ | grep -vE "lo|docker|veth|br-|vmbr|tap|fwpr|fwln|virbr|bond|cilium|zt|wg"); do
-        if [[ -e "/sys/class/net/$iface/device" ]] || [[ -e "/sys/class/net/$iface/phy80211" ]]; then
-            local MAC=$(cat /sys/class/net/$iface/address 2>/dev/null)
-
-            if [[ "$MAC" =~ ^([a-fA-F0-9]{2}:){5}[a-fA-F0-9]{2}$ ]]; then
-                local LINK_FILE="$LINK_DIR/10-$iface.link"
-
-                cat > "$LINK_FILE" <<EOF
-[Match]
-MACAddress=$MAC
-
-[Link]
-Name=$iface
-EOF
-                chmod 644 "$LINK_FILE"
-                ((count++))
-            fi
-        fi
-    done
-
-    if [[ $count -gt 0 ]]; then
+    if (( removed_stale > 0 )); then
+        msg_ok "$(translate "Reconciled") $removed_stale $(translate "stale entry/entries for interfaces no longer present")"
+    fi
+    if (( count > 0 )); then
         msg_ok "$(translate "Created persistent names for") $count $(translate "interfaces")"
-        # In PVE9, systemd-networkd is the native network backend and udev processes
-        # .link files directly. Reloading udev rules makes the new .link files effective
-        # immediately for any interface added later (hotplug, new NICs) without waiting
-        # for a full reboot. On PVE8 (ifupdown2), names are resolved at boot anyway.
         if [[ "$pve_version" -ge 9 ]]; then
             udevadm control --reload-rules 2>/dev/null || true
             msg_ok "$(translate "PVE9: udev rules reloaded — new interfaces will get correct names without reboot")"

@@ -85,7 +85,7 @@ export default async function ShowVersionInformationPage({
       </div>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("sampleHeading")}</h2>
-      <pre className="rounded-md bg-gray-100 p-4 overflow-x-auto text-xs font-mono text-gray-800 leading-relaxed border border-gray-200">{`Current ProxMenux version: 1.2.3
+      <pre className="rounded-md bg-gray-100 p-4 overflow-x-auto text-xs font-mono text-gray-800 leading-relaxed border border-gray-200">{`Current ProxMenux version: 1.2.4
 
 Installation type:
 ✓ Translation Version (Multi-language support)

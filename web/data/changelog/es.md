@@ -1,4 +1,134 @@
 
+## 2026-07-17
+
+### Nueva versión ProxMenux v1.2.4
+
+Esta versión suma dos mejoras visibles en el propio dashboard — un botón para lanzar la actualización de Proxmox desde el Monitor de Salud, y un prompt para invitar a los usuarios móviles a instalar el Monitor como PWA — extiende el flujo de restauración de Backups con snapshots consistentes de pmxcfs (`config.db`) e importación automática de pools ZFS de datos, refina el comportamiento de Log2RAM en hosts que corren Proxmox Backup Server como servicio, refuerza el ajuste de sysctl de los bridges del firewall en todo el ciclo de vida de VMs, ajusta la optimización de ZFS ARC a su propio ámbito, hace idempotentes los nombres persistentes de NIC en re-ejecuciones, recompila automáticamente los drivers DKMS cuando entra un kernel nuevo, mantiene intacta la sesión de la terminal del Monitor cuando hay update de ProxMenux disponible, y afina cinco plantillas de notificaciones y tres chequeos del panel de salud.
+---
+
+## 🩺 Botón Update Now en el Monitor de Salud
+
+- Nuevo botón **Update Now** dentro del modal del Monitor de Salud, en la sección **System Updates**.
+- Ejecuta el flujo estándar de actualización de Proxmox (`apt update` + `dist-upgrade` + limpieza posterior) en una terminal dentro del dashboard — sin necesidad de abrir una shell.
+- Solo aparece cuando hay actualizaciones pendientes; si el sistema está al día, el botón queda oculto.
+- Al cerrar, el Monitor de Salud fuerza un refresh con invalidación de caché (`/api/health/full?refresh=1`) para que el contador de actualizaciones pendientes y la fila del kernel reflejen el estado post-actualización al instante, en lugar del valor pre-actualización que la caché de fondo había guardado justo antes de la ejecución.
+- El script subyacente distingue el contexto: si se ejecuta sobre un host ya en producción, respeta los repositorios personalizados del usuario (no desactiva enterprise/ceph, no borra sources legacy, no purga NTP alternativos ni fuerza instalar zfsutils/chrony); si detecta un servidor virgen crea los repos base necesarios. Detecta también si hay un kernel nuevo instalado distinto del que está corriendo y pide el reboot al terminar.
+- Durante la actualización se suprimen las notificaciones de `service_fail` de servicios PVE (pve-cluster, pveproxy, corosync…) porque su reinicio es parte normal del upgrade; volvían a notificarse hasta 60 s después de que apt termine.
+
+---
+
+## 📱 Prompt de instalación en la app para móvil
+
+- Los visitantes por primera vez en **Android** (Chrome / Brave) e **iOS Safari** ven ahora una bottom-sheet con instrucciones claras para añadir el Monitor a su pantalla de inicio como PWA.
+- La instalación se hace a través de la propia entrada del menú del navegador ("Añadir a pantalla de inicio"), que produce una PWA real instalada que se lanza en modo standalone. La bottom-sheet no intercepta el evento `beforeinstallprompt` del navegador — interceptarlo sin llegar a llamar a `prompt()` degrada la ruta manual del menú a un acceso directo simple, que es lo que apareció en las pruebas de campo.
+- Dos niveles de descarte: **Not now** (temporal, reaparece a los 30 días) y **Don't show again** (permanente, almacenado en `localStorage`).
+- No se muestra en escritorio, ni cuando el Monitor ya se está ejecutando como aplicación instalada.
+
+---
+
+## 🔔 Contenido de notificaciones — cinco refinamientos de renderizado
+
+- **Destino de backup en título y cuerpo.** Los correos y mensajes de Telegram de backup de VM/CT llevan el storage / destino PBS, de modo que en instalaciones con varios destinos se identifica de un vistazo qué backup produjo el evento.
+- **Los cuerpos de migración llevan el nodo destino real** — extraído del log de la tarea PVE para eventos `qmigrate` / `vzmigrate`.
+- **Los cuerpos de snapshot llevan el nombre real del snapshot** — extraído del log de la tarea PVE para eventos `qmsnapshot` / `vzsnapshot`.
+- **Las notificaciones genéricas `system_problem` incluyen la razón real** — el cuerpo del payload de PVE se surface como cuerpo de la notificación.
+- **Los correos de actualización de driver NVIDIA / Coral renderizan correctamente la fila *New Version*** — el placeholder del template está ahora alineado con el campo que lee el renderer.
+
+---
+
+## 🩹 Panel de salud — tres chequeos reforzados
+
+- **Dismiss silencia ahora las alertas de storage.** El flujo de acknowledge cubre `storage_unavailable`, `mount_stale`, `mount_readonly`, `lxc_disk_low`, `lxc_mount_low`, `pve_storage_full` y `zfs_pool_full` bajo la categoría `storage`, y el caché de storage se invalida al pulsar Dismiss para que el panel se refresque inmediatamente.
+- **El chequeo de VMs & Containers tolera errores persistidos con la columna `details` a NULL** (#255). `_check_vms_cts_with_persistence` coalesciona un `details` ausente a un dict vacío antes de leer claves anidadas, de modo que una fila sparse suelta ya no deja el chequeo completo fuera de servicio.
+- **La notificación `system_startup` se dispara una sola vez por boot.** `_check_startup_aggregation` marca la agregación como completada justo después de encolar el evento, así que el resumen de arranque llega una única vez independientemente de cuántos ticks de polling entren en la sesión.
+
+---
+
+## 🛠 Móvil y webhook
+
+- **El polling del dashboard en móvil se mantiene vivo sobre HTTPS + reverse proxy.** `pwa-register.tsx` auto-desregistra cualquier Service Worker al cargar, así que la limitación en segundo plano de los navegadores móviles deja de interferir con los fetch de polling, y la instalabilidad PWA se gestiona ahora desde el nuevo prompt in-app descrito arriba.
+- **La autenticación del webhook confía en todas las IPs locales del host.** El webhook interno (`/api/notifications/webhook`) acepta peticiones desde cualquier IP de una interfaz que el host posee (Tailscale, WireGuard, LAN, IPv6, más la forma IPv4 mapeada en IPv6 `::ffff:x.x.x.x` que Flask reporta en bindings dual-stack), de modo que los botones Test de PVE funcionan a través de cualquiera de ellas.
+
+---
+
+## 🛡 Flujo de actualización — Monitor-terminal-aware para el update y para el cambio de canal
+
+- **La terminal WebSocket del Monitor expone ahora `PROXMENUX_TERMINAL=monitor`** en el entorno de cada shell que abre, y cada proceso hijo lo hereda. Esto le da a `menu` (y a cualquier otro flow que le importe) una vía fiable y determinista para saber que la sesión actual vive dentro del proceso del Monitor — una sesión que quedaría cortada a mitad de instalación si el servicio del Monitor se reiniciara.
+- **Prompt de update de `menu`** — cuando hay una nueva versión de ProxMenux disponible y la sesión corre dentro de la terminal del Monitor, el clásico prompt yes/no se sustituye por un msgbox informativo. El msgbox nombra la nueva versión y muestra el comando canónico de una línea (`bash -c "$(wget -qLO - …)"`) para ejecutar el update desde SSH o la consola del host Proxmox. Como el flow ya ha decidido que el path in-terminal es inseguro, hay un solo botón OK — no hay yes/no que pudiera disparar el update destructivo por accidente.
+- **Ajustes → Canal de release** — el mismo guard se aplica en `apply_release_channel()` de `config_menu.sh`. Seleccionar Stable ↔ Beta desde la terminal del Monitor muestra un msgbox informativo con el comando `wget` exacto para el canal destino (usando la misma URL que el flow habría descargado por su cuenta) y vuelve al menú en lugar de ejecutar el installer en el sitio.
+- **Tras pulsar OK, ambos flows continúan con normalidad.** El usuario sigue usando ProxMenux desde la misma terminal sin restricciones; solo el paso destructivo queda enrutado a otro sitio. No hay bloqueo ni acción forzada.
+- **Las sesiones SSH, la consola del host Proxmox y cualquier entorno donde `PROXMENUX_TERMINAL` no sea `monitor` mantienen el comportamiento anterior** y pueden actualizar o cambiar de canal como siempre. El cambio solo afecta al caso en el que hacerlo en el sitio rompería la sesión activa.
+- **Nota de bootstrap**: como `PROXMENUX_TERMINAL=monitor` lo añade el AppImage que ship-ea esta release, el guard solo empieza a proteger sesiones una vez que el host está en 1.2.4 o posterior. La primera actualización a 1.2.4, si se dispara desde la terminal del Monitor, aún puede caer en el comportamiento antiguo — a partir de 1.2.4 el guard queda en su sitio.
+
+---
+
+## 🔧 Flujo de actualización — Drivers DKMS recompilados cuando entra un kernel nuevo
+
+- **Cuando `apt full-upgrade` deja preparado un kernel más nuevo que el que está en marcha, `update-pve-safe.sh` recompila ahora los drivers DKMS instalados por ProxMenux contra ese nuevo kernel.** El botón Update Now del Monitor de Salud y la utilidad CLI `utilities/proxmox_update.sh` delegan ambos en `update-pve-safe.sh`, así que las dos vías ganan el comportamiento. El paso lee `components_status.json`, cruza los componentes DKMS que ProxMenux gestiona (`nvidia_driver`, `coral_driver`), instala las cabeceras de kernel correspondientes (`proxmox-headers-<newkver>` o `pve-headers-<newkver>`) si no están ya presentes, y ejecuta `dkms autoinstall -k <newkver>`. Después verifica vía `dkms status` que cada módulo esperado (`gasket` para Coral, `nvidia` para el driver NVIDIA) haya alcanzado el estado `installed` para el nuevo kernel — si alguno no lo hizo, cae al camino `--auto-reinstall` de cada instalador.
+- **Un whiptail msgbox anuncia la recompilación antes de ejecutarla.** Un solo botón OK — no hay yes/no. Nombra el kernel entrante y lista los componentes DKMS que se van a recompilar, de modo que el usuario ve exactamente qué está a punto de suceder. Dado que dejar los drivers DKMS sin recompilar dejaría el sistema con un kernel funcional pero TPU / GPU no operativos al arrancar, se trata de transparencia, no de decisión — al pulsar OK se reconoce el trabajo posterior y el flujo procede. Las invocaciones no interactivas (cron, batch sin terminal, sin whiptail) omiten el msgbox y registran la misma información.
+- **Solo se consideran componentes registrados como `installed` en `components_status.json`.** Un host sin drivers DKMS gestionados por ProxMenux no ve msgbox ni paso de recompilación. Los hosts que nunca ejecutaron el instalador de Coral o NVIDIA no se ven afectados.
+- **Si la recompilación falla, no se aborta la actualización.** Si un módulo DKMS no puede recompilarse contra el nuevo kernel (ruptura de API upstream, dependencia faltante), el flujo de actualización termina normalmente, se nombran los componentes concretos que fallaron en el resumen, y el usuario puede re-ejecutar su instalador a mano tras el reboot. El paso es best-effort por diseño — un desajuste kernel/driver es un problema upstream, no algo que el flujo de actualización deba tratar como fallo.
+- El helper compartido `pmx_rebuild_dkms_after_kernel` vive en `scripts/global/utils-install-functions.sh`, de modo que futuros actualizadores o utilidades CLI pueden reutilizarlo con una única llamada.
+
+---
+
+## 🔌 Post-install — Nombres persistentes de NIC ahora idempotentes
+
+- **Los ficheros `.link` gestionados por ProxMenux llevan ahora un prefijo distintivo y un marcador interno.** Se escriben como `10-proxmenux-<iface>.link` y la primera línea de cada fichero es `# Managed by ProxMenux — do not edit`. Ambos se comprueban en los pasos de reconciliación y desinstalación antes de tocar un fichero, de modo que cualquier cosa que el usuario haya escrito a mano o que venga de otro paquete queda a salvo.
+- **Cada re-ejecución de `setup_persistent_network` reconcilia las entradas de ProxMenux.** En cada invocación se recorren los ficheros `10-proxmenux-*.link` existentes, se extrae el valor `MACAddress=`, se compara con las MAC actualmente presentes en `/sys/class/net/`, y se eliminan únicamente las entradas propiedad de ProxMenux cuya MAC ya no está. Reemplazos de tarjetas, cambios de NIC y migraciones de hardware dejan de acumular mapeos huérfanos en cada re-ejecución.
+- **Los ficheros con formato 1.0 (`10-<iface>.link`, escritos por la versión anterior) se migran automáticamente en la primera ejecución de la nueva función.** Si el fichero coincide con la plantilla exacta que usaba el código 1.0 (dos secciones, `MACAddress=` + `Name=`, nada más), se elimina y se reemplaza por el `10-proxmenux-<iface>.link` en un solo paso. Cualquier fichero que no coincida con esa plantilla exacta se deja intacto.
+- **El desinstalador (`uninstall_persistent_network`) elimina ahora solamente ficheros que cumplan a la vez el prefijo `10-proxmenux-` y el marcador en la primera línea.** El anterior barrido `rm -f /etc/systemd/network/*.link` desaparece — los `.link` escritos por el usuario permanecen en su sitio con independencia de su nombre.
+- **Implementación única compartida.** Las tres copias de `setup_persistent_network` (`auto_post_install.sh`, `customizable_post_install.sh`, `network_menu.sh`) y el desinstalador delegan ahora en `pmx_setup_persistent_network` / `pmx_uninstall_persistent_network` en `scripts/global/utils-install-functions.sh`. Los futuros arreglos no pueden dejar una copia atrás.
+- Se sube `FUNC_VERSION` de 1.0 → 1.1 en las tres llamadas, de modo que el detector de actualizaciones de ProxMenux vuelve a ejecutar la función en hosts que ya tenían la 1.0. Esa primera re-ejecución hace la migración legacy y la reconciliación en un solo paso.
+
+---
+
+## 🧮 Post-install — Optimización de ZFS ARC ajustada a su ámbito
+
+- **`optimize_zfs_arc` establece ahora únicamente `zfs_arc_max`.** La función escribe una sola línea en `/etc/modprobe.d/99-zfsarc.conf`: `options zfs zfs_arc_max=<cap>`. `zfs_arc_min` queda en el valor por defecto de OpenZFS (auto-calculado como el mayor entre 32 MiB y ~1/32 de la RAM), y los tunables de L2ARC (`l2arc_noprefetch`, `l2arc_write_max`) y de TXG (`zfs_txg_timeout`) — que quedan fuera del ámbito de una optimización del ARC — se dejan en los valores por defecto de OpenZFS salvo que el usuario los configure explícitamente.
+- **Se regenera ahora el initramfs tras escribir el fichero.** En sistemas con ZFS-on-root el módulo ZFS se carga desde el initramfs antes de que el sistema en marcha lea `/etc/modprobe.d/`, así que un simple reboot no bastaba para que el nuevo cap surtiera efecto. `update-initramfs -u -k all` se ejecuta justo después de escribir el fichero, más `proxmox-boot-tool refresh` en hosts con systemd-boot, de modo que el valor se aplica en el siguiente arranque en lugar de quedar sombreado por la copia obsoleta del initramfs.
+- **La función se protege con la presencia de un pool ZFS vivo** (chequeo `zpool list`), de manera que se convierte en no-op en hosts que no usan ZFS.
+- **Los valores del cap usan tamaños binarios limpios**: 512 MiB hasta 16 GB de RAM, 1 GiB hasta 32 GB, RAM/8 por encima — con un suelo de 512 MiB para que una lectura defectuosa de memoria no deje un ARC inutilizablemente pequeño.
+- Se sube `FUNC_VERSION` de 1.0 → 1.1, de modo que el detector de actualizaciones de ProxMenux vuelve a ejecutar la función en hosts que ya tenían la 1.0. Como la escritura es una reescritura completa de `99-zfsarc.conf`, ejecutar la función actualizada una vez reemplaza el fichero entero limpiamente. El desinstalador ejecuta ahora también `update-initramfs` + `proxmox-boot-tool refresh` tras restaurar o eliminar la configuración, de modo que la reversión se propaga al initramfs de la misma manera.
+
+---
+
+## 🔥 Post-install — Ajuste de sysctl en los bridges del firewall reforzado
+
+- **El ajuste de `rp_filter=0` y `log_martians=0` sobre las interfaces del firewall bridge (`fwbr*`, `fwln*`, `fwpr*`, `tap*`) se aplica ahora también a las interfaces que Proxmox crea al arrancar, parar, reiniciar o migrar una VM.** Se añade `/etc/udev/rules.d/99-proxmenux-fwbr-tune.rules`, que dispara un helper por cada evento `net`/`add` matcheando esos prefijos, de modo que cada interfaz nueva obtiene el valor correcto inmediatamente sin necesidad de reboot ni de reejecutar el post-install.
+- **La lógica de ajuste se ha reorganizado en un helper independiente** en `/usr/local/sbin/proxmenux-fwbr-tune`, compartido por el barrido inicial (servicio `proxmenux-fwbr-tune.service`, tipo oneshot) y por la regla udev. Al instalar se hace además un barrido explícito para que la sesión actual vea el cambio sin esperar al siguiente ciclo de VM.
+- **El flujo configurable (`customizable_post_install.sh`) incorpora ahora el mismo helper + servicio + regla udev + barrido inicial que el flujo automático**, para que ambos variantes de post-install dejen el sistema en el mismo estado.
+- Ambas funciones `apply_network_optimizations` suben `FUNC_VERSION` de 1.0 → 1.1, de modo que el detector de actualizaciones de ProxMenux vuelve a ejecutar la función en hosts que ya tenían la 1.0. El desinstalador (`uninstall_network_optimization`) se amplía para borrar el nuevo helper y la regla udev, y recargar udev.
+
+---
+
+## 🧰 Post-install — Log2RAM + PBS
+
+- **Rotación automática de los logs de la API de PBS cuando `proxmox-backup-server` corre como servicio en el host.** Ambos instaladores de Log2RAM (`install_log2ram_auto` y el configurable `configure_log2ram`) detectan PBS mediante `dpkg-query` y dejan `/etc/logrotate.d/proxmox-backup-api` con una regla de rotación por tamaño (20MB × 3 copias) más `/etc/cron.hourly/proxmox-backup-logrotate`. En un host PVE que además ejecuta PBS como servicio, `pvestatd` sondea el datastore local cada pocos segundos y cada sondeo escribe en `/var/log/proxmox-backup/api/access.log` y `auth.log` — el paquete upstream de PBS no incluye regla de logrotate para esos ficheros, y esta regla los mantiene acotados de modo que un `/var/log` respaldado por tmpfs permanece cómodamente dentro del presupuesto. En hosts sin PBS como servicio no se crea nada.
+- **Script upstream `log2ram` parcheado a `rsync -aXv --no-acls` justo después de `install.sh`.** Ambos instaladores reescriben la llamada en el sitio con un `sed` guardado por `grep -q` (deja backup en `.proxmenux.bak`, no-op si una futura release upstream ya no incluye `-A`). Los atributos extendidos (`-X`) se preservan. Resultado: `log2ram write` finaliza limpio en sistemas de ficheros de `/var/log.hdd` que no aceptan ACLs POSIX (ZFS con `acltype=off`, ext4 montado sin la opción `acl`) — sin mensajes de `set_acl: Operation not supported` / salida 23.
+- **El bloque de emergencia de `log2ram-check.sh` rota los logs de PBS antes de truncar.** Cuando `/var/log` cruza el umbral del 92%, el script de auto-sync ejecuta ahora `logrotate -f /etc/logrotate.d/proxmox-backup-api` (solo si el fichero de regla existe) *antes* de truncar `pveproxy/access.log`, `pveproxy/error.log` y `pveam.log`. El historial reciente de accesos/autenticación de PBS se conserva en los `.gz` rotados en lugar de perderse. Se subió `FUNC_VERSION` de 1.2 → 1.3 en `install_log2ram_auto` y `configure_log2ram`, y el comentario de cabecera del `log2ram-check.sh` embebido de v1.2 → v1.3.
+
+## 🗄 Restauración de backup — snapshot de pmxcfs + pools ZFS de datos
+
+- **`/var/lib/pve-cluster/config.db` se captura ahora con `sqlite3 .backup`.** pmxcfs (`/etc/pve`) es servido por `pve-cluster` desde ese almacén SQLite, así que un rsync directo del fichero raw con el servicio en marcha puede pillarlo a mitad de checkpoint WAL y aterrizar en el archivo como una copia inconsistente. `hb_prepare_staging` ejecuta ahora `sqlite3 /var/lib/pve-cluster/config.db ".backup '$staging/…/config.db'"` antes del rsync general — la vía canónica (documentada por Proxmox) para snapshotear el almacén de forma consistente mientras `pve-cluster` sigue sirviendo tráfico, con downtime cero para el cluster. El rsync general de `/var/lib/pve-cluster` excluye ahora `config.db`, `config.db-wal` y `config.db-shm` para que nada sobrescriba el dump consistente. Los hosts sin `sqlite3` recurren a una copia raw llamada `config.db.raw-fallback`, que el helper de recuperación promociona a `config.db` antes de arrancar `pve-cluster`. Los metadatos registran qué vía se usó vía `pmxcfs_config_db=sqlite_backup|raw_fallback` en `metadata/run_info.env` para trazabilidad. La ruta de restauración sigue usando el patrón canónico `systemctl stop pve-cluster → cp → systemctl start pve-cluster` (`apply_pending_restore.sh` y el helper de recuperación standalone que se escribe junto a cada directorio de cluster extraído), así que la DB que el usuario trae de vuelta es ahora consistente garantizada en lugar de una copia raw de estado en vuelo.
+
+- **Los pools ZFS de datos listados en el backup ahora se importan automáticamente durante la restauración.** El nuevo paso `_rs_import_data_pools` corre tras el apply de configs, recorre `storage_inventory.zfs_pools[]`, excluye el pool raíz (ya montado por el sistema) y lanza `zpool import <nombre>` para cada pool no-raíz cuyos discos estén todos presentes en este host. Cuando ZFS rechaza el import por *foreign* — el caso típico tras una instalación fresh que regraba la etiqueta on-disk con un `hostid` nuevo — el paso reintenta con `-f` y reporta el pool como forzado para dejar trazabilidad. Los pools a los que les falta algún disco se omiten con un aviso claro en lugar de importarse en modo degradado. Todo esto cierra el caso habitual en el que `zfs-import-scan.service` fallaba al boot tras una instalación fresh y dejaba el pool de datos separado indisponible hasta ejecutar `zpool import -f` a mano.
+- **El resultado del auto-import persiste en la tarjeta post-restauración.** El paso escribe una sección `data_pools_import` en `/var/lib/proxmenux/restore-state.json` (el mismo JSON que la tarjeta de la pestaña Backups consulta) y un log crudo en `/var/log/proxmenux/restore-datapools-<timestamp>.log`. La tarjeta muestra dentro de Detalles un bloque dedicado con cinco filas coloreadas (Importados / Forzados / Omitidos parcial / Omitidos ausentes / Fallidos), así que el resumen queda consultable después de cerrar el terminal de restauración, y la entrada se preserva en el historial del run para consulta posterior.
+- **Pools ZFS creados con `by-partuuid` o `/dev/sdX` en bruto reconocidos por el chequeo de presencia de discos.** El paso de auto-import y `validate_storage.sh` tratan como absolutas las entradas de `devices_by_id` que empiezan por `/` y solo prependen `/dev/disk/by-id/` a los basenames desnudos, de modo que los pools construidos contra partition UUIDs o dispositivos de bloque en bruto se detectan como presentes cuando sus discos están en el host.
+- **`/etc/systemd/network` añadido a las rutas de backup por defecto.** Ese directorio contiene los ficheros `.link` de systemd que fijan los nombres de las NICs a su MAC a través de actualizaciones de kernel y reinstalaciones — el `setup_persistent_network` del post_install los escribe para cada interfaz física, y los usuarios pueden dejar los suyos también para renombrar una NIC a algo significativo. Preservarlos a través de una restauración sobre instalación fresh mantiene intacta en el destino la política de nombres de NIC del host origen, de modo que las entradas de `/etc/network/interfaces` que referencian nombres custom siguen resolviendo tras la restauración.
+
+---
+
+## 🙏 Agradecimientos
+
+- **@pepenai** — dashboard en móvil sobre HTTPS + reverse proxy.
+- **Pepo** — autenticación de webhook desde FQDN Tailscale.
+- **@ash34** (#255) — chequeo VM/CT con la columna `details` a NULL.
+- **@f3rs3n** (#256, #257, #258) — ajuste de sysctl en bridges del firewall, ámbito de la optimización de ZFS ARC y reconciliación de nombres persistentes de NIC.
+- **Juan C.** — auto-import de pools ZFS de datos tras instalación fresh.
+- **David Barbero (@sikete)** — recompilación de drivers DKMS al actualizar el kernel.
+
+
 ## 2026-07-14
 
 ### Nueva versión ProxMenux v1.2.3
@@ -106,13 +236,13 @@ Y a cada usuario que abrió una issue, comentó en [GitHub Discussions](https://
 
 ### Nueva versión ProxMenux v1.2.2 — *Consolidación estable del ciclo v1.2.1.x*
 
-Release estable que lleva al canal principal las cuatro prereleases del ciclo **v1.2.1.x** en un solo movimiento. El trabajo a lo largo de esas cuatro betas se centró en tres temas: hacer del Health Monitor algo realmente configurable en lugar de solo observable (thresholds por categoría, duraciones de dismiss por evento, un audit log de supresiones activas), expandir el stack de notificaciones para cubrir alrededor de 80 servicios a través de Apprise mientras se persisten eventos durante las Quiet Hours, y convertir el propio proceso del Monitor en un ciudadano del sistema más silencioso y predecible en hosts idle. Por encima de eso, esta release entrega detección automática de updates en contenedores LXC, una reescritura end-to-end del instalador de Coral TPU con los últimos drivers upstream, y una larga lista de fixes visibles para el operador — handshake del terminal HTTPS, detección de kernel updates en PVE 9.x, flujo del instalador NVIDIA en Alpine LXC, gestión del audio acompañante en passthrough de GPU mixta, y varias optimizaciones runtime en los bucles de scan del Monitor. Cinco contribuciones de código directas de la comunidad shipean junto con esta release ([@jcastro](https://github.com/jcastro) ×5, [@pespinel](https://github.com/pespinel) ×1) y el trabajo de GPU passthrough lo impulsaron los reports detallados de campo de [@ghosthvj](https://github.com/ghosthvj) — ver los Acknowledgments al final.
+Release estable que lleva al canal principal las cuatro prereleases del ciclo **v1.2.1.x** en un solo movimiento. El trabajo a lo largo de esas cuatro betas se centró en tres temas: hacer del Health Monitor algo realmente configurable en lugar de solo observable (thresholds por categoría, duraciones de dismiss por evento, un audit log de supresiones activas), expandir el stack de notificaciones para cubrir alrededor de 80 servicios a través de Apprise mientras se persisten eventos durante las Quiet Hours, y convertir el propio proceso del Monitor en un ciudadano del sistema más silencioso y predecible en hosts idle. Por encima de eso, esta release entrega detección automática de updates en contenedores LXC, una reescritura end-to-end del instalador de Coral TPU con los últimos drivers upstream, y una larga lista de fixes visibles para el usuario — handshake del terminal HTTPS, detección de kernel updates en PVE 9.x, flujo del instalador NVIDIA en Alpine LXC, gestión del audio acompañante en passthrough de GPU mixta, y varias optimizaciones runtime en los bucles de scan del Monitor. Cinco contribuciones de código directas de la comunidad shipean junto con esta release ([@jcastro](https://github.com/jcastro) ×5, [@pespinel](https://github.com/pespinel) ×1) y el trabajo de GPU passthrough lo impulsaron los reports detallados de campo de [@ghosthvj](https://github.com/ghosthvj) — ver los Acknowledgments al final.
 
 ---
 
 ## 🩺 Health Monitor — Configurable, granular, auditable
 
-Tres piezas acopladas que juntas permiten al operador ajustar el Health Monitor a la envoltura real de su host en lugar de trabajar alrededor de sus defaults, y gestionar dismisses con el mismo control fino que ya tienen sobre el resto del dashboard.
+Tres piezas acopladas que juntas permiten al usuario ajustar el Health Monitor a la envoltura real de su host en lugar de trabajar alrededor de sus defaults, y gestionar dismisses con el mismo control fino que ya tienen sobre el resto del dashboard.
 
 ### Thresholds Warning / Critical por categoría
 
@@ -132,7 +262,7 @@ El botón *Dismiss* en cada alerta del Health Monitor abre ahora un pequeño dro
 - **7 days** — útil para una condición temporal de la que no quieres oír durante una migración de una semana
 - **Permanently** — silencia este `error_key` concreto indefinidamente
 
-Los dismisses permanentes se persisten con `suppression_hours = -1` en la base de datos de persistencia, nunca re-emiten, nunca re-notifican y se marcan con un badge ámbar **Permanent** distinto en el Health Monitor para que el operador siempre sepa qué alertas están silenciadas intencionadamente. La infraestructura backend para el centinela permanente ya existía — solo le faltaba a la UI una forma de fijarlo. El contrato de API es pequeño y backwards-compatible: `POST /api/health/acknowledge` acepta un campo body opcional `suppression_hours` (entero positivo para horas, `-1` para permanente); omitirlo preserva el comportamiento previo y usa la supresión configurada de la categoría. Un segundo endpoint nuevo `POST /api/health/un-acknowledge {error_key}` limpia un acknowledgment previamente registrado para que la alerta vuelva a ser elegible para dispararse — usado por el panel Active Suppressions abajo.
+Los dismisses permanentes se persisten con `suppression_hours = -1` en la base de datos de persistencia, nunca re-emiten, nunca re-notifican y se marcan con un badge ámbar **Permanent** distinto en el Health Monitor para que el usuario siempre sepa qué alertas están silenciadas intencionadamente. La infraestructura backend para el centinela permanente ya existía — solo le faltaba a la UI una forma de fijarlo. El contrato de API es pequeño y backwards-compatible: `POST /api/health/acknowledge` acepta un campo body opcional `suppression_hours` (entero positivo para horas, `-1` para permanente); omitirlo preserva el comportamiento previo y usa la supresión configurada de la categoría. Un segundo endpoint nuevo `POST /api/health/un-acknowledge {error_key}` limpia un acknowledgment previamente registrado para que la alerta vuelva a ser elegible para dispararse — usado por el panel Active Suppressions abajo.
 
 ### Panel Active Suppressions en Settings
 
@@ -160,7 +290,7 @@ Tres fixes de fiabilidad shipean junto, todos surfaceados después del rollout b
 
 2. **Regresión del whitelist backend** que rechazaba Apprise con HTTP 400. El conjunto de canales hardcodeado del validador de notifications-test (`{telegram, gotify, discord, email, all}`) tenía a `apprise` ausente, por lo que cada test o send de Apprise devolvía `400 Invalid channel` antes de que la librería fuera siquiera invocada. El whitelist se deriva ahora en vivo desde `notification_channels.CHANNEL_TYPES`, de forma que añadir una nueva implementación de canal en el futuro no puede regresionar silenciosamente este validador otra vez.
 
-3. **Error reporting opaco** cuando el destino devolvía una respuesta no-2xx. Cuando un destino (`jsons://`, `ntfy://`, `slack://`, …) rechazaba el payload, el operador solo veía un mensaje genérico *"Apprise rejected the notification (transport failure)"*. El canal captura ahora el logger interno de Apprise durante `notify()` y surfacea el HTTP status code real más el response body del destino (capado a 300 caracteres) — de forma que un beta tester debuggeando un webhook custom puede ver inmediatamente si el servidor upstream está rechazando su schema de payload.
+3. **Error reporting opaco** cuando el destino devolvía una respuesta no-2xx. Cuando un destino (`jsons://`, `ntfy://`, `slack://`, …) rechazaba el payload, el usuario solo veía un mensaje genérico *"Apprise rejected the notification (transport failure)"*. El canal captura ahora el logger interno de Apprise durante `notify()` y surfacea el HTTP status code real más el response body del destino (capado a 300 caracteres) — de forma que un beta tester debuggeando un webhook custom puede ver inmediatamente si el servidor upstream está rechazando su schema de payload.
 
 ---
 
@@ -197,7 +327,7 @@ El mount monitor solía llamar `lxc-info -n <vmid> -p` por cada CT corriendo sol
 
 ## 🔌 Handshake del terminal HTTPS
 
-Cada modal de terminal en el Monitor (terminal del dashboard, terminal LXC, terminal de scripts) solía fallar con *WebSocket connection error* en hosts donde HTTPS estaba habilitado. La root cause era específica al path `gevent + SSL`: el `WebSocketHandler` de gevent-websocket estaba apilado sobre la implementación de protocolo de flask-sock, por lo que el servidor emitía **dos** cabeceras `HTTP/1.1 101 Switching Protocols` consecutivas y el navegador cerraba la conexión como un frame corrupto. Quitar el argumento explícito `handler_class=WebSocketHandler` restaura una única respuesta 101 y el handshake completa con normalidad. El fix es invisible para operadores corriendo en HTTP plano — no estaban afectados — pero desbloquea cada install fronteada por HTTPS (reverse proxies, deployments con certificate-managed, cualquier cosa detrás de nginx/Traefik).
+Cada modal de terminal en el Monitor (terminal del dashboard, terminal LXC, terminal de scripts) solía fallar con *WebSocket connection error* en hosts donde HTTPS estaba habilitado. La root cause era específica al path `gevent + SSL`: el `WebSocketHandler` de gevent-websocket estaba apilado sobre la implementación de protocolo de flask-sock, por lo que el servidor emitía **dos** cabeceras `HTTP/1.1 101 Switching Protocols` consecutivas y el navegador cerraba la conexión como un frame corrupto. Quitar el argumento explícito `handler_class=WebSocketHandler` restaura una única respuesta 101 y el handshake completa con normalidad. El fix es invisible para usuarios corriendo en HTTP plano — no estaban afectados — pero desbloquea cada install fronteada por HTTPS (reverse proxies, deployments con certificate-managed, cualquier cosa detrás de nginx/Traefik).
 
 Adicionalmente, el panel de terminal solía perder su conexión WebSocket cuando el usuario activaba la feature de auto-traducción del navegador (los prompts "translate this page" de Chrome / Edge / Safari). El traductor mueve nodos del DOM que React aún mantiene como refs, y el componente WebSocket React se rompe porque su ref de contenedor apunta a un nodo movido. Añadido `translate="no"` en los divs contenedores del terminal para que el traductor salte el tty embebido por completo — las traducciones en el resto de la página siguen funcionando.
 
@@ -211,7 +341,7 @@ En hosts Proxmox VE 9.x, la fila *System Updates → Kernel / PVE* reportaba "Ke
 
 2. **El dry-run cambió de `apt-get upgrade --dry-run` a `apt-get dist-upgrade --dry-run`**. PVE 9 shipea kernel updates empaquetados como instalaciones nuevas (no como upgrades directas de un paquete existente), y el `upgrade --dry-run` plano no considera nuevas instalaciones en absoluto. `dist-upgrade --dry-run` sí.
 
-3. **La detección del kernel corriendo** lee ahora `uname -r` y flaguea un update como *running-kernel update* cuando el paquete matchea la release corriendo exactamente o su meta-package de branch (p. ej. `proxmox-kernel-6.14` para un host en `6.14.11-4-pve`). El texto de la fila distingue *"Running kernel update available (reboot required)"* de *"N kernel update(s) available (none for running kernel)"* para que el operador sepa si necesita reboot o solo instalar.
+3. **La detección del kernel corriendo** lee ahora `uname -r` y flaguea un update como *running-kernel update* cuando el paquete matchea la release corriendo exactamente o su meta-package de branch (p. ej. `proxmox-kernel-6.14` para un host en `6.14.11-4-pve`). El texto de la fila distingue *"Running kernel update available (reboot required)"* de *"N kernel update(s) available (none for running kernel)"* para que el usuario sepa si necesita reboot o solo instalar.
 
 ---
 
@@ -241,9 +371,9 @@ Nuevas páginas de documentación cubren la sección **Active Suppressions** en 
 - **Detección de updates de funciones post-install** — el Monitor trackea optimizaciones ProxMenux instaladas (Log2Ram, Memory Settings, System Limits, Logrotate, …) y notifica cuando hay una versión más nueva disponible, con apply one-click desde Settings.
 - **Flujo de update de Secure Gateway (Tailscale)** — update one-click de Tailscale desde Settings con indicadores Last-checked / Installed / Latest y notificación cuando se publica una nueva versión.
 - **Menú Helper-Scripts** — context más rico e información útil para cada entrada, haciendo más fácil saber qué hace cada script antes de ejecutarlo.
-- **Wording de agregación burst** — los resúmenes burst reportan ahora solo los eventos *adicionales* que llegaron después de la alerta individual inicial, de forma que el operador ya no ve el primer evento contado dos veces.
+- **Wording de agregación burst** — los resúmenes burst reportan ahora solo los eventos *adicionales* que llegaron después de la alerta individual inicial, de forma que el usuario ya no ve el primer evento contado dos veces.
 - **Clasificador de errores conocidos** — regex con word-boundary en patrones ATA / UNC para que mensajes de kernel como `nvidia_uvm:FatalError` ya no se clasifiquen mal como problemas de cable ATA.
-- **Errores de control de VM / CT** — start / stop / restart fallido surfacea ahora el stderr real de `pvesh` (p. ej. *"no space left on device"*) en el toast de la UI y dispara una notificación `vm_fail` / `ct_fail`, en lugar del bare 500 INTERNAL SERVER ERROR que el operador solía ver.
+- **Errores de control de VM / CT** — start / stop / restart fallido surfacea ahora el stderr real de `pvesh` (p. ej. *"no space left on device"*) en el toast de la UI y dispara una notificación `vm_fail` / `ct_fail`, en lugar del bare 500 INTERNAL SERVER ERROR que el usuario solía ver.
 - **Path de apply de log2ram** — el flujo auto / update reinicia ahora log2ram después de escribir el nuevo size, de forma que un `512M` configurado realmente surte efecto en el tmpfs corriendo sin restart manual.
 - **PVE webhook URL** — el webhook de notificación sigue ahora automáticamente el estado SSL activo, cambiando entre `http://` y `https://` cuando toggleas HTTPS en el panel.
 - **Cascada de 401 frontend** — la login screen ya no se traga un 401 para siempre tras un estado breve de token rancio; la flag de dedup se limpia al mount y al login exitoso.

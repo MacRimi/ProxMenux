@@ -6,32 +6,26 @@
 # Copyright   : (c) 2024 MacRimi
 # License     : GPL-3.0
 #               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
-# Version     : 1.0
+# Version     : 1.1
 # ==========================================================
 # Description:
-# Wrapper that detects the running Proxmox major version and
-# delegates to the matching worker script:
-#   - PVE 8 -> scripts/global/update-pve8.sh
-#   - PVE 9 -> scripts/global/update-pve9_2.sh
-# After the worker finishes, runs the post-update cleanup
-# (apt-get autoremove + autoclean) and prompts for an immediate
-# reboot if the kernel was updated or /var/run/reboot-required
-# was created.
+# Update wrapper for a Proxmox host ALREADY in production.
+# Delegates to `scripts/global/update-pve-safe.sh`, a non-
+# invasive worker that only performs operations safe for a
+# configured host — no repo overwriting, no service purging,
+# no forced package installs. See the header of the worker
+# for the full list of what it does and what it deliberately
+# refuses to do.
 #
-# Features (delegated to worker scripts):
-#   - APT repository hygiene (Proxmox + Debian)
-#   - Removal of duplicate / conflicting sources
-#   - Switch to the no-subscription Proxmox repository
-#   - Full apt update + dist-upgrade
-#   - Installs essential packages if missing (zfsutils, chrony, ...)
-#   - LVM / storage sanity checks and header repair
-#   - Removes conflicting time-sync packages
-#   - Post-update system cleanup
-#   - Reboot prompt when kernel changed
-# ==========================================================
+# After the worker finishes this script:
+#   - Runs apt-get autoremove + autoclean (final cleanup)
+#   - Prompts for an immediate reboot when the kernel was
+#     updated or /var/run/reboot-required was created
 #
-# The goal of this script is to simplify and secure the update process for Proxmox,
-# reduce manual intervention, and prevent common repository and package errors.
+# NOTE: For a fresh Proxmox install use post_install
+# (scripts/post_install/{auto,customizable}_post_install.sh),
+# which invokes the aggressive `update-pve{8,9_2}.sh` workers
+# that set up repositories and essentials from scratch.
 # ==========================================================
 
 BASE_DIR="/usr/local/share/proxmenux"
@@ -50,6 +44,23 @@ export SCRIPT_TITLE="Proxmox system update"
 # ==========================================================
 
 NECESSARY_REBOOT=1
+
+# Suppress the Monitor's `service_fail` notifications while apt is running.
+# PVE services (pve-cluster, pveproxy, pvedaemon, corosync…) get killed and
+# restarted as part of the upgrade — those events are expected, not real
+# failures. `notification_events.is_apt_active_on_host()` reads these
+# markers; keep the names in sync between the two files.
+_PROXMENUX_UPDATE_MARKER="/var/run/proxmenux-update-in-progress"
+_PROXMENUX_UPDATE_FINISHED_MARKER="/var/run/proxmenux-update-just-finished"
+
+_proxmenux_update_cleanup() {
+    rm -f "$_PROXMENUX_UPDATE_MARKER"
+    # Grace-window marker: journal events landing shortly after apt exits
+    # (e.g. the pve-cluster restart) are still gated on this file's mtime.
+    touch "$_PROXMENUX_UPDATE_FINISHED_MARKER"
+}
+trap _proxmenux_update_cleanup EXIT
+touch "$_PROXMENUX_UPDATE_MARKER"
 
 apt_upgrade() {
     local pve_version pve_raw
@@ -70,17 +81,11 @@ apt_upgrade() {
         return 1
     fi
 
-    if [[ "$pve_version" -ge 9 ]]; then
-        show_proxmenux_logo
-        msg_title "$(translate "$SCRIPT_TITLE")"
-        bash "$LOCAL_SCRIPTS/global/update-pve9_2.sh"
-
-    else
-        show_proxmenux_logo
-        msg_title "$(translate "Proxmox system update")"
-        bash "$LOCAL_SCRIPTS/global/update-pve8.sh"
-
-    fi
+    show_proxmenux_logo
+    msg_title "$(translate "$SCRIPT_TITLE")"
+    # Single worker for both PVE 8 and 9 — it detects the version itself
+    # and only performs operations safe on a production host.
+    bash "$LOCAL_SCRIPTS/global/update-pve-safe.sh"
 
 
 }
@@ -90,10 +95,28 @@ apt_upgrade() {
 check_reboot() {
     NECESSARY_REBOOT=0
 
+    # Standard Debian mechanism — needs `needrestart` (or a package that
+    # explicitly creates it in its postinst) to be present. Not shipped
+    # by default on many PVE installs, so we complement with the kernel
+    # fallback below.
     if [ -f /var/run/reboot-required ]; then
         NECESSARY_REBOOT=1
     fi
-    if grep -q "linux-image" "$log_file" 2>/dev/null; then
+
+    # Fallback: compare the running kernel with the most recent
+    # proxmox-kernel-* / pve-kernel-* installed. If a newer kernel package
+    # is on disk but the box is still on the old one, a reboot is required
+    # regardless of whether needrestart flagged it.
+    local running_kernel newest_kernel
+    running_kernel=$(uname -r)
+    newest_kernel=$(
+        dpkg-query -W -f='${Status}\t${Package}\n' 'proxmox-kernel-*-pve-signed' 'pve-kernel-*-pve' 2>/dev/null \
+        | awk -F'\t' '/^install ok installed\t/ { print $2 }' \
+        | sed -E 's/^(proxmox|pve)-kernel-//; s/-signed$//' \
+        | sort -V \
+        | tail -1
+    )
+    if [ -n "$newest_kernel" ] && [ "$newest_kernel" != "$running_kernel" ]; then
         NECESSARY_REBOOT=1
     fi
 

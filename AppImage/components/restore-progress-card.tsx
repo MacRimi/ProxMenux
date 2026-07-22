@@ -65,6 +65,16 @@ interface RestoreRollback {
   components_to_uninstall?: string[]
 }
 
+interface DataPoolsImport {
+  ok: string[]
+  forced: string[]
+  partial: string[]
+  missing: string[]
+  failed: string[]
+  finished_at?: string
+  log_path?: string
+}
+
 interface RestoreState {
   status: "running" | "complete" | "failed"
   started_at: string
@@ -79,6 +89,7 @@ interface RestoreState {
   summary: RestoreSummary | null
   acknowledged: boolean
   duration?: string
+  data_pools_import?: DataPoolsImport
 }
 
 interface HistoryEntry {
@@ -371,6 +382,8 @@ const RestoreDetailModal: React.FC<{
             </div>
           )}
 
+          {state.data_pools_import && <DataPoolsBlock section={state.data_pools_import} />}
+
           <div className="space-y-2">
             <div className="text-sm font-medium">Rollback delta</div>
             <RollbackDelta delta={state.rollback_delta} />
@@ -389,6 +402,88 @@ const RestoreDetailModal: React.FC<{
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+// Rendered inside RestoreDetailModal — one row per outcome category
+// (imported / forced / partial skip / missing skip / failed).
+const DataPoolsBlock: React.FC<{ section: DataPoolsImport }> = ({ section }) => {
+  const total =
+    section.ok.length +
+    section.forced.length +
+    section.partial.length +
+    section.missing.length +
+    section.failed.length
+  if (total === 0) return null
+
+  const Row: React.FC<{
+    label: string
+    tone: "ok" | "warn" | "info" | "error"
+    items: string[]
+    help?: string
+  }> = ({ label, tone, items, help }) => {
+    if (items.length === 0) return null
+    const toneClass =
+      tone === "ok"
+        ? "text-emerald-400"
+        : tone === "warn"
+          ? "text-amber-400"
+          : tone === "error"
+            ? "text-red-400"
+            : "text-blue-400"
+    return (
+      <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs">
+        <div className={`font-medium ${toneClass} flex items-center gap-2`}>
+          {tone === "ok" && <CheckCircle2 className="h-3.5 w-3.5" />}
+          {tone === "warn" && <AlertTriangle className="h-3.5 w-3.5" />}
+          {tone === "error" && <XCircle className="h-3.5 w-3.5" />}
+          {tone === "info" && <CheckCircle2 className="h-3.5 w-3.5" />}
+          <span>{label}</span>
+          <span className="text-muted-foreground">({items.length})</span>
+        </div>
+        <div className="mt-1 font-mono text-muted-foreground break-all">{items.join(", ")}</div>
+        {help && <div className="mt-1 text-muted-foreground">{help}</div>}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="text-sm font-medium flex items-center gap-2">
+        <Cpu className="h-4 w-4" />
+        ZFS data pools — auto-import
+      </div>
+      <div className="space-y-1.5">
+        <Row label="Imported" tone="ok" items={section.ok} />
+        <Row
+          label="Imported (forced, foreign hostid)"
+          tone="info"
+          items={section.forced}
+          help="New hostid grabbed onto the pool label — next boot imports clean."
+        />
+        <Row
+          label="Skipped (some disks missing)"
+          tone="warn"
+          items={section.partial}
+          help="Some vdev disks weren't found by /dev/disk/by-id. Pool NOT imported to avoid a degraded auto-import. Fix the disks or import manually with zpool import."
+        />
+        <Row
+          label="Skipped (no disks present)"
+          tone="warn"
+          items={section.missing}
+          help="None of the pool's disks are on this host. Move the disks over or import from a different host."
+        />
+        <Row
+          label="Import failed"
+          tone="error"
+          items={section.failed}
+          help="ZFS rejected the import even with -f. Inspect with `zpool import` and the log below."
+        />
+      </div>
+      {section.log_path && (
+        <div className="text-xs text-muted-foreground font-mono">Log: {section.log_path}</div>
+      )}
+    </div>
   )
 }
 
@@ -510,6 +605,14 @@ export const RestoreProgressCard: React.FC = () => {
   }
 
   const hasWarnings = state.sanity_warnings.length > 0
+  const pools = state.data_pools_import
+  const poolCount =
+    (pools?.ok.length ?? 0) +
+    (pools?.forced.length ?? 0) +
+    (pools?.partial.length ?? 0) +
+    (pools?.missing.length ?? 0) +
+    (pools?.failed.length ?? 0)
+  const poolWarnings = (pools?.partial.length ?? 0) + (pools?.missing.length ?? 0) + (pools?.failed.length ?? 0)
   const barColor =
     state.status === "failed" ? "bg-red-500" : state.status === "complete" ? "bg-emerald-500" : "bg-blue-500"
 
@@ -528,6 +631,20 @@ export const RestoreProgressCard: React.FC = () => {
                 <Badge variant="outline" className="text-amber-400 border-amber-500/40 bg-amber-500/10 gap-1">
                   <AlertTriangle className="h-3 w-3" />
                   {state.sanity_warnings.length} boot warning{state.sanity_warnings.length === 1 ? "" : "s"}
+                </Badge>
+              )}
+              {poolCount > 0 && (
+                <Badge
+                  variant="outline"
+                  className={
+                    poolWarnings > 0
+                      ? "text-amber-400 border-amber-500/40 bg-amber-500/10 gap-1"
+                      : "text-emerald-400 border-emerald-500/40 bg-emerald-500/10 gap-1"
+                  }
+                >
+                  <Cpu className="h-3 w-3" />
+                  {poolCount} ZFS pool{poolCount === 1 ? "" : "s"}
+                  {poolWarnings > 0 && ` · ${poolWarnings} need attention`}
                 </Badge>
               )}
             </CardTitle>
