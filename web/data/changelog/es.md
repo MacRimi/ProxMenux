@@ -4,6 +4,7 @@
 ### Nueva versión ProxMenux v1.2.4
 
 Esta versión suma dos mejoras visibles en el propio dashboard — un botón para lanzar la actualización de Proxmox desde el Monitor de Salud, y un prompt para invitar a los usuarios móviles a instalar el Monitor como PWA — extiende el flujo de restauración de Backups con snapshots consistentes de pmxcfs (`config.db`) e importación automática de pools ZFS de datos, refina el comportamiento de Log2RAM en hosts que corren Proxmox Backup Server como servicio, refuerza el ajuste de sysctl de los bridges del firewall en todo el ciclo de vida de VMs, ajusta la optimización de ZFS ARC a su propio ámbito, hace idempotentes los nombres persistentes de NIC en re-ejecuciones, recompila automáticamente los drivers DKMS cuando entra un kernel nuevo, mantiene intacta la sesión de la terminal del Monitor cuando hay update de ProxMenux disponible, y afina cinco plantillas de notificaciones y tres chequeos del panel de salud.
+
 ---
 
 ## 🩺 Botón Update Now en el Monitor de Salud
