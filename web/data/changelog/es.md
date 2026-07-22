@@ -19,10 +19,8 @@ Esta versión suma dos mejoras visibles en el propio dashboard — un botón par
 
 ## 📱 Prompt de instalación en la app para móvil
 
-- Los visitantes por primera vez en **Android** (Chrome / Brave / Edge / Samsung Internet) e **iOS Safari** ven ahora una bottom-sheet con instrucciones claras para añadir el Monitor a su pantalla de inicio como PWA.
-- En Android, cuando el navegador considera el Monitor instalable y dispara `beforeinstallprompt` (Chromium 89+ lo entrega solo con manifest válido, sin necesidad de Service Worker), un botón **Install** en la bottom-sheet dispara el flujo nativo de instalación con un solo tap; el propio banner de instalación in-page del navegador se suprime para que la bottom-sheet sea el camino principal. Las instrucciones manuales de "menú del navegador → Añadir a pantalla de inicio" siguen mostrándose como fallback para navegadores que no disparan el evento (Firefox Android) o casos en que el operador prefiere la ruta manual.
-- iOS Safari mantiene las instrucciones manuales de 3 pasos — no existe una API JS equivalente en iOS.
-- La bottom-sheet se cierra automáticamente cuando el navegador dispara `appinstalled` — no queda ningún prompt colgado tras la instalación en la pantalla de inicio.
+- Los visitantes por primera vez en **Android** (Chrome / Brave) e **iOS Safari** ven ahora una bottom-sheet con instrucciones claras para añadir el Monitor a su pantalla de inicio como PWA.
+- La instalación se hace a través de la propia entrada del menú del navegador ("Añadir a pantalla de inicio"), que produce una PWA real instalada que se lanza en modo standalone. La bottom-sheet no intercepta el evento `beforeinstallprompt` del navegador — interceptarlo sin llegar a llamar a `prompt()` degrada la ruta manual del menú a un acceso directo simple, que es lo que apareció en las pruebas de campo.
 - Dos niveles de descarte: **Not now** (temporal, reaparece a los 30 días) y **Don't show again** (permanente, almacenado en `localStorage`).
 - No se muestra en escritorio, ni cuando el Monitor ya se está ejecutando como aplicación instalada.
 

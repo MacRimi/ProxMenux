@@ -20,10 +20,8 @@ This release adds two in-dashboard improvements — a one-click Proxmox update t
 
 ## 📱 In-app Install prompt for mobile
 
-- First-time visitors on **Android** (Chrome / Brave / Edge / Samsung Internet) and **iOS Safari** now see a bottom-sheet with clear instructions for adding the Monitor as a PWA to their home screen.
-- On Android, when the browser deems the Monitor installable and fires `beforeinstallprompt` (Chromium 89+ delivers it on manifest validity alone, no Service Worker required), an **Install** button in the sheet drives the native install flow with a single tap; the browser's own in-page install banner is suppressed so the sheet is the primary path. The manual "browser menu → Add to Home Screen" steps are still shown as a fallback for browsers that don't fire the event (Firefox Android) or cases where the operator prefers the manual path.
-- iOS Safari keeps the manual 3-step instructions — no equivalent JS API is available on iOS.
-- The sheet closes automatically when the browser fires `appinstalled` — no lingering prompt after the install lands on the home screen.
+- First-time visitors on **Android** (Chrome / Brave) and **iOS Safari** now see a bottom-sheet with clear instructions for adding the Monitor as a PWA to their home screen.
+- Installation goes through the browser's own menu entry ("Add to Home Screen"), which produces a real installed PWA that launches in standalone mode. The sheet doesn't intercept the browser's `beforeinstallprompt` event — intercepting it and not calling `prompt()` degrades the manual menu path to a plain shortcut, which is what showed up in field testing.
 - Two dismissal levels: **Not now** (temporary, reappears in 30 days) and **Don't show again** (permanent, stored in `localStorage`).
 - Never shown on desktop, or once the Monitor is already running standalone.
 
