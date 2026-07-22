@@ -1648,6 +1648,13 @@ fi
 if [[ -d "\$RECOVERY_ROOT/var/lib/pve-cluster" ]]; then
   mkdir -p /var/lib/pve-cluster
   cp -a "\$RECOVERY_ROOT/var/lib/pve-cluster/." /var/lib/pve-cluster/ || true
+  # If the backup only carried the raw-fallback (no sqlite3 dump), promote
+  # it to config.db so pve-cluster picks it up on start.
+  if [[ ! -f /var/lib/pve-cluster/config.db && -f /var/lib/pve-cluster/config.db.raw-fallback ]]; then
+    mv -f /var/lib/pve-cluster/config.db.raw-fallback /var/lib/pve-cluster/config.db
+  else
+    rm -f /var/lib/pve-cluster/config.db.raw-fallback
+  fi
 fi
 
 systemctl start pve-cluster || true
