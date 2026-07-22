@@ -1,0 +1,26 @@
+name: Update project growth
+
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repo-growth
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: MacRimi/repo-growth@v1
+        with:
+          title: ProxMenux growth
+          output: images/project-growth.svg
+          history: .github/repo-growth/history.json
+          metrics: stars,forks
+          layout: dashboard

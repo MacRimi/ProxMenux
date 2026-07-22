@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="582" viewBox="0 0 1000 582" role="img" aria-labelledby="title desc">
+  <title id="title">ProxMenux growth for MacRimi/ProxMenux</title>
+  <desc id="desc">Repository growth dashboard showing stars, forks over time.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fafafa"/><stop offset="1" stop-color="#f4f4f5"/>
+    </linearGradient>
+    <linearGradient id="fill-stars" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b5cf6" stop-opacity=".24"/><stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/></linearGradient><linearGradient id="fill-forks" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#06b6d4" stop-opacity=".24"/><stop offset="1" stop-color="#06b6d4" stop-opacity="0"/></linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#18181b" flood-opacity=".08"/></filter>
+    <style>
+      :root { color-scheme: light dark; }
+      .bg { fill: url(#background); }
+      .surface { fill: #ffffff; stroke: #e4e4e7; }
+      .panel { fill: #ffffff; stroke: #e4e4e7; }
+      .primary { fill: #18181b; }
+      .secondary { fill: #71717a; }
+      .grid { stroke: #e4e4e7; }
+      text { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      @media (prefers-color-scheme: dark) {
+        .bg { fill: #09090b; }
+        .surface, .panel { fill: #111113; stroke: #27272a; }
+        .primary { fill: #fafafa; }
+        .secondary { fill: #a1a1aa; }
+        .grid { stroke: #27272a; }
+      }
+    </style>
+  </defs>
+  <rect class="bg" width="1000" height="720" rx="28"/>
+  <g transform="translate(42 38)">
+    <rect x="0" y="0" width="916" height="506" rx="22" class="surface" filter="url(#shadow)"/>
+    <text x="30" y="45" class="primary" font-size="26" font-weight="750" letter-spacing="-.5">ProxMenux growth</text>
+    <text x="30" y="70" class="secondary" font-size="14">MacRimi/ProxMenux · Tracking since Jul 22, 2026</text>
+    <g transform="translate(740 25)"><rect width="146" height="30" rx="15" fill="#8b5cf6" fill-opacity=".12"/><circle cx="17" cy="15" r="4" fill="#8b5cf6"/><text x="30" y="20" fill="#8b5cf6" font-size="11" font-weight="700" letter-spacing="1">LOCAL HISTORY</text></g>
+    <g transform="translate(30 92)">
+    <rect width="418" height="86" rx="16" class="panel"/>
+    <rect x="16" y="17" width="6" height="52" rx="3" fill="#8b5cf6"/>
+    <text x="38" y="34" class="secondary" font-size="12" font-weight="650" letter-spacing=".3">STARS</text>
+    <text x="38" y="64" class="primary" font-size="27" font-weight="760" letter-spacing="-.5">2,812</text>
+    <text x="392" y="63" text-anchor="end" fill="#8b5cf6" font-size="11" font-weight="650">No change yet</text>
+  </g><g transform="translate(468 92)">
+    <rect width="418" height="86" rx="16" class="panel"/>
+    <rect x="16" y="17" width="6" height="52" rx="3" fill="#06b6d4"/>
+    <text x="38" y="34" class="secondary" font-size="12" font-weight="650" letter-spacing=".3">FORKS</text>
+    <text x="38" y="64" class="primary" font-size="27" font-weight="760" letter-spacing="-.5">148</text>
+    <text x="392" y="63" text-anchor="end" fill="#06b6d4" font-size="11" font-weight="650">No change yet</text>
+  </g>
+    <g transform="translate(30 197)">
+    <rect width="856" height="122" rx="16" class="panel"/>
+    <circle cx="20" cy="27" r="5" fill="#8b5cf6"/>
+    <text x="34" y="31" class="primary" font-size="14" font-weight="700">Stars</text>
+    <text x="20" y="62" class="primary" font-size="20" font-weight="750">2,812</text>
+    <text x="20" y="83" class="secondary" font-size="11">range 2,812–2,812</text>
+    <line x1="220" x2="870" y1="19" y2="19" class="grid" stroke-width="1" stroke-dasharray="3 6"/><line x1="220" x2="870" y1="62" y2="62" class="grid" stroke-width="1" stroke-dasharray="3 6"/><line x1="220" x2="870" y1="105" y2="105" class="grid" stroke-width="1" stroke-dasharray="3 6"/>
+    <path d="M545 94.7 L545 105 L545 105 Z" fill="url(#fill-stars)"/>
+    <path d="M545 94.7" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="545" cy="94.7" r="5" fill="#8b5cf6" stroke="#fff" stroke-width="2"/>
+    <text x="220" y="116" class="secondary" font-size="10">Jul 22</text>
+    <text x="870" y="116" text-anchor="end" class="secondary" font-size="10">Jul 22</text>
+  </g><g transform="translate(30 335)">
+    <rect width="856" height="122" rx="16" class="panel"/>
+    <circle cx="20" cy="27" r="5" fill="#06b6d4"/>
+    <text x="34" y="31" class="primary" font-size="14" font-weight="700">Forks</text>
+    <text x="20" y="62" class="primary" font-size="20" font-weight="750">148</text>
+    <text x="20" y="83" class="secondary" font-size="11">range 148–148</text>
+    <line x1="220" x2="870" y1="19" y2="19" class="grid" stroke-width="1" stroke-dasharray="3 6"/><line x1="220" x2="870" y1="62" y2="62" class="grid" stroke-width="1" stroke-dasharray="3 6"/><line x1="220" x2="870" y1="105" y2="105" class="grid" stroke-width="1" stroke-dasharray="3 6"/>
+    <path d="M545 94.7 L545 105 L545 105 Z" fill="url(#fill-forks)"/>
+    <path d="M545 94.7" fill="none" stroke="#06b6d4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="545" cy="94.7" r="5" fill="#06b6d4" stroke="#fff" stroke-width="2"/>
+    <text x="220" y="116" class="secondary" font-size="10">Jul 22</text>
+    <text x="870" y="116" text-anchor="end" class="secondary" font-size="10">Jul 22</text>
+  </g>
+    <text x="30" y="487" class="secondary" font-size="11">Updated Jul 22, 2026</text>
+    <a href="https://github.com/MacRimi/repo-growth" target="_blank" aria-label="Open the Repo Growth project">
+      <text x="886" y="487" fill="#8b5cf6" text-anchor="end" font-size="13" font-weight="700">Generated by Repo Growth ↗</text>
+    </a>
+  </g>
+</svg>

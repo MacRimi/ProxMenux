@@ -195,6 +195,14 @@ If you want to go a step further, a coffee on Ko-fi keeps development going:
 
 ---
 
-## 📈 Star History
+## 📈 Project Growth
 
-[![Star History Chart](https://api.star-history.com/svg?repos=MacRimi/ProxMenux&type=Date)](https://www.star-history.com/#MacRimi/ProxMenux&Date)
+<p align="center">
+  <a href="https://github.com/MacRimi/repo-growth">
+    <img src="images/project-growth.svg" alt="ProxMenux project growth" width="900">
+  </a>
+</p>
+
+<p align="center">
+  <sub>Stars and forks tracked with <a href="https://github.com/MacRimi/repo-growth">Repo Growth</a>.</sub>
+</p>
