@@ -32,7 +32,7 @@
 <br />
 
 <p align="center">
-  <strong>ProxMenux</strong> is a management tool for <strong>Proxmox VE</strong> that simplifies system administration through an interactive menu, allowing you to execute commands and scripts with ease.
+  <strong>ProxMenux</strong> is an interactive toolkit for <strong>Proxmox VE</strong> — a menu-driven CLI plus a web dashboard for post-install, backup/restore and continuous health monitoring of your homelab.
 </p>
 
 ---
