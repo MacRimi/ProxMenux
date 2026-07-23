@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "The restore reproduces the source, not just the files",
-    "body": "Restoring a ProxMenux backup is not an extraction. Files are only the first step: after the filesystem is in place, the restore reads the manifest to detect differences between source and target, filters paths that would break the target's boot, hydrates operator-authored tuning that cannot be copied verbatim, and — after the mandatory reboot — reinstalls every component the source had (NVIDIA driver, Coral TPU, GPU tools) against the target's own kernel. What the operator picks from the menu is a single archive; what actually happens involves the compatibility check, the path classification, the on-boot dispatcher and the post-boot pass working together to produce a host that behaves like the source."
+    "body": "Restoring a ProxMenux backup is not an extraction. Files are only the first step: after the filesystem is in place, the restore reads the manifest to detect differences between source and target, filters paths that would break the target's boot, hydrates user-authored tuning that cannot be copied verbatim, and — after the mandatory reboot — reinstalls every component the source had (NVIDIA driver, Coral TPU, GPU tools) against the target's own kernel. What the user picks from the menu is a single archive; what actually happens involves the compatibility check, the path classification, the on-boot dispatcher and the post-boot pass working together to produce a host that behaves like the source."
   },
   "threeActions": {
     "heading": "Three actions on a backup",
@@ -52,10 +52,10 @@
       },
       {
         "output": "Rollback plan",
-        "detail": "Computed by <code>compute_rollback_plan.sh</code>. Lists VMs, LXCs and components present on the target but not in the backup. The operator opts in during the confirmation dialog to have these removed as part of the restore, so the target ends up matching the backup exactly."
+        "detail": "Computed by <code>compute_rollback_plan.sh</code>. Lists VMs, LXCs and components present on the target but not in the backup. The user opts in during the confirmation dialog to have these removed as part of the restore, so the target ends up matching the backup exactly."
       }
     ],
-    "reportBody": "The check also emits a structured report (<code>HB_COMPAT_RESULTS</code>) categorised as PASS / INFO / WARN / FAIL. WARN and FAIL entries surface in the pre-restore panel; the restore refuses to proceed only when a FAIL is present that the operator cannot resolve by clicking Continue."
+    "reportBody": "The check also emits a structured report (<code>HB_COMPAT_RESULTS</code>) categorised as PASS / INFO / WARN / FAIL. WARN and FAIL entries surface in the pre-restore panel; the restore refuses to proceed only when a FAIL is present that the user cannot resolve by clicking Continue."
   },
   "twoModes": {
     "heading": "Full restore vs Custom restore",
@@ -67,7 +67,7 @@
       },
       {
         "mode": "Custom restore",
-        "detail": "Opens a checklist showing every path the archive carries. The operator ticks a subset. Paths blocked by the cross-kernel filter appear greyed out and cannot be selected. Package install and component auto-reinstall are skipped by default in Custom mode — the operator is signalling that they want partial application, not a full reproduction."
+        "detail": "Opens a checklist showing every path the archive carries. The user ticks a subset. Paths blocked by the cross-kernel filter appear greyed out and cannot be selected. Package install and component auto-reinstall are skipped by default in Custom mode — the user is signalling that they want partial application, not a full reproduction."
       }
     ]
   },
@@ -92,7 +92,7 @@
   "fullFlow": {
     "heading": "The full restore workflow",
     "intro": "The complete pipeline from archive selection to a working restored host. Each stage feeds the next; the state written by earlier stages is consumed by later ones.",
-    "diagram": "┌─────────────────────────────────────────────────────────────────┐\n│  Archive → staging_root/                                        │\n│    manifest.json   metadata/   rootfs/                          │\n└──────────────────────────────┬──────────────────────────────────┘\n                               │\n                               ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  1. hb_compat_check                                     │\n   │     · hardware drift → RS_SKIP_PATHS                    │\n   │     · kernel direction → same / bk_newer / bk_older     │\n   │     · NIC remap plan                                    │\n   │     · hydration plan (bk_older only)                    │\n   │     · rollback plan                                     │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  2. Confirmation dialog                                 │\n   │     Shows: hot count, pending count, drift, hydration,  │\n   │     NIC remap, cross-kernel note, reinstalls preview    │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │ (accepted)\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  3. Apply hot paths → LIVE                              │\n   │     _rs_apply rsyncs each hot path                      │\n   │     from staging_root/rootfs to /                       │\n   │     (skips paths in RS_SKIP_PATHS)                      │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  4. _rs_prepare_pending_restore                         │\n   │     /var/lib/proxmenux/pending-restore/                 │\n   │       ├── apply-on-boot.list                            │\n   │       ├── plan.env                                      │\n   │       ├── rs-skip-paths.txt                             │\n   │       └── rootfs/ (deferred paths)                      │\n   │     Enable proxmenux-restore-onboot.service             │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  5. _rs_run_complete_extras                             │\n   │     packages.manual.list                                │\n   │       → cascade-safe filter                             │\n   │       → apt-get install                                 │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  6. REBOOT                                              │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  7. apply_pending_restore.sh (on early boot)            │\n   │     Reads plan.env                                      │\n   │     Applies apply-on-boot.list (filtered)               │\n   │     Installs the postboot systemd unit                  │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  8. apply_cluster_postboot.sh (~10 minutes)             │\n   │     Runs after pve-cluster is up                        │\n   │     · Applies /etc/pve entries to pmxcfs                │\n   │     · update-initramfs -u -k all                        │\n   │     · update-grub / proxmox-boot-tool refresh           │\n   │     · component --auto-reinstall (nvidia, coral, ...)   │\n   │     · Boot sanity check                                 │\n   │     · Notification: \"Host restore finished\"             │\n   └─────────────────────────────────────────────────────────┘"
+    "diagram": "┌─────────────────────────────────────────────────────────────────┐\n│  Archive → staging_root/                                        │\n│    manifest.json   metadata/   rootfs/                          │\n└──────────────────────────────┬──────────────────────────────────┘\n                               │\n                               ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  1. hb_compat_check                                     │\n   │     · hardware drift → RS_SKIP_PATHS                    │\n   │     · kernel direction → same / bk_newer / bk_older     │\n   │     · NIC remap plan                                    │\n   │     · hydration plan (bk_older only)                    │\n   │     · rollback plan                                     │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  2. Confirmation dialog                                 │\n   │     Shows: hot count, pending count, drift, hydration,  │\n   │     NIC remap, cross-kernel note, reinstalls preview    │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │ (accepted)\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  3. Apply hot paths → LIVE                              │\n   │     _rs_apply rsyncs each hot path                      │\n   │     from staging_root/rootfs to /                       │\n   │     (skips paths in RS_SKIP_PATHS)                      │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  4. _rs_prepare_pending_restore                         │\n   │     /var/lib/proxmenux/pending-restore/                 │\n   │       ├── apply-on-boot.list                            │\n   │       ├── plan.env                                      │\n   │       ├── rs-skip-paths.txt                             │\n   │       └── rootfs/ (deferred paths)                      │\n   │     Enable proxmenux-restore-onboot.service             │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  4b. _rs_import_data_pools                              │\n   │      Imports non-root ZFS pools whose disks are all     │\n   │      present; retries with -f on foreign hostid;        │\n   │      skips with a warning when disks are missing.       │\n   │      Log: /var/log/proxmenux/restore-datapools-*.log    │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  5. _rs_run_complete_extras                             │\n   │     packages.manual.list                                │\n   │       → cascade-safe filter                             │\n   │       → apt-get install                                 │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  6. REBOOT                                              │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  7. apply_pending_restore.sh (on early boot)            │\n   │     Reads plan.env                                      │\n   │     Applies apply-on-boot.list (filtered)               │\n   │     Installs the postboot systemd unit                  │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  8. apply_cluster_postboot.sh (~10 minutes)             │\n   │     Runs after pve-cluster is up                        │\n   │     · Applies /etc/pve entries to pmxcfs                │\n   │     · update-initramfs -u -k all                        │\n   │     · update-grub / proxmox-boot-tool refresh           │\n   │     · component --auto-reinstall (nvidia, coral, ...)   │\n   │     · Boot sanity check                                 │\n   │     · Notification: \"Host restore finished\"             │\n   └─────────────────────────────────────────────────────────┘"
   },
   "pendingMachinery": {
     "heading": "The pending-restore machinery",
@@ -100,7 +100,7 @@
     "rows": [
       {
         "file": "apply-on-boot.list",
-        "content": "One relative path per line — the exact set of paths <code>apply_pending_restore.sh</code> will apply from the staged rootfs. Reading this file tells the operator exactly what will change on the next boot."
+        "content": "One relative path per line — the exact set of paths <code>apply_pending_restore.sh</code> will apply from the staged rootfs. Reading this file tells the user exactly what will change on the next boot."
       },
       {
         "file": "plan.env",
@@ -123,7 +123,7 @@
     "tasks": [
       {
         "task": "Apply /etc/pve",
-        "detail": "<code>/etc/pve</code> is a live pmxcfs FUSE mount — it cannot be written to on early boot. The dispatcher copies files from the pending rootfs to the live <code>/etc/pve</code> once the cluster filesystem is up, one file at a time, without restarting pve-cluster."
+        "detail": "<code>/etc/pve</code> is a live pmxcfs FUSE mount — it cannot be written to on early boot. The dispatcher copies files from the pending rootfs to the live <code>/etc/pve</code> once the cluster filesystem is up, one file at a time, without restarting pve-cluster. The captured <code>/var/lib/pve-cluster/config.db</code> from the backup (or the promoted <code>config.db.raw-fallback</code>) is materialised with the <code>systemctl stop pve-cluster</code> → atomic file copy → <code>systemctl start pve-cluster</code> pattern, so pmxcfs re-reads the restored state on the way back up."
       },
       {
         "task": "Rebuild initramfs and bootloader",
@@ -158,6 +158,10 @@
       {
         "name": "Component list",
         "detail": "One row per driver being reinstalled (NVIDIA, Intel GPU tools, AMD tools, Coral TPU) with <code>installing</code> / <code>ok</code> / <code>failed</code> plus a link to the per-component log at <code>/var/log/proxmenux/component-*.log</code>."
+      },
+      {
+        "name": "Data-pool import",
+        "detail": "The <code>data_pools_import</code> block shows five colour-coded rows — <em>Imported</em>, <em>Forced</em> (imported with <code>-f</code> after a foreign hostid), <em>Skipped partial</em> (pools with only some disks present), <em>Skipped missing</em> (no disks present) and <em>Failed</em>. The state is persisted in <code>/var/lib/proxmenux/restore-state.json</code>, and the raw per-run log lives at <code>/var/log/proxmenux/restore-datapools-&lt;timestamp&gt;.log</code>."
       },
       {
         "name": "Boot sanity warnings",
@@ -221,14 +225,14 @@
       {
         "stage": "Sanity check + notification",
         "time": "~2 s",
-        "detail": "Cheap. The operator learns the run completed the moment the notification fires."
+        "detail": "Cheap. The user learns the run completed the moment the notification fires."
       }
     ],
-    "outroBody": "The window matters because the operator can log in during this time and see missing tools (<code>nvidia-smi</code> not found, <code>coral</code> not detected). This is expected — the reinstall is still running in the background. The completion notification signals when everything is ready."
+    "outroBody": "The window matters because the user can log in during this time and see missing tools (<code>nvidia-smi</code> not found, <code>coral</code> not detected). This is expected — the reinstall is still running in the background. The completion notification signals when everything is ready."
   },
   "destructiveRollback": {
     "heading": "The optional destructive rollback",
-    "body": "A restore is additive by default: if the target has VMs, LXCs or components that are not in the backup, they survive. This preserves work but can leave stale hostpci entries, orphan components or VMs the operator no longer wants. When drift is detected between target and backup, the confirmation dialog offers a second yes/no: <em>Execute destructive rollback?</em>. Accepting it triggers <code>_rs_execute_rollback</code>, which deletes the VMs, LXCs and components that exist on the target but not in the backup. The rollback runs BEFORE the reboot so that the pending restore machinery sees a clean state. This is opt-in — the default is No, and the operator sees exactly what would be removed listed by name (VMID and CTID) before deciding."
+    "body": "A restore is additive by default: if the target has VMs, LXCs or components that are not in the backup, they survive. This preserves work but can leave stale hostpci entries, orphan components or VMs the user no longer wants. When drift is detected between target and backup, the confirmation dialog offers a second yes/no: <em>Execute destructive rollback?</em>. Accepting it triggers <code>_rs_execute_rollback</code>, which deletes the VMs, LXCs and components that exist on the target but not in the backup. The rollback runs BEFORE the reboot so that the pending restore machinery sees a clean state. This is opt-in — the default is No, and the user sees exactly what would be removed listed by name (VMID and CTID) before deciding."
   },
   "logs": {
     "heading": "Where the logs live",
@@ -247,7 +251,11 @@
       },
       {
         "log": "/var/log/proxmenux/component-<name>-YYYYMMDD_HHMMSS.log",
-        "detail": "One log per component installer (nvidia, coral, etc.) that ran in the post-boot pass. Useful when a specific component's reinstall failed and the operator needs the tool's own output."
+        "detail": "One log per component installer (nvidia, coral, etc.) that ran in the post-boot pass. Useful when a specific component's reinstall failed and the user needs the tool's own output."
+      },
+      {
+        "log": "/var/log/proxmenux/restore-datapools-YYYYMMDD_HHMMSS.log",
+        "detail": "Written by <code>_rs_import_data_pools</code>. Contains: enumeration of non-root pools from the manifest, per-pool outcome (imported cleanly, imported with <code>-f</code> for foreign hostid, skipped due to missing disks, or failed), and the raw output of each <code>zpool import</code> call."
       }
     ]
   },

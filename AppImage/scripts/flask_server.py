@@ -2903,9 +2903,10 @@ def get_system_disks():
         pass
     
     try:
-        # 4. Check LVM physical volumes
+        # 4. Check LVM physical volumes. `--devices` (added when a disk
+        # is parked) keeps pvs from scanning — and waking — standby HDDs.
         result = subprocess.run(
-            ['pvs', '--noheadings', '-o', 'pv_name,vg_name'],
+            ['pvs', *_lvm_device_args(), '--noheadings', '-o', 'pv_name,vg_name'],
             capture_output=True, text=True, timeout=5
         )
         if result.returncode == 0:
@@ -3653,11 +3654,98 @@ def _smart_data_useful(d: dict) -> bool:
     )
 
 
+_standby_cache: dict[str, tuple] = {}
+_STANDBY_CACHE_TTL = 15
+
+
+def _hdd_in_standby(disk_name: str) -> bool:
+    """True if `disk_name` is a spinning disk currently parked.
+
+    The check is smartctl's CHECK POWER MODE probe (`-n standby`), which
+    the drive answers without spinning up. Restricted to rotational,
+    non-NVMe devices so SSDs and NVMe — which have no standby state —
+    skip the extra probe. Any error falls through to False so the caller
+    behaves exactly as before. Result cached briefly so one /api/storage
+    poll doesn't re-probe the same disk from several call sites. See
+    issue #232.
+    """
+    if disk_name.startswith('nvme'):
+        return False
+    now = time.time()
+    hit = _standby_cache.get(disk_name)
+    if hit and now - hit[0] < _STANDBY_CACHE_TTL:
+        return hit[1]
+    try:
+        with open(f'/sys/block/{disk_name}/queue/rotational') as f:
+            if f.read().strip() != '1':
+                _standby_cache[disk_name] = (now, False)
+                return False
+    except OSError:
+        return False
+    parked = False
+    try:
+        r = subprocess.run(
+            ['smartctl', '-n', 'standby', '-i', f'/dev/{disk_name}'],
+            capture_output=True, text=True, timeout=_SMART_TIMEOUT,
+        )
+        parked = r.returncode == 2
+    except (subprocess.SubprocessError, OSError):
+        parked = False
+    _standby_cache[disk_name] = (now, parked)
+    return parked
+
+
+def _lvm_device_args() -> list:
+    """Build the `--devices` argument that keeps an LVM tool (pvs/lvs/
+    vgs) off parked disks.
+
+    LVM tools scan every block device by default, which spins up a
+    standby HDD (issue #232). When any rotational disk is asleep, hand
+    LVM an explicit list of every block node EXCEPT those belonging to a
+    parked disk, so it never opens the sleeping drives. Each partition
+    must be listed too — `--devices /dev/sda` alone does not cover a PV
+    on /dev/sda3. Returns [] when nothing is parked, so hosts without
+    standby disks keep the plain pvs/lvs/vgs call unchanged.
+    """
+    try:
+        r = subprocess.run(
+            ['lsblk', '-rno', 'NAME,TYPE,PKNAME'],
+            capture_output=True, text=True, timeout=5)
+        if r.returncode != 0:
+            return []
+        nodes = []
+        for line in r.stdout.strip().split('\n'):
+            parts = line.split()
+            if len(parts) < 2 or parts[1] not in ('disk', 'part'):
+                continue
+            name = parts[0]
+            base = name if parts[1] == 'disk' else (parts[2] if len(parts) > 2 else name)
+            nodes.append((name, base))
+        standby_bases = {
+            name for name, base in nodes
+            if name == base and _hdd_in_standby(name)
+        }
+        if not standby_bases:
+            return []
+        devices = [f'/dev/{name}' for name, base in nodes if base not in standby_bases]
+        return ['--devices', ','.join(devices)] if devices else []
+    except (subprocess.SubprocessError, OSError):
+        return []
+
+
 def get_smart_data(disk_name):
     """Cached wrapper around the underlying smartctl probe.
 
-    Three short-circuits stack on top of the original 14-variant
+    Four short-circuits stack on top of the original 14-variant
     fallback chain:
+      0. Standby guard — a parked HDD is left alone. The full `smartctl
+         -a` probe is a media read that spins the disk back up, so on a
+         cache miss we first check the power mode (no spin-up) and, if
+         the drive is asleep, return the last good payload instead of
+         waking it. This is the fix for issue #232: with a browser on
+         the dashboard, /api/storage polls often enough that the 30 s
+         cache kept expiring and re-waking disks that hdparm / hd-idle
+         had just parked.
       1. Result cache — within 30 s of a successful probe, return the
          memoised payload immediately. This is the by-far hottest path
          because the dashboard polls /api/storage every few seconds.
@@ -3672,6 +3760,17 @@ def get_smart_data(disk_name):
     cached = _smart_result_cache.get(disk_name)
     if cached and now - cached[0] < _SMART_RESULT_TTL:
         return dict(cached[1])
+
+    if _hdd_in_standby(disk_name):
+        # Keep serving the last known values (temperature blanked, since
+        # we don't have a fresh one) so the card stays populated while
+        # the disk sleeps. The Storage view paints its own Standby badge
+        # from the temperature poller's flag. Don't refresh the cache
+        # timestamp: the moment the disk is active again we re-probe.
+        base = dict(cached[1]) if cached else _smart_default_payload()
+        base['standby'] = True
+        base['temperature'] = 0
+        return base
 
     retry_at = _smart_fail_backoff.get(disk_name, 0)
     if retry_at > now:
@@ -4712,22 +4811,43 @@ def _ethtool_max_speed(iface_name):
         return 0
 
 
+# A bond master always exposes /sys/class/net/<x>/bonding/. This is the
+# kernel's own marker, so it catches bonds whose name isn't "bondN"
+# (Proxmox lets you name them freely in /etc/network/interfaces).
+def _is_bond_master(iface_name):
+    try:
+        return os.path.isdir(f'/sys/class/net/{iface_name}/bonding')
+    except Exception:
+        return False
+
+
+# A physical NIC has a backing device symlink. Covers PCI, USB and any
+# renamed NIC (e.g. a udev-renamed "nic0"), which a name-prefix check
+# would miss.
+def _is_physical_dev(iface_name):
+    try:
+        return os.path.exists(f'/sys/class/net/{iface_name}/device')
+    except Exception:
+        return False
+
+
 def get_interface_type(interface_name):
     """Detect the type of network interface"""
     try:
         # Skip loopback
         if interface_name == 'lo':
             return 'skip'
-        
+
         if interface_name.startswith(('veth', 'tap')):
             return 'vm_lxc'
-        
+
         # Skip other virtual interfaces
         if interface_name.startswith(('tun', 'vnet', 'docker', 'virbr')):
             return 'skip'
-        
-        # Check if it's a bond
-        if interface_name.startswith('bond'):
+
+        # Check if it's a bond — sysfs first (name-agnostic), then the
+        # "bondN" convention as fallback when /sys isn't readable.
+        if _is_bond_master(interface_name) or interface_name.startswith('bond'):
             return 'bond'
         
         # Check if it's a bridge (but not virbr which we skip above)
@@ -4756,36 +4876,75 @@ def get_interface_type(interface_name):
         pass
         return 'skip'
 
+# Only active-backup (and the *-alb/tlb primary) have a real
+# active/standby distinction. In 802.3ad and balance-rr/xor EVERY slave
+# transmits, so labelling the others "standby" would be wrong — hence
+# the role is only assigned for active-backup.
+_BOND_FAILOVER_MODES = ('active-backup',)
+
+
 def get_bond_info(bond_name):
-    """Get detailed information about a bonding interface"""
+    """Get detailed information about a bonding interface.
+
+    sysfs is the primary source (short mode name, live active_slave);
+    /proc/net/bonding/<bond> is parsed too because it's the only place
+    that reports per-slave MII status, which tells a genuinely dead
+    link apart from a healthy standby.
+    """
     bond_info = {
-        'mode': 'unknown',
+        'mode': 'unknown',        # short kernel name, e.g. "active-backup"
+        'mode_detail': None,      # human name, e.g. "fault-tolerance (active-backup)"
         'slaves': [],
-        'active_slave': None
+        'active_slave': None,
+        'slave_status': {},       # {slave: 'up'|'down'}
+        'supports_failover': False,
     }
-    
+
     try:
+        # ── sysfs (authoritative, name-agnostic) ──────────────
+        mode = _read_sysfs(f'/sys/class/net/{bond_name}/bonding/mode')
+        if mode:
+            # "balance-alb 6" → "balance-alb"
+            bond_info['mode'] = mode.split()[0]
+        slaves = _read_sysfs(f'/sys/class/net/{bond_name}/bonding/slaves')
+        if slaves:
+            bond_info['slaves'] = slaves.split()
+        active = _read_sysfs(f'/sys/class/net/{bond_name}/bonding/active_slave')
+        if active:
+            bond_info['active_slave'] = active
+
+        # ── /proc/net/bonding (per-slave MII + pretty mode) ───
         bond_file = f'/proc/net/bonding/{bond_name}'
         if os.path.exists(bond_file):
             with open(bond_file, 'r') as f:
                 content = f.read()
-                
-                # Parse bonding mode
-                for line in content.split('\n'):
-                    if 'Bonding Mode:' in line:
-                        bond_info['mode'] = line.split(':', 1)[1].strip()
-                    elif 'Slave Interface:' in line:
-                        slave_name = line.split(':', 1)[1].strip()
-                        bond_info['slaves'].append(slave_name)
-                    elif 'Currently Active Slave:' in line:
-                        bond_info['active_slave'] = line.split(':', 1)[1].strip()
-                
-                # print(f"[v0] Bond {bond_name} info: mode={bond_info['mode']}, slaves={bond_info['slaves']}")
-                pass
+
+            current_slave = None
+            proc_slaves = []
+            for line in content.split('\n'):
+                if 'Bonding Mode:' in line:
+                    bond_info['mode_detail'] = line.split(':', 1)[1].strip()
+                elif 'Slave Interface:' in line:
+                    current_slave = line.split(':', 1)[1].strip()
+                    proc_slaves.append(current_slave)
+                elif 'Currently Active Slave:' in line:
+                    val = line.split(':', 1)[1].strip()
+                    if val and val.lower() != 'none' and not bond_info['active_slave']:
+                        bond_info['active_slave'] = val
+                elif 'MII Status:' in line and current_slave:
+                    bond_info['slave_status'][current_slave] = line.split(':', 1)[1].strip().lower()
+
+            # Fallbacks when sysfs was unreadable.
+            if not bond_info['slaves']:
+                bond_info['slaves'] = proc_slaves
+            if bond_info['mode'] == 'unknown' and bond_info['mode_detail']:
+                bond_info['mode'] = bond_info['mode_detail']
+
+        bond_info['supports_failover'] = bond_info['mode'] in _BOND_FAILOVER_MODES
     except Exception as e:
         # print(f"[v0] Error reading bond info for {bond_name}: {e}")
         pass
-    
+
     return bond_info
 
 def get_bridge_info(bridge_name):
@@ -4795,7 +4954,10 @@ def get_bridge_info(bridge_name):
         'physical_interface': None,
         'physical_duplex': 'unknown',  # Added physical_duplex field
         # Added bond_slaves to show physical interfaces
-        'bond_slaves': []
+        'bond_slaves': [],
+        # Set when the bridge port is a VLAN sub-interface (bond0.10);
+        # physical_interface then holds the base device (bond0).
+        'vlan_interface': None
     }
     
     try:
@@ -4805,19 +4967,32 @@ def get_bridge_info(bridge_name):
             members = os.listdir(brif_path)
             bridge_info['members'] = members
             
-            for member in members:
+            # Guest taps and firewall veth pairs are never the bridge's
+            # uplink — skipping them up front means the uplink is found
+            # regardless of the (arbitrary) order listdir returns.
+            uplinks = [m for m in members
+                       if not m.startswith(('veth', 'tap', 'fwpr', 'fwln'))]
+
+            for member in uplinks:
+                # A VLAN sub-interface (bond0.10 / eno1.10) is just a tag
+                # on top of the real uplink — resolve to the base device
+                # so the topology still shows the bond or NIC underneath.
+                base = member.split('.', 1)[0] if '.' in member else member
+                if base != member:
+                    bridge_info['vlan_interface'] = member
+
                 # Check if member is a bond first
-                if member.startswith('bond'):
-                    bridge_info['physical_interface'] = member
-                    # print(f"[v0] Bridge {bridge_name} connected to bond: {member}")
+                if _is_bond_master(base) or base.startswith('bond'):
+                    bridge_info['physical_interface'] = base
+                    # print(f"[v0] Bridge {bridge_name} connected to bond: {base}")
                     pass
-                    
-                    bond_info = get_bond_info(member)
+
+                    bond_info = get_bond_info(base)
                     if bond_info['slaves']:
                         bridge_info['bond_slaves'] = bond_info['slaves']
-                        # print(f"[v0] Bond {member} slaves: {bond_info['slaves']}")
+                        # print(f"[v0] Bond {base} slaves: {bond_info['slaves']}")
                         pass
-                    
+
                     # Get duplex from bond's active slave
                     if bond_info['active_slave']:
                         try:
@@ -4831,17 +5006,19 @@ def get_bridge_info(bridge_name):
                             # print(f"[v0] Error getting duplex for bond slave {bond_info['active_slave']}: {e}")
                             pass
                     break
-                # Check if member is a physical interface
-                elif member.startswith(('enp', 'eth', 'eno', 'ens', 'wlan', 'wlp')):
-                    bridge_info['physical_interface'] = member
-                    # print(f"[v0] Bridge {bridge_name} physical interface: {member}")
+                # Check if member is a physical interface. The device
+                # symlink is the reliable marker — a NIC renamed to
+                # "nic0" has no recognisable prefix but still has it.
+                elif _is_physical_dev(base) or base.startswith(('enp', 'eth', 'eno', 'ens', 'wlan', 'wlp')):
+                    bridge_info['physical_interface'] = base
+                    # print(f"[v0] Bridge {bridge_name} physical interface: {base}")
                     pass
-                    
+
                     # Get duplex from physical interface
                     try:
                         net_if_stats = psutil.net_if_stats()
-                        if member in net_if_stats:
-                            stats = net_if_stats[member]
+                        if base in net_if_stats:
+                            stats = net_if_stats[base]
                             bridge_info['physical_duplex'] = 'full' if stats.duplex == 2 else 'half' if stats.duplex == 1 else 'unknown'
                             # print(f"[v0] Physical interface {member} duplex: {bridge_info['physical_duplex']}")
                             pass
@@ -4866,6 +5043,10 @@ def get_network_info():
             'interfaces': [],
             'physical_interfaces': [],  # Added separate list for physical interfaces
             'bridge_interfaces': [],    # Added separate list for bridge interfaces
+            # Bond masters, so the Network Flow diagram can draw them as
+            # the intermediate node between their slaves and the host.
+            # They stay in `interfaces` too, for backward compatibility.
+            'bond_interfaces': [],
             'vm_lxc_interfaces': [],
             'traffic': {'bytes_sent': 0, 'bytes_recv': 0, 'packets_sent': 0, 'packets_recv': 0},
             # 'hostname': socket.gethostname(),
@@ -5043,9 +5224,12 @@ def get_network_info():
             if interface_type == 'bond':
                 bond_info = get_bond_info(interface_name)
                 interface_info['bond_mode'] = bond_info['mode']
+                interface_info['bond_mode_detail'] = bond_info['mode_detail']
                 interface_info['bond_slaves'] = bond_info['slaves']
                 interface_info['bond_active_slave'] = bond_info['active_slave']
-            
+                interface_info['bond_supports_failover'] = bond_info['supports_failover']
+                interface_info['bond_slave_status'] = bond_info['slave_status']
+
             if interface_type == 'bridge':
                 bridge_info = get_bridge_info(interface_name)
                 interface_info['bridge_members'] = bridge_info['members']
@@ -5065,13 +5249,44 @@ def get_network_info():
             else:
                 # Keep other types in the general interfaces list for backward compatibility
                 network_data['interfaces'].append(interface_info)
-        
+                if interface_type == 'bond':
+                    network_data['bond_interfaces'].append(interface_info)
+
         network_data['physical_active_count'] = physical_active_count
         network_data['physical_total_count'] = physical_total_count
         network_data['bridge_active_count'] = bridge_active_count
         network_data['bridge_total_count'] = bridge_total_count
         network_data['vm_lxc_active_count'] = vm_lxc_active_count
         network_data['vm_lxc_total_count'] = vm_lxc_total_count
+
+        # Tag every bond slave with its master and its CURRENT role. The
+        # role is read fresh on each poll (never pinned to a NIC), so a
+        # failover flips active/standby on the next refresh.
+        #   active/standby → only for active-backup, the one mode where
+        #                    a slave really sits idle.
+        #   member         → LACP, balance-rr/xor/tlb/alb: every slave
+        #                    transmits, so no standby label.
+        # `bond_link` comes from /proc/net/bonding's per-slave MII status
+        # and distinguishes a dead link from a healthy standby.
+        slave_meta = {}
+        for bond in network_data['bond_interfaces']:
+            failover = bond.get('bond_supports_failover')
+            active = bond.get('bond_active_slave')
+            statuses = bond.get('bond_slave_status') or {}
+            for slave in bond.get('bond_slaves') or []:
+                if failover:
+                    role = 'active' if slave == active else 'standby'
+                else:
+                    role = 'member'
+                slave_meta[slave] = {
+                    'bond_master': bond['name'],
+                    'bond_role': role,
+                    'bond_link': statuses.get(slave, 'unknown'),
+                }
+        for phy in network_data['physical_interfaces']:
+            meta = slave_meta.get(phy['name'])
+            if meta:
+                phy.update(meta)
 
         # Map physical NICs ↔ bridges using them. For a bridge with a
         # direct NIC parent, that NIC gets the bridge in its list. For
@@ -5135,6 +5350,7 @@ def get_network_info():
             'interfaces': [],
             'physical_interfaces': [],
             'bridge_interfaces': [],
+            'bond_interfaces': [],
             'vm_lxc_interfaces': [],
             'traffic': {'bytes_sent': 0, 'bytes_recv': 0, 'packets_sent': 0, 'packets_recv': 0},
             'active_count': 0,
@@ -7598,29 +7814,23 @@ def _get_hardware_info_uncached():
                         except:
                             pass
                         
-                        # Parse SATA version from smartctl output
+                        # SATA version + form factor from one `smartctl -i`.
+                        # `-n standby` so a parked HDD isn't handed even an
+                        # IDENTIFY command (issue #232) — exit code 2 leaves
+                        # both fields None and the disk asleep. Merged from
+                        # two separate calls that parsed the same output.
                         sata_version = None
+                        form_factor = None
                         try:
-                            result_smart = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], 
-                                                        capture_output=True, text=True, timeout=5)
+                            result_smart = subprocess.run(
+                                ['smartctl', '-n', 'standby', '-i', f'/dev/{disk_name}'],
+                                capture_output=True, text=True, timeout=5)
                             if result_smart.returncode == 0:
                                 for line in result_smart.stdout.split('\n'):
                                     if 'SATA Version is:' in line:
                                         sata_version = line.split(':', 1)[1].strip()
-                                        break
-                        except:
-                            pass
-                        
-                        # Parse form factor from smartctl output
-                        form_factor = None
-                        try:
-                            result_smart = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], 
-                                                        capture_output=True, text=True, timeout=5)
-                            if result_smart.returncode == 0:
-                                for line in result_smart.stdout.split('\n'):
-                                    if 'Form Factor:' in line:
+                                    elif 'Form Factor:' in line:
                                         form_factor = line.split(':', 1)[1].strip()
-                                        break
                         except:
                             pass
                         
@@ -12702,6 +12912,21 @@ _BACKUP_DEFAULT_DUMP_DIRS = ('/var/lib/vz/dump',)
 _BACKUP_FILENAME_RE = re.compile(r'^([A-Za-z0-9._-]+)-(\d{8}_\d{6})\.tar(\.zst|\.gz)?$')
 
 
+def _shell_env_line(line: str) -> str:
+    """Turn a raw ``KEY=value`` pair into a shell-safe assignment.
+
+    The job .env is `source`d by run_scheduled_backup.sh as root, so an
+    unquoted value is not just cosmetic: globs and spaces split the
+    assignment into a command, and `$(...)` or backticks in a password
+    run at source time. backup_scheduler.sh quotes with `printf %q`;
+    this is the same guarantee for the lines written from the API.
+    """
+    if not line or line.startswith('#') or '=' not in line:
+        return line
+    key, val = line.split('=', 1)
+    return f'{key}={shlex.quote(val)}'
+
+
 def _parse_job_env(file_path: str) -> dict:
     """Parse a /var/lib/proxmenux/backup-jobs/*.env file (shell KEY=value
     format with optional quoting) into a Python dict. Returns {} on any
@@ -12716,9 +12941,22 @@ def _parse_job_env(file_path: str) -> dict:
                 key, val = line.split('=', 1)
                 key = key.strip()
                 val = val.strip()
-                # Strip shell quoting if balanced
-                if len(val) >= 2 and val[0] == val[-1] and val[0] in ('"', "'"):
-                    val = val[1:-1]
+                # Unquote the way the shell would — `shlex` handles both
+                # writers, `printf %q` from the TUI and shlex.quote()
+                # from the API. Exactly one token means the value was
+                # properly quoted; anything else is a legacy unquoted
+                # multi-word value already on disk, kept verbatim rather
+                # than truncated to its first word.
+                try:
+                    parts = shlex.split(val)
+                    if len(parts) == 1:
+                        val = parts[0]
+                    elif not parts:
+                        val = ''
+                except ValueError:
+                    # Unbalanced quoting — fall back to a naive strip.
+                    if len(val) >= 2 and val[0] == val[-1] and val[0] in ('"', "'"):
+                        val = val[1:-1]
                 out[key] = val
     except OSError:
         pass
@@ -13412,7 +13650,10 @@ def _list_pbs_destinations() -> list:
                         repos.append({
                             'name': name,
                             'repository': repo,
-                            'fingerprint': None,
+                            # A manual destination never reaches
+                            # storage.cfg, so the sidecar is the only
+                            # place its fingerprint exists.
+                            'fingerprint': _resolve_pbs_fingerprint(name) or None,
                             'source': 'manual',
                         })
                         seen.add((name, repo))
@@ -14947,6 +15188,29 @@ def _resolve_pbs_password(repo_name: str) -> str:
     return ''
 
 
+def _fingerprint_for_repository(repo: str) -> str:
+    """Resolve the fingerprint from a `<user>@<server>:<datastore>`
+    repository string rather than a destination *name*.
+
+    Job payloads carry the repository, so this maps it back to the
+    destination before delegating to `_resolve_pbs_fingerprint`. A job
+    written without a `PBS_FINGERPRINT=` line fails on every run against
+    a self-signed PBS — the client refuses the connection instead of
+    trusting the certificate.
+    """
+    if not repo:
+        return ''
+    try:
+        for dest in _list_pbs_destinations():
+            if dest.get('repository') == repo:
+                fp = dest.get('fingerprint') or _resolve_pbs_fingerprint(dest.get('name') or '')
+                if fp:
+                    return fp
+    except Exception:
+        pass
+    return ''
+
+
 def _resolve_pbs_fingerprint(repo_name: str) -> str:
     """Return the PBS fingerprint for `repo_name`. Symmetric to
     _resolve_pbs_password: first the proxmenux manual sidecar
@@ -15343,6 +15607,8 @@ def api_host_backups_job_create():
             import socket
             pbs_backup_id = f'hostcfg-{socket.gethostname()}'
         pbs_fingerprint = (payload.get('pbs_fingerprint') or '').strip()
+        if not pbs_fingerprint:
+            pbs_fingerprint = _fingerprint_for_repository(pbs_repo)
         # Client-side encryption. Three modes:
         #   - "none"     — no --keyfile flag, plain backup
         #   - "new"      — generate a fresh per-host keyfile (default,
@@ -15448,7 +15714,7 @@ def api_host_backups_job_create():
         os.makedirs(_BACKUP_JOBS_DIR, exist_ok=True)
         with open(env_file, 'w') as f:
             for ln in lines:
-                f.write(ln + '\n')
+                f.write(_shell_env_line(ln) + '\n')
         os.chmod(env_file, 0o600)
         with open(f'{_BACKUP_JOBS_DIR}/{job_id}.paths', 'w') as f:
             for p in resolved_paths:
@@ -15832,6 +16098,8 @@ def api_host_backups_job_update(job_id):
             import socket
             pbs_backup_id = f'hostcfg-{socket.gethostname()}'
         pbs_fingerprint = (payload.get('pbs_fingerprint') or existing.get('PBS_FINGERPRINT') or '').strip()
+        if not pbs_fingerprint:
+            pbs_fingerprint = _fingerprint_for_repository(pbs_repo)
         # Encryption: matches job-create + manual-run. The Web sends
         # `pbs_encrypt_mode` ("none" / "new" / "existing"); older
         # clients may still send the legacy `pbs_encrypt` bool.
@@ -15909,7 +16177,7 @@ def api_host_backups_job_update(job_id):
         tmp_env = f'{env_file}.tmp.{os.getpid()}'
         with open(tmp_env, 'w') as f:
             for ln in lines:
-                f.write(ln + '\n')
+                f.write(_shell_env_line(ln) + '\n')
         os.chmod(tmp_env, 0o600)
         os.replace(tmp_env, env_file)
         paths_file = f'{_BACKUP_JOBS_DIR}/{job_id}.paths'
@@ -16044,6 +16312,8 @@ def api_host_backups_manual_run():
             # form when they need a separate retention bucket.
             pbs_backup_id = f'hostcfg-{socket.gethostname()}'
         pbs_fingerprint = (payload.get('pbs_fingerprint') or '').strip()
+        if not pbs_fingerprint:
+            pbs_fingerprint = _fingerprint_for_repository(pbs_repo)
         # Encryption mode: matches the job-create endpoint exactly.
         # Reads the modern `pbs_encrypt_mode` string ("none"/"new"/
         # "existing") first, falls back to legacy `pbs_encrypt` bool
@@ -16111,7 +16381,7 @@ def api_host_backups_manual_run():
         os.makedirs(_BACKUP_JOBS_DIR, exist_ok=True)
         with open(env_file, 'w') as f:
             for ln in lines:
-                f.write(ln + '\n')
+                f.write(_shell_env_line(ln) + '\n')
         os.chmod(env_file, 0o600)
         with open(paths_file, 'w') as f:
             for p in resolved_paths:

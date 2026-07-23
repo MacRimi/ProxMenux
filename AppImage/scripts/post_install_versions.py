@@ -48,6 +48,9 @@ _FN_DEF_RE = re.compile(r"^(?P<name>[a-zA-Z_][a-zA-Z0-9_]*)\s*\(\)\s*\{\s*$")
 _VERSION_RE = re.compile(r'local\s+FUNC_VERSION\s*=\s*"([0-9]+(?:\.[0-9]+)+)"')
 _DESC_RE = re.compile(r"#\s*description\s*:\s*([^\n]+)")
 _REGISTER_RE = re.compile(r'\bregister_tool\s+"([^"]+)"\s+true\b')
+# Matches a heredoc opener and captures its terminator word. Handles
+# `<<EOF`, `<<-EOF`, `<< EOF`, `<<'EOF'` and `<<"EOF"`.
+_HEREDOC_RE = re.compile(r'<<[-~]?\s*["\']?([A-Za-z_][A-Za-z0-9_]*)["\']?')
 
 # In-memory cache of the last scan. Sprint 12A uses a single startup scan
 # plus on-demand re-scan via the API; no automatic refresh.
@@ -122,12 +125,31 @@ def parse_post_install_script(path: Path) -> dict[str, dict[str, str]]:
             continue
 
         func_name = match.group("name")
-        # Find the matching closing brace at column 0. Bash post-install
-        # scripts use the convention `}` on its own line at the start of
-        # the line to close top-level functions, so we scan until that.
+        # Find the matching closing brace at column 0. Top-level post-install
+        # functions close with `}` alone on a line. A bare scan for that line
+        # breaks when the body embeds a heredoc whose content also has `}` at
+        # column 0 — e.g. a logrotate stanza written via `cat >... <<EOF`.
+        # That truncated the body before its `register_tool` call, so tools
+        # like log2ram / network_optimization were never registered and never
+        # flagged as updatable. Track heredoc state and ignore `}` inside one.
         body_start = i + 1
         body_end = body_start
-        while body_end < len(lines) and not lines[body_end].rstrip() == "}":
+        heredoc_term = None
+        while body_end < len(lines):
+            current = lines[body_end]
+            if heredoc_term is not None:
+                # Inside a heredoc — only its terminator line ends it.
+                if current.strip() == heredoc_term:
+                    heredoc_term = None
+                body_end += 1
+                continue
+            if current.rstrip() == "}":
+                break
+            # A line may open a heredoc (use the last opener on the line, so
+            # `cmd <<A | cmd <<B` picks B, matching shell behaviour).
+            openers = _HEREDOC_RE.findall(current)
+            if openers:
+                heredoc_term = openers[-1]
             body_end += 1
 
         body = "\n".join(lines[body_start:body_end])

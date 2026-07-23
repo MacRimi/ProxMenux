@@ -98,7 +98,7 @@
       {
         "category": "Actualizaciones del sistema",
         "checks": "Actualizaciones pendientes, actualizaciones de seguridad, kernel / versión de PVE, antigüedad del sistema",
-        "events": "Actualizaciones de seguridad disponibles; kernel pinneado varias versiones menores por detrás; uptime del host > 90 días."
+        "events": "Actualizaciones de seguridad disponibles; kernel pinneado varias versiones menores por detrás; uptime del host > 90 días. Cuando hay actualizaciones pendientes, la cabecera de Overview muestra un botón <em>Update Now</em> que ejecuta el flujo completo de actualización de ProxMenux en línea; al cerrar vuelve a golpear el endpoint de health con <code>?refresh=1</code> para que el badge refleje el nuevo estado sin esperar al siguiente ciclo de 5 minutos."
       },
       {
         "category": "Seguridad y Certificados",
@@ -151,11 +151,14 @@
       "<strong>Dismissed</strong> — items previamente reconocidos por el usuario que aún están dentro de su ventana de supresión. Cada fila muestra cuánto queda de la supresión y la duración configurada. Cuando la ventana caduca, el item desaparece de esta lista; si la condición subyacente sigue presente y la categoría soporta re-firing, reaparece en <em>Active</em>."
     ],
     "pillTitle": "La pildora refleja la peor categoría",
-    "pillBody": "El color de la cabecera del panel es la severidad más alta entre las diez categorías: cualquier CRITICAL → rojo, si no cualquier WARNING → amarillo, si no cualquier INFO → azul, si no verde. La misma lógica dirige el punto del favicon y el badge del PWA."
+    "pillBody": "El color de la cabecera del panel es la severidad más alta entre las diez categorías: cualquier CRITICAL → rojo, si no cualquier WARNING → amarillo, si no cualquier INFO → azul, si no verde. La misma lógica dirige el punto del favicon y el badge del PWA.",
+    "updateNowTitle": "Botón Update Now en la cabecera de Overview",
+    "updateNowBody1": "Cuando la categoría <em>Actualizaciones del sistema</em> reporta una o más actualizaciones pendientes, la cabecera de Overview renderiza un botón <strong>Update Now</strong> al lado de la pildora de salud. El botón abre una modal que ejecuta el mismo flujo del lado del host que <em>ProxMenux → Settings post-install Proxmox → Proxmox System Update</em>: higiene de repos, <code>apt full-upgrade</code> vía el worker seguro <code>update-pve-safe.sh</code>, recompilación DKMS automática de los drivers gestionados por ProxMenux cuando aterriza un kernel nuevo, autoremove / autoclean y prompt de reinicio si el kernel cambió. Las líneas de progreso van llegando a la modal según las va imprimiendo el worker.",
+    "updateNowBody2": "Al terminar la ejecución, cerrar la modal llama a <code>GET /api/health/details?refresh=1</code>, que invalida la caché del endpoint de health antes de servir. La fila de actualizaciones pendientes y la severidad de la pildora se recomputan al momento a partir del nuevo estado de paquetes, así que el badge desaparece sin esperar al siguiente ciclo de cinco minutos. Cuando el host ya está al día el botón queda oculto — sin ruido visual en un sistema sano."
   },
   "dismiss": {
     "heading": "Hacer dismiss de alertas y la Suppression Duration",
-    "intro": "Algunos eventos son ruidosos por naturaleza — un <em>System Updates: actualizaciones pendientes disponibles</em> permanece cierto hasta que parches el host, y no quieres una notificación cada cinco minutos durante una semana. El Monitor de salud resuelve esto con dos mecanismos acoplados:",
+    "intro": "Algunos eventos son ruidosos por naturaleza — un <em>System Updates: actualizaciones pendientes disponibles</em> permanece cierto hasta que parches el host, y no quieres una notificación cada cinco minutos durante una semana. El botón <em>Update Now</em> de la cabecera de Overview es el atajo directo para resolver ese caso concreto en sitio; para todo lo demás, o cuando el parche se aplaza, el Monitor de salud ofrece además dos mecanismos de silenciamiento acoplados:",
     "step1": "<strong>Acción Dismiss por evento</strong> en el modal. El botón Dismiss abre un dropdown con tres opciones — <strong>24 horas</strong>, <strong>7 días</strong> o <strong>Permanently</strong> — que te permite elegir cuánto tiempo se silencia esta alerta concreta independientemente del valor por defecto de la categoría. Elegir una llama a <code>POST /api/health/acknowledge</code> con el <code>error_key</code> y el <code>suppression_hours</code> escogido (<code>-1</code> para permanente). El evento se mueve a la lista Dismissed con un <code>acknowledged_at</code> con timestamp.",
     "dropdownImageAlt": "Dropdown de Dismiss sobre una alerta del Monitor de salud — 24 horas, 7 días o Permanently",
     "dropdownImageCaption": "Dropdown Dismiss por evento. La ventana elegida aplica solo a esta alerta; si no eliges ninguna por evento se usa el valor por defecto de la categoría. Los dismisses permanentes se marcan con un badge ámbar distinto <em>Permanent</em> en la lista Dismissed y no se re-disparan.",

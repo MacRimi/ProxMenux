@@ -20,11 +20,11 @@
     "heading": "Archive layout",
     "intro": "Every archive follows the same tree layout regardless of destination. The <code>metadata/</code> subdirectory holds the structured payloads; the <code>rootfs/</code> subdirectory holds the filesystem copy.",
     "treeCaption": "The staging directory laid out during a backup. Every destination receives the same tree (adapted to its native format: tar for local, PBS chunks for PBS, borg segments for Borg).",
-    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # backup run identity + kernel version\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/ssh, …\n    ├── root/                      # /root (with volatile subdirs excluded)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster, /var/spool/cron/…"
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # backup run identity + kernel version + pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, …\n    ├── root/                      # /root (with volatile subdirs excluded)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/…"
   },
   "rootfs": {
     "heading": "The rootfs payload",
-    "intro": "The <code>rootfs/</code> tree is a <strong>plain filesystem copy</strong> produced by <code>rsync</code> from the source host. It contains a curated <strong>default profile</strong> of paths that matter for a Proxmox restore, plus any <strong>custom paths</strong> added by the operator to the backup job or interactive session. The set is deliberately narrow: only paths that either <em>hold configuration</em> or <em>hold state that Proxmox cannot regenerate on its own</em>.",
+    "intro": "The <code>rootfs/</code> tree is a <strong>plain filesystem copy</strong> produced by <code>rsync</code> from the source host. It contains a curated <strong>default profile</strong> of paths that matter for a Proxmox restore, plus any <strong>custom paths</strong> added by the user to the backup job or interactive session. The set is deliberately narrow: only paths that either <em>hold configuration</em> or <em>hold state that Proxmox cannot regenerate on its own</em>.",
     "defaultProfileTitle": "The default profile",
     "defaultProfileBody": "The default profile is defined by <code>hb_default_profile_paths</code> in <code>lib_host_backup_common.sh</code>. It covers eight categories that together describe a working Proxmox host:",
     "categoriesTitle": "Path categories",
@@ -32,17 +32,17 @@
       {
         "category": "PVE core",
         "paths": "/etc/pve, /var/lib/pve-cluster, /etc/vzdump.conf",
-        "why": "Cluster filesystem contents, cluster live data, vzdump defaults."
+        "why": "Cluster filesystem contents and vzdump defaults. The pmxcfs database (<code>config.db</code>) is captured as a consistent snapshot via <code>sqlite3 .backup</code> without stopping the cluster, and the <code>.db-wal</code> / <code>.db-shm</code> sidecars are excluded from the rsync. When <code>sqlite3</code> is not available, a <code>config.db.raw-fallback</code> is dropped instead, which the restore promotes automatically."
       },
       {
         "category": "Host identity & network",
-        "paths": "/etc/hostname, /etc/hosts, /etc/timezone, /etc/resolv.conf, /etc/network",
-        "why": "Everything the host needs to come up on the network with the same identity."
+        "paths": "/etc/hostname, /etc/hosts, /etc/timezone, /etc/resolv.conf, /etc/network, /etc/systemd/network",
+        "why": "Everything the host needs to come up on the network with the same identity. The <code>.link</code> files under <code>/etc/systemd/network</code> pin NIC names to their MAC, so reinstalls and hardware changes do not rename interfaces."
       },
       {
         "category": "Access & auth",
         "paths": "/etc/ssh, /etc/sudoers, /etc/sudoers.d, /etc/pam.d, /etc/security",
-        "why": "SSH keys, sudo rules and PAM configuration. Losing these locks the operator out of the restored host."
+        "why": "SSH keys, sudo rules and PAM configuration. Losing these locks the user out of the restored host."
       },
       {
         "category": "Kernel & boot",
@@ -57,7 +57,7 @@
       {
         "category": "Packaging & cron",
         "paths": "/etc/apt, /etc/cron.d, /etc/cron.{daily,hourly,weekly,monthly}, /etc/cron.allow, /etc/cron.deny, /var/spool/cron/crontabs",
-        "why": "APT sources for consistent package resolution, scheduled tasks defined by the operator."
+        "why": "APT sources for consistent package resolution, scheduled tasks defined by the user."
       },
       {
         "category": "ProxMenux state & tools",
@@ -78,11 +78,11 @@
     "customTitle": "Extending the profile with custom paths",
     "customBody": "Beyond the default profile, ProxMenux offers two ways to include additional paths in a backup. They compose without conflict and both apply to interactive backups and scheduled jobs.",
     "customExtrasTitle": "1. Persistent extras (per-host file)",
-    "customExtrasBody": "A text file at <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code> holds a list of absolute paths the operator has marked as \"always include\" on this host. When a backup runs in <strong>Default</strong> mode, ProxMenux appends these paths to the default profile automatically without asking. The file is edited from the interface — no manual editing needed — and persists across reboots and updates. One absolute path per line; <code>#</code> comments are allowed.",
+    "customExtrasBody": "A text file at <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code> holds a list of absolute paths the user has marked as \"always include\" on this host. When a backup runs in <strong>Default</strong> mode, ProxMenux appends these paths to the default profile automatically without asking. The file is edited from the interface — no manual editing needed — and persists across reboots and updates. One absolute path per line; <code>#</code> comments are allowed.",
     "customModeTitle": "2. Custom mode (per-run)",
-    "customModeBody": "Launching a backup in <strong>Custom</strong> mode replaces the automatic application of the default profile with a checklist showing every path: the default-profile entries and the persistent extras (prefixed with <code>[+]</code> and pre-checked). The operator ticks or unticks entries for that specific run, and can also press <em>Add custom path</em> to enter a new path — which is then persisted to the extras file for future backups.",
+    "customModeBody": "Launching a backup in <strong>Custom</strong> mode replaces the automatic application of the default profile with a checklist showing every path: the default-profile entries and the persistent extras (prefixed with <code>[+]</code> and pre-checked). The user ticks or unticks entries for that specific run, and can also press <em>Add custom path</em> to enter a new path — which is then persisted to the extras file for future backups.",
     "customMissingTitle": "Paths absent from the source",
-    "customMissingBody": "Any path from the profile (default or added) that does not exist on the source host is recorded in <code>metadata/missing_paths.txt</code> inside the archive. The backup neither fails nor stops — the operator sees a summary of archived paths and missing paths at the end. In practice this happens for optional tooling paths like <code>/etc/wireguard</code> or <code>/etc/prometheus</code> when those tools are not installed."
+    "customMissingBody": "Any path from the profile (default or added) that does not exist on the source host is recorded in <code>metadata/missing_paths.txt</code> inside the archive. The backup neither fails nor stops — the user sees a summary of archived paths and missing paths at the end. In practice this happens for optional tooling paths like <code>/etc/wireguard</code> or <code>/etc/prometheus</code> when those tools are not installed."
   },
   "manifest": {
     "heading": "The manifest payload",
@@ -102,7 +102,7 @@
       {
         "collector": "collect_storage.sh",
         "produces": "storage_inventory",
-        "content": "ZFS pools (with pool type + member disks resolved to <code>/dev/disk/by-id/*</code> for portability), LVM volume groups + thin pools, physical disks with SMART capability, PVE <code>storage.cfg</code> entries, external mounts."
+        "content": "ZFS pools (with pool type + member disks resolved to <code>/dev/disk/by-id/*</code>, <code>/dev/disk/by-partuuid/*</code> or raw <code>/dev/sdX</code> paths depending on how each pool was originally created), LVM volume groups + thin pools, physical disks with SMART capability, PVE <code>storage.cfg</code> entries, external mounts."
       },
       {
         "collector": "collect_kernel.sh",
@@ -157,8 +157,8 @@
   },
   "restoreFlow": {
     "heading": "How the restore consumes the three payloads",
-    "intro": "The restore is a five-stage pipeline. Each stage reads a specific subset of the archive and updates the target host. No stage requires the source host to be reachable — the archive is fully self-contained.",
-    "stagesCaption": "Stage 1 uses the manifest to decide what to touch. Stage 2 copies rootfs paths that are safe to apply on a running system. Stage 3 stages the risky paths for the next boot. Stage 4 handles packages. Stage 5 runs after the reboot and reinstalls components against the target's kernel.",
+    "intro": "The restore is a six-stage pipeline. Each stage reads a specific subset of the archive and updates the target host. No stage requires the source host to be reachable — the archive is fully self-contained.",
+    "stagesCaption": "Stage 1 uses the manifest to decide what to touch. Stage 2 copies rootfs paths that are safe to apply on a running system. Stage 3 stages the risky paths for the next boot. Stage 3b imports non-root ZFS data pools whose disks are all present. Stage 4 handles packages. Stage 5 runs after the reboot and reinstalls components against the target's kernel.",
     "stageRows": [
       {
         "stage": "1",
@@ -177,6 +177,12 @@
         "name": "Pending prepare",
         "reads": "rootfs/ (reboot + dangerous paths)",
         "action": "<code>_rs_prepare_pending_restore</code> stages risky paths under <code>/var/lib/proxmenux/pending-restore/</code>, writes <code>plan.env</code>, <code>apply-on-boot.list</code> and <code>rs-skip-paths.txt</code>, and enables <code>proxmenux-restore-onboot.service</code> to fire on the next boot."
+      },
+      {
+        "stage": "3b",
+        "name": "Data-pool import",
+        "reads": "manifest.storage_inventory + target ZFS state",
+        "action": "<code>_rs_import_data_pools</code> imports every non-root ZFS pool whose full set of disks is present on the target. Pools carrying a foreign hostid are retried with <code>zpool import -f</code>. Pools missing any disk are skipped with a warning. The per-pool outcome is recorded in <code>/var/log/proxmenux/restore-datapools-&lt;timestamp&gt;.log</code>."
       },
       {
         "stage": "4",

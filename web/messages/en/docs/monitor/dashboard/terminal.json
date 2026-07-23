@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "A real PTY in the browser",
-    "body": "The terminal allocates a server-side PTY through <code>flask_terminal_routes</code>, pipes it over a WebSocket to <code>xterm.js</code> in the browser, and runs as <code>root</code> (the systemd unit's user). Anything you can do in <code>ssh root@&lt;host&gt;</code> works here — including <code>vim</code>, <code>tmux</code>, ncurses tools and Proxmox CLIs (<code>qm</code>, <code>pct</code>, <code>pvesh</code>, <code>pvecm</code>)."
+    "body": "The terminal allocates a server-side PTY through <code>flask_terminal_routes</code>, pipes it over a WebSocket to <code>xterm.js</code> in the browser, and runs as <code>root</code> (the systemd unit's user). Anything you can do in <code>ssh root@&lt;host&gt;</code> works here — including <code>vim</code>, <code>tmux</code>, ncurses tools and Proxmox CLIs (<code>qm</code>, <code>pct</code>, <code>pvesh</code>, <code>pvecm</code>). Every PTY started from this tab exports the environment variable <code>PROXMENUX_TERMINAL=monitor</code>, which is inherited by every child <code>bash</code> process — including a subsequent <code>menu</code> launch — so ProxMenux flows can tell when they are running inside the Monitor's browser terminal."
   },
   "singleAlt": "ProxMenux Monitor Terminal tab — single terminal session showing Fastfetch system summary on login",
   "singleCaption": "One host terminal open — the toolbar above shows the count (<em>1 / 4 terminals</em>), <em>+ New</em>, <em>Search</em>, <em>Clear</em> and <em>Close</em>. The mobile keyboard helpers appear under the terminal on touch devices.",
@@ -18,6 +18,11 @@
     "heading": "Connection target",
     "body1": "The Terminal tab opens a shell on the <strong>Proxmox host itself</strong> — the same login you would get over SSH. Each tab opens a brand-new host terminal.",
     "body2": "To reach an <strong>LXC container</strong> from the browser, use the dedicated <em>Console</em> button on every running CT card in the <link>VMs & LXCs tab</link>. It opens a modal that runs <code>pct enter &lt;vmid&gt;</code> and reuses the same mobile-friendly toolbar described below."
+  },
+  "menuGuard": {
+    "heading": "Self-update guard when menu runs inside this terminal",
+    "body1": "ProxMenux's <code>menu</code> self-updates in place: accepting the prompt replaces its own script tree and reloads. That works cleanly over SSH or the Proxmox console, but the browser terminal cannot survive it — the update tears down the very PTY the shell is running in, and the WebSocket drops mid-flight. To avoid stranding the session, the internal handlers <code>check_updates_stable</code>, <code>check_updates_beta</code> and <code>apply_release_channel</code> read <code>PROXMENUX_TERMINAL</code> and detect the Monitor context.",
+    "body2": "When they detect it, the classic yes / no dialog is replaced by an informational msgbox with the canonical one-line installer — <code>bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)\"</code> for stable, and the equivalent <code>install_proxmenux_beta.sh</code> URL for beta. The update itself is deferred to an SSH session or the Proxmox host console; the browser terminal is used only to acknowledge and read the command."
   },
   "fourTerminals": {
     "heading": "Up to four terminals at once",

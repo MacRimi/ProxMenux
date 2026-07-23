@@ -88,11 +88,11 @@
         "items": [
           {
             "tool": "Network Optimizations",
-            "restores": "Removes /etc/sysctl.d/99-network.conf and the proxmenux-fwbr-tune.service unit. Reloads sysctl and systemd."
+            "restores": "Removes /etc/sysctl.d/99-network.conf together with the proxmenux-fwbr-tune.service unit, the /usr/local/sbin/proxmenux-fwbr-tune helper and the /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules udev rule. Reloads sysctl, systemd and the udev ruleset."
           },
           {
             "tool": "Persistent Interface Names",
-            "restores": "Removes every .link file from /etc/systemd/network/. Interface names return to systemd's default behaviour on next reboot."
+            "restores": "Removes only the 10-proxmenux-*.link files carrying the ProxMenux header from /etc/systemd/network/. Any .link file provided by another package or written by the user is left in place. Interface names return to systemd's default behaviour on next reboot."
           }
         ]
       },
@@ -171,7 +171,7 @@
     "packageTitle": "Package reinstall touches live Proxmox packages",
     "packageBody": "Reverting <strong>Subscription Banner Removal</strong> reinstalls <code>pve-manager</code>, <code>proxmox-widget-toolkit</code>, <code>libjs-extjs</code> and <code>libpve-http-server-perl</code> with <code>--force-confnew</code>. This is generally safe but does touch the running web UI — refresh your browser afterwards, and expect a few seconds of reconnection. Don't run this in the middle of a migration or clone operation.",
     "rebootTitle": "Persistent names and VFIO need a reboot",
-    "rebootBody": "Removing the <code>.link</code> files (<em>Persistent Interface Names</em>) and reverting <em>IOMMU/VFIO</em> do not affect the running system — they only matter after a reboot. ProxMenux sets the reboot flag automatically for these.",
+    "rebootBody": "Removing ProxMenux's <code>10-proxmenux-*.link</code> files (<em>Persistent Interface Names</em>) and reverting <em>IOMMU/VFIO</em> do not affect the running system — they only matter after a reboot. ProxMenux sets the reboot flag automatically for these.",
     "perItemTitle": "You can revert one thing and keep the rest",
     "perItemBody": "The uninstaller operates per-item. If you only want to remove Log2RAM but keep the network tuning and bashrc changes, tick only <em>Log2RAM</em>. Nothing else is touched, and the registry is updated accordingly."
   },

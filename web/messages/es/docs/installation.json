@@ -57,7 +57,7 @@
   },
   "updating": {
     "heading": "Actualizar",
-    "body": "ProxMenux se autoactualiza. Cuando hay una nueva versión disponible, te lo pide en el siguiente lanzamiento de <code>menu</code> y aceptar reemplaza los archivos de utilidad y las configuraciones en sitio. No hace falta descarga manual. Los usuarios estables reciben releases estables; los usuarios beta reciben releases beta (y el prompt de auto-cambio de arriba cuando una estable se publica)."
+    "body": "ProxMenux se autoactualiza. Cuando hay una nueva versión disponible, el siguiente lanzamiento de <code>menu</code> ofrece la actualización; al aceptar se reemplazan los archivos de utilidad y las configuraciones en sitio. No hace falta descarga manual. Los usuarios estables reciben releases estables; los usuarios beta reciben releases beta (y el prompt de auto-cambio de arriba cuando una estable se publica). La forma del prompt depende de dónde se ejecute <code>menu</code>: por SSH o desde la consola de Proxmox aparece el diálogo clásico sí / no y al aceptar la actualización se aplica de inmediato. Dentro del terminal WebSocket de ProxMenux Monitor se sustituye por un msgbox informativo — ese terminal no puede sobrevivir a una autoactualización en curso, así que el msgbox muestra el instalador canónico de una línea (<code>bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)\"</code> para el canal estable, o la URL equivalente de <code>install_proxmenux_beta.sh</code> para beta) para lanzarlo desde SSH o consola."
   },
   "uninstall": {
     "heading": "Desinstalar",

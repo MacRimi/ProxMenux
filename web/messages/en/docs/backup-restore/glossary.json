@@ -23,7 +23,7 @@
         {
           "id": "passphrase-recuperacion",
           "term": "Recovery passphrase",
-          "def": "Text password the operator picks to protect the <a href=\"#sobre-recuperacion\">recovery envelope</a>. It is prompted twice with a match check, and is only used to encrypt the envelope and to decrypt it if the keyfile ever needs to be recovered. <strong>It is not the passphrase that unlocks the keyfile itself</strong>, and it is never sent to PBS. During a normal backup it never leaves the host."
+          "def": "Text password the user picks to protect the <a href=\"#sobre-recuperacion\">recovery envelope</a>. It is prompted twice with a match check, and is only used to encrypt the envelope and to decrypt it if the keyfile ever needs to be recovered. <strong>It is not the passphrase that unlocks the keyfile itself</strong>, and it is never sent to PBS. During a normal backup it never leaves the host."
         },
         {
           "id": "clave-cifrado",
@@ -130,7 +130,7 @@
         {
           "id": "backup-id",
           "term": "Backup ID",
-          "def": "Name of the <a href=\"#grupo-copia\">backup group</a>. ProxMenux defaults to <code>hostcfg-HOSTNAME</code> and lets the operator edit it before upload; unsupported characters are stripped automatically."
+          "def": "Name of the <a href=\"#grupo-copia\">backup group</a>. ProxMenux defaults to <code>hostcfg-HOSTNAME</code> and lets the user edit it before upload; unsupported characters are stripped automatically."
         },
         {
           "id": "pxar",

@@ -32,6 +32,20 @@ type NIC = {
   rx: number   // MB/s
   tx: number
   status?: "up" | "down"   // present → drives the active state instead of the rate
+  // Set when this NIC is enslaved to a bond. The diagram then routes it
+  // through the bond node instead of straight to the host.
+  bond?: string
+  // Current role INSIDE the bond, re-read on every poll so a failover
+  // flips the labels. "member" = every slave transmits (LACP, balance-*),
+  // so no active/standby distinction exists.
+  role?: "active" | "standby" | "member"
+}
+type Bond = {
+  id: string
+  mode?: string           // "active-backup", "balance-alb", "802.3ad", …
+  rx: number
+  tx: number
+  status?: "up" | "down"
 }
 type Bridge = {
   id: string
@@ -48,6 +62,7 @@ type Guest = {
 }
 export type NetworkFlowData = {
   nics: NIC[]
+  bonds?: Bond[]
   bridges: Bridge[]
   consumers: Guest[]   // includes the host pseudo-entry
 }
@@ -57,6 +72,9 @@ const ICONS: Record<string, string> = {
   nic: `<path d="m15 20 3-3h2a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h2l3 3z"/><path d="M6 8v1"/><path d="M10 8v1"/><path d="M14 8v1"/><path d="M18 8v1"/>`,
   bridge: `<rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/>`,
   host: `<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/>`,
+  // Router — same glyph the interface cards use for a bond, so the node
+  // in the diagram and the row in the list read as the same thing.
+  bond: `<rect width="20" height="8" x="2" y="14" rx="2"/><path d="M6.01 18H6"/><path d="M10.01 18H10"/><path d="M15 10v4"/><path d="M17.84 7.17a4 4 0 0 0-5.66 0"/><path d="M20.66 4.34a8 8 0 0 0-11.31 0"/>`,
   lxc: `<path d="M22 7.7c0-.6-.4-1.2-.8-1.5l-6.3-3.9a1.72 1.72 0 0 0-1.7 0l-10.3 6c-.5.2-.9.8-.9 1.4v6.6c0 .5.4 1.2.8 1.5l6.3 3.9a1.72 1.72 0 0 0 1.7 0l10.3-6c.5-.3.9-1 .9-1.5Z"/><path d="M10 21.9V14L2.1 9.1"/><path d="m10 14 11.9-6.9"/><path d="M14 19.8v-8.1"/><path d="M18 17.5V9.4"/>`,
   vm: `<rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><path d="M6 6h.01"/><path d="M6 18h.01"/>`,
 }
@@ -66,8 +84,56 @@ const COLORS = {
   lxc: "var(--cyan-500, #06b6d4)",
   vm: "var(--purple-500, #a855f7)",
   nic: "var(--amber-500, #f59e0b)",
+  // Warm like the NICs (both live on the physical side of the topology)
+  // but clearly its own hue, so the aggregation node doesn't read as
+  // just another NIC.
+  bond: "var(--orange-500, #f97316)",
   bridge: "var(--cyan-500, #06b6d4)",
   gray: "#525252",
+}
+
+// Bond membership resolved once and shared by both layouts. Only bonds
+// that actually have a rendered slave are kept — an orphan bond node
+// with nothing feeding it would be noise.
+function resolveBonds(data: NetworkFlowData): {
+  bonds: Bond[]
+  bondOfNic: Map<string, string>
+  nics: NIC[]
+} {
+  const declared = data.bonds || []
+  const byId = new Map(declared.map((b) => [b.id, b]))
+  const bondOfNic = new Map<string, string>()
+  data.nics.forEach((n) => {
+    if (n.bond && byId.has(n.bond)) bondOfNic.set(n.id, n.bond)
+  })
+  const bonds = declared.filter((b) =>
+    data.nics.some((n) => bondOfNic.get(n.id) === b.id)
+  )
+  // Group slaves of the same bond together so its node sits next to the
+  // NICs feeding it and the links don't cross unrelated ones. Array sort
+  // is stable, so NICs within a group keep their backend order.
+  const nics = [...data.nics].sort((a, b) => {
+    const ba = bondOfNic.get(a.id) || ""
+    const bb = bondOfNic.get(b.id) || ""
+    if (ba === bb) return 0
+    if (!ba) return 1     // unbonded NICs last
+    if (!bb) return -1
+    return ba < bb ? -1 : 1
+  })
+  return { bonds, bondOfNic, nics }
+}
+
+// Sub-label under a NIC. In active-backup the role is the useful bit
+// (which cable is actually carrying traffic right now); in every other
+// mode all slaves transmit, so the link speed stays.
+function nicSubLabel(n: NIC): string {
+  if (n.status === "down") return "down"
+  const role = n.role === "standby" || n.role === "active" ? n.role : ""
+  if (!role) return n.link
+  // A NIC that doesn't report a negotiated speed renders its link as
+  // "—"; pairing that with the role would read as "— · active".
+  if (!n.link || n.link === "—") return role
+  return `${n.link} · ${role}`
 }
 
 function fmt(v: number): string {
@@ -152,6 +218,7 @@ function renderHorizontal(data: NetworkFlowData, W: number): { svg: string; puls
   const top = activeConsumers(data.consumers)
   const bridges = visibleBridges(data.bridges, top)
   const host = data.consumers.find((c) => c.kind === "host")
+  const { bonds, bondOfNic, nics } = resolveBonds(data)
 
   const tight = W < 1100
   const nicX = tight ? 70 : 90
@@ -165,6 +232,11 @@ function renderHorizontal(data: NetworkFlowData, W: number): { svg: string; puls
   const radHost = tight ? 38 : 44
   const radBridge = tight ? 22 : 26
   const radGuest = 22
+  const radBond = tight ? 22 : 26
+  // Bond column sits halfway between the NICs and the host — the gap
+  // between those two columns was already wide enough to host it, so
+  // nothing downstream (bridges, bus, guests) has to move.
+  const bondX = Math.round((nicX + hostX) / 2)
 
   // More vertical breathing room around each guest. The previous 110
   // crammed circle+label+sub close to the bus; bumping to 135 lets
@@ -226,7 +298,7 @@ function renderHorizontal(data: NetworkFlowData, W: number): { svg: string; puls
     return { b, guests, buses, sectionTop, sectionBot, bridgeY }
   })
 
-  const nicCount = data.nics.length
+  const nicCount = nics.length
   // Vertical pitch per NIC = circle + label + sub + breathing
   // room. Was 118; bumped to 132 because the new 9-px-wide trunk
   // line passing near sibling NICs ate into the label/sub area
@@ -255,18 +327,56 @@ function renderHorizontal(data: NetworkFlowData, W: number): { svg: string; puls
   const linksPulse: PulseData[] = []
   const nodes: string[] = []
 
-  data.nics.forEach((n, i) => {
+  const nicYById = new Map<string, number>()
+  nics.forEach((n, i) => {
     const y = nicY0 + i * nicSpacing
+    nicYById.set(n.id, y)
     // NIC is "active" when the kernel reports the link up — independent
     // of current rate (a NIC with 100 B/s of background traffic should
     // not render as gray).
     const active = n.status ? n.status === "up" : n.rx + n.tx > 0
     const stroke = active ? COLORS.nic : COLORS.gray
-    nodes.push(`<g data-node-id="${n.id}" data-node-kind="nic" style="cursor:pointer;opacity:${active ? 1 : 0.45}">
+    // A healthy standby is NOT a fault: it keeps its colour and is only
+    // slightly dimmed, so it stays clearly distinct from a down link.
+    const opacity = !active ? 0.45 : n.role === "standby" ? 0.72 : 1
+    nodes.push(`<g data-node-id="${n.id}" data-node-kind="nic" style="cursor:pointer;opacity:${opacity}">
       <circle class="nf-circle" cx="${nicX}" cy="${y}" r="${radNic}" stroke="${stroke}" />
       ${svgIcon("nic", nicX, y, 18, stroke)}
       <text class="nf-label" x="${nicX}" y="${y + radNic + 14}">${n.id}</text>
-      <text class="nf-sub"   x="${nicX}" y="${y + radNic + 26}">${n.link}</text>
+      <text class="nf-sub"   x="${nicX}" y="${y + radNic + 26}">${nicSubLabel(n)}</text>
+    </g>`)
+  })
+
+  // Bond node — vertically centred on the slaves feeding it, but lifted
+  // when unbonded NICs are also present. Those run their own trunk up to
+  // the host, and orthLink turns them at the midpoint of the NIC→host
+  // gap — which is the bond's own column. Their vertical leg therefore
+  // occupies everything BELOW hostY at that x, so the bond's three-line
+  // label has to sit above hostY to stay out of it. With every NIC in a
+  // bond there is no such trunk and the node keeps its natural centre.
+  const BOND_TEXT_BLOCK = 38          // label + mode + rate under the circle
+  const hasLooseNics = nics.some((n) => !bondOfNic.has(n.id))
+  const bondCeiling = hostY - radBond - BOND_TEXT_BLOCK - 16
+  const bondYById = new Map<string, number>()
+  bonds.forEach((b) => {
+    const ys = nics
+      .filter((n) => bondOfNic.get(n.id) === b.id)
+      .map((n) => nicYById.get(n.id) as number)
+    if (!ys.length) return
+    const centre = ys.reduce((a, v) => a + v, 0) / ys.length
+    const y = Math.max(
+      radBond + 8,
+      hasLooseNics ? Math.min(centre, bondCeiling) : centre,
+    )
+    bondYById.set(b.id, y)
+    const up = b.status ? b.status === "up" : true
+    const stroke = up ? COLORS.bond : COLORS.gray
+    nodes.push(`<g data-node-id="${b.id}" data-node-kind="bond" style="cursor:pointer;opacity:${up ? 1 : 0.45}">
+      <circle class="nf-circle" cx="${bondX}" cy="${y}" r="${radBond}" stroke="${stroke}" />
+      ${svgIcon("bond", bondX, y, 16, stroke)}
+      <text class="nf-label" x="${bondX}" y="${y + radBond + 14}">${b.id}</text>
+      <text class="nf-sub"   x="${bondX}" y="${y + radBond + 26}">${b.mode || "bond"}</text>
+      <text class="nf-sub"   x="${bondX}" y="${y + radBond + 38}">${fmt(b.rx + b.tx)}</text>
     </g>`)
   })
 
@@ -431,13 +541,18 @@ function renderHorizontal(data: NetworkFlowData, W: number): { svg: string; puls
   // background noise floor so the animation stays solid.
   const NIC_PULSE_MIN_MBPS = 0.002   // 2 KB/s
 
-  data.nics.forEach((n, i) => {
-    const y = nicY0 + i * nicSpacing
+  nics.forEach((n) => {
+    const y = nicYById.get(n.id) as number
     const active = n.status ? n.status === "up" : n.rx + n.tx > 0
     if (!active) return
-    // Add a 5-px gap between each circle and the trunk line so the
-    // 9-px-wide static lane doesn't visually overlap the node ring.
-    const path = orthLink(nicX + radNic + 5, y, hostX - radHost - 5, hostY, 14)
+    // A slave stops at its bond; only a NIC with no bond goes straight
+    // to the host. Add a 5-px gap between each circle and the trunk
+    // line so the static lane doesn't visually overlap the node ring.
+    const bondId = bondOfNic.get(n.id)
+    const bondY = bondId !== undefined ? bondYById.get(bondId) : undefined
+    const path = bondY !== undefined
+      ? orthLink(nicX + radNic + 5, y, bondX - radBond - 5, bondY, 14)
+      : orthLink(nicX + radNic + 5, y, hostX - radHost - 5, hostY, 14)
     linksStatic.push(`<path class="nf-link" d="${path}" stroke-width="${TRUNK_WIDTH}" />`)
     // Per-NIC pulse speed mirrors the per-guest logic: more traffic
     // on this NIC → faster pulse on its line. Each NIC reads
@@ -445,6 +560,17 @@ function renderHorizontal(data: NetworkFlowData, W: number): { svg: string; puls
     const nicDur = durFor(n.rx + n.tx)
     if (n.rx > NIC_PULSE_MIN_MBPS) linksPulse.push({ d: path, type: "rx", strokeWidth: TRUNK_PULSE_WIDTH, animDur: nicDur, key: `nic-rx-${n.id}` })
     if (n.tx > NIC_PULSE_MIN_MBPS) linksPulse.push({ d: path, type: "tx", strokeWidth: TRUNK_PULSE_WIDTH, animDur: nicDur, key: `nic-tx-${n.id}` })
+  })
+
+  // Bond → host: one aggregated lane carrying the sum of its slaves.
+  bonds.forEach((b) => {
+    const y = bondYById.get(b.id)
+    if (y === undefined) return
+    const path = orthLink(bondX + radBond + 5, y, hostX - radHost - 5, hostY, 14)
+    linksStatic.push(`<path class="nf-link" d="${path}" stroke-width="${TRUNK_WIDTH}" />`)
+    const dur = durFor(b.rx + b.tx)
+    if (b.rx > NIC_PULSE_MIN_MBPS) linksPulse.push({ d: path, type: "rx", strokeWidth: TRUNK_PULSE_WIDTH, animDur: dur, key: `bond-rx-${b.id}` })
+    if (b.tx > NIC_PULSE_MIN_MBPS) linksPulse.push({ d: path, type: "tx", strokeWidth: TRUNK_PULSE_WIDTH, animDur: dur, key: `bond-tx-${b.id}` })
   })
 
   // Static svg = lines + nodes. Pulses are returned SEPARATELY as
@@ -473,6 +599,7 @@ function renderVertical(data: NetworkFlowData): { svg: string; pulses: PulseData
   const top = activeConsumers(data.consumers)
   const bridges = visibleBridges(data.bridges, top)
   const host = data.consumers.find((c) => c.kind === "host")
+  const { bonds, bondOfNic, nics } = resolveBonds(data)
 
   const linksStatic: string[] = []
   const linksPulse: PulseData[] = []
@@ -496,6 +623,17 @@ function renderVertical(data: NetworkFlowData): { svg: string; pulses: PulseData
   const RAD_NIC = 22
   const RAD_BRIDGE = 24
   const RAD_GUEST = 20
+  const RAD_BOND = 22
+  // Extra rows the bond level needs when at least one bond exists:
+  // the gap between where the NIC lines start and the bond circle, and
+  // the space its three texts (name / mode / rate) occupy underneath.
+  const BOND_ROW_GAP = 48
+  const BOND_TEXT_H = 44
+  // Same split the NICs use (see NIC_PATH_START_OFFSET / NIC_VERTICAL_LEG):
+  // the link starts BELOW the rate text instead of on top of it, then runs
+  // a visible stretch before curving toward the host.
+  const BOND_PATH_START_OFFSET = BOND_TEXT_H + 14
+  const BOND_VERTICAL_LEG = 40
   const NIC_TOP_Y = 6
   const NIC_PITCH_X_PREFERRED = 88
   const NIC_LEFT_MARGIN = 8
@@ -563,7 +701,7 @@ function renderVertical(data: NetworkFlowData): { svg: string; pulses: PulseData
   // sits directly above the host — straight vertical path, no weird
   // S-curve. When the row is too wide to be centred there without
   // falling off the canvas, it slides right (or left, clamped).
-  const nicCount = data.nics.length
+  const nicCount = nics.length
   const fitWidth = W - 2 * (NIC_LEFT_MARGIN + RAD_NIC)
   const dynamicPitch = nicCount > 1
     ? Math.min(NIC_PITCH_X_PREFERRED, fitWidth / (nicCount - 1))
@@ -574,7 +712,7 @@ function renderVertical(data: NetworkFlowData): { svg: string; pulses: PulseData
   const idealStart = HOST_X - rowWidth / 2
   const startX = Math.max(minStart, Math.min(maxStart, idealStart))
   const nicCy = NIC_TOP_Y + RAD_NIC
-  const nicGeom = data.nics.map((n, i) => ({
+  const nicGeom = nics.map((n, i) => ({
     n, cx: startX + i * dynamicPitch, cy: nicCy, r: RAD_NIC,
   }))
 
@@ -583,14 +721,39 @@ function renderVertical(data: NetworkFlowData): { svg: string; pulses: PulseData
   // NIC path (NIC_VERTICAL_LEG) is what makes the line visibly run
   // a stretch BEFORE turning into the curve.
   const nicPathStartY = nicCy + RAD_NIC + NIC_PATH_START_OFFSET
-  const convergeY = nicPathStartY + NIC_VERTICAL_LEG
+
+  // ─── 1b. Bond row — between the NICs and the convergence row ──
+  // Each bond sits horizontally at the centroid of its own slaves, so
+  // its links stay short and don't cross a neighbouring bond's.
+  const hasBonds = bonds.length > 0
+  const bondCy = nicPathStartY + BOND_ROW_GAP + RAD_BOND
+  const bondGeom = hasBonds
+    ? bonds.map((b) => {
+        const xs = nicGeom
+          .filter(({ n }) => bondOfNic.get(n.id) === b.id)
+          .map(({ cx }) => cx)
+        return { b, cx: xs.reduce((a, v) => a + v, 0) / xs.length, cy: bondCy, r: RAD_BOND }
+      })
+    : []
+  const bondCxById = new Map(bondGeom.map(({ b, cx }) => [b.id, cx]))
+  // Slaves bend into their bond one row above the bond circle.
+  const bondConvergeY = bondCy - RAD_BOND - 20
+  // With a bond level present the shared convergence row moves below
+  // the bond's texts; without bonds the geometry is exactly as before.
+  const convergeY = hasBonds
+    ? bondCy + RAD_BOND + BOND_PATH_START_OFFSET + BOND_VERTICAL_LEG
+    : nicPathStartY + NIC_VERTICAL_LEG
   const hostY = convergeY + HOST_GAP_FROM_CONVERGE + RAD_HOST
   const hostTopY = hostY - RAD_HOST - 4
 
-  // NIC → host orth+Q via shared convergence row.
+  // NIC → bond (if enslaved) or NIC → host, both orth+Q.
   nicGeom.forEach(({ n, cx, cy, r }) => {
     const startX = cx, startY = cy + r + NIC_PATH_START_OFFSET
-    const pathD = vPath(startX, startY, HOST_X, hostTopY, convergeY)
+    const bondId = bondOfNic.get(n.id)
+    const bondCx = bondId !== undefined ? bondCxById.get(bondId) : undefined
+    const pathD = bondCx !== undefined
+      ? vPath(startX, startY, bondCx, bondCy - RAD_BOND - 4, bondConvergeY)
+      : vPath(startX, startY, HOST_X, hostTopY, convergeY)
     linksStatic.push(`<path class="nf-link" d="${pathD}" stroke-width="2.5" />`)
     const active = n.status ? n.status === "up" : n.rx + n.tx > 0
     if (active) {
@@ -600,11 +763,30 @@ function renderVertical(data: NetworkFlowData): { svg: string; pulses: PulseData
     }
     const isDown = n.status === "down"
     const color = isDown ? COLORS.gray : COLORS.nic
-    nodes.push(`<g data-node-id="${n.id}" data-node-kind="nic" style="cursor:pointer;opacity:${isDown ? 0.45 : 1}">
+    const opacity = isDown ? 0.45 : n.role === "standby" ? 0.72 : 1
+    nodes.push(`<g data-node-id="${n.id}" data-node-kind="nic" style="cursor:pointer;opacity:${opacity}">
       <circle class="nf-circle" cx="${cx}" cy="${cy}" r="${r}" stroke="${color}" />
       ${svgIcon("nic", cx, cy, 13, color)}
       <text class="nf-label" x="${cx}" y="${cy + r + LABEL_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${n.id}</text>
-      <text class="nf-sub"   x="${cx}" y="${cy + r + SUB_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${isDown ? "down" : n.link}</text>
+      <text class="nf-sub"   x="${cx}" y="${cy + r + SUB_OFFSET_Y}" text-anchor="middle" style="font-size:11px">${nicSubLabel(n)}</text>
+    </g>`)
+  })
+
+  // Bond node + its aggregated link down to the host.
+  bondGeom.forEach(({ b, cx, cy, r }) => {
+    const pathD = vPath(cx, cy + r + BOND_PATH_START_OFFSET, HOST_X, hostTopY, convergeY)
+    linksStatic.push(`<path class="nf-link" d="${pathD}" stroke-width="2.5" />`)
+    const rate = b.rx + b.tx
+    if (b.rx > 0.001) linksPulse.push({ d: pathD, type: "rx", strokeWidth: 3, key: `m-bond-rx-${b.id}`, rate })
+    if (b.tx > 0.001) linksPulse.push({ d: pathD, type: "tx", strokeWidth: 3, key: `m-bond-tx-${b.id}`, rate })
+    const isDown = b.status === "down"
+    const color = isDown ? COLORS.gray : COLORS.bond
+    nodes.push(`<g data-node-id="${b.id}" data-node-kind="bond" style="cursor:pointer;opacity:${isDown ? 0.45 : 1}">
+      <circle class="nf-circle" cx="${cx}" cy="${cy}" r="${r}" stroke="${color}" />
+      ${svgIcon("bond", cx, cy, 13, color)}
+      <text class="nf-label" x="${cx}" y="${cy + r + LABEL_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${b.id}</text>
+      <text class="nf-sub"   x="${cx}" y="${cy + r + SUB_OFFSET_Y}" text-anchor="middle" style="font-size:11px">${b.mode || "bond"}</text>
+      <text class="nf-sub"   x="${cx}" y="${cy + r + BOND_TEXT_H}" text-anchor="middle" style="font-size:11px">${fmt(rate)}</text>
     </g>`)
   })
 
@@ -752,7 +934,7 @@ export function NetworkFlow({
   // Fires when the user taps/clicks any circle in the diagram. The
   // parent component looks up the matching NetworkInterface and
   // opens the per-interface details modal.
-  onNodeClick?: (name: string, kind: "nic" | "host" | "bridge" | "lxc" | "vm") => void
+  onNodeClick?: (name: string, kind: "nic" | "host" | "bond" | "bridge" | "lxc" | "vm") => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(1320)
@@ -785,14 +967,20 @@ export function NetworkFlow({
       return SB.find((b) => b >= raw) ?? 2.5
     }
     const sig = (r: number) => (r > 0.005 ? 1 : 0)
+    // bond + role are part of the signature so a failover (active ↔
+    // standby, or a slave leaving the bond) redraws the diagram on the
+    // very next poll instead of being masked by the rate bucketing.
     const nics = data.nics.map((n) =>
-      `${n.id}:${n.status || ""}:${bucket(n.rx)}:${bucket(n.tx)}:${sig(n.rx)}:${sig(n.tx)}`
+      `${n.id}:${n.status || ""}:${n.bond || ""}:${n.role || ""}:${bucket(n.rx)}:${bucket(n.tx)}:${sig(n.rx)}:${sig(n.tx)}`
+    ).join("|")
+    const bonds = (data.bonds || []).map((b) =>
+      `${b.id}:${b.mode || ""}:${b.status || ""}:${bucket(b.rx)}:${bucket(b.tx)}:${sig(b.rx)}:${sig(b.tx)}`
     ).join("|")
     const guests = data.consumers.map((c) =>
       `${c.id}:${c.bridge}:${c.kind}:${c.offline ? 1 : 0}:${bucket(c.rx)}:${bucket(c.tx)}:${sig(c.rx)}:${sig(c.tx)}`
     ).join("|")
     const bridges = data.bridges.map((b) => `${b.id}:${b.parent || ""}`).join("|")
-    return `${mode}|${width}|${nics}||${guests}||${bridges}`
+    return `${mode}|${width}|${nics}||${bonds}||${guests}||${bridges}`
   }, [data, mode, width])
 
   const { svgContent, pulses, viewBox, height } = useMemo(() => {
@@ -896,7 +1084,7 @@ export function NetworkFlow({
               if (!hit) return
               const id = hit.getAttribute("data-node-id") || ""
               const kind = (hit.getAttribute("data-node-kind") || "") as
-                "nic" | "host" | "bridge" | "lxc" | "vm"
+                "nic" | "host" | "bond" | "bridge" | "lxc" | "vm"
               if (id && kind) onNodeClick(id, kind)
             }}
           >

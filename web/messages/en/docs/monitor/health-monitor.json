@@ -98,7 +98,7 @@
       {
         "category": "System Updates",
         "checks": "Pending updates, security updates, kernel / PVE version, system age",
-        "events": "Security updates available; pinned kernel several minor versions behind; host uptime > 90 days."
+        "events": "Security updates available; pinned kernel several minor versions behind; host uptime > 90 days. When updates are pending, the Overview header shows an <em>Update Now</em> button that runs the full ProxMenux update flow inline; on close it re-hits the health endpoint with <code>?refresh=1</code> so the badge count reflects the new state without waiting for the next 5-min cycle."
       },
       {
         "category": "Security & Certificates",
@@ -151,11 +151,14 @@
       "<strong>Dismissed</strong> — items previously acknowledged by the user that are still inside their suppression window. Each row shows how much of the suppression remains and the configured duration. When the window expires, the item disappears from this list; if the underlying condition is still present and the category supports re-firing, it re-appears in <em>Active</em>."
     ],
     "pillTitle": "The pill mirrors the worst category",
-    "pillBody": "The dashboard header colour is the highest severity across the ten categories: any CRITICAL → red, else any WARNING → yellow, else any INFO → blue, else green. The same logic drives the favicon dot and the PWA badge."
+    "pillBody": "The dashboard header colour is the highest severity across the ten categories: any CRITICAL → red, else any WARNING → yellow, else any INFO → blue, else green. The same logic drives the favicon dot and the PWA badge.",
+    "updateNowTitle": "Update Now button in the Overview header",
+    "updateNowBody1": "When the <em>System Updates</em> category reports one or more pending updates, the Overview header renders an <strong>Update Now</strong> button next to the health pill. The button opens a modal that runs the same host-side flow as <em>ProxMenux → Settings post-install Proxmox → Proxmox System Update</em>: repo hygiene, <code>apt full-upgrade</code> via the safe worker <code>update-pve-safe.sh</code>, automatic DKMS rebuild of ProxMenux-managed drivers when a new kernel lands, autoremove / autoclean and a reboot prompt if the kernel changed. Progress lines stream in the modal as the worker prints them.",
+    "updateNowBody2": "When the run finishes, closing the modal calls <code>GET /api/health/details?refresh=1</code>, which invalidates the health-endpoint cache before serving. The pending-updates row and the pill severity are recomputed from the new package state on the spot, so the badge disappears without waiting for the next five-minute cycle. When the host is already up to date, the button is hidden — no visual noise on a healthy system."
   },
   "dismiss": {
     "heading": "Dismissing alerts and the Suppression Duration",
-    "intro": "Some events are noisy by nature — a <em>System Updates: pending updates available</em> stays true until you patch the host, and you don't want a notification every five minutes for a week. The Health Monitor solves this with two coupled mechanisms:",
+    "intro": "Some events are noisy by nature — a <em>System Updates: pending updates available</em> stays true until you patch the host, and you don't want a notification every five minutes for a week. The <em>Update Now</em> button in the Overview header is the direct shortcut to resolve that specific case in place; for everything else, or when patching is deferred, the Health Monitor also offers two coupled silencing mechanisms:",
     "step1": "<strong>Per-event Dismiss action</strong> in the modal. The Dismiss button opens a small dropdown with three options — <strong>24 hours</strong>, <strong>7 days</strong> or <strong>Permanently</strong> — letting you choose how long this specific alert stays silenced regardless of the category's default. Picking one calls <code>POST /api/health/acknowledge</code> with the <code>error_key</code> and the chosen <code>suppression_hours</code> (<code>-1</code> for permanent). The event moves to the Dismissed list with a timestamped <code>acknowledged_at</code>.",
     "dropdownImageAlt": "Dismiss dropdown on a Health Monitor alert — 24 hours, 7 days or Permanently",
     "dropdownImageCaption": "Per-event Dismiss dropdown. The chosen window applies to this single alert; if no per-event window is selected the category's default is used. Permanent dismisses are tagged with a distinct amber <em>Permanent</em> badge in the Dismissed list and never re-fire.",

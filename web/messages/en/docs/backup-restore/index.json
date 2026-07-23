@@ -36,7 +36,7 @@
     "intro": "A ProxMenux archive is structured around three self-contained payloads. The restore uses all three together to reproduce the source host on a target that may not even have the same kernel installed.",
     "diagramCaption": "Every backup ships the same three payloads regardless of destination. The restore consumes all three: rootfs to lay down files, manifest to detect drift and cross-kernel differences, and application inventory to re-install packages and components against the target's own kernel.",
     "pillar1Label": "Filesystem",
-    "pillar1Detail": "rootfs/\n(rsync of\n/etc, /root,\n/var/lib/pve-cluster,\n+ optional paths)",
+    "pillar1Detail": "rootfs/\n(rsync of /etc,\n/etc/systemd/network,\n/root, plus a\nsqlite3 snapshot\nof /var/lib/pve-cluster,\n+ optional paths)",
     "pillar2Label": "Manifest",
     "pillar2Detail": "manifest.json\n(hardware, kernel\nparams, network,\nZFS, users, cron,\nZFS pools, storage)",
     "pillar3Label": "Applications",
@@ -44,7 +44,7 @@
   },
   "restoreIsUniversal": {
     "heading": "The restore reproduces the source host, not the archive",
-    "body": "Restoring a ProxMenux backup does not just extract the filesystem. The restore flow reads the manifest to detect drift between the source and the target (hardware differences, NIC renames, kernel version, ZFS pool identity), replays the filesystem, then triggers the correct component installer for every service that was installed on the source (NVIDIA driver, Coral TPU, AMD GPU tools, Intel GPU tools). Each installer runs against the <strong>target's current kernel</strong>, so the restored host does not depend on the source's kernel being present. When the target's kernel is newer than the backup's, a kernel-agnostic <strong>hydration</strong> pass merges the operator's own tuning (IOMMU tokens, VFIO device IDs, custom quirks, GRUB keys) into the target's fresh boot configuration without copying kernel-tied files verbatim."
+    "body": "Restoring a ProxMenux backup does not just extract the filesystem. The restore flow reads the manifest to detect drift between the source and the target (hardware differences, NIC renames, kernel version, ZFS pool identity), replays the filesystem, then triggers the correct component installer for every service that was installed on the source (NVIDIA driver, Coral TPU, AMD GPU tools, Intel GPU tools). Each installer runs against the <strong>target's current kernel</strong>, so the restored host does not depend on the source's kernel being present. When the target's kernel is newer than the backup's, a kernel-agnostic <strong>hydration</strong> pass merges the user's own tuning (IOMMU tokens, VFIO device IDs, custom quirks, GRUB keys) into the target's fresh boot configuration without copying kernel-tied files verbatim."
   },
   "twoInterfaces": {
     "heading": "Two interfaces, one backend",

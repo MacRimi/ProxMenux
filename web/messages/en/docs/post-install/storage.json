@@ -18,30 +18,26 @@
     "intro": "The <strong>Adaptive Replacement Cache (ARC)</strong> is ZFS's in-memory read cache. Without explicit tuning, ZFS happily grabs up to half the host RAM for itself, which is excessive on a Proxmox host that also needs memory for VMs and LXCs. This option caps ARC to a sane fraction of total RAM based on the size of the machine.",
     "sizingTitle": "Sizing rules",
     "headerRam": "Host RAM",
-    "headerMin": "ARC min",
-    "headerMax": "ARC max",
+    "headerMax": "ARC cap",
     "rows": [
       {
         "ram": "≤ 16 GB",
-        "min": "512 MB",
-        "max": "512 MB"
+        "max": "512 MiB"
       },
       {
         "ram": "17 – 32 GB",
-        "min": "1 GB",
-        "max": "1 GB"
+        "max": "1 GiB"
       },
       {
         "ram": "> 32 GB",
-        "min": "RAM / 16",
-        "max": "RAM / 8"
+        "max": "RAM / 8 (floor 512 MiB)"
       }
     ],
-    "after": "On a 64 GB host, that means 4 GB min / 8 GB max for ARC. The config is written to <code>/etc/modprobe.d/99-zfsarc.conf</code> and enables a few extra ZFS tunables (L2ARC prefetch on, L2ARC write max at 500 MB, longer TXG timeout).",
+    "after": "On a 64 GB host, that means an 8 GB cap for ARC. The file <code>/etc/modprobe.d/99-zfsarc.conf</code> contains a single directive — <code>options zfs zfs_arc_max=…</code>. Every other ZFS module parameter (<code>zfs_arc_min</code>, L2ARC prefetch/write throttle, TXG timeout) is left at its OpenZFS default. After writing the file, ProxMenux runs <code>update-initramfs -u -k all</code> and, when applicable, <code>proxmox-boot-tool refresh</code>, so the cap also lands in the initramfs used by ZFS-on-root setups.",
     "rebootTitle": "Requires a reboot to take effect",
-    "rebootBody": "ARC settings are read when the <code>zfs</code> kernel module loads. They do <strong>not</strong> apply on a live system — you'll need to reboot the host for the cap to kick in. The script sets the \"reboot required\" flag automatically.",
+    "rebootBody": "ARC settings are read when the <code>zfs</code> kernel module loads. To make the cap take effect on ZFS-on-root hosts, ProxMenux regenerates the initramfs with <code>update-initramfs -u -k all</code> and, when applicable, refreshes the boot loader with <code>proxmox-boot-tool refresh</code>. A reboot is still required to pick up the new module parameter; the \"reboot required\" flag is set automatically.",
     "safeTitle": "Safe on non-ZFS hosts",
-    "safeBody": "The function checks for the <code>zfs</code> command before touching anything. On ext4 / LVM-only Proxmox hosts, ticking this option is a no-op — nothing gets written.",
+    "safeBody": "The function only writes the config when <code>zpool list</code> reports at least one imported ZFS pool. On ext4 / LVM-only Proxmox hosts, or on machines with the ZFS tools installed but no pool imported, ticking this option is a no-op — nothing gets written.",
     "verifyTitle": "Verification and manual rollback"
   },
   "autoSnap": {

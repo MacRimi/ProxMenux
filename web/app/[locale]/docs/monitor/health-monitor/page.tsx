@@ -225,6 +225,14 @@ export default async function HealthMonitorPage({
         {t("dashboardView.pillBody")}
       </Callout>
 
+      <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("dashboardView.updateNowTitle")}</h3>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("dashboardView.updateNowBody1", { strong, em, code })}
+      </p>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("dashboardView.updateNowBody2", { strong, em, code })}
+      </p>
+
       <h2 id="dismissing-alerts-and-the-suppression-duration" className="text-2xl font-semibold mt-10 mb-4 text-gray-900 scroll-mt-24">{t("dismiss.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">
         {t.rich("dismiss.intro", { em })}

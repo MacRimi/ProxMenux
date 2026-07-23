@@ -98,7 +98,7 @@
       {
         "step": "1",
         "name": "Ensamblado del rootfs",
-        "detail": "Ejecuta <code>rsync -a</code> por cada ruta seleccionada hacia <code>staging_root/rootfs/</code>. Excluye subrutas volátiles (historial de bash, cachés, papelera) de <code>/root/</code>. Las rutas ausentes en el origen se registran en <code>metadata/missing_paths.txt</code> sin detener la copia."
+        "detail": "Ejecuta <code>rsync -a</code> por cada ruta seleccionada hacia <code>staging_root/rootfs/</code>. La base pmxcfs en <code>/var/lib/pve-cluster/config.db</code> se captura aparte con <code>sqlite3 .backup</code> para obtener un snapshot consistente sin parar el clúster, y los sidecars <code>.db-wal</code> / <code>.db-shm</code> se excluyen del rsync; si <code>sqlite3</code> no está disponible, se deposita un <code>config.db.raw-fallback</code> que la restauración promociona al importar. Excluye subrutas volátiles (historial de bash, cachés, papelera) de <code>/root/</code>. Las rutas ausentes en el origen se registran en <code>metadata/missing_paths.txt</code> sin detener la copia."
       },
       {
         "step": "2",
@@ -165,7 +165,7 @@
   "archiveStructure": {
     "heading": "Estructura del archivo",
     "intro": "El directorio de staging que produce cada backend sigue el mismo layout con independencia del destino. El tarball, el <code>.pxar</code> de PBS o el archivo Borg almacenan este árbol verbatim.",
-    "tree": "backup-[timestamp]/\n├── manifest.json                  # estado estructurado del host (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # salida de apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, versión del kernel\n│   ├── paths_archived.txt         # lista exacta de rutas que llegaron a rootfs/\n│   └── missing_paths.txt          # rutas del perfil ausentes en el origen\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root sin subpaths volátiles\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (sólo estado)\n    └── var/                       # /var/lib/pve-cluster, /var/spool/cron/crontabs"
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # estado estructurado del host (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # salida de apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, versión del kernel, método pmxcfs\n│   ├── paths_archived.txt         # lista exacta de rutas que llegaron a rootfs/\n│   └── missing_paths.txt          # rutas del perfil ausentes en el origen\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root sin subpaths volátiles\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (sólo estado)\n    └── var/                       # /var/lib/pve-cluster (config.db vía sqlite3 .backup), /var/spool/cron/crontabs"
   },
   "confirmation": {
     "heading": "Resumen de confirmación",
