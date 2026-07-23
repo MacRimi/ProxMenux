@@ -1,0 +1,2538 @@
+{
+  "version": 1,
+  "repository": "MacRimi/ProxMenux",
+  "updatedAt": "2026-07-23T14:53:21.867Z",
+  "backfilledAt": "2026-07-22T18:09:20.834Z",
+  "totals": {
+    "downloads": 0
+  },
+  "assets": {},
+  "points": [
+    {
+      "date": "2025-01-15",
+      "stars": 1,
+      "forks": 0,
+      "downloads": null
+    },
+    {
+      "date": "2025-03-08",
+      "stars": 3,
+      "forks": 0,
+      "downloads": null
+    },
+    {
+      "date": "2025-03-16",
+      "stars": 4,
+      "forks": 0,
+      "downloads": null
+    },
+    {
+      "date": "2025-03-23",
+      "stars": 5,
+      "forks": 0,
+      "downloads": null
+    },
+    {
+      "date": "2025-03-24",
+      "stars": 6,
+      "forks": 0,
+      "downloads": null
+    },
+    {
+      "date": "2025-03-28",
+      "stars": 7,
+      "forks": 0,
+      "downloads": null
+    },
+    {
+      "date": "2025-03-29",
+      "stars": 8,
+      "forks": 0,
+      "downloads": null
+    },
+    {
+      "date": "2025-04-01",
+      "stars": 9,
+      "forks": 0,
+      "downloads": null
+    },
+    {
+      "date": "2025-04-07",
+      "stars": 10,
+      "forks": 0,
+      "downloads": null
+    },
+    {
+      "date": "2025-04-30",
+      "stars": 14,
+      "forks": 0,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-01",
+      "stars": 16,
+      "forks": 1,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-07",
+      "stars": 17,
+      "forks": 1,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-09",
+      "stars": 19,
+      "forks": 1,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-10",
+      "stars": 20,
+      "forks": 1,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-11",
+      "stars": 22,
+      "forks": 1,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-12",
+      "stars": 38,
+      "forks": 1,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-13",
+      "stars": 59,
+      "forks": 1,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-14",
+      "stars": 61,
+      "forks": 1,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-15",
+      "stars": 64,
+      "forks": 2,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-16",
+      "stars": 66,
+      "forks": 2,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-17",
+      "stars": 69,
+      "forks": 2,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-19",
+      "stars": 71,
+      "forks": 2,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-20",
+      "stars": 73,
+      "forks": 2,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-21",
+      "stars": 76,
+      "forks": 3,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-22",
+      "stars": 77,
+      "forks": 4,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-23",
+      "stars": 92,
+      "forks": 4,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-24",
+      "stars": 113,
+      "forks": 5,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-25",
+      "stars": 124,
+      "forks": 5,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-26",
+      "stars": 131,
+      "forks": 5,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-27",
+      "stars": 132,
+      "forks": 5,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-28",
+      "stars": 134,
+      "forks": 5,
+      "downloads": null
+    },
+    {
+      "date": "2025-05-29",
+      "stars": 138,
+      "forks": 5,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-02",
+      "stars": 140,
+      "forks": 5,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-03",
+      "stars": 144,
+      "forks": 5,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-04",
+      "stars": 146,
+      "forks": 5,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-06",
+      "stars": 149,
+      "forks": 5,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-07",
+      "stars": 151,
+      "forks": 5,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-09",
+      "stars": 153,
+      "forks": 5,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-10",
+      "stars": 155,
+      "forks": 5,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-11",
+      "stars": 157,
+      "forks": 6,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-13",
+      "stars": 159,
+      "forks": 7,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-15",
+      "stars": 160,
+      "forks": 7,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-16",
+      "stars": 164,
+      "forks": 7,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-19",
+      "stars": 242,
+      "forks": 11,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-20",
+      "stars": 308,
+      "forks": 16,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-21",
+      "stars": 337,
+      "forks": 19,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-22",
+      "stars": 374,
+      "forks": 21,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-23",
+      "stars": 407,
+      "forks": 22,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-24",
+      "stars": 431,
+      "forks": 22,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-25",
+      "stars": 454,
+      "forks": 23,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-26",
+      "stars": 472,
+      "forks": 25,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-27",
+      "stars": 479,
+      "forks": 26,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-28",
+      "stars": 488,
+      "forks": 26,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-29",
+      "stars": 496,
+      "forks": 26,
+      "downloads": null
+    },
+    {
+      "date": "2025-06-30",
+      "stars": 502,
+      "forks": 26,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-01",
+      "stars": 506,
+      "forks": 26,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-02",
+      "stars": 515,
+      "forks": 26,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-03",
+      "stars": 522,
+      "forks": 26,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-04",
+      "stars": 534,
+      "forks": 27,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-05",
+      "stars": 545,
+      "forks": 27,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-06",
+      "stars": 554,
+      "forks": 28,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-07",
+      "stars": 567,
+      "forks": 30,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-08",
+      "stars": 575,
+      "forks": 32,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-09",
+      "stars": 577,
+      "forks": 34,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-10",
+      "stars": 584,
+      "forks": 34,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-11",
+      "stars": 590,
+      "forks": 34,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-12",
+      "stars": 598,
+      "forks": 35,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-13",
+      "stars": 602,
+      "forks": 35,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-15",
+      "stars": 608,
+      "forks": 36,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-16",
+      "stars": 614,
+      "forks": 37,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-17",
+      "stars": 617,
+      "forks": 37,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-18",
+      "stars": 619,
+      "forks": 37,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-19",
+      "stars": 623,
+      "forks": 38,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-20",
+      "stars": 626,
+      "forks": 39,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-21",
+      "stars": 628,
+      "forks": 39,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-22",
+      "stars": 633,
+      "forks": 39,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-23",
+      "stars": 639,
+      "forks": 39,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-24",
+      "stars": 644,
+      "forks": 39,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-25",
+      "stars": 652,
+      "forks": 39,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-26",
+      "stars": 655,
+      "forks": 39,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-27",
+      "stars": 657,
+      "forks": 39,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-28",
+      "stars": 662,
+      "forks": 40,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-29",
+      "stars": 665,
+      "forks": 40,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-30",
+      "stars": 669,
+      "forks": 40,
+      "downloads": null
+    },
+    {
+      "date": "2025-07-31",
+      "stars": 672,
+      "forks": 41,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-01",
+      "stars": 676,
+      "forks": 41,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-02",
+      "stars": 680,
+      "forks": 41,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-03",
+      "stars": 682,
+      "forks": 41,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-04",
+      "stars": 687,
+      "forks": 41,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-05",
+      "stars": 689,
+      "forks": 41,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-06",
+      "stars": 692,
+      "forks": 42,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-07",
+      "stars": 695,
+      "forks": 42,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-08",
+      "stars": 696,
+      "forks": 42,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-09",
+      "stars": 702,
+      "forks": 42,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-10",
+      "stars": 711,
+      "forks": 42,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-11",
+      "stars": 719,
+      "forks": 42,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-12",
+      "stars": 721,
+      "forks": 42,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-13",
+      "stars": 728,
+      "forks": 42,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-14",
+      "stars": 733,
+      "forks": 42,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-15",
+      "stars": 738,
+      "forks": 42,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-17",
+      "stars": 743,
+      "forks": 42,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-18",
+      "stars": 748,
+      "forks": 42,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-19",
+      "stars": 751,
+      "forks": 42,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-20",
+      "stars": 754,
+      "forks": 42,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-21",
+      "stars": 761,
+      "forks": 42,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-22",
+      "stars": 766,
+      "forks": 43,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-23",
+      "stars": 768,
+      "forks": 43,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-24",
+      "stars": 770,
+      "forks": 44,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-25",
+      "stars": 771,
+      "forks": 44,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-26",
+      "stars": 774,
+      "forks": 45,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-27",
+      "stars": 775,
+      "forks": 45,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-28",
+      "stars": 778,
+      "forks": 45,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-29",
+      "stars": 783,
+      "forks": 45,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-30",
+      "stars": 787,
+      "forks": 46,
+      "downloads": null
+    },
+    {
+      "date": "2025-08-31",
+      "stars": 789,
+      "forks": 46,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-01",
+      "stars": 790,
+      "forks": 47,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-02",
+      "stars": 793,
+      "forks": 47,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-05",
+      "stars": 800,
+      "forks": 48,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-06",
+      "stars": 801,
+      "forks": 48,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-07",
+      "stars": 805,
+      "forks": 48,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-08",
+      "stars": 809,
+      "forks": 48,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-10",
+      "stars": 810,
+      "forks": 48,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-11",
+      "stars": 819,
+      "forks": 49,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-12",
+      "stars": 821,
+      "forks": 49,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-13",
+      "stars": 829,
+      "forks": 49,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-14",
+      "stars": 837,
+      "forks": 49,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-15",
+      "stars": 843,
+      "forks": 50,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-16",
+      "stars": 844,
+      "forks": 50,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-17",
+      "stars": 846,
+      "forks": 50,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-18",
+      "stars": 850,
+      "forks": 51,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-19",
+      "stars": 854,
+      "forks": 51,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-20",
+      "stars": 858,
+      "forks": 52,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-21",
+      "stars": 863,
+      "forks": 52,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-22",
+      "stars": 866,
+      "forks": 52,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-23",
+      "stars": 870,
+      "forks": 52,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-24",
+      "stars": 880,
+      "forks": 53,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-25",
+      "stars": 885,
+      "forks": 53,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-26",
+      "stars": 887,
+      "forks": 53,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-27",
+      "stars": 894,
+      "forks": 53,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-28",
+      "stars": 904,
+      "forks": 53,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-29",
+      "stars": 915,
+      "forks": 53,
+      "downloads": null
+    },
+    {
+      "date": "2025-09-30",
+      "stars": 918,
+      "forks": 53,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-01",
+      "stars": 926,
+      "forks": 53,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-02",
+      "stars": 930,
+      "forks": 53,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-04",
+      "stars": 935,
+      "forks": 54,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-05",
+      "stars": 937,
+      "forks": 54,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-06",
+      "stars": 940,
+      "forks": 54,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-07",
+      "stars": 947,
+      "forks": 54,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-08",
+      "stars": 953,
+      "forks": 54,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-09",
+      "stars": 959,
+      "forks": 54,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-11",
+      "stars": 967,
+      "forks": 54,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-13",
+      "stars": 973,
+      "forks": 55,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-14",
+      "stars": 978,
+      "forks": 56,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-15",
+      "stars": 983,
+      "forks": 57,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-16",
+      "stars": 985,
+      "forks": 57,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-17",
+      "stars": 989,
+      "forks": 57,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-18",
+      "stars": 992,
+      "forks": 57,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-19",
+      "stars": 993,
+      "forks": 57,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-20",
+      "stars": 998,
+      "forks": 57,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-21",
+      "stars": 998,
+      "forks": 59,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-22",
+      "stars": 1001,
+      "forks": 59,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-23",
+      "stars": 1007,
+      "forks": 60,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-24",
+      "stars": 1010,
+      "forks": 60,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-25",
+      "stars": 1014,
+      "forks": 61,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-26",
+      "stars": 1016,
+      "forks": 61,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-27",
+      "stars": 1024,
+      "forks": 62,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-28",
+      "stars": 1028,
+      "forks": 62,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-29",
+      "stars": 1032,
+      "forks": 62,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-30",
+      "stars": 1040,
+      "forks": 62,
+      "downloads": null
+    },
+    {
+      "date": "2025-10-31",
+      "stars": 1050,
+      "forks": 63,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-01",
+      "stars": 1061,
+      "forks": 63,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-02",
+      "stars": 1083,
+      "forks": 63,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-03",
+      "stars": 1105,
+      "forks": 64,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-04",
+      "stars": 1120,
+      "forks": 64,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-05",
+      "stars": 1134,
+      "forks": 64,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-06",
+      "stars": 1146,
+      "forks": 65,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-07",
+      "stars": 1176,
+      "forks": 66,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-08",
+      "stars": 1255,
+      "forks": 67,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-09",
+      "stars": 1307,
+      "forks": 69,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-10",
+      "stars": 1336,
+      "forks": 71,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-11",
+      "stars": 1345,
+      "forks": 72,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-12",
+      "stars": 1360,
+      "forks": 72,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-13",
+      "stars": 1372,
+      "forks": 73,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-14",
+      "stars": 1411,
+      "forks": 73,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-15",
+      "stars": 1448,
+      "forks": 73,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-16",
+      "stars": 1480,
+      "forks": 74,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-17",
+      "stars": 1492,
+      "forks": 75,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-18",
+      "stars": 1518,
+      "forks": 77,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-19",
+      "stars": 1530,
+      "forks": 79,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-20",
+      "stars": 1545,
+      "forks": 80,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-21",
+      "stars": 1560,
+      "forks": 80,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-22",
+      "stars": 1575,
+      "forks": 80,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-23",
+      "stars": 1587,
+      "forks": 81,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-24",
+      "stars": 1612,
+      "forks": 83,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-25",
+      "stars": 1619,
+      "forks": 83,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-26",
+      "stars": 1642,
+      "forks": 84,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-27",
+      "stars": 1646,
+      "forks": 86,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-28",
+      "stars": 1651,
+      "forks": 86,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-29",
+      "stars": 1661,
+      "forks": 86,
+      "downloads": null
+    },
+    {
+      "date": "2025-11-30",
+      "stars": 1673,
+      "forks": 86,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-01",
+      "stars": 1684,
+      "forks": 87,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-02",
+      "stars": 1692,
+      "forks": 88,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-03",
+      "stars": 1698,
+      "forks": 88,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-04",
+      "stars": 1708,
+      "forks": 88,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-05",
+      "stars": 1720,
+      "forks": 91,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-06",
+      "stars": 1729,
+      "forks": 91,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-07",
+      "stars": 1786,
+      "forks": 92,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-08",
+      "stars": 1811,
+      "forks": 93,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-09",
+      "stars": 1828,
+      "forks": 94,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-10",
+      "stars": 1844,
+      "forks": 94,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-11",
+      "stars": 1853,
+      "forks": 95,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-12",
+      "stars": 1865,
+      "forks": 95,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-13",
+      "stars": 1875,
+      "forks": 95,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-14",
+      "stars": 1886,
+      "forks": 95,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-15",
+      "stars": 1893,
+      "forks": 95,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-16",
+      "stars": 1898,
+      "forks": 96,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-17",
+      "stars": 1902,
+      "forks": 96,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-18",
+      "stars": 1907,
+      "forks": 96,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-19",
+      "stars": 1917,
+      "forks": 96,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-20",
+      "stars": 1922,
+      "forks": 98,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-21",
+      "stars": 1935,
+      "forks": 98,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-22",
+      "stars": 1939,
+      "forks": 99,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-23",
+      "stars": 1944,
+      "forks": 99,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-24",
+      "stars": 1950,
+      "forks": 99,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-25",
+      "stars": 1955,
+      "forks": 99,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-26",
+      "stars": 1964,
+      "forks": 99,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-27",
+      "stars": 1970,
+      "forks": 99,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-28",
+      "stars": 1987,
+      "forks": 100,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-29",
+      "stars": 1993,
+      "forks": 101,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-30",
+      "stars": 2000,
+      "forks": 101,
+      "downloads": null
+    },
+    {
+      "date": "2025-12-31",
+      "stars": 2002,
+      "forks": 101,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-01",
+      "stars": 2008,
+      "forks": 101,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-02",
+      "stars": 2016,
+      "forks": 101,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-03",
+      "stars": 2019,
+      "forks": 103,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-04",
+      "stars": 2027,
+      "forks": 103,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-05",
+      "stars": 2035,
+      "forks": 103,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-06",
+      "stars": 2039,
+      "forks": 103,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-07",
+      "stars": 2044,
+      "forks": 103,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-08",
+      "stars": 2051,
+      "forks": 104,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-09",
+      "stars": 2056,
+      "forks": 105,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-10",
+      "stars": 2061,
+      "forks": 106,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-11",
+      "stars": 2063,
+      "forks": 106,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-12",
+      "stars": 2070,
+      "forks": 107,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-13",
+      "stars": 2078,
+      "forks": 107,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-14",
+      "stars": 2083,
+      "forks": 107,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-15",
+      "stars": 2086,
+      "forks": 107,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-16",
+      "stars": 2103,
+      "forks": 107,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-17",
+      "stars": 2117,
+      "forks": 107,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-18",
+      "stars": 2123,
+      "forks": 107,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-19",
+      "stars": 2128,
+      "forks": 107,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-20",
+      "stars": 2134,
+      "forks": 107,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-21",
+      "stars": 2138,
+      "forks": 107,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-22",
+      "stars": 2145,
+      "forks": 107,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-23",
+      "stars": 2151,
+      "forks": 107,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-24",
+      "stars": 2154,
+      "forks": 107,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-25",
+      "stars": 2157,
+      "forks": 107,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-26",
+      "stars": 2161,
+      "forks": 107,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-27",
+      "stars": 2166,
+      "forks": 107,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-28",
+      "stars": 2180,
+      "forks": 108,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-29",
+      "stars": 2185,
+      "forks": 108,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-30",
+      "stars": 2194,
+      "forks": 108,
+      "downloads": null
+    },
+    {
+      "date": "2026-01-31",
+      "stars": 2203,
+      "forks": 108,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-01",
+      "stars": 2207,
+      "forks": 109,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-02",
+      "stars": 2216,
+      "forks": 109,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-03",
+      "stars": 2222,
+      "forks": 111,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-04",
+      "stars": 2224,
+      "forks": 111,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-05",
+      "stars": 2227,
+      "forks": 111,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-06",
+      "stars": 2231,
+      "forks": 111,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-07",
+      "stars": 2237,
+      "forks": 112,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-08",
+      "stars": 2238,
+      "forks": 112,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-09",
+      "stars": 2242,
+      "forks": 112,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-10",
+      "stars": 2249,
+      "forks": 112,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-11",
+      "stars": 2289,
+      "forks": 112,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-12",
+      "stars": 2306,
+      "forks": 113,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-13",
+      "stars": 2324,
+      "forks": 116,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-14",
+      "stars": 2334,
+      "forks": 116,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-15",
+      "stars": 2341,
+      "forks": 117,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-16",
+      "stars": 2352,
+      "forks": 117,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-17",
+      "stars": 2365,
+      "forks": 118,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-18",
+      "stars": 2373,
+      "forks": 118,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-19",
+      "stars": 2383,
+      "forks": 118,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-20",
+      "stars": 2390,
+      "forks": 118,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-21",
+      "stars": 2392,
+      "forks": 118,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-22",
+      "stars": 2402,
+      "forks": 118,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-23",
+      "stars": 2409,
+      "forks": 118,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-24",
+      "stars": 2413,
+      "forks": 118,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-25",
+      "stars": 2417,
+      "forks": 118,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-26",
+      "stars": 2421,
+      "forks": 119,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-27",
+      "stars": 2428,
+      "forks": 120,
+      "downloads": null
+    },
+    {
+      "date": "2026-02-28",
+      "stars": 2435,
+      "forks": 120,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-01",
+      "stars": 2443,
+      "forks": 120,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-02",
+      "stars": 2444,
+      "forks": 120,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-03",
+      "stars": 2449,
+      "forks": 120,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-04",
+      "stars": 2456,
+      "forks": 121,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-05",
+      "stars": 2458,
+      "forks": 121,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-06",
+      "stars": 2460,
+      "forks": 121,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-07",
+      "stars": 2463,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-08",
+      "stars": 2465,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-09",
+      "stars": 2467,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-10",
+      "stars": 2469,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-11",
+      "stars": 2470,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-12",
+      "stars": 2474,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-13",
+      "stars": 2476,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-14",
+      "stars": 2477,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-15",
+      "stars": 2481,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-16",
+      "stars": 2485,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-17",
+      "stars": 2491,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-18",
+      "stars": 2492,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-19",
+      "stars": 2495,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-20",
+      "stars": 2497,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-21",
+      "stars": 2506,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-22",
+      "stars": 2510,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-23",
+      "stars": 2517,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-24",
+      "stars": 2519,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-25",
+      "stars": 2527,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-26",
+      "stars": 2530,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-27",
+      "stars": 2532,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-28",
+      "stars": 2534,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-29",
+      "stars": 2538,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-30",
+      "stars": 2544,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-03-31",
+      "stars": 2547,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-01",
+      "stars": 2550,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-02",
+      "stars": 2553,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-03",
+      "stars": 2556,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-04",
+      "stars": 2558,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-05",
+      "stars": 2561,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-06",
+      "stars": 2564,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-07",
+      "stars": 2565,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-10",
+      "stars": 2567,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-11",
+      "stars": 2572,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-13",
+      "stars": 2574,
+      "forks": 122,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-14",
+      "stars": 2576,
+      "forks": 123,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-16",
+      "stars": 2578,
+      "forks": 123,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-17",
+      "stars": 2580,
+      "forks": 124,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-18",
+      "stars": 2587,
+      "forks": 125,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-19",
+      "stars": 2590,
+      "forks": 125,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-20",
+      "stars": 2595,
+      "forks": 125,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-21",
+      "stars": 2598,
+      "forks": 125,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-22",
+      "stars": 2601,
+      "forks": 125,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-23",
+      "stars": 2607,
+      "forks": 125,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-24",
+      "stars": 2608,
+      "forks": 126,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-25",
+      "stars": 2610,
+      "forks": 127,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-27",
+      "stars": 2614,
+      "forks": 127,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-28",
+      "stars": 2614,
+      "forks": 129,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-29",
+      "stars": 2616,
+      "forks": 129,
+      "downloads": null
+    },
+    {
+      "date": "2026-04-30",
+      "stars": 2616,
+      "forks": 130,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-01",
+      "stars": 2619,
+      "forks": 130,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-02",
+      "stars": 2620,
+      "forks": 132,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-03",
+      "stars": 2622,
+      "forks": 132,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-04",
+      "stars": 2625,
+      "forks": 132,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-06",
+      "stars": 2627,
+      "forks": 132,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-07",
+      "stars": 2630,
+      "forks": 132,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-08",
+      "stars": 2632,
+      "forks": 132,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-09",
+      "stars": 2635,
+      "forks": 132,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-10",
+      "stars": 2641,
+      "forks": 133,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-12",
+      "stars": 2642,
+      "forks": 133,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-13",
+      "stars": 2644,
+      "forks": 133,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-14",
+      "stars": 2649,
+      "forks": 134,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-15",
+      "stars": 2652,
+      "forks": 135,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-16",
+      "stars": 2655,
+      "forks": 136,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-17",
+      "stars": 2659,
+      "forks": 136,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-18",
+      "stars": 2660,
+      "forks": 136,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-19",
+      "stars": 2663,
+      "forks": 136,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-20",
+      "stars": 2665,
+      "forks": 136,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-21",
+      "stars": 2670,
+      "forks": 136,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-22",
+      "stars": 2674,
+      "forks": 136,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-23",
+      "stars": 2679,
+      "forks": 138,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-24",
+      "stars": 2681,
+      "forks": 138,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-25",
+      "stars": 2682,
+      "forks": 138,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-26",
+      "stars": 2686,
+      "forks": 138,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-27",
+      "stars": 2689,
+      "forks": 138,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-28",
+      "stars": 2690,
+      "forks": 138,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-29",
+      "stars": 2693,
+      "forks": 139,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-30",
+      "stars": 2694,
+      "forks": 139,
+      "downloads": null
+    },
+    {
+      "date": "2026-05-31",
+      "stars": 2696,
+      "forks": 139,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-01",
+      "stars": 2698,
+      "forks": 139,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-02",
+      "stars": 2702,
+      "forks": 139,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-03",
+      "stars": 2705,
+      "forks": 139,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-04",
+      "stars": 2708,
+      "forks": 140,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-05",
+      "stars": 2709,
+      "forks": 140,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-06",
+      "stars": 2711,
+      "forks": 140,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-07",
+      "stars": 2713,
+      "forks": 140,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-08",
+      "stars": 2714,
+      "forks": 140,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-09",
+      "stars": 2716,
+      "forks": 140,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-10",
+      "stars": 2720,
+      "forks": 140,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-11",
+      "stars": 2721,
+      "forks": 140,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-12",
+      "stars": 2722,
+      "forks": 140,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-13",
+      "stars": 2723,
+      "forks": 142,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-14",
+      "stars": 2725,
+      "forks": 143,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-15",
+      "stars": 2729,
+      "forks": 143,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-16",
+      "stars": 2729,
+      "forks": 144,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-18",
+      "stars": 2731,
+      "forks": 144,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-19",
+      "stars": 2733,
+      "forks": 144,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-20",
+      "stars": 2735,
+      "forks": 144,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-21",
+      "stars": 2738,
+      "forks": 144,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-22",
+      "stars": 2738,
+      "forks": 145,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-23",
+      "stars": 2741,
+      "forks": 145,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-24",
+      "stars": 2743,
+      "forks": 145,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-25",
+      "stars": 2745,
+      "forks": 145,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-27",
+      "stars": 2749,
+      "forks": 145,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-29",
+      "stars": 2750,
+      "forks": 145,
+      "downloads": null
+    },
+    {
+      "date": "2026-06-30",
+      "stars": 2752,
+      "forks": 145,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-01",
+      "stars": 2756,
+      "forks": 145,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-03",
+      "stars": 2758,
+      "forks": 145,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-04",
+      "stars": 2759,
+      "forks": 145,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-05",
+      "stars": 2761,
+      "forks": 145,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-06",
+      "stars": 2765,
+      "forks": 145,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-07",
+      "stars": 2766,
+      "forks": 146,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-09",
+      "stars": 2770,
+      "forks": 146,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-10",
+      "stars": 2772,
+      "forks": 146,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-13",
+      "stars": 2773,
+      "forks": 146,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-14",
+      "stars": 2779,
+      "forks": 146,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-15",
+      "stars": 2780,
+      "forks": 146,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-16",
+      "stars": 2782,
+      "forks": 146,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-17",
+      "stars": 2783,
+      "forks": 146,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-18",
+      "stars": 2785,
+      "forks": 146,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-19",
+      "stars": 2786,
+      "forks": 146,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-20",
+      "stars": 2795,
+      "forks": 146,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-21",
+      "stars": 2811,
+      "forks": 149,
+      "downloads": null
+    },
+    {
+      "date": "2026-07-22",
+      "stars": 2812,
+      "forks": 148,
+      "downloads": 0
+    },
+    {
+      "date": "2026-07-23",
+      "stars": 2816,
+      "forks": 149,
+      "downloads": 0
+    }
+  ]
+}
