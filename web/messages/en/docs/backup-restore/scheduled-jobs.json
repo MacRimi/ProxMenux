@@ -39,7 +39,7 @@
     "heading": "How attach mode works",
     "intro": "PVE writes <code>vzdump</code> tasks to <code>/etc/pve/jobs.cfg</code> — one stanza per task, each pointing at a storage where the VM and LXC dumps land. Attach mode requires that storage to be a backend ProxMenux understands (Local or PBS); when the task fires, ProxMenux runs alongside it.",
     "steps": [
-      { "step": "1", "detail": "During job creation, ProxMenux lists compatible parent PVE tasks via <code>hb_pve_list_vzdump_jobs_for_backend</code>. The operator picks one." },
+      { "step": "1", "detail": "During job creation, ProxMenux lists compatible parent PVE tasks via <code>hb_pve_list_vzdump_jobs_for_backend</code>. The user picks one." },
       { "step": "2", "detail": "The job's <code>.env</code> is written with <code>PVE_PARENT_JOB</code>, <code>PVE_STORAGE</code> and the inherited <code>KEEP_*</code> values; no systemd timer is created." },
       { "step": "3", "detail": "<code>hb_install_vzdump_hook</code> registers a script-hook in <code>/etc/vzdump.conf</code>. When PVE runs any vzdump task, the hook script fires; if the <code>$STOREID</code> passed to it matches an attached job's <code>PVE_STORAGE</code>, the runner is invoked for that job." },
       { "step": "4", "detail": "The archive lands in the same storage the vzdump dumps just wrote to: <code>path/dump/</code> for Local, or the PBS repository configured on the PVE storage entry." }
@@ -78,7 +78,7 @@
   },
   "notifications": {
     "heading": "Notifications",
-    "body": "Every scheduled run fires the same <code>hb_notify_lifecycle</code> events as the interactive flow (<code>start</code>, <code>complete</code>, <code>fail</code>). If notification channels are configured in the Monitor, unattended jobs surface their results the same way manual backups do — an operator does not need to check the log to know whether a job succeeded."
+    "body": "Every scheduled run fires the same <code>hb_notify_lifecycle</code> events as the interactive flow (<code>start</code>, <code>complete</code>, <code>fail</code>). If notification channels are configured in the Monitor, unattended jobs surface their results the same way manual backups do — an user does not need to check the log to know whether a job succeeded."
   },
   "whereNext": {
     "heading": "Where to go next",

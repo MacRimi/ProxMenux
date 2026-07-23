@@ -153,7 +153,7 @@
       {
         "href": "/docs/utils/system-update",
         "label": "Actualización del sistema Proxmox (interactivo)",
-        "tail": " — wrapper que hace todo esto con un diálogo de confirmación y preguntar antes de reiniciar."
+        "tail": " — wrapper que hace todo esto con un diálogo de confirmación, una recompilación DKMS automática de los drivers gestionados por ProxMenux cuando se instala un kernel nuevo y un prompt de reinicio. También lanzable desde el botón Update Now del dashboard de ProxMenux Monitor."
       },
       {
         "href": "/docs/utils/upgrade-pve8-pve9",

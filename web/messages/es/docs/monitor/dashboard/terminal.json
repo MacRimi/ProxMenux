@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Un PTY real en el navegador",
-    "body": "El terminal asigna una PTY del lado del servidor a través de <code>flask_terminal_routes</code>, la canaliza por un WebSocket hacia <code>xterm.js</code> en el navegador y se ejecuta como <code>root</code> (el usuario de la unidad systemd). Cualquier cosa que puedas hacer en <code>ssh root@&lt;host&gt;</code> funciona aquí — incluidos <code>vim</code>, <code>tmux</code>, herramientas ncurses y las CLIs de Proxmox (<code>qm</code>, <code>pct</code>, <code>pvesh</code>, <code>pvecm</code>)."
+    "body": "El terminal asigna una PTY del lado del servidor a través de <code>flask_terminal_routes</code>, la canaliza por un WebSocket hacia <code>xterm.js</code> en el navegador y se ejecuta como <code>root</code> (el usuario de la unidad systemd). Cualquier cosa que puedas hacer en <code>ssh root@&lt;host&gt;</code> funciona aquí — incluidos <code>vim</code>, <code>tmux</code>, herramientas ncurses y las CLIs de Proxmox (<code>qm</code>, <code>pct</code>, <code>pvesh</code>, <code>pvecm</code>). Cada PTY lanzada desde esta pestaña exporta la variable de entorno <code>PROXMENUX_TERMINAL=monitor</code>, que hereda todo proceso <code>bash</code> hijo — incluida una llamada posterior a <code>menu</code> — para que los flujos de ProxMenux puedan saber si se están ejecutando dentro del terminal del navegador del Monitor."
   },
   "singleAlt": "Pestaña Terminal de ProxMenux Monitor — una única sesión de terminal mostrando el resumen del sistema de Fastfetch al hacer login",
   "singleCaption": "Un terminal del host abierto — la barra de arriba muestra el recuento (<em>1 / 4 terminals</em>), <em>+ New</em>, <em>Search</em>, <em>Clear</em> y <em>Close</em>. Las ayudas de teclado para móvil aparecen bajo el terminal en dispositivos táctiles.",
@@ -18,6 +18,11 @@
     "heading": "Destino de la conexión",
     "body1": "La pestaña Terminal abre una shell en el <strong>propio host Proxmox</strong> — el mismo login que obtendrías por SSH. Cada pestaña abre un terminal del host completamente nuevo.",
     "body2": "Para llegar a un <strong>contenedor LXC</strong> desde el navegador, usa el botón <em>Console</em> dedicado en cada tarjeta de CT en ejecución de la <link>pestaña VMs y LXCs</link>. Abre una modal que ejecuta <code>pct enter &lt;vmid&gt;</code> y reutiliza la misma barra para móvil descrita abajo."
+  },
+  "menuGuard": {
+    "heading": "Guarda de autoactualización cuando menu corre dentro de este terminal",
+    "body1": "El <code>menu</code> de ProxMenux se autoactualiza en sitio: aceptar el prompt reemplaza su propio árbol de scripts y recarga. Eso funciona bien por SSH o desde la consola de Proxmox, pero el terminal del navegador no puede sobrevivir a ello — la actualización desmonta la propia PTY sobre la que corre la shell y el WebSocket cae a mitad. Para no dejar la sesión colgada, los handlers internos <code>check_updates_stable</code>, <code>check_updates_beta</code> y <code>apply_release_channel</code> leen <code>PROXMENUX_TERMINAL</code> y detectan el contexto Monitor.",
+    "body2": "Al detectarlo, el diálogo clásico sí / no se sustituye por un msgbox informativo con el instalador canónico de una línea — <code>bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)\"</code> para el canal estable, y la URL equivalente de <code>install_proxmenux_beta.sh</code> para beta. La actualización propiamente dicha se deja para una sesión SSH o la consola del host Proxmox; el terminal del navegador solo se usa para confirmar y leer el comando."
   },
   "fourTerminals": {
     "heading": "Hasta cuatro terminales a la vez",

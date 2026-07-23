@@ -113,6 +113,14 @@ export default async function TerminalTabPage({
         {t.rich("target.body2", { strong, em, code, link: vmsLink })}
       </p>
 
+      <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("menuGuard.heading")}</h2>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("menuGuard.body1", { strong, em, code })}
+      </p>
+      <p className="mb-6 text-gray-800 leading-relaxed">
+        {t.rich("menuGuard.body2", { strong, em, code })}
+      </p>
+
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("fourTerminals.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t("fourTerminals.intro")}</p>
       <ul className="list-disc pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">

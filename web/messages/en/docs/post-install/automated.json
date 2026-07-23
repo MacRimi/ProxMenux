@@ -67,7 +67,7 @@
     },
     {
       "tool": "Network stack tuning",
-      "what": "TCP buffer sizing, IPv4 hardening (redirects off, rp_filter=2, martian log off), local port range 1024-65535, TCP MTU probing, RFC 1337, plus a oneshot systemd unit to normalise virtual firewall bridges.",
+      "what": "TCP buffer sizing, IPv4 hardening (redirects off, rp_filter=2, martian log off), local port range 1024-65535, TCP MTU probing, RFC 1337, plus a helper at /usr/local/sbin/proxmenux-fwbr-tune wired to a oneshot systemd unit and a udev rule, so rp_filter=0 / log_martians=0 are re-applied to fwbr*/fwln*/fwpr*/tap* interfaces every time Proxmox recreates them at VM start/stop, reboot or live migration.",
       "category": "Network",
       "categorySlug": "network"
     },
@@ -103,7 +103,7 @@
     },
     {
       "tool": "Persistent interface names",
-      "what": "Writes /etc/systemd/network/10-*.link files matching each physical NIC by MAC so eth0 / enp… names stay stable across reboots and new NIC additions.",
+      "what": "Writes one /etc/systemd/network/10-proxmenux-<iface>.link per physical NIC (each starting with a 'Managed by ProxMenux' header) that pins the MAC to the current name, so eth0 / enp… names stay stable across reboots and new NIC additions.",
       "category": "Network",
       "categorySlug": "network"
     }

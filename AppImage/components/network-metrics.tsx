@@ -18,6 +18,9 @@ interface NetworkData {
   interfaces: NetworkInterface[]
   physical_interfaces?: NetworkInterface[]
   bridge_interfaces?: NetworkInterface[]
+  // Bond masters. Also present inside `interfaces` for backward
+  // compatibility; this list is what the topology diagram consumes.
+  bond_interfaces?: NetworkInterface[]
   vm_lxc_interfaces?: NetworkInterface[]
   traffic: {
     bytes_sent: number
@@ -79,11 +82,26 @@ interface NetworkInterface {
   // operator can see "this NIC → vmbr0" at a glance.
   used_by_bridges?: string[]
   bond_mode?: string
+  // Kernel's human-readable mode, e.g. "fault-tolerance (active-backup)".
+  // bond_mode holds the short form ("active-backup") that matches
+  // /etc/network/interfaces and the Proxmox UI.
+  bond_mode_detail?: string | null
   bond_slaves?: string[]
   bond_active_slave?: string | null
+  // True only for modes where a slave really sits idle (active-backup).
+  bond_supports_failover?: boolean
+  bond_slave_status?: Record<string, string>
+  // Set on a physical NIC that is enslaved to a bond.
+  bond_master?: string
+  bond_role?: "active" | "standby" | "member"
+  bond_link?: string
+  // Master device resolved from /sys/class/net/<iface>/master — the
+  // bridge for a guest tap, the bond for a slave NIC.
+  bridge_owner?: string
   bridge_members?: string[]
   bridge_physical_interface?: string
   bridge_bond_slaves?: string[]
+  bridge_vlan_interface?: string | null
   packet_loss_in?: number
   packet_loss_out?: number
   vmid?: number
@@ -509,6 +527,7 @@ export function NetworkMetrics() {
 
   const allInterfaces = [
     ...(networkData.physical_interfaces || []),
+    ...(networkData.bond_interfaces || []),
     ...(networkData.bridge_interfaces || []),
     ...(networkData.vm_lxc_interfaces || []),
   ]
@@ -788,6 +807,7 @@ export function NetworkMetrics() {
         const toMBps = (bps?: number) => (bps || 0) / (1024 * 1024)
         const allIfaces = [
           ...(networkData.physical_interfaces || []),
+          ...(networkData.bond_interfaces || []),
           ...(networkData.bridge_interfaces || []),
           ...(networkData.vm_lxc_interfaces || []),
         ]
@@ -797,7 +817,24 @@ export function NetworkMetrics() {
             link: formatSpeed(p.speed),
             rx: toMBps(p.rx_Bps),
             tx: toMBps(p.tx_Bps),
-            status: (p.status || "").toLowerCase() === "up" ? "up" : "down",
+            // A slave whose MII status is down has no carrier even though
+            // the interface itself stays administratively up — the bond
+            // driver's view is the accurate one here.
+            status:
+              p.bond_link === "down"
+                ? "down"
+                : (p.status || "").toLowerCase() === "up"
+                  ? "up"
+                  : "down",
+            bond: p.bond_master,
+            role: p.bond_role,
+          })),
+          bonds: (networkData.bond_interfaces || []).map((b) => ({
+            id: b.name,
+            mode: b.bond_mode && b.bond_mode !== "unknown" ? b.bond_mode : undefined,
+            rx: toMBps(b.rx_Bps),
+            tx: toMBps(b.tx_Bps),
+            status: (b.status || "").toLowerCase() === "up" ? "up" : "down",
           })),
           bridges: (networkData.bridge_interfaces || []).map((b) => ({
             id: b.name,
@@ -918,24 +955,6 @@ export function NetworkMetrics() {
                         {interface_.bridge_physical_interface && (
                           <div className="text-sm text-blue-500 font-medium flex items-center gap-1 flex-wrap break-all">
                             → {interface_.bridge_physical_interface}
-                            {interface_.bridge_physical_interface.startsWith("bond") &&
-                              networkData.physical_interfaces && (
-                                <>
-                                  {(() => {
-                                    const bondInterface = networkData.physical_interfaces.find(
-                                      (iface) => iface.name === interface_.bridge_physical_interface,
-                                    )
-                                    if (bondInterface?.bond_slaves && bondInterface.bond_slaves.length > 0) {
-                                      return (
-                                        <span className="text-muted-foreground text-xs break-all">
-                                          ({bondInterface.bond_slaves.join(", ")})
-                                        </span>
-                                      )
-                                    }
-                                    return null
-                                  })()}
-                                </>
-                              )}
                             {interface_.bridge_bond_slaves && interface_.bridge_bond_slaves.length > 0 && (
                               <span className="text-muted-foreground text-xs break-all">
                                 ({interface_.bridge_bond_slaves.join(", ")})
@@ -1125,6 +1144,7 @@ export function NetworkMetrics() {
                 const currentInterfaceData = modalNetworkData
                   ? [
                       ...(modalNetworkData.physical_interfaces || []),
+                      ...(modalNetworkData.bond_interfaces || []),
                       ...(modalNetworkData.bridge_interfaces || []),
                       ...(modalNetworkData.vm_lxc_interfaces || []),
                     ].find((iface) => iface.name === selectedInterface.name)
@@ -1154,35 +1174,10 @@ export function NetworkMetrics() {
                             <div className="font-medium text-blue-500 text-lg break-all">
                               {displayInterface.bridge_physical_interface}
                             </div>
-                            {displayInterface.bridge_physical_interface.startsWith("bond") &&
-                              modalNetworkData?.physical_interfaces && (
-                                <>
-                                  {(() => {
-                                    const bondInterface = modalNetworkData.physical_interfaces.find(
-                                      (iface) => iface.name === displayInterface.bridge_physical_interface,
-                                    )
-                                    if (bondInterface?.bond_slaves && bondInterface.bond_slaves.length > 0) {
-                                      return (
-                                        <div className="mt-2">
-                                          <div className="text-sm text-muted-foreground mb-2">Bond Members</div>
-                                          <div className="flex flex-wrap gap-2">
-                                            {bondInterface.bond_slaves.map((slave, idx) => (
-                                              <Badge
-                                                key={idx}
-                                                variant="outline"
-                                                className="bg-purple-500/10 text-purple-500 border-purple-500/20"
-                                              >
-                                                {slave}
-                                              </Badge>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )
-                                    }
-                                    return null
-                                  })()}
-                                </>
-                              )}
+                            {/* Slaves come from the bridge's own payload
+                                (bridge_bond_slaves); the bond master is not
+                                part of physical_interfaces, so looking it up
+                                there never matched. */}
                             {displayInterface.bridge_bond_slaves && displayInterface.bridge_bond_slaves.length > 0 && (
                               <div className="mt-2">
                                 <div className="text-sm text-muted-foreground mb-2">Bond Members</div>
@@ -1418,26 +1413,53 @@ export function NetworkMetrics() {
                         <div className="space-y-3">
                           <div>
                             <div className="text-sm text-muted-foreground">Bonding Mode</div>
-                            <div className="font-medium">{displayInterface.bond_mode || "Unknown"}</div>
+                            <div className="font-medium">
+                              {displayInterface.bond_mode || "Unknown"}
+                              {displayInterface.bond_mode_detail &&
+                                displayInterface.bond_mode_detail !== displayInterface.bond_mode && (
+                                  <span className="text-muted-foreground font-normal">
+                                    {" "}
+                                    ({displayInterface.bond_mode_detail})
+                                  </span>
+                                )}
+                            </div>
                           </div>
                           {displayInterface.bond_active_slave && (
                             <div>
-                              <div className="text-sm text-muted-foreground">Active Slave</div>
+                              <div className="text-sm text-muted-foreground">
+                                {displayInterface.bond_supports_failover ? "Active Slave" : "Primary Slave"}
+                              </div>
                               <div className="font-medium">{displayInterface.bond_active_slave}</div>
                             </div>
                           )}
                           <div>
                             <div className="text-sm text-muted-foreground mb-2">Slave Interfaces</div>
                             <div className="flex flex-wrap gap-2">
-                              {displayInterface.bond_slaves.map((slave, idx) => (
-                                <Badge
-                                  key={idx}
-                                  variant="outline"
-                                  className="bg-purple-500/10 text-purple-500 border-purple-500/20"
-                                >
-                                  {slave}
-                                </Badge>
-                              ))}
+                              {displayInterface.bond_slaves.map((slave, idx) => {
+                                // Only active-backup has a real standby. In every
+                                // other mode all slaves transmit, so we just show
+                                // the link state.
+                                const link = displayInterface.bond_slave_status?.[slave]
+                                const isDown = link === "down"
+                                const role = isDown
+                                  ? "down"
+                                  : displayInterface.bond_supports_failover
+                                    ? slave === displayInterface.bond_active_slave
+                                      ? "active"
+                                      : "standby"
+                                    : null
+                                const tone = isDown
+                                  ? "bg-red-500/10 text-red-500 border-red-500/20"
+                                  : role === "standby"
+                                    ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                                    : "bg-purple-500/10 text-purple-500 border-purple-500/20"
+                                return (
+                                  <Badge key={idx} variant="outline" className={tone}>
+                                    {slave}
+                                    {role && <span className="ml-1 opacity-70">· {role}</span>}
+                                  </Badge>
+                                )
+                              })}
                             </div>
                           </div>
                         </div>

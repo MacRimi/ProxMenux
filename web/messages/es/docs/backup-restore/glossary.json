@@ -24,7 +24,7 @@
           "id": "passphrase-recuperacion",
           "term": "Passphrase de recuperación",
           "also": "recovery passphrase",
-          "def": "Contraseña de texto que elige el operador para proteger el <a href=\"#sobre-recuperacion\">sobre de recuperación</a>. Se pide dos veces con validación de coincidencia y solo se usa para cifrar el sobre y para descifrarlo si algún día hay que recuperar la clave. <strong>No sirve para desbloquear la clave del keyfile</strong> ni se envía nunca a PBS. Nunca sale del host durante una copia normal."
+          "def": "Contraseña de texto que elige el usuario para proteger el <a href=\"#sobre-recuperacion\">sobre de recuperación</a>. Se pide dos veces con validación de coincidencia y solo se usa para cifrar el sobre y para descifrarlo si algún día hay que recuperar la clave. <strong>No sirve para desbloquear la clave del keyfile</strong> ni se envía nunca a PBS. Nunca sale del host durante una copia normal."
         },
         {
           "id": "clave-cifrado",

@@ -54,6 +54,8 @@
       }
     ],
     "sourceOutro": "También añade <code>source /etc/network/interfaces.d/*</code> a <code>/etc/network/interfaces</code> si no está ya presente — práctica estándar para que puedas dejar snippets modulares de interfaz sin editar el archivo principal.",
+    "fwbrTitle": "Ajuste automático de los bridges de firewall virtual",
+    "fwbrBody": "Junto al perfil sysctl, ProxMenux instala un helper en <code>/usr/local/sbin/proxmenux-fwbr-tune</code> que aplica <code>rp_filter=0</code> y <code>log_martians=0</code> a las interfaces <code>fwbr*</code> / <code>fwln*</code> / <code>fwpr*</code> / <code>tap*</code> que Proxmox crea alrededor de VMs y contenedores. El helper lo lanza la unit oneshot <code>proxmenux-fwbr-tune.service</code> al arranque y la regla <code>/etc/udev/rules.d/99-proxmenux-fwbr-tune.rules</code> en cada evento <code>net add</code> que coincida con esos prefijos — cubriendo las interfaces que Proxmox recrea al iniciar/parar VMs, en reinicios y en migraciones en vivo.",
     "rpFilterTitle": "Por qué rp_filter=2 (loose) en lugar de 1 (strict)",
     "rpFilterBody": "El reverse-path filtering strict descarta paquetes cuya fuente se rutearía por una interfaz <em>distinta</em>. Es el valor por defecto correcto en una máquina cliente, pero rompe gravemente en un host Proxmox donde el tráfico de VMs a menudo llega por un bridge y sale por un uplink con rutas asimétricas. <code>rp_filter=2</code> (loose) solo descarta paquetes con fuentes verdaderamente no enrutables. Es un trade-off pragmático — ligera reducción en la detección de spoofing de IP local a cambio de no romper tu red de VMs."
   },
@@ -84,14 +86,14 @@
       "Contenedores LXC con NICs <code>hotplug</code> y enlaces bonded pueden hacer race en el arranque y acabar nombrados de forma inconsistente. Fijarlos lo soluciona."
     ],
     "writtenTitle": "Qué se escribe",
-    "writtenIntro": "Un archivo por NIC física, en <code>/etc/systemd/network/10-&lt;iface&gt;.link</code>:",
-    "writtenOutro": "Cualquier archivo <code>.link</code> preexistente en ese directorio se copia a <code>/etc/systemd/network/backup-&lt;timestamp&gt;/</code> antes de tocar nada.",
+    "writtenIntro": "Un archivo por NIC física, en <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code>. Cada archivo comienza con la cabecera <code># Managed by ProxMenux — do not edit</code>, marca que permite a ProxMenux distinguir sus propios archivos de los <code>.link</code> provistos por el usuario o por otros paquetes.",
+    "writtenOutro": "Los archivos <code>.link</code> de otros paquetes o escritos a mano por el usuario se dejan intactos — solo se gestionan los archivos que llevan la cabecera de ProxMenux. En cada nueva ejecución la función reconcilia su propio conjunto: relee <code>MACAddress=</code> de cada <code>10-proxmenux-*.link</code> y elimina los cuya MAC ya no aparece en <code>/sys/class/net/</code>. Los archivos escritos por una versión antigua de ProxMenux en el formato <code>10-&lt;iface&gt;.link</code> se migran automáticamente en la primera ejecución.",
     "pveTitle": "PVE 9 vs PVE 8",
     "pveBody": "En Proxmox VE 9 (<code>systemd-networkd</code> nativo), el script recarga las reglas udev tras escribir los archivos <code>.link</code> para que las nuevas NICs hotplug cojan el nombre correcto sin reiniciar. En PVE 8 (<code>ifupdown2</code>), el naming de interfaz se resuelve en el arranque de todos modos — se requiere un reinicio para que los cambios surtan efecto. El script activa el flag de reinicio en cualquier caso para que Personalizable te lo pregunte.",
     "reviewTitle": "Revisa antes el /etc/network/interfaces existente",
     "reviewBody": "Si tu host tiene configuración legacy en <code>/etc/network/interfaces</code> que referencia nombres de NIC generados por el esquema por defecto del kernel, fijar los nombres <em>de hoy</em> es exactamente lo que quieres. Pero si ya has customizado manualmente la configuración alrededor de nombres específicos, comprueba dos veces que el pinning coincide con lo que el archivo interfaces espera antes de reiniciar.",
     "revertTitle": "Reversible desde el menú Uninstall",
-    "revertBody": "<link>Uninstall Optimizations</link> borra cada archivo <code>.link</code> de <code>/etc/systemd/network/</code>, restaurando el naming por defecto del kernel en el siguiente reinicio. El backup con marca de tiempo de los archivos originales se queda por si necesitas restaurar alguno manualmente."
+    "revertBody": "<link>Uninstall Optimizations</link> solo borra los archivos <code>10-proxmenux-*.link</code> que llevan la cabecera de ProxMenux en <code>/etc/systemd/network/</code>. Cualquier archivo <code>.link</code> añadido por el usuario o por otro paquete se preserva. Los nombres de interfaz vuelven al comportamiento por defecto de systemd en el siguiente reinicio."
   },
   "related": {
     "heading": "Relacionado",

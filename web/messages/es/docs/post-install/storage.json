@@ -18,30 +18,26 @@
     "intro": "El <strong>Adaptive Replacement Cache (ARC)</strong> es la caché de lectura en memoria de ZFS. Sin tuning explícito, ZFS coge alegremente hasta la mitad de la RAM del host para sí mismo, lo que es excesivo en un host Proxmox que también necesita memoria para VMs y LXCs. Esta opción limita el ARC a una fracción sensata de la RAM total según el tamaño de la máquina.",
     "sizingTitle": "Reglas de dimensionado",
     "headerRam": "RAM del host",
-    "headerMin": "ARC mín",
-    "headerMax": "ARC máx",
+    "headerMax": "Cap ARC",
     "rows": [
       {
         "ram": "≤ 16 GB",
-        "min": "512 MB",
-        "max": "512 MB"
+        "max": "512 MiB"
       },
       {
         "ram": "17 – 32 GB",
-        "min": "1 GB",
-        "max": "1 GB"
+        "max": "1 GiB"
       },
       {
         "ram": "> 32 GB",
-        "min": "RAM / 16",
-        "max": "RAM / 8"
+        "max": "RAM / 8 (mínimo 512 MiB)"
       }
     ],
-    "after": "En un host de 64 GB, eso significa 4 GB mín / 8 GB máx para el ARC. La config se escribe en <code>/etc/modprobe.d/99-zfsarc.conf</code> y activa unos cuantos tunables ZFS extra (L2ARC prefetch activo, L2ARC write max en 500 MB, timeout TXG más largo).",
+    "after": "En un host de 64 GB, eso se traduce en un cap de 8 GB para el ARC. El archivo <code>/etc/modprobe.d/99-zfsarc.conf</code> contiene una única directiva — <code>options zfs zfs_arc_max=…</code>. El resto de parámetros del módulo (<code>zfs_arc_min</code>, prefetch/write throttle de L2ARC, timeout de TXG) se dejan en los valores por defecto de OpenZFS. Tras escribir el archivo, ProxMenux ejecuta <code>update-initramfs -u -k all</code> y, cuando corresponde, <code>proxmox-boot-tool refresh</code>, para que el cap llegue también al initramfs que usan las instalaciones con ZFS-on-root.",
     "rebootTitle": "Requiere reinicio para surtir efecto",
-    "rebootBody": "Los ajustes del ARC se leen cuando se carga el módulo del kernel <code>zfs</code>. <strong>No</strong> se aplican en un sistema en vivo — necesitarás reiniciar el host para que el límite entre en juego. El script activa el flag de \"se requiere reinicio\" automáticamente.",
+    "rebootBody": "Los ajustes del ARC se leen cuando se carga el módulo del kernel <code>zfs</code>. Para que el cap se aplique en hosts ZFS-on-root, ProxMenux regenera el initramfs con <code>update-initramfs -u -k all</code> y, cuando corresponde, refresca el cargador de arranque con <code>proxmox-boot-tool refresh</code>. Un reinicio sigue siendo necesario para que el módulo relea el parámetro; el flag de \"se requiere reinicio\" se activa automáticamente.",
     "safeTitle": "Seguro en hosts sin ZFS",
-    "safeBody": "La función comprueba el comando <code>zfs</code> antes de tocar nada. En hosts Proxmox solo ext4 / LVM, marcar esta opción es un no-op — no se escribe nada.",
+    "safeBody": "La función solo escribe la configuración cuando <code>zpool list</code> reporta al menos un pool ZFS importado. En hosts Proxmox solo ext4 / LVM, o en máquinas con las utilidades ZFS instaladas pero sin ningún pool importado, marcar esta opción es un no-op — no se escribe nada.",
     "verifyTitle": "Verificación y rollback manual"
   },
   "autoSnap": {

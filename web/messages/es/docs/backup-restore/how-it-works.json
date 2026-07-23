@@ -20,7 +20,7 @@
     "heading": "Layout del archivo",
     "intro": "Cada archivo respeta el mismo layout con independencia del destino. El subdirectorio <code>metadata/</code> contiene los bloques estructurados; el subdirectorio <code>rootfs/</code> contiene la copia del sistema de ficheros.",
     "treeCaption": "El directorio de staging generado durante una copia. Todos los destinos reciben el mismo árbol (adaptado a su formato nativo: tar para local, chunks PBS para PBS, segmentos borg para Borg).",
-    "tree": "backup-[timestamp]/\n├── manifest.json                  # estado estructurado del host\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # identidad de la ejecución + versión del kernel\n│   ├── paths_archived.txt         # lista exacta de rutas que llegaron a rootfs/\n│   └── missing_paths.txt          # rutas del perfil ausentes en el origen\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/ssh, …\n    ├── root/                      # /root (con subdirs volátiles excluidos)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster, /var/spool/cron/…"
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # estado estructurado del host\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # identidad de la ejecución + versión del kernel + método pmxcfs\n│   ├── paths_archived.txt         # lista exacta de rutas que llegaron a rootfs/\n│   └── missing_paths.txt          # rutas del perfil ausentes en el origen\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, …\n    ├── root/                      # /root (con subdirs volátiles excluidos)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster (config.db vía sqlite3 .backup), /var/spool/cron/…"
   },
   "rootfs": {
     "heading": "El bloque rootfs",
@@ -32,12 +32,12 @@
       {
         "category": "Núcleo PVE",
         "paths": "/etc/pve, /var/lib/pve-cluster, /etc/vzdump.conf",
-        "why": "Contenido del filesystem del clúster, datos vivos del clúster, valores por defecto de vzdump."
+        "why": "Contenido del filesystem del clúster y valores por defecto de vzdump. La base pmxcfs (<code>config.db</code>) se captura con un snapshot consistente vía <code>sqlite3 .backup</code> sin parar el clúster, y los sidecars <code>.db-wal</code> y <code>.db-shm</code> quedan excluidos del rsync. Si <code>sqlite3</code> no está disponible, la copia deposita un <code>config.db.raw-fallback</code> que la restauración promociona automáticamente."
       },
       {
         "category": "Identidad del host y red",
-        "paths": "/etc/hostname, /etc/hosts, /etc/timezone, /etc/resolv.conf, /etc/network",
-        "why": "Todo lo necesario para que el host arranque en red con la misma identidad."
+        "paths": "/etc/hostname, /etc/hosts, /etc/timezone, /etc/resolv.conf, /etc/network, /etc/systemd/network",
+        "why": "Todo lo necesario para que el host arranque en red con la misma identidad. Los ficheros <code>.link</code> bajo <code>/etc/systemd/network</code> pinnean los nombres de las NICs a su MAC, de modo que reinstalaciones y cambios de hardware no rebautizan las interfaces."
       },
       {
         "category": "Acceso y autenticación",
@@ -102,7 +102,7 @@
       {
         "collector": "collect_storage.sh",
         "produces": "storage_inventory",
-        "content": "Pools ZFS (con tipo de pool y discos miembro resueltos a <code>/dev/disk/by-id/*</code> para portabilidad), grupos de volúmenes LVM + thin pools, discos físicos con capacidad SMART, entradas de <code>storage.cfg</code> de PVE, puntos de montaje externos."
+        "content": "Pools ZFS (con tipo de pool y discos miembro resueltos a <code>/dev/disk/by-id/*</code>, <code>/dev/disk/by-partuuid/*</code> o rutas <code>/dev/sdX</code> en bruto según cómo se creara cada pool en el origen), grupos de volúmenes LVM + thin pools, discos físicos con capacidad SMART, entradas de <code>storage.cfg</code> de PVE, puntos de montaje externos."
       },
       {
         "collector": "collect_kernel.sh",
@@ -157,8 +157,8 @@
   },
   "restoreFlow": {
     "heading": "Cómo consume la restauración los tres bloques",
-    "intro": "La restauración es un pipeline de cinco etapas. Cada etapa lee un subconjunto concreto del archivo y actualiza el host de destino. Ninguna etapa requiere que el host de origen esté accesible — el archivo es totalmente autocontenido.",
-    "stagesCaption": "La etapa 1 usa el manifiesto para decidir qué tocar. La etapa 2 copia las rutas del rootfs seguras de aplicar en un sistema en ejecución. La etapa 3 deja las rutas de riesgo preparadas para el siguiente arranque. La etapa 4 gestiona los paquetes. La etapa 5 corre tras el reinicio y reinstala los componentes contra el kernel del destino.",
+    "intro": "La restauración es un pipeline de seis etapas. Cada etapa lee un subconjunto concreto del archivo y actualiza el host de destino. Ninguna etapa requiere que el host de origen esté accesible — el archivo es totalmente autocontenido.",
+    "stagesCaption": "La etapa 1 usa el manifiesto para decidir qué tocar. La etapa 2 copia las rutas del rootfs seguras de aplicar en un sistema en ejecución. La etapa 3 deja las rutas de riesgo preparadas para el siguiente arranque. La etapa 3b importa automáticamente los pools ZFS de datos cuyos discos están todos presentes. La etapa 4 gestiona los paquetes. La etapa 5 corre tras el reinicio y reinstala los componentes contra el kernel del destino.",
     "stageRows": [
       {
         "stage": "1",
@@ -177,6 +177,12 @@
         "name": "Preparación de pending",
         "reads": "rootfs/ (rutas reboot + dangerous)",
         "action": "<code>_rs_prepare_pending_restore</code> deja las rutas de riesgo preparadas bajo <code>/var/lib/proxmenux/pending-restore/</code>, escribe <code>plan.env</code>, <code>apply-on-boot.list</code> y <code>rs-skip-paths.txt</code>, y habilita <code>proxmenux-restore-onboot.service</code> para que dispare en el siguiente arranque."
+      },
+      {
+        "stage": "3b",
+        "name": "Importación de pools de datos",
+        "reads": "manifest.storage_inventory + estado ZFS del destino",
+        "action": "<code>_rs_import_data_pools</code> intenta importar cada pool ZFS no-raíz cuyo conjunto completo de discos está presente en el destino. Los pools con hostid ajeno se reintentan con <code>zpool import -f</code>. Los pools con discos faltantes se saltan con una advertencia. El resultado por pool queda registrado en <code>/var/log/proxmenux/restore-datapools-&lt;timestamp&gt;.log</code>."
       },
       {
         "stage": "4",

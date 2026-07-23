@@ -96,6 +96,11 @@ export default async function PostInstallNetworkPage({
         {t.rich("sysctl.sourceOutro", { code })}
       </p>
 
+      <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("sysctl.fwbrTitle")}</h3>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("sysctl.fwbrBody", { code })}
+      </p>
+
       <Callout variant="warning" title={t("sysctl.rpFilterTitle")}>
         {t.rich("sysctl.rpFilterBody", { em, code })}
       </Callout>

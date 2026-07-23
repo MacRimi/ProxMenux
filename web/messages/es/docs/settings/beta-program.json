@@ -53,7 +53,8 @@
       "Tu configuración existente, login de ProxMenux Monitor (<code>auth.json</code>), canales de notificación, registro post-instalación, umbrales personalizados — nada de eso se toca. El cambio de canal solo intercambia el árbol de scripts y el AppImage binario.",
       "Un Monitor que estaba activo antes del cambio sigue activo después; uno que estaba desactivado sigue desactivado.",
       "El <code>auth.json</code>, los tokens de API y el secreto JWT de ProxMenux Monitor se preservan entre cambios de canal. Las sesiones no se cierran.",
-      "Puedes saltar de canal tantas veces como quieras — el diálogo lo aceptará cada vez y volverá a ejecutar el instalador. No hace falta reiniciar Proxmox."
+      "Puedes saltar de canal tantas veces como quieras — el diálogo lo aceptará cada vez y volverá a ejecutar el instalador. No hace falta reiniciar Proxmox.",
+      "El instalador de cambio de canal reemplaza el propio árbol de scripts de ProxMenux, así que no puede correr dentro del terminal del navegador del Monitor (esa PTY sería desmontada a mitad de la actualización y dejaría el diálogo colgado). Si lanzas la opción desde ahí, la confirmación se sustituye por un msgbox informativo con el instalador canónico de una línea para el canal de destino; ejecuta ese comando desde una sesión SSH o desde la consola del host Proxmox."
     ]
   },
   "feedback": {

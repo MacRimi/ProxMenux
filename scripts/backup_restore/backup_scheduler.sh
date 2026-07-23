@@ -296,6 +296,10 @@ _create_job_attached() {
         "PBS_BACKUP_ID=${bid}"
         "PBS_KEYFILE=${pbs_kf_val}"
         "PBS_ENCRYPTION_PASSWORD=${HB_PBS_ENC_PASS:-}"
+        # Resolved by hb_select_pbs_repository. Persist it so the runner
+        # doesn't have to re-derive it — it can only do that for
+        # Datacenter-managed storages.
+        "PBS_FINGERPRINT=${HB_PBS_FINGERPRINT:-}"
       )
       ;;
     local)
@@ -463,6 +467,10 @@ _create_job() {
         "PBS_BACKUP_ID=${bid}"
         "PBS_KEYFILE=${pbs_kf_val}"
         "PBS_ENCRYPTION_PASSWORD=${HB_PBS_ENC_PASS:-}"
+        # Resolved by hb_select_pbs_repository. Persist it so the runner
+        # doesn't have to re-derive it — it can only do that for
+        # Datacenter-managed storages.
+        "PBS_FINGERPRINT=${HB_PBS_FINGERPRINT:-}"
       )
       ;;
   esac

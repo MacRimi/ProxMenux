@@ -36,7 +36,7 @@
     "intro": "Un archivo de ProxMenux se estructura en torno a tres cargas útiles autocontenidas. La restauración utiliza las tres en conjunto para reproducir el host de origen sobre un destino que puede no tener siquiera el mismo kernel instalado.",
     "diagramCaption": "Cada copia contiene los mismos tres bloques con independencia del destino. La restauración los consume todos: rootfs para colocar los ficheros, manifiesto para detectar drift y diferencias cross-kernel, e inventario de aplicaciones para reinstalar paquetes y componentes contra el kernel del propio destino.",
     "pillar1Label": "Sistema de ficheros",
-    "pillar1Detail": "rootfs/\n(rsync de\n/etc, /root,\n/var/lib/pve-cluster,\n+ rutas opcionales)",
+    "pillar1Detail": "rootfs/\n(rsync de /etc,\n/etc/systemd/network,\n/root, más snapshot\nsqlite3 de\n/var/lib/pve-cluster,\n+ rutas opcionales)",
     "pillar2Label": "Manifiesto",
     "pillar2Detail": "manifest.json\n(hardware, params\ndel kernel, red,\nZFS, usuarios, cron,\npools ZFS, storage)",
     "pillar3Label": "Aplicaciones",

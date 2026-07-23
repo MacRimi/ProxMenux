@@ -840,14 +840,44 @@ hb_configure_pbs_manual() {
 
     repo="${user}@${host}:${datastore}"
     mkdir -p "$HB_STATE_DIR"
+
+    # Capture the PBS certificate fingerprint. proxmox-backup-client
+    # refuses a self-signed PBS without one, and a scheduled job has no
+    # TTY to answer the interactive prompt — so a destination added here
+    # with no fingerprint would fail every timed run. openssl reads the
+    # cert without authenticating; show it for the operator to confirm
+    # (trust-on-first-use) before saving. Skipped silently if the host is
+    # unreachable or openssl is absent — a CA-signed PBS needs no pin.
+    local fingerprint="" fp_host fp_port
+    fp_host="${host%%:*}"
+    fp_port="${host##*:}"
+    [[ "$fp_port" == "$host" || -z "$fp_port" ]] && fp_port=8007
+    if command -v openssl >/dev/null 2>&1; then
+        fingerprint=$(echo | timeout 8 openssl s_client -connect "${fp_host}:${fp_port}" 2>/dev/null \
+            | openssl x509 -fingerprint -sha256 -noout 2>/dev/null \
+            | sed 's/.*=//' | tr 'A-Z' 'a-z')
+    fi
+    if [[ -n "$fingerprint" ]]; then
+        if ! dialog --backtitle "ProxMenux" --title "$(hb_translate "PBS certificate")" \
+            --yesno "$(hb_translate "Certificate fingerprint of the PBS server:")\n\n${fingerprint}\n\n$(hb_translate "Trust this certificate and save it for scheduled backups?")" \
+            14 76; then
+            fingerprint=""
+        fi
+    fi
+
     local cfg_line="${name}|${repo}"
     local manual_cfg="$HB_STATE_DIR/pbs-manual-configs.txt"
     touch "$manual_cfg"
     grep -Fxq "$cfg_line" "$manual_cfg" || echo "$cfg_line" >> "$manual_cfg"
     printf '%s' "$secret" > "$HB_STATE_DIR/pbs-pass-${name}.txt"
     chmod 600 "$HB_STATE_DIR/pbs-pass-${name}.txt"
+    if [[ -n "$fingerprint" ]]; then
+        printf '%s' "$fingerprint" > "$HB_STATE_DIR/pbs-fingerprint-${name}.txt"
+        chmod 600 "$HB_STATE_DIR/pbs-fingerprint-${name}.txt"
+    fi
 
     HB_PBS_NAME="$name"; HB_PBS_REPOSITORY="$repo"; HB_PBS_SECRET="$secret"
+    HB_PBS_FINGERPRINT="$fingerprint"
 }
 
 hb_select_pbs_repository() {
@@ -875,13 +905,12 @@ hb_select_pbs_repository() {
         HB_PBS_NAME="${HB_PBS_NAMES[$sel]}"
         export HB_PBS_REPOSITORY="${HB_PBS_REPOS[$sel]}"
         HB_PBS_SECRET="${HB_PBS_SECRETS[$sel]}"
-        # Export the fingerprint so _bk_pbs / _rs_extract_pbs can
-        # pass it to proxmox-backup-client via PBS_FINGERPRINT. The
-        # binary otherwise prompts "Are you sure you want to
-        # continue connecting? (y/n):" — twice in some flows
-        # (backup + catalog upload) — and silently auto-accepts on
-        # stdin closure, which is both noisy and an MITM risk on a
-        # cross-host restore.
+        # Export the fingerprint so _bk_pbs / _rs_extract_pbs can pass it
+        # to proxmox-backup-client via PBS_FINGERPRINT. Against a
+        # self-signed PBS the client only offers its "continue
+        # connecting? (y/n)" prompt on a real TTY; anywhere else it
+        # refuses the connection outright, so the fingerprint is what
+        # makes the transfer work at all.
         export HB_PBS_FINGERPRINT="${HB_PBS_FINGERPRINTS[$sel]:-}"
         if [[ -z "$HB_PBS_SECRET" ]]; then
             while true; do

@@ -115,6 +115,75 @@ def _disk_base_for_sysfs(name: str) -> str:
     return name
 
 
+_standby_cache: dict = {}
+_STANDBY_CACHE_TTL = 15
+
+
+def _hdd_in_standby(disk_name: str) -> bool:
+    """True if `disk_name` is a spinning disk currently parked.
+
+    CHECK POWER MODE probe (`smartctl -n standby`) — answered without
+    spinning the drive up. Rotational, non-NVMe only. Mirrors the helper
+    in flask_server.py; see issue #232.
+    """
+    base = _disk_base_for_sysfs(disk_name)
+    if base.startswith('nvme'):
+        return False
+    now = time.time()
+    hit = _standby_cache.get(base)
+    if hit and now - hit[0] < _STANDBY_CACHE_TTL:
+        return hit[1]
+    try:
+        with open(f'/sys/block/{base}/queue/rotational') as f:
+            if f.read().strip() != '1':
+                _standby_cache[base] = (now, False)
+                return False
+    except OSError:
+        return False
+    parked = False
+    try:
+        r = subprocess.run(
+            ['smartctl', '-n', 'standby', '-i', f'/dev/{base}'],
+            capture_output=True, text=True, timeout=5)
+        parked = r.returncode == 2
+    except Exception:
+        parked = False
+    _standby_cache[base] = (now, parked)
+    return parked
+
+
+def _lvm_device_args() -> list:
+    """`--devices` list scoping pvs/lvs/vgs off parked disks so they
+    aren't spun up by the LVM scan (issue #232). Empty when nothing is
+    parked, so the plain command runs unchanged. Each partition is
+    listed too — a whole-disk path alone doesn't cover a PV on a
+    partition."""
+    try:
+        r = subprocess.run(
+            ['lsblk', '-rno', 'NAME,TYPE,PKNAME'],
+            capture_output=True, text=True, timeout=5)
+        if r.returncode != 0:
+            return []
+        nodes = []
+        for line in r.stdout.strip().split('\n'):
+            parts = line.split()
+            if len(parts) < 2 or parts[1] not in ('disk', 'part'):
+                continue
+            name = parts[0]
+            base = name if parts[1] == 'disk' else (parts[2] if len(parts) > 2 else name)
+            nodes.append((name, base))
+        standby_bases = {
+            name for name, base in nodes
+            if name == base and _hdd_in_standby(name)
+        }
+        if not standby_bases:
+            return []
+        devices = [f'/dev/{name}' for name, base in nodes if base not in standby_bases]
+        return ['--devices', ','.join(devices)] if devices else []
+    except Exception:
+        return []
+
+
 def _is_disk_removable(disk_name: str) -> bool:
     """True if `/sys/block/<disk>/removable` reads 1. USB-attached storage."""
     try:
@@ -2199,8 +2268,10 @@ class HealthMonitor:
             if result_which.returncode != 0:
                 return {'status': 'OK'} # LVM not installed
 
+            # `--devices` keeps lvs from scanning parked HDDs (issue #232).
+            dev_args = _lvm_device_args()
             result = subprocess.run(
-                ['lvs', '--noheadings', '--options', 'lv_name,vg_name,lv_attr'],
+                ['lvs', *dev_args, '--noheadings', '--options', 'lv_name,vg_name,lv_attr'],
                 capture_output=True,
                 text=True,
                 timeout=3
@@ -2224,7 +2295,7 @@ class HealthMonitor:
             if not volumes:
                 # Check if any VGs exist to determine if LVM is truly unconfigured or just inactive
                 vg_result = subprocess.run(
-                    ['vgs', '--noheadings', '--options', 'vg_name'],
+                    ['vgs', *dev_args, '--noheadings', '--options', 'vg_name'],
                     capture_output=True,
                     text=True,
                     timeout=3

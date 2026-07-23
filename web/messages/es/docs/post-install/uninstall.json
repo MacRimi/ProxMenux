@@ -88,11 +88,11 @@
         "items": [
           {
             "tool": "Network Optimizations",
-            "restores": "Elimina /etc/sysctl.d/99-network.conf y la unit proxmenux-fwbr-tune.service. Recarga sysctl y systemd."
+            "restores": "Elimina /etc/sysctl.d/99-network.conf junto con la unit proxmenux-fwbr-tune.service, el helper /usr/local/sbin/proxmenux-fwbr-tune y la regla /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules. Recarga sysctl, systemd y el conjunto de reglas udev."
           },
           {
             "tool": "Persistent Interface Names",
-            "restores": "Elimina cada archivo .link de /etc/systemd/network/. Los nombres de interfaz vuelven al comportamiento por defecto de systemd en el siguiente reinicio."
+            "restores": "Elimina solo los archivos 10-proxmenux-*.link que llevan la cabecera de ProxMenux en /etc/systemd/network/. Cualquier archivo .link provisto por otro paquete o escrito por el usuario se mantiene intacto. Los nombres de interfaz vuelven al comportamiento por defecto de systemd en el siguiente reinicio."
           }
         ]
       },
@@ -171,7 +171,7 @@
     "packageTitle": "La reinstalación de paquetes toca paquetes vivos de Proxmox",
     "packageBody": "Revertir <strong>Subscription Banner Removal</strong> reinstala <code>pve-manager</code>, <code>proxmox-widget-toolkit</code>, <code>libjs-extjs</code> y <code>libpve-http-server-perl</code> con <code>--force-confnew</code>. Es generalmente seguro pero sí toca la UI web en ejecución — refresca tu navegador después, y espera unos segundos de reconexión. No lo ejecutes a mitad de una migración o una operación de clonado.",
     "rebootTitle": "Los nombres persistentes y VFIO necesitan reinicio",
-    "rebootBody": "Eliminar los archivos <code>.link</code> (<em>Persistent Interface Names</em>) y revertir <em>IOMMU/VFIO</em> no afectan al sistema en ejecución — solo importan tras un reinicio. ProxMenux activa el flag de reinicio automáticamente para estos.",
+    "rebootBody": "Eliminar los archivos <code>10-proxmenux-*.link</code> propios de ProxMenux (<em>Persistent Interface Names</em>) y revertir <em>IOMMU/VFIO</em> no afectan al sistema en ejecución — solo importan tras un reinicio. ProxMenux activa el flag de reinicio automáticamente para estos.",
     "perItemTitle": "Puedes revertir una cosa y mantener el resto",
     "perItemBody": "El uninstaller opera por item. Si solo quieres eliminar Log2RAM pero mantener el tuning de red y los cambios de bashrc, marca solo <em>Log2RAM</em>. Nada más se toca, y el registro se actualiza en consecuencia."
   },

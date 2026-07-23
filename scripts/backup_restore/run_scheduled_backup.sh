@@ -339,6 +339,35 @@ _sb_pbs_resolve_fingerprint() {
   printf '%s' "$found_fp"
 }
 
+# Same lookup for a PBS destination added through ProxMenux instead of
+# Datacenter → Storage. Those never reach storage.cfg, so the walkers
+# above find nothing and their credentials live only in our state dir:
+# `pbs-manual-configs.txt` holds `<name>|<user>@<server>:<datastore>`
+# lines, and the secret itself is in the `pbs-<kind>-<name>.txt` sidecar
+# written when the destination was added.
+_sb_pbs_state_lookup() {
+  local repo="$1" kind="$2"           # kind: fingerprint | pass
+  local state_dir="${HB_STATE_DIR:-/usr/local/share/proxmenux}"
+  local manual="$state_dir/pbs-manual-configs.txt"
+  [[ -f "$manual" && -n "$repo" ]] || return 1
+
+  local line name entry_repo
+  while IFS= read -r line; do
+    line="${line%%#*}"
+    line="${line#"${line%%[![:space:]]*}"}"
+    line="${line%"${line##*[![:space:]]}"}"
+    [[ -z "$line" || "$line" != *"|"* ]] && continue
+    name="${line%%|*}"
+    entry_repo="${line#*|}"
+    [[ "$entry_repo" == "$repo" ]] || continue
+    local f="$state_dir/pbs-${kind}-${name}.txt"
+    [[ -r "$f" ]] || return 1
+    tr -d '\r\n' < "$f"
+    return 0
+  done < "$manual"
+  return 1
+}
+
 _sb_run_pbs() {
   local stage_root="$1"
   local backup_id="$2"
@@ -363,17 +392,21 @@ _sb_run_pbs() {
   # this function can run unchanged.
   if [[ -z "${PBS_PASSWORD:-}" && -n "${PBS_REPOSITORY:-}" ]]; then
     PBS_PASSWORD=$(_sb_pbs_resolve_password "$PBS_REPOSITORY" 2>/dev/null || true)
+    # ProxMenux-managed destinations aren't in /etc/pve/priv/storage.
+    [[ -z "$PBS_PASSWORD" ]] && \
+      PBS_PASSWORD=$(_sb_pbs_state_lookup "$PBS_REPOSITORY" pass 2>/dev/null || true)
   fi
 
   # Same treatment for PBS_FINGERPRINT. Attached scheduled jobs are
   # created without one (the wizard delegates trust to PVE's storage
-  # config), and running proxmox-backup-client with an empty fingerprint
-  # against a self-signed PBS drops into an interactive `(y/n)` prompt —
-  # which under systemd never gets an answer and hangs the timer.
-  # Resolving on-demand from storage.cfg matches the runtime behavior
-  # PVE itself has for its own vzdump jobs.
+  # config), and against a self-signed PBS the client refuses to connect
+  # without it, so the job fails on every run. Two sources, in order:
+  # PVE's storage.cfg for Datacenter-managed storages, then our own
+  # state dir for destinations added from the ProxMenux UI.
   if [[ -z "${PBS_FINGERPRINT:-}" && -n "${PBS_REPOSITORY:-}" ]]; then
     PBS_FINGERPRINT=$(_sb_pbs_resolve_fingerprint "$PBS_REPOSITORY" 2>/dev/null || true)
+    [[ -z "$PBS_FINGERPRINT" ]] && \
+      PBS_FINGERPRINT=$(_sb_pbs_state_lookup "$PBS_REPOSITORY" fingerprint 2>/dev/null || true)
   fi
 
   # PBS_ENCRYPTION_PASSWORD: the passphrase that unlocks the keyfile

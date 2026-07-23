@@ -91,7 +91,6 @@ export default async function PostInstallStoragePage({
           <thead className="bg-gray-100">
             <tr>
               <th className="border border-gray-200 px-3 py-2 text-left text-gray-900">{t("arc.headerRam")}</th>
-              <th className="border border-gray-200 px-3 py-2 text-left text-gray-900">{t("arc.headerMin")}</th>
               <th className="border border-gray-200 px-3 py-2 text-left text-gray-900">{t("arc.headerMax")}</th>
             </tr>
           </thead>
@@ -99,7 +98,6 @@ export default async function PostInstallStoragePage({
             {arcRows.map((row) => (
               <tr key={row.ram}>
                 <td className="border border-gray-200 px-3 py-2">{row.ram}</td>
-                <td className="border border-gray-200 px-3 py-2">{row.min}</td>
                 <td className="border border-gray-200 px-3 py-2">{row.max}</td>
               </tr>
             ))}
