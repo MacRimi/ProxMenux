@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "MacRimi/ProxMenux",
-  "updatedAt": "2026-07-23T14:53:21.867Z",
+  "updatedAt": "2026-07-24T06:41:43.780Z",
   "backfilledAt": "2026-07-22T18:09:20.834Z",
   "totals": {
     "downloads": 0
@@ -2531,6 +2531,12 @@
     {
       "date": "2026-07-23",
       "stars": 2816,
+      "forks": 149,
+      "downloads": 0
+    },
+    {
+      "date": "2026-07-24",
+      "stars": 2818,
       "forks": 149,
       "downloads": 0
     }
