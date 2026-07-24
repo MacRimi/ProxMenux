@@ -19091,8 +19091,8 @@
     ],
     "config_path": "",
     "default_credentials": {
-      "username": "sync-in",
-      "password": "sync-in"
+      "username": "admin",
+      "password": "cat /root/sync-in.creds"
     },
     "os": "debian"
   },
