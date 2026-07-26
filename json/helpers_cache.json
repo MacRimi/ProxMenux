@@ -452,6 +452,40 @@
     "os": "debian"
   },
   {
+    "name": "AirTrail",
+    "slug": "airtrail",
+    "desc": "AirTrail is a modern, self-hosted personal flight tracking system. Log your flights, visualize them on an interactive world map, view detailed statistics, share flights between multiple users, and import from sources such as MyFlightRadar24, Flighty and OpenFlights.",
+    "script": "ct/airtrail.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/airtrail.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/airtrail.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00000"
+    ],
+    "category_names": [
+      "Miscellaneous"
+    ],
+    "notes": [
+      "On first access, register an account through the web interface. The first user created becomes the owner/administrator.",
+      "The interactive airport-overlay map tiles are published by upstream only as a separate container image and are not bundled in this bare-metal install. All other map layers, statistics and features work normally."
+    ],
+    "warnings": [],
+    "port": 3000,
+    "website": "https://airtrail.johan.ohly.dk/",
+    "documentation": "https://airtrail.johan.ohly.dk/docs/overview/introduction",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/airtrail.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "AliasVault",
     "slug": "aliasvault",
     "desc": "AliasVault is an open-source, end-to-end encrypted password manager and email alias service. It features a zero-knowledge architecture where your master password never leaves your device, a built-in SMTP server for alias email addresses, browser extensions with autofill, and native iOS/Android apps.",
@@ -8743,10 +8777,13 @@
       "Files & Downloads"
     ],
     "notes": [
-      "MyJDownloader cloud access is disabled by default. To enable it, edit /opt/jdownloader/cfg/org.jdownloader.api.myjdownloader.MyJDownloaderSettings.json, replace the placeholder email/password with your my.jdownloader.org credentials, set autoconnectenabledv2 to true, and restart the service.",
+      "MyJDownloader cloud access is disabled by default. Easiest setup: open the noVNC web UI, go to Settings > My JDownloader, and sign in with your my.jdownloader.org account. You must register that account and confirm the activation email at my.jdownloader.org first, otherwise the GUI reports 'logins are not correct'.",
+      "To paste download links, expand the noVNC control bar on the left edge of the web UI and paste the link into its clipboard panel - JDownloader's LinkGrabber then picks it up automatically (the container keeps the VNC clipboard in sync via autocutsel). The browser's local OS clipboard is not shared automatically, so use the panel rather than pasting directly onto the canvas.",
       "JDownloader self-updates automatically on every restart. The 'Update' button in the UI simply restarts the service to trigger this process."
     ],
-    "warnings": [],
+    "warnings": [
+      "Headless alternative: to configure MyJDownloader by editing /opt/jdownloader/cfg/org.jdownloader.api.myjdownloader.MyJDownloaderSettings.json (set email, password and autoconnectenabledv2 to true), you must run 'systemctl stop jdownloader' first, then edit the file, then 'systemctl start jdownloader'. Editing the file while the service is running - or using 'systemctl restart' - discards your changes, because JDownloader rewrites its cfg/*.json files from memory on shutdown."
+    ],
     "port": 3129,
     "website": "https://jdownloader.org/",
     "documentation": "https://jdownloader.org/knowledge/wiki/setup",
@@ -13404,6 +13441,42 @@
     "os": "debian"
   },
   {
+    "name": "OmniRoute",
+    "slug": "omniroute",
+    "desc": "OmniRoute is a self-hosted, OpenAI-compatible AI gateway that routes requests across 290+ providers and 500+ models with quota-aware auto-fallback, prompt compression and a management dashboard. Works with Claude Code, Cursor, Cline, Codex and any OpenAI-compatible client.",
+    "script": "ct/omniroute.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/omniroute.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/omniroute.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Reset the admin password anytime with: omniroute-reset-password"
+    ],
+    "warnings": [
+      "The generated admin password and secrets (JWT_SECRET, API_KEY_SECRET, STORAGE_ENCRYPTION_KEY) are set once at install and stored in /opt/omniroute/.env. The dashboard login uses INITIAL_PASSWORD from that file.",
+      "STORAGE_ENCRYPTION_KEY encrypts the SQLite database at rest. Do not lose /opt/omniroute/.env or the encrypted data becomes unrecoverable."
+    ],
+    "port": 20128,
+    "website": "https://omniroute.online",
+    "documentation": "https://github.com/diegosouzapw/OmniRoute/tree/main/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/omniroute.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "OmniTools",
     "slug": "omnitools",
     "desc": "OmniTools is a self-hosted collection of browser-based tools for working with PDFs, images, video, audio, text, data, dates, mathematics, and other everyday file and conversion tasks.",
@@ -14720,6 +14793,43 @@
       "pve"
     ],
     "config_path": "/etc/peanut/settings.yml",
+    "os": "debian"
+  },
+  {
+    "name": "PegaProx",
+    "slug": "pegaprox",
+    "desc": "PegaProx is a third-party multi-cluster web UI for Proxmox VE (and XCP-ng): unified datacenter management, cross-cluster VM migrations, intelligent load balancing, and integrated VNC/SSH consoles. It connects to your clusters remotely over the Proxmox API and SSH and stores its config in an encrypted local SQLite database.",
+    "script": "ct/pegaprox.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/pegaprox.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/pegaprox.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00001"
+    ],
+    "category_names": [
+      "Proxmox & Virtualization"
+    ],
+    "notes": [
+      "The web UI is served over HTTPS on port 5000 with a self-signed certificate on first boot - accept the browser certificate warning. The first login creates the admin account.",
+      "PegaProx connects to Proxmox clusters remotely via the Proxmox API and SSH - add your cluster credentials in the web UI after first login. It does not need to run on a PVE node.",
+      "Besides port 5000 (web), PegaProx also uses port 5001 (VNC WebSocket) and port 5002 (SSH WebSocket) for the in-browser consoles."
+    ],
+    "warnings": [
+      "PegaProx is pre-1.0 BETA software with frequent, sometimes breaking releases. This script lives in the experimental ProxmoxVED repo - snapshot/back up before updating."
+    ],
+    "port": 5000,
+    "website": "https://pegaprox.com/",
+    "documentation": "https://docs.pegaprox.com/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pegaprox.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
