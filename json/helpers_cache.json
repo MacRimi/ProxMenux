@@ -13503,7 +13503,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -13877,7 +13877,8 @@
     ],
     "notes": [
       "Services are enabled but not started at install. Configure `/etc/default/otbr-agent` with your RCP device, then run: `systemctl restart otbr-agent otbr-web`",
-      "Home Assistant: Add 'OpenThread Border Router' integration with URL `http://<IP>:8081`. Web UI is on port 80."
+      "Home Assistant: Add 'OpenThread Border Router' integration with URL `http://<IP>:8081`. Web UI is on port 80.",
+      "Some features like NAT64 or a custom MDNS hostname must be enabled at runtime using ot-ctl commands. The script at `/usr/local/bin/otbr-post-start.sh` can be used to specify those commands"
     ],
     "warnings": [
       "Requires a Thread Radio Co-Processor (RCP) device. USB: pass through to LXC (e.g. /dev/ttyACM0). TCP: use socat forkpty pattern (see `/etc/default/otbr-agent` for examples)."
@@ -17450,7 +17451,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
