@@ -4349,7 +4349,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -4630,7 +4630,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -10469,6 +10469,45 @@
     "os": "alpine"
   },
   {
+    "name": "Lore",
+    "slug": "lore",
+    "desc": "Lore is Epic Games' open-source, centralized, self-hostable version control server. Teams push to, clone from, and resolve conflicts through the loreserver endpoint over QUIC and gRPC, backed by durable local-disk storage.",
+    "script": "ct/lore.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/lore.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/lore.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Disk usage scales with total repository size. The default 20 GB is a starting point; size the container to your data.",
+      "Ports: 41337 (main endpoint, gRPC over TCP + QUIC over UDP), 41339 (HTTP health check), 41340 (internal mTLS replication, disabled by default).",
+      "A self-signed TLS certificate is generated at install (/etc/ssl/lore). Clients must trust it or be configured to accept it.",
+      "This is the Lore SERVER (loreserver). Developers connect to it with the 'lore' client CLI."
+    ],
+    "warnings": [
+      "Lore is pre-1.0: on-disk formats may still change between versions, though committed-data durability is guaranteed. Intended for the experimental VED repo only.",
+      "Authentication is disabled by default (demo mode): the public endpoint accepts unauthenticated clients. Enable JWT verification via [server.auth.jwk] against an external identity provider in /opt/lore/local.toml before exposing it."
+    ],
+    "port": 41337,
+    "website": "https://epicgames.github.io/lore/",
+    "documentation": "https://epicgames.github.io/lore/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/lore.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "LubeLogger",
     "slug": "lubelogger",
     "desc": "Web-Based Vehicle Maintenance and Fuel Mileage Tracker",
@@ -10930,7 +10969,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -12609,7 +12648,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -14619,7 +14658,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -15751,7 +15790,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -17854,7 +17893,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -17961,6 +18000,44 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "SimpleLogin",
+    "slug": "simplelogin",
+    "desc": "SimpleLogin is an open-source email alias solution that lets you create anonymous email aliases to protect your real email address from spam, trackers and data breaches.",
+    "script": "ct/simplelogin.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/simplelogin.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/simplelogin.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "DKIM keys are generated in /opt/simplelogin/dkim/. The ready-to-use DNS TXT record is saved to /opt/simplelogin/dkim/dkim.dns.txt (public key also at dkim.public.key). Add it as a TXT record at dkim._domainkey.yourdomain.com, replacing EMAIL_DOMAIN with your domain.",
+      "Create your first admin account by visiting the web interface and registering."
+    ],
+    "warnings": [
+      "After installation, update EMAIL_DOMAIN and URL in /opt/simplelogin/.env with your actual domain and configure DNS (MX, SPF, DKIM) accordingly.",
+      "A working SMTP setup (Postfix + valid domain/DNS) is required. Registration sends an activation email that must be delivered.",
+      "For real email delivery, edit /etc/postfix/main.cf with your values: myhostname (e.g. sl.yourdomain.com), mydomain (yourdomain.com), myorigin = $mydomain, inet_interfaces = all, and add your LXC subnet to mynetworks; then 'systemctl restart postfix'. SimpleLogin requires a fully configured mail domain (MX, SPF, DKIM, PTR/rDNS)."
+    ],
+    "port": 80,
+    "website": "https://simplelogin.io/",
+    "documentation": "https://github.com/simple-login/app/blob/master/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/simplelogin.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -21484,6 +21561,42 @@
       "pve"
     ],
     "config_path": "/etc/vikunja/config.yml",
+    "os": "debian"
+  },
+  {
+    "name": "vLLM",
+    "slug": "vllm",
+    "desc": "vLLM is a high-throughput, memory-efficient inference and serving engine for LLMs. It exposes an OpenAI-compatible HTTP API (/v1) so existing OpenAI clients can serve local models.",
+    "script": "ct/vllm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/vllm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/vllm.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "The model to serve is set via VLLM_MODEL in /opt/vllm/vllm.env (default Qwen/Qwen2.5-0.5B-Instruct). Restart the service after changing it: systemctl restart vllm",
+      "The configured model is downloaded from HuggingFace on first service start, which needs internet access and disk space. For gated/private models set HF_TOKEN in /opt/vllm/vllm.env. Resource needs scale heavily with the chosen model."
+    ],
+    "warnings": [
+      "Select NVIDIA GPU passthrough at container creation. vLLM installs the CUDA build by default and requires an NVIDIA GPU for usable performance; CPU-only inference is impractically slow."
+    ],
+    "port": 8000,
+    "website": "https://vllm.ai/",
+    "documentation": "https://docs.vllm.ai/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/vllm.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
