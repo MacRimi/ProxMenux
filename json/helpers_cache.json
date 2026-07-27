@@ -2348,6 +2348,40 @@
     "os": "debian"
   },
   {
+    "name": "Budget-Board",
+    "slug": "budget-board",
+    "desc": "Budget-Board is a simple self-hosted app for tracking monthly spending and working towards financial goals. It pairs a .NET web API with a web client backed by PostgreSQL.",
+    "script": "ct/budget-board.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/budget-board.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/budget-board.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00023"
+    ],
+    "category_names": [
+      "Finance & Budgeting"
+    ],
+    "notes": [
+      "Create your account by registering via the web interface on first access.",
+      "To enable email features (password reset, notifications), configure the EMAIL_SMTP_* values in /opt/budget-board/server/.env and restart the service."
+    ],
+    "warnings": [],
+    "port": 80,
+    "website": "https://budgetboard.net",
+    "documentation": "https://github.com/teelur/budget-board",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/budget-board.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "BunkerWeb",
     "slug": "bunkerweb",
     "desc": "BunkerWeb is a security-focused web server that enhances web application protection. It guards against common web vulnerabilities like SQL injection, XSS, and CSRF. It features simple setup and configuration using a YAML file, customizable security rules, and provides detailed logs for traffic monitoring and threat detection.",
@@ -3337,7 +3371,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -16396,6 +16430,42 @@
     "os": "debian"
   },
   {
+    "name": "Puter",
+    "slug": "puter",
+    "desc": "Puter is an open-source personal cloud and web desktop environment that runs in your browser, providing a full desktop experience with file management, app ecosystem, and cloud storage.",
+    "script": "ct/puter.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/puter.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/puter.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00000"
+    ],
+    "category_names": [
+      "Miscellaneous"
+    ],
+    "notes": [
+      "Access via http://&lt;IP&gt;.nip.io:4100 (not the raw IP). nip.io is required for Puter's subdomain routing.",
+      "Configuration is stored in /etc/puter/config.json and data in /var/puter."
+    ],
+    "warnings": [
+      "Camera, microphone, and other media capture features require HTTPS (a secure context). They will not work on the default HTTP setup."
+    ],
+    "port": 4100,
+    "website": "https://puter.com/",
+    "documentation": "https://docs.puter.com/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/puter.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "PVE Privilege Converter",
     "slug": "pve-privilege-converter",
     "desc": "This script allows converting Proxmox LXC containers between privileged and unprivileged modes using vzdump backup and restore. It guides you through container selection, backup storage, ID assignment, and privilege flipping via automated restore. Useful for applying changes that require different LXC modes.",
@@ -17595,6 +17665,48 @@
       "pve"
     ],
     "config_path": "/scraparr/config/config.yaml",
+    "os": "debian"
+  },
+  {
+    "name": "Seanime",
+    "slug": "seanime",
+    "desc": "Seanime is a self-hosted server for an anime and manga library, built around AniList. It scans local media, tracks progress back to AniList, searches torrents through extension-based providers, downloads through qBittorrent, Transmission, Torbox, Real-Debrid, AllDebrid or Premiumize, streams torrent and debrid content straight to a player, auto-downloads airing episodes, and includes a manga reader and online streaming via extensions.",
+    "script": "ct/seanime.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/seanime.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/seanime.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "A random server password is generated at install and saved to `/root/seanime.creds`. Seanime authenticates with that password alone — there is no username. Change it under `[server]` in /opt/seanime-data/config.toml and restart seanime.service.",
+      "Attach your existing library to the container, then point Seanime at it under Settings: pct set <CTID> -mp0 /path/on/host,mp=/mnt/anime",
+      "GPU passthrough is enabled by default during installation and can be turned off in the Advanced install options. The matching Intel/AMD/NVIDIA drivers and jellyfin-ffmpeg7 are installed for it. Transcoding itself is off by default: enable it under Settings > Transcoding / Direct Play, then set Hardware acceleration to Intel (QSV), Intel (QSV Low-Power), VAAPI or NVIDIA (NVENC). That choice is stored in Seanime's database, so the installer cannot preset it.",
+      "The data directory /opt/seanime-data lives on the container disk and holds config.toml, the database, logs, the transcode cache, downloaded manga and — when the built-in torrent client is used — downloads. It is kept outside /opt/seanime so updates can replace the binary cleanly. Increase the disk size or bind-mount storage before building a large library."
+    ],
+    "warnings": [
+      "Seanime is built around a single AniList account per instance and has no multi-user accounts or role-based access. Trakt and SIMKL are not supported, and MyAnimeList is limited to optional progress sync."
+    ],
+    "port": 43211,
+    "website": "https://seanime.app/",
+    "documentation": "https://seanime.app/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/seanime.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "",
+      "password": "auto-generated"
+    },
     "os": "debian"
   },
   {
@@ -21081,7 +21193,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
