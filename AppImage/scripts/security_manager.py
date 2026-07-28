@@ -137,6 +137,25 @@ def _run_cmd(cmd, timeout=10):
         return -1, "", str(e)
 
 
+def _pve_firewall_apply():
+    """
+    Recompile and apply pending firewall changes.
+
+    pve-firewall 6.x (shipped with PVE 9) dropped the `reload`
+    subcommand — only `restart` recompiles the ruleset and re-applies
+    it to iptables/nftables. Older releases accepted `reload`. Try
+    `reload` first for the cheap path; fall back to `restart` when
+    the subcommand is missing or returns an error. Without this
+    fallback, every mutating firewall call in this module was silently
+    a no-op on PVE 9 (the config file was updated but the kernel
+    ruleset never picked up the change until an unrelated restart).
+    """
+    rc, out, err = _run_cmd(["pve-firewall", "reload"])
+    if rc == 0:
+        return rc, out, err
+    return _run_cmd(["pve-firewall", "restart"])
+
+
 def get_firewall_status():
     """
     Get the overall Proxmox firewall status.
@@ -392,7 +411,7 @@ def add_firewall_rule(direction="IN", action="ACCEPT", protocol="tcp", dport="",
             with open(fw_file, 'w') as f:
                 f.write(content)
 
-        _run_cmd(["pve-firewall", "reload"])
+        _pve_firewall_apply()
 
         return True, f"Firewall rule added: {direction} {action} {protocol}{':' + dport if dport else ''}"
     except PermissionError:
@@ -509,7 +528,7 @@ def edit_firewall_rule(rule_index, level="host", direction="IN", action="ACCEPT"
             with open(fw_file, 'w') as f:
                 f.write("\n".join(new_lines) + "\n")
 
-        _run_cmd(["pve-firewall", "reload"])
+        _pve_firewall_apply()
 
         return True, f"Firewall rule updated: {direction} {action} {protocol}{':' + dport if dport else ''}"
     except PermissionError:
@@ -571,7 +590,7 @@ def delete_firewall_rule(rule_index, level="host"):
             with open(fw_file, 'w') as f:
                 f.write("\n".join(new_lines) + "\n")
 
-        _run_cmd(["pve-firewall", "reload"])
+        _pve_firewall_apply()
 
         return True, f"Firewall rule deleted: {removed_rule}"
     except PermissionError:
@@ -625,7 +644,7 @@ def add_monitor_port_rule():
             f.write(content)
 
         # Reload firewall
-        _run_cmd(["pve-firewall", "reload"])
+        _pve_firewall_apply()
 
         return True, "Firewall rule added: port 8008 (TCP) allowed for ProxMenux Monitor"
     except PermissionError:
@@ -662,7 +681,7 @@ def remove_monitor_port_rule():
         with open(host_fw, 'w') as f:
             f.writelines(new_lines)
 
-        _run_cmd(["pve-firewall", "reload"])
+        _pve_firewall_apply()
 
         return True, "ProxMenux Monitor firewall rule removed"
     except Exception as e:
@@ -673,9 +692,25 @@ def enable_firewall(level="host"):
     """
     Enable the Proxmox firewall at host or cluster level.
     Returns (success, message)
+
+    Safety net: whoever is calling this endpoint is reaching the Monitor
+    through port 8008. Enabling the firewall without an explicit ACCEPT
+    rule for that port drops the caller's own connection the instant
+    `pve-firewall reload` runs, and they lose the UI they need to fix it.
+    Ensure the rule is in host.fw first; if we can't place it, refuse
+    to enable rather than risk a lock-out.
     """
     if level not in _FIREWALL_LEVELS:
         return False, f"Invalid level: {level}. Must be one of {_FIREWALL_LEVELS}"
+
+    rule_ok, rule_msg = add_monitor_port_rule()
+    if not rule_ok:
+        return False, (
+            f"Refused to enable firewall: could not ensure port 8008 "
+            f"(ProxMenux Monitor) rule in host.fw — {rule_msg}. "
+            f"Add the rule manually and try again."
+        )
+
     if level == "cluster":
         return _set_firewall_enabled(CLUSTER_FW, True)
     else:
@@ -750,7 +785,7 @@ def _set_firewall_enabled(fw_file, enabled):
             _run_cmd(["systemctl", "enable", "pve-firewall"])
             _run_cmd(["systemctl", "start", "pve-firewall"])
         
-        _run_cmd(["pve-firewall", "reload"])
+        _pve_firewall_apply()
 
         state = "enabled" if enabled else "disabled"
         level = "cluster" if fw_file == CLUSTER_FW else "host"
