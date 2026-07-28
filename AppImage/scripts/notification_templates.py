@@ -1157,6 +1157,27 @@ TEMPLATES = {
         'default_enabled': True,
     },
 
+    # Aggregate filesystem usage reported by the QEMU guest agent for a
+    # running VM. Fires when the guest is filling up regardless of
+    # whether the storage is a virtual disk or a PCI-passthrough drive
+    # (TrueNAS-style appliances included) — the metric is "how full is
+    # the guest", not "how full is the disk PVE knows about".
+    'vm_disk_low': {
+        'title': '{hostname}: VM {vmid} filesystems at {usage_percent}%',
+        'body': (
+            'VM {vmid} ({name}) guest filesystems are at {usage_percent}% '
+            '({disk_bytes_human} / {maxdisk_bytes_human}).\n\n'
+            'Reported by the QEMU guest agent. Includes every persistent '
+            'filesystem the guest mounts on a block device — virtual disks '
+            'and PCI-passthrough drives alike. Free up space inside the '
+            'guest or expand the affected storage before writes start to '
+            'fail.'
+        ),
+        'label': 'VM filesystems near full',
+        'group': 'storage',
+        'default_enabled': True,
+    },
+
     # ── Phase 3 capacity events (Sprint 14.5) ─────────────────────────
     # Three new events that complete the storage-monitoring picture.
     # Each fires at the user-configured warning/critical thresholds
@@ -1716,6 +1737,7 @@ EVENT_EMOJI = {
     'mount_stale':          '\U0001F517',         # link (broken connection feel)
     'mount_readonly':       '\U0001F512',         # lock
     'lxc_disk_low':         '\U0001F4BE',         # floppy disk (near-full)
+    'vm_disk_low':          '\U0001F4BE',         # floppy disk — same shape as LXC counterpart
     'lxc_mount_low':        '\U0001F4C2',         # 📂 folder near-full
     'pve_storage_full':     '\U0001F4E6',         # 📦 package (running out)
     'zfs_pool_full':        '\U0001F30A',         # 🌊 wave (pool is full)

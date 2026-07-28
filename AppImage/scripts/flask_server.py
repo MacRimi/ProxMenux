@@ -1477,6 +1477,223 @@ _hardware_cache = {
 }
 _HARDWARE_CACHE_TTL = 300  # 5 minutes - hardware doesn't change
 
+# VM guest-agent disk usage — refreshed by a daemon thread, read by
+# /api/vms and by the health monitor. Keeping the subprocess OUT of the
+# hot path is what makes this whole feature affordable: /api/vms is
+# polled every few seconds by the dashboard, and blocking it on a
+# per-VM `qm guest cmd` (200 ms – 3 s per VM depending on agent state)
+# would silently regress a previously instant endpoint. The refresher
+# absorbs that cost off-request and every reader gets a dict lookup.
+#
+# Cache stores the ALREADY-COMPUTED (used_bytes, total_bytes) tuple —
+# not the raw fsinfo — so readers never parse or filter, and the
+# expensive dedup / filesystem-type filtering runs at most once per
+# refresh cycle per VM.
+_vm_disk_cache = {}           # vmid -> (fetched_at, (used, total) or None)
+_VM_DISK_REFRESH_PERIOD = 60  # seconds between full refresh cycles
+_VM_DISK_STALE_AFTER = 300    # readers ignore entries older than this
+_VM_DISK_GA_TIMEOUT = 3       # per-VM `qm guest cmd` timeout (seconds)
+_VM_DISK_REFRESH_WORKERS = 6  # parallelism cap for the fsinfo pass
+
+# Filesystem types that never count towards VM disk usage:
+# read-only image / CD formats, ram-backed pseudo-fs, kernel virtual
+# filesystems, and union / container overlays. Anything not on this
+# list is treated as real, persistent disk space.
+_VM_FS_SKIP_TYPES = frozenset({
+    # Read-only image / CD formats
+    'erofs', 'squashfs', 'iso9660', 'udf', 'cdfs', 'romfs',
+    # Ram-backed
+    'tmpfs', 'devtmpfs', 'ramfs', 'zram',
+    # Kernel virtual
+    'proc', 'sysfs', 'cgroup', 'cgroup2', 'nsfs', 'fusectl',
+    'binfmt_misc', 'bpf', 'hugetlbfs', 'mqueue', 'pstore',
+    'tracefs', 'debugfs', 'securityfs', 'configfs', 'efivarfs',
+    'rpc_pipefs', 'selinuxfs',
+    # Overlay / union
+    'overlay', 'overlayfs', 'aufs', 'autofs',
+})
+
+
+def _compute_vm_disk_from_fsinfo(fsinfo):
+    """Aggregate real filesystem usage from a QEMU guest agent fsinfo list.
+
+    Returns (used_bytes, total_bytes) when at least one persistent
+    filesystem is found, otherwise None. Filters non-persistent
+    filesystems and deduplicates bind-mounts by their backing block
+    device signature (bus, target, unit, dev) — a Home Assistant OS
+    layout with a dozen bind-mounts of /mnt/data is counted once,
+    Windows System-Reserved partitions of size 0 are dropped so C:\\
+    carries the value.
+    """
+    if not fsinfo:
+        return None
+
+    seen_disks = set()
+    total_used = 0
+    total_size = 0
+
+    for fs in fsinfo:
+        if not isinstance(fs, dict):
+            continue
+
+        fstype = (fs.get('type') or '').lower()
+        if not fstype or fstype in _VM_FS_SKIP_TYPES or fstype.startswith('fuse.'):
+            continue
+
+        # Must be backed by a real block device — bind-mounts to pseudo
+        # filesystems have an empty disk[] and are already accounted
+        # for through the mount that owns the underlying device.
+        disks = fs.get('disk') or []
+        if not disks or not isinstance(disks[0], dict):
+            continue
+
+        d = disks[0]
+        sig = (d.get('bus'), d.get('target'), d.get('unit'), d.get('dev'))
+        if sig in seen_disks:
+            continue
+        seen_disks.add(sig)
+
+        try:
+            total = int(fs.get('total-bytes') or 0)
+            used = int(fs.get('used-bytes') or 0)
+        except (TypeError, ValueError):
+            continue
+        if total <= 0:
+            continue
+
+        total_size += total
+        total_used += used
+
+    if total_size <= 0:
+        return None
+    return total_used, total_size
+
+
+def _fetch_vm_guest_fsinfo(vmid):
+    """One-shot `qm guest cmd <vmid> get-fsinfo` — invoked only by the
+    background refresher, never on a request path. Returns the parsed
+    JSON list or None on any error (timeout, absent agent, malformed
+    response). Callers must NOT invoke this from an endpoint handler:
+    it blocks for up to _VM_DISK_GA_TIMEOUT seconds per call, which is
+    exactly what the refresher is designed to shield /api/vms from.
+    """
+    try:
+        result = subprocess.run(
+            ['qm', 'guest', 'cmd', str(vmid), 'get-fsinfo'],
+            capture_output=True, text=True, timeout=_VM_DISK_GA_TIMEOUT,
+        )
+        if result.returncode != 0 or not result.stdout.strip():
+            return None
+        try:
+            parsed = json.loads(result.stdout)
+            return parsed if isinstance(parsed, list) else None
+        except (ValueError, TypeError):
+            return None
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return None
+
+
+def get_cached_vm_disk(vmid):
+    """Read the pre-computed VM disk usage from cache — the ONLY function
+    request handlers should call. Returns (used, total) or None when
+    the VM isn't in the cache yet (fresh VM, refresher hasn't run yet)
+    or its data has aged past the staleness window. Never blocks and
+    never spawns subprocesses.
+    """
+    entry = _vm_disk_cache.get(vmid)
+    if entry is None:
+        return None
+    fetched_at, value = entry
+    if time.time() - fetched_at > _VM_DISK_STALE_AFTER:
+        return None
+    return value
+
+
+def _vm_disk_refresh_one(vmid):
+    """Refresh a single VMID's cache entry. Runs in a worker thread of
+    the refresher pool — never on the request path."""
+    fsinfo = _fetch_vm_guest_fsinfo(vmid)
+    computed = _compute_vm_disk_from_fsinfo(fsinfo)
+    _vm_disk_cache[vmid] = (time.time(), computed)
+
+
+def _vm_disk_refresher_loop():
+    """Daemon-thread body that keeps `_vm_disk_cache` warm.
+
+    Every ``_VM_DISK_REFRESH_PERIOD`` seconds, walks the running QEMU
+    VMs from the (already-cached) cluster resources snapshot and fires
+    a parallel `qm guest cmd get-fsinfo` per VM through a small thread
+    pool. Absorbs every subprocess cost off-request so /api/vms is
+    always a dict lookup. Also drops entries for VMs that no longer
+    exist so the cache doesn't leak.
+
+    Robust to transient exceptions in the resources probe — a single
+    bad cycle just delays the next one, it never crashes the thread.
+    """
+    # Small stagger so we don't compete with the request that started
+    # us for the very first cluster-resources fetch.
+    time.sleep(2)
+    while True:
+        cycle_started = time.time()
+        try:
+            resources = get_cached_pvesh_cluster_resources_vm() or []
+            live_vmids = set()
+            targets = []
+            for r in resources:
+                if r.get('type') not in ('qemu', 'vm'):
+                    continue
+                if r.get('status') != 'running':
+                    continue
+                vmid = r.get('vmid')
+                if vmid is None:
+                    continue
+                live_vmids.add(vmid)
+                targets.append(vmid)
+
+            if targets:
+                # Bounded parallelism — fsinfo calls per VM are IO-bound
+                # (waiting on the guest agent), so a small pool wins big
+                # over serial execution but doesn't stampede the host.
+                try:
+                    from concurrent.futures import ThreadPoolExecutor, wait
+                    with ThreadPoolExecutor(max_workers=_VM_DISK_REFRESH_WORKERS) as ex:
+                        futures = [ex.submit(_vm_disk_refresh_one, v) for v in targets]
+                        wait(futures, timeout=_VM_DISK_GA_TIMEOUT * 2)
+                except Exception:
+                    # Fallback to serial if the executor itself fails
+                    for v in targets:
+                        try:
+                            _vm_disk_refresh_one(v)
+                        except Exception:
+                            pass
+
+            # Evict entries for VMs no longer running / removed. Iterate
+            # over a snapshot so the concurrent updates from the workers
+            # above (already finished at this point) don't fight us.
+            for v in list(_vm_disk_cache.keys()):
+                if v not in live_vmids:
+                    _vm_disk_cache.pop(v, None)
+        except Exception:
+            pass
+
+        # Sleep the remainder of the cycle — never less than 5s even if
+        # the refresh took longer, to avoid a busy loop when everything
+        # times out at once.
+        elapsed = time.time() - cycle_started
+        remaining = _VM_DISK_REFRESH_PERIOD - elapsed
+        time.sleep(max(remaining, 5.0))
+
+
+_VM_DISK_REFRESHER_STARTED = False
+def _ensure_vm_disk_refresher():
+    global _VM_DISK_REFRESHER_STARTED
+    if _VM_DISK_REFRESHER_STARTED:
+        return
+    _VM_DISK_REFRESHER_STARTED = True
+    import threading
+    t = threading.Thread(target=_vm_disk_refresher_loop, daemon=True, name='vm-disk-refresher')
+    t.start()
+
 
 def get_cached_pvesh_cluster_resources_vm():
     """Get cluster VM resources with a per-process cache.
@@ -4649,6 +4866,17 @@ try:
 except Exception:
     pass
 
+# Same pattern for the VM guest-agent fsinfo refresher — kicks off a
+# daemon thread that keeps _vm_disk_cache warm so /api/vms and the
+# health check only ever do dict lookups. First cycle runs ~2s after
+# module load; running QEMU VMs report accurate disk usage as soon
+# as their first refresh completes, and fall back to the PVE value
+# in the meantime.
+try:
+    _ensure_vm_disk_refresher()
+except Exception:
+    pass
+
 
 # ─── Per-NIC live rate (moving window) ──────────────────────────
 # Keep the last ~30s of byte counters and derive the rate from the
@@ -5447,6 +5675,20 @@ def get_proxmox_vms():
                         upd = lxc_updates_map.get(str(resource.get('vmid')))
                         if upd is not None:
                             vm_data['update_check'] = upd
+
+                    # PVE's cluster resources API reports disk=0 for most
+                    # QEMU VMs — it can't see inside the guest filesystem
+                    # for the common storage backends. For running QEMU
+                    # VMs we override with the guest-agent-derived value
+                    # produced by the background refresher; readers only
+                    # do a dict lookup, no subprocess ever runs on the
+                    # request path. VMs not yet in the cache (fresh
+                    # boot, refresher hasn't run) keep the PVE value.
+                    if vm_type == 'qemu' and vm_data['status'] == 'running':
+                        computed = get_cached_vm_disk(vm_data['vmid'])
+                        if computed is not None:
+                            vm_data['disk'], vm_data['maxdisk'] = computed
+
                     all_vms.append(vm_data)
 
                 return all_vms

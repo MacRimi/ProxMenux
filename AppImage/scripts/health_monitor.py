@@ -964,6 +964,20 @@ class HealthMonitor:
             elif lxc_disk_result.get('status') == 'WARNING':
                 warning_issues.append(lxc_disk_result.get('reason', 'LXC rootfs filling up'))
 
+        # QEMU VM filesystem usage via guest agent — mirrors the LXC
+        # rootfs check but reads from the guest agent because pvesh
+        # reports disk=0 for most QEMU storage backends. VMs without
+        # a responsive agent are silently skipped (no signal ≠ OK).
+        _t = time.time()
+        vm_disk_result = self._check_vm_disk_usage()
+        _perf_log("vm_disk_usage", (time.time() - _t) * 1000)
+        if vm_disk_result:
+            details['vm_disk'] = vm_disk_result
+            if vm_disk_result.get('status') == 'CRITICAL':
+                critical_issues.append(vm_disk_result.get('reason', 'VM filesystems near full'))
+            elif vm_disk_result.get('status') == 'WARNING':
+                warning_issues.append(vm_disk_result.get('reason', 'VM filesystems filling up'))
+
         # Phase 3 capacity checks added on top of the existing storage
         # ones. Each is independently configurable via Settings →
         # Health Thresholds; defaults are 85/95 to align with the host
@@ -6259,6 +6273,149 @@ class HealthMonitor:
         return {
             'status': 'OK',
             'reason': f'{len(checks)} running CT(s) within safe rootfs usage',
+            'checks': checks,
+        }
+
+    def _check_vm_disk_usage(self) -> Optional[Dict[str, Any]]:
+        """QEMU VM filesystem usage via the guest agent.
+
+        Sibling of ``_check_lxc_disk_usage`` that closes the analogous
+        gap for VMs: ``pvesh cluster resources`` reports ``disk=0`` for
+        most QEMU storage backends (PVE can't see inside the guest),
+        so this check asks the guest agent directly for every running
+        QEMU VM and emits WARNING at 85% / CRITICAL at 95% — same
+        defaults as the LXC counterpart. The aggregated total includes
+        every persistent filesystem the guest reports as backed by a
+        block device, PCI-passthrough drives included: the metric is
+        "how full is the guest", not "how full is the virtual disk
+        PVE knows about", which is intentionally more useful for
+        appliances like TrueNAS or a Synology VM.
+
+        VMs whose agent is absent, unreachable, times out, or reports
+        no usable data are skipped — no false OK, no false alert.
+        Reads the pre-computed cache maintained by the daemon refresher
+        in ``flask_server``; never spawns a subprocess on the check
+        path, so a slow / dead guest agent can't stretch the health
+        cycle.
+        """
+        try:
+            import flask_server  # deferred — avoids circular import
+            resources = flask_server.get_cached_pvesh_cluster_resources_vm() or []
+        except Exception as e:
+            print(f"[HealthMonitor] VM disk check failed: {e}")
+            return None
+
+        # Cheap short-circuit: no running QEMU VMs on this node.
+        if not any(
+            r.get('type') in ('qemu', 'vm') and r.get('status') == 'running'
+            for r in resources
+        ):
+            return None
+
+        WARN_PCT, CRIT_PCT = self._read_capacity_thresholds('vm_disk', fb_warn=85, fb_crit=95)
+
+        checks: Dict[str, Dict[str, Any]] = {}
+        critical_vms: list[str] = []
+        warning_vms: list[str] = []
+        emitted_keys: set[str] = set()
+
+        for r in resources:
+            if r.get('type') not in ('qemu', 'vm'):
+                continue
+            if r.get('status') != 'running':
+                continue
+
+            vmid = r.get('vmid')
+            if vmid is None:
+                continue
+
+            try:
+                computed = flask_server.get_cached_vm_disk(vmid)
+            except Exception:
+                computed = None
+
+            if computed is None:
+                continue
+
+            used, total = computed
+            if total <= 0:
+                continue
+            pct = (used / total) * 100
+            vmid_str = str(vmid)
+            name = r.get('name', '') or ''
+            label = f'VM {vmid_str}' + (f' ({name})' if name else '')
+
+            entry: Dict[str, Any] = {
+                'detail': f'guest filesystems {pct:.1f}% used ({used // (1024**2)} MB / {total // (1024**2)} MB)',
+                'usage_percent': round(pct, 1),
+                'disk_bytes': used,
+                'maxdisk_bytes': total,
+                'vmid': vmid_str,
+                'name': name,
+            }
+            error_key = f'vm_disk_{vmid_str}'
+
+            if pct >= CRIT_PCT:
+                entry['status'] = 'CRITICAL'
+                entry['error_key'] = error_key
+                entry['dismissable'] = True
+                checks[label] = entry
+                critical_vms.append(label)
+                emitted_keys.add(error_key)
+                health_persistence.record_error(
+                    error_key=error_key,
+                    category='storage',
+                    severity='CRITICAL',
+                    reason=f'{label} filesystems at {pct:.1f}% ({used // (1024**2)} MB / {total // (1024**2)} MB)',
+                    details=entry,
+                )
+            elif pct >= WARN_PCT:
+                entry['status'] = 'WARNING'
+                entry['error_key'] = error_key
+                entry['dismissable'] = True
+                checks[label] = entry
+                warning_vms.append(label)
+                emitted_keys.add(error_key)
+                health_persistence.record_error(
+                    error_key=error_key,
+                    category='storage',
+                    severity='WARNING',
+                    reason=f'{label} filesystems at {pct:.1f}% ({used // (1024**2)} MB / {total // (1024**2)} MB)',
+                    details=entry,
+                )
+            else:
+                entry['status'] = 'OK'
+                checks[label] = entry
+
+        # Clear stale VM disk errors (VM stopped, agent lost, freed up).
+        for err in (health_persistence.get_active_errors() or []):
+            ek = err.get('error_key', '')
+            if not ek.startswith('vm_disk_'):
+                continue
+            if ek not in emitted_keys:
+                health_persistence.clear_error(ek)
+
+        if not checks:
+            return None
+        if critical_vms:
+            entity, _ = _fmt_entity_and_summary(critical_vms, 'x', 'x')
+            return {
+                'status': 'CRITICAL',
+                'reason': f'{len(critical_vms)} VM(s) at >{CRIT_PCT}% filesystems: {_fmt_name_list(critical_vms)}',
+                'entity': entity,
+                'checks': checks,
+            }
+        if warning_vms:
+            entity, _ = _fmt_entity_and_summary(warning_vms, 'x', 'x')
+            return {
+                'status': 'WARNING',
+                'reason': f'{len(warning_vms)} VM(s) at >{WARN_PCT}% filesystems: {_fmt_name_list(warning_vms)}',
+                'entity': entity,
+                'checks': checks,
+            }
+        return {
+            'status': 'OK',
+            'reason': f'{len(checks)} running VM(s) within safe filesystem usage',
             'checks': checks,
         }
 

@@ -2772,6 +2772,8 @@ class PollingCollector:
             if category == 'storage':
                 if error_key.startswith('lxc_disk_'):
                     event_type = 'lxc_disk_low'
+                elif error_key.startswith('vm_disk_'):
+                    event_type = 'vm_disk_low'
                 elif error_key.startswith('lxc_mount_'):
                     event_type = 'lxc_mount_low'
                 elif error_key.startswith('pve_storage_full_'):

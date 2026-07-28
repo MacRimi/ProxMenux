@@ -924,6 +924,12 @@ class HealthPersistence:
                 for cat, prefix in [('updates', 'security_updates'), ('updates', 'system_age'),
                                     ('updates', 'pending_updates'), ('updates', 'kernel_pve'),
                                     ('security', 'security_'),
+                                    # `vm_disk_<vmid>` is a storage-category key that WOULD otherwise
+                                    # match the `vm_` prefix below and end up mis-tagged under `vms`;
+                                    # putting the storage-specific override first keeps the Dismiss
+                                    # flow honest (invalidates the storage cache, groups with the
+                                    # other capacity events).
+                                    ('storage', 'vm_disk_'),
                                     ('pve_services', 'pve_service_'), ('vms', 'vmct_'), ('vms', 'vm_'), ('vms', 'ct_'),
                                     # ── Storage keys — HealthMonitor emits these under `storage` category
                                     # but they used to fall through to 'general' here because no prefix

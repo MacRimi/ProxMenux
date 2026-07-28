@@ -75,6 +75,16 @@ DEFAULTS: dict[str, Any] = {
         "warning": {"value": 85, "unit": "%", "min": 1, "max": 100, "step": 1},
         "critical": {"value": 95, "unit": "%", "min": 1, "max": 100, "step": 1},
     },
+    "vm_disk": {
+        # Aggregate guest-filesystem usage for running QEMU VMs, read
+        # from the guest agent (mirrors `lxc_rootfs` for VMs). Includes
+        # every persistent filesystem the guest reports on a block
+        # device, so PCI-passthrough drives and add-on storage count
+        # towards the threshold — the metric is "how full is the
+        # guest", not "how full is the disk PVE knows about".
+        "warning": {"value": 85, "unit": "%", "min": 1, "max": 100, "step": 1},
+        "critical": {"value": 95, "unit": "%", "min": 1, "max": 100, "step": 1},
+    },
     "cpu_temperature": {
         "warning": {"value": 80, "unit": "°C", "min": 30, "max": 120, "step": 1},
         "critical": {"value": 90, "unit": "°C", "min": 30, "max": 120, "step": 1},
