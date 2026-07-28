@@ -169,6 +169,13 @@ FAIL_COUNT=0
 log "Found $TOTAL_DISKS disk(s) to test"
 
 for disk in $DISK_LIST; do
+    # Accept both full paths and basenames. Older cron entries written
+    # before the Monitor prepended /dev/ passed disk names as bare
+    # basenames (sdb, nvme0n1), which then failed the block-device
+    # check below. Normalising here keeps those legacy entries working
+    # after the update without forcing the operator to recreate them.
+    [[ "$disk" != /* ]] && disk="/dev/$disk"
+
     # Skip if disk doesn't exist
     if [[ ! -b "$disk" ]]; then
         log "WARNING: Disk $disk not found, skipping"

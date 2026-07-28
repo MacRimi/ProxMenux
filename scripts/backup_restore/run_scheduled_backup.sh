@@ -547,19 +547,54 @@ main() {
   # jobs keep whatever KEEP_* the .env has.
   _sb_hydrate_attached_retention
 
-  local lock_file="${LOCK_DIR}/proxmenux-backup-${job_id}.lock"
-  if command -v flock >/dev/null 2>&1; then
-    exec 9>"$lock_file" || exit 1
-    if ! flock -n 9; then
-      echo "Another run is active for job ${job_id}" >&2
-      exit 1
-    fi
-  fi
-
+  # Create log_file and summary_file BEFORE the flock so any early
+  # failure (lock contention, missing tools, unreadable env) surfaces
+  # in the runner log the Monitor polls, instead of being lost to
+  # stderr/DEVNULL and leaving the UI stuck on "Waiting for runner
+  # to start…" forever.
   local ts log_file stage_root summary_file
   ts="$(date +%Y%m%d_%H%M%S)"
   log_file="${LOG_DIR}/${job_id}-${ts}.log"
   summary_file="${LOG_DIR}/${job_id}-last.status"
+
+  local lock_file="${LOCK_DIR}/proxmenux-backup-${job_id}.lock"
+  if command -v flock >/dev/null 2>&1; then
+    if ! exec 9>"$lock_file"; then
+      {
+        echo "=== Scheduled backup job ${job_id} aborted at $(date -Iseconds) ==="
+        echo "Cannot open lock file: $lock_file"
+        echo "Check that ${LOCK_DIR} exists and is writable by root."
+      } >"$log_file"
+      {
+        echo "JOB_ID=${job_id}"
+        echo "RUN_AT=$(date -Iseconds)"
+        echo "RESULT=failed"
+        echo "REASON=lock_open_failed"
+      } >"$summary_file"
+      exit 1
+    fi
+    if ! flock -n 9; then
+      {
+        echo "=== Scheduled backup job ${job_id} aborted at $(date -Iseconds) ==="
+        echo "Another run is already active for this job (lock held: $lock_file)."
+        echo ""
+        echo "Possible causes:"
+        echo "  - A previous run is still in progress (check with: ps auxf | grep run_scheduled_backup)."
+        echo "  - A previous run hung and left the lock behind. Kill the stale"
+        echo "    process (if any) and remove the lock: rm $lock_file"
+        echo ""
+        echo "This run did NOT execute a backup."
+      } >"$log_file"
+      {
+        echo "JOB_ID=${job_id}"
+        echo "RUN_AT=$(date -Iseconds)"
+        echo "RESULT=failed"
+        echo "REASON=another_run_active"
+      } >"$summary_file"
+      exit 1
+    fi
+  fi
+
   stage_root="$(mktemp -d /tmp/proxmenux-sched-stage.XXXXXX)"
 
   {

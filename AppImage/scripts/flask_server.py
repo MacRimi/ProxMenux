@@ -10048,7 +10048,12 @@ def _update_smart_cron():
         # scheduled tests in history" with no obvious clue why.
         cmd = f'/usr/local/share/proxmenux/scripts/storage/smart-scheduled-test.sh --schedule-id {schedule_id} --test-type {test_type} --retention {retention}'
         if disks != ['all']:
-            cmd += f" --disks '{','.join(disks)}'"
+            # Prepend /dev/ when the UI stored the disk as a basename
+            # (sdb, nvme0n1, …). The runner's `[[ -b "$disk" ]]` check
+            # only accepts full block-device paths, so basenames were
+            # silently skipped and no test ever ran.
+            disk_args = [d if d.startswith('/') else f'/dev/{d}' for d in disks]
+            cmd += f" --disks '{','.join(disk_args)}'"
         
         cron_lines.append(f'{cron_time} root {cmd} >> /var/log/proxmenux/smart-schedule.log 2>&1')
     
