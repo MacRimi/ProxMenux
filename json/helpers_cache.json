@@ -38,11 +38,11 @@
     "name": "Actual Budget Prometheus Exporter",
     "slug": "actual-budget-prometheus-exporter",
     "desc": "Prometheus exporter for Actual Budget. Exposes account balances, budget balances, transaction counts and uncategorized/transfer counts as metrics on /metrics. Installs as an addon into an existing LXC (e.g. alongside your Actual Budget server) and builds from source with Node.js.",
-    "script": "ct/actual-budget-prometheus-exporter.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/actual-budget-prometheus-exporter.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/actual-budget-prometheus-exporter.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
+    "script": "tools/addon/actual-budget-prometheus-exporter.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/actual-budget-prometheus-exporter.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/addon/actual-budget-prometheus-exporter.sh",
+    "type": "addon",
+    "type_id": "88xtxy57q80v38v",
     "categories": [
       "scriptcat00009"
     ],
@@ -62,12 +62,10 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
-    "execute_in": [
-      "lxc"
-    ],
+    "is_dev": false,
+    "execute_in": [],
     "config_path": "/opt/actual-budget-prometheus-exporter.env",
-    "os": ""
+    "os": "debian"
   },
   {
     "name": "Actual Budget",
@@ -3402,7 +3400,7 @@
     "port": 9080,
     "website": "https://cooklang.org",
     "documentation": "https://github.com/cooklang/cookcli/blob/main/docs/server.md",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cooklang.webp",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cookcli.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": true,
@@ -9964,6 +9962,41 @@
     "os": "debian"
   },
   {
+    "name": "Lemonade Server",
+    "slug": "lemonade-server",
+    "desc": "Lemonade Server is an open-source local AI runtime with OpenAI-compatible APIs for chat, vision, image generation, transcription, and speech. It auto-detects GPU and NPU hardware and provides a web control panel for model management.",
+    "script": "ct/lemonade-server.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/lemonade-server.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/lemonade-server.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Models download on demand — increase disk size if you plan to run large models."
+    ],
+    "warnings": [
+      "Remote access is configured with `host=0.0.0.0`. Set `LEMONADE_API_KEY` via a systemd override at `/etc/systemd/system/lemond.service.d/override.conf` before exposing the service."
+    ],
+    "port": 13305,
+    "website": "https://lemonade-server.ai/",
+    "documentation": "https://lemonade-server.ai/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/lemonade-ai.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "LibreChat",
     "slug": "librechat",
     "desc": "LibreChat is an open-source AI chat platform that supports multiple AI providers including OpenAI, Anthropic, Google, and more. It features conversation history, multi-modal support, custom endpoints, and a plugin system.",
@@ -14723,7 +14756,7 @@
     "port": 5100,
     "website": "https://pwpush.com",
     "documentation": "https://docs.pwpush.com",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pwpush.webp",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/password-pusher.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": true,
