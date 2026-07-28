@@ -35,6 +35,41 @@
     "os": "debian"
   },
   {
+    "name": "Actual Budget Prometheus Exporter",
+    "slug": "actual-budget-prometheus-exporter",
+    "desc": "Prometheus exporter for Actual Budget. Exposes account balances, budget balances, transaction counts and uncategorized/transfer counts as metrics on /metrics. Installs as an addon into an existing LXC (e.g. alongside your Actual Budget server) and builds from source with Node.js.",
+    "script": "ct/actual-budget-prometheus-exporter.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/actual-budget-prometheus-exporter.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/actual-budget-prometheus-exporter.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00009"
+    ],
+    "category_names": [
+      "Monitoring & Analytics"
+    ],
+    "notes": [
+      "This is an addon, not a standalone container. Run it inside an existing LXC via the tools/addon script; it does not create its own container.",
+      "Requires an Actual Budget server URL, server password, and the Budget Sync ID (Settings > Advanced settings > Sync ID). E2E encryption password is optional.",
+      "Metrics are served at http://<ip>:3001/metrics (port configurable via PORT in the config file)."
+    ],
+    "warnings": [],
+    "port": 3001,
+    "website": "https://github.com/sakowicz/actual-budget-prometheus-exporter",
+    "documentation": "https://github.com/sakowicz/actual-budget-prometheus-exporter",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/actual-budget.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "/opt/actual-budget-prometheus-exporter.env",
+    "os": ""
+  },
+  {
     "name": "Actual Budget",
     "slug": "actualbudget",
     "desc": "Actual Budget is a super fast and privacy-focused app for managing your finances. At its heart is the well proven and much loved Envelope Budgeting methodology.",
