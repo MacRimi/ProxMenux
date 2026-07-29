@@ -2792,6 +2792,43 @@
     "os": "debian"
   },
   {
+    "name": "Chatwoot",
+    "slug": "chatwoot",
+    "desc": "Chatwoot is an open-source omnichannel customer-support platform for live chat, email, social media and messaging conversations.",
+    "script": "ct/chatwoot.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/chatwoot.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/chatwoot.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00022"
+    ],
+    "category_names": [
+      "Bots & ChatOps"
+    ],
+    "notes": [
+      "Create the first account at http://IP:3000 after the services have started.",
+      "Chatwoot compiles Ruby dependencies and frontend assets during installation; allow several minutes for setup."
+    ],
+    "warnings": [
+      "Set FRONTEND_URL to a public HTTPS domain and configure SMTP before using Chatwoot in production.",
+      "Attachments are stored in /opt/chatwoot/storage. Include it and the PostgreSQL database in regular container backups."
+    ],
+    "port": 3000,
+    "website": "https://www.chatwoot.com/",
+    "documentation": "https://developers.chatwoot.com/self-hosted/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/chatwoot.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Checkmate",
     "slug": "checkmate",
     "desc": "Checkmate is an open source uptime and infrastructure monitoring application that helps you track the availability and performance of your services.",
@@ -9217,6 +9254,43 @@
     "os": "debian"
   },
   {
+    "name": "Kaneo",
+    "slug": "kaneo",
+    "desc": "Kaneo is an open source project management platform with kanban boards, task tracking, time tracking and team workspaces.",
+    "script": "ct/kaneo.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/kaneo.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/kaneo.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00025"
+    ],
+    "category_names": [
+      "Business & ERP"
+    ],
+    "notes": [
+      "The first registered account becomes the instance admin.",
+      "Image and file attachments require object storage. Add S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY to /opt/kaneo/.env and restart the service."
+    ],
+    "warnings": [
+      "Registration and guest sign-in both stay open after that. Set DISABLE_REGISTRATION=true and DISABLE_GUEST_ACCESS=true in /opt/kaneo/.env and restart the service to close the instance; DISABLE_REGISTRATION alone still leaves the guest login available.",
+      "The API URL is baked into the frontend at build time. To move Kaneo to another IP or a custom domain, set KANEO_CLIENT_URL and KANEO_API_URL in /opt/kaneo/.env and the matching VITE_API_URL and VITE_CLIENT_URL in /opt/kaneo/apps/web/.env.production, then rebuild with 'cd /opt/kaneo && pnpm exec turbo build --filter=@kaneo/web'."
+    ],
+    "port": 5173,
+    "website": "https://kaneo.app/",
+    "documentation": "https://kaneo.app/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kaneo.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Kapowarr",
     "slug": "kapowarr",
     "desc": "Kapowarr allows you to build a digital library of comics. You can add volumes, map them to a folder and start managing! Download, rename, move and convert issues of the volume (including TPB's, One Shots, Hard Covers, and more). The whole process is automated and can be customised in the settings.",
@@ -12778,7 +12852,8 @@
     ],
     "notes": [
       "Nginx runs on ports 80/443, Nginx UI management interface on port 9000.",
-      "SSL certificates can be managed automatically with Let's Encrypt integration."
+      "SSL certificates can be managed automatically with Let's Encrypt integration.",
+      "Nginx UI Install Secret: `cat /usr/local/etc/nginx-ui/.install_secret`. This Secret is valid for 10 minutes after service start, then removed.\nNew secret: systemctl restart nginx-ui && cat /usr/local/etc/nginx-ui/.install_secret"
     ],
     "warnings": [
       "On first visit, the setup wizard will guide you to create an admin account and configure ACME email."
@@ -13826,6 +13901,76 @@
     "os": "debian"
   },
   {
+    "name": "OpenBao",
+    "slug": "openbao",
+    "desc": "OpenBao is a community-driven, open-source fork of HashiCorp Vault for managing, storing and distributing secrets such as tokens, passwords, certificates and encryption keys.",
+    "script": "ct/openbao.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/openbao.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/openbao.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "The initial root token and unseal key are written to /etc/openbao/openbao.env (Debian) or /etc/conf.d/openbao (Alpine)."
+    ],
+    "warnings": [
+      "OpenBao is unsealed automatically on every boot, reading the unseal key from that same file. To unseal manually instead, remove the BAO_UNSEAL_KEY line and delete /etc/systemd/system/openbao.service.d/unseal.conf (Debian) or the start_post block in /etc/init.d/openbao (Alpine)."
+    ],
+    "port": 8200,
+    "website": "https://openbao.org/",
+    "documentation": "https://openbao.org/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openbao.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "OpenBao",
+    "slug": "openbao",
+    "desc": "OpenBao is a community-driven, open-source fork of HashiCorp Vault for managing, storing and distributing secrets such as tokens, passwords, certificates and encryption keys.",
+    "script": "ct/openbao.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/openbao.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/openbao.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "The initial root token and unseal key are written to /etc/openbao/openbao.env (Debian) or /etc/conf.d/openbao (Alpine)."
+    ],
+    "warnings": [
+      "OpenBao is unsealed automatically on every boot, reading the unseal key from that same file. To unseal manually instead, remove the BAO_UNSEAL_KEY line and delete /etc/systemd/system/openbao.service.d/unseal.conf (Debian) or the start_post block in /etc/init.d/openbao (Alpine)."
+    ],
+    "port": 8200,
+    "website": "https://openbao.org/",
+    "documentation": "https://openbao.org/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openbao.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "alpine"
+  },
+  {
     "name": "OpenCloud",
     "slug": "opencloud",
     "desc": "OpenCloud is the file sharing and collaboration solution of the Heinlein Group. Through intelligent file management and a strong open source community, files become valuable resources, effectively structured and usable in the long term. With flexible data rooms and intelligent access rights, teams can access and work together on data anytime, anywhere without barriers, but with a lot of productivity.",
@@ -14213,6 +14358,42 @@
       "password": "opnsense"
     },
     "os": "freebsd"
+  },
+  {
+    "name": "Orb",
+    "slug": "orb",
+    "desc": "Orb continuously measures internet quality rather than just speed, scoring responsiveness, reliability and bandwidth into a single Orb Score. The sensor is a headless agent that runs 24/7, uploads its measurements to your Orb account, and is viewed from the Orb mobile or desktop app. Orb is free for up to five sensors.",
+    "script": "ct/orb.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/orb.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/orb.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00009",
+      "scriptcat00004"
+    ],
+    "category_names": [
+      "Monitoring & Analytics",
+      "Network & Firewall"
+    ],
+    "notes": [
+      "The sensor starts unlinked and must be claimed before it appears in your account. Run `runuser -u orb -- orb link` inside the container to sign into Orb.",
+      "View measurements in the Orb app or at https://app.orb.net, or run `runuser -u orb -- orb summary` in the container for the latest scores as JSON."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://orb.net/",
+    "documentation": "https://orb.net/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/orb.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
   },
   {
     "name": "OTS",
@@ -22575,7 +22756,7 @@
       "Documents & Notes"
     ],
     "notes": [
-      "After installation execute `writefreely user create --admin <username>:<password>` to create your user."
+      "After installation execute `cd /opt/writefreely && writefreely user create --admin <username>:<password>` to create your user."
     ],
     "warnings": [],
     "port": 80,
