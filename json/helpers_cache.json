@@ -22287,6 +22287,42 @@
     "os": "debian"
   },
   {
+    "name": "Whisparr-Eros",
+    "slug": "whisparr-eros",
+    "desc": "Whisparr V3 (\"eros\") is an adult movie and scene collection manager for Usenet and BitTorrent users. It monitors RSS feeds for new items, interfaces with download clients and indexers to grab, sort and rename them, and can automatically upgrade existing files when a better quality release appears. V3 is the Radarr-based train and is developed in its own repository, separate from the Sonarr-based Whisparr V2.",
+    "script": "ct/whisparr-eros.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/whisparr-eros.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/whisparr-eros.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00014"
+    ],
+    "category_names": [
+      "*Arr Suite"
+    ],
+    "notes": [
+      "The in-app updater cannot update this install. The Servarr `eros` update channel has not advanced past 3.1.0.2116 (2026-01-14) and reports no update available for current releases, so Whisparr will log \"Update mechanism ... changing to BuiltIn\" and then find nothing. Update with this script's update option instead, which pulls the latest stable release from Whisparr/Whisparr-Eros.",
+      "Configuration and the database live in /var/lib/whisparr-eros and survive updates — the update replaces /opt/Whisparr-Eros only. Attach your media and download directories before use: pct set <CTID> -mp0 /path/on/host,mp=/media"
+    ],
+    "warnings": [
+      "Whisparr V3 (\"eros\") is not an upgrade of Whisparr V2 — they are two different applications developed in parallel. V2 is based on Sonarr and uses whisparr.db, V3 is based on Radarr and uses whisparr3.db, and neither can read the other's database. Use the `whisparr` script for V2 and this one for V3; do not point one at the other's data directory."
+    ],
+    "port": 6969,
+    "website": "https://github.com/Whisparr/Whisparr-Eros",
+    "documentation": "https://wiki.servarr.com/whisparr",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/whisparr.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "WhoDB",
     "slug": "whodb",
     "desc": "WhoDB is a lightweight next-gen database management tool built with Go and React, supporting PostgreSQL, MySQL, SQLite, MongoDB, Redis, MariaDB, ElasticSearch, and ClickHouse with AI-powered natural language queries.",
