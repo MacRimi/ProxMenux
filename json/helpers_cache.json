@@ -5041,7 +5041,7 @@
   {
     "name": "DroppedNeedle",
     "slug": "droppedneedle",
-    "desc": "<p>Droppedneedle is a self-hosted music request and discovery app for Lidarr. Search MusicBrainz, request albums, stream from Jellyfin, Navidrome, Plex, or local files, and scrobble to ListenBrainz and Last.fm.</p>",
+    "desc": "DroppedNeedle is a self-hosted music request and discovery app with a built-in native library and download engine (no Lidarr required). Search the full MusicBrainz catalogue, request whole albums or single tracks, and let the engine scan, tag, and organise your library while it drives downloads through your own slskd or Usenet/SABnzbd. Stream from Jellyfin, Navidrome, Plex, or your local files, get recommendations from your listening history, and scrobble to ListenBrainz and Last.fm. Play your library in third-party apps like Symfonium and Finamp over the OpenSubsonic and Jellyfin APIs. It all runs as a single Docker container, configured from the web UI.",
     "script": "ct/droppedneedle.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/droppedneedle.sh",
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/droppedneedle.sh",
@@ -5054,7 +5054,6 @@
       "*Arr Suite"
     ],
     "notes": [
-      "Requires a running Lidarr instance. Configure Lidarr and other integrations in the web UI after installation.",
       "For local file playback, mount your music library into the container and set the path in Settings > Local Files."
     ],
     "warnings": [
@@ -5062,7 +5061,7 @@
     ],
     "port": 8688,
     "website": "https://github.com/droppedneedle/droppedneedle",
-    "documentation": "",
+    "documentation": "https://droppedneedle.com/docs",
     "logo": "",
     "updateable": true,
     "privileged": false,
@@ -15148,7 +15147,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
