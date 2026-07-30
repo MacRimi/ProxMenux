@@ -20883,6 +20883,42 @@
     "os": "debian"
   },
   {
+    "name": "TubeSync",
+    "slug": "tubesync",
+    "desc": "TubeSync is a PVR (personal video recorder) for YouTube. It synchronizes channels and playlists to your local storage, downloading media automatically via yt-dlp so you can keep an offline library and watch it in your media player of choice.",
+    "script": "ct/tubesync.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/tubesync.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/tubesync.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Downloaded media is stored in /opt/tubesync-downloads and app data (SQLite database, cache, cookies) in /opt/tubesync-config. Increase the container disk to fit your library.",
+      "SQLite is used by default. To use PostgreSQL/MySQL instead, set DATABASE_CONNECTION in /opt/tubesync.env before first start."
+    ],
+    "warnings": [
+      "The web interface has no authentication by default. Set HTTP_USER and HTTP_PASS in /opt/tubesync.env to enable HTTP basic auth."
+    ],
+    "port": 4848,
+    "website": "https://github.com/meeb/tubesync",
+    "documentation": "https://github.com/meeb/tubesync/blob/main/README.md",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tubesync.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Tududi",
     "slug": "tududi",
     "desc": "Self-hosted task management with functional programming architecture, hierarchical organization, and multi-language support.",
