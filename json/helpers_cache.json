@@ -20899,7 +20899,8 @@
     ],
     "notes": [
       "Downloaded media is stored in /opt/tubesync-downloads and app data (SQLite database, cache, cookies) in /opt/tubesync-config. Increase the container disk to fit your library.",
-      "SQLite is used by default. To use PostgreSQL/MySQL instead, set DATABASE_CONNECTION in /opt/tubesync.env before first start."
+      "SQLite is used by default. For PostgreSQL, set DATABASE_CONNECTION in /opt/tubesync.env (e.g. postgresql://user:pass@host:5432/tubesync) before first start.",
+      "MySQL/MariaDB is not bundled (the mysqlclient driver needs a native build). To use it, install the driver first: 'apt install -y build-essential default-libmysqlclient-dev pkg-config && uv pip install --python /opt/tubesync/.venv/bin/python mysqlclient', then set DATABASE_CONNECTION=mysql://user:pass@host:3306/tubesync in /opt/tubesync.env."
     ],
     "warnings": [
       "The web interface has no authentication by default. Set HTTP_USER and HTTP_PASS in /opt/tubesync.env to enable HTTP basic auth."
