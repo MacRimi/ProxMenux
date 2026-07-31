@@ -984,7 +984,7 @@ show_uninstall_menu() {
     ensure_tools_json
     migrate_installed_tools
     
-    mapfile -t tools_installed < <(jq -r 'to_entries | map(select(.value==true or .value.installed==true)) | .[].key' "$TOOLS_JSON")
+    mapfile -t tools_installed < <(jq -r 'to_entries | map(select(.value==true or .value.installed?==true)) | .[].key' "$TOOLS_JSON")
     
     if [[ ${#tools_installed[@]} -eq 0 ]]; then
         dialog --backtitle "ProxMenux" --title "ProxMenux" \
