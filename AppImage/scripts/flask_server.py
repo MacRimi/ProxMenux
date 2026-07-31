@@ -1547,12 +1547,6 @@ def _compute_vm_disk_from_fsinfo(fsinfo):
         if not disks or not isinstance(disks[0], dict):
             continue
 
-        d = disks[0]
-        sig = (d.get('bus'), d.get('target'), d.get('unit'), d.get('dev'))
-        if sig in seen_disks:
-            continue
-        seen_disks.add(sig)
-
         try:
             total = int(fs.get('total-bytes') or 0)
             used = int(fs.get('used-bytes') or 0)
@@ -1560,6 +1554,19 @@ def _compute_vm_disk_from_fsinfo(fsinfo):
             continue
         if total <= 0:
             continue
+
+        # Dedup by backing block device AFTER confirming the mount has
+        # a usable size. Windows exposes several partitions of the same
+        # `\\.\PhysicalDrive0` with identical disk[0] info; the
+        # System-Reserved partitions of size 0 often appear before the
+        # real C:\ mount, and marking their signature eagerly would
+        # suppress C:\ and yield None for the entire VM (bug reported
+        # for a Windows 11 VM at 166 GB used / 1965 GB total).
+        d = disks[0]
+        sig = (d.get('bus'), d.get('target'), d.get('unit'), d.get('dev'))
+        if sig in seen_disks:
+            continue
+        seen_disks.add(sig)
 
         total_size += total
         total_used += used
