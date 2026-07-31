@@ -1598,6 +1598,41 @@
     "os": "debian"
   },
   {
+    "name": "Aurral",
+    "slug": "aurral",
+    "desc": "Aurral is a self-hosted music discovery and artist request companion for Lidarr. It provides personalized recommendations, trends, tags and recent releases, playlist flows with streaming-service imports, and playback via Navidrome or Plex, while integrating with an existing Lidarr instance rather than replacing it.",
+    "script": "ct/aurral.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/aurral.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/aurral.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00014"
+    ],
+    "category_names": [
+      "*Arr Suite"
+    ],
+    "notes": [
+      "On first access at http://IP:3001, create the admin account and connect your Lidarr instance.",
+      "Application data (SQLite database aurral.db) is stored in /opt/aurral/data. Include it in regular container backups.",
+      "Aurral compiles native modules and builds the frontend during installation; allow several minutes for setup."
+    ],
+    "warnings": [],
+    "port": 3001,
+    "website": "https://aurral.org",
+    "documentation": "https://github.com/lklynet/aurral",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/aurral.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Authelia",
     "slug": "authelia",
     "desc": "Authelia is an open-source authentication and authorization server and portal fulfilling the identity and access management (IAM) role of information security in providing multi-factor authentication and single sign-on (SSO) for your applications via a web portal. It acts as a companion for common reverse proxies.",
@@ -2792,6 +2827,43 @@
     "os": "debian"
   },
   {
+    "name": "Chatto",
+    "slug": "chatto",
+    "desc": "Chatto is a fully-featured, privacy-first team and group chat application that is free and easy to self-host. It ships as a single binary with an embedded NATS/JetStream store (no external database) and supports voice/video calls and screensharing via an optional LiveKit server.",
+    "script": "ct/chatto.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/chatto.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/chatto.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00022"
+    ],
+    "category_names": [
+      "Bots & ChatOps"
+    ],
+    "notes": [
+      "Create the first account with `cd /opt/chatto && ./chatto operator user create --login admin` (enable the operator API in chatto.toml first), or register via the web UI at http://IP:4000.",
+      "Voice and video calls require a separately deployed LiveKit server; configure the [livekit] section in chatto.toml to enable them."
+    ],
+    "warnings": [
+      "Review /opt/chatto/chatto.toml and configure SMTP credentials and a public webserver.url before using Chatto in production.",
+      "All data is stored in /opt/chatto/data (embedded NATS/JetStream). Include this directory and chatto.toml in regular backups."
+    ],
+    "port": 4000,
+    "website": "https://chatto.run",
+    "documentation": "https://docs.chatto.run",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/chatto.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Chatwoot",
     "slug": "chatwoot",
     "desc": "Chatwoot is an open-source omnichannel customer-support platform for live chat, email, social media and messaging conversations.",
@@ -2892,6 +2964,41 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Chevereto",
+    "slug": "chevereto",
+    "desc": "Chevereto is a self-hosted image and video hosting platform for building your own Flickr or Imgur style media sharing site with full control over content, data and platform rules. This installs the open-source AGPLv3 Free edition on nginx, PHP-FPM and MariaDB.",
+    "script": "ct/chevereto.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/chevereto.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/chevereto.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00011"
+    ],
+    "category_names": [
+      "Files & Downloads"
+    ],
+    "notes": [
+      "Open http://<IP> in your browser and complete the web installer to create the admin account and initialize the database.",
+      "Database credentials are stored in /opt/chevereto/app/env.php",
+      "Uses MariaDB, nginx and PHP-FPM. Uploaded images are stored in /opt/chevereto/images"
+    ],
+    "warnings": [],
+    "port": 80,
+    "website": "https://chevereto.com/",
+    "documentation": "https://v4-docs.chevereto.com/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/chevereto.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -9329,6 +9436,42 @@
     "os": "debian"
   },
   {
+    "name": "Kanidm",
+    "slug": "kanidm",
+    "desc": "Kanidm is a modern, simple and secure identity management platform written in Rust. It provides OAuth2/OIDC, LDAP, RADIUS and Unix (PAM/nsswitch) authentication, WebAuthn/passkey support and a self-service web portal for managing people, groups and service accounts.",
+    "script": "ct/kanidm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/kanidm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/kanidm.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "Generate the break-glass admin passwords after install by running inside the container: 'kanidmd recover-account idm_admin' (manages people and groups) and 'kanidmd recover-account admin' (manages server configuration).",
+      "The default domain/origin is kanidm.lan (https://kanidm.lan:8443). For WebAuthn/passkeys and OAuth2 to work correctly, point a DNS/hosts record for this name at the container or set your own domain in /etc/kanidm/server.toml."
+    ],
+    "warnings": [
+      "The server uses a self-signed TLS certificate. Open the web UI at https://<IP>:8443 and accept the certificate warning, or set 'verify_ca = false' in your kanidm client config."
+    ],
+    "port": 8443,
+    "website": "https://kanidm.com/",
+    "documentation": "https://kanidm.github.io/kanidm/stable/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kanidm.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Kapowarr",
     "slug": "kapowarr",
     "desc": "Kapowarr allows you to build a digital library of comics. You can add volumes, map them to a folder and start managing! Download, rename, move and convert issues of the volume (including TPB's, One Shots, Hard Covers, and more). The whole process is automated and can be customised in the settings.",
@@ -10650,6 +10793,76 @@
       "lxc"
     ],
     "config_path": "/opt/localagi/.env",
+    "os": "debian"
+  },
+  {
+    "name": "Logseq",
+    "slug": "logseq",
+    "desc": "Logseq is a privacy-first, open-source knowledge base and outliner for organizing notes, tasks and connected thoughts with Markdown and a local-first graph. This deployment builds and serves the self-hosted web version behind Nginx.",
+    "script": "ct/logseq.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/logseq.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/logseq.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "This is the self-hosted web build. Logseq does not ship a sync server (Logseq Sync is a separate paid hosted service), so graphs do not sync across devices or browsers.",
+      "The initial build compiles ClojureScript and can take 10+ minutes; generous RAM is required."
+    ],
+    "warnings": [
+      "All graphs are stored locally in the browser (IndexedDB/OPFS). Clearing browser data removes your notes, so export and back up regularly."
+    ],
+    "port": 80,
+    "website": "https://logseq.com/",
+    "documentation": "https://docs.logseq.com/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/logseq.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Logto",
+    "slug": "logto",
+    "desc": "Logto is an open-source identity and access management (IAM) platform for building sign-in, authentication, and authorization. It provides OIDC-based auth, a prebuilt sign-in experience, user and role management, and an Admin Console, backed by PostgreSQL.",
+    "script": "ct/logto.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/logto.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/logto.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "Open the Admin Console at http://<IP>:3002 and complete the Welcome flow to create your first admin account.",
+      "The Core service (OIDC issuer / API) runs on port 3001, the Admin Console on port 3002."
+    ],
+    "warnings": [],
+    "port": 3002,
+    "website": "https://logto.io/",
+    "documentation": "https://docs.logto.io/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/logto.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -12595,6 +12808,46 @@
       "pve"
     ],
     "config_path": "/etc/netdata/netdata.conf",
+    "os": "debian"
+  },
+  {
+    "name": "NetworkOptimizer",
+    "slug": "networkoptimizer",
+    "desc": "Network Optimizer is a self-hosted optimization, monitoring (NMS) and security audit tool for UniFi networks. It scores and optimizes Wi-Fi, runs DNS, VLAN and firewall security checks, hosts a centralized WAN and LAN speed test server with L2 tracing, and monitors ISP and WAN health. Built on .NET 10 / Blazor Server with a local SQLite database.",
+    "script": "ct/networkoptimizer.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/networkoptimizer.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/networkoptimizer.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00004"
+    ],
+    "category_names": [
+      "Network & Firewall"
+    ],
+    "notes": [
+      "Edit ASPNETCORE_URLS, HOST_IP and Iperf3Server__Enabled in /opt/networkoptimizer/networkoptimizer.env, then restart the service.",
+      "Licensed under the Business Source License 1.1: free for personal use of up to 3 sites; commercial use requires a license."
+    ],
+    "warnings": [
+      "On first start an admin password is auto-generated. Retrieve it with: journalctl -u networkoptimizer | grep -i password"
+    ],
+    "port": 8042,
+    "website": "https://ozarkconnect.net/network-optimizer",
+    "documentation": "https://github.com/Ozark-Connect/NetworkOptimizer",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/networkoptimizer.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
     "os": "debian"
   },
   {
@@ -15841,6 +16094,45 @@
       "pve"
     ],
     "config_path": "/var/lib/containers/storage/volumes/hass_config/_data",
+    "os": "debian"
+  },
+  {
+    "name": "Portabase",
+    "slug": "portabase",
+    "desc": "Portabase is a self-hosted dashboard to schedule, run and restore database backups for PostgreSQL, MySQL, MariaDB, MsSQL, Firebird, SQLite, MongoDB, Redis and Docker volumes. It supports retention policies, notifications and multiple storage backends (local, S3, Azure, GCS).",
+    "script": "ct/portabase.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/portabase.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/portabase.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00007"
+    ],
+    "category_names": [
+      "Backup & Recovery"
+    ],
+    "notes": [
+      "SMTP, storage backends and auth providers can be configured in /opt/portabase/.env - restart with 'systemctl restart portabase' after changes."
+    ],
+    "warnings": [
+      "Change the default admin password (admin@example.com / Portabase123!) after the first login."
+    ],
+    "port": 3000,
+    "website": "https://portabase.io",
+    "documentation": "https://portabase.io/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/portabase.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin@example.com",
+      "password": "Portabase123!"
+    },
     "os": "debian"
   },
   {
@@ -19538,6 +19830,40 @@
     "os": "debian"
   },
   {
+    "name": "Super Productivity",
+    "slug": "super-productivity",
+    "desc": "Super Productivity is a privacy-focused, open-source to-do list, task manager and time tracker that helps you organize tasks, plan your day and track time. This deploys the self-hostable web (PWA) build as static files served by nginx.",
+    "script": "ct/super-productivity.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/super-productivity.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/super-productivity.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Task data is stored locally in your browser (IndexedDB). Use the app's built-in export/backup or configure sync to avoid data loss when clearing browser data.",
+      "Optional cross-device sync is available via WebDAV, Dropbox or SuperSync and can be configured in the app settings."
+    ],
+    "warnings": [],
+    "port": 80,
+    "website": "https://super-productivity.com/",
+    "documentation": "https://github.com/super-productivity/super-productivity",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/super-productivity.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Sure",
     "slug": "sure",
     "desc": "The personal finance app for everyone. NOT affiliated with or endorsed by Maybe Finance Inc..",
@@ -22903,7 +23229,7 @@
     ],
     "notes": [
       "Set API keys (TMDB_API, MAL_API, IGDB_ID, IGDB_SECRET) in /opt/yamtrack/src/.env to enable media search from external providers.",
-      "If you need to access the python console of Yamtrack (e.g.  creating a user) with the console), you can call  `/opt/yamtrack/.venv/bin/python manage.py shell`"
+      "If you need to access the python console of Yamtrack (e.g.  creating a user) with the console), you can call  `/opt/yamtrack/.venv/bin/python /opt/yamtrack/src/manage.py shell`"
     ],
     "warnings": [
       "If using a reverse proxy, set the URLS variable in .env to your external URL (e.g., URLS=https://yamtrack.example.com)."
