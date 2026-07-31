@@ -1407,6 +1407,39 @@
   },
   {
     "name": "Arch Linux",
+    "slug": "archlinux",
+    "desc": "Arch Linux is a lightweight, rolling-release Linux distribution that follows a keep-it-simple philosophy. It provides a minimalist base system that users can build upon according to their needs.",
+    "script": "ct/archlinux.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/archlinux.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/archlinux.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems"
+    ],
+    "notes": [
+      "Arch Linux is a rolling-release distribution. Run 'pacman -Syu' regularly to keep the system up to date."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://archlinux.org/",
+    "documentation": "https://wiki.archlinux.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/arch-linux.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "arch linux"
+  },
+  {
+    "name": "Arch Linux",
     "slug": "archlinux-vm",
     "desc": "Arch Linux is a highly customizable, independent Linux distribution that gives users complete control over their system. Known for its rolling release model, Arch Linux is always up-to-date with the latest software. It's favored by experienced users who appreciate its minimalist approach, demanding a hands-on installation and configuration process. This level of control and flexibility makes it a popular choice for those who want to tailor their Linux system to their exact needs.",
     "script": "vm/archlinux-vm.sh",
@@ -5914,6 +5947,41 @@
     "os": "debian"
   },
   {
+    "name": "Fedora",
+    "slug": "fedora",
+    "desc": "Fedora is a cutting-edge Linux distribution sponsored by Red Hat, featuring current open-source technologies.",
+    "script": "ct/fedora.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/fedora.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/fedora.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems"
+    ],
+    "notes": [],
+    "warnings": [],
+    "port": 0,
+    "website": "https://fedoraproject.org/",
+    "documentation": "https://docs.fedoraproject.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/fedora.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "root",
+      "password": ""
+    },
+    "os": "fedora"
+  },
+  {
     "name": "Feishin",
     "slug": "feishin",
     "desc": "Modern self-hosted music player web client for Navidrome, Jellyfin, and OpenSubsonic-compatible servers.",
@@ -7888,10 +7956,11 @@
       "Documents & Notes"
     ],
     "notes": [
-      "This is the SYNC SERVER only, not the Hammer editor and it has no web interface. Install the Hammer client (desktop/mobile) separately, create a server account from the client, and point it at http://<IP>:8080.",
-      "The server is served over plain HTTP on port 8080. For access over the internet, put it behind a reverse proxy with TLS. Optional settings (public URL, TLS, external PostgreSQL) can be configured via a config.toml - see the upstream HOW-TO-RUN-A-SERVER documentation."
+      "This is the SYNC SERVER only, not the Hammer editor. Install the Hammer client (desktop/mobile) separately and create your account from there - the first account created becomes the admin account. http://<IP>:8080 serves the public web pages (/setup, /admin); /api is the sync endpoint and returns an error in a browser because it requires the client's protocol-version header.",
+      "Settings live in /opt/hammer_data/config.toml, which the server auto-loads from its data directory. It ships pre-filled with the container IP plus commented examples for reverse proxy, TLS, external PostgreSQL and caching. Apply changes with 'systemctl restart hammer'."
     ],
     "warnings": [
+      "Hammer clients only speak https and will NOT connect to plain HTTP, so the default http://<IP>:8080 works in a browser but not from the app. Put a TLS reverse proxy in front of it, or give Hammer a real certificate via sslPort/[sslCert] in /opt/hammer_data/config.toml. Self-signed certificates are rejected by the clients.",
       "Sync data is stored in an embedded PostgreSQL under /opt/hammer_data (kept outside the app directory so it survives updates). Include /opt/hammer_data in regular backups."
     ],
     "port": 8080,
