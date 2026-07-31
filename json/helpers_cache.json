@@ -1598,6 +1598,47 @@
     "os": "debian"
   },
   {
+    "name": "AudioMuse-AI",
+    "slug": "audiomuse-ai",
+    "desc": "AudioMuse-AI is a self-hosted tool that uses sonic analysis to rediscover forgotten songs and generate groove-aware playlists for your music library, without external APIs. It integrates with Jellyfin, Navidrome, Emby, Lyrion or Plex and runs a Flask web UI backed by Redis Queue workers and PostgreSQL.",
+    "script": "ct/audiomuse-ai.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/audiomuse-ai.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/audiomuse-ai.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00014"
+    ],
+    "category_names": [
+      "*Arr Suite"
+    ],
+    "notes": [
+      "The generated web UI password is saved to /root/audiomuse-ai.creds inside the container (user: admin). Open http://<IP>:8000 to log in.",
+      "The installer downloads roughly 2.2 GB of ML models (musicnn, CLAP, Whisper, silero, gte) into /opt/audiomuse-ai_data/model, so the setup takes a while. Configuration, models and caches live in /opt/audiomuse-ai_data so they survive updates; the PostgreSQL database holds the analysis results. Sonic analysis itself is CPU- and memory-intensive.",
+      "Running two analysis workers can use significant RAM. If the container runs out of memory, disable audiomuse-ai-worker-high or increase the assigned RAM."
+    ],
+    "warnings": [
+      "Connect your music server before running an analysis: edit /opt/audiomuse-ai_data/audiomuse.env and set MEDIASERVER_TYPE (jellyfin, navidrome, emby, lyrion, plex) plus the matching URL and credentials, then 'systemctl restart audiomuse-ai audiomuse-ai-worker audiomuse-ai-worker-high'."
+    ],
+    "port": 8000,
+    "website": "https://github.com/NeptuneHub/AudioMuse-AI",
+    "documentation": "https://github.com/NeptuneHub/AudioMuse-AI/tree/main/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/audiomuse-ai.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "Aurral",
     "slug": "aurral",
     "desc": "Aurral is a self-hosted music discovery and artist request companion for Lidarr. It provides personalized recommendations, trends, tags and recent releases, playlist flows with streaming-service imports, and playback via Navidrome or Plex, while integrating with an existing Lidarr instance rather than replacing it.",
@@ -2726,6 +2767,43 @@
     "os": "debian"
   },
   {
+    "name": "CentOS Stream",
+    "slug": "centos",
+    "desc": "CentOS Stream is a continuously delivered Linux distribution that tracks just ahead of RHEL development.",
+    "script": "ct/centos.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/centos.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/centos.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems"
+    ],
+    "notes": [
+      "CentOS Stream is the upstream development platform for RHEL."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://www.centos.org/centos-stream/",
+    "documentation": "https://docs.centos.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/centos.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "root",
+      "password": ""
+    },
+    "os": "centos"
+  },
+  {
     "name": "Certimate",
     "slug": "certimate",
     "desc": "Certimate is an open-source SSL certificate management tool that automates the application, deployment, and renewal of SSL certificates, supporting integration with various cloud providers and deployment targets.",
@@ -2842,12 +2920,12 @@
       "Bots & ChatOps"
     ],
     "notes": [
-      "Create the first account with `cd /opt/chatto && ./chatto operator user create --login admin` (enable the operator API in chatto.toml first), or register via the web UI at http://IP:4000.",
+      "Create the first account with `cd /opt/chatto && ./chatto operator user create --login admin` (the operator API is enabled by default), or register via the web UI at http://IP:4000.",
       "Voice and video calls require a separately deployed LiveKit server; configure the [livekit] section in chatto.toml to enable them."
     ],
     "warnings": [
-      "Review /opt/chatto/chatto.toml and configure SMTP credentials and a public webserver.url before using Chatto in production.",
-      "All data is stored in /opt/chatto/data (embedded NATS/JetStream). Include this directory and chatto.toml in regular backups."
+      "Review /opt/chatto_data/chatto.toml and configure SMTP credentials and a public webserver.url before using Chatto in production.",
+      "All persistent data (embedded NATS/JetStream store and chatto.toml with its secrets) lives in /opt/chatto_data, kept outside the app directory so it survives updates. Include /opt/chatto_data in regular backups."
     ],
     "port": 4000,
     "website": "https://chatto.run",
@@ -4458,6 +4536,43 @@
     ],
     "config_path": "/etc/default/pve-auto-hook",
     "os": ""
+  },
+  {
+    "name": "Devuan",
+    "slug": "devuan",
+    "desc": "Devuan is a Debian-derived Linux distribution that offers init-system freedom without systemd.",
+    "script": "ct/devuan.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/devuan.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/devuan.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems"
+    ],
+    "notes": [
+      "Devuan uses SysVinit by default instead of systemd."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://www.devuan.org/",
+    "documentation": "https://www.devuan.org/os/documentation",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/devuan.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "root",
+      "password": ""
+    },
+    "os": "devuan"
   },
   {
     "name": "Directus",
@@ -6852,6 +6967,43 @@
     "os": "alpine"
   },
   {
+    "name": "Gentoo",
+    "slug": "gentoo",
+    "desc": "Gentoo is a highly customizable source-based Linux distribution.",
+    "script": "ct/gentoo.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/gentoo.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/gentoo.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems"
+    ],
+    "notes": [],
+    "warnings": [
+      "Gentoo compiles packages from source, so software installation may take time."
+    ],
+    "port": 0,
+    "website": "https://www.gentoo.org/",
+    "documentation": "https://wiki.gentoo.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gentoo.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "root",
+      "password": ""
+    },
+    "os": "gentoo"
+  },
+  {
     "name": "GeoPulse",
     "slug": "geopulse",
     "desc": "Self-hosted location tracking and visualization platform with GPS history, trip detection, and AI-powered insights, backed by PostgreSQL with PostGIS.",
@@ -7721,6 +7873,42 @@
     "os": "debian"
   },
   {
+    "name": "Hammer",
+    "slug": "hammer",
+    "desc": "This installs the self-hosted sync server for Hammer, the offline-first story/novel writing app. The Kotlin/Ktor server lets you sync your Hammer projects across your own devices instead of using Dropbox or a third-party service. It ships with an in-process (embedded) PostgreSQL, so no external database is required. The server has no UI of its own - install the Hammer desktop/mobile client separately and point it at this server.",
+    "script": "ct/hammer.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/hammer.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/hammer.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "This is the SYNC SERVER only, not the Hammer editor and it has no web interface. Install the Hammer client (desktop/mobile) separately, create a server account from the client, and point it at http://<IP>:8080.",
+      "The server is served over plain HTTP on port 8080. For access over the internet, put it behind a reverse proxy with TLS. Optional settings (public URL, TLS, external PostgreSQL) can be configured via a config.toml - see the upstream HOW-TO-RUN-A-SERVER documentation."
+    ],
+    "warnings": [
+      "Sync data is stored in an embedded PostgreSQL under /opt/hammer_data (kept outside the app directory so it survives updates). Include /opt/hammer_data in regular backups."
+    ],
+    "port": 8080,
+    "website": "https://hammereditor.com",
+    "documentation": "https://github.com/Darkrock-Studios/hammer-editor/blob/develop/HOW-TO-RUN-A-SERVER.md",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hammer-editor.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Home Assistant OS",
     "slug": "haos-vm",
     "desc": "This script automates the process of creating a Virtual Machine (VM) using the official KVM (qcow2) disk image provided by the Home Assistant Team. It involves finding, downloading, and extracting the image, defining user-defined settings, importing and attaching the disk, setting the boot order, and starting the VM. It supports various storage types, and does not involve any hidden installations. After the script completes, click on the VM, then on the Summary tab to find the VM IP.",
@@ -8398,6 +8586,43 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Ignis",
+    "slug": "ignis",
+    "desc": "Ignis runs Obsidian in the browser by reimplementing the Electron APIs Obsidian uses, keeping your vaults on the server. It supports multiple vaults, plugins, file upload/download and sync across browser tabs, so you can access your Obsidian vault from any device without a desktop client.",
+    "script": "ct/ignis.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/ignis.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/ignis.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Open https://<IP> and accept the self-signed certificate. HTTPS is required: outside a secure browser context Obsidian's browser APIs (OPFS, service workers) are disabled and the app will not load correctly. nginx terminates TLS and proxies to the Node server on port 8080.",
+      "On install the matching Obsidian web build is downloaded and unpacked automatically. A default vault is created on first start (AUTO_CREATE_DEFAULT)."
+    ],
+    "warnings": [
+      "Ignis has NO built-in authentication. Do not expose it directly to the internet - put an authenticating reverse proxy (or VPN) in front of it before allowing remote access.",
+      "Vaults and application data live in /opt/ignis_data (vaults, data, obsidian-app), kept outside the app directory so they survive updates. Include /opt/ignis_data in regular backups."
+    ],
+    "port": 443,
+    "website": "https://github.com/Nystik-gh/ignis",
+    "documentation": "https://github.com/Nystik-gh/ignis",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/obsidian.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -9451,11 +9676,11 @@
       "Authentication & Security"
     ],
     "notes": [
-      "Generate the break-glass admin passwords after install by running inside the container: 'kanidmd recover-account idm_admin' (manages people and groups) and 'kanidmd recover-account admin' (manages server configuration).",
-      "The default domain/origin is kanidm.lan (https://kanidm.lan:8443). For WebAuthn/passkeys and OAuth2 to work correctly, point a DNS/hosts record for this name at the container or set your own domain in /etc/kanidm/server.toml."
+      "Kanidm cannot run on a bare IP (WebAuthn/passkeys require a real domain name, and its domain must start with a letter). The script defaults the domain/origin to kanidm.<container-IP>.nip.io, a public wildcard DNS that resolves to the container automatically — just open https://kanidm.<container-IP>.nip.io:8443, no hosts file or DNS setup needed, and accept the self-signed certificate warning.",
+      "Generate the break-glass admin passwords after install, inside the container: 'kanidmd recover-account idm_admin' (manages people and groups — use this account to sign in to the web portal) and 'kanidmd recover-account admin' (manages server configuration)."
     ],
     "warnings": [
-      "The server uses a self-signed TLS certificate. Open the web UI at https://<IP>:8443 and accept the certificate warning, or set 'verify_ca = false' in your kanidm client config."
+      "If your router/DNS has rebinding protection (blocks public names that resolve to private IPs), nip.io may not resolve. Fallback: add '<container-IP> kanidm.local' to your client's hosts file and set the matching domain/origin in /etc/kanidm/server.toml. To use your own real domain, change 'domain' and 'origin' in server.toml BEFORE creating accounts — changing it later requires a Kanidm domain rename."
     ],
     "port": 8443,
     "website": "https://kanidm.com/",
@@ -10811,6 +11036,7 @@
       "Documents & Notes"
     ],
     "notes": [
+      "Open the app at https://<IP> and accept the self-signed certificate. HTTPS is required: Logseq's local database uses OPFS (navigator.storage.getDirectory) and SharedArrayBuffer, which browsers only expose in a secure, cross-origin-isolated context — over plain HTTP the graph fails to load. nginx serves it over TLS with the COOP/COEP isolation headers set.",
       "This is the self-hosted web build. Logseq does not ship a sync server (Logseq Sync is a separate paid hosted service), so graphs do not sync across devices or browsers.",
       "The initial build compiles ClojureScript and can take 10+ minutes; generous RAM is required."
     ],
@@ -10847,10 +11073,11 @@
       "Authentication & Security"
     ],
     "notes": [
-      "Open the Admin Console at http://<IP>:3002 and complete the Welcome flow to create your first admin account.",
-      "The Core service (OIDC issuer / API) runs on port 3001, the Admin Console on port 3002."
+      "Open the Admin Console at https://<IP>:3002 and accept the self-signed certificate. The sign-in flow redirects to the Core at https://logto.<IP>.nip.io:3001 (a nip.io hostname that auto-resolves to the container) — open that URL once too and accept its certificate before signing in. Then complete the Welcome flow to create your first admin account."
     ],
-    "warnings": [],
+    "warnings": [
+      "HTTPS with two distinct hostnames is required: the console uses Web Crypto (crypto.subtle, HTTPS-only), and Logto's OIDC needs the Core (logto.<IP>.nip.io:3001) and Console (<IP>:3002) on different hostnames so their session cookies don't collide (a bare IP on two ports causes an 'invalid session' error). If your router blocks nip.io (DNS-rebinding protection), or for a browser-trusted cert, front Logto with your own domain + reverse proxy and set ENDPOINT/ADMIN_ENDPOINT in /opt/logto/.env accordingly."
+    ],
     "port": 3002,
     "website": "https://logto.io/",
     "documentation": "https://docs.logto.io/",
@@ -14306,6 +14533,41 @@
     "os": "debian"
   },
   {
+    "name": "openEuler",
+    "slug": "openeuler",
+    "desc": "openEuler is an open-source Linux distribution designed for servers and cloud computing.",
+    "script": "ct/openeuler.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/openeuler.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/openeuler.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems"
+    ],
+    "notes": [],
+    "warnings": [],
+    "port": 0,
+    "website": "https://www.openeuler.org/",
+    "documentation": "https://docs.openeuler.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openeuler.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "root",
+      "password": ""
+    },
+    "os": "openeuler"
+  },
+  {
     "name": "Opengist",
     "slug": "opengist",
     "desc": "Self-hosted pastebin powered by Git, open-source alternative to Github Gist.",
@@ -14436,6 +14698,41 @@
       "password": "admin"
     },
     "os": "debian"
+  },
+  {
+    "name": "openSUSE",
+    "slug": "opensuse",
+    "desc": "openSUSE is a stable, easy-to-use Linux distribution with the YaST configuration tool and zypper package manager.",
+    "script": "ct/opensuse.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/opensuse.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/opensuse.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems"
+    ],
+    "notes": [],
+    "warnings": [],
+    "port": 0,
+    "website": "https://www.opensuse.org/",
+    "documentation": "https://doc.opensuse.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/opensuse.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "root",
+      "password": ""
+    },
+    "os": "opensuse"
   },
   {
     "name": "OpenThread Border Router",
@@ -18350,6 +18647,42 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Securo",
+    "slug": "securo",
+    "desc": "Securo is a self-hosted personal finance manager for tracking accounts, transactions, budgets and assets. It ships a FastAPI backend with PostgreSQL and Celery, a React frontend, optional bank synchronization (Pluggy, Enable Banking, SimpleFIN), OIDC login and optional AI agents. All data stays on your own infrastructure.",
+    "script": "ct/securo.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/securo.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/securo.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00023"
+    ],
+    "category_names": [
+      "Finance & Budgeting"
+    ],
+    "notes": [
+      "Open https://<IP> and accept the self-signed certificate, then register the first account. HTTPS is served by nginx (self-signed) because the frontend and passkey/WebAuthn login require a secure browser context.",
+      "Application secrets and the database URL live in /opt/securo_data/.env, kept outside the app directory so they survive updates. Optional integrations (Pluggy, Enable Banking, SimpleFIN, OIDC, AI agents) can be added there; restart with 'systemctl restart securo securo-worker securo-beat' after changes."
+    ],
+    "warnings": [
+      "Passkey/WebAuthn registration does not work against a bare IP address (WebAuthn requires a real domain). Use email/password login on the IP, or put Securo behind a real domain with valid TLS to enable passkeys."
+    ],
+    "port": 443,
+    "website": "https://github.com/securo-finance/securo",
+    "documentation": "https://github.com/securo-finance/securo",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/securo.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
