@@ -104,8 +104,26 @@ update_pve_safe() {
         return 1
     fi
 
-    if ! ping -c 1 download.proxmox.com >/dev/null 2>&1; then
-        msg_error "$(translate "Cannot reach Proxmox repositories")"
+    # Reachability check: HEAD https://download.proxmox.com over the same
+    # transport apt-get update will use (HTTPS 443). Previously a single
+    # ICMP ping — hosts behind firewalls that filter ICMP but allow 443
+    # (typical corporate / cloud-provider setups) hit a false negative
+    # and the update aborted even though the repository was reachable.
+    # Two attempts with a short pause absorb transient network glitches
+    # without adding perceptible latency when the network is healthy.
+    _repo_reachable() {
+        local url="https://download.proxmox.com/"
+        local attempt
+        for attempt in 1 2; do
+            if curl -sfI --connect-timeout 5 --max-time 10 -o /dev/null "$url"; then
+                return 0
+            fi
+            [[ $attempt -eq 1 ]] && sleep 1
+        done
+        return 1
+    }
+    if ! _repo_reachable; then
+        msg_error "$(translate "Cannot reach https://download.proxmox.com (HTTPS 443). Check network, proxy or DNS.")"
         echo -e
         msg_success "$(translate "Press Enter to return to menu...")"
         read -r
