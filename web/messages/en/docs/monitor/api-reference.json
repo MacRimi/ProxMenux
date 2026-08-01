@@ -100,6 +100,85 @@
       }
     ]
   },
+  "actions": {
+    "heading": "System actions",
+    "intro": "Fire-and-forget endpoints that trigger the same operations the operator would run from the Monitor UI or the shell menu — designed for Home Assistant, Homepage, Ansible, custom dashboards and any other automation that needs to reach into the host over HTTP. Every mutating route requires a token with <code>full_admin</code> scope; read-only <code>read_only</code> tokens can still poll the <code>.../status</code> endpoints without triggering anything. Each action returns 202 with a state snapshot; poll the matching <code>.../status</code> to observe progress.",
+    "shapeTitle": "Common response shape",
+    "shapeIntro": "All action endpoints return the same JSON object — one shape to parse from any client:",
+    "shapeCode": "{\n  \"unit\": \"proxmenux-action-pve-update.service\",\n  \"state\": \"idle | running | success | failed | cancelled\",\n  \"started_at\": \"Sat 2026-08-01 11:01:32 CEST\",\n  \"finished_at\": null,\n  \"exit_code\": null,\n  \"result\": null\n}",
+    "concurrencyTitle": "Concurrency and cancellation",
+    "concurrencyBody": "A second POST while a run is in flight returns 409 with the current running state. Cancel an in-flight run with a DELETE to the action's base URL; the state moves to <code>cancelled</code> and timestamps are preserved so the caller can still see when it was triggered and stopped. The last terminal state (success / failed / cancelled) is remembered until the next run replaces it.",
+    "rows": [
+      {
+        "endpoint": "/api/system/power/reboot",
+        "method": "POST",
+        "use": "Reboot the Proxmox host. Fire-and-forget — the HTTP connection drops when systemd starts the shutdown sequence."
+      },
+      {
+        "endpoint": "/api/system/power/reboot/status",
+        "method": "GET",
+        "use": "State of the last / current reboot action."
+      },
+      {
+        "endpoint": "/api/system/power/shutdown",
+        "method": "POST",
+        "use": "Power off the Proxmox host. Useful as an effect wired to a UPS shutdown signal."
+      },
+      {
+        "endpoint": "/api/system/power/shutdown/status",
+        "method": "GET",
+        "use": "State of the last / current shutdown action."
+      },
+      {
+        "endpoint": "/api/system/pve-update/run",
+        "method": "POST",
+        "use": "Trigger the safe PVE update flow (the same one the Health Monitor's Update Now button and the shell menu run — delegates to update-pve-safe.sh)."
+      },
+      {
+        "endpoint": "/api/system/pve-update/status",
+        "method": "GET",
+        "use": "State of the last / current PVE update run."
+      },
+      {
+        "endpoint": "/api/system/pve-update",
+        "method": "DELETE",
+        "use": "Cancel a PVE update in progress (SIGTERM to the running script)."
+      },
+      {
+        "endpoint": "/api/proxmenux/self-update/run",
+        "method": "POST",
+        "use": "Update ProxMenux itself by piping the canonical stable installer. Runs in its own systemd unit so the update completes across the proxmenux-monitor restart the installer performs."
+      },
+      {
+        "endpoint": "/api/proxmenux/self-update/status",
+        "method": "GET",
+        "use": "State of the last / current ProxMenux self-update run."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/control",
+        "method": "POST",
+        "use": "Start / stop / shutdown / reboot a VM or LXC container (the same operations the Monitor's VM & LXC modal exposes). Body: {\"action\": \"start|stop|shutdown|reboot\"}. Synchronous — returns the outcome directly with no polling needed."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/backup",
+        "method": "POST",
+        "use": "Create a vzdump backup of a VM or LXC. Body (all optional except when the defaults don't match your storage layout): {\"storage\": \"<pve-storage>\", \"mode\": \"snapshot|suspend|stop\", \"compress\": \"zstd|lzo|gz|none\", \"protected\": true, \"notes\": \"…\", \"notification\": \"auto|always|failure|never\", \"pbs_change_detection\": \"default|legacy|data\"}. Returns the PVE task UPID."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/backups",
+        "method": "GET",
+        "use": "List previous backups for a VM or LXC across all reachable storages."
+      }
+    ],
+    "syncVsAsyncTitle": "Two flavours of action",
+    "syncVsAsyncBody": "System-level actions (host power, PVE update, ProxMenux self-update) can take minutes — they run in their own transient systemd unit and expose a <code>.../status</code> endpoint plus a <code>DELETE</code> to cancel. VM / LXC actions (start, stop, shutdown, reboot, backup) are fast and use the fire-and-return style the Monitor's UI already exposes: the POST returns the outcome directly. Both flavours share the same authentication model (JWT or long-lived API token).",
+    "curlTitle": "curl example",
+    "curlBody": "Fire a PVE update and poll for completion — the exact same sequence a Home Assistant automation or an Ansible playbook would run:",
+    "curlCode": "TOKEN=<your full_admin token>\n\ncurl -sSf -X POST \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  https://<host>:8008/api/system/pve-update/run\n\nwhile true; do\n  state=$(curl -sSf -H \"Authorization: Bearer $TOKEN\" \\\n    https://<host>:8008/api/system/pve-update/status | jq -r .state)\n  [ \"$state\" != \"running\" ] && break\n  sleep 30\ndone\necho \"final state: $state\"",
+    "haTitle": "Home Assistant integration snippet",
+    "haBody": "A <code>rest</code> sensor polls the state and a <code>rest_command</code> triggers the update. Wire both to a dashboard button and to any automation you like:",
+    "haCode": "# configuration.yaml\nsensor:\n  - platform: rest\n    resource: https://pve.local:8008/api/system/pve-update/status\n    name: pve_update_state\n    value_template: \"{{ value_json.state }}\"\n    scan_interval: 60\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\nrest_command:\n  pve_update:\n    url: https://pve.local:8008/api/system/pve-update/run\n    method: POST\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\n  # Start VM 100 (works for LXC too — same endpoint)\n  vm_100_start:\n    url: https://pve.local:8008/api/vms/100/control\n    method: POST\n    content_type: 'application/json'\n    payload: '{\"action\": \"start\"}'\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\n  # Backup VM 100 to the 'pbs-main' storage\n  vm_100_backup:\n    url: https://pve.local:8008/api/vms/100/backup\n    method: POST\n    content_type: 'application/json'\n    payload: '{\"storage\": \"pbs-main\", \"mode\": \"snapshot\", \"compress\": \"zstd\"}'\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\""
+  },
   "health": {
     "heading": "Health Monitor",
     "rows": [

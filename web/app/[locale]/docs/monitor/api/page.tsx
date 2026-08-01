@@ -63,6 +63,7 @@ export default async function MonitorApiPage({
       auth: { rows: EndpointRow[]; items: string[] }
       conventions: { items: string[] }
       system: { rows: EndpointRow[] }
+      actions: { rows: EndpointRow[] }
       health: { rows: EndpointRow[] }
       storage: { rows: EndpointRow[] }
       network: { rows: EndpointRow[] }
@@ -81,6 +82,7 @@ export default async function MonitorApiPage({
   const authItems = api.auth.items
   const conventionsItems = api.conventions.items
   const systemRows = api.system.rows
+  const actionsRows = api.actions.rows
   const healthRows = api.health.rows
   const storageRows = api.storage.rows
   const networkRows = api.network.rows
@@ -180,6 +182,29 @@ export default async function MonitorApiPage({
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("system.heading")}</h2>
       {endpointTable(systemRows, "system.rows")}
+
+      <h2 id="actions" className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("actions.heading")}</h2>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("actions.intro", { code })}</p>
+
+      <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("actions.shapeTitle")}</h3>
+      <p className="mb-2 text-gray-800 leading-relaxed">{t("actions.shapeIntro")}</p>
+      <CopyableCode code={t("actions.shapeCode")} className="my-4" />
+
+      <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("actions.concurrencyTitle")}</h3>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("actions.concurrencyBody", { code })}</p>
+
+      {endpointTable(actionsRows, "actions.rows")}
+
+      <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("actions.syncVsAsyncTitle")}</h3>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("actions.syncVsAsyncBody", { code })}</p>
+
+      <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("actions.curlTitle")}</h3>
+      <p className="mb-2 text-gray-800 leading-relaxed">{t("actions.curlBody")}</p>
+      <CopyableCode code={t("actions.curlCode")} className="my-4" />
+
+      <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("actions.haTitle")}</h3>
+      <p className="mb-2 text-gray-800 leading-relaxed">{t.rich("actions.haBody", { code })}</p>
+      <CopyableCode code={t("actions.haCode")} className="my-4" />
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("health.heading")}</h2>
       {endpointTable(healthRows, "health.rows")}

@@ -79,7 +79,7 @@ from flask_notification_routes import notification_bp  # noqa: E402
 from flask_oci_routes import oci_bp  # noqa: E402
 from notification_manager import notification_manager  # noqa: E402
 import post_install_versions  # noqa: E402  — Sprint 12A: detect post-install function updates
-from jwt_middleware import require_auth, require_auth_or_ticket  # noqa: E402
+from jwt_middleware import require_auth, require_auth_or_ticket, require_admin_scope  # noqa: E402
 import auth_manager  # noqa: E402
 
 # -------------------------------------------------------------------
@@ -1700,6 +1700,255 @@ def _ensure_vm_disk_refresher():
     import threading
     t = threading.Thread(target=_vm_disk_refresher_loop, daemon=True, name='vm-disk-refresher')
     t.start()
+
+
+# ─── Actions API helpers ─────────────────────────────────────────────────
+#
+# Backing store for POST /api/system/... and POST /api/proxmenux/... —
+# transient systemd units. Doing it this way instead of `subprocess.Popen`
+# gives us four properties for free:
+#
+#   1. Persistence:  the unit outlives the Flask process, so the
+#                    self-update path (which restarts proxmenux-monitor
+#                    mid-install) doesn't lose track of the run.
+#   2. Concurrency:  systemd rejects `systemd-run --unit <name>` if that
+#                    unit is already active, so we return 409 Conflict
+#                    without needing our own flock.
+#   3. Cancellable:  `systemctl stop <unit>` from CLI or DELETE from API.
+#   4. State + log:  `systemctl show ... --property=...` gives us the
+#                    ActiveState / ExecMainStatus / timestamps, and the
+#                    unit's stdout/stderr lands in the journal.
+#
+# Every action gets a stable unit name (one per action, not per run) so
+# the GET .../status endpoint knows where to look without needing the
+# client to remember an opaque run-id.
+
+
+# Snapshot of the last terminal state for each action unit. systemd
+# reclaims transient units the instant they finish (or are stopped
+# explicitly); without this cache, `.../status` would jump back to
+# `idle` seconds after a run ends and callers would never see the
+# exit code / result they polled for. Every time `_action_state`
+# observes a terminal state we snapshot it here; when a later call
+# finds the unit gone from systemd, we serve the snapshot instead.
+_action_last_state = {}  # unit_name -> full state dict
+_ACTION_TERMINAL = ('success', 'failed', 'cancelled')
+
+
+def _action_run(unit_name, cmd_argv, description=None, extra_properties=None):
+    """Launch ``cmd_argv`` as a transient systemd oneshot unit.
+
+    Returns ``(True, {})`` on success or ``(False, {"error": ..., "status": <http>})``
+    on failure. The caller is responsible for mapping the error dict to
+    a jsonify() + status code.
+    """
+    if not unit_name.endswith('.service'):
+        unit_name = f'{unit_name}.service'
+
+    state = _action_state(unit_name)
+    if state.get('state') == 'running':
+        return False, {
+            'error': 'Action already in progress',
+            'unit': unit_name,
+            'state': state,
+            'status': 409,
+        }
+
+    # Starting a new run — clear any previous terminal snapshot so we
+    # don't serve stale exit-code data on the first `.../status` call
+    # after the new run completes.
+    _action_last_state.pop(unit_name, None)
+
+    # Any previous run may have left the unit in "active (exited)" via
+    # RemainAfterExit — reset it so systemd will accept the fresh start.
+    # Silent: reset-failed no-ops when the unit isn't in a failed state,
+    # and stop no-ops when it isn't loaded.
+    try:
+        subprocess.run(['systemctl', 'reset-failed', unit_name],
+                       capture_output=True, text=True, timeout=5)
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        pass
+
+    # Type=simple: systemd treats the first process as the main one and
+    # follows its lifecycle — correct for long-running scripts like
+    # `proxmox_update.sh` (minutes) or the self-update installer.
+    # RemainAfterExit=yes: after the main process exits, systemd keeps
+    # the unit in the "active (exited)" state so `.../status` remains
+    # informative (exit code, timestamps, result) instead of returning
+    # to `idle` the instant the run finishes. Without this, transient
+    # units disappear on termination and callers lose the last-run info.
+    run_argv = [
+        'systemd-run',
+        '--unit', unit_name,
+        '--property', 'Type=simple',
+        '--property', 'RemainAfterExit=yes',
+    ]
+    if description:
+        run_argv.extend(['--description', description])
+    for prop in (extra_properties or []):
+        run_argv.extend(['--property', prop])
+    run_argv.extend(cmd_argv)
+
+    try:
+        proc = subprocess.run(run_argv, capture_output=True, text=True, timeout=10)
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+        return False, {'error': f'systemd-run failed to launch: {e}', 'status': 500}
+
+    if proc.returncode != 0:
+        return False, {
+            'error': 'systemd-run refused to start the unit',
+            'stderr': (proc.stderr or '').strip(),
+            'status': 500,
+        }
+    return True, {}
+
+
+def _action_state(unit_name):
+    """Read the state of a transient action unit.
+
+    Returns a uniform dict — ALWAYS the same keys regardless of whether
+    the unit ever existed. Callers can jsonify() it directly.
+
+    ``state`` values:
+        ``idle``      – never run (or fully cleaned up)
+        ``running``   – currently executing
+        ``success``   – last run finished with exit 0
+        ``failed``    – last run finished with non-zero exit
+        ``cancelled`` – last run was stopped via DELETE / systemctl stop
+        ``unknown``   – systemctl responded with a shape we don't expect
+    """
+    if not unit_name.endswith('.service'):
+        unit_name = f'{unit_name}.service'
+
+    empty = {
+        'unit': unit_name,
+        'state': 'idle',
+        'started_at': None,
+        'finished_at': None,
+        'exit_code': None,
+        'result': None,
+    }
+
+    try:
+        proc = subprocess.run(
+            ['systemctl', 'show', unit_name,
+             '--property=LoadState,ActiveState,SubState,Result,ExecMainStatus,ExecMainStartTimestamp,ExecMainExitTimestamp'],
+            capture_output=True, text=True, timeout=5,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return empty
+
+    if proc.returncode != 0:
+        return empty
+
+    props = {}
+    for line in proc.stdout.splitlines():
+        if '=' in line:
+            k, _, v = line.partition('=')
+            props[k] = v
+
+    if props.get('LoadState') == 'not-found':
+        # systemd already reclaimed the transient unit. If we have a
+        # snapshot of its terminal state, serve that so the caller sees
+        # the exit code / result / timestamps of the last run.
+        snap = _action_last_state.get(unit_name)
+        return snap if snap else empty
+
+    active = props.get('ActiveState', '')
+    sub = props.get('SubState', '')
+    result = props.get('Result', '') or None
+
+    exit_code = props.get('ExecMainStatus')
+    try:
+        exit_code = int(exit_code) if exit_code not in (None, '') else None
+    except (TypeError, ValueError):
+        exit_code = None
+
+    # Type=simple + RemainAfterExit=yes semantics:
+    #   active/running  → process still executing
+    #   active/exited   → process finished cleanly (unit persists post-exit)
+    #   failed          → process died with non-zero or was killed by signal
+    if active == 'active' and sub == 'running':
+        state = 'running'
+    elif active == 'active' and sub == 'exited' and (result in (None, '', 'success')):
+        state = 'success'
+    elif active == 'inactive' and result == 'success':
+        # No RemainAfterExit (older units) — terminated cleanly then vanished.
+        state = 'success'
+    elif result == 'canceled':
+        state = 'cancelled'
+    # SIGTERM (exit 15) is the signal systemd sends when we DELETE the
+    # unit or when the operator runs `systemctl stop` — treat it as
+    # cancelled rather than failed, so the API surfaces intent, not
+    # only the signal that carried it. A hard SIGKILL (137) or any
+    # other signal still surfaces as `failed`.
+    elif result == 'signal' and exit_code == 15:
+        state = 'cancelled'
+    elif active == 'failed' or result in ('exit-code', 'signal', 'core-dump', 'timeout', 'oom-kill'):
+        state = 'failed'
+    elif active in ('activating', 'deactivating') or sub == 'start':
+        state = 'running'
+    else:
+        state = 'unknown'
+
+    def _ts(s):
+        # systemd emits either an empty string, "0" or a formatted date;
+        # we return it as-is (empty → None) so the frontend / client
+        # doesn't have to parse an ad-hoc format.
+        return s.strip() if s and s.strip() and s.strip() != '0' else None
+
+    result_dict = {
+        'unit': unit_name,
+        'state': state,
+        'started_at': _ts(props.get('ExecMainStartTimestamp', '')),
+        'finished_at': _ts(props.get('ExecMainExitTimestamp', '')),
+        'exit_code': exit_code,
+        'result': result,
+    }
+    # Cache terminal states so we can serve them after systemd garbage-
+    # collects the transient unit. Running / idle states are transient
+    # by definition and don't need snapshotting.
+    if state in _ACTION_TERMINAL:
+        _action_last_state[unit_name] = result_dict
+    return result_dict
+
+
+def _action_cancel(unit_name):
+    """Stop a running transient action unit. Idempotent — succeeds on
+    units that are not running (or don't exist).
+
+    Preserves the started-at timestamp of the run being cancelled and
+    manufactures a `cancelled` snapshot into ``_action_last_state`` so
+    that callers polling `.../status` after the cancel see the
+    cancellation intent, not the empty `idle` state that systemd
+    exposes once transient units get reclaimed. We snapshot BEFORE
+    calling `systemctl stop` because systemd releases the unit the
+    moment the stop returns — reading state afterwards would see
+    `not-found`.
+    """
+    if not unit_name.endswith('.service'):
+        unit_name = f'{unit_name}.service'
+
+    pre = _action_state(unit_name)
+    was_active = pre.get('state') in ('running',)
+
+    try:
+        subprocess.run(['systemctl', 'stop', unit_name],
+                       capture_output=True, text=True, timeout=10)
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return False
+
+    if was_active:
+        import datetime
+        _action_last_state[unit_name] = {
+            'unit': unit_name,
+            'state': 'cancelled',
+            'started_at': pre.get('started_at'),
+            'finished_at': datetime.datetime.now().astimezone().strftime('%a %Y-%m-%d %H:%M:%S %Z'),
+            'exit_code': 15,
+            'result': 'signal',
+        }
+    return True
 
 
 def get_cached_pvesh_cluster_resources_vm():
@@ -18880,6 +19129,132 @@ def api_host_backups_archive_log(archive_id):
         'content': content,
         'tail': lines[-80:],
     })
+
+
+# ─── Actions API ─────────────────────────────────────────────────────────
+#
+# External-integration friendly endpoints (Home Assistant, Homepage,
+# Ansible, custom dashboards) to trigger the same actions the operator
+# would run from the Monitor UI or the shell menu. All mutating routes
+# require a token with `full_admin` scope; the read-only `.../status`
+# routes accept any authenticated caller. Every trigger returns 202
+# with the state at the moment of the call; clients poll `.../status`
+# to observe progress. See `_action_run` / `_action_state` for the
+# systemd-run backing that makes each of these persistent, cancellable
+# and single-instance without extra plumbing.
+
+# System power — reboot / shutdown of the Proxmox host
+
+@app.route('/api/system/power/reboot', methods=['POST'])
+@require_admin_scope
+def api_system_power_reboot():
+    """Reboot the Proxmox host. Fire-and-forget: the host will drop the
+    HTTP connection when the shutdown sequence starts."""
+    ok, err = _action_run(
+        'proxmenux-action-system-power-reboot',
+        ['/bin/systemctl', 'reboot'],
+        description='ProxMenux action: reboot host',
+    )
+    if not ok:
+        return jsonify({k: v for k, v in err.items() if k != 'status'}), err.get('status', 500)
+    return jsonify(_action_state('proxmenux-action-system-power-reboot')), 202
+
+
+@app.route('/api/system/power/reboot/status', methods=['GET'])
+@require_auth
+def api_system_power_reboot_status():
+    return jsonify(_action_state('proxmenux-action-system-power-reboot'))
+
+
+@app.route('/api/system/power/shutdown', methods=['POST'])
+@require_admin_scope
+def api_system_power_shutdown():
+    """Power off the Proxmox host."""
+    ok, err = _action_run(
+        'proxmenux-action-system-power-shutdown',
+        ['/bin/systemctl', 'poweroff'],
+        description='ProxMenux action: shutdown host',
+    )
+    if not ok:
+        return jsonify({k: v for k, v in err.items() if k != 'status'}), err.get('status', 500)
+    return jsonify(_action_state('proxmenux-action-system-power-shutdown')), 202
+
+
+@app.route('/api/system/power/shutdown/status', methods=['GET'])
+@require_auth
+def api_system_power_shutdown_status():
+    return jsonify(_action_state('proxmenux-action-system-power-shutdown'))
+
+
+# Proxmox VE update — same script the Update Now dashboard button runs
+
+_PVE_UPDATE_SCRIPT = '/usr/local/share/proxmenux/scripts/utilities/proxmox_update.sh'
+
+
+@app.route('/api/system/pve-update/run', methods=['POST'])
+@require_admin_scope
+def api_system_pve_update_run():
+    """Trigger the same safe PVE update flow the Health Monitor's
+    Update Now button invokes (delegates to `update-pve-safe.sh`)."""
+    if not os.path.exists(_PVE_UPDATE_SCRIPT):
+        return jsonify({'error': 'PVE update script not installed',
+                        'path': _PVE_UPDATE_SCRIPT}), 500
+    ok, err = _action_run(
+        'proxmenux-action-pve-update',
+        ['/bin/bash', _PVE_UPDATE_SCRIPT],
+        description='ProxMenux action: Proxmox VE update',
+    )
+    if not ok:
+        return jsonify({k: v for k, v in err.items() if k != 'status'}), err.get('status', 500)
+    return jsonify(_action_state('proxmenux-action-pve-update')), 202
+
+
+@app.route('/api/system/pve-update/status', methods=['GET'])
+@require_auth
+def api_system_pve_update_status():
+    return jsonify(_action_state('proxmenux-action-pve-update'))
+
+
+@app.route('/api/system/pve-update', methods=['DELETE'])
+@require_admin_scope
+def api_system_pve_update_cancel():
+    """Cancel a PVE update run in progress. No-op if no run is active."""
+    _action_cancel('proxmenux-action-pve-update')
+    return jsonify(_action_state('proxmenux-action-pve-update'))
+
+
+# ProxMenux self-update — pipes the canonical one-line installer.
+# Runs inside a systemd unit so it survives the proxmenux-monitor
+# service restart the installer performs mid-way.
+
+_PROXMENUX_INSTALLER_URL = 'https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh'
+
+
+@app.route('/api/proxmenux/self-update/run', methods=['POST'])
+@require_admin_scope
+def api_proxmenux_self_update_run():
+    """Update ProxMenux itself by piping the canonical installer.
+
+    The installer restarts `proxmenux-monitor.service` mid-way; because
+    the run lives in its own transient systemd unit (not a subprocess
+    of this Flask worker), the update completes even though the Monitor
+    process that accepted the call dies during the restart. Clients
+    can poll `.../status` to observe completion.
+    """
+    ok, err = _action_run(
+        'proxmenux-action-self-update',
+        ['/bin/bash', '-c', f'wget -qLO - {_PROXMENUX_INSTALLER_URL} | bash'],
+        description='ProxMenux action: self-update',
+    )
+    if not ok:
+        return jsonify({k: v for k, v in err.items() if k != 'status'}), err.get('status', 500)
+    return jsonify(_action_state('proxmenux-action-self-update')), 202
+
+
+@app.route('/api/proxmenux/self-update/status', methods=['GET'])
+@require_auth
+def api_proxmenux_self_update_status():
+    return jsonify(_action_state('proxmenux-action-self-update'))
 
 
 if __name__ == '__main__':
