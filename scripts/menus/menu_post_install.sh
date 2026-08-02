@@ -322,7 +322,7 @@ show_menu() {
         
 
         menu_items+=("" "")
-        menu_items+=("" "\Z4───────────────────── Community Scripts ──────────────────────\Zn")
+        menu_items+=("" "\Z4───────────────────── $(translate "Community Scripts") ──────────────────────\Zn")
 
         for script in "${COMMUNITY_SCRIPTS[@]}"; do
             IFS='|' read -r name source command <<< "$script"
@@ -344,7 +344,7 @@ show_menu() {
         script_selection=$(dialog --clear --colors \
                                  --backtitle "ProxMenux" \
                                  --title "$(translate "Post-Installation Scripts")" \
-                                 --menu "\n$(translate "Select a post-installation script:"):\n" \
+                                 --menu "\n$(translate "Select a post-installation script:")\n" \
                                  24 84 16 \
                                  "${menu_items[@]}" 2>&1 1>&3)
         exit_status=$?

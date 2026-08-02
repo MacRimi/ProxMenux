@@ -4077,7 +4077,7 @@ main_menu() {
             4   "$(_bk_format_menu_item "$(translate "Scheduled backups and retention policies")" "")" \
             5   "$(_bk_format_menu_item "$(translate "Configure backup destinations (PBS, Borg, local)")" "")" \
             ""  " " \
-            ""  "\Z4───────────────────── Community Scripts ─────────────────────\Zn" \
+            ""  "\Z4───────────────────── $(translate "Community Scripts") ─────────────────────\Zn" \
             6   "$(_bk_format_menu_item "PVE Host Backup" "Helper-Scripts")" \
             7   "$(_bk_format_menu_item "proxmox_toolbox" "Tontonjo")" \
             8   "$(_bk_format_menu_item "proxsave" "tis24dev")" \

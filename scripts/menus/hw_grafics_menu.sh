@@ -32,16 +32,16 @@ while true; do
             "1"         "$(translate "Install/Update NVIDIA Drivers (Host + LXC)")" \
             "2"         "$(translate "Install/Update Coral TPU on Host")" \
             ""  "\Zb\Z4                          LXC\Zn" \
-            "3"         "$(translate "Add GPU to LXC   (Intel | AMD | NVIDIA)")  \Zb\Z4Switch Mode\Zn" \
+            "3"         "$(translate "Add GPU to LXC   (Intel | AMD | NVIDIA)")  \Zb\Z4$(translate "Switch Mode")\Zn" \
             "4"         "$(translate "Add Coral TPU to LXC")" \
             ""  "\Zb\Z4                          VM\Zn" \
-            "5"         "$(translate "Add GPU to VM    (Intel | AMD | NVIDIA)")  \Zb\Z4Switch Mode\Zn" \
+            "5"         "$(translate "Add GPU to VM    (Intel | AMD | NVIDIA)")  \Zb\Z4$(translate "Switch Mode")\Zn" \
             ""          "" \
-            ""  "\Z4──────────────────── SWICHT MODE ───────────────────────\Zn" \
+            ""  "\Z4──────────────────── $(translate "Switch Mode") ───────────────────────\Zn" \
             ""          "" \
             "6"         "$(translate "Switch GPU Mode  (VM <-> LXC)")" \
             ""  "" \
-            ""  "\Z4───────────────────── Utilities ────────────────────────\Zn" \
+            ""  "\Z4───────────────────── $(translate "Utilities") ────────────────────────\Zn" \
             "7"         "$(translate "Manual CLI Guide (GPU/TPU)")" \
             "0"         "$(translate "Return to Main Menu")" \
             2>&1 >/dev/tty

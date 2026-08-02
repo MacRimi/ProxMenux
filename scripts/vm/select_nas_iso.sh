@@ -189,7 +189,7 @@ function select_nas_iso() {
     "6" "Rockstor       VM          (openSUSE based)"
     "7" "ZimaOS         VM          (Proxmox-zimaos)"
     ""  ""
-    ""  "\Z4───────────────── Community Scripts ─────────────────\Zn"
+    ""  "\Z4───────────────── $(translate "Community Scripts") ─────────────────\Zn"
     ""  ""
     "8" "Umbrel OS      VM          (Helper-Scripts)"
     "9" "$(translate "Return to Main Menu")"
