@@ -28,7 +28,7 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
-DEFAULT_LANGUAGES = ("es", "fr", "de", "it", "pt")
+DEFAULT_LANGUAGES = ("es", "fr", "de", "it", "pt", "sk")
 DEFAULT_CONTEXT = "Context: Technical message for Proxmox and IT. Translate:"
 TRANSLATE_CALL_RE = re.compile(
     r"""translate\s+(?P<quote>["'])(?P<text>(?:\\.|(?! (?P=quote) ).)*?)(?P=quote)""",
@@ -260,7 +260,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--languages",
         default=",".join(DEFAULT_LANGUAGES),
-        help="Comma-separated destination languages. Default: es,fr,de,it,pt",
+        help="Comma-separated destination languages. Default: es,fr,de,it,pt,sk",
     )
     parser.add_argument(
         "--provider",
