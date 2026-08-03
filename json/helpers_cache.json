@@ -1103,6 +1103,43 @@
     "os": "debian"
   },
   {
+    "name": "AnythingLLM",
+    "slug": "anythingllm",
+    "desc": "AnythingLLM is an all-in-one AI application: turn documents, websites and other content into a chat-ready knowledge base with RAG, agents and multi-user workspaces. It connects to local model runners such as Ollama and LM Studio as well as OpenAI, Anthropic and other hosted providers.",
+    "script": "ct/anythingllm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/anythingllm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/anythingllm.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Open http://<IP>:3001 and complete the onboarding: pick an LLM provider (for example an existing Ollama container) and an embedding model. Nothing works until a provider is configured.",
+      "Documents, the LanceDB vector store and the SQLite database live in /opt/anythingllm_data/storage, outside the app directory, so they survive updates. Back up that directory.",
+      "Two services run here: anythingllm (server and web UI on 3001) and anythingllm-collector (document processing). No models run in this container - point it at a separate Ollama or a hosted API."
+    ],
+    "warnings": [
+      "Upstream does not support bare-metal deployments - BARE_METAL.md is explicitly a reference only and issues from non-Docker installs are not answered. This script follows that documented procedure."
+    ],
+    "port": 3001,
+    "website": "https://anythingllm.com/",
+    "documentation": "https://docs.anythingllm.com/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/anythingllm.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Anytype Server",
     "slug": "anytype-server",
     "desc": "Anytype is a local-first, privacy-focused alternative to Notion. This script deploys the any-sync-bundle which provides a self-hosted sync server for Anytype clients with external MongoDB and Redis Stack.",
@@ -4501,6 +4538,85 @@
     "os": "debian"
   },
   {
+    "name": "Decypharr",
+    "slug": "decypharr",
+    "desc": "Decypharr exposes a mock qBittorrent and SABnzbd API in front of debrid services, so Sonarr, Radarr, Lidarr and friends can send downloads to Real-Debrid, Torbox, AllDebrid, Debrid-Link or Premiumize as if they were talking to a normal download client. It also supports direct Usenet streaming via NNTP without a separate download client.",
+    "script": "ct/decypharr.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/decypharr.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/decypharr.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00014"
+    ],
+    "category_names": [
+      "*Arr Suite"
+    ],
+    "notes": [
+      "Open http://<IP>:8282 and complete the setup wizard to add your debrid provider and create the admin account. The configuration is written to /opt/decypharr_data/config.json, outside the app directory, so it survives updates.",
+      "The qBittorrent-compatible endpoint is what you add in Sonarr/Radarr as a download client - point it at http://<IP>:8282 and use the credentials you created in the wizard."
+    ],
+    "warnings": [
+      "The optional rclone/DFS mount features need /dev/fuse inside the container. In an unprivileged LXC add 'lxc.cgroup2.devices.allow: c 10:229 rwm' and 'lxc.mount.entry: /dev/fuse dev/fuse none bind,create=file' to the container config. WebDAV and the download-client API work without it."
+    ],
+    "port": 8282,
+    "website": "https://github.com/sirrobot01/decypharr",
+    "documentation": "https://sirrobot01.github.io/decypharr/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/decypharr.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Defguard",
+    "slug": "defguard",
+    "desc": "Defguard is a WireGuard VPN server combined with an identity provider. It adds user enrollment, multi-factor authentication, OpenID Connect SSO and per-user access control on top of WireGuard, all managed from a web interface. This installs the Defguard Core service; gateways are deployed separately on the machines that terminate the VPN tunnels.",
+    "script": "ct/defguard.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/defguard.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/defguard.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "VPN traffic is handled by a third component, the Defguard Gateway, installed on the machine that terminates the tunnels. It connects back to the gRPC port 50055 on this container - see the upstream documentation.",
+      "Installed from the official Defguard apt repository (apt.defguard.net, component release-2.0), so updates go through apt. Data lives in the local PostgreSQL database 'defguard', not in /opt.",
+      "To run Edge on a separate host instead (upstream's segmented layout, with Edge in a DMZ and Core internal), install the defguard-proxy package from the same apt repository there and copy the proxy.toml block from install/defguard-install.sh, then point the wizard at that host's IP:50051."
+    ],
+    "warnings": [
+      "The generated admin password is stored as DEFGUARD_DEFAULT_ADMIN_PASSWORD in /etc/defguard/core.conf. Log in as 'admin' at http://<IP>:8000 and change it.",
+      "Defguard 2.x needs an Edge component before the setup wizard can be completed. It is installed in this same container, so in the wizard step 'Edge Component Adoption' enter 127.0.0.1:50051. Ports do not collide: Core uses 8000/50055, Edge uses 8080/8443/50051.",
+      "DEFGUARD_COOKIE_INSECURE=true is set so the web UI works over plain HTTP. When you put Defguard behind a TLS reverse proxy, remove that line and set DEFGUARD_URL to the public https URL, then restart the service."
+    ],
+    "port": 8000,
+    "website": "https://defguard.net/",
+    "documentation": "https://docs.defguard.net/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/defguard.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "degoog",
     "slug": "degoog",
     "desc": "Search aggregator that queries multiple engines and supports plugins, themes, and extension repositories.",
@@ -6509,6 +6625,41 @@
     "os": "debian"
   },
   {
+    "name": "Fleet",
+    "slug": "fleet",
+    "desc": "Fleet is an open-source device management platform for IT and security teams to manage and monitor servers, laptops, and other devices with osquery.",
+    "script": "ct/fleet.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/fleet.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/fleet.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00009"
+    ],
+    "category_names": [
+      "Monitoring & Analytics"
+    ],
+    "notes": [
+      "Create your admin account on first login via the web interface."
+    ],
+    "warnings": [
+      "TLS is disabled by default. Configure TLS in /opt/fleet/.env for production use."
+    ],
+    "port": 8080,
+    "website": "https://fleetdm.com/",
+    "documentation": "https://fleetdm.com/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/fleet-dm.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "FlowiseAI",
     "slug": "flowiseai",
     "desc": "FlowiseAI is an open source low-code tool for developers to build customized LLM orchestration flow & AI agents",
@@ -7340,6 +7491,48 @@
       "lxc"
     ],
     "config_path": "/opt/actions-runner",
+    "os": "debian"
+  },
+  {
+    "name": "GitLab",
+    "slug": "gitlab",
+    "desc": "GitLab CE is a complete DevOps platform: Git repository hosting, issue tracking, merge requests, CI/CD pipelines, a container registry and a package registry in one application. This installs the official Omnibus package, which bundles its own PostgreSQL, Redis, NGINX and Puma.",
+    "script": "ct/gitlab.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/gitlab.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/gitlab.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "external_url is set to the container IP at install time. If you use a domain or a reverse proxy, change external_url in /etc/gitlab/gitlab.rb and run 'gitlab-ctl reconfigure'.",
+      "Omnibus bundles its own PostgreSQL, Redis and NGINX - do not install those separately in this container. Repositories live in /var/opt/gitlab; back up with 'gitlab-backup create' rather than copying directories."
+    ],
+    "warnings": [
+      "The initial root password is in /etc/gitlab/initial_root_password and is deleted automatically after 24 hours. Log in at http://<IP> as 'root' and change it right away.",
+      "GitLab Omnibus is resource-hungry. 8 GB RAM and 4 cores are the practical minimum; the official requirement is 4 GB RAM plus swap and it will feel slow below 8 GB. The first 'gitlab-ctl reconfigure' during installation takes several minutes.",
+      "/etc/gitlab/gitlab.rb sets package['modify_kernel_parameters'] = false. Omnibus otherwise runs 'sysctl -e --system' during reconfigure, which fails in an unprivileged LXC because most kernel keys are not writable. Do not remove that line."
+    ],
+    "port": 80,
+    "website": "https://about.gitlab.com/",
+    "documentation": "https://docs.gitlab.com/omnibus/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gitlab.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "root",
+      "password": ""
+    },
     "os": "debian"
   },
   {
@@ -9661,6 +9854,43 @@
     "os": "debian"
   },
   {
+    "name": "Journiv",
+    "slug": "journiv",
+    "desc": "Journiv is a self-hosted, privacy-focused journaling app. It stores entries, photos and videos on your own server, supports activity and mood tracking, full-text search and imports from Daylio and other journaling apps, with a Flutter web frontend served by a FastAPI backend.",
+    "script": "ct/journiv.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/journiv.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/journiv.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Create your account through the web UI at http://<IP>:8000 on first visit - the first registered user becomes the administrator.",
+      "Three services run in this container: journiv (API and web UI), journiv-worker (Celery) and journiv-beat (scheduler). Check all three with 'systemctl status journiv journiv-worker journiv-beat'.",
+      "Journiv is in beta (0.x). The paid 'Plus' features ship as a precompiled module in the official Docker image only and are therefore not available in this source-based install."
+    ],
+    "warnings": [
+      "Media, exports, imports and logs live in /opt/journiv_data; entries and metadata are in the local PostgreSQL database 'journiv'. Back up both."
+    ],
+    "port": 8000,
+    "website": "https://journiv.com/",
+    "documentation": "https://github.com/journiv/journiv-app#readme",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/journiv.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Jupyter Notebook",
     "slug": "jupyternotebook",
     "desc": "The Jupyter Notebook is an open-source web application that allows you to create and share documents that contain live code, equations, visualizations and narrative text. Uses include: data cleaning and transformation, numerical simulation, statistical modeling, data visualization, machine learning, and much more.",
@@ -11019,6 +11249,43 @@
     "os": "ubuntu"
   },
   {
+    "name": "llama.cpp",
+    "slug": "llama-cpp",
+    "desc": "llama.cpp runs GGUF language models directly in C/C++ with no Python runtime. This installs llama-server, which serves a built-in web chat UI plus an OpenAI-compatible API on the same port, so it can back tools like AnythingLLM, Open WebUI or Claude Code. Lighter and closer to the metal than Ollama.",
+    "script": "ct/llama-cpp.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/llama-cpp.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/llama-cpp.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "On first start llama-server downloads the model set in LLAMA_ARG_HF_REPO (default: ggml-org/gemma-3-1b-it-GGUF, roughly 800 MB) into /opt/llama-cpp_data/models, so the container is usable straight away. Swap it for any GGUF repo, or point LLAMA_ARG_MODEL at a local file, then restart.",
+      "This is the CPU build (LLAMA_ARG_N_GPU_LAYERS=0). For GPU offload pass a card through and install the matching build - the release also ships vulkan, rocm and sycl variants. Adjust the asset name in the script accordingly.",
+      "RAM is the limiting factor: the model must fit alongside the KV cache. 8 GB comfortably runs models up to roughly 7B at Q4. Raise LLAMA_ARG_CTX_SIZE only if you have headroom."
+    ],
+    "warnings": [
+      "The web UI and the OpenAI-compatible API share port 8080: /v1/chat/completions, /v1/models and friends. There is no authentication - set LLAMA_ARG_API_KEY in /opt/llama-cpp.env or keep it off untrusted networks."
+    ],
+    "port": 8080,
+    "website": "https://github.com/ggml-org/llama.cpp",
+    "documentation": "https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/llama-cpp.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "lldap",
     "slug": "lldap",
     "desc": "LLDAP is a lightweight LDAP server designed for simplicity and ease of use. It provides secure user authentication and authorization management through LDAP over TLS. Ideal for small to medium-sized environments, It aims to streamline identity management tasks with a minimalistic and straightforward setup.",
@@ -11802,6 +12069,43 @@
     "privileged": false,
     "has_arm": true,
     "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Home Assistant Matter Hub",
+    "slug": "matter-hub",
+    "desc": "Home Assistant Matter Hub publishes your Home Assistant entities as Matter devices, so Apple Home, Google Home, Amazon Alexa and any other Matter controller can see and control them. It acts as a Matter bridge in front of Home Assistant and needs only a long-lived access token to connect. This installs the actively maintained RiDDiX fork - the original t0bst4r project reached end of maintenance in January 2026.",
+    "script": "ct/matter-hub.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/matter-hub.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/matter-hub.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00017"
+    ],
+    "category_names": [
+      "ZigBee, Z-Wave & Matter"
+    ],
+    "notes": [
+      "Bridge data and fabric credentials are stored in /opt/matter-hub_data. Deleting that directory unpairs every controller and requires re-commissioning.",
+      "This is the community fork by RiDDiX. The original t0bst4r/home-assistant-matter-hub ended maintenance in January 2026 and receives no further fixes."
+    ],
+    "warnings": [
+      "Set HAMH_HOME_ASSISTANT_URL and HAMH_HOME_ASSISTANT_ACCESS_TOKEN in /opt/matter-hub.env, then run 'systemctl restart matter-hub'. Create the long-lived access token in Home Assistant under your user profile, Security tab.",
+      "Matter relies on IPv6 and mDNS. The container needs working IPv6 and must be on the same L2 network as your Matter controllers. Access points and switches that filter or rate-limit multicast are the most common cause of devices going 'No Response' after a while - check for IGMP snooping, mDNS/Bonjour filtering and AP isolation."
+    ],
+    "port": 8482,
+    "website": "https://github.com/RiDDiX/home-assistant-matter-hub",
+    "documentation": "https://riddix.github.io/home-assistant-matter-hub",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/home-assistant.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
     "execute_in": [
       "lxc"
     ],
@@ -12931,6 +13235,42 @@
     "os": "debian"
   },
   {
+    "name": "nebula-sync",
+    "slug": "nebula-sync",
+    "desc": "nebula-sync keeps multiple Pi-hole v6 instances in sync by replicating the configuration of a primary Pi-hole to one or more replicas over the Pi-hole API. It can run a full Teleporter import/export or sync only selected features, on a cron schedule.",
+    "script": "ct/nebula-sync.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/nebula-sync.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/nebula-sync.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00005"
+    ],
+    "category_names": [
+      "Adblock & DNS"
+    ],
+    "notes": [
+      "Until PRIMARY and REPLICAS are configured the service restarts every 30 seconds. Check progress with 'journalctl -u nebula-sync -f'. The default schedule is CRON='0 * * * *' (hourly).",
+      "Requires Pi-hole v6 or newer on all instances - the v5 API is not supported. This is a third-party project and not part of the official Pi-hole project."
+    ],
+    "warnings": [
+      "This has no web interface. Edit /opt/nebula-sync.env and set PRIMARY and REPLICAS to your Pi-hole instances in the format 'http://host|password' (replicas comma-separated), then run 'systemctl restart nebula-sync'."
+    ],
+    "port": 0,
+    "website": "https://github.com/lovelaze/nebula-sync",
+    "documentation": "https://github.com/lovelaze/nebula-sync#configuration",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pi-hole.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Neko",
     "slug": "neko",
     "desc": "A self-hosted virtual browser that uses WebRTC to stream a desktop environment to multiple users for watch parties, collaborative browsing, and interactive presentations.",
@@ -13762,6 +14102,43 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Nomad",
+    "slug": "nomad",
+    "desc": "Nomad is a workload orchestrator from HashiCorp. It schedules containers, raw binaries, Java applications and VMs across a cluster from a single binary, and is a much lighter alternative to Kubernetes for homelab-scale deployments. This installs a single node running as both server and client.",
+    "script": "ct/nomad.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/nomad.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/nomad.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00003"
+    ],
+    "category_names": [
+      "Containers & Docker"
+    ],
+    "notes": [
+      "This is a single-node setup: server and client are both enabled with bootstrap_expect = 1. To join more nodes, edit /etc/nomad.d/nomad.hcl and restart the service.",
+      "The Docker task driver needs a working Docker daemon in the same container, which is not installed here. Out of the box the exec, raw_exec and java drivers are available.",
+      "State lives in /opt/nomad_data. Installed from the official HashiCorp apt repository, so updates go through 'apt install nomad'."
+    ],
+    "warnings": [
+      "ACLs are disabled by default, so the UI on port 4646 is open to anyone who can reach it. Enable the ACL system or restrict access before exposing this beyond a trusted network."
+    ],
+    "port": 4646,
+    "website": "https://www.nomadproject.io/",
+    "documentation": "https://developer.hashicorp.com/nomad/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nomad.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -15812,6 +16189,47 @@
     "os": "debian"
   },
   {
+    "name": "PeerTube",
+    "slug": "peertube",
+    "desc": "PeerTube is a federated, self-hosted video platform. Videos are distributed peer-to-peer via WebTorrent to reduce bandwidth on the origin server, and instances federate over ActivityPub so users can follow channels across the fediverse, including Mastodon.",
+    "script": "ct/peertube.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/peertube.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/peertube.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Videos, thumbnails and logs live in /opt/peertube_data/storage, the configuration in /opt/peertube_data/config, and metadata in the PostgreSQL database 'peertube_prod'. Transcoding is CPU-heavy - give the container more cores if you upload a lot."
+    ],
+    "warnings": [
+      "The initial 'root' password is generated on first start and written to the log. Read it with: journalctl -u peertube | grep -i 'User password'",
+      "PeerTube does not support changing the webserver hostname after the fact - it is a documented, risky operation. Set webserver.hostname in /opt/peertube_data/config/production.yaml to your final domain BEFORE creating any content, then restart the service.",
+      "For federation and normal use PeerTube needs HTTPS on a public domain. The install is configured for plain HTTP on port 9000 for initial setup; put it behind a TLS reverse proxy and set webserver.https to true and port to 443."
+    ],
+    "port": 9000,
+    "website": "https://joinpeertube.org/",
+    "documentation": "https://docs.joinpeertube.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/peertube.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "root",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "PegaProx",
     "slug": "pegaprox",
     "desc": "PegaProx is a third-party multi-cluster web UI for Proxmox VE (and XCP-ng): unified datacenter management, cross-cluster VM migrations, intelligent load balancing, and integrated VNC/SSH consoles. It connects to your clusters remotely over the Proxmox API and SSH and stores its config in an encrypted local SQLite database.",
@@ -17511,6 +17929,47 @@
       "pve"
     ],
     "config_path": "/opt/PVEScripts-Local/.env",
+    "os": "debian"
+  },
+  {
+    "name": "pyLoad",
+    "slug": "pyload",
+    "desc": "pyLoad is a lightweight download manager written in Python. It handles one-click hosters, container files (DLC, RSDF, CCF) and direct links, supports premium accounts, captcha solving and a plugin system, and is controlled through a web interface, a CLI or third-party clients.",
+    "script": "ct/pyload.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/pyload.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/pyload.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00011"
+    ],
+    "category_names": [
+      "Files & Downloads"
+    ],
+    "notes": [
+      "pyLoad binds its web interface to localhost by default. The installer rewrites the webui host in /opt/pyload_data/userdir/settings/pyload.cfg to 0.0.0.0 so the container is reachable by IP - do not set it back to localhost unless you only access it through a reverse proxy on the same host.",
+      "Downloads go to /opt/pyload_data/downloads and the configuration lives in /opt/pyload_data/userdir. Both are outside the app directory so they survive updates.",
+      "pyLoad is still in pre-release; the installer uses the pyload-ng pre-release channel because no stable release exists yet."
+    ],
+    "warnings": [
+      "Log in at http://<IP>:8000 with pyload/pyload and change the password immediately."
+    ],
+    "port": 8000,
+    "website": "https://pyload.net/",
+    "documentation": "https://github.com/pyload/pyload/wiki",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pyload.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "pyload",
+      "password": "pyload"
+    },
     "os": "debian"
   },
   {
@@ -19952,6 +20411,83 @@
     "os": "debian"
   },
   {
+    "name": "Stalwart",
+    "slug": "stalwart",
+    "desc": "Stalwart is an all-in-one mail and collaboration server written in Rust. A single binary provides SMTP, IMAP, POP3, JMAP, CalDAV, CardDAV and WebDAV plus spam filtering, DKIM/SPF/DMARC and a web admin interface, with no external database required for a default install.",
+    "script": "ct/stalwart.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/stalwart.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/stalwart.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00000"
+    ],
+    "category_names": [
+      "Miscellaneous"
+    ],
+    "notes": [
+      "Configuration and mail data live in /opt/stalwart_data (etc, data, logs), outside the app directory, so they survive updates. Include this directory in your backups.",
+      "The default datastore is embedded RocksDB - no external database needed. PostgreSQL, MySQL, SQLite, S3, Redis and NATS backends can be configured later through the admin UI."
+    ],
+    "warnings": [
+      "On first start Stalwart runs in bootstrap mode and generates a temporary admin password. Read it with: journalctl -u stalwart | grep -A8 'bootstrap mode'. Then finish setup at http://<IP>:8080/admin.",
+      "Running a mail server that is reachable from the internet needs correct DNS (MX, SPF, DKIM, DMARC, rDNS/PTR) and a valid TLS certificate. Set STALWART_HOSTNAME and STALWART_PUBLIC_URL in /opt/stalwart_data/etc/stalwart.env, then restart the service."
+    ],
+    "port": 8080,
+    "website": "https://stalw.art/",
+    "documentation": "https://stalw.art/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/stalwart.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
+    "name": "Stash",
+    "slug": "stash",
+    "desc": "Stash is a self-hosted organizer for adult media collections. It scans your library, then enriches it with performers, studios, tags and scene metadata pulled from stash-box instances such as StashDB and from community scrapers, and serves everything through a web interface.",
+    "script": "ct/stash.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/stash.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/stash.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "On first start Stash runs a setup wizard at http://<IP>:9999 where you pick your media directories and optionally set a username and password.",
+      "Configuration, database and generated content live in /opt/stash_data, outside the app directory, so they survive updates. Include this directory in your backups."
+    ],
+    "warnings": [
+      "Media files are not stored in the container. Mount your library into the LXC (for example via a Proxmox bind mount) and point the Stash scan directories at the mount path."
+    ],
+    "port": 9999,
+    "website": "https://stashapp.cc/",
+    "documentation": "https://docs.stashapp.cc/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/stash.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "step-ca",
     "slug": "step-ca",
     "desc": "A private certificate authority (X.509 & SSH) & ACME server for secure automated certificate management, so you can use TLS everywhere & SSO for SSH.",
@@ -20930,6 +21466,48 @@
       "pve"
     ],
     "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "TeslaMate",
+    "slug": "teslamate",
+    "desc": "TeslaMate is a self-hosted data logger for Tesla vehicles. It records drives, charges, battery health, efficiency and vehicle updates into PostgreSQL and visualizes everything through a set of prebuilt Grafana dashboards, with optional MQTT publishing for home automation.",
+    "script": "ct/teslamate.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/teslamate.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/teslamate.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00009"
+    ],
+    "category_names": [
+      "Monitoring & Analytics"
+    ],
+    "notes": [
+      "A local Mosquitto broker is installed and TeslaMate publishes to it on 127.0.0.1. Point your home automation at port 1883, or set DISABLE_MQTT=true in /opt/teslamate.env if you do not need it.",
+      "Built from source with Elixir/Phoenix - the initial build takes several minutes."
+    ],
+    "warnings": [
+      "Two web interfaces: TeslaMate on port 4000 (sign in with your Tesla account there) and Grafana on port 3000 with the TeslaMate dashboards. The Grafana credentials admin/admin must be changed on first login.",
+      "TeslaMate has no authentication of its own. Your Tesla API tokens are stored in it, so never expose port 4000 to the internet without putting an authenticating reverse proxy in front of it.",
+      "ENCRYPTION_KEY in /opt/teslamate.env encrypts the stored Tesla tokens - losing it means re-authenticating every vehicle. Set TZ to your local timezone for correct drive and charge timestamps. Vehicle data lives in the PostgreSQL database 'teslamate'."
+    ],
+    "port": 4000,
+    "website": "https://github.com/teslamate-org/teslamate",
+    "documentation": "https://docs.teslamate.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/teslamate.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": "admin"
+    },
     "os": "debian"
   },
   {
@@ -22282,6 +22860,43 @@
     "privileged": false,
     "has_arm": true,
     "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Unsloth",
+    "slug": "unsloth",
+    "desc": "Unsloth Studio is a local web UI for running and fine-tuning language models. It can search, download and serve GGUF, LoRA and safetensors models, compare two models side by side, export to other formats, and expose OpenAI- and Anthropic-compatible endpoints so local models can be used from Claude Code, Codex and similar tools. Fine-tuning with LoRA is configured entirely through the UI.",
+    "script": "ct/unsloth.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/unsloth.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/unsloth.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Models and Hugging Face caches land in /opt/unsloth_data, which fills up quickly - a single 7B model at Q4 is roughly 4 GB. Give the container more disk if you plan to keep several, and back that directory up rather than /opt/unsloth.",
+      "PyTorch is installed with uv's --torch-backend=auto, so a CPU-only container gets the CPU wheels and a GPU container the matching CUDA build. Re-run the update after adding a GPU so the right backend is pulled."
+    ],
+    "warnings": [
+      "The generated UI password is stored as UNSLOTH_STUDIO_PASSWORD in /opt/unsloth.env. Without it Unsloth Studio would prompt for one on the terminal, which a systemd service cannot answer.",
+      "Fine-tuning requires an NVIDIA GPU. Without one, inference, model management, export and the OpenAI-compatible API work, but training does not. Pass a card through and install the NVIDIA driver in the container to enable it."
+    ],
+    "port": 8888,
+    "website": "https://unsloth.ai/",
+    "documentation": "https://unsloth.ai/docs/new/studio",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/unsloth.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
     "execute_in": [
       "lxc"
     ],
@@ -23684,6 +24299,43 @@
       "pve"
     ],
     "config_path": "/opt/yamtrack/src/.env",
+    "os": "debian"
+  },
+  {
+    "name": "Your Spotify",
+    "slug": "your-spotify",
+    "desc": "Your Spotify records your Spotify listening history and turns it into statistics: top tracks, artists and albums over any period, listening habits by time of day, and long-term trends. Past history can be imported from a Spotify privacy data export.",
+    "script": "ct/your-spotify.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/your-spotify.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/your-spotify.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Two services run here: your-spotify (API on 8080) and your-spotify-web (UI on 3000). Point the reverse proxy at both.",
+      "Listening history is stored in the local MongoDB database 'your_spotify'. Back that up rather than /opt."
+    ],
+    "warnings": [
+      "Spotify only accepts https redirect URIs (loopback excepted), so the Spotify login cannot be completed on the container's plain IP - it fails with 'redirect_uri: Insecure'. A TLS reverse proxy with a real domain is required for normal use.",
+      "Create an app at https://developer.spotify.com/dashboard, put its client ID and secret into SPOTIFY_PUBLIC and SPOTIFY_SECRET in /opt/your-spotify.env, set API_ENDPOINT and CLIENT_ENDPOINT to your https URLs, and register <API_ENDPOINT>/oauth/spotify/callback in the dashboard. The API endpoint is baked into the built frontend, so run the update after changing it."
+    ],
+    "port": 3000,
+    "website": "https://github.com/Yooooomi/your_spotify",
+    "documentation": "https://github.com/Yooooomi/your_spotify#readme",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/your-spotify.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
