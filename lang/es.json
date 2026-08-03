@@ -4205,7 +4205,7 @@
   "Swap partition detected": "Intercambiar partición detectada",
   "Swappiness configuration created successfully": "Configuración de intercambio creada exitosamente",
   "Switch GPU Mode  (VM <-> LXC)": "Cambiar el modo GPU (VM <-> LXC)",
-  "Switch Mode": "Cambiar modo",
+  "Switch Mode": "Switch Mode",
   "Switch Script Not Found": "Script de cambio no encontrado",
   "Switch to GPU -> LXC (native driver mode)": "Cambie a GPU -> LXC (modo de controlador nativo)",
   "Switch to GPU -> VM (VFIO passthrough mode)": "Cambie a GPU -> VM (modo de paso VFIO)",

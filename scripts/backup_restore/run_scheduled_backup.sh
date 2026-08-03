@@ -532,6 +532,58 @@ _sb_hydrate_attached_retention() {
   done < <(hb_pve_prune_to_keep_env "$prune")
 }
 
+# Safe replacement for `source <env>`. The job .env is DATA (credentials
+# + parameters), not code. Sourcing it as bash produces two failure modes
+# reported from the field:
+#   - a value with spaces (e.g. `ON_CALENDAR=*-*-* 01:00:00`) is parsed
+#     as "assign first token, then run the rest as a command" — the
+#     scheduled runner dies with `01:00:00: command not found` before
+#     doing any work.
+#   - a value containing a bare `$word` under `set -u` triggers an
+#     unbound-variable expansion during sourcing and aborts.
+# It also opens a code-execution vector (backticks / `$(...)` in a
+# password would run as root at source time).
+# The API (shlex.quote) and CLI (printf %q) both quote on write, so
+# jobs created by current code are safe under source. Legacy jobs on
+# disk are not — hence this parser.
+_sb_load_env_file() {
+  local file="$1"
+  [[ -f "$file" ]] || return 1
+  local line key value_raw prev_u prev_f
+  case $- in *u*) prev_u=1 ;; *) prev_u=0 ;; esac
+  case $- in *f*) prev_f=1 ;; *) prev_f=0 ;; esac
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    [[ "$line" == *=* ]] || continue
+    key="${line%%=*}"
+    [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+    value_raw="${line#*=}"
+    unset "$key"
+    # Refuse command substitution — no legitimate reason for `$(...)`
+    # or backticks in a data file; treating them as literal is safer
+    # than evaluating them as root.
+    # shellcheck disable=SC2016  # matching literal `$(` and backtick, not expanding
+    if [[ "$value_raw" == *'$('* || "$value_raw" == *'`'* ]]; then
+      declare -gx "$key=$value_raw"
+      continue
+    fi
+    # Try a shell-quoted parse (handles printf %q backslash escapes and
+    # shlex.quote surrounding quotes). Guards: set +u so `$FOO` in an
+    # unquoted value doesn't abort; set -f so `*` doesn't glob-expand
+    # against files on disk. If eval fails (legacy unquoted value with
+    # spaces, unbalanced quotes, etc.), fall through to a raw literal
+    # assignment.
+    set +u
+    set -f
+    if ! eval "declare -gx $key=$value_raw" 2>/dev/null; then
+      unset "$key"
+      declare -gx "$key=$value_raw"
+    fi
+    (( prev_u )) && set -u
+    (( prev_f )) || set +f
+  done <"$file"
+}
+
 main() {
   local job_id="${1:-}"
   [[ -z "$job_id" ]] && { echo "Usage: $0 <job_id>" >&2; exit 1; }
@@ -539,8 +591,7 @@ main() {
   local job_file="${JOBS_DIR}/${job_id}.env"
   [[ -f "$job_file" ]] || { echo "Job not found: $job_id" >&2; exit 1; }
 
-  # shellcheck source=/dev/null
-  source "$job_file"
+  _sb_load_env_file "$job_file"
 
   # Attached jobs: re-read retention from the PVE parent live (see
   # _sb_hydrate_attached_retention above for the why). Standalone
