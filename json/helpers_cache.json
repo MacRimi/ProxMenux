@@ -1103,43 +1103,6 @@
     "os": "debian"
   },
   {
-    "name": "AnythingLLM",
-    "slug": "anythingllm",
-    "desc": "AnythingLLM is an all-in-one AI application: turn documents, websites and other content into a chat-ready knowledge base with RAG, agents and multi-user workspaces. It connects to local model runners such as Ollama and LM Studio as well as OpenAI, Anthropic and other hosted providers.",
-    "script": "ct/anythingllm.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/anythingllm.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/anythingllm.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00020"
-    ],
-    "category_names": [
-      "AI / Coding & Dev-Tools"
-    ],
-    "notes": [
-      "Open http://<IP>:3001 and complete the onboarding: pick an LLM provider (for example an existing Ollama container) and an embedding model. Nothing works until a provider is configured.",
-      "Documents, the LanceDB vector store and the SQLite database live in /opt/anythingllm_data/storage, outside the app directory, so they survive updates. Back up that directory.",
-      "Two services run here: anythingllm (server and web UI on 3001) and anythingllm-collector (document processing). No models run in this container - point it at a separate Ollama or a hosted API."
-    ],
-    "warnings": [
-      "Upstream does not support bare-metal deployments - BARE_METAL.md is explicitly a reference only and issues from non-Docker installs are not answered. This script follows that documented procedure."
-    ],
-    "port": 3001,
-    "website": "https://anythingllm.com/",
-    "documentation": "https://docs.anythingllm.com/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/anythingllm.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": true,
-    "is_dev": true,
-    "execute_in": [
-      "lxc"
-    ],
-    "config_path": "",
-    "os": "debian"
-  },
-  {
     "name": "Anytype Server",
     "slug": "anytype-server",
     "desc": "Anytype is a local-first, privacy-focused alternative to Notion. This script deploys the any-sync-bundle which provides a self-hosted sync server for Anytype clients with external MongoDB and Redis Stack.",
@@ -2560,6 +2523,43 @@
       "username": "admin@admin.com",
       "password": "password"
     },
+    "os": "debian"
+  },
+  {
+    "name": "Borg-UI",
+    "slug": "borg-ui",
+    "desc": "Borg-UI is a web frontend for BorgBackup. It replaces the borg command line for everyday work: creating and browsing repositories, scheduling backups, inspecting archives and restoring files, all from the browser. BorgBackup itself is installed alongside it.",
+    "script": "ct/borg-ui.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/borg-ui.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/borg-ui.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems"
+    ],
+    "notes": [
+      "Create your account through the web UI at http://<IP>:8081 on first visit.",
+      "ENABLE_STARTUP_LICENSE_SYNC is set to false in /opt/borg-ui/.env so the container does not contact the upstream licence service on every start. Set it to true if you use a paid licence.",
+      "Application data lives in /opt/borg-ui_data. The Borg repositories themselves are wherever you point them - those are the ones that actually matter for backups."
+    ],
+    "warnings": [
+      "This container backs up what it can see. Mount the directories you want to protect into the LXC, and for remote repositories deploy an SSH key from the UI to the target host."
+    ],
+    "port": 8081,
+    "website": "https://github.com/karanhudia/borg-ui",
+    "documentation": "https://github.com/karanhudia/borg-ui#readme",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/borgbackup.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -5582,6 +5582,47 @@
     "config_path": "/etc/default/ebusd",
     "default_credentials": {
       "username": "root",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
+    "name": "Elasticsearch",
+    "slug": "elasticsearch",
+    "desc": "Elasticsearch is a distributed search and analytics engine. It is mostly deployed as the backend for something else - log aggregation, full-text search in an application, or as the storage layer for Graylog and similar tools. This installs a single node from the official Elastic repository.",
+    "script": "ct/elasticsearch.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/elasticsearch.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/elasticsearch.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00008"
+    ],
+    "category_names": [
+      "Databases"
+    ],
+    "notes": [
+      "The JVM heap is set to 1 GB in /etc/elasticsearch/jvm.options.d/heap.options. Rule of thumb: half the container RAM, never above 31 GB. Data lives in /opt/elasticsearch_data."
+    ],
+    "warnings": [
+      "vm.max_map_count is a kernel setting that containers cannot change - it is inherited from the Proxmox host. The installer aborts if it is below 262144. Modern kernels default to 1048576, so this normally passes; if not, set it on the HOST with: echo 'vm.max_map_count=1048576' >/etc/sysctl.d/99-elasticsearch.conf && sysctl --system",
+      "Set a password for the built-in 'elastic' user before use: /usr/share/elasticsearch/bin/elasticsearch-reset-password -u elastic",
+      "TLS is disabled so the node is reachable over plain HTTP on the LAN, but authentication is on. Do not expose port 9200 to the internet without enabling xpack.security.http.ssl in /etc/elasticsearch/elasticsearch.yml."
+    ],
+    "port": 9200,
+    "website": "https://www.elastic.co/elasticsearch",
+    "documentation": "https://www.elastic.co/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/elasticsearch.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "elastic",
       "password": ""
     },
     "os": "debian"
@@ -11087,6 +11128,43 @@
     "os": "debian"
   },
   {
+    "name": "Lingarr",
+    "slug": "lingarr",
+    "desc": "Lingarr translates subtitles in your Radarr and Sonarr libraries. It watches for media without subtitles in the languages you want and translates existing ones automatically, using either a self-hosted LibreTranslate instance or a hosted provider such as DeepL, OpenAI, Anthropic or Gemini.",
+    "script": "ct/lingarr.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/lingarr.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/lingarr.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00014"
+    ],
+    "category_names": [
+      "*Arr Suite"
+    ],
+    "notes": [
+      "Needs the .NET 10 SDK, which Debian does not ship - it comes from the Microsoft repository. The build is therefore large; the compiled output lands in /opt/lingarr_app while the source tree stays in /opt/lingarr.",
+      "Metadata is stored in the local PostgreSQL database 'lingarr'. Upstream also supports MySQL and SQLite via DB_CONNECTION."
+    ],
+    "warnings": [
+      "Set a translation backend in /opt/lingarr.env before use. The default points at a LibreTranslate instance that does not exist yet - either deploy one and set LIBRE_TRANSLATE_URL, or switch SERVICE_TYPE to a hosted provider and add its API key.",
+      "Mount your media libraries into the LXC and connect Radarr/Sonarr through the web UI. Lingarr writes subtitle files next to the media, so it needs write access to those paths."
+    ],
+    "port": 9876,
+    "website": "https://github.com/lingarr-translate/lingarr",
+    "documentation": "https://lingarr.com/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/lingarr.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "linkding",
     "slug": "linkding",
     "desc": "linkding is a self-hosted bookmark manager that is designed to be minimal, fast, and easy to set up. It features a clean UI, tag-based organization, bulk editing, Markdown notes, read it later functionality, sharing, REST API, and browser extensions for Firefox and Chrome.",
@@ -14148,43 +14226,6 @@
     "os": "debian"
   },
   {
-    "name": "Nomad",
-    "slug": "nomad",
-    "desc": "Nomad is a workload orchestrator from HashiCorp. It schedules containers, raw binaries, Java applications and VMs across a cluster from a single binary, and is a much lighter alternative to Kubernetes for homelab-scale deployments. This installs a single node running as both server and client.",
-    "script": "ct/nomad.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/nomad.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/nomad.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00003"
-    ],
-    "category_names": [
-      "Containers & Docker"
-    ],
-    "notes": [
-      "This is a single-node setup: server and client are both enabled with bootstrap_expect = 1. To join more nodes, edit /etc/nomad.d/nomad.hcl and restart the service.",
-      "The Docker task driver needs a working Docker daemon in the same container, which is not installed here. Out of the box the exec, raw_exec and java drivers are available.",
-      "State lives in /opt/nomad_data. Installed from the official HashiCorp apt repository, so updates go through 'apt install nomad'."
-    ],
-    "warnings": [
-      "ACLs are disabled by default, so the UI on port 4646 is open to anyone who can reach it. Enable the ACL system or restrict access before exposing this beyond a trusted network."
-    ],
-    "port": 4646,
-    "website": "https://www.nomadproject.io/",
-    "documentation": "https://developer.hashicorp.com/nomad/docs",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hashicorp-nomad.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": true,
-    "is_dev": true,
-    "execute_in": [
-      "lxc"
-    ],
-    "config_path": "",
-    "os": "debian"
-  },
-  {
     "name": "NoteDiscovery",
     "slug": "notediscovery",
     "desc": "NoteDiscovery is a lightweight, self-hosted knowledge base and note-taking platform. Write Markdown notes, build a graph of linked knowledge, and search full-text across your entire vault — all stored as plain files.",
@@ -17110,6 +17151,43 @@
     "os": "debian"
   },
   {
+    "name": "Proxmox Datacenter Manager Post Install",
+    "slug": "post-pdm-install",
+    "desc": "This script performs post-installation routines on a Proxmox Datacenter Manager host: it corrects the Debian sources, manages the pdm-enterprise, pdm-no-subscription and pdm-test repositories, optionally removes the subscription nag, and runs a distribution upgrade. Each step is a separate prompt, so nothing is changed without being asked.",
+    "script": "tools/pve/post-pdm-install.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pdm-install.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/pve/post-pdm-install.sh",
+    "type": "pve",
+    "type_id": "1uyjfno0fpf5buh",
+    "categories": [
+      "scriptcat00001"
+    ],
+    "category_names": [
+      "Proxmox & Virtualization"
+    ],
+    "notes": [
+      "Execute within the Proxmox Datacenter Manager shell. The script aborts if the proxmox-datacenter-manager package is not installed.",
+      "After the run, clear your browser cache or do a hard reload (Ctrl+Shift+R) before using the PDM web interface, otherwise the old JavaScript stays cached."
+    ],
+    "warnings": [
+      "The pdm-enterprise repository is enabled by default after a fresh install and makes 'apt update' fail without a subscription. Disabling it and enabling pdm-no-subscription instead is the usual fix.",
+      "Proxmox Datacenter Manager is still under active development. Do not make it the only management path to your nodes - keep direct access to the PVE web interfaces."
+    ],
+    "port": 0,
+    "website": "https://pdm.proxmox.com/",
+    "documentation": "https://pdm.proxmox.com/docs/installation.html",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "pve"
+    ],
+    "config_path": "",
+    "os": ""
+  },
+  {
     "name": "PMG Post Install",
     "slug": "post-pmg-install",
     "desc": "The script is designed for Proxmox Mail Gateway and will give options to Disable the Enterprise Repo, Add/Correct PMG Sources, Enable the No-Subscription Repo, Add Test Repo, Disable Subscription Nag, Update Proxmox Mail Gateway and Reboot PMG.",
@@ -18585,6 +18663,43 @@
     "os": "debian"
   },
   {
+    "name": "ReadMeABook",
+    "slug": "readmeabook",
+    "desc": "ReadMeABook is a request and download platform for audiobooks - the audiobook counterpart to Sonarr and Radarr. Users request titles, ReadMeABook finds and fetches them, and the result drops into a library that Audiobookshelf or a similar player can serve.",
+    "script": "ct/readmeabook.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/readmeabook.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/readmeabook.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00014"
+    ],
+    "category_names": [
+      "*Arr Suite"
+    ],
+    "notes": [
+      "Create your account through the web UI at http://<IP>:3030 on first visit - the first user becomes the administrator.",
+      "NEXTAUTH_SECRET is generated at install and stored in /opt/readmeabook/.env. Changing it invalidates all existing sessions. The update path backs the file up and restores it around the source refresh.",
+      "Next.js build with Prisma migrations against the local PostgreSQL. The build needs roughly 4 GB RAM; less tends to end in an out-of-memory kill."
+    ],
+    "warnings": [
+      "Mount your audiobook library into the LXC and point the download directory at it, otherwise finished downloads stay inside the container."
+    ],
+    "port": 3030,
+    "website": "https://github.com/kikootwo/ReadMeABook",
+    "documentation": "https://github.com/kikootwo/ReadMeABook#readme",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/readmeabook.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Recyclarr",
     "slug": "recyclarr",
     "desc": "Recyclarr is an automation tool that integrates with media management software like Sonarr and Radarr. It helps users manage and organize their media libraries by automatically searching for and adding content from indexers, based on user-defined criteria. It streamlines the process of maintaining and updating media collections without manual intervention.",
@@ -18841,43 +18956,6 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
-    "execute_in": [
-      "lxc"
-    ],
-    "config_path": "",
-    "os": "debian"
-  },
-  {
-    "name": "RSSHub",
-    "slug": "rsshub",
-    "desc": "RSSHub generates RSS feeds for sites that do not offer them - social networks, video platforms, shops, forums, news outlets and hundreds more, through community-maintained route definitions. Feed the resulting URLs into any reader such as FreshRSS, Miniflux or CommaFeed.",
-    "script": "ct/rsshub.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/rsshub.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/rsshub.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00012"
-    ],
-    "category_names": [
-      "Documents & Notes"
-    ],
-    "notes": [
-      "Caching goes to the local Redis with a 300 second expiry. Many routes scrape HTML, so a short cache means more requests to the target site and a higher chance of being rate-limited or blocked - raise CACHE_EXPIRE if a route starts failing.",
-      "Routes that need credentials (some social networks) are configured through additional environment variables in /opt/rsshub.env - see the route documentation upstream.",
-      "The build is a large TypeScript project and takes several minutes; 4 GB RAM is the practical minimum for it to complete."
-    ],
-    "warnings": [
-      "The instance is open to anyone who can reach it. If it is exposed beyond your LAN, uncomment ACCESS_KEY in /opt/rsshub.env and append ?key=... to your feed URLs, otherwise strangers can use your server to scrape third-party sites."
-    ],
-    "port": 1200,
-    "website": "https://rsshub.app/",
-    "documentation": "https://docs.rsshub.app/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/rsshub.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": true,
     "is_dev": true,
     "execute_in": [
       "lxc"
@@ -19751,6 +19829,43 @@
     "privileged": false,
     "has_arm": true,
     "is_dev": false,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Shoko Server",
+    "slug": "shoko",
+    "desc": "Shoko Server organizes anime collections. It identifies files by hash against AniDB, pulls in metadata from TvDB, TMDB and Trakt, and tracks watched state and series relations. Plugins expose the result to Plex, Jellyfin and Kodi, so the library stays correct even with inconsistently named files.",
+    "script": "ct/shoko.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/shoko.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/shoko.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "Your anime files are not stored in the container - mount the library into the LXC and add it as an import folder. Shoko's own database and settings live in /opt/shoko_data.",
+      "Runs on the framework-dependent release build with the ASP.NET Core 8 runtime from Debian, so no .NET SDK and no compilation is needed. Upstream also documents a source build, which this script does not use."
+    ],
+    "warnings": [
+      "Complete the first-run wizard at http://<IP>:8111. An AniDB account is required - Shoko identifies files against AniDB and without it the whole point is lost.",
+      "AniDB enforces strict rate limits and bans clients that hammer the API. Leave the default throttling alone when importing a large collection, or the account gets temporarily banned."
+    ],
+    "port": 8111,
+    "website": "https://shokoanime.com/",
+    "documentation": "https://docs.shokoanime.com/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/shoko.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
     "execute_in": [
       "lxc"
     ],
@@ -21030,6 +21145,42 @@
       "pve"
     ],
     "config_path": "/opt/stylus/config.yaml",
+    "os": "debian"
+  },
+  {
+    "name": "SuggestArr",
+    "slug": "suggestarr",
+    "desc": "SuggestArr watches what you actually play on Jellyfin, Plex or Emby, looks up similar titles on TMDB, and automatically files requests for them in Jellyseerr or Overseerr. It turns your viewing history into an automatically growing library without manual searching.",
+    "script": "ct/suggestarr.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/suggestarr.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/suggestarr.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00014"
+    ],
+    "category_names": [
+      "*Arr Suite"
+    ],
+    "notes": [
+      "Everything is configured through the setup wizard at http://<IP>:5000: your media server (Jellyfin/Plex/Emby), a TMDB API key, and the Jellyseerr or Overseerr instance that receives the requests.",
+      "Configuration and the local database live in /opt/suggestarr_data, outside the app directory, so they survive updates."
+    ],
+    "warnings": [
+      "SuggestArr files requests automatically. Start with a conservative job configuration and keep approval enabled in Jellyseerr/Overseerr, otherwise it can fill your disks faster than expected."
+    ],
+    "port": 5000,
+    "website": "https://github.com/giuseppe99barchetta/SuggestArr",
+    "documentation": "https://giuseppe99barchetta.github.io/SuggestArr/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/suggestarr.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
