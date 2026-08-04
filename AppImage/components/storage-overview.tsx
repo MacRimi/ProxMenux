@@ -20,6 +20,45 @@ import {
   type DiskTempMap,
 } from "../lib/health-thresholds"
 
+// Raw smartctl names are shared by the compact SMART tab and the full
+// report. Keep one canonical mapping so both views use the same labels
+// and explanations instead of drifting into separate translations.
+const NVME_SMART_ATTRIBUTE_KEYS: Record<string, string> = {
+  "Critical Warning": "criticalWarning",
+  "Temperature": "nvmeTemperature",
+  "Temperature Sensor 1": "temperatureSensor1",
+  "Temperature Sensor 2": "temperatureSensor2",
+  "Temperature Sensor 3": "temperatureSensor3",
+  "Available Spare": "availableSpare",
+  "Available Spare Threshold": "availableSpareThreshold",
+  "Percentage Used": "percentageUsed",
+  "Percent Used": "percentageUsed",
+  "Endurance Group Warning": "enduranceGroupWarning",
+  "Media Errors": "mediaErrors",
+  "Media and Data Integrity Errors": "mediaIntegrityErrors",
+  "Unsafe Shutdowns": "unsafeShutdowns",
+  "Power Cycles": "nvmePowerCycles",
+  "Power On Hours": "nvmePowerOnHours",
+  "Data Units Read": "dataUnitsRead",
+  "Data Units Written": "dataUnitsWritten",
+  "Host Read Commands": "hostReadCommands",
+  "Host Write Commands": "hostWriteCommands",
+  "Controller Busy Time": "controllerBusyTime",
+  "Error Log Entries": "errorLogEntries",
+  "Error Information Log Entries": "errorLogEntries",
+  "Warning Temp Time": "warningTempTime",
+  "Critical Temp Time": "criticalTempTime",
+  "Warning Composite Temperature Time": "warningCompositeTemperatureTime",
+  "Critical Composite Temperature Time": "criticalCompositeTemperatureTime",
+  "Thermal Management T1 Trans Count": "thermalManagementT1TransCount",
+  "Thermal Management T2 Trans Count": "thermalManagementT2TransCount",
+  "Thermal Management T1 Total Time": "thermalManagementT1TotalTime",
+  "Thermal Management T2 Total Time": "thermalManagementT2TotalTime",
+}
+
+const getNvmeSmartAttributeKey = (name: string): string | undefined =>
+  NVME_SMART_ATTRIBUTE_KEYS[name.replace(/_/g, " ")] || NVME_SMART_ATTRIBUTE_KEYS[name]
+
 interface DiskInfo {
   name: string
   size?: number // Changed from string to number (KB) for formatMemory()
@@ -2359,38 +2398,6 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
   // Build attributes table - format differs for NVMe vs SATA
   const isNvmeForTable = diskType === 'NVMe'
   
-  const nvmeExplanationKeys: Record<string, string> = {
-    'Critical Warning': 'criticalWarning',
-    'Temperature': 'nvmeTemperature',
-    'Temperature Sensor 1': 'temperatureSensor1',
-    'Temperature Sensor 2': 'temperatureSensor2',
-    'Temperature Sensor 3': 'temperatureSensor3',
-    'Available Spare': 'availableSpare',
-    'Available Spare Threshold': 'availableSpareThreshold',
-    'Percentage Used': 'percentageUsed',
-    'Percent Used': 'percentageUsed',
-    'Media Errors': 'mediaErrors',
-    'Media and Data Integrity Errors': 'mediaIntegrityErrors',
-    'Unsafe Shutdowns': 'unsafeShutdowns',
-    'Power Cycles': 'nvmePowerCycles',
-    'Power On Hours': 'nvmePowerOnHours',
-    'Data Units Read': 'dataUnitsRead',
-    'Data Units Written': 'dataUnitsWritten',
-    'Host Read Commands': 'hostReadCommands',
-    'Host Write Commands': 'hostWriteCommands',
-    'Controller Busy Time': 'controllerBusyTime',
-    'Error Log Entries': 'errorLogEntries',
-    'Error Information Log Entries': 'errorLogEntries',
-    'Warning Temp Time': 'warningTempTime',
-    'Critical Temp Time': 'criticalTempTime',
-    'Warning Composite Temperature Time': 'warningCompositeTemperatureTime',
-    'Critical Composite Temperature Time': 'criticalCompositeTemperatureTime',
-    'Thermal Management T1 Trans Count': 'thermalManagementT1TransCount',
-    'Thermal Management T2 Trans Count': 'thermalManagementT2TransCount',
-    'Thermal Management T1 Total Time': 'thermalManagementT1TotalTime',
-    'Thermal Management T2 Total Time': 'thermalManagementT2TotalTime',
-  }
-
   const sataExplanationKeys: Record<string, string> = {
     'Raw Read Error Rate': 'rawReadErrorRate',
     'Write Error Rate': 'writeErrorRate',
@@ -2518,7 +2525,7 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
     const cleanName = name.replace(/_/g, ' ')
     const keyPrefix = 'storage.smartReport.attributeExplanations.'
     if (diskKind === 'NVMe') {
-      const key = nvmeExplanationKeys[cleanName] || nvmeExplanationKeys[name]
+      const key = getNvmeSmartAttributeKey(cleanName)
       return key ? t(`${keyPrefix}${key}`) : ''
     }
     if (diskKind === 'SAS') {
@@ -2527,6 +2534,12 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
     }
     const key = sataExplanationKeys[cleanName] || sataExplanationKeys[name]
     return key ? t(`${keyPrefix}${key}`) : ''
+  }
+
+  const getAttrLabel = (name: string, diskKind: string): string => {
+    if (diskKind !== 'NVMe') return name.replace(/_/g, ' ')
+    const key = getNvmeSmartAttributeKey(name)
+    return key ? t(`storage.smartReport.attributeLabels.${key}`) : name.replace(/_/g, ' ')
   }
 
   const attrStatusText = (status?: string) => {
@@ -2615,7 +2628,7 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
     const displayValue = isSasDisk ? attr.raw_value : attr.value
     return `
     <tr>
-      <td class="col-name" style="font-weight:500;${explanation ? 'border-bottom:none;padding-bottom:2px;' : ''}">${attr.name}</td>
+      <td class="col-name" style="font-weight:500;${explanation ? 'border-bottom:none;padding-bottom:2px;' : ''}">${getAttrLabel(attr.name, diskType)}</td>
       <td style="text-align:center;font-family:monospace;${explanation ? 'border-bottom:none;' : ''}">${displayValue}</td>
       <td style="${explanation ? 'border-bottom:none;' : ''}"><span class="f-tag" style="background:${statusBg};color:${statusColor}">${attrStatusText(attr.status)}</span></td>
     </tr>
@@ -3813,6 +3826,11 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
   
   // Extract SMART attributes from testStatus for the report
   const smartAttributes = testStatus.smart_data?.attributes || []
+  const smartAttributeLabel = (name: string): string => {
+    if (!disk.name.startsWith("nvme")) return name.replace(/_/g, " ")
+    const key = getNvmeSmartAttributeKey(name)
+    return key ? t(`storage.smartReport.attributeLabels.${key}`) : name.replace(/_/g, " ")
+  }
   
   const fetchSmartStatus = async () => {
   try {
@@ -4138,7 +4156,7 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
               {testStatus.smart_data.attributes.slice(0, 15).map((attr) => (
                 <div key={attr.id} className={`grid ${(isNvme || testStatus.smart_data?.is_sas) ? 'grid-cols-10' : 'grid-cols-12'} gap-2 p-3 text-sm items-center`}>
                   {!isNvme && !testStatus.smart_data?.is_sas && <div className="col-span-1 text-muted-foreground">{attr.id}</div>}
-                  <div className={`${(isNvme || testStatus.smart_data?.is_sas) ? 'col-span-5' : 'col-span-5'} truncate`} title={attr.name}>{attr.name}</div>
+                  <div className={`${(isNvme || testStatus.smart_data?.is_sas) ? 'col-span-5' : 'col-span-5'} truncate`} title={smartAttributeLabel(attr.name)}>{smartAttributeLabel(attr.name)}</div>
                   <div className={`${(isNvme || testStatus.smart_data?.is_sas) ? 'col-span-3' : 'col-span-2'} text-center font-mono`}>{testStatus.smart_data?.is_sas ? attr.raw_value : attr.value}</div>
                   {!isNvme && !testStatus.smart_data?.is_sas && <div className="col-span-2 text-center font-mono text-muted-foreground">{attr.worst}</div>}
                   <div className="col-span-2 text-center">

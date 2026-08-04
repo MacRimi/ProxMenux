@@ -313,6 +313,8 @@ export function Settings() {
     const translated = t(key)
     return translated === key ? fallback : translated
   }
+  const interfaceTypeLabel = (type: string) =>
+    tFallback(`network.interfaceTypes.${type.toLowerCase()}`, type)
   const [proxmenuxTools, setProxmenuxTools] = useState<ProxMenuxTool[]>([])
   const [updatesAvailableCount, setUpdatesAvailableCount] = useState(0)
   const [loadingTools, setLoadingTools] = useState(true)
@@ -1005,8 +1007,8 @@ export function Settings() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Bytes">Bytes</SelectItem>
-                  <SelectItem value="Bits">Bits</SelectItem>
+                  <SelectItem value="Bytes">{t("settings.networkUnits.bytes")}</SelectItem>
+                  <SelectItem value="Bits">{t("settings.networkUnits.bits")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1263,7 +1265,7 @@ export function Settings() {
                               </div>
                               <div className="text-sm text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
                                 <span>{t("settings.healthMonitor.labels.category")}: <span className="font-medium text-foreground/80">{s.category ? tFallback(`settings.healthMonitor.categories.${s.category}`, s.category) : "—"}</span></span>
-                                {s.severity && <span>{t("settings.healthMonitor.labels.severity")}: <span className="font-medium text-foreground/80">{tFallback(`status.${s.severity}`, s.severity)}</span></span>}
+                                {s.severity && <span>{t("settings.healthMonitor.labels.severity")}: <span className="font-medium text-foreground/80">{tFallback(`status.${s.severity.toLowerCase()}`, s.severity)}</span></span>}
                                 {dismissedAtLabel && <span>{t("settings.healthMonitor.labels.dismissed")}: {dismissedAtLabel}</span>}
                               </div>
                             </div>
@@ -1467,7 +1469,7 @@ export function Settings() {
                               {iface.name}
                             </span>
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                              {iface.type}
+                              {interfaceTypeLabel(iface.type)}
                             </Badge>
                             {isDown && !isExcluded && (
                               <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
@@ -1569,9 +1571,9 @@ export function Settings() {
               <CardTitle>{t("settings.snippets.title")}</CardTitle>
             </div>
             <CardDescription>
-              {t("settings.snippets.description")}
+              {t("settings.snippets.description")}{" "}
               <code className="mx-1">local</code>
-              {t("settings.snippets.localNote")}
+              {" "}{t("settings.snippets.localNote")}
             </CardDescription>
           </CardHeader>
           <CardContent>

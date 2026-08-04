@@ -334,6 +334,8 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     if (match) return t("healthStatus.details.gatewayLatency", { latency: match[1] })
     match = value.match(/^(\d+) failed login attempts in 24h$/)
     if (match) return t("healthStatus.details.failedLogins", { count: match[1] })
+    match = value.match(/^(\d+) IP\(s\) currently banned by Fail2Ban \(jails: (.+)\)$/)
+    if (match) return t("healthStatus.details.fail2banBannedIps", { count: match[1], jails: match[2] })
     match = value.match(/^Uptime (\d+) days?$/)
     if (match) return t("healthStatus.details.uptimeDays", { count: match[1] })
     match = value.match(/^(\d+) package\(s\) pending$/)

@@ -51,7 +51,7 @@ import { fetchApi, getApiUrl } from "../lib/api-config"
 import { fetchTerminalTicket } from "../lib/terminal-ws"
 import { formatStorage, formatBytes } from "../lib/utils"
 import { getStorageUsageColor } from "../lib/storage-usage-color"
-import { useT } from "../lib/i18n/provider"
+import { useI18n, useT } from "../lib/i18n/provider"
 
 type TFunction = (key: string, params?: Record<string, string | number>) => string
 
@@ -378,6 +378,23 @@ const methodBadgeCls = (m: string | undefined): string => {
     default:
       return "bg-blue-500/10 text-blue-400 border-blue-500/20"
   }
+}
+
+const localizedBackendLabel = (source: string, t: (key: string) => string): string =>
+  source === "pbs" ? "PBS" : source === "borg" ? "Borg" : t("backup.backends.local")
+
+const formatCalendarPreview = (value: string, language: string, t: (key: string) => string): string => {
+  if (language !== "sk") return value
+  const match = value.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(\d{4})-(\d{2})-(\d{2})\s+(.+)$/i)
+  if (!match) return value
+  const [, weekday, year, month, day, rest] = match
+  return `${t(`backup.weekdays.short.${weekday.toLowerCase()}`)} ${Number(day)}. ${Number(month)}. ${year} ${rest}`
+}
+
+const formatCalendarDistance = (value: string, language: string): string => {
+  if (language !== "sk") return value
+  const distance = value.replace(/\s+left$/i, "").replace(/\bdays?\b/gi, "d")
+  return `zostáva ${distance}`
 }
 
 const formatRunAt = (iso: string | null) => {
@@ -1314,7 +1331,7 @@ export function HostBackup() {
                       </div>
                       <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-3 flex-wrap">
                         <span className={`uppercase tracking-wide text-[10px] px-1.5 py-0.5 rounded border ${sourceBadgeCls}`}>
-                          {u.source}
+                          {localizedBackendLabel(u.source, t)}
                         </span>
                         {u.remote?.encrypted && (
                           <span
@@ -1981,7 +1998,7 @@ function InspectModal({
                           ? "text-fuchsia-400 border-fuchsia-500/40 bg-fuchsia-500/10"
                           : "text-blue-400 border-blue-500/40 bg-blue-500/10"
                     }`}>
-                      {archive.source}
+                      {localizedBackendLabel(archive.source, t)}
                     </Badge>
                   )}
                   {remoteArc?.encrypted && (
@@ -2016,9 +2033,9 @@ function InspectModal({
                     <div><span className="text-muted-foreground">{t("backup.fields.sizeLabel")}</span> {formatBytes(localArc.size_bytes)}</div>
                     <div className="sm:col-span-2"><span className="text-muted-foreground">{t("backup.fields.pathLabel")}</span> <code className="font-mono break-all">{localArc.path}</code></div>
                     {localArc.job_id && <div><span className="text-muted-foreground">{t("backup.fields.jobIdLabel")}</span> <code className="font-mono">{localArc.job_id}</code></div>}
-                    {localArc.profile && <div><span className="text-muted-foreground">{t("backup.fields.profileLabel")}</span> <code className="font-mono">{localArc.profile}</code></div>}
+                    {localArc.profile && <div><span className="text-muted-foreground">{t("backup.fields.profileLabel")}</span> <code className="font-mono">{localArc.profile === "default" ? t("backup.profile.default") : localArc.profile === "custom" ? t("backup.profile.custom") : localArc.profile}</code></div>}
                     {localArc.source_hostname && <div><span className="text-muted-foreground">{t("backup.fields.sourceHostLabel")}</span> <code className="font-mono">{localArc.source_hostname}</code></div>}
-                    <div><span className="text-muted-foreground">{t("backup.fields.detectedViaLabel")}</span> <code className="font-mono text-[10px]">{localArc.detected_via}</code></div>
+                    <div><span className="text-muted-foreground">{t("backup.fields.detectedViaLabel")}</span> <code className="font-mono text-[10px]">{localArc.detected_via === "sidecar" ? t("backup.archives.companionFile") : localArc.detected_via}</code></div>
                   </>
                 ) : null}
               </div>
@@ -2779,7 +2796,7 @@ function CreateJobDialog({
   onCreated: () => void
   editingJobId?: string | null
 }) {
-  const t = useT()
+  const { t, language } = useI18n()
   const isEdit = !!editingJobId
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1)
   const [jobId, setJobId] = useState("")
@@ -3343,7 +3360,7 @@ function CreateJobDialog({
                 <p className="text-xs text-muted-foreground mt-1">
                   {isEdit
                     ? t("backup.jobs.jobNameLocked")
-                    : <>{t("backup.jobs.jobNameHelpBefore")} <code className="font-mono">_</code> {t("backup.jobs.jobNameHelpAnd")} <code className="font-mono">-</code> {t("backup.jobs.jobNameHelpAfter")}</>}
+                    : <>{t("backup.jobs.jobNameHelpBefore")} <code className="font-mono">_</code> {t("backup.jobs.jobNameHelpAnd")} <code className="font-mono">-</code>. {t("backup.jobs.jobNameHelpAfter")}</>}
                 </p>
                 {!idValid && jobId.length > 0 && !isEdit && (
                   <p className="text-xs text-red-500 mt-1">{t("backup.jobs.invalidJobName")}</p>
@@ -3654,9 +3671,9 @@ function CreateJobDialog({
                       {calendarPreview.next_elapse && (
                         <div className="flex items-baseline gap-2">
                           <span className="text-muted-foreground">{t("backup.jobs.nextRunLabel")}</span>
-                          <span className="text-emerald-400">{calendarPreview.next_elapse}</span>
+                          <span className="text-emerald-400">{formatCalendarPreview(calendarPreview.next_elapse, language, t)}</span>
                           {calendarPreview.from_now && (
-                            <span className="text-muted-foreground">({calendarPreview.from_now})</span>
+                            <span className="text-muted-foreground">({formatCalendarDistance(calendarPreview.from_now, language)})</span>
                           )}
                         </div>
                       )}
@@ -5774,7 +5791,7 @@ function DestinationRow({
             <Icon className={`h-5 w-5 flex-shrink-0 ${iconColor} mt-0.5`} />
             <h3 className="font-mono font-semibold text-sm break-all">{headline}</h3>
             <Badge variant="outline" className={`text-[10px] uppercase tracking-wide ${accent}`}>
-              {item.kind}
+              {localizedBackendLabel(item.kind, t)}
             </Badge>
           {item.kind === "local" && item.source === "default" && (
             <Badge variant="outline" className="text-[10px] uppercase tracking-wide border-border text-muted-foreground">
@@ -5802,7 +5819,7 @@ function DestinationRow({
                 </Badge>
               ) : (
                 <Badge variant="outline" className="text-[10px] uppercase tracking-wide border-amber-500/40 text-amber-400 bg-amber-500/5">
-                  local
+                  {t("backup.backends.local")}
                 </Badge>
               )}
               {/* Encryption indicator — icon-only chip for encrypted

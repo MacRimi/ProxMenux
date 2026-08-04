@@ -68,6 +68,10 @@ function validatePasswordStrength(pw: string, t: (key: string) => string): strin
 export function Security() {
   const { language, t } = useI18n()
   const st = (key: string, params?: Record<string, string | number>) => t(`securityPage.${key}`, params)
+  const interfaceTypeLabel = (type: string) =>
+    ["physical", "bridge", "bond", "vlan", "virtual"].includes(type)
+      ? t(`network.interfaceTypes.${type}`)
+      : type
   const authErrorText = (message: unknown, fallbackKey: string) => {
     const raw = typeof message === "string" ? message : ""
     const normalized = raw.toLowerCase()
@@ -2927,7 +2931,7 @@ ${(report.sections && report.sections.length > 0) ? `
                           <option value="">{st("firewall.anyInterface")}</option>
                           {networkInterfaces.map((iface) => (
                             <option key={iface.name} value={iface.name}>
-                              {iface.name} ({iface.type}{iface.status === "up" ? `, ${st("values.up")}` : `, ${st("values.down")}`})
+                              {iface.name} ({interfaceTypeLabel(iface.type)}{iface.status === "up" ? `, ${st("values.up")}` : `, ${st("values.down")}`})
                             </option>
                           ))}
                         </select>
@@ -3113,7 +3117,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                           <option value="">{st("firewall.any")}</option>
                                           {networkInterfaces.map((iface) => (
                                             <option key={iface.name} value={iface.name}>
-                                              {iface.name} ({iface.type})
+                                              {iface.name} ({interfaceTypeLabel(iface.type)})
                                             </option>
                                           ))}
                                         </select>
