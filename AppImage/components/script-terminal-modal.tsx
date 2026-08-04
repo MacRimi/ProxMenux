@@ -31,6 +31,7 @@ import {
 import "xterm/css/xterm.css"
 import { API_PORT } from "@/lib/api-config"
 import { getTicketedWsUrl } from "@/lib/terminal-ws"
+import { useT } from "../lib/i18n/provider"
 
 interface WebInteraction {
   type: "yesno" | "menu" | "msgbox" | "input" | "inputbox"
@@ -66,6 +67,7 @@ export function ScriptTerminalModal({
   params = { EXECUTION_MODE: "web" },
   onComplete,
 }: ScriptTerminalModalProps) {
+  const t = useT()
   const termRef = useRef<any>(null)
   const wsRef = useRef<WebSocket | null>(null)
   // Mirrors `isOpen` for use inside async closures (initializeTerminal)
@@ -388,12 +390,12 @@ const initMessage = {
 
     ws.onerror = (error) => {
       setConnectionStatus("offline")
-      term.writeln("\x1b[31mWebSocket error occurred\x1b[0m")
+      term.writeln(`\x1b[31m${t("scriptTerminal.websocketError")}\x1b[0m`)
     }
 
     ws.onclose = (event) => {
       setConnectionStatus("offline")
-      term.writeln("\x1b[33mConnection closed\x1b[0m")
+      term.writeln(`\x1b[33m${t("scriptTerminal.connectionClosed")}\x1b[0m`)
 
       if (keepAliveIntervalRef.current) {
         clearInterval(keepAliveIntervalRef.current)
@@ -712,7 +714,7 @@ const initMessage = {
               <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                 <div className="flex flex-col items-center gap-3">
                   <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                  <p className="text-sm text-muted-foreground">Processing...</p>
+                  <p className="text-sm text-muted-foreground">{t("scriptTerminal.processing")}</p>
                 </div>
               </div>
             )}
@@ -835,29 +837,29 @@ const initMessage = {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">Control Sequences</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">{t("scriptTerminal.controlSequences")}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={() => sendCommand("\x03")}>
                     <span className="font-mono text-xs mr-2">Ctrl+C</span>
-                    <span className="text-muted-foreground text-xs">Cancel/Interrupt</span>
+                    <span className="text-muted-foreground text-xs">{t("scriptTerminal.cancelInterrupt")}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => sendCommand("\x18")}>
                     <span className="font-mono text-xs mr-2">Ctrl+X</span>
-                    <span className="text-muted-foreground text-xs">Exit (nano)</span>
+                    <span className="text-muted-foreground text-xs">{t("scriptTerminal.exitNano")}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => sendCommand("\x12")}>
                     <span className="font-mono text-xs mr-2">Ctrl+R</span>
-                    <span className="text-muted-foreground text-xs">Search history</span>
+                    <span className="text-muted-foreground text-xs">{t("scriptTerminal.searchHistory")}</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">Clipboard</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">{t("scriptTerminal.clipboard")}</DropdownMenuLabel>
                   <DropdownMenuItem onSelect={() => { void handleCopy() }}>
                     <Copy className="h-3.5 w-3.5 mr-2" />
-                    <span className="text-xs">Copy selection</span>
+                    <span className="text-xs">{t("scriptTerminal.copySelection")}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => { void handlePaste() }}>
                     <Clipboard className="h-3.5 w-3.5 mr-2" />
-                    <span className="text-xs">Paste</span>
+                    <span className="text-xs">{t("scriptTerminal.paste")}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -877,18 +879,18 @@ const initMessage = {
                 }`}
                 title={
                   connectionStatus === "online"
-                    ? "Connected"
+                    ? t("scriptTerminal.connected")
                     : connectionStatus === "connecting"
-                      ? "Connecting"
-                      : "Disconnected"
+                      ? t("scriptTerminal.connecting")
+                      : t("scriptTerminal.disconnected")
                 }
               ></div>
               <span className="text-xs text-muted-foreground">
                 {connectionStatus === "online"
-                  ? "Online"
+                  ? t("scriptTerminal.online")
                   : connectionStatus === "connecting"
-                    ? "Connecting..."
-                    : "Offline"}
+                    ? t("scriptTerminal.connectingStatus")
+                    : t("scriptTerminal.offline")}
               </span>
             </div>
 
@@ -897,7 +899,7 @@ const initMessage = {
               variant="outline"
               className="bg-red-600/20 hover:bg-red-600/30 border-red-600/50 text-red-400"
             >
-              Close
+              {t("actions.close")}
             </Button>
           </div>
         </DialogContent>
@@ -933,14 +935,14 @@ const initMessage = {
                     onClick={() => handleInteractionResponse("yes")}
                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white transition-all duration-150"
                   >
-                    Yes
+                    {t("scriptTerminal.yes")}
                   </Button>
                   <Button
                     onClick={() => handleInteractionResponse("cancel")}
                     variant="outline"
                     className="flex-1 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all duration-150"
                   >
-                    Cancel
+                    {t("actions.cancel")}
                   </Button>
                 </div>
               )}
@@ -963,14 +965,14 @@ const initMessage = {
                     variant="outline"
                     className="w-full hover:bg-red-600 hover:text-white hover:border-red-600 transition-all duration-150"
                   >
-                    Cancel
+                    {t("actions.cancel")}
                   </Button>
                 </div>
               )}
 
               {(currentInteraction.type === "input" || currentInteraction.type === "inputbox") && (
                 <div className="space-y-2">
-                  <Label>Your input:</Label>
+                  <Label>{t("scriptTerminal.yourInput")}</Label>
                   <Input
                     value={interactionInput}
                     onChange={(e) => setInteractionInput(e.target.value)}
@@ -987,14 +989,14 @@ const initMessage = {
                       onClick={() => handleInteractionResponse(interactionInput)}
                       className="flex-1 bg-blue-600 hover:bg-blue-700 transition-all duration-150"
                     >
-                      Submit
+                      {t("scriptTerminal.submit")}
                     </Button>
                     <Button
                       onClick={() => handleInteractionResponse("cancel")}
                       variant="outline"
                       className="flex-1 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all duration-150"
                     >
-                      Cancel
+                      {t("actions.cancel")}
                     </Button>
                   </div>
                 </div>
@@ -1006,14 +1008,14 @@ const initMessage = {
                     onClick={() => handleInteractionResponse("ok")}
                     className="flex-1 bg-blue-600 hover:bg-blue-700 transition-all duration-150"
                   >
-                    OK
+                    {t("scriptTerminal.ok")}
                   </Button>
                   <Button
                     onClick={() => handleInteractionResponse("cancel")}
                     variant="outline"
                     className="flex-1 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all duration-150"
                   >
-                    Cancel
+                    {t("actions.cancel")}
                   </Button>
                 </div>
               )}

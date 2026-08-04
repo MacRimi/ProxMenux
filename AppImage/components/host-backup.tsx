@@ -51,6 +51,9 @@ import { fetchApi, getApiUrl } from "../lib/api-config"
 import { fetchTerminalTicket } from "../lib/terminal-ws"
 import { formatStorage, formatBytes } from "../lib/utils"
 import { getStorageUsageColor } from "../lib/storage-usage-color"
+import { useT } from "../lib/i18n/provider"
+
+type TFunction = (key: string, params?: Record<string, string | number>) => string
 
 // ── Shape contracts with the backend (flask_server.py: api_host_backups_*) ──
 
@@ -234,36 +237,38 @@ const parseKeyfileError = (raw: string): KeyfileError | null => {
   }
 }
 
-const KeyfileErrorBlock: React.FC<{ err: KeyfileError; className?: string }> = ({ err, className }) => (
-  <div className={`text-xs rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-100 px-3 py-3 space-y-2 ${className ?? ""}`}>
-    <div className="flex items-start gap-2">
-      <Lock className="h-4 w-4 mt-0.5 shrink-0 text-amber-400" />
-      <div className="flex-1 min-w-0 space-y-1">
-        <div className="font-semibold text-amber-300">Encrypted backup — wrong keyfile on this host</div>
-        <div className="text-amber-100/90">
-          The keyfile installed here does not match the one used to create this backup, so PBS refuses to open it.
-        </div>
-        {err.manifestFp && (
-          <div className="pt-1">
-            <div className="text-[10.5px] uppercase tracking-wider text-amber-300/80">Required (manifest)</div>
-            <div className="font-mono text-[11px] break-all">{err.manifestFp}</div>
+const KeyfileErrorBlock: React.FC<{ err: KeyfileError; className?: string }> = ({ err, className }) => {
+  const t = useT()
+
+  return (
+    <div className={`text-xs rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-100 px-3 py-3 space-y-2 ${className ?? ""}`}>
+      <div className="flex items-start gap-2">
+        <Lock className="h-4 w-4 mt-0.5 shrink-0 text-amber-400" />
+        <div className="flex-1 min-w-0 space-y-1">
+          <div className="font-semibold text-amber-300">{t("backup.keyfileError.title")}</div>
+          <div className="text-amber-100/90">{t("backup.keyfileError.description")}</div>
+          {err.manifestFp && (
+            <div className="pt-1">
+              <div className="text-[10.5px] uppercase tracking-wider text-amber-300/80">{t("backup.keyfileError.requiredManifest")}</div>
+              <div className="font-mono text-[11px] break-all">{err.manifestFp}</div>
+            </div>
+          )}
+          {err.providedFp && (
+            <div>
+              <div className="text-[10.5px] uppercase tracking-wider text-amber-300/80">{t("backup.keyfileError.currentlyInstalled")}</div>
+              <div className="font-mono text-[11px] break-all">{err.providedFp}</div>
+            </div>
+          )}
+          <div className="pt-1 text-amber-100/90">
+            {t("backup.keyfileError.importFrom")}{" "}
+            <span className="font-medium">{t("backup.keyfileError.importPath")}</span>
+            {" "}{t("backup.keyfileError.retryHint")}
           </div>
-        )}
-        {err.providedFp && (
-          <div>
-            <div className="text-[10.5px] uppercase tracking-wider text-amber-300/80">Currently installed</div>
-            <div className="font-mono text-[11px] break-all">{err.providedFp}</div>
-          </div>
-        )}
-        <div className="pt-1 text-amber-100/90">
-          Import the correct keyfile from{" "}
-          <span className="font-medium">Backup configuration → Destinations → PBS row → Upload</span>
-          {" "}(you may need to Delete the current one first) and retry.
         </div>
       </div>
     </div>
-  </div>
-)
+  )
+}
 
 const formatMtime = (mtime: number) =>
   new Date(mtime * 1000).toLocaleString(undefined, {
@@ -288,30 +293,30 @@ const formatNext = (iso: string | null) => {
 // operator at least knows what kind of string they're looking at.
 // Handles the patterns the host-backup wizard can emit ("hourly",
 // "daily", "weekly", "monthly", "*-*-* HH:MM:SS", "Mon..Sun *-*-* …").
-const humanizeOnCalendar = (raw: string | null | undefined): string => {
+const humanizeOnCalendar = (raw: string | null | undefined, t: TFunction): string => {
   if (!raw) return "—"
   const s = raw.trim()
   if (!s) return "—"
   const lower = s.toLowerCase()
-  if (lower === "hourly") return "Every hour (at minute 0)"
-  if (lower === "daily") return "Every day at 00:00"
-  if (lower === "weekly") return "Every Monday at 00:00"
-  if (lower === "monthly") return "On the 1st of every month at 00:00"
-  if (lower === "yearly" || lower === "annually") return "On Jan 1st at 00:00"
-  if (lower === "minutely") return "Every minute"
+  if (lower === "hourly") return t("backup.schedule.everyHourAtMinuteZero")
+  if (lower === "daily") return t("backup.schedule.everyDayAtMidnight")
+  if (lower === "weekly") return t("backup.schedule.everyMondayAtMidnight")
+  if (lower === "monthly") return t("backup.schedule.firstDayMonthly")
+  if (lower === "yearly" || lower === "annually") return t("backup.schedule.janFirst")
+  if (lower === "minutely") return t("backup.schedule.everyMinute")
   // *-*-* HH:MM[:SS]  → "Every day at HH:MM"
   let m = s.match(/^\*-\*-\*\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/)
-  if (m) return `Every day at ${m[1].padStart(2, "0")}:${m[2]}`
+  if (m) return t("backup.schedule.everyDayAt", { time: `${m[1].padStart(2, "0")}:${m[2]}` })
   // *-*-* *:MM:SS    → "Every hour at minute MM"
   m = s.match(/^\*-\*-\*\s+\*:(\d{2})(?::(\d{2}))?$/)
-  if (m) return `Every hour at minute ${m[1]}`
+  if (m) return t("backup.schedule.everyHourAtMinute", { minute: m[1] })
   // Mon,Tue *-*-* HH:MM:SS   →  "<weekdays> at HH:MM"
   m = s.match(/^([A-Za-z,.\s]+)\s+\*-\*-\*\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/)
   if (m) {
     const expandWeekdays = (chunk: string): string => {
       const days: Record<string, string> = {
-        mon: "Monday", tue: "Tuesday", wed: "Wednesday",
-        thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday",
+        mon: t("backup.weekdays.monday"), tue: t("backup.weekdays.tuesday"), wed: t("backup.weekdays.wednesday"),
+        thu: t("backup.weekdays.thursday"), fri: t("backup.weekdays.friday"), sat: t("backup.weekdays.saturday"), sun: t("backup.weekdays.sunday"),
       }
       const rangeMatch = chunk.match(/^([A-Za-z]+)\.\.([A-Za-z]+)$/)
       if (rangeMatch) {
@@ -327,9 +332,9 @@ const humanizeOnCalendar = (raw: string | null | undefined): string => {
         .map((d) => days[d.trim().slice(0, 3).toLowerCase()] || d.trim())
         .join(", ")
     }
-    return `${expandWeekdays(m[1])} at ${m[2].padStart(2, "0")}:${m[3]}`
+    return t("backup.schedule.weekdaysAt", { days: expandWeekdays(m[1]), time: `${m[2].padStart(2, "0")}:${m[3]}` })
   }
-  return `${s} (systemd OnCalendar)`
+  return t("backup.schedule.rawOnCalendar", { value: s })
 }
 
 // A job is "running" when its .status file has RUN_AT (runner started)
@@ -414,6 +419,7 @@ const formatRunAt = (iso: string | null) => {
 // the fuller management surface.
 // ──────────────────────────────────────────────────────────────
 function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
+  const t = useT()
   const { data: info, mutate: mutateInfo } = useSWR<{
     installed: boolean
     fingerprint?: string
@@ -470,7 +476,7 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
 
   const runUpload = async () => {
     if (!importFile && !importPath.trim()) {
-      setErr("Pick a keyfile file or enter an absolute path on this host.")
+      setErr(t("backup.errors.pickKeyfile"))
       return
     }
     setBusy(true)
@@ -523,17 +529,17 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
     <div className="mt-2 border-t border-white/10 pt-2 space-y-1.5">
       <div className="flex items-center gap-2 flex-wrap">
         <div className="text-xs min-w-0 flex-1 flex items-center gap-1.5">
-          <span className="font-medium text-muted-foreground">Encryption keyfile:</span>{" "}
+          <span className="font-medium text-muted-foreground">{t("backup.keyfileActions.keyfileLabel")}</span>{" "}
           {installed ? (
             <span
               className="inline-flex items-center gap-1 text-emerald-400 font-medium"
-              title={info?.fingerprint ? `Keyfile fingerprint: ${info.fingerprint}` : undefined}
+              title={info?.fingerprint ? t("backup.keyfileActions.fingerprintTitle", { fingerprint: info.fingerprint }) : undefined}
             >
               <CheckCircle2 className="h-4 w-4" />
-              installed
+              {t("backup.keyfileActions.installed")}
             </span>
           ) : (
-            <span className="text-blue-400 font-medium">not installed on this host</span>
+            <span className="text-blue-400 font-medium">{t("backup.keyfileActions.notInstalled")}</span>
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
@@ -545,10 +551,10 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
                 variant="outline"
                 className="h-7 text-[11px] !text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/10"
                 onClick={download}
-                title="Download the keyfile as pbs-key.conf"
+                title={t("backup.keyfileActions.downloadTitle")}
               >
                 <Download className="h-3.5 w-3.5 mr-1" />
-                Download
+                {t("backup.actions.download")}
               </Button>
               <Button
                 type="button"
@@ -556,10 +562,10 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
                 variant="outline"
                 className="h-7 text-[11px] !text-red-400 border-red-500/40 hover:bg-red-500/10"
                 onClick={() => setDeleteOpen(true)}
-                title="Remove the local keyfile"
+                title={t("backup.keyfileActions.deleteTitle")}
               >
                 <Trash2 className="h-3.5 w-3.5 mr-1" />
-                Delete
+                {t("backup.actions.delete")}
               </Button>
             </>
           )}
@@ -570,10 +576,10 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
               variant="outline"
               className="h-7 text-[11px] !text-blue-400 border-blue-500/40 hover:bg-blue-500/10"
               onClick={() => setUploadOpen(true)}
-              title="Import a keyfile you already have"
+              title={t("backup.keyfileActions.uploadTitle")}
             >
               <Lock className="h-3.5 w-3.5 mr-1" />
-              Upload
+              {t("backup.actions.upload")}
             </Button>
           )}
         </div>
@@ -582,9 +588,9 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
       <Dialog open={uploadOpen} onOpenChange={(v) => !v && closeUpload()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Upload PBS keyfile</DialogTitle>
+            <DialogTitle>{t("backup.keyfileActions.uploadDialogTitle")}</DialogTitle>
             <DialogDescription>
-              Import a keyfile you already have. It lands at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> and every subsequent encrypted backup reuses it. Recovery escrow stays off — use the setup wizard if you want to enable it.
+              {t("backup.keyfileActions.uploadDialogDescriptionBefore")} <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> {t("backup.keyfileActions.uploadDialogDescriptionAfter")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -593,10 +599,10 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
                 <div className="flex items-start gap-2">
                   <Lock className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
                   <div className="flex-1 space-y-1">
-                    <div className="font-semibold text-emerald-300">PVE-managed keyfile detected for this PBS</div>
+                    <div className="font-semibold text-emerald-300">{t("backup.keyfileActions.pveKeyDetected")}</div>
                     <div className="text-muted-foreground">
-                      Proxmox already stores an encryption key for storage <code className="font-mono text-[10.5px]">{pveMatch.name}</code> at{" "}
-                      <code className="font-mono text-[10.5px] break-all">{pveMatch.path}</code>. Import it in one click.
+                      {t("backup.keyfileActions.pveKeyDescriptionBefore")} <code className="font-mono text-[10.5px]">{pveMatch.name}</code> {t("backup.keyfileActions.pveKeyDescriptionMiddle")}{" "}
+                      <code className="font-mono text-[10.5px] break-all">{pveMatch.path}</code>. {t("backup.keyfileActions.pveKeyDescriptionAfter")}
                     </div>
                   </div>
                 </div>
@@ -610,14 +616,14 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
                     disabled={busy}
                     className="!bg-emerald-600 hover:!bg-emerald-700 !text-white h-7 text-[11px]"
                   >
-                    Use this key
+                    {t("backup.keyfileActions.useThisKey")}
                   </Button>
                 </div>
               </div>
             )}
-            {pveMatch && <div className="text-[10px] text-center text-muted-foreground">— or upload your own —</div>}
+            {pveMatch && <div className="text-[10px] text-center text-muted-foreground">{t("backup.keyfileActions.orUploadOwn")}</div>}
             <div>
-              <Label htmlFor="pbsKfUploadFile" className="text-xs">Upload from your machine</Label>
+              <Label htmlFor="pbsKfUploadFile" className="text-xs">{t("backup.keyfileActions.uploadFromMachine")}</Label>
               <Input
                 id="pbsKfUploadFile"
                 type="file"
@@ -627,16 +633,16 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
                 className="h-9 mt-1"
               />
             </div>
-            <div className="text-[10px] text-center text-muted-foreground">— or —</div>
+            <div className="text-[10px] text-center text-muted-foreground">{t("backup.common.or")}</div>
             <div>
-              <Label htmlFor="pbsKfUploadPath" className="text-xs">Absolute path on this host</Label>
+              <Label htmlFor="pbsKfUploadPath" className="text-xs">{t("backup.fields.absolutePathOnHost")}</Label>
               <Input
                 id="pbsKfUploadPath"
                 type="text"
                 value={importPath}
                 onChange={(e) => setImportPath(e.target.value)}
                 disabled={busy || !!importFile}
-                placeholder="e.g. /etc/pve/priv/storage/<NAME>.enc or /root/my-pbs-key"
+                placeholder={t("backup.placeholders.keyfilePath")}
                 className="h-9 mt-1 font-mono text-xs"
               />
             </div>
@@ -645,13 +651,13 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeUpload} disabled={busy}>Cancel</Button>
+            <Button variant="outline" onClick={closeUpload} disabled={busy}>{t("actions.cancel")}</Button>
             <Button
               onClick={runUpload}
               disabled={busy || (!importFile && !importPath.trim())}
               className="!bg-blue-500 hover:!bg-blue-600 !text-white"
             >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Import"}
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("backup.actions.import")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -662,24 +668,24 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-red-400" />
-              Delete keyfile
+              {t("backup.keyfileActions.deleteDialogTitle")}
             </DialogTitle>
             <DialogDescription>
-              Backups already stored on PBS were encrypted with the current keyfile. After this action:
+              {t("backup.keyfileActions.deleteDialogDescription")}
             </DialogDescription>
           </DialogHeader>
           <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1 pl-2">
-            <li>New backups will use no encryption on this host until a new keyfile is set up.</li>
-            <li>Downloading pre-existing encrypted backups from this host <strong className="text-red-400">will fail</strong> unless you kept a copy of the current key.</li>
-            <li>Existing recovery blobs on PBS stay intact — they still recover the old key with its original passphrase.</li>
+            <li>{t("backup.keyfileActions.deleteWarningNewBackups")}</li>
+            <li>{t("backup.keyfileActions.deleteWarningDownloadsBefore")} <strong className="text-red-400">{t("backup.keyfileActions.willFail")}</strong> {t("backup.keyfileActions.deleteWarningDownloadsAfter")}</li>
+            <li>{t("backup.keyfileActions.deleteWarningRecoveryBlobs")}</li>
           </ul>
           {err && (
             <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">{err}</div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={closeDelete} disabled={busy}>Cancel</Button>
+            <Button variant="outline" onClick={closeDelete} disabled={busy}>{t("actions.cancel")}</Button>
             <Button onClick={runDelete} disabled={busy} className="!bg-red-500 hover:!bg-red-600 !text-white">
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("backup.actions.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -695,6 +701,7 @@ function KeyfileActionsBar({
   mutateStatus: () => Promise<unknown>
   escrowMode?: "none" | "local" | "full"
 }) {
+  const t = useT()
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [pass1, setPass1] = useState("")
@@ -709,11 +716,11 @@ function KeyfileActionsBar({
     // Yes → passphrase required + match. No → passphrase ignored.
     if (pendingMode === "full") {
       if (!pass1) {
-        setErr("Recovery passphrase is required.")
+        setErr(t("backup.errors.recoveryPassphraseRequired"))
         return
       }
       if (pass1 !== pass2) {
-        setErr("Passphrases do not match.")
+        setErr(t("backup.errors.passphrasesDoNotMatch"))
         return
       }
     }
@@ -743,12 +750,12 @@ function KeyfileActionsBar({
   //   Yes → Yes (new pw)  → "Update passphrase" (rewraps envelope)
   const applyLabel =
     pendingMode === "full" && !currentIsFull
-      ? "Start uploading"
+      ? t("backup.keyfileManagement.startUploading")
       : pendingMode === "none" && currentIsFull
-        ? "Stop uploading"
+        ? t("backup.keyfileManagement.stopUploading")
         : pendingMode === "full" && currentIsFull
-          ? "Update passphrase"
-          : "Apply"
+          ? t("backup.keyfileManagement.updatePassphrase")
+          : t("backup.actions.apply")
 
   // Apply is enabled when there is a real change to commit.
   const canApply = (
@@ -767,20 +774,20 @@ function KeyfileActionsBar({
 
   return (
     <div className="space-y-3">
-      <div className="text-[11px] font-medium text-foreground">Manage installed keyfile</div>
+      <div className="text-[11px] font-medium text-foreground">{t("backup.keyfileManagement.title")}</div>
 
       {/* Current status — icon + colour by state, no truncated fp. */}
       {escrowMode !== undefined && (
         <div className="flex items-center gap-2 text-xs bg-background/40 border border-white/10 rounded px-2.5 py-1.5">
-          <span className="font-medium text-foreground">Upload to PBS:</span>
+          <span className="font-medium text-foreground">{t("backup.keyfileManagement.uploadToPbs")}</span>
           {currentIsFull ? (
             <span className="inline-flex items-center gap-1 text-emerald-400 font-medium">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              Yes — envelope uploaded on every backup
+              {t("backup.keyfileManagement.uploadYes")}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 text-blue-400 font-medium">
-              No — kept only on this host
+              {t("backup.keyfileManagement.uploadNo")}
             </span>
           )}
         </div>
@@ -791,7 +798,7 @@ function KeyfileActionsBar({
           intent is Yes (both for a first-time upload and for a
           passphrase rotation while already in Yes). */}
       <div className="space-y-2 rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
-        <div className="text-[11px] font-medium text-foreground">Upload key to PBS?</div>
+        <div className="text-[11px] font-medium text-foreground">{t("backup.keyfileManagement.uploadQuestion")}</div>
         <div className="grid gap-1.5">
           <label className="flex items-start gap-2 cursor-pointer text-[11px]">
             <input
@@ -802,8 +809,8 @@ function KeyfileActionsBar({
               className="mt-1"
             />
             <div className="flex-1">
-              <div className="font-medium">No, keep local only</div>
-              <div className="text-muted-foreground">Keyfile stays at <code className="font-mono text-[10.5px]">/usr/local/share/proxmenux/pbs-key.conf</code>. You handle the offsite copy — use <em>Download keyfile</em> below.</div>
+              <div className="font-medium">{t("backup.keyfileManagement.keepLocalOnly")}</div>
+              <div className="text-muted-foreground">{t("backup.keyfileManagement.keepLocalDescriptionBefore")} <code className="font-mono text-[10.5px]">/usr/local/share/proxmenux/pbs-key.conf</code>. {t("backup.keyfileManagement.keepLocalDescriptionAfter")} <em>{t("backup.keyfileManagement.downloadKeyfile")}</em> {t("backup.keyfileManagement.below")}.</div>
             </div>
           </label>
           <label className="flex items-start gap-2 cursor-pointer text-[11px]">
@@ -815,8 +822,8 @@ function KeyfileActionsBar({
               className="mt-1"
             />
             <div className="flex-1">
-              <div className="font-medium">Yes, upload</div>
-              <div className="text-muted-foreground">A passphrase-wrapped copy of the keyfile is uploaded to PBS with every backup. Fill the passphrase pair below to enable — or to rotate the current one.</div>
+              <div className="font-medium">{t("backup.keyfileManagement.yesUpload")}</div>
+              <div className="text-muted-foreground">{t("backup.keyfileManagement.yesUploadDescription")}</div>
             </div>
           </label>
         </div>
@@ -824,29 +831,29 @@ function KeyfileActionsBar({
           <div className="space-y-2 pt-2 border-t border-blue-500/20">
             <div>
               <Label htmlFor="mgmtPass1" className="text-[11px]">
-                {currentIsFull ? "New recovery passphrase" : "Recovery passphrase"}
+                {currentIsFull ? t("backup.fields.newRecoveryPassphrase") : t("backup.fields.recoveryPassphrase")}
               </Label>
               <Input
                 id="mgmtPass1"
                 type="password"
                 value={pass1}
                 onChange={(e) => setPass1(e.target.value)}
-                placeholder={currentIsFull ? "Type a new passphrase to rotate" : "Long random string — write it down somewhere safe"}
+                placeholder={currentIsFull ? t("backup.placeholders.newRecoveryPassphrase") : t("backup.placeholders.recoveryPassphrase")}
                 className="font-mono mt-1 h-8 text-xs"
               />
             </div>
             <div>
-              <Label htmlFor="mgmtPass2" className="text-[11px]">Confirm passphrase</Label>
+              <Label htmlFor="mgmtPass2" className="text-[11px]">{t("backup.fields.confirmPassphrase")}</Label>
               <Input
                 id="mgmtPass2"
                 type="password"
                 value={pass2}
                 onChange={(e) => setPass2(e.target.value)}
-                placeholder="Type it again"
+                placeholder={t("backup.placeholders.typeItAgain")}
                 className="font-mono mt-1 h-8 text-xs"
               />
               {pass1 && pass2 && pass1 !== pass2 && (
-                <p className="text-[11px] text-red-400 mt-1">Passphrases don&apos;t match.</p>
+                <p className="text-[11px] text-red-400 mt-1">{t("backup.errors.passphrasesDontMatch")}</p>
               )}
             </div>
           </div>
@@ -876,7 +883,7 @@ function KeyfileActionsBar({
           onClick={download}
         >
           <Download className="h-3.5 w-3.5 mr-1" />
-          Download keyfile
+          {t("backup.keyfileManagement.downloadKeyfile")}
         </Button>
       </div>
 
@@ -887,6 +894,7 @@ function KeyfileActionsBar({
 }
 
 export function HostBackup() {
+  const t = useT()
   const { data: jobsResp, error: jobsErr, mutate: mutateJobs } = useSWR<{ jobs: BackupJob[] }>(
     "/api/host-backups/jobs",
     fetcher,
@@ -921,7 +929,7 @@ export function HostBackup() {
       mutateJobs()
       setJobToDelete(null)
     } catch (e) {
-      setActionError(`Failed to delete "${id}": ${e instanceof Error ? e.message : String(e)}`)
+      setActionError(t("backup.errors.deleteFailed", { error: `"${id}": ${e instanceof Error ? e.message : String(e)}` }))
     } finally {
       setBusyJobId(null)
     }
@@ -1009,7 +1017,7 @@ export function HostBackup() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <div className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-blue-500" />
-            <CardTitle className="text-base font-semibold">Scheduled Backup Jobs</CardTitle>
+            <CardTitle className="text-base font-semibold">{t("backup.jobs.scheduledTitle")}</CardTitle>
             <Badge variant="outline" className="ml-1">
               {jobsResp?.jobs?.filter((j) => !j.manual).length ?? 0}
             </Badge>
@@ -1020,16 +1028,16 @@ export function HostBackup() {
             onClick={() => setCreatingJob(true)}
           >
             <Plus className="h-4 w-4 mr-1" />
-            Create job
+            {t("backup.jobs.createJob")}
           </Button>
         </CardHeader>
         <CardContent>
           {jobsErr ? (
-            <div className="text-sm text-red-500 py-4">Failed to load jobs</div>
+            <div className="text-sm text-red-500 py-4">{t("backup.jobs.loadFailed")}</div>
           ) : !jobsResp ? (
             <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Loading...
+              {t("backup.common.loading")}
             </div>
           ) : jobsResp.jobs.filter((j) => !j.manual).length === 0 ? null : (
             <div className="space-y-2">
@@ -1046,7 +1054,7 @@ export function HostBackup() {
                 // the row re-opens JobDetailModal which auto-detects
                 // the in-progress state and resumes streaming.
                 const statusBadge = running
-                  ? { label: "running", cls: "bg-blue-500/10 border-blue-500/40 text-blue-300" }
+                  ? { label: t("backup.status.running"), cls: "bg-blue-500/10 border-blue-500/40 text-blue-300" }
                   : status?.result === "ok"
                     ? { label: "ok", cls: "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" }
                     : status?.result
@@ -1059,7 +1067,7 @@ export function HostBackup() {
                     type="button"
                     onClick={() => setViewingJobId(j.id)}
                     className="w-full text-left flex items-start gap-3 p-3 rounded-md border border-border bg-card hover:bg-white/5 transition-colors group"
-                    title="Click to open this job"
+                    title={t("backup.jobs.openJobTitle")}
                   >
                     <div className="min-w-0 flex-1 w-full">
                       {/* Title row */}
@@ -1070,19 +1078,19 @@ export function HostBackup() {
                         </Badge>
                         {j.manual && (
                           <Badge variant="outline" className="text-[10px] text-purple-400 border-purple-400/40 bg-purple-500/5">
-                            manual
+                            {t("backup.status.manual")}
                           </Badge>
                         )}
                         {j.attached && (
                           <Badge variant="outline" className="text-[10px] text-blue-400 border-blue-400/40 bg-blue-500/5">
-                            attached
+                            {t("backup.status.attached")}
                           </Badge>
                         )}
                         {j.encrypted && (
                           <Badge
                             variant="outline"
                             className="text-[10px] uppercase tracking-wide border-emerald-500/40 text-emerald-400 bg-emerald-500/5"
-                            title="Encrypted backups (client-side keyfile / borg repokey)"
+                            title={t("backup.jobs.encryptedTitle")}
                           >
                             <Lock className="h-3.5 w-3.5" />
                           </Badge>
@@ -1101,15 +1109,15 @@ export function HostBackup() {
                           }`}
                           title={
                             j.profile_mode === "custom"
-                              ? "Custom path list — only the paths the operator picked"
-                              : "Default path list — ProxMenux's recommended host config set"
+                              ? t("backup.jobs.customProfileTitle")
+                              : t("backup.jobs.defaultProfileTitle")
                           }
                         >
-                          {j.profile_mode === "custom" ? "custom" : "default"}
+                          {j.profile_mode === "custom" ? t("backup.profile.custom") : t("backup.profile.default")}
                         </Badge>
                         {!j.enabled && !j.manual && (
                           <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/40 bg-amber-500/5">
-                            disabled
+                            {t("status.disabled")}
                           </Badge>
                         )}
                       </div>
@@ -1124,10 +1132,10 @@ export function HostBackup() {
                       <div className="mt-2 text-xs text-foreground flex items-center gap-x-4 gap-y-1 flex-wrap">
                         <span className="inline-flex items-center gap-1" title={j.on_calendar}>
                           <Calendar className="h-3.5 w-3.5 text-green-500" />
-                          <span>{humanizeOnCalendar(j.on_calendar)}</span>
+                          <span>{humanizeOnCalendar(j.on_calendar, t)}</span>
                         </span>
                         {j.retention && (
-                          <span className="inline-flex items-center gap-1.5 flex-wrap" title="Retention policy">
+                          <span className="inline-flex items-center gap-1.5 flex-wrap" title={t("backup.jobs.retentionTitle")}>
                             <Archive className="h-3.5 w-3.5 text-green-500" />
                             {(() => {
                               // Backend returns retention as "last=7, daily=7, …".
@@ -1157,15 +1165,15 @@ export function HostBackup() {
                           </span>
                         )}
                         {!j.attached && j.next_run && (
-                          <span className="inline-flex items-center gap-1" title="Next scheduled run">
+                          <span className="inline-flex items-center gap-1" title={t("backup.jobs.nextRunTitle")}>
                             <Clock className="h-3.5 w-3.5 text-green-500" />
-                            <span>next: {formatNext(j.next_run)}</span>
+                            <span>{t("backup.jobs.nextRun", { time: formatNext(j.next_run) })}</span>
                           </span>
                         )}
                         {(statusBadge || lastRunWhen) && (
                           <span className="inline-flex items-center gap-1" title={status?.logFile ?? ""}>
                             <Clock className="h-3.5 w-3.5 text-green-500" />
-                            <span>last:</span>
+                            <span>{t("backup.jobs.lastRunLabel")}</span>
                             {statusBadge && (
                               <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wide border ${statusBadge.cls}`}>
                                 {running && <Loader2 className="h-2.5 w-2.5 animate-spin" />}
@@ -1178,7 +1186,7 @@ export function HostBackup() {
                         {!status && (
                           <span className="inline-flex items-center gap-1 text-muted-foreground">
                             <Clock className="h-3.5 w-3.5 text-green-500" />
-                            <span>never run</span>
+                            <span>{t("backup.jobs.neverRun")}</span>
                           </span>
                         )}
                       </div>
@@ -1204,19 +1212,19 @@ export function HostBackup() {
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <PlayCircle className="h-5 w-5 text-purple-400" />
-            <CardTitle className="text-base font-semibold">Manual backups</CardTitle>
+            <CardTitle className="text-base font-semibold">{t("backup.manual.title")}</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            Manual backups run once and stop — no schedule.
+            {t("backup.manual.description")}
           </p>
           <Button
             className="w-full sm:w-auto bg-purple-500 hover:bg-purple-600 text-white"
             onClick={() => setRunningManual(true)}
           >
             <PlayCircle className="h-4 w-4 mr-2" />
-            Run manual backup
+            {t("backup.manual.run")}
           </Button>
           {/* In-progress manual jobs. If the operator closed the
               ManualBackupDialog before the runner finished, this
@@ -1231,13 +1239,13 @@ export function HostBackup() {
                 type="button"
                 onClick={() => setWatchingManualId(j.id)}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-md border border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 transition-colors text-left"
-                title="Click to re-open the live log"
+                title={t("backup.manual.reopenLogTitle")}
               >
                 <Loader2 className="h-4 w-4 animate-spin text-blue-400 shrink-0" />
                 <span className="text-sm min-w-0 flex-1 truncate">
-                  Manual backup in progress — <span className="font-mono">{j.id}</span>
+                  {t("backup.manual.inProgress")} — <span className="font-mono">{j.id}</span>
                 </span>
-                <span className="text-xs text-blue-300 shrink-0">View progress</span>
+                <span className="text-xs text-blue-300 shrink-0">{t("backup.manual.viewProgress")}</span>
               </button>
             ))}
         </CardContent>
@@ -1248,17 +1256,17 @@ export function HostBackup() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <div className="flex items-center gap-2">
             <Archive className="h-5 w-5 text-blue-500" />
-            <CardTitle className="text-base font-semibold">Available Archives</CardTitle>
+            <CardTitle className="text-base font-semibold">{t("backup.archives.title")}</CardTitle>
           </div>
           <Badge variant="outline">{unifiedArchives.length}</Badge>
         </CardHeader>
         <CardContent>
           <p className="text-[11px] text-muted-foreground mb-3">
-            All backups visible from this host — local <code className="font-mono">.tar.zst</code> files (PVE default dump dir, configured local target, USB mountpoints, scheduled jobs' destinations) and PBS backups from every configured datastore. Click an entry to inspect, restore or download it — downloads of PBS backups are extracted on-demand only when you request them.
+            {t("backup.archives.descriptionBefore")} <code className="font-mono">.tar.zst</code> {t("backup.archives.descriptionAfter")}
           </p>
           {remoteArchivesResp?.errors && remoteArchivesResp.errors.length > 0 && (
             <div className="text-[11px] text-amber-500 mb-3 px-3 py-2 rounded-md border border-amber-500/30 bg-amber-500/5 space-y-1">
-              <div className="font-medium">Some remote backends couldn't be queried:</div>
+              <div className="font-medium">{t("backup.archives.remoteQueryWarning")}</div>
               {remoteArchivesResp.errors.map((e, i) => (
                 <div key={i} className="font-mono break-all">
                   {e.backend}/{e.repo_name}: {e.error}
@@ -1267,15 +1275,15 @@ export function HostBackup() {
             </div>
           )}
           {archivesErr && remoteArchivesErr ? (
-            <div className="text-sm text-red-500 py-4">Failed to load archives</div>
+            <div className="text-sm text-red-500 py-4">{t("backup.archives.loadFailed")}</div>
           ) : !archivesResp && !remoteArchivesResp ? (
             <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Loading...
+              {t("backup.common.loading")}
             </div>
           ) : unifiedArchives.length === 0 ? (
             <div className="text-sm text-muted-foreground py-4">
-              No backups found yet. Use <span className="font-medium">Run manual backup</span> above, configure a scheduled job, or check that the configured PBS / Borg destinations have backups.
+              {t("backup.archives.emptyBefore")} <span className="font-medium">{t("backup.manual.run")}</span> {t("backup.archives.emptyAfter")}
             </div>
           ) : (
             <div className="space-y-2">
@@ -1298,7 +1306,7 @@ export function HostBackup() {
                     type="button"
                     onClick={() => setInspectingArchive(u)}
                     className="w-full text-left flex items-center justify-between gap-3 p-3 rounded-md border border-border bg-background/40 hover:bg-white/5 hover:border-blue-500/40 transition-colors group"
-                    title="Click to inspect, restore or download this backup"
+                    title={t("backup.archives.inspectTitle")}
                   >
                     <div className="min-w-0 flex-1">
                       <div className="font-mono text-xs truncate group-hover:text-blue-400 transition-colors" title={localPath || u.display_id}>
@@ -1311,7 +1319,7 @@ export function HostBackup() {
                         {u.remote?.encrypted && (
                           <span
                             className="uppercase tracking-wide text-[10px] px-1.5 py-0.5 rounded border border-emerald-500/40 text-emerald-400 bg-emerald-500/5 inline-flex items-center"
-                            title="Encrypted backup"
+                            title={t("backup.archives.encryptedTitle")}
                           >
                             <Lock className="h-3.5 w-3.5" />
                           </span>
@@ -1325,24 +1333,24 @@ export function HostBackup() {
                           {formatBytes(u.size_bytes)}
                         </span>
                         <span title={u.source_label}>
-                          at: <code className="font-mono">{u.source_label}</code>
+                          {t("backup.archives.at")} <code className="font-mono">{u.source_label}</code>
                         </span>
                         {u.source === "local" && localKind === "scheduled" && localJobId ? (
-                          <span>job: <code className="font-mono">{localJobId}</code></span>
+                          <span>{t("backup.archives.job")} <code className="font-mono">{localJobId}</code></span>
                         ) : u.source === "local" && localKind === "legacy" ? (
                           <span className="uppercase tracking-wide text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/40 text-amber-400">
-                            legacy
+                            {t("backup.status.legacy")}
                           </span>
                         ) : u.source === "local" && localKind === "manual" ? (
                           <span className="uppercase tracking-wide text-[10px] px-1.5 py-0.5 rounded bg-white/5 border border-border">
-                            manual
+                            {t("backup.status.manual")}
                           </span>
                         ) : null}
                         {(u.source === "pbs" || u.source === "borg") && u.remote?.backup_id && (
-                          <span>{u.source === "pbs" ? "group" : "archive"}: <code className="font-mono">{u.remote.backup_id}</code></span>
+                          <span>{u.source === "pbs" ? t("backup.archives.group") : t("backup.archives.archive")}: <code className="font-mono">{u.remote.backup_id}</code></span>
                         )}
                         {u.source === "local" && localHost && (
-                          <span>host: <code className="font-mono">{localHost}</code></span>
+                          <span>{t("backup.archives.host")} <code className="font-mono">{localHost}</code></span>
                         )}
                       </div>
                     </div>
@@ -1454,33 +1462,31 @@ export function HostBackup() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" />
-              Delete backup job?
+              {t("backup.deleteJob.title")}
             </DialogTitle>
             <DialogDescription>
-              This action cannot be undone.
+              {t("backup.deleteJob.description")}
             </DialogDescription>
           </DialogHeader>
           {jobToDelete && (
             <div className="space-y-3 text-sm">
               <div className="rounded-md border border-border bg-background/50 p-3 space-y-1">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Job ID</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("backup.fields.jobId")}</div>
                 <div className="font-mono text-sm">{jobToDelete.id}</div>
                 {jobToDelete.attached && jobToDelete.pve_storage && (
                   <>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-2">Type</div>
-                    <div className="text-xs">attached to PVE storage <span className="font-mono">{jobToDelete.pve_storage}</span></div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-2">{t("backup.fields.type")}</div>
+                    <div className="text-xs">{t("backup.deleteJob.attachedToStorage")} <span className="font-mono">{jobToDelete.pve_storage}</span></div>
                   </>
                 )}
               </div>
               {jobToDelete.attached ? (
                 <p className="text-xs text-muted-foreground">
-                  Only the ProxMenux host backup hook is removed.
-                  PVE vzdump jobs targeting this storage stay intact and keep running.
+                  {t("backup.deleteJob.attachedWarning")}
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  The systemd timer and service for this job will be stopped, disabled and removed.
-                  Existing backup archives on disk are NOT deleted.
+                  {t("backup.deleteJob.timerWarning")}
                 </p>
               )}
             </div>
@@ -1491,7 +1497,7 @@ export function HostBackup() {
               onClick={() => setJobToDelete(null)}
               disabled={busyJobId === jobToDelete?.id}
             >
-              Cancel
+              {t("actions.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -1503,7 +1509,7 @@ export function HostBackup() {
               ) : (
                 <Trash2 className="h-4 w-4 mr-2" />
               )}
-              Delete
+              {t("backup.actions.delete")}
             </Button>
           </div>
         </DialogContent>
@@ -1526,13 +1532,14 @@ function InspectModal({
   onClose: () => void
   onDeleted?: () => void
 }) {
+  const t = useT()
   const open = archive !== null
   // Aliases to the source-specific payloads — saves on `.local!` /
   // `.remote!` repetition later. PBS and Borg share the same shape.
   const localArc = archive?.source === "local" ? archive.local : undefined
   const remoteArc = archive && archive.source !== "local" ? archive.remote : undefined
   const isRemote = archive?.source === "pbs" || archive?.source === "borg"
-  const backendLabel = archive?.source === "pbs" ? "PBS" : archive?.source === "borg" ? "Borg" : "Local"
+  const backendLabel = archive?.source === "pbs" ? "PBS" : archive?.source === "borg" ? "Borg" : t("backup.backends.local")
   const [mode, setMode] = useState<string>("full")
   const [report, setReport] = useState<PreflightReport | null>(null)
   const [running, setRunning] = useState(false)
@@ -1647,7 +1654,7 @@ function InspectModal({
     // both land at /usr/local/share/proxmenux/pbs-key.conf with
     // escrow_mode='none'. When both are provided the file wins.
     if (!importFile && !importPath.trim()) {
-      setImportError("Pick a keyfile file or enter an absolute path on this host.")
+      setImportError(t("backup.errors.pickKeyfile"))
       return
     }
     setImporting(true)
@@ -1685,13 +1692,13 @@ function InspectModal({
     setRestorePreparing(true)
     const body: Record<string, string> = { source: archive.source }
     if (archive.source === "local") {
-      if (!localArc?.path) { setRestoreError("Local archive path missing"); setRestorePreparing(false); return }
+      if (!localArc?.path) { setRestoreError(t("backup.errors.localArchivePathMissing")); setRestorePreparing(false); return }
       body.path = localArc.path
     } else if (remoteArc) {
       body.repo_name = remoteArc.repo_name
       body.snapshot = remoteArc.snapshot
     } else {
-      setRestoreError("Snapshot info missing")
+      setRestoreError(t("backup.errors.snapshotInfoMissing"))
       setRestorePreparing(false)
       return
     }
@@ -1701,7 +1708,7 @@ function InspectModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       })
-      if (!r?.staging_path) throw new Error("backend did not return a staging path")
+      if (!r?.staging_path) throw new Error(t("backup.errors.backendNoStagingPath"))
       const ck = r.cross_kernel || {}
       const hyd = r.hydration || {}
       setRestoreOptions({
@@ -1753,7 +1760,7 @@ function InspectModal({
       a.click()
       document.body.removeChild(a)
     } catch (e) {
-      setError(`Download failed: ${e instanceof Error ? e.message : String(e)}`)
+      setError(t("backup.errors.downloadFailed", { error: e instanceof Error ? e.message : String(e) }))
     } finally {
       // The download itself runs in the browser's network stack;
       // we just initiated it. Clear the spinner immediately.
@@ -1777,7 +1784,7 @@ function InspectModal({
       repo_name: remoteArc.repo_name,
       snapshot: remoteArc.snapshot,
       state: "queued",
-      message: "Starting export…",
+      message: t("backup.archives.startingExport"),
       size_bytes: 0,
       output_path: null,
       error: null,
@@ -1808,7 +1815,7 @@ function InspectModal({
         if (task.state === "completed" || task.state === "failed") break
       }
       if (!task || task.state !== "completed") {
-        throw new Error(task?.error || "export did not complete")
+        throw new Error(task?.error || t("backup.errors.exportDidNotComplete"))
       }
       // Stream the resulting .tar.zst with a ticketed URL + <a download>.
       // Same rationale as downloadLocalArchive: bypass fetch+blob to
@@ -1826,7 +1833,7 @@ function InspectModal({
       document.body.removeChild(a)
       setExportTask(null)
     } catch (e) {
-      setError(`Download failed: ${e instanceof Error ? e.message : String(e)}`)
+      setError(t("backup.errors.downloadFailed", { error: e instanceof Error ? e.message : String(e) }))
     } finally {
       setDownloading(false)
     }
@@ -1874,7 +1881,7 @@ function InspectModal({
       setShowDeleteArchiveConfirm(false)
       if (onDeleted) onDeleted(); else onClose()
     } catch (e) {
-      setError(`Failed to delete: ${e instanceof Error ? e.message : String(e)}`)
+      setError(t("backup.errors.deleteFailed", { error: e instanceof Error ? e.message : String(e) }))
     } finally {
       setDeletingArchive(false)
     }
@@ -1933,7 +1940,7 @@ function InspectModal({
       )
       setReport(res)
     } catch (e: any) {
-      setError(e?.message || "Preflight failed")
+      setError(e?.message || t("backup.errors.preflightFailed"))
     } finally {
       setRunning(false)
     }
@@ -1964,7 +1971,7 @@ function InspectModal({
                 where they used to overlap the close button). */}
             <section className="rounded-md border border-border bg-background/40 p-3 space-y-1 text-xs">
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Backup</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("backup.archives.backup")}</div>
                 <div className="flex items-center gap-1.5">
                   {archive && (
                     <Badge variant="outline" className={`text-[10px] uppercase tracking-wide ${
@@ -1981,7 +1988,7 @@ function InspectModal({
                     <Badge
                       variant="outline"
                       className="text-emerald-400 border-emerald-500/40 bg-emerald-500/10"
-                      title="Encrypted"
+                      title={t("backup.archives.encrypted")}
                     >
                       <Lock className="h-3.5 w-3.5" />
                     </Badge>
@@ -1992,33 +1999,33 @@ function InspectModal({
                 {/* Time + size — present for every backend. */}
                 {archive && (archive.source === "pbs" || archive.source === "borg") && remoteArc ? (
                   <>
-                    <div><span className="text-muted-foreground">Backup time:</span> {formatMtime(remoteArc.backup_time)}</div>
-                    {remoteArc.size_bytes > 0 && <div><span className="text-muted-foreground">Size:</span> {formatBytes(remoteArc.size_bytes)}</div>}
-                    <div><span className="text-muted-foreground">Repository:</span> <code className="font-mono break-all">{remoteArc.repo_repository}</code></div>
-                    <div><span className="text-muted-foreground">Repo name:</span> <code className="font-mono">{remoteArc.repo_name}</code></div>
+                    <div><span className="text-muted-foreground">{t("backup.archives.backupTimeLabel")}</span> {formatMtime(remoteArc.backup_time)}</div>
+                    {remoteArc.size_bytes > 0 && <div><span className="text-muted-foreground">{t("backup.fields.sizeLabel")}</span> {formatBytes(remoteArc.size_bytes)}</div>}
+                    <div><span className="text-muted-foreground">{t("backup.fields.repositoryLabel")}</span> <code className="font-mono break-all">{remoteArc.repo_repository}</code></div>
+                    <div><span className="text-muted-foreground">{t("backup.fields.repoNameLabel")}</span> <code className="font-mono">{remoteArc.repo_name}</code></div>
                     <div>
-                      <span className="text-muted-foreground">{remoteArc.backend === "pbs" ? "Backup group:" : "Archive name:"}</span>{" "}
+                      <span className="text-muted-foreground">{remoteArc.backend === "pbs" ? t("backup.fields.backupGroupLabel") : t("backup.fields.archiveNameLabel")}</span>{" "}
                       <code className="font-mono break-all">{remoteArc.backend === "pbs" ? `${remoteArc.backup_type}/${remoteArc.backup_id}` : remoteArc.backup_id}</code>
                     </div>
-                    {remoteArc.owner && <div><span className="text-muted-foreground">Owner:</span> <code className="font-mono">{remoteArc.owner}</code></div>}
-                    {remoteArc.borg_id && <div className="sm:col-span-2"><span className="text-muted-foreground">Borg id:</span> <code className="font-mono text-[10px] break-all">{remoteArc.borg_id}</code></div>}
+                    {remoteArc.owner && <div><span className="text-muted-foreground">{t("backup.fields.ownerLabel")}</span> <code className="font-mono">{remoteArc.owner}</code></div>}
+                    {remoteArc.borg_id && <div className="sm:col-span-2"><span className="text-muted-foreground">{t("backup.fields.borgIdLabel")}</span> <code className="font-mono text-[10px] break-all">{remoteArc.borg_id}</code></div>}
                   </>
                 ) : localArc ? (
                   <>
-                    <div><span className="text-muted-foreground">Created:</span> {formatMtime(localArc.mtime)}</div>
-                    <div><span className="text-muted-foreground">Size:</span> {formatBytes(localArc.size_bytes)}</div>
-                    <div className="sm:col-span-2"><span className="text-muted-foreground">Path:</span> <code className="font-mono break-all">{localArc.path}</code></div>
-                    {localArc.job_id && <div><span className="text-muted-foreground">Job id:</span> <code className="font-mono">{localArc.job_id}</code></div>}
-                    {localArc.profile && <div><span className="text-muted-foreground">Profile:</span> <code className="font-mono">{localArc.profile}</code></div>}
-                    {localArc.source_hostname && <div><span className="text-muted-foreground">Source host:</span> <code className="font-mono">{localArc.source_hostname}</code></div>}
-                    <div><span className="text-muted-foreground">Detected via:</span> <code className="font-mono text-[10px]">{localArc.detected_via}</code></div>
+                    <div><span className="text-muted-foreground">{t("backup.fields.createdLabel")}</span> {formatMtime(localArc.mtime)}</div>
+                    <div><span className="text-muted-foreground">{t("backup.fields.sizeLabel")}</span> {formatBytes(localArc.size_bytes)}</div>
+                    <div className="sm:col-span-2"><span className="text-muted-foreground">{t("backup.fields.pathLabel")}</span> <code className="font-mono break-all">{localArc.path}</code></div>
+                    {localArc.job_id && <div><span className="text-muted-foreground">{t("backup.fields.jobIdLabel")}</span> <code className="font-mono">{localArc.job_id}</code></div>}
+                    {localArc.profile && <div><span className="text-muted-foreground">{t("backup.fields.profileLabel")}</span> <code className="font-mono">{localArc.profile}</code></div>}
+                    {localArc.source_hostname && <div><span className="text-muted-foreground">{t("backup.fields.sourceHostLabel")}</span> <code className="font-mono">{localArc.source_hostname}</code></div>}
+                    <div><span className="text-muted-foreground">{t("backup.fields.detectedViaLabel")}</span> <code className="font-mono text-[10px]">{localArc.detected_via}</code></div>
                   </>
                 ) : null}
               </div>
               {/* PBS pxar files list — only PBS exposes this. */}
               {remoteArc?.files && remoteArc.files.length > 0 && (
                 <div className="pt-2 mt-2 border-t border-border/50">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Files in this backup</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("backup.archives.filesInBackup")}</div>
                   <ul className="space-y-0.5">
                     {remoteArc.files.map((f) => (
                       <li key={f.filename} className="font-mono text-[11px] flex items-center justify-between gap-2">
@@ -2035,7 +2042,7 @@ function InspectModal({
             {archive?.source === "local" && archiveLog && archiveLog.log_path && archiveLog.tail.length > 0 && (
               <section className="space-y-2">
                 <h4 className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5 text-green-500">
-                  <FileText className="h-3.5 w-3.5" /> Run log
+                  <FileText className="h-3.5 w-3.5" /> {t("backup.logs.runLog")}
                 </h4>
                 <div className="rounded-md border border-border bg-background/60 p-2">
                   <pre className="text-[11px] font-mono whitespace-pre-wrap break-all max-h-48 overflow-auto text-foreground/90">
@@ -2043,12 +2050,12 @@ function InspectModal({
                   </pre>
                   <div className="flex items-center justify-between mt-2 gap-2 flex-wrap">
                     <span className="text-[10px] text-muted-foreground inline-flex items-center gap-2 min-w-0">
-                      <span>tail · {formatBytes(archiveLog.size)}</span>
+                      <span>{t("backup.logs.tail")} · {formatBytes(archiveLog.size)}</span>
                       <span className="font-mono break-all">{archiveLog.log_path}</span>
                     </span>
                     <Button size="sm" variant="ghost" className="h-7 text-xs shrink-0" onClick={() => setShowArchiveFullLog(true)}>
                       <FileText className="h-3.5 w-3.5 mr-1" />
-                      Open full log
+                      {t("backup.logs.openFull")}
                     </Button>
                   </div>
                 </div>
@@ -2060,14 +2067,14 @@ function InspectModal({
               <div className="text-[11px] space-y-1 px-3 py-2 rounded-md border border-border bg-background/40">
                 <div className="flex items-center gap-2">
                   <Loader2 className={`h-3.5 w-3.5 ${exportTask.state === "completed" || exportTask.state === "failed" ? "" : "animate-spin"}`} />
-                  <span className="font-medium capitalize">{exportTask.state}</span>
+                  <span className="font-medium">{t(`backup.taskStates.${exportTask.state}`)}</span>
                   <span className="text-muted-foreground">— {exportTask.message}</span>
                 </div>
                 {exportTask.state === "failed" && exportTask.error && (
                   <div className="text-red-500 mt-1">{exportTask.error}</div>
                 )}
                 {exportTask.state === "completed" && exportTask.size_bytes > 0 && (
-                  <div className="text-emerald-400">Packed size: {formatBytes(exportTask.size_bytes)}</div>
+                  <div className="text-emerald-400">{t("backup.archives.packedSizeLabel")} {formatBytes(exportTask.size_bytes)}</div>
                 )}
               </div>
             )}
@@ -2092,11 +2099,11 @@ function InspectModal({
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
                   <div className="flex-1 space-y-1">
-                    <div className="font-semibold text-amber-300">Encrypted backup — keyfile required</div>
+                    <div className="font-semibold text-amber-300">{t("backup.keyfileGate.title")}</div>
                     <div className="text-muted-foreground leading-relaxed">
-                      This snapshot is encrypted but no local keyfile is installed at
+                      {t("backup.keyfileGate.descriptionBefore")}
                       {" "}<code className="font-mono text-[10.5px]">/usr/local/share/proxmenux/pbs-key.conf</code>.
-                      Import the keyfile that was used at backup time to continue.
+                      {" "}{t("backup.keyfileGate.descriptionAfter")}
                     </div>
                   </div>
                 </div>
@@ -2105,10 +2112,10 @@ function InspectModal({
                     <div className="flex items-start gap-2">
                       <Lock className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
                       <div className="flex-1 space-y-1">
-                        <div className="font-semibold text-emerald-300">PVE-managed keyfile detected for this PBS</div>
+                        <div className="font-semibold text-emerald-300">{t("backup.keyfileActions.pveKeyDetected")}</div>
                         <div className="text-muted-foreground">
-                          Proxmox stores an encryption key for storage <code className="font-mono text-[10.5px]">{pveMatchInspect.name}</code> at{" "}
-                          <code className="font-mono text-[10.5px] break-all">{pveMatchInspect.path}</code>. Import it in one click.
+                          {t("backup.keyfileActions.pveKeyDescriptionBefore")} <code className="font-mono text-[10.5px]">{pveMatchInspect.name}</code> {t("backup.keyfileActions.pveKeyDescriptionMiddle")}{" "}
+                          <code className="font-mono text-[10.5px] break-all">{pveMatchInspect.path}</code>. {t("backup.keyfileActions.pveKeyDescriptionAfter")}
                         </div>
                       </div>
                     </div>
@@ -2122,14 +2129,14 @@ function InspectModal({
                         disabled={importing}
                         className="!bg-emerald-600 hover:!bg-emerald-700 !text-white h-6 text-[10.5px] px-2"
                       >
-                        Use this key
+                        {t("backup.keyfileActions.useThisKey")}
                       </Button>
                     </div>
                   </div>
                 )}
                 <div className="space-y-1.5 pt-1 border-t border-amber-500/30">
                   <Label htmlFor="keyfileImport" className="text-[11px] font-medium">
-                    {pveMatchInspect ? "Or upload from your machine" : "Upload from your machine"}
+                    {pveMatchInspect ? t("backup.keyfileActions.orUploadFromMachine") : t("backup.keyfileActions.uploadFromMachine")}
                   </Label>
                   <Input
                     id="keyfileImport"
@@ -2140,16 +2147,16 @@ function InspectModal({
                     className="h-8 text-[11px]"
                   />
                 </div>
-                <div className="text-[10px] text-center text-muted-foreground">— or —</div>
+                <div className="text-[10px] text-center text-muted-foreground">{t("backup.common.or")}</div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="keyfileImportPath" className="text-[11px] font-medium">Absolute path on this host</Label>
+                  <Label htmlFor="keyfileImportPath" className="text-[11px] font-medium">{t("backup.fields.absolutePathOnHost")}</Label>
                   <Input
                     id="keyfileImportPath"
                     type="text"
                     value={importPath}
                     onChange={(e) => setImportPath(e.target.value)}
                     disabled={importing || !!importFile}
-                    placeholder="e.g. /etc/pve/priv/storage/<NAME>.enc or /root/my-pbs-key"
+                    placeholder={t("backup.placeholders.keyfilePath")}
                     className="h-8 text-[11px] font-mono"
                   />
                 </div>
@@ -2171,7 +2178,7 @@ function InspectModal({
                     ) : (
                       <Lock className="h-3.5 w-3.5 mr-1.5" />
                     )}
-                    Import keyfile
+                    {t("backup.actions.importKeyfile")}
                   </Button>
                 </div>
               </section>
@@ -2190,38 +2197,38 @@ function InspectModal({
               onClick={beginRestore}
               disabled={restorePreparing || needsKeyfile}
               className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
-              title={needsKeyfile ? "Import the encryption keyfile above to enable Restore" : "Restore this snapshot to the current host (Complete or Custom by paths)"}
+              title={needsKeyfile ? t("backup.archives.importKeyToRestoreTitle") : t("backup.archives.restoreTitle")}
             >
               {restorePreparing ? (
                 <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
               ) : (
                 <DatabaseBackup className="h-4 w-4 sm:mr-2" />
               )}
-              <span>Restore</span>
+              <span>{t("backup.actions.restore")}</span>
             </Button>
             <Button
               onClick={downloadArchive}
               disabled={downloading || needsKeyfile}
               className="bg-blue-500/10 border border-blue-500/40 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300 disabled:opacity-50"
               variant="outline"
-              title={needsKeyfile ? "Import the encryption keyfile above to enable Download" : "Download the snapshot as a .tar.zst"}
+              title={needsKeyfile ? t("backup.archives.importKeyToDownloadTitle") : t("backup.archives.downloadTitle")}
             >
               {downloading ? (
                 <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
               ) : (
                 <Download className="h-4 w-4 sm:mr-2" />
               )}
-              <span className="hidden sm:inline">Download</span>
+              <span className="hidden sm:inline">{t("backup.actions.download")}</span>
             </Button>
             <Button
               onClick={() => setViewingContents(true)}
               disabled={needsKeyfile}
               className="bg-blue-500/10 border border-blue-500/40 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300 disabled:opacity-50"
               variant="outline"
-              title={needsKeyfile ? "Import the encryption keyfile above to enable View contents" : "Extract + show manifest, plan, files, metadata as HTML"}
+              title={needsKeyfile ? t("backup.archives.importKeyToViewTitle") : t("backup.archives.viewContentsTitle")}
             >
               <Eye className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">View contents</span>
+              <span className="hidden sm:inline">{t("backup.actions.viewContents")}</span>
             </Button>
           </div>
           <Button
@@ -2231,10 +2238,10 @@ function InspectModal({
             variant="outline"
             title={
               archive?.source === "local"
-                ? "Permanently delete this archive (.tar.zst + sidecar + log)"
+                ? t("backup.archives.deleteLocalTitle")
                 : archive?.source === "pbs"
-                ? "Permanently forget this PBS snapshot (proxmox-backup-client snapshot forget)"
-                : "Permanently delete this Borg archive (borg delete)"
+                ? t("backup.archives.deletePbsTitle")
+                : t("backup.archives.deleteBorgTitle")
             }
           >
             {deletingArchive ? (
@@ -2242,7 +2249,7 @@ function InspectModal({
             ) : (
               <Trash2 className="h-4 w-4 sm:mr-2" />
             )}
-            <span className="hidden sm:inline">Delete</span>
+            <span className="hidden sm:inline">{t("backup.actions.delete")}</span>
           </Button>
         </div>
       </DialogContent>
@@ -2268,7 +2275,7 @@ function InspectModal({
             <DialogHeader>
               <DialogTitle className="text-base flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-red-500" />
-                {kf ? "Restore blocked — encrypted backup" : "Restore preparation failed"}
+                {kf ? t("backup.restore.blockedEncryptedTitle") : t("backup.restore.preparationFailedTitle")}
               </DialogTitle>
               {!kf && (
                 <DialogDescription className="text-xs text-red-400 break-all">
@@ -2278,7 +2285,7 @@ function InspectModal({
             </DialogHeader>
             {kf && <KeyfileErrorBlock err={kf} />}
             <div className="flex justify-end">
-              <Button variant="ghost" onClick={() => setRestoreError(null)}>Close</Button>
+              <Button variant="ghost" onClick={() => setRestoreError(null)}>{t("actions.close")}</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -2346,11 +2353,11 @@ function InspectModal({
         }}
         scriptPath="/usr/local/share/proxmenux/scripts/backup_restore/restore/monitor_apply.sh"
         scriptName="monitor_apply"
-        title={`Restore — ${restoreTerminal.mode === "full" ? "Complete" : "Custom by paths"}`}
+        title={t("backup.restore.terminalTitle", { mode: restoreTerminal.mode === "full" ? t("backup.restore.complete") : t("backup.restore.customByPaths") })}
         description={
           restoreTerminal.mode === "custom"
-            ? `${restoreTerminal.paths.length} path(s) selected`
-            : "Complete restore — applies the whole backup"
+            ? t("backup.restore.pathsSelected", { count: restoreTerminal.paths.length })
+            : t("backup.restore.completeDescription")
         }
         params={{
           EXECUTION_MODE: "web",
@@ -2370,14 +2377,14 @@ function InspectModal({
         <DialogHeader>
           <DialogTitle className="text-base flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-red-500" />
-            Delete {backendLabel} backup
+            {t("backup.archives.deleteBackendTitle", { backend: backendLabel })}
           </DialogTitle>
           <DialogDescription className="text-xs">
             {archive?.source === "local"
-              ? "Removes the archive, its sidecar JSON and the matching run log. The action is permanent — restore needs an off-host copy."
+              ? t("backup.archives.deleteLocalDescription")
               : archive?.source === "pbs"
-              ? `Forgets this snapshot from the PBS repository "${remoteArc?.repo_name ?? ""}". The action is permanent — PBS GC may reclaim the underlying chunks at the next garbage-collection run.`
-              : `Deletes this archive from the Borg repository "${remoteArc?.repo_name ?? ""}". The action is permanent — Borg compacts the freed space at the next prune.`}
+              ? t("backup.archives.deletePbsDescription", { repo: remoteArc?.repo_name ?? "" })
+              : t("backup.archives.deleteBorgDescription", { repo: remoteArc?.repo_name ?? "" })}
           </DialogDescription>
         </DialogHeader>
         <div className="text-sm font-mono px-3 py-2 rounded-md border border-border bg-background/40 break-all">
@@ -2385,7 +2392,7 @@ function InspectModal({
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={() => setShowDeleteArchiveConfirm(false)} disabled={deletingArchive}>
-            Cancel
+            {t("actions.cancel")}
           </Button>
           <Button variant="destructive" onClick={deleteArchive} disabled={deletingArchive}>
             {deletingArchive ? (
@@ -2393,7 +2400,7 @@ function InspectModal({
             ) : (
               <Trash2 className="h-4 w-4 mr-2" />
             )}
-            Delete
+            {t("backup.actions.delete")}
           </Button>
         </div>
       </DialogContent>
@@ -2405,7 +2412,7 @@ function InspectModal({
         <DialogHeader>
           <DialogTitle className="text-base flex items-center gap-2">
             <FileText className="h-5 w-5 text-blue-500" />
-            Run log
+            {t("backup.logs.runLog")}
           </DialogTitle>
           <DialogDescription className="text-xs font-mono break-all">
             {archiveLog?.log_path}
@@ -2415,7 +2422,7 @@ function InspectModal({
 {archiveLog?.content ?? ""}
         </pre>
         <div className="flex justify-end">
-          <Button variant="ghost" onClick={() => setShowArchiveFullLog(false)}>Close</Button>
+          <Button variant="ghost" onClick={() => setShowArchiveFullLog(false)}>{t("actions.close")}</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -2434,25 +2441,26 @@ function ManifestSummary({
     storage_inventory?: { zfs_pools?: unknown[]; lvm?: { vgs?: unknown[] } }
   }
 }) {
+  const t = useT()
   const sh = manifest.source_host
   const zfsCount = manifest.storage_inventory?.zfs_pools?.length ?? 0
   const lvmCount = manifest.storage_inventory?.lvm?.vgs?.length ?? 0
   return (
     <div className="space-y-3 py-2">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-        <Field icon={<Server className="h-3.5 w-3.5" />} label="Source host" value={sh.hostname} />
-        <Field label="PVE version" value={sh.pve_version || "—"} />
-        <Field label="Roles" value={sh.roles.join(", ")} />
-        <Field label="Kernel" value={sh.kernel} mono />
-        <Field label="Boot mode" value={sh.boot_mode} />
-        <Field label="Memory" value={`${Math.round(sh.memory_kb / 1024)} MB`} />
-        <Field label="ZFS pools" value={String(zfsCount)} />
-        <Field label="LVM VGs" value={String(lvmCount)} />
-        <Field label="VMs / LXCs" value={`${manifest.vms_lxcs_at_backup.vms.length} VM / ${manifest.vms_lxcs_at_backup.lxcs.length} LXC`} />
+        <Field icon={<Server className="h-3.5 w-3.5" />} label={t("backup.fields.sourceHost")} value={sh.hostname} />
+        <Field label={t("backup.fields.pveVersion")} value={sh.pve_version || "—"} />
+        <Field label={t("backup.fields.roles")} value={sh.roles.join(", ")} />
+        <Field label={t("backup.fields.kernel")} value={sh.kernel} mono />
+        <Field label={t("backup.fields.bootMode")} value={sh.boot_mode} />
+        <Field label={t("backup.fields.memory")} value={`${Math.round(sh.memory_kb / 1024)} MB`} />
+        <Field label={t("backup.fields.zfsPools")} value={String(zfsCount)} />
+        <Field label={t("backup.fields.lvmVgs")} value={String(lvmCount)} />
+        <Field label={t("backup.fields.vmsLxcs")} value={`${manifest.vms_lxcs_at_backup.vms.length} VM / ${manifest.vms_lxcs_at_backup.lxcs.length} LXC`} />
       </div>
       {manifest.proxmenux_installed_components.length > 0 && (
         <div className="text-xs">
-          <div className="text-muted-foreground mb-1">ProxMenux components at backup time:</div>
+          <div className="text-muted-foreground mb-1">{t("backup.manifest.componentsAtBackup")}</div>
           <div className="flex flex-wrap gap-1.5">
             {manifest.proxmenux_installed_components.map((c) => (
               <Badge key={c.id} variant="outline" className="font-mono text-[10px]">
@@ -2486,13 +2494,14 @@ function Field({ icon, label, value, mono, labelClassName }: { icon?: React.Reac
 // `key=val, key=val…` string which read like a config file. This view
 // drops zero-valued entries and presents what survives as ordered chips.
 function RetentionDisplay({ retention }: { retention: Record<string, string | undefined> }) {
+  const t = useT()
   const order: Array<[string, string]> = [
-    ["keep_last", "last"],
-    ["keep_hourly", "hourly"],
-    ["keep_daily", "daily"],
-    ["keep_weekly", "weekly"],
-    ["keep_monthly", "monthly"],
-    ["keep_yearly", "yearly"],
+    ["keep_last", "backup.retention.last"],
+    ["keep_hourly", "backup.retention.hourly"],
+    ["keep_daily", "backup.retention.daily"],
+    ["keep_weekly", "backup.retention.weekly"],
+    ["keep_monthly", "backup.retention.monthly"],
+    ["keep_yearly", "backup.retention.yearly"],
   ]
   const items = order
     .map(([k, lbl]) => {
@@ -2506,10 +2515,10 @@ function RetentionDisplay({ retention }: { retention: Record<string, string | un
   return (
     <div>
       <div className="text-[10px] uppercase tracking-wider flex items-center gap-1 text-green-500/90">
-        <Archive className="h-3 w-3 text-green-500/80" /> retention
+        <Archive className="h-3 w-3 text-green-500/80" /> {t("backup.retention.title")}
       </div>
       {items.length === 0 ? (
-        <div className="text-muted-foreground italic text-xs mt-1">No retention rules — backups will accumulate.</div>
+        <div className="text-muted-foreground italic text-xs mt-1">{t("backup.retention.noneAccumulate")}</div>
       ) : (
         <div className="mt-1 flex flex-wrap gap-1.5">
           {items.map((it) => (
@@ -2517,7 +2526,7 @@ function RetentionDisplay({ retention }: { retention: Record<string, string | un
               key={it.label}
               className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-border bg-background/60"
             >
-              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{it.label}</span>
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{t(it.label)}</span>
               <span className="font-mono text-xs text-foreground">{it.value}</span>
             </span>
           ))}
@@ -2532,10 +2541,11 @@ function RetentionDisplay({ retention }: { retention: Record<string, string | un
 // old layout forced a horizontal scroll on the dialog because the
 // line couldn't be wrapped without breaking the path identifiers.
 function PathsDisplay({ paths }: { paths: string[] }) {
+  const t = useT()
   return (
     <div>
       <div className="text-[10px] uppercase tracking-wider flex items-center gap-1 text-green-500/90">
-        <HardDrive className="h-3 w-3 text-green-500/80" /> paths
+        <HardDrive className="h-3 w-3 text-green-500/80" /> {t("backup.paths.title")}
         <span className="ml-1 text-muted-foreground normal-case">({paths.length})</span>
       </div>
       <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5">
@@ -2555,6 +2565,7 @@ function PathsDisplay({ paths }: { paths: string[] }) {
 
 // ── Preflight report view ────────────────────────────────────
 function PreflightReportView({ report }: { report: PreflightReport }) {
+  const t = useT()
   const { summary, checks } = report.preflight
   const passColor = "text-emerald-500"
   const warnColor = "text-amber-500"
@@ -2566,19 +2577,19 @@ function PreflightReportView({ report }: { report: PreflightReport }) {
       <div className="flex items-center gap-4 text-sm">
         <span className={`inline-flex items-center gap-1 ${passColor}`}>
           <CheckCircle2 className="h-4 w-4" />
-          {summary.pass} pass
+          {t("backup.preflight.passCount", { count: summary.pass })}
         </span>
         <span className={`inline-flex items-center gap-1 ${warnColor}`}>
           <AlertTriangle className="h-4 w-4" />
-          {summary.warn} warn
+          {t("backup.preflight.warnCount", { count: summary.warn })}
         </span>
         <span className={`inline-flex items-center gap-1 ${failColor}`}>
           <XCircle className="h-4 w-4" />
-          {summary.fail} fail
+          {t("backup.preflight.failCount", { count: summary.fail })}
         </span>
         {summary.fail > 0 && (
           <span className="ml-auto text-xs text-red-500">
-            --apply would be refused
+            {t("backup.preflight.applyWouldBeRefused")}
           </span>
         )}
       </div>
@@ -2609,20 +2620,20 @@ function PreflightReportView({ report }: { report: PreflightReport }) {
       {/* Storage / network counts */}
       <div className="grid grid-cols-2 gap-3 text-xs pt-2 border-t border-border/40">
         <div>
-          <div className="text-muted-foreground mb-1">Storage [in mode: {String(report.storage.in_selected_mode)}]</div>
+          <div className="text-muted-foreground mb-1">{t("backup.preflight.storageInMode", { mode: String(report.storage.in_selected_mode) })}</div>
           <div>
-            {report.storage.zfs.length} ZFS pool(s) ·
-            {" "}{report.storage.lvm.length} LVM VG(s) ·
-            {" "}{report.storage.pve_storage.length} PVE storage(s)
+            {t("backup.preflight.zfsPoolsCount", { count: report.storage.zfs.length })} ·
+            {" "}{t("backup.preflight.lvmVgsCount", { count: report.storage.lvm.length })} ·
+            {" "}{t("backup.preflight.pveStorageCount", { count: report.storage.pve_storage.length })}
           </div>
         </div>
         <div>
-          <div className="text-muted-foreground mb-1">Network [in mode: {String(report.network.in_selected_mode)}]</div>
+          <div className="text-muted-foreground mb-1">{t("backup.preflight.networkInMode", { mode: String(report.network.in_selected_mode) })}</div>
           <div>
-            {report.network.keep.length} keep ·
-            {" "}{report.network.remap.length} remap ·
-            {" "}{report.network.orphan.length} orphan ·
-            {" "}{report.network.new.length} new
+            {t("backup.preflight.keepCount", { count: report.network.keep.length })} ·
+            {" "}{t("backup.preflight.remapCount", { count: report.network.remap.length })} ·
+            {" "}{t("backup.preflight.orphanCount", { count: report.network.orphan.length })} ·
+            {" "}{t("backup.preflight.newCount", { count: report.network.new.length })}
           </div>
         </div>
       </div>
@@ -2630,7 +2641,7 @@ function PreflightReportView({ report }: { report: PreflightReport }) {
       {/* Driver plan */}
       {report.driver_reinstall.plan.length > 0 && (
         <div className="text-xs pt-2 border-t border-border/40">
-          <div className="text-muted-foreground mb-1.5">Driver reinstall plan ({report.driver_reinstall.plan.length})</div>
+          <div className="text-muted-foreground mb-1.5">{t("backup.preflight.driverReinstallPlan", { count: report.driver_reinstall.plan.length })}</div>
           <div className="space-y-1">
             {report.driver_reinstall.plan.map((p) => (
               <div key={p.component_id} className="flex items-center justify-between gap-2">
@@ -2768,6 +2779,7 @@ function CreateJobDialog({
   onCreated: () => void
   editingJobId?: string | null
 }) {
+  const t = useT()
   const isEdit = !!editingJobId
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1)
   const [jobId, setJobId] = useState("")
@@ -3168,12 +3180,12 @@ function CreateJobDialog({
       // or a typed absolute path — mirrors the shell wizard.
       // Existing + PVE auto-detect uses source=pve-storage.
       if (pbsEncryptMode === "existing" && !pbsPveMatch && !pbsImportFile && !pbsImportPath.trim()) {
-        setError("Pick a keyfile file or enter an absolute path on this host.")
+        setError(t("backup.errors.pickKeyfile"))
         setSubmitting(false)
         return
       }
       if (pbsUploadToPbs && pbsRecoveryPass !== pbsRecoveryPass2) {
-        setError("Recovery passphrases don't match.")
+        setError(t("backup.errors.passphrasesDoNotMatch"))
         setSubmitting(false)
         return
       }
@@ -3213,9 +3225,9 @@ function CreateJobDialog({
       } catch (e) {
         const err = e as Error & { body?: { tool_output?: string; tool_exit_code?: number } }
         const detail = err.body?.tool_output
-          ? `${err.message}\n\nproxmox-backup-client output:\n${err.body.tool_output}`
+          ? `${err.message}\n\n${t("backup.errors.proxmoxBackupClientOutput")}:\n${err.body.tool_output}`
           : err.message
-        setError(`Encryption setup failed: ${detail || String(e)}`)
+        setError(t("backup.errors.encryptionSetupFailed", { detail: detail || String(e) }))
         setPbsImportBusy(false)
         setSubmitting(false)
         return
@@ -3297,10 +3309,10 @@ function CreateJobDialog({
             ) : (
               <Plus className="h-5 w-5 text-blue-500" />
             )}
-            {isEdit ? "Edit scheduled backup job" : "Create scheduled backup job"}
+            {isEdit ? t("backup.jobs.editScheduledJob") : t("backup.jobs.createScheduledJob")}
           </DialogTitle>
           <DialogDescription>
-            Step {step} of 5 · {mode === "attach" ? "Attached to PVE vzdump" : "Standalone scheduled job"}
+            {t("backup.jobs.stepOf", { step, total: 5 })} · {mode === "attach" ? t("backup.jobs.attachedToPveVzdump") : t("backup.jobs.standaloneScheduledJob")}
           </DialogDescription>
         </DialogHeader>
 
@@ -3319,40 +3331,40 @@ function CreateJobDialog({
           {step === 1 && (
             <div className="space-y-4">
               <div>
-                <Label htmlFor="jobId">Job name</Label>
+                <Label htmlFor="jobId">{t("backup.fields.jobName")}</Label>
                 <Input
                   id="jobId"
                   value={jobId}
                   onChange={(e) => setJobId(e.target.value)}
                   disabled={isEdit}
                   className="font-mono mt-1"
-                  placeholder="my-host-backup"
+                  placeholder="moja-zaloha-servera"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   {isEdit
-                    ? "The job name can't be changed. Delete and recreate the job if you want to rename it."
-                    : <>A short name to identify this job in the list, logs, and shell menu. Letters, digits, <code className="font-mono">_</code> and <code className="font-mono">-</code> only (no spaces or accents).</>}
+                    ? t("backup.jobs.jobNameLocked")
+                    : <>{t("backup.jobs.jobNameHelpBefore")} <code className="font-mono">_</code> {t("backup.jobs.jobNameHelpAnd")} <code className="font-mono">-</code> {t("backup.jobs.jobNameHelpAfter")}</>}
                 </p>
                 {!idValid && jobId.length > 0 && !isEdit && (
-                  <p className="text-xs text-red-500 mt-1">Invalid characters. Use letters, digits, _ or -.</p>
+                  <p className="text-xs text-red-500 mt-1">{t("backup.jobs.invalidJobName")}</p>
                 )}
               </div>
 
               <div>
-                <Label>Backend</Label>
+                <Label>{t("backup.fields.backend")}</Label>
                 {isEdit && (
                   <p className="text-xs text-muted-foreground mb-2">
-                    You can change where the backup is sent. The destination of the new option is set on Step 5.
+                    {t("backup.jobs.backendEditHelp")}
                   </p>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-1">
                   {(["pbs", "local", "borg"] as const).map((b) => {
                     const Icon = b === "pbs" ? Server : b === "local" ? HardDrive : Archive
                     const desc = b === "pbs"
-                      ? "Proxmox Backup Server. Incremental, encrypted, dedup."
+                      ? t("backup.backends.pbsDescription")
                       : b === "local"
-                        ? "tar.zst archive into a local directory or mounted disk."
-                        : "Borg repo over SSH or on a local/USB disk (timer only)."
+                        ? t("backup.backends.localDescription")
+                        : t("backup.backends.borgDescriptionTimerOnly")
                     return (
                       <button
                         key={b}
@@ -3364,7 +3376,7 @@ function CreateJobDialog({
                       >
                         <div className="flex items-center gap-2 font-medium text-sm">
                           <Icon className="h-4 w-4" />
-                          {b.toUpperCase()}
+                          {b === "pbs" ? "PBS" : b === "borg" ? "Borg" : t("backup.backends.local")}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">{desc}</div>
                       </button>
@@ -3379,11 +3391,11 @@ function CreateJobDialog({
           {step === 2 && (
             <div className="space-y-3">
               <div>
-                <Label>How to schedule</Label>
+                <Label>{t("backup.schedule.howToSchedule")}</Label>
                 <p className="text-xs text-muted-foreground mb-2">
                   {backend === "borg"
-                    ? "Borg backups only run on their own timer — they're not produced by PVE vzdump."
-                    : "Either run on a schedule you define here, or hook into an existing PVE vzdump job and inherit its schedule + retention."}
+                    ? t("backup.schedule.borgTimerOnly")
+                    : t("backup.schedule.modeHelp")}
                 </p>
               </div>
               <div className="space-y-2">
@@ -3394,10 +3406,10 @@ function CreateJobDialog({
                 >
                   <div className="text-sm font-medium flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
-                    New scheduled job
+                    {t("backup.jobs.newScheduledJob")}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    Own systemd timer with the OnCalendar and retention policy you pick on the next steps.
+                    {t("backup.jobs.newScheduledJobDescription")}
                   </div>
                 </button>
                 <button
@@ -3412,15 +3424,15 @@ function CreateJobDialog({
                 >
                   <div className="text-sm font-medium flex items-center gap-2">
                     <Server className="h-4 w-4" />
-                    Attach to existing PVE vzdump job
+                    {t("backup.jobs.attachToPveJob")}
                     {backend === "borg" && (
                       <Badge variant="outline" className="text-[10px] text-muted-foreground">
-                        not available for borg
+                        {t("backup.jobs.notAvailableForBorg")}
                       </Badge>
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    Fires on every <code className="font-mono">job-end</code> of a PVE vzdump job that writes to a <code className="font-mono">{backend}</code> storage. Inherits schedule + retention.
+                    {t("backup.jobs.attachDescriptionBefore")} <code className="font-mono">job-end</code> {t("backup.jobs.attachDescriptionMiddle")} <code className="font-mono">{backend === "pbs" ? "PBS" : backend === "borg" ? "Borg" : t("backup.backends.local")}</code> {t("backup.jobs.attachDescriptionAfter")}
                   </div>
                 </button>
               </div>
@@ -3431,19 +3443,19 @@ function CreateJobDialog({
           {step === 3 && mode === "attach" && (
             <div className="space-y-3">
               <div>
-                <Label>Pick the parent PVE vzdump job</Label>
+                <Label>{t("backup.jobs.pickParentPveJob")}</Label>
                 <p className="text-xs text-muted-foreground mb-2">
-                  The host config backup will fire on every <code className="font-mono">job-end</code> of this job.
+                  {t("backup.jobs.parentPveJobHelpBefore")} <code className="font-mono">job-end</code> {t("backup.jobs.parentPveJobHelpAfter")}
                 </p>
               </div>
               {compatibleJobs.length === 0 ? (
                 <div className="p-4 rounded-md border border-amber-500/40 bg-amber-500/5 text-sm">
                   <div className="flex items-center gap-2 text-amber-500 font-medium">
                     <AlertTriangle className="h-4 w-4" />
-                    No compatible PVE vzdump job
+                    {t("backup.jobs.noCompatiblePveJob")}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    No PVE vzdump job currently uses a <span className="font-mono">{backend}</span> storage. Create one in <span className="font-medium">Datacenter → Backup</span> first, then come back here to attach.
+                    {t("backup.jobs.noCompatiblePveJobDescriptionBefore")} <span className="font-mono">{backend === "pbs" ? "PBS" : backend === "borg" ? "Borg" : t("backup.backends.local")}</span> {t("backup.jobs.noCompatiblePveJobDescriptionMiddle")} <span className="font-medium">Datacenter → Backup</span> {t("backup.jobs.noCompatiblePveJobDescriptionAfter")}
                   </p>
                 </div>
               ) : (
@@ -3459,14 +3471,14 @@ function CreateJobDialog({
                         <span className="font-mono text-xs">{j.id}</span>
                         {!j.enabled && (
                           <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/40">
-                            disabled
+                            {t("status.disabled")}
                           </Badge>
                         )}
                       </div>
                       <div className="mt-1 text-xs text-muted-foreground flex items-center gap-x-3 gap-y-1 flex-wrap">
-                        <span>storage: <code className="font-mono">{j.storage}</code></span>
-                        <span>schedule: <code className="font-mono">{j.schedule || "—"}</code></span>
-                        <span>retention: <code className="font-mono">{j.prune || "—"}</code></span>
+                        <span>{t("backup.fields.storageLabel")} <code className="font-mono">{j.storage}</code></span>
+                        <span>{t("backup.fields.scheduleLabel")} <code className="font-mono">{j.schedule || "—"}</code></span>
+                        <span>{t("backup.fields.retentionLabel")} <code className="font-mono">{j.prune || "—"}</code></span>
                       </div>
                     </button>
                   ))}
@@ -3478,9 +3490,9 @@ function CreateJobDialog({
           {step === 3 && mode === "new" && (
             <div className="space-y-4">
               <div>
-                <Label>Schedule</Label>
+                <Label>{t("backup.fields.schedule")}</Label>
                 <p className="text-xs text-muted-foreground mb-2">
-                  Pick how often this backup runs. The expression is built and validated for you.
+                  {t("backup.schedule.pickFrequency")}
                 </p>
                 <Select
                   value={scheduleType}
@@ -3490,18 +3502,18 @@ function CreateJobDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="daily">Daily — every day at a specific time</SelectItem>
-                    <SelectItem value="hourly">Hourly — every hour at a specific minute</SelectItem>
-                    <SelectItem value="weekly">Weekly — on specific weekdays at a time</SelectItem>
-                    <SelectItem value="monthly">Monthly — on a specific day of the month</SelectItem>
-                    <SelectItem value="advanced">Advanced — type the OnCalendar expression myself</SelectItem>
+                    <SelectItem value="daily">{t("backup.schedule.dailyOption")}</SelectItem>
+                    <SelectItem value="hourly">{t("backup.schedule.hourlyOption")}</SelectItem>
+                    <SelectItem value="weekly">{t("backup.schedule.weeklyOption")}</SelectItem>
+                    <SelectItem value="monthly">{t("backup.schedule.monthlyOption")}</SelectItem>
+                    <SelectItem value="advanced">{t("backup.schedule.advancedOption")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {scheduleType === "daily" && (
                 <div>
-                  <Label htmlFor="schedTime">Time of day</Label>
+                  <Label htmlFor="schedTime">{t("backup.fields.timeOfDay")}</Label>
                   <Input
                     id="schedTime"
                     type="time"
@@ -3514,7 +3526,7 @@ function CreateJobDialog({
 
               {scheduleType === "hourly" && (
                 <div>
-                  <Label htmlFor="schedMinute">Minute of the hour (0–59)</Label>
+                  <Label htmlFor="schedMinute">{t("backup.fields.minuteOfHour")}</Label>
                   <Input
                     id="schedMinute"
                     type="number"
@@ -3525,7 +3537,7 @@ function CreateJobDialog({
                     className="font-mono mt-1 max-w-[120px]"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    The job fires every hour at this minute. <code className="font-mono">0</code> = on the hour, <code className="font-mono">30</code> = half past, etc.
+                    {t("backup.schedule.hourlyHelpBefore")} <code className="font-mono">0</code> {t("backup.schedule.hourlyHelpMiddle")} <code className="font-mono">30</code> {t("backup.schedule.hourlyHelpAfter")}
                   </p>
                 </div>
               )}
@@ -3533,7 +3545,7 @@ function CreateJobDialog({
               {scheduleType === "weekly" && (
                 <div className="space-y-3">
                   <div>
-                    <Label>Days of the week</Label>
+                    <Label>{t("backup.fields.daysOfWeek")}</Label>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => {
                         const active = scheduleWeekdays.has(d)
@@ -3555,17 +3567,17 @@ function CreateJobDialog({
                                 : "border-border bg-background/40 text-muted-foreground hover:bg-white/5"
                             }`}
                           >
-                            {d}
+                            {t(`backup.weekdays.short.${d.toLowerCase()}`)}
                           </button>
                         )
                       })}
                     </div>
                     {scheduleWeekdays.size === 0 && (
-                      <p className="text-xs text-amber-500 mt-1">Pick at least one day.</p>
+                      <p className="text-xs text-amber-500 mt-1">{t("backup.schedule.pickAtLeastOneDay")}</p>
                     )}
                   </div>
                   <div>
-                    <Label htmlFor="schedTimeW">Time of day</Label>
+                    <Label htmlFor="schedTimeW">{t("backup.fields.timeOfDay")}</Label>
                     <Input
                       id="schedTimeW"
                       type="time"
@@ -3580,7 +3592,7 @@ function CreateJobDialog({
               {scheduleType === "monthly" && (
                 <div className="space-y-3">
                   <div>
-                    <Label htmlFor="schedDay">Day of the month (1–31)</Label>
+                    <Label htmlFor="schedDay">{t("backup.fields.dayOfMonth")}</Label>
                     <Input
                       id="schedDay"
                       type="number"
@@ -3591,11 +3603,11 @@ function CreateJobDialog({
                       className="font-mono mt-1 max-w-[120px]"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      If the chosen day doesn't exist in a given month (e.g. 31 in February), systemd skips that month.
+                      {t("backup.schedule.monthlySkipHelp")}
                     </p>
                   </div>
                   <div>
-                    <Label htmlFor="schedTimeM">Time of day</Label>
+                    <Label htmlFor="schedTimeM">{t("backup.fields.timeOfDay")}</Label>
                     <Input
                       id="schedTimeM"
                       type="time"
@@ -3609,25 +3621,25 @@ function CreateJobDialog({
 
               {scheduleType === "advanced" && (
                 <div>
-                  <Label htmlFor="schedAdv">OnCalendar expression</Label>
+                  <Label htmlFor="schedAdv">{t("backup.fields.onCalendarExpression")}</Label>
                   <Input
                     id="schedAdv"
                     value={scheduleAdvanced}
                     onChange={(e) => setScheduleAdvanced(e.target.value)}
                     className="font-mono mt-1"
-                    placeholder="*-*-* 02:00, Mon..Fri *-*-* 04:00, daily, ..."
+                    placeholder={t("backup.placeholders.onCalendar")}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Any expression accepted by <code className="font-mono">systemd-analyze calendar</code>. See <span className="font-mono">man systemd.time</span> for the full grammar.
+                    {t("backup.schedule.advancedHelpBefore")} <code className="font-mono">systemd-analyze calendar</code>. {t("backup.schedule.advancedHelpMiddle")} <span className="font-mono">man systemd.time</span> {t("backup.schedule.advancedHelpAfter")}
                   </p>
                 </div>
               )}
 
               {/* Live preview from the backend */}
               <div className="rounded-md border border-border bg-background/40 p-3 space-y-1 text-xs">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Preview</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("backup.schedule.preview")}</div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-muted-foreground">Expression:</span>
+                  <span className="text-muted-foreground">{t("backup.fields.expressionLabel")}</span>
                   <code className="font-mono">{onCalendar}</code>
                 </div>
                 {calendarPreview ? (
@@ -3635,13 +3647,13 @@ function CreateJobDialog({
                     <>
                       {calendarPreview.normalized && calendarPreview.normalized !== onCalendar && (
                         <div className="flex items-baseline gap-2">
-                          <span className="text-muted-foreground">Normalized:</span>
+                          <span className="text-muted-foreground">{t("backup.fields.normalizedLabel")}</span>
                           <code className="font-mono">{calendarPreview.normalized}</code>
                         </div>
                       )}
                       {calendarPreview.next_elapse && (
                         <div className="flex items-baseline gap-2">
-                          <span className="text-muted-foreground">Next run:</span>
+                          <span className="text-muted-foreground">{t("backup.jobs.nextRunLabel")}</span>
                           <span className="text-emerald-400">{calendarPreview.next_elapse}</span>
                           {calendarPreview.from_now && (
                             <span className="text-muted-foreground">({calendarPreview.from_now})</span>
@@ -3651,25 +3663,25 @@ function CreateJobDialog({
                     </>
                   ) : (
                     <div className="text-red-500">
-                      <span className="font-medium">Invalid:</span> {calendarPreview.error}
+                      <span className="font-medium">{t("backup.validation.invalidLabel")}</span> {calendarPreview.error}
                     </div>
                   )
                 ) : (
-                  <div className="text-muted-foreground italic">checking…</div>
+                  <div className="text-muted-foreground italic">{t("backup.common.checking")}</div>
                 )}
               </div>
 
               <div>
-                <Label>Retention</Label>
-                <p className="text-xs text-muted-foreground mb-2">Zero disables that bucket.</p>
+                <Label>{t("backup.retention.title")}</Label>
+                <p className="text-xs text-muted-foreground mb-2">{t("backup.retention.zeroDisables")}</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {[
-                    { id: "keep-last", lbl: "keep-last", v: keepLast, set: setKeepLast },
-                    { id: "keep-hourly", lbl: "keep-hourly", v: keepHourly, set: setKeepHourly },
-                    { id: "keep-daily", lbl: "keep-daily", v: keepDaily, set: setKeepDaily },
-                    { id: "keep-weekly", lbl: "keep-weekly", v: keepWeekly, set: setKeepWeekly },
-                    { id: "keep-monthly", lbl: "keep-monthly", v: keepMonthly, set: setKeepMonthly },
-                    { id: "keep-yearly", lbl: "keep-yearly", v: keepYearly, set: setKeepYearly },
+                    { id: "keep-last", lbl: t("backup.retention.keepLast"), v: keepLast, set: setKeepLast },
+                    { id: "keep-hourly", lbl: t("backup.retention.keepHourly"), v: keepHourly, set: setKeepHourly },
+                    { id: "keep-daily", lbl: t("backup.retention.keepDaily"), v: keepDaily, set: setKeepDaily },
+                    { id: "keep-weekly", lbl: t("backup.retention.keepWeekly"), v: keepWeekly, set: setKeepWeekly },
+                    { id: "keep-monthly", lbl: t("backup.retention.keepMonthly"), v: keepMonthly, set: setKeepMonthly },
+                    { id: "keep-yearly", lbl: t("backup.retention.keepYearly"), v: keepYearly, set: setKeepYearly },
                   ].map((row) => (
                     <div key={row.id}>
                       <Label htmlFor={row.id} className="text-xs">{row.lbl}</Label>
@@ -3692,16 +3704,16 @@ function CreateJobDialog({
           {step === 4 && (
             <div className="space-y-4">
               <div>
-                <Label>Backup profile</Label>
+                <Label>{t("backup.profile.title")}</Label>
                 <div className="grid grid-cols-2 gap-2 mt-1">
                   <button
                     type="button"
                     onClick={() => setProfileMode("default")}
                     className={`text-left p-3 rounded-md border ${profileMode === "default" ? "border-blue-500 bg-blue-500/5" : "border-border bg-background/40"} hover:bg-white/5 transition-colors`}
                   >
-                    <div className="text-sm font-medium">Default</div>
+                    <div className="text-sm font-medium">{t("backup.profile.default")}</div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Critical config paths ({defaultPaths.length} entries): /etc/pve, /etc/network, /root, /usr/local, etc.
+                      {t("backup.profile.defaultDescription", { count: defaultPaths.length })}
                     </div>
                   </button>
                   <button
@@ -3709,16 +3721,16 @@ function CreateJobDialog({
                     onClick={() => setProfileMode("custom")}
                     className={`text-left p-3 rounded-md border ${profileMode === "custom" ? "border-blue-500 bg-blue-500/5" : "border-border bg-background/40"} hover:bg-white/5 transition-colors`}
                   >
-                    <div className="text-sm font-medium">Custom</div>
+                    <div className="text-sm font-medium">{t("backup.profile.custom")}</div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Pick from the default list which paths to include. At least one is required.
+                      {t("backup.profile.customDescription")}
                     </div>
                   </button>
                 </div>
               </div>
               {profileMode === "custom" && (
                 <div>
-                  <Label>Paths to include ({customPaths.size}/{defaultPaths.length})</Label>
+                  <Label>{t("backup.profile.pathsToInclude", { selected: customPaths.size, total: defaultPaths.length })}</Label>
                   <ScrollArea className="h-64 mt-1 rounded-md border border-border p-2">
                     {defaultPaths.map((p) => (
                       <label
@@ -3744,7 +3756,7 @@ function CreateJobDialog({
               {backend === "pbs" && (
                 <>
                   <div>
-                    <Label>PBS repository</Label>
+                    <Label>{t("backup.fields.pbsRepository")}</Label>
                     {destResp?.pbs?.length ? (
                       <div className="mt-1 flex items-center gap-2">
                         <Select value={pbsRepository} onValueChange={setPbsRepository}>
@@ -3757,7 +3769,7 @@ function CreateJobDialog({
                             {(() => {
                               const sel = destResp.pbs.find((r) => r.repository === pbsRepository)
                               if (!sel) {
-                                return <span className="truncate text-muted-foreground">Pick a PBS repository</span>
+                                return <span className="truncate text-muted-foreground">{t("backup.placeholders.pickPbsRepository")}</span>
                               }
                               return (
                                 <span className="truncate font-mono text-left">
@@ -3782,15 +3794,15 @@ function CreateJobDialog({
                           variant="outline"
                           className="shrink-0 bg-blue-500/10 border-blue-500/40 !text-blue-400 hover:bg-blue-500/20 hover:!text-blue-300"
                           onClick={() => setAddingDestType("pbs")}
-                          title="Save another PBS repository"
+                          title={t("backup.destinations.saveAnotherPbsTitle")}
                         >
                           <Plus className="h-3.5 w-3.5 mr-1" />
-                          Add another
+                          {t("backup.actions.addAnother")}
                         </Button>
                       </div>
                     ) : (
                       <div className="mt-1 p-3 rounded-md border border-amber-500/40 bg-amber-500/5 text-xs space-y-2">
-                        <div>No PBS repository configured yet. You can add one without leaving this wizard.</div>
+                        <div>{t("backup.destinations.noPbsInWizard")}</div>
                         <Button
                           type="button"
                           size="sm"
@@ -3799,22 +3811,22 @@ function CreateJobDialog({
                           onClick={() => setAddingDestType("pbs")}
                         >
                           <Plus className="h-3.5 w-3.5 mr-1" />
-                          Add PBS repository
+                          {t("backup.destinations.addPbsRepository")}
                         </Button>
                       </div>
                     )}
                   </div>
                   <div>
-                    <Label htmlFor="pbsBackupId">Group name in PBS</Label>
+                    <Label htmlFor="pbsBackupId">{t("backup.fields.groupNameInPbs")}</Label>
                     <Input
                       id="pbsBackupId"
                       value={pbsBackupId}
                       onChange={(e) => setPbsBackupId(e.target.value)}
-                      placeholder="Leave blank for the default"
+                      placeholder={t("backup.placeholders.leaveBlankForDefault")}
                       className="font-mono mt-1"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      PBS organises backups into named groups, each with its own retention. Leave blank to use the automatic default for this host (recommended).
+                      {t("backup.jobs.pbsGroupHelp")}
                     </p>
                   </div>
                   {/* PBS client-side encryption — mirrors the shell wizard:
@@ -3842,10 +3854,10 @@ function CreateJobDialog({
                       <div className="flex-1">
                         <div className="inline-flex items-center gap-1.5 text-sm">
                           <Lock className="h-3.5 w-3.5 text-emerald-400" />
-                          Encrypt backups (client-side keyfile)
+                          {t("backup.encryption.encryptBackups")}
                         </div>
                         <p className="text-[11px] text-muted-foreground mt-1">
-                          Adds <code className="font-mono">--keyfile</code> to <code className="font-mono">proxmox-backup-client backup</code>. Encryption happens before upload so chunks land on PBS already ciphered. The keyfile is installed at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> (chmod 0600) and reused by every encrypted PBS job on this host.
+                          {t("backup.encryption.pbsHelpBefore")} <code className="font-mono">--keyfile</code> {t("backup.encryption.pbsHelpMiddle")} <code className="font-mono">proxmox-backup-client backup</code>. {t("backup.encryption.pbsHelpAfter")} <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> (chmod 0600) {t("backup.encryption.pbsHelpEnd")}
                         </p>
                       </div>
                     </label>
@@ -3854,7 +3866,7 @@ function CreateJobDialog({
                     {pbsEncrypt && !pbsRecoveryStatus?.has_keyfile && (
                       <div className="space-y-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
                         <div className="text-[11px] font-medium">
-                          No encryption key is stored on this host. Choose how to set one up:
+                          {t("backup.encryption.noKeyStored")}
                         </div>
                         <label className="flex items-start gap-2 cursor-pointer text-[11px]">
                           <input
@@ -3865,8 +3877,8 @@ function CreateJobDialog({
                             className="mt-1"
                           />
                           <div className="flex-1">
-                            <div className="font-medium">Generate a new keyfile (per host — safest isolation)</div>
-                            <div className="text-muted-foreground">Creates a fresh keyfile at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code>. Backup up the recovery passphrase (below) to survive host loss.</div>
+                            <div className="font-medium">{t("backup.encryption.generateNewKeyfile")}</div>
+                            <div className="text-muted-foreground">{t("backup.encryption.generateNewKeyfileDescriptionBefore")} <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code>. {t("backup.encryption.generateNewKeyfileDescriptionAfter")}</div>
                           </div>
                         </label>
                         <label className="flex items-start gap-2 cursor-pointer text-[11px]">
@@ -3878,8 +3890,8 @@ function CreateJobDialog({
                             className="mt-1"
                           />
                           <div className="flex-1">
-                            <div className="font-medium">Import an existing keyfile (shared across hosts)</div>
-                            <div className="text-muted-foreground">Use the same keyfile another host already has — enables cross-host restore of encrypted backups.</div>
+                            <div className="font-medium">{t("backup.encryption.importExistingKeyfile")}</div>
+                            <div className="text-muted-foreground">{t("backup.encryption.importExistingKeyfileDescription")}</div>
                           </div>
                         </label>
                         {pbsEncryptMode === "existing" && pbsPveMatch && (
@@ -3887,11 +3899,11 @@ function CreateJobDialog({
                             <div className="flex items-start gap-1.5">
                               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
                               <div className="flex-1">
-                                <div className="font-medium text-foreground">Auto-detected from PVE storage &apos;{pbsPveMatch.name}&apos;</div>
+                                <div className="font-medium text-foreground">{t("backup.encryption.autoDetectedFromPveStorage", { storage: pbsPveMatch.name })}</div>
                                 <div className="text-muted-foreground mt-0.5">
-                                  Existing key at <code className="font-mono text-[10.5px]">{pbsPveMatch.path}</code>
+                                  {t("backup.encryption.existingKeyAt")} <code className="font-mono text-[10.5px]">{pbsPveMatch.path}</code>
                                 </div>
-                                <div className="text-muted-foreground mt-0.5">Will be copied to the ProxMenux state directory. No file upload needed.</div>
+                                <div className="text-muted-foreground mt-0.5">{t("backup.encryption.pveKeyWillBeCopied")}</div>
                               </div>
                             </div>
                           </div>
@@ -3900,7 +3912,7 @@ function CreateJobDialog({
                           <div className="space-y-2 pt-1">
                             <div className="space-y-1.5">
                               <Label htmlFor="pbsImportFile" className="text-[11px] font-medium">
-                                Upload from your machine
+                                {t("backup.keyfileActions.uploadFromMachine")}
                               </Label>
                               <Input
                                 id="pbsImportFile"
@@ -3911,10 +3923,10 @@ function CreateJobDialog({
                                 className="h-8 text-[11px]"
                               />
                             </div>
-                            <div className="text-[10px] text-center text-muted-foreground">— or —</div>
+                            <div className="text-[10px] text-center text-muted-foreground">{t("backup.common.or")}</div>
                             <div className="space-y-1.5">
                               <Label htmlFor="pbsImportPath" className="text-[11px] font-medium">
-                                Absolute path on this host
+                                {t("backup.fields.absolutePathOnHost")}
                               </Label>
                               <Input
                                 id="pbsImportPath"
@@ -3922,11 +3934,11 @@ function CreateJobDialog({
                                 value={pbsImportPath}
                                 onChange={(e) => setPbsImportPath(e.target.value)}
                                 disabled={pbsImportBusy || !!pbsImportFile}
-                                placeholder="e.g. /etc/pve/priv/storage/<NAME>.enc or /root/my-pbs-key"
+                                placeholder={t("backup.placeholders.keyfilePath")}
                                 className="h-8 text-[11px] font-mono"
                               />
                               <p className="text-[10px] text-muted-foreground">
-                                Either option works. The file lands at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> and every subsequent encrypted backup reuses it.
+                                {t("backup.encryption.importKeyfileHelpBefore")} <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> {t("backup.encryption.importKeyfileHelpAfter")}
                               </p>
                             </div>
                           </div>
@@ -3940,15 +3952,15 @@ function CreateJobDialog({
                           <div className="flex items-start gap-2 text-[11px]">
                             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
                             <div className="flex-1">
-                              <div className="text-foreground">Keyfile installed. Backups reuse it silently.</div>
-                              <div className="text-muted-foreground mt-0.5">The current PBS-upload setting stays in effect.</div>
+                              <div className="text-foreground">{t("backup.keyfileManagement.keyfileInstalled")}</div>
+                              <div className="text-muted-foreground mt-0.5">{t("backup.keyfileManagement.currentPbsUploadStays")}</div>
                             </div>
                             <button
                               type="button"
                               onClick={() => setPbsRecoveryChange(true)}
                               className="text-blue-400 hover:text-blue-300 underline underline-offset-2 shrink-0"
                             >
-                              Change
+                              {t("backup.actions.change")}
                             </button>
                           </div>
                         )}
@@ -3963,14 +3975,14 @@ function CreateJobDialog({
                               onClick={() => setPbsRecoveryChange(false)}
                               className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
                             >
-                              Done — hide keyfile options
+                              {t("backup.keyfileManagement.hideOptions")}
                             </button>
                           </>
                         )}
                         {!pbsRecoveryStatus?.has_keyfile && (
                           <>
                             <div>
-                              <div className="text-[11px] font-medium text-foreground mb-2">Upload key to PBS?</div>
+                              <div className="text-[11px] font-medium text-foreground mb-2">{t("backup.keyfileManagement.uploadToPbs")}</div>
                               <div className="grid gap-1.5">
                                 <label className="flex items-start gap-2 cursor-pointer text-[11px]">
                                   <input
@@ -3981,8 +3993,8 @@ function CreateJobDialog({
                                     className="mt-1"
                                   />
                                   <div className="flex-1">
-                                    <div className="font-medium">No, keep local only</div>
-                                    <div className="text-muted-foreground">Keyfile stays only at <code className="font-mono text-[10.5px]">/usr/local/share/proxmenux/pbs-key.conf</code>. You are responsible for keeping an offsite copy — losing it makes every encrypted backup unreadable.</div>
+                                    <div className="font-medium">{t("backup.keyfileManagement.keepLocalOnly")}</div>
+                                    <div className="text-muted-foreground">{t("backup.keyfileManagement.keepLocalDescriptionBefore")} <code className="font-mono text-[10.5px]">/usr/local/share/proxmenux/pbs-key.conf</code>. {t("backup.keyfileManagement.keepLocalDescriptionAfter")}</div>
                                   </div>
                                 </label>
                                 <label className="flex items-start gap-2 cursor-pointer text-[11px]">
@@ -3994,8 +4006,8 @@ function CreateJobDialog({
                                     className="mt-1"
                                   />
                                   <div className="flex-1">
-                                    <div className="font-medium">Yes, upload</div>
-                                    <div className="text-muted-foreground">Set a recovery passphrase now. ProxMenux uploads a passphrase-wrapped copy of the keyfile to PBS with every backup so you can recover it on a reinstalled host with just the passphrase.</div>
+                                    <div className="font-medium">{t("backup.keyfileManagement.yesUpload")}</div>
+                                    <div className="text-muted-foreground">{t("backup.keyfileManagement.yesUploadDescription")}</div>
                                   </div>
                                 </label>
                               </div>
@@ -4003,36 +4015,36 @@ function CreateJobDialog({
                             {pbsUploadToPbs ? (
                               <div className="space-y-2 pt-1 border-t border-blue-500/20">
                                 <div>
-                                  <Label htmlFor="pbsRecPass" className="text-[11px]">Recovery passphrase</Label>
+                                  <Label htmlFor="pbsRecPass" className="text-[11px]">{t("backup.fields.recoveryPassphrase")}</Label>
                                   <Input
                                     id="pbsRecPass"
                                     type="password"
                                     value={pbsRecoveryPass}
                                     onChange={(e) => setPbsRecoveryPass(e.target.value)}
-                                    placeholder="Long random string — write it down somewhere safe"
+                                    placeholder={t("backup.placeholders.recoveryPassphrase")}
                                     className="font-mono mt-1 h-8 text-xs"
                                   />
                                 </div>
                                 <div>
-                                  <Label htmlFor="pbsRecPass2" className="text-[11px]">Confirm passphrase</Label>
+                                  <Label htmlFor="pbsRecPass2" className="text-[11px]">{t("backup.fields.confirmPassphrase")}</Label>
                                   <Input
                                     id="pbsRecPass2"
                                     type="password"
                                     value={pbsRecoveryPass2}
                                     onChange={(e) => setPbsRecoveryPass2(e.target.value)}
-                                    placeholder="Type it again"
+                                    placeholder={t("backup.placeholders.typeItAgain")}
                                     className="font-mono mt-1 h-8 text-xs"
                                   />
                                   {pbsRecoveryPass && pbsRecoveryPass2 && pbsRecoveryPass !== pbsRecoveryPass2 && (
-                                    <p className="text-[11px] text-red-400 mt-1">Passphrases don't match.</p>
+                                    <p className="text-[11px] text-red-400 mt-1">{t("backup.errors.passphrasesDontMatch")}</p>
                                   )}
                                 </div>
                               </div>
                             ) : (
                               <div className="pt-1 border-t border-blue-500/20 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-3 py-2 leading-relaxed space-y-1">
-                                <div className="font-semibold">Keep an offsite copy of the keyfile.</div>
-                                <div>After the job is created, copy <code className="font-mono text-[10.5px] bg-amber-500/20 rounded px-1">/usr/local/share/proxmenux/pbs-key.conf</code> to an external medium (USB, password manager, another host).</div>
-                                <div>Without that copy, losing this host makes every encrypted backup on PBS unreadable.</div>
+                                <div className="font-semibold">{t("backup.keyfileManagement.keepOffsiteCopy")}</div>
+                                <div>{t("backup.keyfileManagement.copyAfterCreateBefore")} <code className="font-mono text-[10.5px] bg-amber-500/20 rounded px-1">/usr/local/share/proxmenux/pbs-key.conf</code> {t("backup.keyfileManagement.copyAfterCreateAfter")}</div>
+                                <div>{t("backup.keyfileManagement.withoutCopyWarning")}</div>
                               </div>
                             )}
                           </>
@@ -4044,18 +4056,18 @@ function CreateJobDialog({
               )}
               {backend === "local" && (
                 <div className="space-y-2">
-                  <Label htmlFor="localDest">Destination directory</Label>
+                  <Label htmlFor="localDest">{t("backup.fields.destinationDirectory")}</Label>
                   {mode === "attach" ? (
                     <>
                       <Input
                         id="localDest"
                         value={localDestDir}
                         onChange={(e) => setLocalDestDir(e.target.value)}
-                        placeholder="Auto (derived from the PVE storage path)"
+                        placeholder={t("backup.placeholders.autoFromPveStorage")}
                         className="font-mono"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Leave blank to derive automatically from the parent PVE job's storage at backup time. Default is the storage's <code className="font-mono">/dump</code> subdir, falling back to <code className="font-mono">/var/lib/vz/dump</code>.
+                        {t("backup.destinations.localAttachHelpBefore")} <code className="font-mono">/dump</code> {t("backup.destinations.localAttachHelpMiddle")} <code className="font-mono">/var/lib/vz/dump</code>.
                       </p>
                     </>
                   ) : (
@@ -4067,14 +4079,14 @@ function CreateJobDialog({
                             onValueChange={(v) => setLocalDestDir(v)}
                           >
                             <SelectTrigger className="flex-1">
-                              <SelectValue placeholder="Pick a configured local destination" />
+                              <SelectValue placeholder={t("backup.placeholders.pickLocalDestination")} />
                             </SelectTrigger>
                             <SelectContent>
                               {destResp?.local?.entries?.map((e) => (
                                 <SelectItem key={e.path} value={e.path}>
                                   <span className="font-mono">{e.path}</span>
                                   {e.source === "default" && (
-                                    <span className="text-muted-foreground ml-2 text-[10px] uppercase">default</span>
+                                    <span className="text-muted-foreground ml-2 text-[10px] uppercase">{t("backup.profile.default")}</span>
                                   )}
                                 </SelectItem>
                               ))}
@@ -4086,10 +4098,10 @@ function CreateJobDialog({
                             variant="outline"
                             className="shrink-0 bg-blue-500/10 border-blue-500/40 !text-blue-400 hover:bg-blue-500/20 hover:!text-blue-300"
                             onClick={() => setAddingDestType("local")}
-                            title="Save another local destination"
+                            title={t("backup.destinations.saveAnotherLocalTitle")}
                           >
                             <Plus className="h-3.5 w-3.5 mr-1" />
-                            Add another
+                            {t("backup.actions.addAnother")}
                           </Button>
                         </div>
                       )}
@@ -4101,7 +4113,7 @@ function CreateJobDialog({
                         className="font-mono"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Pick a configured destination above, or type a custom directory path. Empty input falls back to <span className="font-mono">{destResp?.local?.effective || "/var/lib/vz/dump"}</span>.
+                        {t("backup.destinations.localPickHelpBefore")} <span className="font-mono">{destResp?.local?.effective || "/var/lib/vz/dump"}</span>.
                       </p>
                     </>
                   )}
@@ -4110,7 +4122,7 @@ function CreateJobDialog({
               {backend === "borg" && (
                 <>
                   <div>
-                    <Label>Borg repository</Label>
+                    <Label>{t("backup.fields.borgRepository")}</Label>
                     {destResp?.borg?.length ? (
                       <div className="mt-1 flex items-center gap-2">
                         <Select value={borgRepoSelected} onValueChange={setBorgRepoSelected}>
@@ -4118,7 +4130,7 @@ function CreateJobDialog({
                             {(() => {
                               const sel = destResp.borg.find((r) => r.repository === borgRepoSelected)
                               if (!sel) {
-                                return <span className="truncate text-muted-foreground">Pick a Borg repository</span>
+                                return <span className="truncate text-muted-foreground">{t("backup.placeholders.pickBorgRepository")}</span>
                               }
                               return (
                                 <span className="truncate font-mono text-left">
@@ -4143,15 +4155,15 @@ function CreateJobDialog({
                           variant="outline"
                           className="shrink-0 bg-fuchsia-500/10 border-fuchsia-500/40 !text-fuchsia-400 hover:bg-fuchsia-500/20 hover:!text-fuchsia-300"
                           onClick={() => setAddingDestType("borg")}
-                          title="Save another Borg repository"
+                          title={t("backup.destinations.saveAnotherBorgTitle")}
                         >
                           <Plus className="h-3.5 w-3.5 mr-1" />
-                          Add another
+                          {t("backup.actions.addAnother")}
                         </Button>
                       </div>
                     ) : (
                       <div className="mt-1 p-3 rounded-md border border-amber-500/40 bg-amber-500/5 text-xs space-y-2">
-                        <div>No Borg repository configured yet. You can add one without leaving this wizard (SSH or local/USB path supported).</div>
+                        <div>{t("backup.destinations.noBorgInWizard")}</div>
                         <Button
                           type="button"
                           size="sm"
@@ -4160,7 +4172,7 @@ function CreateJobDialog({
                           onClick={() => setAddingDestType("borg")}
                         >
                           <Plus className="h-3.5 w-3.5 mr-1" />
-                          Add Borg repository
+                          {t("backup.destinations.addBorgRepository")}
                         </Button>
                       </div>
                     )}
@@ -4174,7 +4186,7 @@ function CreateJobDialog({
                     const mode = dest.encrypt_mode || "repokey"
                     return (
                       <p className="text-[11px] text-muted-foreground">
-                        Encryption + passphrase are taken from the destination ({mode === "none" ? "no encryption" : mode}). Edit the destination if you need to change them.
+                        {t("backup.destinations.borgEncryptionInherited", { mode: mode === "none" ? t("backup.encryption.none") : mode })}
                       </p>
                     )
                   })()}
@@ -4186,37 +4198,37 @@ function CreateJobDialog({
                   see when they open the job later. */}
               {(() => {
                 const retentionPairs: Array<[string, string]> = [
-                  ["last", String(keepLast || "")],
-                  ["hourly", String(keepHourly || "")],
-                  ["daily", String(keepDaily || "")],
-                  ["weekly", String(keepWeekly || "")],
-                  ["monthly", String(keepMonthly || "")],
-                  ["yearly", String(keepYearly || "")],
+                  [t("backup.retention.last"), String(keepLast || "")],
+                  [t("backup.retention.hourly"), String(keepHourly || "")],
+                  [t("backup.retention.daily"), String(keepDaily || "")],
+                  [t("backup.retention.weekly"), String(keepWeekly || "")],
+                  [t("backup.retention.monthly"), String(keepMonthly || "")],
+                  [t("backup.retention.yearly"), String(keepYearly || "")],
                 ].filter(([, v]) => Number(v) > 0) as Array<[string, string]>
                 return (
                   <div className="rounded-md border border-border bg-background/40 p-3 space-y-2 text-xs">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Summary</div>
-                    <div><span className="text-muted-foreground">Name:</span> <span className="font-mono text-foreground">{jobId}</span></div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("backup.jobs.summary")}</div>
+                    <div><span className="text-muted-foreground">{t("backup.fields.nameLabel")}</span> <span className="font-mono text-foreground">{jobId}</span></div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-muted-foreground">Backend:</span>
+                      <span className="text-muted-foreground">{t("backup.fields.backendLabel")}</span>
                       <Badge variant="outline" className={`text-[10px] uppercase tracking-wide ${methodBadgeCls(backend)}`}>
-                        {backend}
+                        {backend === "pbs" ? "PBS" : backend === "borg" ? "Borg" : t("backup.backends.local")}
                       </Badge>
                       <Badge variant="outline" className="text-[10px] text-blue-400 border-blue-400/40 bg-blue-500/5">
-                        {mode === "attach" ? "attached" : "scheduled"}
+                        {mode === "attach" ? t("backup.status.attached") : t("backup.status.scheduled")}
                       </Badge>
                     </div>
                     {mode === "attach" && selectedPveJob && (
                       <>
-                        <div><span className="text-muted-foreground">PVE job:</span> <span className="font-mono text-foreground">{selectedPveJob.id}</span></div>
+                        <div><span className="text-muted-foreground">{t("backup.fields.pveJobLabel")}</span> <span className="font-mono text-foreground">{selectedPveJob.id}</span></div>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <Calendar className="h-3 w-3 text-green-500/80" />
-                          <span className="text-green-500/90 uppercase tracking-wider text-[10px]">inherited schedule:</span>
-                          <span className="text-foreground">{humanizeOnCalendar(selectedPveJob.schedule)}</span>
+                          <span className="text-green-500/90 uppercase tracking-wider text-[10px]">{t("backup.jobs.inheritedScheduleLabel")}</span>
+                          <span className="text-foreground">{humanizeOnCalendar(selectedPveJob.schedule, t)}</span>
                         </div>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <Archive className="h-3 w-3 text-green-500/80" />
-                          <span className="text-green-500/90 uppercase tracking-wider text-[10px]">inherited retention:</span>
+                          <span className="text-green-500/90 uppercase tracking-wider text-[10px]">{t("backup.jobs.inheritedRetentionLabel")}</span>
                           <span className="font-mono text-foreground">{selectedPveJob.prune}</span>
                         </div>
                       </>
@@ -4225,15 +4237,15 @@ function CreateJobDialog({
                       <>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <Calendar className="h-3 w-3 text-green-500/80" />
-                          <span className="text-green-500/90 uppercase tracking-wider text-[10px]">when:</span>
-                          <span className="text-foreground">{humanizeOnCalendar(onCalendar)}</span>
+                          <span className="text-green-500/90 uppercase tracking-wider text-[10px]">{t("backup.fields.whenLabel")}</span>
+                          <span className="text-foreground">{humanizeOnCalendar(onCalendar, t)}</span>
                         </div>
                         <div className="flex items-start gap-1.5 flex-wrap">
                           <span className="text-green-500/90 uppercase tracking-wider text-[10px] inline-flex items-center gap-1 pt-0.5">
-                            <Archive className="h-3 w-3 text-green-500/80" /> retention:
+                            <Archive className="h-3 w-3 text-green-500/80" /> {t("backup.fields.retentionLabel")}
                           </span>
                           {retentionPairs.length === 0 ? (
-                            <span className="text-muted-foreground italic">No retention rules</span>
+                            <span className="text-muted-foreground italic">{t("backup.retention.none")}</span>
                           ) : (
                             <div className="flex flex-wrap gap-1.5">
                               {retentionPairs.map(([k, v]) => (
@@ -4249,9 +4261,9 @@ function CreateJobDialog({
                     )}
                     <div className="inline-flex items-center gap-1.5">
                       <FileSearch className="h-3 w-3 text-green-500/80" />
-                      <span className="text-green-500/90 uppercase tracking-wider text-[10px]">profile:</span>
-                      <span className="text-foreground">{profileMode}</span>
-                      <span className="text-muted-foreground">({profileMode === "default" ? defaultPaths.length : customPaths.size} paths)</span>
+                      <span className="text-green-500/90 uppercase tracking-wider text-[10px]">{t("backup.fields.profileLabel")}</span>
+                      <span className="text-foreground">{profileMode === "default" ? t("backup.profile.default") : t("backup.profile.custom")}</span>
+                      <span className="text-muted-foreground">({t("backup.paths.count", { count: profileMode === "default" ? defaultPaths.length : customPaths.size })})</span>
                     </div>
                   </div>
                 )
@@ -4273,7 +4285,7 @@ function CreateJobDialog({
             onClick={onClose}
             disabled={submitting}
           >
-            Cancel
+            {t("actions.cancel")}
           </Button>
           <div className="flex items-center gap-2">
             {step > 1 && (
@@ -4283,7 +4295,7 @@ function CreateJobDialog({
                 disabled={submitting}
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
-                Back
+                {t("backup.actions.back")}
               </Button>
             )}
             {step < 5 ? (
@@ -4296,7 +4308,7 @@ function CreateJobDialog({
                   (step === 4 && !canAdvanceFrom4)
                 }
               >
-                Next
+                {t("backup.actions.next")}
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             ) : (
@@ -4312,7 +4324,7 @@ function CreateJobDialog({
                 ) : (
                   <Plus className="h-4 w-4 mr-2" />
                 )}
-                {isEdit ? "Save changes" : "Create job"}
+                {isEdit ? t("backup.actions.saveChanges") : t("backup.jobs.createJob")}
               </Button>
             )}
           </div>
@@ -4361,6 +4373,7 @@ function ManualBackupDialog({
   // never has to chase a banner after pressing Run.
   onLaunched: (jobId: string) => void
 }) {
+  const t = useT()
   const [step, setStep] = useState<1 | 2>(1)
   const [backend, setBackend] = useState<"pbs" | "local" | "borg">("local")
   const [profileMode, setProfileMode] = useState<"default" | "custom">("default")
@@ -4535,12 +4548,12 @@ function ManualBackupDialog({
       !pbsRecoveryStatus?.has_keyfile
     if (needsInstall) {
       if (pbsEncryptMode === "existing" && !pbsPveMatch && !pbsImportFile && !pbsImportPath.trim()) {
-        setError("Pick a keyfile file or enter an absolute path on this host.")
+        setError(t("backup.errors.pickKeyfile"))
         setSubmitting(false)
         return
       }
       if (pbsUploadToPbs && pbsRecoveryPass !== pbsRecoveryPass2) {
-        setError("Recovery passphrases don't match.")
+        setError(t("backup.errors.passphrasesDoNotMatch"))
         setSubmitting(false)
         return
       }
@@ -4575,9 +4588,9 @@ function ManualBackupDialog({
       } catch (e) {
         const err = e as Error & { body?: { tool_output?: string; tool_exit_code?: number } }
         const detail = err.body?.tool_output
-          ? `${err.message}\n\nproxmox-backup-client output:\n${err.body.tool_output}`
+          ? `${err.message}\n\n${t("backup.errors.proxmoxBackupClientOutput")}:\n${err.body.tool_output}`
           : err.message
-        setError(`Encryption setup failed: ${detail || String(e)}`)
+        setError(t("backup.errors.encryptionSetupFailed", { detail: detail || String(e) }))
         setPbsImportBusy(false)
         setSubmitting(false)
         return
@@ -4629,10 +4642,10 @@ function ManualBackupDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <PlayCircle className="h-5 w-5 text-blue-500" />
-            Run a one-shot backup
+            {t("backup.manual.runOneShotBackup")}
           </DialogTitle>
           <DialogDescription>
-            Step {step} of 2 · The backup runs once. It appears in the list with a "manual" badge and won't fire again.
+            {t("backup.jobs.stepOf", { step, total: 2 })} · {t("backup.manual.oneShotDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -4649,15 +4662,15 @@ function ManualBackupDialog({
           {step === 1 && (
             <div className="space-y-4">
               <div>
-                <Label>Backend</Label>
+                <Label>{t("backup.fields.backend")}</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-1">
                   {(["pbs", "local", "borg"] as const).map((b) => {
                     const Icon = b === "pbs" ? Server : b === "local" ? HardDrive : Archive
                     const desc = b === "pbs"
-                      ? "Proxmox Backup Server."
+                      ? t("backup.backends.pbsShortDescription")
                       : b === "local"
-                        ? "tar.zst archive into a local directory."
-                        : "Borg repo (SSH or local/USB disk)."
+                        ? t("backup.backends.localShortDescription")
+                        : t("backup.backends.borgShortDescription")
                     return (
                       <button
                         key={b}
@@ -4667,7 +4680,7 @@ function ManualBackupDialog({
                       >
                         <div className="flex items-center gap-2 font-medium text-sm">
                           <Icon className="h-4 w-4" />
-                          {b.toUpperCase()}
+                          {b === "pbs" ? "PBS" : b === "borg" ? "Borg" : t("backup.backends.local")}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">{desc}</div>
                       </button>
@@ -4677,16 +4690,16 @@ function ManualBackupDialog({
               </div>
 
               <div>
-                <Label>Backup profile</Label>
+                <Label>{t("backup.profile.title")}</Label>
                 <div className="grid grid-cols-2 gap-2 mt-1">
                   <button
                     type="button"
                     onClick={() => setProfileMode("default")}
                     className={`text-left p-3 rounded-md border ${profileMode === "default" ? "border-blue-500 bg-blue-500/5" : "border-border bg-background/40"} hover:bg-white/5 transition-colors`}
                   >
-                    <div className="text-sm font-medium">Default</div>
+                    <div className="text-sm font-medium">{t("backup.profile.default")}</div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Critical config paths ({defaultPaths.length} entries).
+                      {t("backup.profile.defaultDescriptionShort", { count: defaultPaths.length })}
                     </div>
                   </button>
                   <button
@@ -4694,9 +4707,9 @@ function ManualBackupDialog({
                     onClick={() => setProfileMode("custom")}
                     className={`text-left p-3 rounded-md border ${profileMode === "custom" ? "border-blue-500 bg-blue-500/5" : "border-border bg-background/40"} hover:bg-white/5 transition-colors`}
                   >
-                    <div className="text-sm font-medium">Custom</div>
+                    <div className="text-sm font-medium">{t("backup.profile.custom")}</div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Pick which paths to include.
+                      {t("backup.profile.pickPaths")}
                     </div>
                   </button>
                 </div>
@@ -4704,7 +4717,7 @@ function ManualBackupDialog({
 
               {profileMode === "custom" && (
                 <div>
-                  <Label>Paths to include ({customPaths.size}/{defaultPaths.length})</Label>
+                  <Label>{t("backup.profile.pathsToInclude", { selected: customPaths.size, total: defaultPaths.length })}</Label>
                   <ScrollArea className="h-48 mt-1 rounded-md border border-border p-2">
                     {defaultPaths.map((p) => (
                       <label
@@ -4729,7 +4742,7 @@ function ManualBackupDialog({
               {backend === "pbs" && (
                 <>
                   <div>
-                    <Label>PBS repository</Label>
+                    <Label>{t("backup.fields.pbsRepository")}</Label>
                     {destResp?.pbs?.length ? (
                       <div className="mt-1 flex items-center gap-2">
                         <Select value={pbsRepository} onValueChange={setPbsRepository}>
@@ -4742,7 +4755,7 @@ function ManualBackupDialog({
                             {(() => {
                               const sel = destResp.pbs.find((r) => r.repository === pbsRepository)
                               if (!sel) {
-                                return <span className="truncate text-muted-foreground">Pick a PBS repository</span>
+                                return <span className="truncate text-muted-foreground">{t("backup.placeholders.pickPbsRepository")}</span>
                               }
                               return (
                                 <span className="truncate font-mono text-left">
@@ -4767,15 +4780,15 @@ function ManualBackupDialog({
                           variant="outline"
                           className="shrink-0 bg-blue-500/10 border-blue-500/40 !text-blue-400 hover:bg-blue-500/20 hover:!text-blue-300"
                           onClick={() => setAddingDestType("pbs")}
-                          title="Save another PBS repository"
+                          title={t("backup.destinations.saveAnotherPbsTitle")}
                         >
                           <Plus className="h-3.5 w-3.5 mr-1" />
-                          Add another
+                          {t("backup.actions.addAnother")}
                         </Button>
                       </div>
                     ) : (
                       <div className="mt-1 p-3 rounded-md border border-amber-500/40 bg-amber-500/5 text-xs space-y-2">
-                        <div>No PBS repository configured yet. You can add one without leaving this dialog.</div>
+                        <div>{t("backup.destinations.noPbsInDialog")}</div>
                         <Button
                           type="button"
                           size="sm"
@@ -4784,18 +4797,18 @@ function ManualBackupDialog({
                           onClick={() => setAddingDestType("pbs")}
                         >
                           <Plus className="h-3.5 w-3.5 mr-1" />
-                          Add PBS repository
+                          {t("backup.destinations.addPbsRepository")}
                         </Button>
                       </div>
                     )}
                   </div>
                   <div>
-                    <Label htmlFor="manualPbsBackupId">Group name in PBS</Label>
+                    <Label htmlFor="manualPbsBackupId">{t("backup.fields.groupNameInPbs")}</Label>
                     <Input
                       id="manualPbsBackupId"
                       value={pbsBackupId}
                       onChange={(e) => setPbsBackupId(e.target.value)}
-                      placeholder="Leave blank for the default"
+                      placeholder={t("backup.placeholders.leaveBlankForDefault")}
                       className="font-mono mt-1"
                     />
                   </div>
@@ -4816,10 +4829,10 @@ function ManualBackupDialog({
                       <div className="flex-1">
                         <div className="inline-flex items-center gap-1.5 text-sm">
                           <Lock className="h-3.5 w-3.5 text-emerald-400" />
-                          Encrypt this backup (client-side keyfile)
+                          {t("backup.encryption.encryptThisBackup")}
                         </div>
                         <p className="text-[11px] text-muted-foreground mt-1">
-                          Uses the shared keyfile at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code>.
+                          {t("backup.encryption.usesSharedKeyfileAt")} <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code>.
                         </p>
                       </div>
                     </label>
@@ -4828,7 +4841,7 @@ function ManualBackupDialog({
                     {pbsEncrypt && !pbsRecoveryStatus?.has_keyfile && (
                       <div className="space-y-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
                         <div className="text-[11px] font-medium">
-                          No encryption key is stored on this host. Choose how to set one up:
+                          {t("backup.encryption.noKeyStored")}
                         </div>
                         <label className="flex items-start gap-2 cursor-pointer text-[11px]">
                           <input
@@ -4839,8 +4852,8 @@ function ManualBackupDialog({
                             className="mt-1"
                           />
                           <div className="flex-1">
-                            <div className="font-medium">Generate a new keyfile (per host — safest isolation)</div>
-                            <div className="text-muted-foreground">Creates a fresh keyfile. Set a recovery passphrase (below) to survive host loss.</div>
+                            <div className="font-medium">{t("backup.encryption.generateNewKeyfile")}</div>
+                            <div className="text-muted-foreground">{t("backup.encryption.generateManualDescription")}</div>
                           </div>
                         </label>
                         <label className="flex items-start gap-2 cursor-pointer text-[11px]">
@@ -4852,8 +4865,8 @@ function ManualBackupDialog({
                             className="mt-1"
                           />
                           <div className="flex-1">
-                            <div className="font-medium">Import an existing keyfile (shared across hosts)</div>
-                            <div className="text-muted-foreground">Reuse the same keyfile another host already has.</div>
+                            <div className="font-medium">{t("backup.encryption.importExistingKeyfile")}</div>
+                            <div className="text-muted-foreground">{t("backup.encryption.importManualDescription")}</div>
                           </div>
                         </label>
                         {pbsEncryptMode === "existing" && pbsPveMatch && (
@@ -4861,11 +4874,11 @@ function ManualBackupDialog({
                             <div className="flex items-start gap-1.5">
                               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
                               <div className="flex-1">
-                                <div className="font-medium text-foreground">Auto-detected from PVE storage &apos;{pbsPveMatch.name}&apos;</div>
+                                <div className="font-medium text-foreground">{t("backup.encryption.autoDetectedFromPveStorage", { storage: pbsPveMatch.name })}</div>
                                 <div className="text-muted-foreground mt-0.5">
-                                  Existing key at <code className="font-mono text-[10.5px]">{pbsPveMatch.path}</code>
+                                  {t("backup.encryption.existingKeyAt")} <code className="font-mono text-[10.5px]">{pbsPveMatch.path}</code>
                                 </div>
-                                <div className="text-muted-foreground mt-0.5">Will be copied to the ProxMenux state directory. No file upload needed.</div>
+                                <div className="text-muted-foreground mt-0.5">{t("backup.encryption.pveKeyWillBeCopied")}</div>
                               </div>
                             </div>
                           </div>
@@ -4874,7 +4887,7 @@ function ManualBackupDialog({
                           <div className="space-y-2 pt-1">
                             <div className="space-y-1.5">
                               <Label htmlFor="manualPbsImportFile" className="text-[11px] font-medium">
-                                Upload from your machine
+                                {t("backup.keyfileActions.uploadFromMachine")}
                               </Label>
                               <Input
                                 id="manualPbsImportFile"
@@ -4885,10 +4898,10 @@ function ManualBackupDialog({
                                 className="h-8 text-[11px]"
                               />
                             </div>
-                            <div className="text-[10px] text-center text-muted-foreground">— or —</div>
+                            <div className="text-[10px] text-center text-muted-foreground">{t("backup.common.or")}</div>
                             <div className="space-y-1.5">
                               <Label htmlFor="manualPbsImportPath" className="text-[11px] font-medium">
-                                Absolute path on this host
+                                {t("backup.fields.absolutePathOnHost")}
                               </Label>
                               <Input
                                 id="manualPbsImportPath"
@@ -4896,11 +4909,11 @@ function ManualBackupDialog({
                                 value={pbsImportPath}
                                 onChange={(e) => setPbsImportPath(e.target.value)}
                                 disabled={pbsImportBusy || !!pbsImportFile}
-                                placeholder="e.g. /etc/pve/priv/storage/<NAME>.enc or /root/my-pbs-key"
+                                placeholder={t("backup.placeholders.keyfilePath")}
                                 className="h-8 text-[11px] font-mono"
                               />
                               <p className="text-[10px] text-muted-foreground">
-                                Either option works. The file lands at <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> and every subsequent encrypted backup reuses it.
+                                {t("backup.encryption.importKeyfileHelpBefore")} <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code> {t("backup.encryption.importKeyfileHelpAfter")}
                               </p>
                             </div>
                           </div>
@@ -4914,15 +4927,15 @@ function ManualBackupDialog({
                           <div className="flex items-start gap-2 text-[11px]">
                             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
                             <div className="flex-1">
-                              <div className="text-foreground">Keyfile installed. This backup reuses it silently.</div>
-                              <div className="text-muted-foreground mt-0.5">The current PBS-upload setting stays in effect.</div>
+                              <div className="text-foreground">{t("backup.keyfileManagement.thisBackupReusesKeyfile")}</div>
+                              <div className="text-muted-foreground mt-0.5">{t("backup.keyfileManagement.currentPbsUploadStays")}</div>
                             </div>
                             <button
                               type="button"
                               onClick={() => setPbsRecoveryChange(true)}
                               className="text-blue-400 hover:text-blue-300 underline underline-offset-2 shrink-0"
                             >
-                              Change
+                              {t("backup.actions.change")}
                             </button>
                           </div>
                         )}
@@ -4937,14 +4950,14 @@ function ManualBackupDialog({
                               onClick={() => setPbsRecoveryChange(false)}
                               className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
                             >
-                              Done — hide keyfile options
+                              {t("backup.keyfileManagement.hideOptions")}
                             </button>
                           </>
                         )}
                         {!pbsRecoveryStatus?.has_keyfile && (
                           <>
                             <div>
-                              <div className="text-[11px] font-medium text-foreground mb-2">Upload key to PBS?</div>
+                              <div className="text-[11px] font-medium text-foreground mb-2">{t("backup.keyfileManagement.uploadToPbs")}</div>
                               <div className="grid gap-1.5">
                                 <label className="flex items-start gap-2 cursor-pointer text-[11px]">
                                   <input
@@ -4955,8 +4968,8 @@ function ManualBackupDialog({
                                     className="mt-1"
                                   />
                                   <div className="flex-1">
-                                    <div className="font-medium">No, keep local only</div>
-                                    <div className="text-muted-foreground">Keyfile stays only at <code className="font-mono text-[10.5px]">/usr/local/share/proxmenux/pbs-key.conf</code>. You are responsible for keeping an offsite copy — losing it makes every encrypted backup unreadable.</div>
+                                    <div className="font-medium">{t("backup.keyfileManagement.keepLocalOnly")}</div>
+                                    <div className="text-muted-foreground">{t("backup.keyfileManagement.keepLocalDescriptionBefore")} <code className="font-mono text-[10.5px]">/usr/local/share/proxmenux/pbs-key.conf</code>. {t("backup.keyfileManagement.keepLocalDescriptionAfter")}</div>
                                   </div>
                                 </label>
                                 <label className="flex items-start gap-2 cursor-pointer text-[11px]">
@@ -4968,8 +4981,8 @@ function ManualBackupDialog({
                                     className="mt-1"
                                   />
                                   <div className="flex-1">
-                                    <div className="font-medium">Yes, upload</div>
-                                    <div className="text-muted-foreground">Set a recovery passphrase now. ProxMenux uploads a passphrase-wrapped copy of the keyfile to PBS with every backup so you can recover it on a reinstalled host with just the passphrase.</div>
+                                    <div className="font-medium">{t("backup.keyfileManagement.yesUpload")}</div>
+                                    <div className="text-muted-foreground">{t("backup.keyfileManagement.yesUploadDescription")}</div>
                                   </div>
                                 </label>
                               </div>
@@ -4977,36 +4990,36 @@ function ManualBackupDialog({
                             {pbsUploadToPbs ? (
                               <div className="space-y-2 pt-1 border-t border-blue-500/20">
                                 <div>
-                                  <Label htmlFor="manualPbsRecPass" className="text-[11px]">Recovery passphrase</Label>
+                                  <Label htmlFor="manualPbsRecPass" className="text-[11px]">{t("backup.fields.recoveryPassphrase")}</Label>
                                   <Input
                                     id="manualPbsRecPass"
                                     type="password"
                                     value={pbsRecoveryPass}
                                     onChange={(e) => setPbsRecoveryPass(e.target.value)}
-                                    placeholder="Long random string — write it down somewhere safe"
+                                    placeholder={t("backup.placeholders.recoveryPassphrase")}
                                     className="font-mono mt-1 h-8 text-xs"
                                   />
                                 </div>
                                 <div>
-                                  <Label htmlFor="manualPbsRecPass2" className="text-[11px]">Confirm passphrase</Label>
+                                  <Label htmlFor="manualPbsRecPass2" className="text-[11px]">{t("backup.fields.confirmPassphrase")}</Label>
                                   <Input
                                     id="manualPbsRecPass2"
                                     type="password"
                                     value={pbsRecoveryPass2}
                                     onChange={(e) => setPbsRecoveryPass2(e.target.value)}
-                                    placeholder="Type it again"
+                                    placeholder={t("backup.placeholders.typeItAgain")}
                                     className="font-mono mt-1 h-8 text-xs"
                                   />
                                   {pbsRecoveryPass && pbsRecoveryPass2 && pbsRecoveryPass !== pbsRecoveryPass2 && (
-                                    <p className="text-[11px] text-red-400 mt-1">Passphrases don't match.</p>
+                                    <p className="text-[11px] text-red-400 mt-1">{t("backup.errors.passphrasesDontMatch")}</p>
                                   )}
                                 </div>
                               </div>
                             ) : (
                               <div className="pt-1 border-t border-blue-500/20 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-3 py-2 leading-relaxed space-y-1">
-                                <div className="font-semibold">Keep an offsite copy of the keyfile.</div>
-                                <div>After this backup, copy <code className="font-mono text-[10.5px] bg-amber-500/20 rounded px-1">/usr/local/share/proxmenux/pbs-key.conf</code> to an external medium (USB, password manager, another host).</div>
-                                <div>Without that copy, losing this host makes every encrypted backup on PBS unreadable.</div>
+                                <div className="font-semibold">{t("backup.keyfileManagement.keepOffsiteCopy")}</div>
+                                <div>{t("backup.keyfileManagement.copyAfterManualBefore")} <code className="font-mono text-[10.5px] bg-amber-500/20 rounded px-1">/usr/local/share/proxmenux/pbs-key.conf</code> {t("backup.keyfileManagement.copyAfterCreateAfter")}</div>
+                                <div>{t("backup.keyfileManagement.withoutCopyWarning")}</div>
                               </div>
                             )}
                           </>
@@ -5018,7 +5031,7 @@ function ManualBackupDialog({
               )}
               {backend === "local" && (
                 <div className="space-y-2">
-                  <Label>Local destination</Label>
+                  <Label>{t("backup.fields.localDestination")}</Label>
                   {(destResp?.local?.entries?.length ?? 0) > 0 && (
                     <div className="flex items-center gap-2">
                       <Select
@@ -5026,14 +5039,14 @@ function ManualBackupDialog({
                         onValueChange={(v) => setLocalDestDir(v)}
                       >
                         <SelectTrigger className="flex-1">
-                          <SelectValue placeholder="Pick a configured local destination" />
+                          <SelectValue placeholder={t("backup.placeholders.pickLocalDestination")} />
                         </SelectTrigger>
                         <SelectContent>
                           {destResp?.local?.entries?.map((e) => (
                             <SelectItem key={e.path} value={e.path}>
                               <span className="font-mono">{e.path}</span>
                               {e.source === "default" && (
-                                <span className="text-muted-foreground ml-2 text-[10px] uppercase">default</span>
+                                <span className="text-muted-foreground ml-2 text-[10px] uppercase">{t("backup.profile.default")}</span>
                               )}
                             </SelectItem>
                           ))}
@@ -5045,15 +5058,15 @@ function ManualBackupDialog({
                         variant="outline"
                         className="shrink-0 bg-blue-500/10 border-blue-500/40 !text-blue-400 hover:bg-blue-500/20 hover:!text-blue-300"
                         onClick={() => setAddingDestType("local")}
-                        title="Save another local destination"
+                        title={t("backup.destinations.saveAnotherLocalTitle")}
                       >
                         <Plus className="h-3.5 w-3.5 mr-1" />
-                        Add another
+                        {t("backup.actions.addAnother")}
                       </Button>
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Pick one of the configured local destinations, or type a custom directory path below. Empty input falls back to the selected destination above.
+                    {t("backup.destinations.localManualPickHelp")}
                   </p>
                   <Input
                     id="manualLocalDest"
@@ -5067,7 +5080,7 @@ function ManualBackupDialog({
               {backend === "borg" && (
                 <>
                   <div>
-                    <Label>Borg repository</Label>
+                    <Label>{t("backup.fields.borgRepository")}</Label>
                     {destResp?.borg?.length ? (
                       <div className="mt-1 flex items-center gap-2">
                         <Select value={borgRepoSelected} onValueChange={setBorgRepoSelected}>
@@ -5075,7 +5088,7 @@ function ManualBackupDialog({
                             {(() => {
                               const sel = destResp.borg.find((r) => r.repository === borgRepoSelected)
                               if (!sel) {
-                                return <span className="truncate text-muted-foreground">Pick a Borg repository</span>
+                                return <span className="truncate text-muted-foreground">{t("backup.placeholders.pickBorgRepository")}</span>
                               }
                               return (
                                 <span className="truncate font-mono text-left">
@@ -5100,15 +5113,15 @@ function ManualBackupDialog({
                           variant="outline"
                           className="shrink-0 bg-fuchsia-500/10 border-fuchsia-500/40 !text-fuchsia-400 hover:bg-fuchsia-500/20 hover:!text-fuchsia-300"
                           onClick={() => setAddingDestType("borg")}
-                          title="Save another Borg repository"
+                          title={t("backup.destinations.saveAnotherBorgTitle")}
                         >
                           <Plus className="h-3.5 w-3.5 mr-1" />
-                          Add another
+                          {t("backup.actions.addAnother")}
                         </Button>
                       </div>
                     ) : (
                       <div className="mt-1 p-3 rounded-md border border-amber-500/40 bg-amber-500/5 text-xs space-y-2">
-                        <div>No Borg repository configured yet. You can add one without leaving this dialog (SSH or local/USB path supported).</div>
+                        <div>{t("backup.destinations.noBorgInDialog")}</div>
                         <Button
                           type="button"
                           size="sm"
@@ -5117,7 +5130,7 @@ function ManualBackupDialog({
                           onClick={() => setAddingDestType("borg")}
                         >
                           <Plus className="h-3.5 w-3.5 mr-1" />
-                          Add Borg repository
+                          {t("backup.destinations.addBorgRepository")}
                         </Button>
                       </div>
                     )}
@@ -5128,7 +5141,7 @@ function ManualBackupDialog({
                     const mode = dest.encrypt_mode || "repokey"
                     return (
                       <p className="text-[11px] text-muted-foreground">
-                        Encryption + passphrase are taken from the destination ({mode === "none" ? "no encryption" : mode}). Edit the destination if you need to change them.
+                        {t("backup.destinations.borgEncryptionInherited", { mode: mode === "none" ? t("backup.encryption.none") : mode })}
                       </p>
                     )
                   })()}
@@ -5137,21 +5150,21 @@ function ManualBackupDialog({
 
               {/* Summary — mirrors the styling of the JobDetailModal. */}
               <div className="rounded-md border border-border bg-background/40 p-3 space-y-2 text-xs">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Summary</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("backup.jobs.summary")}</div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-muted-foreground">Backend:</span>
+                  <span className="text-muted-foreground">{t("backup.fields.backendLabel")}</span>
                   <Badge variant="outline" className={`text-[10px] uppercase tracking-wide ${methodBadgeCls(backend)}`}>
-                    {backend}
+                    {backend === "pbs" ? "PBS" : backend === "borg" ? "Borg" : t("backup.backends.local")}
                   </Badge>
                   <Badge variant="outline" className="text-[10px] text-purple-400 border-purple-400/40 bg-purple-500/5">
-                    manual / one-shot
+                    {t("backup.status.manualOneShot")}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <FileSearch className="h-3 w-3 text-green-500/80" />
-                  <span className="text-green-500/90 uppercase tracking-wider text-[10px]">profile:</span>
-                  <span className="text-foreground">{profileMode}</span>
-                  <span className="text-muted-foreground">({profileMode === "default" ? defaultPaths.length : customPaths.size} paths)</span>
+                  <span className="text-green-500/90 uppercase tracking-wider text-[10px]">{t("backup.fields.profileLabel")}</span>
+                  <span className="text-foreground">{profileMode === "default" ? t("backup.profile.default") : t("backup.profile.custom")}</span>
+                  <span className="text-muted-foreground">({t("backup.paths.count", { count: profileMode === "default" ? defaultPaths.length : customPaths.size })})</span>
                 </div>
               </div>
 
@@ -5166,7 +5179,7 @@ function ManualBackupDialog({
 
         <div className="flex items-center justify-between gap-2 pt-3 border-t border-border">
           <Button variant="ghost" onClick={onClose} disabled={submitting}>
-            Cancel
+            {t("actions.cancel")}
           </Button>
           <div className="flex items-center gap-2">
             {step > 1 && (
@@ -5176,7 +5189,7 @@ function ManualBackupDialog({
                 disabled={submitting}
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
-                Back
+                {t("backup.actions.back")}
               </Button>
             )}
             {step < 2 ? (
@@ -5184,7 +5197,7 @@ function ManualBackupDialog({
                 onClick={() => setStep(2)}
                 disabled={!canAdvanceFrom1}
               >
-                Next
+                {t("backup.actions.next")}
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             ) : (
@@ -5198,7 +5211,7 @@ function ManualBackupDialog({
                 ) : (
                   <PlayCircle className="h-4 w-4 mr-2" />
                 )}
-                Run backup
+                {t("backup.manual.runBackup")}
               </Button>
             )}
           </div>
@@ -5283,6 +5296,7 @@ function DestinationsSection({
   destinations?: DestinationsResp
   onChanged: () => void
 }) {
+  const t = useT()
   const [configuring, setConfiguring] = useState<boolean>(false)
   const [editingDest, setEditingDest] = useState<EditingDest | null>(null)
   const [confirmingDest, setConfirmingDest] = useState<UnifiedDest | null>(null)
@@ -5492,7 +5506,7 @@ function DestinationsSection({
           onClick={() => setConfiguring(true)}
         >
           <Plus className="h-4 w-4 mr-1" />
-          Configure destination
+          {t("backup.destinations.configureDestination")}
         </Button>
       </div>
       {error && (
@@ -5511,18 +5525,18 @@ function DestinationsSection({
           type="button"
           onClick={() => setRecoveringKeyfile(true)}
           className="w-full flex items-start gap-2 px-3 py-2.5 rounded-md border border-emerald-500/40 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors text-left"
-          title="A recovery copy of the PBS keyfile was found on this PBS server"
+          title={t("backup.recovery.copyFoundTitle")}
         >
           <Lock className="h-4 w-4 mt-0.5 text-emerald-400 shrink-0" />
           <div className="min-w-0 flex-1">
             <div className="text-sm font-medium text-foreground">
-              PBS keyfile is missing — recover it from PBS
+              {t("backup.recovery.keyfileMissingTitle")}
             </div>
             <div className="text-[11px] text-muted-foreground mt-0.5">
-              An encrypted recovery copy of the keyfile is available ({pbsRecoveryAvailable!.snapshots.length} backup{pbsRecoveryAvailable!.snapshots.length === 1 ? "" : "s"}). Click to rebuild the keyfile using your recovery passphrase.
+              {t("backup.recovery.encryptedCopyAvailable", { count: pbsRecoveryAvailable!.snapshots.length })}
             </div>
           </div>
-          <span className="text-xs text-emerald-300 shrink-0 self-center">Recover →</span>
+          <span className="text-xs text-emerald-300 shrink-0 self-center">{t("backup.recovery.recoverArrow")}</span>
         </button>
       )}
 
@@ -5644,12 +5658,12 @@ function DestinationsSection({
               <DialogHeader>
                 <DialogTitle className="text-base flex items-center gap-2">
                   <AlertTriangle className={`h-5 w-5 ${jobs.length > 0 ? "text-amber-500" : "text-red-500"}`} />
-                  Remove destination
+                  {t("backup.destinations.removeDestination")}
                 </DialogTitle>
                 <DialogDescription className="text-xs">
                   {jobs.length === 0 && backups === 0
-                    ? "Removes the destination from the list. Nothing else depends on it."
-                    : "The destination + its saved credentials will be removed. Backups already stored stay where they are — you decide what to do with them later."}
+                    ? t("backup.destinations.removeDescriptionPlain")
+                    : t("backup.destinations.removeDescriptionWithData")}
                 </DialogDescription>
               </DialogHeader>
               <div className="text-sm font-mono px-3 py-2 rounded-md border border-border bg-background/40 break-all">
@@ -5660,7 +5674,7 @@ function DestinationsSection({
                   {jobs.length > 0 && (
                     <div className="px-3 py-2 rounded-md border border-amber-500/40 bg-amber-500/5">
                       <div className="font-medium text-amber-400">
-                        {jobs.length} job{jobs.length === 1 ? "" : "s"} will be deleted (cascade):
+                        {t("backup.destinations.jobsWillBeDeleted", { count: jobs.length })}
                       </div>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {jobs.map((j) => (
@@ -5673,18 +5687,18 @@ function DestinationsSection({
                   )}
                   {backups > 0 && (
                     <div className="px-3 py-2 rounded-md border border-blue-500/40 bg-blue-500/5">
-                      <span className="font-medium text-blue-400">{backups}</span> backup{backups === 1 ? "" : "s"} already at this destination — they are <span className="font-medium">kept</span>.
+                      {t("backup.destinations.backupsKeptBefore", { count: backups })} <span className="font-medium">{t("backup.destinations.kept")}</span>.
                     </div>
                   )}
                 </div>
               )}
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" onClick={() => setConfirmingDest(null)}>
-                  Cancel
+                  {t("actions.cancel")}
                 </Button>
                 <Button variant="destructive" onClick={confirmDeleteDest}>
                   <Trash2 className="h-4 w-4 mr-2" />
-                  {jobs.length > 0 ? "Remove + delete jobs" : "Remove destination"}
+                  {jobs.length > 0 ? t("backup.destinations.removeAndDeleteJobs") : t("backup.destinations.removeDestination")}
                 </Button>
               </div>
             </DialogContent>
@@ -5717,6 +5731,7 @@ function DestinationRow({
   onUnmount?: () => void
   onEdit?: () => void
 }) {
+  const t = useT()
   const accent =
     item.kind === "pbs" ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
     : item.kind === "borg" ? "bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20"
@@ -5736,12 +5751,12 @@ function DestinationRow({
     : null
   const isUsb = !!capacity?.is_usb || (item.kind === "borg" && !item.isSsh && /\/(?:mnt|media)\//.test(item.repository))
   const sourceLabel =
-    item.kind === "local" ? (item.source === "default" ? "built-in default" : "manually added")
-    : item.kind === "pbs" ? (item.source === "proxmox" ? "Datacenter → Storage" : "manually added")
+    item.kind === "local" ? (item.source === "default" ? t("backup.destinations.builtInDefault") : t("backup.destinations.manuallyAdded"))
+    : item.kind === "pbs" ? (item.source === "proxmox" ? t("backup.destinations.datacenterStorage") : t("backup.destinations.manuallyAdded"))
     // Borg targets are always operator-configured (no Datacenter
     // auto-discovery path), so they all share the "manually added"
     // wording for visual consistency with the Local custom row.
-    : "manually added"
+    : t("backup.destinations.manuallyAdded")
 
   const pct = capacity?.total && capacity.available !== undefined
     ? Math.min(100, Math.round(((capacity.total - capacity.available) / capacity.total) * 100))
@@ -5763,7 +5778,7 @@ function DestinationRow({
             </Badge>
           {item.kind === "local" && item.source === "default" && (
             <Badge variant="outline" className="text-[10px] uppercase tracking-wide border-border text-muted-foreground">
-              default
+              {t("backup.profile.default")}
             </Badge>
           )}
           {item.kind === "borg" ? (
@@ -5798,7 +5813,7 @@ function DestinationRow({
                 <Badge
                   variant="outline"
                   className="text-[10px] uppercase tracking-wide border-emerald-500/40 text-emerald-400 bg-emerald-500/5"
-                  title={`Encrypted (${item.encryptMode})${item.hasPassphrase ? " · passphrase saved" : " · passphrase NOT saved"}`}
+                  title={t("backup.encryption.encryptedModeTitle", { mode: item.encryptMode, passphrase: item.hasPassphrase ? t("backup.encryption.passphraseSaved") : t("backup.encryption.passphraseNotSaved") })}
                 >
                   {/* Icon sized to roughly the text-[10px] line-box of
                       the neighbouring text badges (BORG, USB, …) so the
@@ -5828,7 +5843,7 @@ function DestinationRow({
                 type="button"
                 disabled={busy || unmountBusy}
                 onClick={onEdit}
-                title="Edit destination — update credentials, encryption, repository path"
+                title={t("backup.destinations.editTitle")}
                 className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Pencil className="h-3.5 w-3.5" />
@@ -5839,7 +5854,7 @@ function DestinationRow({
                 type="button"
                 disabled={unmountBusy || busy}
                 onClick={onUnmount}
-                title="Unmount — detach the USB filesystem only. The destination stays in the list so re-plugging the disk picks it up again."
+                title={t("backup.destinations.unmountTitle")}
                 className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {unmountBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Power className="h-3.5 w-3.5" />}
@@ -5850,14 +5865,14 @@ function DestinationRow({
                 type="button"
                 disabled={busy || unmountBusy}
                 onClick={onDelete}
-                title="Remove from the destinations list — the filesystem on disk is left untouched"
+                title={t("backup.destinations.removeTitle")}
                 className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
               </button>
             ) : (
               <span className="text-[10px] text-muted-foreground italic self-center px-2 whitespace-nowrap">
-                {item.kind === "local" ? "built-in" : "managed by PVE"}
+                {item.kind === "local" ? t("backup.destinations.builtIn") : t("backup.destinations.managedByPve")}
               </span>
             )}
           </div>
@@ -5886,13 +5901,13 @@ function DestinationRow({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
         {capacity?.total !== undefined && (
           <div>
-            <p className="text-sm text-muted-foreground">Size</p>
+            <p className="text-sm text-muted-foreground">{t("backup.fields.size")}</p>
             <p className="font-medium">{formatBytes(capacity.total)}</p>
           </div>
         )}
         {capacity?.used !== undefined && capacity.total !== undefined && (
           <div>
-            <p className="text-sm text-muted-foreground">Used</p>
+            <p className="text-sm text-muted-foreground">{t("backup.fields.used")}</p>
             <p className="font-medium">
               {formatBytes(capacity.used)}
               {pct !== null && <span className="text-muted-foreground"> ({pct}%)</span>}
@@ -5901,7 +5916,7 @@ function DestinationRow({
         )}
         {capacity?.available !== undefined && (
           <div>
-            <p className="text-sm text-muted-foreground">Free</p>
+            <p className="text-sm text-muted-foreground">{t("backup.fields.free")}</p>
             <p
               className={`font-medium ${
                 pct === null ? "" : getStorageUsageColor(pct).textClass
@@ -5912,19 +5927,19 @@ function DestinationRow({
           </div>
         )}
         <div>
-          <p className="text-sm text-muted-foreground">Source</p>
+          <p className="text-sm text-muted-foreground">{t("backup.fields.source")}</p>
           <p className="font-medium text-xs">{sourceLabel}</p>
         </div>
       </div>
 
       {capacity?.error && (
         <p className="mt-3 text-[11px] text-muted-foreground italic">
-          Capacity unavailable: {capacity.error}
+          {t("backup.destinations.capacityUnavailable", { error: capacity.error })}
         </p>
       )}
       {!capacity && (
         <p className="mt-3 text-[11px] text-muted-foreground italic flex items-center gap-1.5">
-          <Loader2 className="h-3 w-3 animate-spin" /> Probing capacity…
+          <Loader2 className="h-3 w-3 animate-spin" /> {t("backup.destinations.probingCapacity")}
         </p>
       )}
       {/* Keyfile actions live inside each PBS row — the encryption key
@@ -5949,6 +5964,7 @@ function ConfigureDestinationWizard({
   onClose: () => void
   onSaved: () => void
 }) {
+  const t = useT()
   const [picked, setPicked] = useState<"pbs" | "local" | "borg" | null>(null)
   useEffect(() => {
     if (!open) setPicked(null)
@@ -5972,17 +5988,17 @@ function ConfigureDestinationWizard({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5 text-blue-500" />
-            Configure destination
+            {t("backup.destinations.configureDestination")}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Pick the backend you want to add. The next step has the credentials and path fields for that backend only.
+            {t("backup.destinations.configureDescription")}
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {([
-            { type: "pbs",   label: "PBS",   accent: "border-purple-500/40 hover:border-purple-400 text-purple-400",   blurb: "Proxmox Backup Server. Incremental, encrypted, dedup." },
-            { type: "local", label: "Local", accent: "border-blue-500/40 hover:border-blue-400 text-blue-400",         blurb: "tar.zst archive into a local directory or mounted disk." },
-            { type: "borg",  label: "Borg",  accent: "border-fuchsia-500/40 hover:border-fuchsia-400 text-fuchsia-400", blurb: "Borg repo over SSH or on a local / USB disk." },
+            { type: "pbs",   label: "PBS",   accent: "border-purple-500/40 hover:border-purple-400 text-purple-400",   blurb: t("backup.backends.pbsDescription") },
+            { type: "local", label: t("backup.backends.local"), accent: "border-blue-500/40 hover:border-blue-400 text-blue-400", blurb: t("backup.backends.localDescription") },
+            { type: "borg",  label: "Borg",  accent: "border-fuchsia-500/40 hover:border-fuchsia-400 text-fuchsia-400", blurb: t("backup.backends.borgDescription") },
           ] as const).map((opt) => (
             <button
               key={opt.type}
@@ -6001,7 +6017,7 @@ function ConfigureDestinationWizard({
           ))}
         </div>
         <div className="flex justify-end">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="ghost" onClick={onClose}>{t("actions.cancel")}</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -6045,6 +6061,7 @@ function AddDestinationDialog({
   // and for the legacy callers that don't care.
   onSaved: (repository?: string) => void
 }) {
+  const t = useT()
   const [name, setName] = useState("")
   // PBS fields
   const [server, setServer] = useState("")
@@ -6262,6 +6279,10 @@ function AddDestinationDialog({
     }
   }
 
+  const destinationTitle = type === "local"
+    ? t(isEditing ? "backup.destinations.editLocalDestinationTitle" : "backup.destinations.addLocalDestinationTitle")
+    : t(isEditing ? "backup.destinations.editDestinationTitle" : "backup.destinations.addDestinationTitle", { type: type === "pbs" ? "PBS" : type === "borg" ? "Borg" : t("backup.backends.local") })
+
   return (
     <Dialog open={type !== null} onOpenChange={(v) => { if (!v) onClose() }}>
       <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
@@ -6272,81 +6293,81 @@ function AddDestinationDialog({
             ) : (
               <Plus className="h-5 w-5 text-blue-500" />
             )}
-            {isEditing ? "Edit" : "Add"} {type === "pbs" ? "PBS" : type === "borg" ? "Borg" : "local"} destination
+            {destinationTitle}
           </DialogTitle>
         </DialogHeader>
         <div className="overflow-y-auto -mr-2 pr-2 space-y-3">
           {type === "pbs" && (
             <>
               <div>
-                <Label htmlFor="pbsName">Name</Label>
-                <Input id="pbsName" value={name} onChange={(e) => setName(e.target.value)} className="font-mono mt-1" placeholder="my-pbs" disabled={isEditing} />
+                <Label htmlFor="pbsName">{t("backup.fields.name")}</Label>
+                <Input id="pbsName" value={name} onChange={(e) => setName(e.target.value)} className="font-mono mt-1" placeholder="moje-pbs" disabled={isEditing} />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {isEditing ? "Name is the key for saved credentials and can't be changed." : "A short identifier. Letters, digits, _ or -."}
+                  {isEditing ? t("backup.destinations.nameCredentialsLocked") : t("backup.destinations.shortIdentifierHelp")}
                 </p>
               </div>
               <div>
-                <Label htmlFor="pbsServer">Server (host or IP)</Label>
+                <Label htmlFor="pbsServer">{t("backup.fields.serverHostOrIp")}</Label>
                 <Input id="pbsServer" value={server} onChange={(e) => setServer(e.target.value)} className="font-mono mt-1" placeholder="192.168.1.10" />
               </div>
               <div>
-                <Label htmlFor="pbsDatastore">Datastore</Label>
+                <Label htmlFor="pbsDatastore">{t("backup.fields.datastore")}</Label>
                 <Input id="pbsDatastore" value={datastore} onChange={(e) => setDatastore(e.target.value)} className="font-mono mt-1" placeholder="pbs" />
               </div>
               <div>
-                <Label htmlFor="pbsUser">Username</Label>
+                <Label htmlFor="pbsUser">{t("backup.fields.username")}</Label>
                 <Input id="pbsUser" value={username} onChange={(e) => setUsername(e.target.value)} className="font-mono mt-1" />
-                <p className="text-xs text-muted-foreground mt-1">User that runs <code className="font-mono">proxmox-backup-client</code>. Default <code className="font-mono">root@pam</code>.</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("backup.destinations.pbsUserHelpBefore")} <code className="font-mono">proxmox-backup-client</code>. {t("backup.destinations.defaultUserBefore")} <code className="font-mono">root@pam</code>.</p>
               </div>
               <div>
-                <Label htmlFor="pbsPass">Password</Label>
+                <Label htmlFor="pbsPass">{t("backup.fields.password")}</Label>
                 <Input
                   id="pbsPass"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="font-mono mt-1"
-                  placeholder={isEditing && editing?.has_password ? "(unchanged — type to replace)" : ""}
+                  placeholder={isEditing && editing?.has_password ? t("backup.placeholders.unchangedTypeToReplace") : ""}
                 />
                 {isEditing && editing?.has_password && (
-                  <p className="text-xs text-muted-foreground mt-1">Leave blank to keep the saved password.</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t("backup.destinations.leavePasswordBlank")}</p>
                 )}
               </div>
               <div>
-                <Label htmlFor="pbsFp">Fingerprint (optional)</Label>
+                <Label htmlFor="pbsFp">{t("backup.fields.fingerprintOptional")}</Label>
                 <Input id="pbsFp" value={fingerprint} onChange={(e) => setFingerprint(e.target.value)} className="font-mono mt-1" placeholder="aa:bb:cc:…" />
-                <p className="text-xs text-muted-foreground mt-1">Required only if the PBS uses a self-signed certificate.</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("backup.destinations.fingerprintHelp")}</p>
               </div>
             </>
           )}
           {type === "borg" && (
             <>
               <div>
-                <Label htmlFor="borgName">Name</Label>
-                <Input id="borgName" value={name} onChange={(e) => setName(e.target.value)} className="font-mono mt-1" placeholder="usb-borg or remote-borg" disabled={isEditing} />
+                <Label htmlFor="borgName">{t("backup.fields.name")}</Label>
+                <Input id="borgName" value={name} onChange={(e) => setName(e.target.value)} className="font-mono mt-1" placeholder="usb-borg" disabled={isEditing} />
                 {isEditing && (
-                  <p className="text-xs text-muted-foreground mt-1">Name is the key for the saved passphrase and can't be changed.</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t("backup.destinations.namePassphraseLocked")}</p>
                 )}
               </div>
 
               <div>
-                <Label>Where is the Borg repository?</Label>
+                <Label>{t("backup.destinations.whereIsBorgRepo")}</Label>
                 <div className="grid grid-cols-2 gap-2 mt-1">
                   <button
                     type="button"
                     onClick={() => setBorgMode("local")}
                     className={`text-left p-2.5 rounded-md border text-sm ${borgMode === "local" ? "border-blue-500 bg-blue-500/5" : "border-border bg-background/40"} hover:bg-white/5 transition-colors`}
                   >
-                    <div className="font-medium flex items-center gap-1"><HardDrive className="h-3.5 w-3.5" /> Local / USB</div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">Path on this host (mounted USB, local dir).</div>
+                    <div className="font-medium flex items-center gap-1"><HardDrive className="h-3.5 w-3.5" /> {t("backup.destinations.localUsb")}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">{t("backup.destinations.localUsbDescription")}</div>
                   </button>
                   <button
                     type="button"
                     onClick={() => setBorgMode("ssh")}
                     className={`text-left p-2.5 rounded-md border text-sm ${borgMode === "ssh" ? "border-blue-500 bg-blue-500/5" : "border-border bg-background/40"} hover:bg-white/5 transition-colors`}
                   >
-                    <div className="font-medium flex items-center gap-1"><Server className="h-3.5 w-3.5" /> Remote (SSH)</div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">Borg repo on another host over SSH.</div>
+                    <div className="font-medium flex items-center gap-1"><Server className="h-3.5 w-3.5" /> {t("backup.destinations.remoteSsh")}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">{t("backup.destinations.remoteSshDescription")}</div>
                   </button>
                 </div>
               </div>
@@ -6354,10 +6375,10 @@ function AddDestinationDialog({
               {borgMode === "local" ? (
                 <div className="space-y-3">
                   <div>
-                    <Label htmlFor="borgRepoIn">Repository path</Label>
+                    <Label htmlFor="borgRepoIn">{t("backup.fields.repositoryPath")}</Label>
                     <Input id="borgRepoIn" value={borgRepo} onChange={(e) => setBorgRepo(e.target.value)} className="font-mono mt-1" placeholder="/mnt/usb-disk/borgbackup" />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Absolute path on this host. Pick a USB drive below to auto-fill, or type the path manually.
+                      {t("backup.destinations.absolutePathHelp")}
                     </p>
                   </div>
                   <UsbPicker onPick={(p) => setBorgRepo(p)} excludePaths={usedPaths} />
@@ -6365,32 +6386,32 @@ function AddDestinationDialog({
               ) : (
                 <>
                   <div>
-                    <Label htmlFor="borgSshUser">SSH user</Label>
+                    <Label htmlFor="borgSshUser">{t("backup.fields.sshUser")}</Label>
                     <Input id="borgSshUser" value={borgSshUser} onChange={(e) => setBorgSshUser(e.target.value)} className="font-mono mt-1" placeholder="borg" />
                     <p className="text-xs text-muted-foreground mt-1">
-                      User on the remote host that runs <code className="font-mono">borg serve</code>. Conventionally <code className="font-mono">borg</code>, not <code className="font-mono">root</code>.
+                      {t("backup.destinations.sshUserHelpBefore")} <code className="font-mono">borg serve</code>. {t("backup.destinations.sshUserHelpAfter")} <code className="font-mono">borg</code>, {t("backup.destinations.not")} <code className="font-mono">root</code>.
                     </p>
                   </div>
                   <div>
-                    <Label htmlFor="borgSshHost">SSH host or IP</Label>
+                    <Label htmlFor="borgSshHost">{t("backup.fields.sshHostOrIp")}</Label>
                     <Input id="borgSshHost" value={borgSshHost} onChange={(e) => setBorgSshHost(e.target.value)} className="font-mono mt-1" placeholder="backup.example.com" />
                   </div>
                   <div>
-                    <Label htmlFor="borgSshPath">Remote repository path</Label>
+                    <Label htmlFor="borgSshPath">{t("backup.fields.remoteRepositoryPath")}</Label>
                     <Input id="borgSshPath" value={borgSshRemotePath} onChange={(e) => setBorgSshRemotePath(e.target.value)} className="font-mono mt-1" placeholder="/backup/borgbackup" />
                   </div>
                   <div>
-                    <Label htmlFor="borgKeyPath">SSH key path (on this host)</Label>
+                    <Label htmlFor="borgKeyPath">{t("backup.fields.sshKeyPath")}</Label>
                     <Input id="borgKeyPath" value={borgSshKeyPath} onChange={(e) => setBorgSshKeyPath(e.target.value)} className="font-mono mt-1" />
                     <p className="text-xs text-muted-foreground mt-1">
-                      If you already have an SSH key registered with the server, point to it here.
-                      Otherwise click <span className="font-medium text-foreground">Generate key</span> below and paste the line shown into the server's authorized_keys.
+                      {t("backup.destinations.sshKeyHelpBefore")}
+                      {" "}{t("backup.destinations.sshKeyHelpMiddle")} <span className="font-medium text-foreground">{t("backup.actions.generateKey")}</span> {t("backup.destinations.sshKeyHelpAfter")}
                     </p>
                   </div>
 
                   <div className="rounded-md border border-border bg-background/40 p-3 space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium">Generate a new SSH key</span>
+                      <span className="text-xs font-medium">{t("backup.destinations.generateNewSshKey")}</span>
                       <Button
                         type="button"
                         size="sm"
@@ -6400,13 +6421,13 @@ function AddDestinationDialog({
                         onClick={generateBorgKey}
                       >
                         {generatingKey ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Plus className="h-3.5 w-3.5 mr-1" />}
-                        {generatedKey ? "Regenerate" : "Generate key"}
+                        {generatedKey ? t("backup.actions.regenerate") : t("backup.actions.generateKey")}
                       </Button>
                     </div>
                     {generatedKey ? (
                       <>
                         <p className="text-[11px] text-muted-foreground">
-                          On the Borg server, append this single line to <code className="font-mono">~{borgSshUser}/.ssh/authorized_keys</code>:
+                          {t("backup.destinations.appendAuthorizedKeyBefore")} <code className="font-mono">~{borgSshUser}/.ssh/authorized_keys</code>:
                         </p>
                         <textarea
                           readOnly
@@ -6417,7 +6438,7 @@ function AddDestinationDialog({
                       </>
                     ) : (
                       <p className="text-[11px] text-muted-foreground">
-                        Creates an ed25519 key (no passphrase) at the path above if one isn't there already. The public half — restricted to <code className="font-mono">borg serve</code> for the remote path — will appear here for you to copy.
+                        {t("backup.destinations.createsSshKeyBefore")} <code className="font-mono">borg serve</code> {t("backup.destinations.createsSshKeyAfter")}
                       </p>
                     )}
                   </div>
@@ -6431,55 +6452,55 @@ function AddDestinationDialog({
                   backend for legacy shell-created configs but not
                   exposed here. */}
               <div className="space-y-2 pt-2 border-t border-border">
-                <Label>Encryption</Label>
+                <Label>{t("backup.fields.encryption")}</Label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setBorgEncryptionEnabled(true)}
                     className={`text-left p-2.5 rounded-md border text-sm transition-colors ${borgEncryptionEnabled ? "border-fuchsia-500 bg-fuchsia-500/5" : "border-border bg-background/40 hover:bg-white/5"}`}
                   >
-                    <div className="font-medium">Encrypted (repokey)</div>
-                    <div className="text-[11px] text-muted-foreground">AES-256 + HMAC. Passphrase required to read the repo.</div>
+                    <div className="font-medium">{t("backup.encryption.encryptedRepokey")}</div>
+                    <div className="text-[11px] text-muted-foreground">{t("backup.encryption.encryptedRepokeyDescription")}</div>
                   </button>
                   <button
                     type="button"
                     onClick={() => setBorgEncryptionEnabled(false)}
                     className={`text-left p-2.5 rounded-md border text-sm transition-colors ${!borgEncryptionEnabled ? "border-amber-500 bg-amber-500/5" : "border-border bg-background/40 hover:bg-white/5"}`}
                   >
-                    <div className="font-medium">No encryption</div>
-                    <div className="text-[11px] text-muted-foreground">Faster but data and checksums are in plain.</div>
+                    <div className="font-medium">{t("backup.encryption.noEncryption")}</div>
+                    <div className="text-[11px] text-muted-foreground">{t("backup.encryption.noEncryptionDescription")}</div>
                   </button>
                 </div>
                 {borgEncryptionEnabled && (
                   <div className="space-y-2 pt-1">
                     <div>
-                      <Label htmlFor="borgPass">Passphrase</Label>
+                      <Label htmlFor="borgPass">{t("backup.fields.passphrase")}</Label>
                       <Input
                         id="borgPass"
                         type="password"
                         value={borgPassphrase}
                         onChange={(e) => setBorgPassphraseLocal(e.target.value)}
                         placeholder={isEditing && editing?.has_passphrase
-                          ? "(unchanged — type to replace)"
-                          : "Long random string — store it somewhere safe"}
+                          ? t("backup.placeholders.unchangedTypeToReplace")
+                          : t("backup.placeholders.longRandomStoreSafe")}
                         className="font-mono mt-1"
                       />
                       {isEditing && editing?.has_passphrase && (
-                        <p className="text-[11px] text-muted-foreground mt-1">Leave blank to keep the saved passphrase.</p>
+                        <p className="text-[11px] text-muted-foreground mt-1">{t("backup.destinations.leavePassphraseBlank")}</p>
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="borgPass2">Confirm passphrase</Label>
+                      <Label htmlFor="borgPass2">{t("backup.fields.confirmPassphrase")}</Label>
                       <Input
                         id="borgPass2"
                         type="password"
                         value={borgPassphrase2}
                         onChange={(e) => setBorgPassphrase2(e.target.value)}
-                        placeholder="Type it again"
+                        placeholder={t("backup.placeholders.typeItAgain")}
                         className="font-mono mt-1"
                       />
                       {borgPassphrase && borgPassphrase2 && borgPassphrase !== borgPassphrase2 && (
-                        <p className="text-[11px] text-red-400 mt-1">Passphrases don't match.</p>
+                        <p className="text-[11px] text-red-400 mt-1">{t("backup.errors.passphrasesDontMatch")}</p>
                       )}
                     </div>
                     <div className="mt-1 rounded-md border border-red-500/40 bg-red-500/10 p-2.5">
@@ -6487,12 +6508,12 @@ function AddDestinationDialog({
                         <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                         <div className="space-y-1">
                           <p>
-                            <span className="font-medium">This passphrase is the ONLY way to access encrypted Borg backups.</span> It's saved server-side at <code className="font-mono">borg-pass-{name || "&lt;name&gt;"}.txt</code> (chmod 0600) so jobs can use it transparently.
+                            <span className="font-medium">{t("backup.encryption.borgPassphraseOnlyWay")}</span> {t("backup.encryption.borgPassphraseSavedAt")} <code className="font-mono">borg-pass-{name || "&lt;name&gt;"}.txt</code> (chmod 0600) {t("backup.encryption.borgPassphraseSavedAfter")}
                           </p>
                           <p>
-                            If you lose or reinstall this host without a copy of the passphrase somewhere else (password manager, offline note, another host, USB stick...), every encrypted archive in this repository becomes <span className="font-semibold">UNRECOVERABLE</span>.
+                            {t("backup.encryption.borgPassphraseLossBefore")} <span className="font-semibold">{t("backup.encryption.unrecoverable")}</span>.
                           </p>
-                          <p className="font-medium">Save the passphrase somewhere safe NOW, before continuing.</p>
+                          <p className="font-medium">{t("backup.encryption.savePassphraseNow")}</p>
                         </div>
                       </div>
                     </div>
@@ -6504,10 +6525,10 @@ function AddDestinationDialog({
           {type === "local" && (
             <div className="space-y-3">
               <div>
-                <Label htmlFor="localPath">Directory path</Label>
+                <Label htmlFor="localPath">{t("backup.fields.directoryPath")}</Label>
                 <Input id="localPath" value={localPath} onChange={(e) => setLocalPath(e.target.value)} className="font-mono mt-1" placeholder="/var/lib/vz/dump" />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Where scheduled / manual local backups write the <code className="font-mono">tar.zst</code> archive. Pick a USB drive below to auto-fill, or type the path manually.
+                  {t("backup.destinations.localPathHelpBefore")} <code className="font-mono">tar.zst</code> {t("backup.destinations.localPathHelpAfter")}
                 </p>
               </div>
               <UsbPicker onPick={(p) => setLocalPath(p)} excludePaths={usedPaths} />
@@ -6520,14 +6541,14 @@ function AddDestinationDialog({
           )}
         </div>
         <div className="flex justify-end gap-2 pt-3 border-t border-border">
-          <Button variant="ghost" onClick={onClose} disabled={submitting}>Cancel</Button>
+          <Button variant="ghost" onClick={onClose} disabled={submitting}>{t("actions.cancel")}</Button>
           <Button
             onClick={handleSave}
             disabled={!canSubmit || submitting}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Save
+            {t("actions.save")}
           </Button>
         </div>
       </DialogContent>
@@ -6555,6 +6576,7 @@ function UsbPicker({
   // destination type once any one of them landed on the disk.
   excludePaths?: string[]
 }) {
+  const t = useT()
   const { data, mutate, isLoading } = useSWR<{ drives: UsbDrive[] }>(
     "/api/host-backups/usb-drives",
     fetcher,
@@ -6629,7 +6651,7 @@ function UsbPicker({
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs font-medium">
             <HardDrive className="h-3.5 w-3.5 text-orange-400" />
-            USB drives detected
+            {t("backup.usb.drivesDetected", { count: drives.length })}
             {drives.length > 0 && (
               <Badge variant="outline" className="text-[10px]">{drives.length}</Badge>
             )}
@@ -6643,7 +6665,7 @@ function UsbPicker({
             disabled={isLoading}
           >
             {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-            <span className="ml-1">Refresh</span>
+            <span className="ml-1">{t("actions.refresh")}</span>
           </Button>
         </div>
         {error && (
@@ -6653,11 +6675,11 @@ function UsbPicker({
         )}
         {isLoading ? (
           <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" /> Scanning…
+            <Loader2 className="h-3 w-3 animate-spin" /> {t("backup.usb.scanning")}
           </div>
         ) : drives.length === 0 ? (
           <p className="text-[11px] text-muted-foreground italic">
-            No USB drives detected. Plug a USB stick and click Refresh.
+            {t("backup.usb.noneDetected")}
           </p>
         ) : (
           <div className="space-y-1.5">
@@ -6665,10 +6687,10 @@ function UsbPicker({
               const busy = busyKey === d.path_or_device
               const stateBadge =
                 d.state === "mounted"
-                  ? { label: "mounted", cls: "border-green-500/40 text-green-400 bg-green-500/5" }
+                  ? { label: t("backup.usb.mounted"), cls: "border-green-500/40 text-green-400 bg-green-500/5" }
                   : d.state === "unmounted"
-                    ? { label: "unmounted", cls: "border-amber-500/40 text-amber-400 bg-amber-500/5" }
-                    : { label: "unformatted", cls: "border-red-500/40 text-red-400 bg-red-500/5" }
+                    ? { label: t("backup.usb.unmounted"), cls: "border-amber-500/40 text-amber-400 bg-amber-500/5" }
+                    : { label: t("backup.usb.unformatted"), cls: "border-red-500/40 text-red-400 bg-red-500/5" }
               return (
                 <div
                   key={d.uuid || d.path_or_device}
@@ -6700,7 +6722,7 @@ function UsbPicker({
                         className="h-7 text-xs bg-blue-500/10 border-blue-500/40 !text-blue-400 hover:bg-blue-500/20 hover:!text-blue-300"
                         onClick={() => onPick(d.path_or_device)}
                       >
-                        Use
+                        {t("backup.actions.use")}
                       </Button>
                     )}
                     {d.state === "unmounted" && (
@@ -6713,7 +6735,7 @@ function UsbPicker({
                         onClick={() => mountAndUse(d)}
                       >
                         {busy ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                        Mount and use
+                        {t("backup.usb.mountAndUse")}
                       </Button>
                     )}
                     {d.state === "empty" && (
@@ -6725,7 +6747,7 @@ function UsbPicker({
                         disabled={busy}
                         onClick={() => { setFormatTarget(d); setFormatTyped("") }}
                       >
-                        Format & use
+                        {t("backup.usb.formatAndUse")}
                       </Button>
                     )}
                   </div>
@@ -6742,10 +6764,10 @@ function UsbPicker({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
               <AlertTriangle className="h-5 w-5 text-red-500" />
-              Format USB drive
+              {t("backup.usb.formatDrive")}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              This will partition the disk (GPT + a single ext4), then mount it. Everything on this device will be permanently lost.
+              {t("backup.usb.formatDescription")}
             </DialogDescription>
           </DialogHeader>
           {formatTarget && (
@@ -6755,7 +6777,7 @@ function UsbPicker({
                 {formatTarget.size && <span className="text-muted-foreground"> · {formatTarget.size}</span>}
               </div>
               <Label htmlFor="formatConfirmInput" className="text-xs">
-                Type the device path exactly to confirm:
+                {t("backup.usb.typeDeviceToConfirm")}
               </Label>
               <Input
                 id="formatConfirmInput"
@@ -6772,7 +6794,7 @@ function UsbPicker({
               onClick={() => { setFormatTarget(null); setFormatTyped("") }}
               disabled={busyKey === formatTarget?.path_or_device}
             >
-              Cancel
+              {t("actions.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -6784,7 +6806,7 @@ function UsbPicker({
               ) : (
                 <AlertTriangle className="h-4 w-4 mr-2" />
               )}
-              Wipe and format
+              {t("backup.usb.wipeAndFormat")}
             </Button>
           </div>
         </DialogContent>
@@ -6807,6 +6829,7 @@ interface ExtraPathEntry {
 }
 
 function ExtraPathsSection() {
+  const t = useT()
   const { data, mutate } = useSWR<{ paths: ExtraPathEntry[] }>(
     "/api/host-backups/extra-paths",
     fetcher,
@@ -6855,14 +6878,14 @@ function ExtraPathsSection() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Paths added here are included in <span className="font-medium text-foreground">every backup</span> (manual or scheduled, default or custom profile) on top of the default profile list. Useful for application data, custom config dirs, etc. ({paths.length} configured)
+        {t("backup.extraPaths.descriptionBefore")} <span className="font-medium text-foreground">{t("backup.extraPaths.everyBackup")}</span> {t("backup.extraPaths.descriptionAfter", { count: paths.length })}
       </p>
 
         <div className="flex flex-col sm:flex-row gap-2">
           <Input
             value={newPath}
             onChange={(e) => setNewPath(e.target.value)}
-            placeholder="/root/my-folder, /srv/myapp/data, /etc/cron.d ..."
+            placeholder={t("backup.placeholders.extraPathExamples")}
             className="font-mono"
             onKeyDown={(e) => { if (e.key === "Enter" && newPath.trim()) addPath() }}
           />
@@ -6872,11 +6895,11 @@ function ExtraPathsSection() {
             className="shrink-0 bg-blue-500 hover:bg-blue-600 text-white"
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-            Add path
+            {t("backup.actions.addPath")}
           </Button>
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Use the full absolute path. <code className="font-mono">/hola</code> is not the same as <code className="font-mono">/root/hola</code> — the path has to exist on this host exactly as you type it.
+          {t("backup.extraPaths.absolutePathHintBefore")} <code className="font-mono">/hola</code> {t("backup.extraPaths.absolutePathHintMiddle")} <code className="font-mono">/root/hola</code> {t("backup.extraPaths.absolutePathHintAfter")}
         </p>
 
         {error && (
@@ -6887,7 +6910,7 @@ function ExtraPathsSection() {
 
         {paths.length === 0 ? (
           <div className="text-xs text-muted-foreground py-3 text-center">
-            No custom paths yet — backups use the default profile only.
+            {t("backup.extraPaths.empty")}
           </div>
         ) : (
           <div className="space-y-1">
@@ -6900,7 +6923,7 @@ function ExtraPathsSection() {
                   <span className="font-mono text-xs truncate" title={p.path}>{p.path}</span>
                   {!p.exists && (
                     <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/40">
-                      missing on disk
+                      {t("backup.extraPaths.missingOnDisk")}
                     </Badge>
                   )}
                 </div>
@@ -6908,7 +6931,7 @@ function ExtraPathsSection() {
                   type="button"
                   disabled={busyPath === p.path}
                   onClick={() => removePath(p.path)}
-                  title="Remove this custom path"
+                  title={t("backup.extraPaths.removeTitle")}
                   className="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-md border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {busyPath === p.path ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
@@ -6934,12 +6957,13 @@ function BackupConfigurationCard({
   destinations?: DestinationsResp
   onDestChanged: () => void
 }) {
+  const t = useT()
   return (
     <Card className="bg-card border-border">
       <CardHeader className="space-y-0 pb-3">
         <div className="flex items-center gap-2">
           <Server className="h-5 w-5 text-blue-500" />
-          <CardTitle className="text-base font-semibold">Backup configuration</CardTitle>
+          <CardTitle className="text-base font-semibold">{t("backup.configuration.title")}</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -6948,7 +6972,7 @@ function BackupConfigurationCard({
             this list when mounted, and the add-destination wizard can
             mount / format them inline. */}
         <section className="space-y-2">
-          <h3 className="text-sm font-medium">Destinations</h3>
+          <h3 className="text-sm font-medium">{t("backup.destinations.title")}</h3>
           <DestinationsSection destinations={destinations} onChanged={onDestChanged} />
         </section>
 
@@ -6956,7 +6980,7 @@ function BackupConfigurationCard({
 
         {/* Custom paths — extra absolute paths included in every backup */}
         <section className="space-y-2">
-          <h3 className="text-sm font-medium">Custom paths</h3>
+          <h3 className="text-sm font-medium">{t("backup.extraPaths.title")}</h3>
           <ExtraPathsSection />
         </section>
       </CardContent>
@@ -6984,6 +7008,7 @@ interface UsbDrive {
 }
 
 function UsbDrivesSection() {
+  const t = useT()
   const { data, mutate, isLoading } = useSWR<{ drives: UsbDrive[] }>(
     "/api/host-backups/usb-drives",
     fetcher,
@@ -7017,7 +7042,7 @@ function UsbDrivesSection() {
   }
 
   async function unmountDrive(d: UsbDrive) {
-    if (!confirm(`Unmount ${d.path_or_device}? Any backup job pointing at this path will fail until you remount it.`)) return
+    if (!confirm(t("backup.usb.unmountConfirm", { path: d.path_or_device }))) return
     setBusyKey(d.path_or_device)
     setError(null)
     try {
@@ -7061,7 +7086,7 @@ function UsbDrivesSection() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Mount USB drives so they can be picked as a local or Borg target. Drives that already had a filesystem can be remounted as-is; raw drives (no partition table) can be wiped and formatted to <code className="font-mono">ext4</code>.
+        {t("backup.usb.description")} <code className="font-mono">ext4</code>.
       </p>
 
       {error && (
@@ -7073,11 +7098,11 @@ function UsbDrivesSection() {
       {isLoading ? (
         <div className="text-xs text-muted-foreground py-3 text-center">
           <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
-          Scanning USB drives…
+          {t("backup.usb.scanning")}
         </div>
       ) : drives.length === 0 ? (
         <div className="text-xs text-muted-foreground py-3 text-center">
-          No USB drives detected. Plug one in and refresh — Monitor scans for them automatically every 30s.
+          {t("backup.usb.empty")}
         </div>
       ) : (
         <div className="space-y-2">
@@ -7085,10 +7110,10 @@ function UsbDrivesSection() {
             const isBusy = busyKey === d.path_or_device
             const stateBadge =
               d.state === "mounted"
-                ? { label: "mounted", cls: "text-emerald-400 border-emerald-400/40" }
+                ? { label: t("backup.usb.stateMounted"), cls: "text-emerald-400 border-emerald-400/40" }
                 : d.state === "unmounted"
-                  ? { label: "not mounted", cls: "text-amber-500 border-amber-500/40" }
-                  : { label: "no filesystem", cls: "text-red-400 border-red-400/40" }
+                  ? { label: t("backup.usb.stateUnmounted"), cls: "text-amber-500 border-amber-500/40" }
+                  : { label: t("backup.usb.stateEmpty"), cls: "text-red-400 border-red-400/40" }
             return (
               <div
                 key={`${d.state}-${d.path_or_device}-${d.uuid}`}
@@ -7102,10 +7127,10 @@ function UsbDrivesSection() {
                     </Badge>
                   </div>
                   <div className="mt-1 text-[11px] text-muted-foreground flex items-center gap-x-3 gap-y-1 flex-wrap">
-                    {d.label && <span><span className="text-muted-foreground/70">label:</span> <code className="font-mono">{d.label}</code></span>}
-                    {d.size && <span><span className="text-muted-foreground/70">size:</span> <code className="font-mono">{d.size}</code></span>}
-                    {d.fstype && <span><span className="text-muted-foreground/70">fs:</span> <code className="font-mono">{d.fstype}</code></span>}
-                    {d.uuid && <span className="hidden sm:inline" title={`uuid: ${d.uuid}`}><span className="text-muted-foreground/70">uuid:</span> <code className="font-mono">{d.uuid.substring(0, 8)}…</code></span>}
+                    {d.label && <span><span className="text-muted-foreground/70">{t("backup.fields.label")}:</span> <code className="font-mono">{d.label}</code></span>}
+                    {d.size && <span><span className="text-muted-foreground/70">{t("backup.fields.size")}:</span> <code className="font-mono">{d.size}</code></span>}
+                    {d.fstype && <span><span className="text-muted-foreground/70">{t("backup.fields.filesystemShort")}:</span> <code className="font-mono">{d.fstype}</code></span>}
+                    {d.uuid && <span className="hidden sm:inline" title={t("backup.usb.uuidTitle", { uuid: d.uuid })}><span className="text-muted-foreground/70">uuid:</span> <code className="font-mono">{d.uuid.substring(0, 8)}…</code></span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
@@ -7118,7 +7143,7 @@ function UsbDrivesSection() {
                       onClick={() => unmountDrive(d)}
                     >
                       {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
-                      <span className="ml-1 text-xs">Unmount</span>
+                      <span className="ml-1 text-xs">{t("backup.actions.unmount")}</span>
                     </Button>
                   )}
                   {d.state === "unmounted" && (
@@ -7130,7 +7155,7 @@ function UsbDrivesSection() {
                       onClick={() => mountDrive(d)}
                     >
                       {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                      <span className="ml-1 text-xs">Mount</span>
+                      <span className="ml-1 text-xs">{t("backup.actions.mount")}</span>
                     </Button>
                   )}
                   {d.state === "empty" && (
@@ -7140,10 +7165,10 @@ function UsbDrivesSection() {
                       className="h-8 px-2 text-red-500 hover:text-red-400 hover:bg-red-500/10"
                       disabled={isBusy}
                       onClick={() => { setFormatTarget(d); setFormatTyped("") }}
-                      title="Wipe + format this disk as ext4"
+                      title={t("backup.usb.formatTitle")}
                     >
                       <AlertTriangle className="h-3.5 w-3.5" />
-                      <span className="ml-1 text-xs">Format</span>
+                      <span className="ml-1 text-xs">{t("backup.actions.format")}</span>
                     </Button>
                   )}
                 </div>
@@ -7159,21 +7184,21 @@ function UsbDrivesSection() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-red-500" />
-              Wipe and format this disk?
+              {t("backup.usb.formatDriveQuestion")}
             </DialogTitle>
             <DialogDescription>
-              Everything on the disk will be destroyed. This cannot be undone.
+              {t("backup.usb.formatWarning")}
             </DialogDescription>
           </DialogHeader>
           {formatTarget && (
             <div className="space-y-3 text-sm">
               <div className="rounded-md border border-red-500/40 bg-red-500/5 p-3 space-y-1">
-                <div className="text-[10px] uppercase tracking-wider text-red-400">Target</div>
+                <div className="text-[10px] uppercase tracking-wider text-red-400">{t("backup.fields.target")}</div>
                 <div className="font-mono text-base">{formatTarget.path_or_device}</div>
-                <div className="text-xs text-muted-foreground">Size: {formatTarget.size || "?"}</div>
+                <div className="text-xs text-muted-foreground">{t("backup.fields.size")}: {formatTarget.size || "?"}</div>
               </div>
               <div>
-                <Label htmlFor="formatConfirm">Type the device path EXACTLY to confirm:</Label>
+                <Label htmlFor="formatConfirm">{t("backup.usb.typeDeviceExactly")}</Label>
                 <Input
                   id="formatConfirm"
                   value={formatTyped}
@@ -7183,13 +7208,13 @@ function UsbDrivesSection() {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                The disk will be re-partitioned (GPT + single ext4 partition) and mounted automatically.
+                {t("backup.usb.repartitionHint")}
               </p>
             </div>
           )}
           <div className="flex justify-end gap-2 mt-2">
             <Button variant="ghost" onClick={() => { setFormatTarget(null); setFormatTyped("") }} disabled={busyKey === formatTarget?.path_or_device}>
-              Cancel
+              {t("actions.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -7201,7 +7226,7 @@ function UsbDrivesSection() {
               ) : (
                 <AlertTriangle className="h-4 w-4 mr-2" />
               )}
-              Wipe and format
+              {t("backup.usb.wipeAndFormat")}
             </Button>
           </div>
         </DialogContent>
@@ -7232,6 +7257,7 @@ function JobDetailModal({
   onRequestDelete: (id: string) => void
   onChanged: () => void
 }) {
+  const t = useT()
   const open = jobId !== null
   const [running, setRunning] = useState(false)
   const [runBaseline, setRunBaseline] = useState<string | null>(null)
@@ -7337,7 +7363,7 @@ function JobDetailModal({
       setRunning(false)
       setRunBaseline(null)
       setRunBaselineLogPath(null)
-      setActionError(`Failed to run: ${e instanceof Error ? e.message : String(e)}`)
+      setActionError(t("backup.errors.runFailed", { error: e instanceof Error ? e.message : String(e) }))
     }
   }
 
@@ -7351,7 +7377,7 @@ function JobDetailModal({
       await refetch()
       onChanged()
     } catch (e) {
-      setActionError(`Failed to toggle: ${e instanceof Error ? e.message : String(e)}`)
+      setActionError(t("backup.errors.toggleFailed", { error: e instanceof Error ? e.message : String(e) }))
     } finally {
       setBusy("")
     }
@@ -7360,9 +7386,9 @@ function JobDetailModal({
   const lastResult = detail?.last_result ?? null
   const lastRunWhen = formatRunAt(detail?.last_run_at ?? null)
   const resultBadge = running
-    ? { label: "running", cls: "bg-blue-500/10 border-blue-500/40 text-blue-300" }
+    ? { label: t("backup.taskStates.running"), cls: "bg-blue-500/10 border-blue-500/40 text-blue-300" }
     : lastResult === "ok"
-      ? { label: "ok", cls: "bg-emerald-500/10 border-emerald-500/40 text-emerald-300" }
+      ? { label: t("backup.status.ok"), cls: "bg-emerald-500/10 border-emerald-500/40 text-emerald-300" }
       : lastResult
         ? { label: lastResult, cls: "bg-red-500/10 border-red-500/40 text-red-300" }
         : null
@@ -7392,26 +7418,26 @@ function JobDetailModal({
                     <Badge
                       variant="outline"
                       className="text-emerald-400 border-emerald-500/40 bg-emerald-500/10"
-                      title="Encrypted"
+                      title={t("backup.archives.encrypted")}
                     >
                       <Lock className="h-3.5 w-3.5" />
                     </Badge>
                   )}
                   {detail.attached && (
                     <Badge variant="outline" className="text-[10px] text-blue-400 border-blue-400/40 bg-blue-500/5">
-                      attached
+                      {t("backup.status.attached")}
                     </Badge>
                   )}
                   {!detail.enabled && (
                     <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/40 bg-amber-500/5">
-                      disabled
+                      {t("backup.status.disabled")}
                     </Badge>
                   )}
                 </>
               )}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Schedule, profile, destination and last run for this job.
+              {t("backup.jobs.detailDescription")}
             </DialogDescription>
           </DialogHeader>
 
@@ -7424,7 +7450,7 @@ function JobDetailModal({
           {isLoading || !detail ? (
             <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Loading job…
+              {t("backup.jobs.loadingJob")}
             </div>
           ) : (
             <ScrollArea className="max-h-[60vh] pr-2">
@@ -7448,7 +7474,7 @@ function JobDetailModal({
                         modal where it belongs (one log per .tar.zst). */}
                     <section className="space-y-2">
                       <h4 className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5 text-green-500">
-                        <Clock className="h-3.5 w-3.5" /> Last run
+                        <Clock className="h-3.5 w-3.5" /> {t("backup.jobs.lastRun")}
                       </h4>
                       <div className="flex items-center gap-2 flex-wrap text-xs">
                         {resultBadge ? (
@@ -7457,7 +7483,7 @@ function JobDetailModal({
                             {resultBadge.label}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground">never run</span>
+                          <span className="text-muted-foreground">{t("backup.jobs.neverRun")}</span>
                         )}
                         {lastRunWhen && <span className="text-muted-foreground">{lastRunWhen}</span>}
                       </div>
@@ -7479,14 +7505,14 @@ function JobDetailModal({
                                 ref={liveLogRef}
                                 className="text-[11px] font-mono whitespace-pre-wrap break-all max-h-64 overflow-auto text-foreground/90"
                               >
-{showContent ? liveLog!.content : "Waiting for runner to start…"}
+{showContent ? liveLog!.content : t("backup.jobs.waitingForRunner")}
                               </pre>
                               <div className="flex items-center justify-between mt-2">
                                 <span className="text-[10px] text-blue-300 inline-flex items-center gap-1.5">
                                   <Loader2 className="h-3 w-3 animate-spin" />
                                   {showContent
-                                    ? `live · ${formatBytes(liveLog?.size ?? 0)}`
-                                    : "starting…"}
+                                    ? t("backup.jobs.liveLogSize", { size: formatBytes(liveLog?.size ?? 0) })
+                                    : t("backup.jobs.starting")}
                                 </span>
                                 {showContent && liveLog?.log_path && (
                                   <span className="text-[10px] text-muted-foreground font-mono break-all">
@@ -7503,18 +7529,18 @@ function JobDetailModal({
                     {/* ─── Schedule + retention ─────────────── */}
                     <section className="space-y-2">
                       <h4 className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5 text-green-500">
-                        <Calendar className="h-3.5 w-3.5" /> Schedule
+                        <Calendar className="h-3.5 w-3.5" /> {t("backup.schedule.title")}
                       </h4>
                       <Field
                         icon={<Calendar className="h-3 w-3 text-green-500/80" />}
-                        label="when"
-                        value={humanizeOnCalendar(detail.on_calendar)}
+                        label={t("backup.fields.when")}
+                        value={humanizeOnCalendar(detail.on_calendar, t)}
                         labelClassName="text-green-500/90"
                       />
                       {detail.next_run && (
                         <Field
                           icon={<Clock className="h-3 w-3 text-green-500/80" />}
-                          label="next run"
+                          label={t("backup.fields.nextRun")}
                           value={formatNext(detail.next_run)}
                           labelClassName="text-green-500/90"
                         />
@@ -7525,11 +7551,11 @@ function JobDetailModal({
                     {/* ─── Profile + paths ──────────────────── */}
                     <section className="space-y-2">
                       <h4 className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5 text-green-500">
-                        <FileSearch className="h-3.5 w-3.5" /> Profile
+                        <FileSearch className="h-3.5 w-3.5" /> {t("backup.profile.title")}
                       </h4>
                       <Field
                         icon={<Server className="h-3 w-3 text-green-500/80" />}
-                        label="mode"
+                        label={t("backup.fields.mode")}
                         value={detail.profile_mode || "—"}
                         mono
                         labelClassName="text-green-500/90"
@@ -7542,32 +7568,32 @@ function JobDetailModal({
                     {/* ─── Destination ──────────────────────── */}
                     <section className="space-y-1">
                       <h4 className={`text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5 ${destAccent}`}>
-                        <HardDrive className="h-3.5 w-3.5" /> Destination
+                        <HardDrive className="h-3.5 w-3.5" /> {t("backup.destinations.single")}
                       </h4>
-                      <Field icon={<HardDrive className={`h-3 w-3 ${destAccent} opacity-80`} />} label="target" value={detail.destination || "—"} mono />
+                      <Field icon={<HardDrive className={`h-3 w-3 ${destAccent} opacity-80`} />} label={t("backup.fields.target")} value={detail.destination || "—"} mono />
                       {detail.method === "pbs" && (
                         <>
                           {detail.pbs_repository && (
-                            <Field icon={<Server className={`h-3 w-3 ${destAccent} opacity-80`} />} label="repository" value={detail.pbs_repository} mono />
+                            <Field icon={<Server className={`h-3 w-3 ${destAccent} opacity-80`} />} label={t("backup.fields.repository")} value={detail.pbs_repository} mono />
                           )}
                           {detail.pbs_backup_id && (
-                            <Field icon={<Archive className={`h-3 w-3 ${destAccent} opacity-80`} />} label="backup-id" value={detail.pbs_backup_id} mono />
+                            <Field icon={<Archive className={`h-3 w-3 ${destAccent} opacity-80`} />} label={t("backup.fields.backupId")} value={detail.pbs_backup_id} mono />
                           )}
                         </>
                       )}
                       {detail.method === "borg" && (
                         <>
                           {detail.borg_repo && (
-                            <Field icon={<Server className={`h-3 w-3 ${destAccent} opacity-80`} />} label="repo" value={detail.borg_repo} mono />
+                            <Field icon={<Server className={`h-3 w-3 ${destAccent} opacity-80`} />} label={t("backup.fields.repo")} value={detail.borg_repo} mono />
                           )}
-                          <Field icon={<FileSearch className={`h-3 w-3 ${destAccent} opacity-80`} />} label="encryption" value={detail.borg_encrypt_mode} mono />
+                          <Field icon={<FileSearch className={`h-3 w-3 ${destAccent} opacity-80`} />} label={t("backup.fields.encryption")} value={detail.borg_encrypt_mode} mono />
                         </>
                       )}
                       {detail.method === "local" && detail.local_dest_dir && (
-                        <Field icon={<HardDrive className={`h-3 w-3 ${destAccent} opacity-80`} />} label="dir" value={detail.local_dest_dir} mono />
+                        <Field icon={<HardDrive className={`h-3 w-3 ${destAccent} opacity-80`} />} label={t("backup.fields.directoryShort")} value={detail.local_dest_dir} mono />
                       )}
                       {detail.pve_storage && (
-                        <Field icon={<DatabaseBackup className={`h-3 w-3 ${destAccent} opacity-80`} />} label="pve storage" value={detail.pve_storage} mono />
+                        <Field icon={<DatabaseBackup className={`h-3 w-3 ${destAccent} opacity-80`} />} label={t("backup.fields.pveStorage")} value={detail.pve_storage} mono />
                       )}
                     </section>
                   </div>
@@ -7590,15 +7616,15 @@ function JobDetailModal({
                   disabled={running || busy !== ""}
                   className="bg-green-600 hover:bg-green-700 text-white"
                   title={detail.attached
-                    ? "Trigger an ad-hoc run now (the PVE timer keeps its own schedule)"
-                    : "Trigger this job now"}
+                    ? t("backup.jobs.runAttachedTitle")
+                    : t("backup.jobs.runNowTitle")}
                 >
                   {running ? (
                     <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
                   ) : (
                     <PlayCircle className="h-3.5 w-3.5 mr-1" />
                   )}
-                  {running ? "Running…" : "Run now"}
+                  {running ? t("backup.jobs.running") : t("backup.actions.runNow")}
                 </Button>
                 <Button
                   size="sm"
@@ -7608,7 +7634,7 @@ function JobDetailModal({
                   onClick={() => onEdit(detail.id)}
                 >
                   <Pencil className="h-3.5 w-3.5 mr-1" />
-                  Edit
+                  {t("backup.actions.edit")}
                 </Button>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -7631,7 +7657,7 @@ function JobDetailModal({
                   ) : (
                     <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                   )}
-                  {detail.enabled ? "Disable" : "Enable"}
+                  {detail.enabled ? t("backup.actions.disable") : t("backup.actions.enable")}
                 </Button>
                 <Button
                   size="sm"
@@ -7641,7 +7667,7 @@ function JobDetailModal({
                   onClick={() => onRequestDelete(detail.id)}
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-1" />
-                  Delete
+                  {t("backup.actions.delete")}
                 </Button>
               </div>
             </div>
@@ -7655,10 +7681,10 @@ function JobDetailModal({
           <DialogHeader>
             <DialogTitle className="text-base flex items-center gap-2">
               <Power className="h-5 w-5 text-amber-500" />
-              Disable job
+              {t("backup.jobs.disableJob")}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              The systemd timer will be stopped — no further automatic runs. You can re-enable it later from this same dialog.
+              {t("backup.jobs.disableJobDescription")}
             </DialogDescription>
           </DialogHeader>
           <div className="text-sm font-mono px-3 py-2 rounded-md border border-border bg-background/40 break-all">
@@ -7666,7 +7692,7 @@ function JobDetailModal({
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setShowDisableConfirm(false)}>
-              Cancel
+              {t("actions.cancel")}
             </Button>
             <Button
               variant="outline"
@@ -7674,7 +7700,7 @@ function JobDetailModal({
               onClick={handleToggle}
             >
               <Power className="h-3.5 w-3.5 mr-1" />
-              Disable
+              {t("backup.actions.disable")}
             </Button>
           </div>
         </DialogContent>
@@ -7705,6 +7731,7 @@ function ManualJobWatchModal({
   onClose: () => void
   onChanged: () => void
 }) {
+  const t = useT()
   const open = jobId !== null
   const [running, setRunning] = useState(false)
   const [runBaselineLogPath, setRunBaselineLogPath] = useState<string | null>(null)
@@ -7756,9 +7783,9 @@ function ManualJobWatchModal({
   }, [open])
 
   const resultBadge = running
-    ? { label: "running", cls: "bg-blue-500/10 border-blue-500/40 text-blue-300" }
+    ? { label: t("backup.taskStates.running"), cls: "bg-blue-500/10 border-blue-500/40 text-blue-300" }
     : detail?.last_result === "ok"
-      ? { label: "ok", cls: "bg-emerald-500/10 border-emerald-500/40 text-emerald-300" }
+      ? { label: t("backup.status.ok"), cls: "bg-emerald-500/10 border-emerald-500/40 text-emerald-300" }
       : detail?.last_result
         ? { label: detail.last_result, cls: "bg-red-500/10 border-red-500/40 text-red-300" }
         : null
@@ -7782,13 +7809,13 @@ function ManualJobWatchModal({
                     {detail.method}
                   </Badge>
                   <Badge variant="outline" className="text-[10px] text-purple-400 border-purple-400/40 bg-purple-500/5">
-                    manual / one-shot
+                    {t("backup.jobs.manualOneShot")}
                   </Badge>
                 </>
               )}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              One-shot backup — captured at the time of the trigger. Cannot be re-run or edited.
+              {t("backup.jobs.manualOneShotDescription")}
             </DialogDescription>
           </DialogHeader>
 
@@ -7801,7 +7828,7 @@ function ManualJobWatchModal({
           {isLoading || !detail ? (
             <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Loading job…
+              {t("backup.jobs.loadingJob")}
             </div>
           ) : (
             <ScrollArea className="max-h-[60vh] pr-2">
@@ -7811,7 +7838,7 @@ function ManualJobWatchModal({
                     neutral "Status" header here. */}
                 <section className="space-y-2">
                   <h4 className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5 text-green-500">
-                    <Clock className="h-3.5 w-3.5" /> Status
+                    <Clock className="h-3.5 w-3.5" /> {t("backup.fields.status")}
                   </h4>
                   <div className="flex items-center gap-2 flex-wrap text-xs">
                     {resultBadge ? (
@@ -7820,7 +7847,7 @@ function ManualJobWatchModal({
                         {resultBadge.label}
                       </span>
                     ) : (
-                      <span className="text-muted-foreground">starting…</span>
+                      <span className="text-muted-foreground">{t("backup.jobs.starting")}</span>
                     )}
                     {lastRunWhen && <span className="text-muted-foreground">{lastRunWhen}</span>}
                   </div>
@@ -7837,12 +7864,12 @@ function ManualJobWatchModal({
                             ref={liveLogRef}
                             className="text-[11px] font-mono whitespace-pre-wrap break-all max-h-64 overflow-auto text-foreground/90"
                           >
-{showContent ? liveLog!.content : "Waiting for runner to start…"}
+{showContent ? liveLog!.content : t("backup.jobs.waitingForRunner")}
                           </pre>
                           <div className="flex items-center justify-between mt-2">
                             <span className="text-[10px] text-blue-300 inline-flex items-center gap-1.5">
                               <Loader2 className="h-3 w-3 animate-spin" />
-                              {showContent ? `live · ${formatBytes(liveLog?.size ?? 0)}` : "starting…"}
+                              {showContent ? t("backup.jobs.liveLogSize", { size: formatBytes(liveLog?.size ?? 0) }) : t("backup.jobs.starting")}
                             </span>
                             {showContent && liveLog?.log_path && (
                               <span className="text-[10px] text-muted-foreground font-mono break-all">
@@ -7859,7 +7886,7 @@ function ManualJobWatchModal({
 {detail.last_log_tail.join("\n")}
                       </pre>
                       <div className="text-[10px] text-muted-foreground mt-2">
-                        tail · {detail.last_log_size > 0 ? formatBytes(detail.last_log_size) : "—"}
+                        {t("backup.logs.tail")} · {detail.last_log_size > 0 ? formatBytes(detail.last_log_size) : "—"}
                       </div>
                     </div>
                   ) : null}
@@ -7870,28 +7897,28 @@ function ManualJobWatchModal({
                     because manual jobs don't carry those. */}
                 <section className="space-y-1">
                   <h4 className={`text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5 ${destAccent}`}>
-                    <HardDrive className="h-3.5 w-3.5" /> Destination
+                    <HardDrive className="h-3.5 w-3.5" /> {t("backup.destinations.single")}
                   </h4>
                   {detail.method === "pbs" && (
                     <>
                       {detail.pbs_repository && (
-                        <Field icon={<Server className={`h-3 w-3 ${destAccent} opacity-80`} />} label="repository" value={detail.pbs_repository} mono />
+                        <Field icon={<Server className={`h-3 w-3 ${destAccent} opacity-80`} />} label={t("backup.fields.repository")} value={detail.pbs_repository} mono />
                       )}
                       {detail.pbs_backup_id && (
-                        <Field icon={<Archive className={`h-3 w-3 ${destAccent} opacity-80`} />} label="backup-id" value={detail.pbs_backup_id} mono />
+                        <Field icon={<Archive className={`h-3 w-3 ${destAccent} opacity-80`} />} label={t("backup.fields.backupId")} value={detail.pbs_backup_id} mono />
                       )}
                     </>
                   )}
                   {detail.method === "borg" && (
                     <>
                       {detail.borg_repo && (
-                        <Field icon={<Server className={`h-3 w-3 ${destAccent} opacity-80`} />} label="repo" value={detail.borg_repo} mono />
+                        <Field icon={<Server className={`h-3 w-3 ${destAccent} opacity-80`} />} label={t("backup.fields.repo")} value={detail.borg_repo} mono />
                       )}
-                      <Field icon={<FileSearch className={`h-3 w-3 ${destAccent} opacity-80`} />} label="encryption" value={detail.borg_encrypt_mode} mono />
+                      <Field icon={<FileSearch className={`h-3 w-3 ${destAccent} opacity-80`} />} label={t("backup.fields.encryption")} value={detail.borg_encrypt_mode} mono />
                     </>
                   )}
                   {detail.method === "local" && detail.local_dest_dir && (
-                    <Field icon={<HardDrive className={`h-3 w-3 ${destAccent} opacity-80`} />} label="dir" value={detail.local_dest_dir} mono />
+                    <Field icon={<HardDrive className={`h-3 w-3 ${destAccent} opacity-80`} />} label={t("backup.fields.directoryShort")} value={detail.local_dest_dir} mono />
                   )}
                 </section>
               </div>
@@ -7928,6 +7955,7 @@ function PbsKeyfileRecoveryDialog({
   onClose: () => void
   onRecovered: () => void
 }) {
+  const t = useT()
   const [selectedKey, setSelectedKey] = useState<string>("")
   const [passphrase, setPassphrase] = useState<string>("")
   const [busy, setBusy] = useState<boolean>(false)
@@ -7976,16 +8004,16 @@ function PbsKeyfileRecoveryDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <Lock className="h-5 w-5 text-emerald-400" />
-            Recover PBS keyfile
+            {t("backup.keyfileRecovery.title")}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            The encrypted keyfile blob is downloaded from PBS and decrypted with your recovery passphrase. The resulting key is written to <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code>.
+            {t("backup.keyfileRecovery.descriptionBefore")} <code className="font-mono">/usr/local/share/proxmenux/pbs-key.conf</code>.
           </DialogDescription>
         </DialogHeader>
 
         {snapshots.length > 1 && (
           <div className="space-y-1">
-            <Label className="text-xs">Recovery snapshot</Label>
+            <Label className="text-xs">{t("backup.keyfileRecovery.snapshot")}</Label>
             <Select value={selectedKey} onValueChange={setSelectedKey}>
               <SelectTrigger>
                 <SelectValue />
@@ -8005,7 +8033,7 @@ function PbsKeyfileRecoveryDialog({
               </SelectContent>
             </Select>
             <p className="text-[11px] text-muted-foreground">
-              Pick the source host whose passphrase you remember — each install uploads its own escrow.
+              {t("backup.keyfileRecovery.pickSourceHost")}
             </p>
           </div>
         )}
@@ -8013,7 +8041,7 @@ function PbsKeyfileRecoveryDialog({
         {selected && (
           <div className="text-xs space-y-1 px-3 py-2 rounded-md border border-border bg-background/40">
             <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">Source host:</span>
+              <span className="text-muted-foreground">{t("backup.fields.sourceHost")}:</span>
               <span className="font-mono">{selected.source_host}</span>
             </div>
             <div className="flex items-center gap-2">
@@ -8024,13 +8052,13 @@ function PbsKeyfileRecoveryDialog({
         )}
 
         <div>
-          <Label htmlFor="recoveryPass" className="text-xs">Recovery passphrase</Label>
+          <Label htmlFor="recoveryPass" className="text-xs">{t("backup.keyfileRecovery.passphrase")}</Label>
           <Input
             id="recoveryPass"
             type="password"
             value={passphrase}
             onChange={(e) => setPassphrase(e.target.value)}
-            placeholder="The passphrase set when the keyfile was created"
+            placeholder={t("backup.placeholders.keyfileRecoveryPassphrase")}
             className="font-mono mt-1"
             autoFocus
             onKeyDown={(e) => {
@@ -8047,7 +8075,7 @@ function PbsKeyfileRecoveryDialog({
 
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose} disabled={busy}>
-            Cancel
+            {t("actions.cancel")}
           </Button>
           <Button
             className="bg-green-600 hover:bg-green-700 text-white"
@@ -8059,7 +8087,7 @@ function PbsKeyfileRecoveryDialog({
             ) : (
               <Lock className="h-4 w-4 mr-2" />
             )}
-            Recover keyfile
+            {t("backup.actions.recoverKeyfile")}
           </Button>
         </div>
       </DialogContent>
@@ -8122,6 +8150,7 @@ function ArchiveContentsModal({
   path?: string
   display_id?: string
 }) {
+  const t = useT()
   const [data, setData] = useState<InspectResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -8135,10 +8164,10 @@ function ArchiveContentsModal({
     }
     const body: Record<string, string> = { source }
     if (source === "local") {
-      if (!path) { setError("Local archive path missing"); return }
+      if (!path) { setError(t("backup.errors.localArchivePathMissing")); return }
       body.path = path
     } else {
-      if (!repo_name || !snapshot) { setError("repo_name and snapshot required"); return }
+      if (!repo_name || !snapshot) { setError(t("backup.errors.repoNameAndSnapshotRequired")); return }
       body.repo_name = repo_name
       body.snapshot = snapshot
     }
@@ -8164,7 +8193,7 @@ function ArchiveContentsModal({
         <DialogHeader className="px-6 pt-6 pb-3 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Eye className="h-5 w-5 text-blue-400" />
-            Backup contents
+            {t("backup.contents.title")}
           </DialogTitle>
           <DialogDescription className="text-xs font-mono break-all">
             {display_id}
@@ -8174,7 +8203,7 @@ function ArchiveContentsModal({
         {loading && (
           <div className="flex items-center gap-3 py-12 justify-center text-sm text-muted-foreground px-6">
             <Loader2 className="h-5 w-5 animate-spin" />
-            Extracting snapshot and analyzing — this may take a minute on large backups…
+            {t("backup.contents.extracting")}
           </div>
         )}
 
@@ -8192,17 +8221,17 @@ function ArchiveContentsModal({
         {data && !loading && (
           <ScrollArea className="flex-1 min-h-0 px-6">
             <div className="space-y-4 pr-2">
-              <ContentsSection icon={Info} title="Manifest" iconColor="text-blue-400">
+              <ContentsSection icon={Info} title={t("backup.contents.manifest")} iconColor="text-blue-400">
                 {manifest ? (
                   <ManifestGrid manifest={manifest} />
                 ) : data.manifest_missing ? (
                   <div className="text-xs text-muted-foreground italic">
-                    This backup doesn't include a manifest.json. Manifest is generated by the collectors pipeline (not yet wired into the backup runner). The Metadata files below carry the equivalent info: <code className="font-mono">run_info.env</code>, <code className="font-mono">pveversion.txt</code>, <code className="font-mono">selected_paths.txt</code>.
+                    {t("backup.contents.manifestMissingBefore")} <code className="font-mono">run_info.env</code>, <code className="font-mono">pveversion.txt</code>, <code className="font-mono">selected_paths.txt</code>.
                   </div>
                 ) : data.manifest_error ? (
                   <div className="text-xs text-amber-400">{data.manifest_error}</div>
                 ) : (
-                  <div className="text-xs text-muted-foreground italic">No manifest in this archive.</div>
+                  <div className="text-xs text-muted-foreground italic">{t("backup.contents.noManifest")}</div>
                 )}
               </ContentsSection>
 
@@ -8222,22 +8251,22 @@ function ArchiveContentsModal({
                 return (
                   <>
                     {planHasInfo && (
-                      <ContentsSection icon={ListTree} title="Restore plan" iconColor="text-emerald-400">
+                      <ContentsSection icon={ListTree} title={t("backup.contents.restorePlan")} iconColor="text-emerald-400">
                         <PlanSummary plan={plan} />
                       </ContentsSection>
                     )}
                     {storageEntries.length > 0 && (
-                      <ContentsSection icon={HardDrive} title="Storage" iconColor="text-amber-400">
+                      <ContentsSection icon={HardDrive} title={t("backup.contents.storage")} iconColor="text-amber-400">
                         <StorageSection storage={plan.storage} />
                       </ContentsSection>
                     )}
                     {networkIfaces.length > 0 && (
-                      <ContentsSection icon={Network} title="Network" iconColor="text-purple-400">
+                      <ContentsSection icon={Network} title={t("backup.contents.network")} iconColor="text-purple-400">
                         <NetworkSection network={plan.network} />
                       </ContentsSection>
                     )}
                     {driverList.length > 0 && (
-                      <ContentsSection icon={Cpu} title="Drivers to reinstall" iconColor="text-cyan-400">
+                      <ContentsSection icon={Cpu} title={t("backup.contents.driversToReinstall")} iconColor="text-cyan-400">
                         <DriversSection drivers={plan.drivers} />
                       </ContentsSection>
                     )}
@@ -8246,7 +8275,7 @@ function ArchiveContentsModal({
               })()}
 
               {data.rollback_plan && (
-                <ContentsSection icon={History} title="Rollback plan" iconColor="text-blue-400">
+                <ContentsSection icon={History} title={t("backup.contents.rollbackPlan")} iconColor="text-blue-400">
                   <RollbackPlanView plan={data.rollback_plan} />
                 </ContentsSection>
               )}
@@ -8254,7 +8283,7 @@ function ArchiveContentsModal({
               {files && files.length > 0 && (
                 <ContentsSection
                   icon={Package}
-                  title={`Files (${data.files_total_count ?? files.length}${data.files_truncated ? "+" : ""})`}
+                  title={t("backup.contents.filesTitle", { count: data.files_total_count ?? files.length, plus: data.files_truncated ? "+" : "" })}
                   iconColor="text-fuchsia-400"
                 >
                   <FilesTree files={files} truncated={data.files_truncated} />
@@ -8262,7 +8291,7 @@ function ArchiveContentsModal({
               )}
 
               {data.metadata_files && Object.keys(data.metadata_files).length > 0 && (
-                <ContentsSection icon={FileText} title="Metadata files" iconColor="text-muted-foreground">
+                <ContentsSection icon={FileText} title={t("backup.contents.metadataFiles")} iconColor="text-muted-foreground">
                   <div className="space-y-3">
                     {Object.entries(data.metadata_files).map(([fname, content]) => (
                       <div key={fname}>
@@ -8278,7 +8307,7 @@ function ArchiveContentsModal({
 
               {data.plan_error && !data.manifest_missing && (
                 <div className="text-[11px] text-amber-400 italic">
-                  Restore plan unavailable: {data.plan_error}
+                  {t("backup.contents.restorePlanUnavailable", { error: data.plan_error })}
                 </div>
               )}
             </div>
@@ -8312,6 +8341,7 @@ function ContentsSection({
 }
 
 function ManifestGrid({ manifest }: { manifest: any }) {
+  const t = useT()
   // The manifest follows the proxmenux_backup_manifest schema:
   //   {source_host: {hostname, pve_version, kernel, boot_mode, cpu_model, memory_kb, roles},
   //    hardware_inventory: {gpu, tpu, nic, wireless},
@@ -8332,22 +8362,22 @@ function ManifestGrid({ manifest }: { manifest: any }) {
     if (v === undefined || v === null || v === "") return
     rows.push([k, v])
   }
-  push("Source host", src.hostname || manifest.hostname)
-  push("Created at", manifest.created_at || meta.created_at)
+  push(t("backup.manifest.sourceHost"), src.hostname || manifest.hostname)
+  push(t("backup.manifest.createdAt"), manifest.created_at || meta.created_at)
   push("Kernel", src.kernel || manifest.kernel)
-  push("Proxmox version", src.pve_version || manifest.pve_version)
-  push("Boot mode", src.boot_mode)
+  push(t("backup.manifest.proxmoxVersion"), src.pve_version || manifest.pve_version)
+  push(t("backup.manifest.bootMode"), src.boot_mode)
   push("CPU", src.cpu_model)
-  push("Memory", src.memory_kb ? `${(src.memory_kb / 1024 / 1024).toFixed(1)} GB` : undefined)
-  push("Roles", Array.isArray(src.roles) && src.roles.length ? src.roles.join(", ") : undefined)
-  push("GPUs", Array.isArray(hw.gpu) && hw.gpu.length ? `${hw.gpu.length} device(s)` : undefined)
-  push("NICs", Array.isArray(hw.nic) && hw.nic.length ? `${hw.nic.length} interface(s)` : undefined)
-  push("VMs at backup", Array.isArray(guests.vms) ? guests.vms.length : undefined)
-  push("LXCs at backup", Array.isArray(guests.lxcs) ? guests.lxcs.length : undefined)
-  push("Compression", meta.compression)
-  push("Encrypted", meta.encrypted === true ? "yes" : meta.encrypted === false ? "no" : undefined)
-  push("Paths archived", Array.isArray(meta.paths_archived) ? `${meta.paths_archived.length} paths` : undefined)
-  push("Built by", manifest.created_by)
+  push(t("backup.manifest.memory"), src.memory_kb ? `${(src.memory_kb / 1024 / 1024).toFixed(1)} GB` : undefined)
+  push(t("backup.manifest.roles"), Array.isArray(src.roles) && src.roles.length ? src.roles.join(", ") : undefined)
+  push(t("backup.manifest.gpus"), Array.isArray(hw.gpu) && hw.gpu.length ? t("backup.manifest.deviceCount", { count: hw.gpu.length }) : undefined)
+  push(t("backup.manifest.nics"), Array.isArray(hw.nic) && hw.nic.length ? t("backup.manifest.interfaceCount", { count: hw.nic.length }) : undefined)
+  push(t("backup.manifest.vmsAtBackup"), Array.isArray(guests.vms) ? guests.vms.length : undefined)
+  push(t("backup.manifest.lxcsAtBackup"), Array.isArray(guests.lxcs) ? guests.lxcs.length : undefined)
+  push(t("backup.manifest.compression"), meta.compression)
+  push(t("backup.manifest.encrypted"), meta.encrypted === true ? t("backup.common.yes") : meta.encrypted === false ? t("backup.common.no") : undefined)
+  push(t("backup.manifest.pathsArchived"), Array.isArray(meta.paths_archived) ? t("backup.manifest.pathCount", { count: meta.paths_archived.length }) : undefined)
+  push(t("backup.manifest.builtBy"), manifest.created_by)
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
       {rows.map(([k, v]) => (
@@ -8361,6 +8391,7 @@ function ManifestGrid({ manifest }: { manifest: any }) {
 }
 
 function PlanSummary({ plan }: { plan: any }) {
+  const t = useT()
   const status = plan.status || plan.preflight?.status || "unknown"
   const blockers: any[] = plan.preflight?.blockers || plan.blockers || []
   const warnings: any[] = plan.preflight?.warnings || plan.warnings || []
@@ -8370,11 +8401,11 @@ function PlanSummary({ plan }: { plan: any }) {
     <div className="space-y-2 text-xs">
       <div className="flex items-center gap-2">
         <StatusIcon className={`h-4 w-4 ${statusColor}`} />
-        <span className="font-medium capitalize">{status}</span>
+        <span className="font-medium">{t(`backup.plan.status.${status}`)}</span>
       </div>
       {blockers.length > 0 && (
         <div>
-          <div className="text-[10px] uppercase tracking-wider text-red-400 mb-1">Blockers</div>
+          <div className="text-[10px] uppercase tracking-wider text-red-400 mb-1">{t("backup.plan.blockers")}</div>
           <ul className="space-y-0.5 ml-4 list-disc">
             {blockers.map((b, i) => (
               <li key={i} className="text-red-400">{typeof b === "string" ? b : (b.message || JSON.stringify(b))}</li>
@@ -8384,7 +8415,7 @@ function PlanSummary({ plan }: { plan: any }) {
       )}
       {warnings.length > 0 && (
         <div>
-          <div className="text-[10px] uppercase tracking-wider text-amber-400 mb-1">Warnings</div>
+          <div className="text-[10px] uppercase tracking-wider text-amber-400 mb-1">{t("backup.plan.warnings")}</div>
           <ul className="space-y-0.5 ml-4 list-disc">
             {warnings.map((w, i) => (
               <li key={i} className="text-amber-400">{typeof w === "string" ? w : (w.message || JSON.stringify(w))}</li>
@@ -8393,16 +8424,17 @@ function PlanSummary({ plan }: { plan: any }) {
         </div>
       )}
       {blockers.length === 0 && warnings.length === 0 && (
-        <div className="text-muted-foreground italic">No blockers or warnings detected.</div>
+        <div className="text-muted-foreground italic">{t("backup.plan.noIssues")}</div>
       )}
     </div>
   )
 }
 
 function StorageSection({ storage }: { storage: any }) {
+  const t = useT()
   const entries: any[] = storage.entries || storage.storages || []
   if (entries.length === 0) {
-    return <div className="text-xs text-muted-foreground italic">No storage entries reported.</div>
+    return <div className="text-xs text-muted-foreground italic">{t("backup.contents.noStorageEntries")}</div>
   }
   return (
     <ul className="space-y-1 text-xs">
@@ -8426,9 +8458,10 @@ function StorageSection({ storage }: { storage: any }) {
 }
 
 function NetworkSection({ network }: { network: any }) {
+  const t = useT()
   const ifaces: any[] = network.interfaces || network.remap || []
   if (ifaces.length === 0) {
-    return <div className="text-xs text-muted-foreground italic">No interface changes planned.</div>
+    return <div className="text-xs text-muted-foreground italic">{t("backup.contents.noNetworkChanges")}</div>
   }
   return (
     <ul className="space-y-1 text-xs">
@@ -8448,9 +8481,10 @@ function NetworkSection({ network }: { network: any }) {
 }
 
 function DriversSection({ drivers }: { drivers: any }) {
+  const t = useT()
   const list: any[] = drivers.plan || drivers.components || drivers.entries || []
   if (list.length === 0) {
-    return <div className="text-xs text-muted-foreground italic">No drivers to reinstall.</div>
+    return <div className="text-xs text-muted-foreground italic">{t("backup.contents.noDrivers")}</div>
   }
   return (
     <ul className="space-y-1 text-xs">
@@ -8469,6 +8503,7 @@ function DriversSection({ drivers }: { drivers: any }) {
 }
 
 function FilesTree({ files, truncated }: { files: Array<{ path: string; size: number }>; truncated?: boolean }) {
+  const t = useT()
   const [query, setQuery] = useState("")
   const filtered = query
     ? files.filter((f) => f.path.toLowerCase().includes(query.toLowerCase()))
@@ -8479,7 +8514,7 @@ function FilesTree({ files, truncated }: { files: Array<{ path: string; size: nu
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Filter paths…"
+        placeholder={t("backup.placeholders.filterPaths")}
         className="h-8 text-xs"
       />
       <div className="max-h-72 overflow-auto rounded border border-border bg-background/40">
@@ -8493,8 +8528,13 @@ function FilesTree({ files, truncated }: { files: Array<{ path: string; size: nu
         </ul>
       </div>
       <div className="text-[10px] text-muted-foreground flex items-center gap-2">
-        Showing {Math.min(filtered.length, 2000)} of {filtered.length}{query ? " filtered" : ""}{filtered.length !== files.length ? ` (total ${files.length})` : ""}
-        {truncated && <span className="text-amber-400">· list truncated at 5000 — open the snapshot manually to see the rest</span>}
+        {t("backup.contents.filesShowing", {
+          shown: Math.min(filtered.length, 2000),
+          filtered: filtered.length,
+          filteredLabel: query ? t("backup.contents.filtered") : "",
+          total: filtered.length !== files.length ? t("backup.contents.totalFiles", { count: files.length }) : "",
+        })}
+        {truncated && <span className="text-amber-400">{t("backup.contents.filesTruncated")}</span>}
       </div>
     </div>
   )
@@ -8509,6 +8549,7 @@ function FilesTree({ files, truncated }: { files: Array<{ path: string; size: nu
 // operator confirmation in the Complete restore flow.
 // ──────────────────────────────────────────────────────────────
 function RollbackPlanView({ plan }: { plan: RollbackPlan }) {
+  const t = useT()
   // The destructive "Not in backup — will be deleted on rollback"
   // block was removed: operators read it as an action ProxMenux
   // would take silently. We only show the "Configurations included
@@ -8520,7 +8561,7 @@ function RollbackPlanView({ plan }: { plan: RollbackPlan }) {
   if (!hasRollback) {
     return (
       <div className="text-xs text-muted-foreground italic">
-        No host-state differences detected — the backup state matches the current host (or the backup didn't include /etc/pve).
+        {t("backup.rollback.noDifferences")}
       </div>
     )
   }
@@ -8549,19 +8590,19 @@ function RollbackPlanView({ plan }: { plan: RollbackPlan }) {
   return (
     <div className="rounded-md border border-emerald-500/40 bg-emerald-500/5 p-3 space-y-2 text-xs">
       <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">
-        Configurations included in backup
+        {t("backup.rollback.configsIncluded")}
       </div>
       {plan.vms_to_restore.length > 0 && (
-        <Row label="VM configs:" items={plan.vms_to_restore} />
+        <Row label={t("backup.rollback.vmConfigs")} items={plan.vms_to_restore} />
       )}
       {plan.lxcs_to_restore.length > 0 && (
-        <Row label="LXC configs:" items={plan.lxcs_to_restore} />
+        <Row label={t("backup.rollback.lxcConfigs")} items={plan.lxcs_to_restore} />
       )}
       {plan.components_to_reinstall.length > 0 && (
-        <Row label="Components:" items={plan.components_to_reinstall} />
+        <Row label={t("backup.rollback.components")} items={plan.components_to_reinstall} />
       )}
       <div className="text-[10px] text-muted-foreground pt-1">
-        Only the /etc/pve config is restored — disk images stay where they live.
+        {t("backup.rollback.pveOnlyHint")}
       </div>
     </div>
   )
@@ -8608,6 +8649,7 @@ function RestoreOptionsModal({
   display_id?: string
   onLaunch: (mode: "full" | "custom", paths: string[], rollbackExecute?: boolean) => void
 }) {
+  const t = useT()
   // When direction === "bk_older" the CLI-side filter (RS_SKIP_PATHS)
   // will drop these prefixes from any restore. We mirror that
   // behavior in the picker so the operator can see what will be
@@ -8669,7 +8711,7 @@ function RestoreOptionsModal({
 
   const launch = (mode: "full" | "custom") => {
     if (mode === "custom" && selected.size === 0) {
-      setError("Pick at least one path to continue.")
+      setError(t("backup.restore.pickPathError"))
       return
     }
     setError(null)
@@ -8682,7 +8724,7 @@ function RestoreOptionsModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <DatabaseBackup className="h-5 w-5 text-emerald-400" />
-            Restore — choose mode
+            {t("backup.restore.chooseModeTitle")}
           </DialogTitle>
           <DialogDescription className="text-xs font-mono break-all">
             {display_id}
@@ -8698,7 +8740,7 @@ function RestoreOptionsModal({
             <div className="rounded-md border border-blue-500/40 bg-blue-500/5 p-3 text-[11px] text-muted-foreground flex items-start gap-2">
               <History className="h-3.5 w-3.5 text-blue-400 shrink-0 mt-0.5" />
               <div>
-                After the reboot, this Backups tab will show a live post-restore progress card with estimated time, per-component status, log tail and rollback delta. If Telegram/Discord/ntfy notifications are configured, you'll also receive the "Host restore finished" event.
+                {t("backup.restore.afterRebootHint")}
               </div>
             </div>
 
@@ -8706,19 +8748,19 @@ function RestoreOptionsModal({
               <div className="rounded-md border border-amber-500/50 bg-amber-500/5 p-3">
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
                   <AlertTriangle className="h-3.5 w-3.5" />
-                  Cross-kernel restore — safe subset only
+                  {t("backup.restore.crossKernelTitle")}
                 </div>
                 <div className="text-[11px] text-muted-foreground mt-2 space-y-1.5">
                   <div>
-                    Backup kernel <code className="font-mono">{crossKernel?.backupKernel}</code> is older than target kernel <code className="font-mono">{crossKernel?.targetKernel}</code>.
+                    {t("backup.restore.backupKernel")} <code className="font-mono">{crossKernel?.backupKernel}</code> {t("backup.restore.olderThanTargetKernel")} <code className="font-mono">{crossKernel?.targetKernel}</code>.
                   </div>
                   <div>
-                    Both Complete and Custom restore will automatically skip kernel/boot-tied paths to avoid a kernel panic on next boot. Everything else (VMs, LXCs, network, components, custom paths) restores normally.
+                    {t("backup.restore.crossKernelDescription")}
                   </div>
                   {blockedPrefixes.length > 0 && (
                     <details className="mt-1.5">
                       <summary className="cursor-pointer text-amber-400/90 hover:text-amber-300">
-                        Paths that will be skipped ({blockedPrefixes.length})
+                        {t("backup.restore.pathsSkipped", { count: blockedPrefixes.length })}
                       </summary>
                       <ul className="mt-1.5 pl-3 space-y-0.5 max-h-40 overflow-auto">
                         {blockedPrefixes.map((p) => (
@@ -8735,11 +8777,11 @@ function RestoreOptionsModal({
               <div className="rounded-md border border-emerald-500/50 bg-emerald-500/5 p-3">
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  Operator config re-applied via kernel-agnostic merge
+                  {t("backup.restore.operatorConfigTitle")}
                 </div>
                 <div className="text-[11px] text-muted-foreground mt-2 space-y-1.5">
                   <div>
-                    The following operator-authored settings will be merged into the target automatically, without touching kernel-tied defaults. Runs on both Complete and Custom restore.
+                    {t("backup.restore.operatorConfigDescription")}
                   </div>
                   <ul className="mt-1.5 pl-3 space-y-0.5 max-h-40 overflow-auto">
                     {hydration.actions.map((a, i) => (
@@ -8760,7 +8802,7 @@ function RestoreOptionsModal({
               <div className="rounded-md border border-red-500/50 bg-red-500/5 p-3 space-y-3">
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-red-400 flex items-center gap-1.5">
                   <AlertTriangle className="h-3.5 w-3.5" />
-                  Complete restore will REMOVE the following (created after the backup)
+                  {t("backup.restore.destructiveTitle")}
                 </div>
                 <RollbackPlanView plan={rollbackPlan} />
                 <label className="flex items-start gap-2 cursor-pointer text-xs">
@@ -8770,7 +8812,7 @@ function RestoreOptionsModal({
                     className="mt-0.5"
                   />
                   <span className="text-foreground">
-                    I understand that Complete restore will <strong className="text-red-400">permanently delete</strong> the VMs, LXCs and components listed above. This is irreversible.
+                    {t("backup.restore.ackBefore")} <strong className="text-red-400">{t("backup.restore.permanentlyDelete")}</strong> {t("backup.restore.ackAfter")}
                   </span>
                 </label>
               </div>
@@ -8785,11 +8827,11 @@ function RestoreOptionsModal({
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium">Complete restore</div>
+                  <div className="text-sm font-medium">{t("backup.restore.completeTitle")}</div>
                   <div className="text-[11px] text-muted-foreground mt-1">
-                    Replays everything in the backup. Equivalent to picking <em>"Complete restore"</em> in the shell TUI menu. The terminal that opens next will still ask you to confirm safe-only vs safe+reboot vs all-at-once before touching the host.
+                    {t("backup.restore.completeDescriptionBefore")} <em>{t("backup.restore.completeTitle")}</em> {t("backup.restore.completeDescriptionAfter")}
                     {hasDestructive && !destructiveAck && (
-                      <span className="block mt-1 text-red-400">Tick the acknowledgement above to enable.</span>
+                      <span className="block mt-1 text-red-400">{t("backup.restore.tickAckToEnable")}</span>
                     )}
                   </div>
                 </div>
@@ -8806,17 +8848,17 @@ function RestoreOptionsModal({
                 <ListTree className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium">
-                    Custom restore by paths
+                    {t("backup.restore.customByPathsTitle")}
                     {pathsAvailable.length > 0 && (
                       <span className="ml-2 text-[10px] text-muted-foreground font-normal">
-                        ({pathsAvailable.length} paths in backup)
+                        {t("backup.restore.pathsInBackup", { count: pathsAvailable.length })}
                       </span>
                     )}
                   </div>
                   <div className="text-[11px] text-muted-foreground mt-1">
                     {pathsAvailable.length === 0
-                      ? "This backup carries no restorable paths — only Complete restore is meaningful here."
-                      : "Pick exactly which paths to restore. Lists what's actually in this backup (default profile + your custom paths)."}
+                      ? t("backup.restore.noRestorablePaths")
+                      : t("backup.restore.customByPathsDescription")}
                   </div>
                 </div>
               </div>
@@ -8833,14 +8875,14 @@ function RestoreOptionsModal({
         {step === "custom" && (
           <div className="space-y-2">
             <p className="text-[11px] text-muted-foreground">
-              Pick the paths to restore. Your selection feeds <code className="font-mono">_rs_run_custom_restore</code> via the <code className="font-mono">HB_PRESELECTED_PATHS</code> env var — same downstream code as the TUI. Reboot-required paths (kernel, modules, fstab, …) will be detected by the bash flow and you can schedule them for next boot from there.
+              {t("backup.restore.customPickDescriptionBefore")} <code className="font-mono">_rs_run_custom_restore</code> {t("backup.restore.customPickDescriptionMiddle")} <code className="font-mono">HB_PRESELECTED_PATHS</code> {t("backup.restore.customPickDescriptionAfter")}
             </p>
             <div className="flex items-center gap-2">
               <Input
                 type="search"
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-                placeholder="Filter paths…"
+                placeholder={t("backup.placeholders.filterPaths")}
                 className="h-8 text-xs"
               />
               <Button
@@ -8850,12 +8892,12 @@ function RestoreOptionsModal({
                 onClick={toggleAll}
                 className="h-8 text-xs whitespace-nowrap"
               >
-                {selected.size === selectableCount && selectableCount > 0 ? "Clear" : "All"}
+                {selected.size === selectableCount && selectableCount > 0 ? t("backup.actions.clear") : t("backup.actions.all")}
               </Button>
             </div>
             {isBkOlder && (
               <div className="text-[10.5px] text-amber-400/90 px-2 py-1.5 rounded border border-amber-500/30 bg-amber-500/5">
-                Kernel/boot-tied paths are grayed out and cannot be selected — target runs a newer kernel.
+                {t("backup.restore.blockedPathsHint")}
               </div>
             )}
             <div className="rounded-md border border-border bg-background/40 p-1 max-h-72 overflow-auto">
@@ -8866,7 +8908,7 @@ function RestoreOptionsModal({
                     <li key={p}>
                       <label
                         className={`flex items-center gap-2 px-2 py-1 ${blocked ? "opacity-40 cursor-not-allowed" : "hover:bg-white/5 cursor-pointer"}`}
-                        title={blocked ? "Skipped: kernel-tied path, target runs a newer kernel" : undefined}
+                        title={blocked ? t("backup.restore.skippedPathTitle") : undefined}
                       >
                         <Checkbox
                           checked={!blocked && selected.has(p)}
@@ -8875,19 +8917,23 @@ function RestoreOptionsModal({
                         />
                         <code className={`font-mono text-xs break-all flex-1 ${blocked ? "line-through" : ""}`}>{p}</code>
                         {blocked && (
-                          <span className="text-[10px] text-amber-400/80 font-normal shrink-0">skipped</span>
+                          <span className="text-[10px] text-amber-400/80 font-normal shrink-0">{t("backup.restore.skipped")}</span>
                         )}
                       </label>
                     </li>
                   )
                 })}
                 {filteredPaths.length === 0 && (
-                  <li className="text-[11px] text-muted-foreground italic px-2 py-2">No paths match the filter.</li>
+                  <li className="text-[11px] text-muted-foreground italic px-2 py-2">{t("backup.restore.noPathsMatch")}</li>
                 )}
               </ul>
             </div>
             <div className="text-[11px] text-muted-foreground">
-              Selected: {selected.size} / {isBkOlder ? selectableCount : pathsAvailable.length}{filter && filteredPaths.length !== pathsAvailable.length ? ` (${filteredPaths.length} shown)` : ""}
+              {t("backup.restore.selectedCount", {
+                selected: selected.size,
+                total: isBkOlder ? selectableCount : pathsAvailable.length,
+                shown: filter && filteredPaths.length !== pathsAvailable.length ? t("backup.restore.shownCount", { count: filteredPaths.length }) : "",
+              })}
             </div>
             {error && (
               <div className="text-xs text-red-400 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10">
@@ -8900,11 +8946,11 @@ function RestoreOptionsModal({
         <div className="flex justify-end gap-2 pt-2 border-t border-border">
           {step === "custom" && (
             <Button variant="ghost" onClick={() => setStep("choose")}>
-              Back
+              {t("backup.actions.back")}
             </Button>
           )}
           <Button variant="ghost" onClick={onClose}>
-            Cancel
+            {t("actions.cancel")}
           </Button>
           {step === "custom" && (
             <Button
@@ -8913,7 +8959,7 @@ function RestoreOptionsModal({
               className="bg-green-600 hover:bg-green-700 text-white"
             >
               <DatabaseBackup className="h-4 w-4 mr-2" />
-              Restore selected
+              {t("backup.actions.restoreSelected")}
             </Button>
           )}
         </div>

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { fetchApi } from "@/lib/api-config"
+import { useI18n } from "@/lib/i18n/provider"
 
 interface MetricsViewProps {
   vmid: number
@@ -15,12 +16,12 @@ interface MetricsViewProps {
 }
 
 const TIMEFRAME_OPTIONS = [
-  { value: "hour", label: "1 Hour" },
-  { value: "day", label: "24 Hours" },
-  { value: "week", label: "7 Days" },
-  { value: "month", label: "30 Days" },
-  { value: "year", label: "1 Year" },
-]
+  { value: "hour", labelKey: "vmMetrics.timeframes.hour" },
+  { value: "day", labelKey: "vmMetrics.timeframes.day" },
+  { value: "week", labelKey: "vmMetrics.timeframes.week" },
+  { value: "month", labelKey: "vmMetrics.timeframes.month" },
+  { value: "year", labelKey: "vmMetrics.timeframes.year" },
+] as const
 
 const CustomCPUTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -103,6 +104,7 @@ const CustomNetworkTooltip = ({ active, payload, label }: any) => {
 }
 
 export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) {
+  const { language, t } = useI18n()
   const [timeframe, setTimeframe] = useState("week")
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
@@ -112,7 +114,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
 
   useEffect(() => {
     fetchMetrics()
-  }, [vmid, timeframe])
+  }, [vmid, timeframe, language])
 
   const fetchMetrics = async () => {
     setLoading(true)
@@ -126,19 +128,19 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
         let timeLabel = ""
 
         if (timeframe === "hour") {
-          timeLabel = date.toLocaleString("en-US", {
+          timeLabel = date.toLocaleString(language, {
             hour: "2-digit",
             minute: "2-digit",
             hour12: false,
           })
         } else if (timeframe === "day") {
-          timeLabel = date.toLocaleString("en-US", {
+          timeLabel = date.toLocaleString(language, {
             hour: "2-digit",
             minute: "2-digit",
             hour12: false,
           })
         } else if (timeframe === "week") {
-          timeLabel = date.toLocaleString("en-US", {
+          timeLabel = date.toLocaleString(language, {
             month: "short",
             day: "numeric",
             hour: "2-digit",
@@ -146,12 +148,12 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
             hour12: false,
           })
         } else if (timeframe === "month") {
-          timeLabel = date.toLocaleString("en-US", {
+          timeLabel = date.toLocaleString(language, {
             month: "short",
             day: "numeric",
           })
         } else {
-          timeLabel = date.toLocaleString("en-US", {
+          timeLabel = date.toLocaleString(language, {
             month: "short",
             year: "numeric",
           })
@@ -173,7 +175,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
 
       setData(transformedData)
     } catch (err: any) {
-      setError(err.message || "Error loading metrics")
+      setError(err.message || t("vmMetrics.errors.loading"))
     } finally {
       setLoading(false)
     }
@@ -203,7 +205,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
     if (data.length === 0) {
       return (
         <div className="flex items-center justify-center h-[400px]">
-          <p className="text-muted-foreground">No data available</p>
+          <p className="text-muted-foreground">{t("vmMetrics.noData")}</p>
         </div>
       )
     }
@@ -214,7 +216,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
       <div className="space-y-8">
         {/* CPU Chart */}
         <div>
-          <h3 className="text-lg font-semibold mb-4">CPU Usage</h3>
+          <h3 className="text-lg font-semibold mb-4">{t("vmMetrics.charts.cpu")}</h3>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={data} margin={{ bottom: 80 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
@@ -244,7 +246,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 strokeWidth={2}
                 fill="#3b82f6"
                 fillOpacity={0.3}
-                name="CPU %"
+                name={t("vmMetrics.series.cpu")}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -252,7 +254,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
 
         {/* Memory Chart */}
         <div>
-          <h3 className="text-lg font-semibold mb-4">Memory Usage</h3>
+          <h3 className="text-lg font-semibold mb-4">{t("vmMetrics.charts.memory")}</h3>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={data} margin={{ bottom: 80 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
@@ -282,7 +284,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 fill="#10b981"
                 fillOpacity={0.3}
                 strokeWidth={2}
-                name="Memory GB"
+                name={t("vmMetrics.series.memoryGb")}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -290,7 +292,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
 
         {/* Disk I/O Chart */}
         <div>
-          <h3 className="text-lg font-semibold mb-4">Disk I/O</h3>
+          <h3 className="text-lg font-semibold mb-4">{t("vmMetrics.charts.diskIo")}</h3>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={data} margin={{ bottom: 80 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
@@ -321,7 +323,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 fill="#10b981"
                 fillOpacity={0.3}
                 strokeWidth={2}
-                name="Read"
+                name={t("vmMetrics.series.read")}
                 hide={hiddenDiskLines.includes("diskread")}
               />
               <Area
@@ -331,7 +333,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 fill="#3b82f6"
                 fillOpacity={0.3}
                 strokeWidth={2}
-                name="Write"
+                name={t("vmMetrics.series.write")}
                 hide={hiddenDiskLines.includes("diskwrite")}
               />
             </AreaChart>
@@ -340,7 +342,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
 
         {/* Network I/O Chart */}
         <div>
-          <h3 className="text-lg font-semibold mb-4">Network I/O</h3>
+          <h3 className="text-lg font-semibold mb-4">{t("vmMetrics.charts.networkIo")}</h3>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={data} margin={{ bottom: 80 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
@@ -371,7 +373,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 fill="#10b981"
                 fillOpacity={0.3}
                 strokeWidth={2}
-                name="Download"
+                name={t("vmMetrics.series.download")}
                 hide={hiddenNetworkLines.includes("netin")}
               />
               <Area
@@ -381,7 +383,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 fill="#3b82f6"
                 fillOpacity={0.3}
                 strokeWidth={2}
-                name="Upload"
+                name={t("vmMetrics.series.upload")}
                 hide={hiddenNetworkLines.includes("netout")}
               />
             </AreaChart>
@@ -461,9 +463,9 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h2 className="text-xl font-semibold">Metrics - {vmName}</h2>
+              <h2 className="text-xl font-semibold">{t("vmMetrics.title", { name: vmName })}</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                VMID: {vmid} • Type: {vmType.toUpperCase()}
+                VMID: {vmid} • {t("vmMetrics.type")}: {vmType.toUpperCase()}
               </p>
             </div>
           </div>
@@ -474,7 +476,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
             <SelectContent>
               {TIMEFRAME_OPTIONS.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+                  {t(option.labelKey)}
                 </SelectItem>
               ))}
             </SelectContent>

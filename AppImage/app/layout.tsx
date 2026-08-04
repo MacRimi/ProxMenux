@@ -44,15 +44,15 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${GeistSans.variable} ${GeistMono.variable} antialiased bg-background text-foreground`}>
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={null}>
           <I18nProvider>
             <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
               {children}
             </ThemeProvider>
+            <PwaInstallPrompt />
           </I18nProvider>
         </Suspense>
         <PwaRegister />
-        <PwaInstallPrompt />
       </body>
     </html>
   )

@@ -40,6 +40,7 @@ import {
   Filter,
 } from "lucide-react"
 import { fetchApi } from "../lib/api-config"
+import { useT } from "../lib/i18n/provider"
 
 // ── Shape contracts with the backend ──────────────────────────
 
@@ -121,15 +122,17 @@ const formatIso = (iso: string | null | undefined) => {
   }
 }
 
-const formatRelative = (iso: string) => {
+type Translator = ReturnType<typeof useT>
+
+const formatRelative = (iso: string, t: Translator) => {
   try {
     const then = new Date(iso).getTime()
     const now = Date.now()
     const diff = Math.max(0, Math.round((now - then) / 1000))
-    if (diff < 60) return `${diff}s ago`
-    if (diff < 3600) return `${Math.round(diff / 60)}m ago`
-    if (diff < 86400) return `${Math.round(diff / 3600)}h ago`
-    return `${Math.round(diff / 86400)}d ago`
+    if (diff < 60) return t("restoreProgress.time.secondsAgo", { count: diff })
+    if (diff < 3600) return t("restoreProgress.time.minutesAgo", { count: Math.round(diff / 60) })
+    if (diff < 86400) return t("restoreProgress.time.hoursAgo", { count: Math.round(diff / 3600) })
+    return t("restoreProgress.time.daysAgo", { count: Math.round(diff / 86400) })
   } catch {
     return iso
   }
@@ -140,40 +143,41 @@ const formatRelative = (iso: string) => {
 // "estimating time…". After the run is terminal, "—". The output is
 // a full phrase so the caller doesn't have to add suffix words that
 // only make sense on some branches.
-const computeEta = (state: RestoreState): string => {
+const computeEta = (state: RestoreState, t: Translator): string => {
   if (state.status !== "running") return "—"
-  if (!state.steps_done || state.steps_done <= 0) return "estimating time…"
+  if (!state.steps_done || state.steps_done <= 0) return t("restoreProgress.time.estimating")
   const elapsedSec = Math.max(1, Math.round((Date.now() - new Date(state.started_at).getTime()) / 1000))
   const perStep = elapsedSec / state.steps_done
   const remaining = Math.max(0, state.steps_total - state.steps_done)
   const eta = Math.round(perStep * remaining)
-  if (eta < 60) return `~${eta}s left`
-  if (eta < 3600) return `~${Math.round(eta / 60)}m left`
-  return `~${Math.round(eta / 3600)}h left`
+  if (eta < 60) return t("restoreProgress.time.secondsLeft", { count: eta })
+  if (eta < 3600) return t("restoreProgress.time.minutesLeft", { count: Math.round(eta / 60) })
+  return t("restoreProgress.time.hoursLeft", { count: Math.round(eta / 3600) })
 }
 
 // ── Small building blocks ─────────────────────────────────────
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
+  const t = useT()
   if (status === "running")
     return (
       <Badge className="bg-blue-500/10 border-blue-500/40 text-blue-300 gap-1">
         <Loader2 className="h-3 w-3 animate-spin" />
-        Restore in progress
+        {t("restoreProgress.status.running")}
       </Badge>
     )
   if (status === "complete")
     return (
       <Badge className="bg-emerald-500/10 border-emerald-500/40 text-emerald-400 gap-1">
         <CheckCircle2 className="h-3 w-3" />
-        Restore complete
+        {t("restoreProgress.status.complete")}
       </Badge>
     )
   if (status === "failed")
     return (
       <Badge className="bg-red-500/10 border-red-500/40 text-red-400 gap-1">
         <XCircle className="h-3 w-3" />
-        Restore failed
+        {t("restoreProgress.status.failed")}
       </Badge>
     )
   return <Badge variant="outline">{status}</Badge>
@@ -190,6 +194,7 @@ const ComponentStatusIcon: React.FC<{ status: string }> = ({ status }) => {
 // ── Log viewer ────────────────────────────────────────────────
 
 const LogViewer: React.FC<{ path: string | null; historyOnly?: boolean }> = ({ path, historyOnly }) => {
+  const t = useT()
   const [filter, setFilter] = useState<"all" | "issues">("all")
   const swrKey = path
     ? `/api/host-backups/restore/log?filter=${filter}&tail=600${historyOnly ? `&path=${encodeURIComponent(path)}` : ""}`
@@ -205,7 +210,7 @@ const LogViewer: React.FC<{ path: string | null; historyOnly?: boolean }> = ({ p
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-1 text-muted-foreground">
           <FileText className="h-3.5 w-3.5" />
-          {path ?? "no log yet"}
+          {path ?? t("restoreProgress.log.noLog")}
         </div>
         <div className="flex items-center gap-1">
           <Button
@@ -215,7 +220,7 @@ const LogViewer: React.FC<{ path: string | null; historyOnly?: boolean }> = ({ p
             onClick={() => setFilter("all")}
           >
             <ArrowDownAZ className="h-3 w-3 mr-1" />
-            Full
+            {t("restoreProgress.log.full")}
           </Button>
           <Button
             size="sm"
@@ -224,13 +229,13 @@ const LogViewer: React.FC<{ path: string | null; historyOnly?: boolean }> = ({ p
             onClick={() => setFilter("issues")}
           >
             <Filter className="h-3 w-3 mr-1" />
-            Issues only
+            {t("restoreProgress.log.issuesOnly")}
           </Button>
         </div>
       </div>
       <ScrollArea className="h-72 rounded-md border border-border bg-black/40">
         <pre className="p-3 text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
-          {isLoading ? "Loading…" : (data?.lines?.join("\n") || "(no output)")}
+          {isLoading ? t("app.loading") : (data?.lines?.join("\n") || t("restoreProgress.log.noOutput"))}
         </pre>
       </ScrollArea>
     </div>
@@ -240,13 +245,14 @@ const LogViewer: React.FC<{ path: string | null; historyOnly?: boolean }> = ({ p
 // ── Rollback delta widget ─────────────────────────────────────
 
 const RollbackDelta: React.FC<{ delta: RestoreRollback | undefined }> = ({ delta }) => {
+  const t = useT()
   const vms = delta?.vms_to_remove ?? []
   const lxcs = delta?.lxcs_to_remove ?? []
   const comps = delta?.components_to_uninstall ?? []
   if (!vms.length && !lxcs.length && !comps.length) {
     return (
       <div className="text-xs text-muted-foreground">
-        No entries exist on this host that weren't in the restored backup.
+        {t("restoreProgress.rollback.empty")}
       </div>
     )
   }
@@ -264,7 +270,7 @@ const RollbackDelta: React.FC<{ delta: RestoreRollback | undefined }> = ({ delta
         {items.length > 0 && (
           <details className="text-xs">
             <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-              Show manual cleanup commands
+              {t("restoreProgress.rollback.showCleanup")}
             </summary>
             <pre className="mt-1 p-2 rounded-md bg-black/40 text-xs text-muted-foreground font-mono">
               {items.map(cmd).join("\n")}
@@ -277,22 +283,22 @@ const RollbackDelta: React.FC<{ delta: RestoreRollback | undefined }> = ({ delta
   return (
     <div className="space-y-3">
       <div className="text-xs text-muted-foreground">
-        These entries exist on this host but were NOT in the restored backup. Review before removing.
+        {t("restoreProgress.rollback.description")}
       </div>
       <Row
-        label="VMs created after the backup"
+        label={t("restoreProgress.rollback.vms")}
         items={vms}
         cmd={(id) => `qm stop ${id} 2>/dev/null; qm destroy ${id} --purge`}
       />
       <Row
-        label="LXCs created after the backup"
+        label={t("restoreProgress.rollback.lxcs")}
         items={lxcs}
         cmd={(id) => `pct stop ${id} 2>/dev/null; pct destroy ${id} --purge`}
       />
       <Row
-        label="Components installed after the backup"
+        label={t("restoreProgress.rollback.components")}
         items={comps}
-        cmd={(name) => `# uninstall ${name} manually via ProxMenux → Hardware & GPU`}
+        cmd={(name) => t("restoreProgress.rollback.uninstallComponentCommand", { name })}
       />
     </div>
   )
@@ -306,6 +312,7 @@ const RestoreDetailModal: React.FC<{
   state: RestoreState
   historyMode?: boolean
 }> = ({ open, onClose, state, historyMode }) => {
+  const t = useT()
   const progressPct = state.steps_total > 0 ? Math.round((state.steps_done / state.steps_total) * 100) : 0
 
   return (
@@ -314,12 +321,12 @@ const RestoreDetailModal: React.FC<{
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <RotateCcw className="h-5 w-5 text-blue-500" />
-            Post-restore progress
+            {t("restoreProgress.title")}
             <StatusBadge status={state.status} />
           </DialogTitle>
           <DialogDescription>
-            Started {formatIso(state.started_at)}
-            {state.finished_at ? ` · finished ${formatIso(state.finished_at)}` : ""}
+            {t("restoreProgress.startedAt", { time: formatIso(state.started_at) })}
+            {state.finished_at ? ` · ${t("restoreProgress.finishedAt", { time: formatIso(state.finished_at) })}` : ""}
             {state.summary?.duration ? ` · ${state.summary.duration}` : ""}
           </DialogDescription>
         </DialogHeader>
@@ -329,8 +336,8 @@ const RestoreDetailModal: React.FC<{
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>{state.current_step || "—"}</span>
               <span>
-                {state.steps_done}/{state.steps_total} steps
-                {state.status === "running" && ` · ${computeEta(state)}`}
+                {t("restoreProgress.steps", { done: state.steps_done, total: state.steps_total })}
+                {state.status === "running" && ` · ${computeEta(state, t)}`}
               </span>
             </div>
             <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -347,7 +354,7 @@ const RestoreDetailModal: React.FC<{
             <div className="space-y-2">
               <div className="text-sm font-medium flex items-center gap-2">
                 <Cpu className="h-4 w-4" />
-                Components
+                {t("restoreProgress.sections.components")}
               </div>
               <div className="space-y-1.5">
                 {state.components.map((c) => (
@@ -358,8 +365,8 @@ const RestoreDetailModal: React.FC<{
                     <div className="flex items-center gap-2">
                       <ComponentStatusIcon status={c.status} />
                       <span className="font-medium">{formatComponent(c.name)}</span>
-                      <span className="text-muted-foreground">{c.status}</span>
-                      {c.exit_code && <span className="text-red-400">exit {c.exit_code}</span>}
+                      <span className="text-muted-foreground">{t(`restoreProgress.componentStatus.${c.status}`)}</span>
+                      {c.exit_code && <span className="text-red-400">{t("restoreProgress.exitCode", { code: c.exit_code })}</span>}
                     </div>
                     {c.log && <span className="text-muted-foreground font-mono">{c.log}</span>}
                   </div>
@@ -372,7 +379,7 @@ const RestoreDetailModal: React.FC<{
             <div className="space-y-2">
               <div className="text-sm font-medium flex items-center gap-2 text-amber-400">
                 <AlertTriangle className="h-4 w-4" />
-                Boot sanity warnings
+                {t("restoreProgress.sections.bootWarnings")}
               </div>
               <ul className="list-disc list-inside text-xs text-muted-foreground space-y-1">
                 {state.sanity_warnings.map((w) => (
@@ -385,19 +392,19 @@ const RestoreDetailModal: React.FC<{
           {state.data_pools_import && <DataPoolsBlock section={state.data_pools_import} />}
 
           <div className="space-y-2">
-            <div className="text-sm font-medium">Rollback delta</div>
+            <div className="text-sm font-medium">{t("restoreProgress.sections.rollbackDelta")}</div>
             <RollbackDelta delta={state.rollback_delta} />
           </div>
 
           <div className="space-y-2">
-            <div className="text-sm font-medium">Log</div>
+            <div className="text-sm font-medium">{t("restoreProgress.sections.log")}</div>
             <LogViewer path={state.log_path} historyOnly={historyMode} />
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Close
+            {t("actions.close")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -408,6 +415,7 @@ const RestoreDetailModal: React.FC<{
 // Rendered inside RestoreDetailModal — one row per outcome category
 // (imported / forced / partial skip / missing skip / failed).
 const DataPoolsBlock: React.FC<{ section: DataPoolsImport }> = ({ section }) => {
+  const t = useT()
   const total =
     section.ok.length +
     section.forced.length +
@@ -448,40 +456,40 @@ const DataPoolsBlock: React.FC<{ section: DataPoolsImport }> = ({ section }) => 
   }
 
   return (
-    <div className="space-y-2">
+      <div className="space-y-2">
       <div className="text-sm font-medium flex items-center gap-2">
         <Cpu className="h-4 w-4" />
-        ZFS data pools — auto-import
+        {t("restoreProgress.dataPools.title")}
       </div>
       <div className="space-y-1.5">
-        <Row label="Imported" tone="ok" items={section.ok} />
+        <Row label={t("restoreProgress.dataPools.imported")} tone="ok" items={section.ok} />
         <Row
-          label="Imported (forced, foreign hostid)"
+          label={t("restoreProgress.dataPools.importedForced")}
           tone="info"
           items={section.forced}
-          help="New hostid grabbed onto the pool label — next boot imports clean."
+          help={t("restoreProgress.dataPools.importedForcedHelp")}
         />
         <Row
-          label="Skipped (some disks missing)"
+          label={t("restoreProgress.dataPools.skippedPartial")}
           tone="warn"
           items={section.partial}
-          help="Some vdev disks weren't found by /dev/disk/by-id. Pool NOT imported to avoid a degraded auto-import. Fix the disks or import manually with zpool import."
+          help={t("restoreProgress.dataPools.skippedPartialHelp")}
         />
         <Row
-          label="Skipped (no disks present)"
+          label={t("restoreProgress.dataPools.skippedMissing")}
           tone="warn"
           items={section.missing}
-          help="None of the pool's disks are on this host. Move the disks over or import from a different host."
+          help={t("restoreProgress.dataPools.skippedMissingHelp")}
         />
         <Row
-          label="Import failed"
+          label={t("restoreProgress.dataPools.importFailed")}
           tone="error"
           items={section.failed}
-          help="ZFS rejected the import even with -f. Inspect with `zpool import` and the log below."
+          help={t("restoreProgress.dataPools.importFailedHelp")}
         />
       </div>
       {section.log_path && (
-        <div className="text-xs text-muted-foreground font-mono">Log: {section.log_path}</div>
+        <div className="text-xs text-muted-foreground font-mono">{t("restoreProgress.dataPools.logPath", { path: section.log_path })}</div>
       )}
     </div>
   )
@@ -490,6 +498,7 @@ const DataPoolsBlock: React.FC<{ section: DataPoolsImport }> = ({ section }) => 
 // ── History browser modal ─────────────────────────────────────
 
 const RestoreHistoryModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+  const t = useT()
   const { data } = useSWR<{ entries: HistoryEntry[] }>(open ? "/api/host-backups/restore/history" : null, fetcher)
   const [detailFile, setDetailFile] = useState<string | null>(null)
   const { data: detailResp } = useSWR<{ state: RestoreState }>(
@@ -504,17 +513,17 @@ const RestoreHistoryModal: React.FC<{ open: boolean; onClose: () => void }> = ({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <History className="h-5 w-5" />
-              Past restores
+              {t("restoreProgress.history.title")}
             </DialogTitle>
             <DialogDescription>
-              Restores archived by the post-boot dispatcher. The latest 20 are kept.
+              {t("restoreProgress.history.description")}
             </DialogDescription>
           </DialogHeader>
 
           <ScrollArea className="h-96">
             <div className="space-y-1.5">
               {(data?.entries ?? []).length === 0 ? (
-                <div className="text-sm text-muted-foreground py-6 text-center">No past restores recorded.</div>
+                <div className="text-sm text-muted-foreground py-6 text-center">{t("restoreProgress.history.empty")}</div>
               ) : (
                 (data?.entries ?? []).map((e) => (
                   <button
@@ -538,7 +547,7 @@ const RestoreHistoryModal: React.FC<{ open: boolean; onClose: () => void }> = ({
 
           <DialogFooter>
             <Button variant="outline" onClick={onClose}>
-              Close
+              {t("actions.close")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -559,6 +568,7 @@ const RestoreHistoryModal: React.FC<{ open: boolean; onClose: () => void }> = ({
 // ── Main inline card ──────────────────────────────────────────
 
 export const RestoreProgressCard: React.FC = () => {
+  const t = useT()
   const { data, mutate } = useSWR<{ state: RestoreState | null }>(
     "/api/host-backups/restore/status",
     fetcher,
@@ -597,7 +607,7 @@ export const RestoreProgressCard: React.FC = () => {
       <div className="flex justify-end">
         <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
           <History className="h-3.5 w-3.5 mr-1" />
-          Past restores
+          {t("restoreProgress.history.title")}
         </Button>
         <RestoreHistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} />
       </div>
@@ -625,12 +635,12 @@ export const RestoreProgressCard: React.FC = () => {
               <RotateCcw
                 className={`h-5 w-5 ${state.status === "running" ? "text-blue-500 animate-spin" : "text-blue-500"}`}
               />
-              Post-restore progress
+              {t("restoreProgress.title")}
               <StatusBadge status={state.status} />
               {hasWarnings && (
                 <Badge variant="outline" className="text-amber-400 border-amber-500/40 bg-amber-500/10 gap-1">
                   <AlertTriangle className="h-3 w-3" />
-                  {state.sanity_warnings.length} boot warning{state.sanity_warnings.length === 1 ? "" : "s"}
+                  {t("restoreProgress.badges.bootWarnings", { count: state.sanity_warnings.length })}
                 </Badge>
               )}
               {poolCount > 0 && (
@@ -643,22 +653,22 @@ export const RestoreProgressCard: React.FC = () => {
                   }
                 >
                   <Cpu className="h-3 w-3" />
-                  {poolCount} ZFS pool{poolCount === 1 ? "" : "s"}
-                  {poolWarnings > 0 && ` · ${poolWarnings} need attention`}
+                  {t("restoreProgress.badges.zfsPools", { count: poolCount })}
+                  {poolWarnings > 0 && ` · ${t("restoreProgress.badges.needAttention", { count: poolWarnings })}`}
                 </Badge>
               )}
             </CardTitle>
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" onClick={() => setDetailOpen(true)}>
-                Details
+                {t("restoreProgress.actions.details")}
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setHistoryOpen(true)}>
                 <History className="h-3.5 w-3.5 mr-1" />
-                History
+                {t("restoreProgress.actions.history")}
               </Button>
               {state.status !== "running" && (
                 <Button size="sm" onClick={dismiss} disabled={dismissing}>
-                  {dismissing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Dismiss"}
+                  {dismissing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("restoreProgress.actions.dismiss")}
                 </Button>
               )}
             </div>
@@ -668,11 +678,11 @@ export const RestoreProgressCard: React.FC = () => {
           <div className="space-y-1">
             <div className="flex justify-between text-xs text-muted-foreground">
               <span className="truncate">
-                {state.current_step || "—"} · started {formatRelative(state.started_at)}
+                {state.current_step || "—"} · {t("restoreProgress.startedRelative", { time: formatRelative(state.started_at, t) })}
               </span>
               <span>
-                {state.steps_done}/{state.steps_total} steps
-                {state.status === "running" && ` · ${computeEta(state)}`}
+                {t("restoreProgress.steps", { done: state.steps_done, total: state.steps_total })}
+                {state.status === "running" && ` · ${computeEta(state, t)}`}
                 {state.summary?.duration && state.status !== "running" && ` · ${state.summary.duration}`}
               </span>
             </div>
@@ -684,19 +694,19 @@ export const RestoreProgressCard: React.FC = () => {
           {state.summary && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
               <div className="rounded-md border border-border bg-muted/30 px-2 py-1.5">
-                <div className="text-muted-foreground">Guests</div>
+                <div className="text-muted-foreground">{t("restoreProgress.summary.guests")}</div>
                 <div className="font-medium">{state.summary.guests}</div>
               </div>
               <div className="rounded-md border border-border bg-muted/30 px-2 py-1.5">
-                <div className="text-muted-foreground">Bind-mount stubs</div>
+                <div className="text-muted-foreground">{t("restoreProgress.summary.bindMountStubs")}</div>
                 <div className="font-medium">{state.summary.stubs}</div>
               </div>
               <div className="rounded-md border border-border bg-muted/30 px-2 py-1.5">
-                <div className="text-muted-foreground">Stale nodes cleaned</div>
+                <div className="text-muted-foreground">{t("restoreProgress.summary.staleNodesCleaned")}</div>
                 <div className="font-medium">{state.summary.stale_nodes}</div>
               </div>
               <div className="rounded-md border border-border bg-muted/30 px-2 py-1.5">
-                <div className="text-muted-foreground">Components</div>
+                <div className="text-muted-foreground">{t("restoreProgress.summary.components")}</div>
                 <div className="font-medium">{state.summary.components}</div>
               </div>
             </div>

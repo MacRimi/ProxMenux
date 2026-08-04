@@ -169,13 +169,13 @@ interface SuppressionCategory {
 }
 
 const SUPPRESSION_OPTIONS = [
-  { value: "24", label: "24 hours" },
-  { value: "72", label: "3 days" },
-  { value: "168", label: "1 week" },
-  { value: "720", label: "1 month" },
-  { value: "8760", label: "1 year" },
-  { value: "custom", label: "Custom" },
-  { value: "-1", label: "Permanent" },
+  { value: "24", labelKey: "settings.healthMonitor.options.24h" },
+  { value: "72", labelKey: "settings.healthMonitor.options.3d" },
+  { value: "168", labelKey: "settings.healthMonitor.options.1w" },
+  { value: "720", labelKey: "settings.healthMonitor.options.1m" },
+  { value: "8760", labelKey: "settings.healthMonitor.options.1y" },
+  { value: "custom", labelKey: "settings.healthMonitor.options.custom" },
+  { value: "-1", labelKey: "settings.healthMonitor.options.permanent" },
 ]
 
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
@@ -248,6 +248,15 @@ function normalizeErrorKey(key: string): string {
   return `${desc}: ${resourceParts.join("_")}`
 }
 
+function healthCategoryKey(category: SuppressionCategory): string {
+  const raw = category.category || category.key.replace(/^suppress_/, "")
+  const aliases: Record<string, string> = {
+    disks: "disk",
+    pve_services: "services",
+  }
+  return aliases[raw] || raw
+}
+
 interface ProxMenuxTool {
   key: string
   name: string
@@ -300,6 +309,10 @@ interface NetworkInterface {
 
 export function Settings() {
   const { language, setLanguage, t } = useI18n()
+  const tFallback = (key: string, fallback: string) => {
+    const translated = t(key)
+    return translated === key ? fallback : translated
+  }
   const [proxmenuxTools, setProxmenuxTools] = useState<ProxMenuxTool[]>([])
   const [updatesAvailableCount, setUpdatesAvailableCount] = useState(0)
   const [loadingTools, setLoadingTools] = useState(true)
@@ -472,11 +485,11 @@ export function Settings() {
     if (entries.length === 0) return
     const batch = entries.map(e => `${e.source}:${e.function}:${e.key}`).join("\n")
     const title = entries.length === 1
-      ? `Update: ${entries[0].name}`
-      : `Update ${entries.length} optimizations`
+      ? t("settings.optimizations.updateOneTitle", { name: entries[0].name })
+      : t("settings.optimizations.updateManyTitle", { count: entries.length })
     const description = entries.length === 1
-      ? `Re-running ${entries[0].function} from the ${entries[0].source} flow.`
-      : `Re-running ${entries.length} post-install functions in sequence.`
+      ? t("settings.optimizations.updateOneDescription", { functionName: entries[0].function, source: entries[0].source })
+      : t("settings.optimizations.updateManyDescription", { count: entries.length })
     setUpdateTerminal({
       open: true,
       title,
@@ -1007,14 +1020,14 @@ export function Settings() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <HeartPulse className="h-5 w-5 text-red-500" />
-              <CardTitle>Health Monitor</CardTitle>
+              <CardTitle>{t("settings.healthMonitor.title")}</CardTitle>
             </div>
             {!loadingHealth && (
               <div className="flex items-center gap-2">
                 {savedAllHealth && (
                   <span className="flex items-center gap-1 text-xs text-green-500">
                     <Check className="h-3.5 w-3.5" />
-                    Saved
+                    {t("status.saved")}
                   </span>
                 )}
                 {healthEditMode ? (
@@ -1024,7 +1037,7 @@ export function Settings() {
                       onClick={handleCancelEdit}
                       disabled={savingAllHealth}
                     >
-                      Cancel
+                      {t("actions.cancel")}
                     </button>
                     <button
                       className="h-7 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1.5"
@@ -1036,7 +1049,7 @@ export function Settings() {
                       ) : (
                         <Check className="h-3 w-3" />
                       )}
-                      Save
+                      {t("actions.save")}
                     </button>
                   </>
                 ) : (
@@ -1045,15 +1058,14 @@ export function Settings() {
                     onClick={() => setHealthEditMode(true)}
                   >
                     <Settings2 className="h-3 w-3" />
-                    Edit
+                    {t("actions.edit")}
                   </button>
                 )}
               </div>
             )}
           </div>
           <CardDescription>
-            Configure how long dismissed alerts stay suppressed for each category.
-            Changes apply immediately to both existing and future dismissed alerts.
+            {t("settings.healthMonitor.description")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1065,8 +1077,8 @@ export function Settings() {
             <div className="space-y-0">
               {/* Header */}
               <div className="flex items-center justify-between pb-2 mb-1 border-b border-border">
-                <span className="text-xs font-medium text-muted-foreground">Category</span>
-                <span className="text-xs font-medium text-muted-foreground">Suppression Duration</span>
+                <span className="text-xs font-medium text-muted-foreground">{t("settings.healthMonitor.category")}</span>
+                <span className="text-xs font-medium text-muted-foreground">{t("settings.healthMonitor.suppressionDuration")}</span>
               </div>
               
               {/* Per-category rows */}
@@ -1079,13 +1091,14 @@ export function Settings() {
                   const isLong = effectiveHours >= 720 && effectiveHours !== -1 && effectiveHours !== -2
                   const hasChanged = cat.key in pendingChanges && pendingChanges[cat.key] !== cat.hours
                   const selectVal = isCustomMode ? "custom" : getSelectValue(effectiveHours, cat.key)
+                  const catLabel = tFallback(`settings.healthMonitor.categories.${healthCategoryKey(cat)}`, cat.label)
                   
                   return (
                     <div key={cat.key}>
                       <div className="flex items-center justify-between gap-2 py-2 sm:py-2.5 px-1 sm:px-2">
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           <IconComp className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <span className="text-xs sm:text-sm font-medium">{cat.label}</span>
+                          <span className="text-xs sm:text-sm font-medium">{catLabel}</span>
                           {hasChanged && healthEditMode && (
                             <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
                           )}
@@ -1099,7 +1112,7 @@ export function Settings() {
                                 className="w-16 sm:w-20 h-7 text-xs"
                                 value={customValues[cat.key] || ""}
                                 onChange={(e) => setCustomValues(prev => ({ ...prev, [cat.key]: e.target.value }))}
-                                placeholder="Hours"
+                                placeholder={t("settings.healthMonitor.hours")}
                               />
                               <span className="text-xs text-muted-foreground">h</span>
                               <button
@@ -1138,7 +1151,7 @@ export function Settings() {
                               <SelectContent>
                                 {SUPPRESSION_OPTIONS.map((opt) => (
                                   <SelectItem key={opt.value} value={opt.value}>
-                                    {opt.label}
+                                    {t(opt.labelKey)}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -1152,10 +1165,10 @@ export function Settings() {
                         <div className="flex items-start gap-2 ml-6 sm:ml-8 mr-1 mb-2 p-2 rounded-md bg-blue-500/10 border border-blue-500/20">
                           <Info className="h-3.5 w-3.5 text-blue-400 shrink-0 mt-0.5" />
                           <p className="text-[11px] text-blue-400/90 leading-relaxed">
-                            Alerts for <span className="font-semibold">{cat.label}</span> will be permanently suppressed when dismissed.
+                            {t("settings.healthMonitor.permanentNotice", { category: catLabel })}
                             {cat.category === "temperature" && (
                               <span className="block mt-0.5 text-blue-300/80">
-                                Critical CPU temperature alerts will still trigger for hardware safety.
+                                {t("settings.healthMonitor.temperatureSafetyNotice")}
                               </span>
                             )}
                           </p>
@@ -1167,7 +1180,7 @@ export function Settings() {
                         <div className="flex items-start gap-2 ml-6 sm:ml-8 mr-1 mb-2 p-2 rounded-md bg-blue-500/10 border border-blue-500/20">
                           <Info className="h-3.5 w-3.5 text-blue-400 shrink-0 mt-0.5" />
                           <p className="text-[11px] text-blue-400/90 leading-relaxed">
-                            Long suppression period. Dismissed alerts for this category will not reappear for an extended time.
+                            {t("settings.healthMonitor.longSuppressionNotice")}
                           </p>
                         </div>
                       )}
@@ -1180,8 +1193,7 @@ export function Settings() {
               <div className="flex items-start gap-2 mt-3 pt-3 border-t border-border">
                 <Info className="h-3.5 w-3.5 text-blue-400 shrink-0 mt-0.5" />
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  These settings apply when you dismiss a warning from the Health Monitor.
-                  Critical CPU temperature alerts always trigger regardless of settings to protect your hardware.
+                  {t("settings.healthMonitor.footerNote")}
                 </p>
               </div>
 
@@ -1197,11 +1209,11 @@ export function Settings() {
               <div className="pt-8">
                 <div className="flex items-center gap-2 mb-1.5">
                   <BellOff className="h-4 w-4 text-amber-500" />
-                  <span className="text-sm font-medium">Active Suppressions</span>
+                  <span className="text-sm font-medium">{t("settings.healthMonitor.activeSuppressions")}</span>
                 </div>
                 <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-                  Alerts you have silenced from the Health Monitor. Permanent dismisses can only be
-                  reverted here. Editing requires the Health Monitor <span className="font-mono text-xs">Edit</span> mode at the top of this card.
+                  {t("settings.healthMonitor.activeSuppressionsDescription")}{" "}
+                  <span className="font-mono text-xs">{t("actions.edit")}</span>.
                 </p>
                 {loadingSuppressions ? (
                   <div className="flex items-center justify-center py-4">
@@ -1209,19 +1221,19 @@ export function Settings() {
                   </div>
                 ) : activeSuppressions.length === 0 ? (
                   <div className="text-center py-4 text-sm text-muted-foreground">
-                    No active suppressions. Dismissed alerts from the Health Monitor will appear here.
+                    {t("settings.healthMonitor.noActiveSuppressions")}
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {activeSuppressions.map((s) => {
                       const remaining = s.suppression_remaining_hours
                       const remainingLabel = s.permanent
-                        ? "Permanent"
+                        ? t("settings.healthMonitor.permanent")
                         : remaining === undefined || remaining === null
-                          ? "Active"
+                          ? t("status.active")
                           : remaining >= 24
-                            ? `${Math.round(remaining / 24)}d remaining`
-                            : `${Math.max(0, Math.round(remaining))}h remaining`
+                            ? t("settings.healthMonitor.daysRemaining", { count: Math.round(remaining / 24) })
+                            : t("settings.healthMonitor.hoursRemaining", { count: Math.max(0, Math.round(remaining)) })
                       const dismissedAtLabel = s.acknowledged_at
                         ? new Date(s.acknowledged_at).toLocaleString()
                         : ""
@@ -1238,7 +1250,7 @@ export function Settings() {
                           <div className={`flex items-start gap-2 min-w-0 flex-1 ${isQueued ? "opacity-60" : ""}`}>
                             {s.permanent ? (
                               <Badge variant="outline" className="text-sm px-2 py-0.5 shrink-0 text-amber-400 border-amber-400/40 mt-0.5 font-normal">
-                                Permanent
+                                {t("settings.healthMonitor.permanent")}
                               </Badge>
                             ) : (
                               <Badge variant="outline" className="text-sm px-2 py-0.5 shrink-0 text-blue-400 border-blue-400/30 mt-0.5 font-normal">
@@ -1247,12 +1259,12 @@ export function Settings() {
                             )}
                             <div className="min-w-0 flex-1">
                               <div className={`text-xs sm:text-sm font-medium text-foreground truncate ${isQueued ? "line-through" : ""}`} title={s.error_key}>
-                                {normalizeErrorKey(s.error_key)}
+                                {tFallback(`settings.healthMonitor.errorNames.${s.error_key}`, normalizeErrorKey(s.error_key))}
                               </div>
                               <div className="text-sm text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                                <span>category: <span className="font-medium text-foreground/80">{s.category || "—"}</span></span>
-                                {s.severity && <span>severity: <span className="font-medium text-foreground/80">{s.severity}</span></span>}
-                                {dismissedAtLabel && <span>dismissed: {dismissedAtLabel}</span>}
+                                <span>{t("settings.healthMonitor.labels.category")}: <span className="font-medium text-foreground/80">{s.category ? tFallback(`settings.healthMonitor.categories.${s.category}`, s.category) : "—"}</span></span>
+                                {s.severity && <span>{t("settings.healthMonitor.labels.severity")}: <span className="font-medium text-foreground/80">{tFallback(`status.${s.severity}`, s.severity)}</span></span>}
+                                {dismissedAtLabel && <span>{t("settings.healthMonitor.labels.dismissed")}: {dismissedAtLabel}</span>}
                               </div>
                             </div>
                           </div>
@@ -1268,13 +1280,13 @@ export function Settings() {
                             onClick={() => handleReEnable(s.error_key)}
                             title={
                               !healthEditMode
-                                ? "Enable Health Monitor Edit mode to re-enable"
+                                ? t("settings.healthMonitor.reEnableDisabledTitle")
                                 : isQueued
-                                  ? "Cancel re-enable (will not be applied on Save)"
-                                  : "Queue this alert for re-enable on Save"
+                                  ? t("settings.healthMonitor.reEnableQueuedTitle")
+                                  : t("settings.healthMonitor.reEnableTitle")
                             }
                           >
-                            {isQueued ? "Undo" : "Re-enable"}
+                            {isQueued ? t("actions.undo") : t("settings.healthMonitor.reEnable")}
                           </Button>
                         </div>
                       )
@@ -1292,11 +1304,10 @@ export function Settings() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Database className="h-5 w-5 text-purple-500" />
-            <CardTitle>Remote Storage Exclusions</CardTitle>
+            <CardTitle>{t("settings.remoteStorage.title")}</CardTitle>
           </div>
           <CardDescription>
-            Exclude remote storages (PBS, NFS, CIFS, etc.) from health monitoring and notifications.
-            Use this for storages that are intentionally offline or have limited API access.
+            {t("settings.remoteStorage.description")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1307,18 +1318,18 @@ export function Settings() {
           ) : remoteStorages.length === 0 ? (
             <div className="text-center py-8">
               <CloudOff className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-              <p className="text-muted-foreground">No remote storages detected</p>
+              <p className="text-muted-foreground">{t("settings.remoteStorage.emptyTitle")}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                PBS, NFS, CIFS, and other remote storages will appear here when configured
+                {t("settings.remoteStorage.emptyDescription")}
               </p>
             </div>
           ) : (
             <div className="space-y-0">
               {/* Header */}
               <div className="grid grid-cols-[1fr_auto_auto] gap-4 pb-2 mb-1 border-b border-border">
-                <span className="text-xs font-medium text-muted-foreground">Storage</span>
-                <span className="text-xs font-medium text-muted-foreground text-center w-20">Health</span>
-                <span className="text-xs font-medium text-muted-foreground text-center w-20">Alerts</span>
+                <span className="text-xs font-medium text-muted-foreground">{t("settings.remoteStorage.storage")}</span>
+                <span className="text-xs font-medium text-muted-foreground text-center w-20">{t("settings.common.health")}</span>
+                <span className="text-xs font-medium text-muted-foreground text-center w-20">{t("settings.common.alerts")}</span>
               </div>
               
               {/* Storage rows - scrollable container */}
@@ -1343,10 +1354,10 @@ export function Settings() {
                             </Badge>
                           </div>
                           {isOffline && (
-                            <p className="text-[11px] text-red-400 mt-0.5">Offline or unavailable</p>
+                            <p className="text-[11px] text-red-400 mt-0.5">{t("settings.remoteStorage.offline")}</p>
                           )}
                           {isNamespaceRestricted && (
-                            <p className="text-[11px] text-blue-400 mt-0.5">Reachable; datastore size hidden by ACL</p>
+                            <p className="text-[11px] text-blue-400 mt-0.5">{t("settings.remoteStorage.namespaceRestricted")}</p>
                           )}
                         </div>
                       </div>
@@ -1397,9 +1408,9 @@ export function Settings() {
               <div className="flex items-start gap-2 mt-3 pt-3 border-t border-border">
                 <Info className="h-3.5 w-3.5 text-purple-400 shrink-0 mt-0.5" />
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  <strong>Health:</strong> When OFF, the storage won't trigger warnings/critical alerts in the Health Monitor.
+                  <strong>{t("settings.common.health")}:</strong> {t("settings.remoteStorage.healthHelp")}
                   <br />
-                  <strong>Alerts:</strong> When OFF, no notifications will be sent for this storage.
+                  <strong>{t("settings.common.alerts")}:</strong> {t("settings.remoteStorage.alertsHelp")}
                 </p>
               </div>
             </div>
@@ -1412,11 +1423,10 @@ export function Settings() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Network className="h-5 w-5 text-blue-500" />
-            <CardTitle>Network Interface Exclusions</CardTitle>
+            <CardTitle>{t("settings.networkInterfaces.title")}</CardTitle>
           </div>
           <CardDescription>
-            Exclude network interfaces (bridges, bonds, physical NICs) from health monitoring and notifications.
-            Use this for interfaces that are intentionally disabled or unused.
+            {t("settings.networkInterfaces.description")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1427,15 +1437,15 @@ export function Settings() {
           ) : networkInterfaces.length === 0 ? (
             <div className="text-center py-8">
               <Network className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-              <p className="text-muted-foreground">No network interfaces detected</p>
+              <p className="text-muted-foreground">{t("settings.networkInterfaces.emptyTitle")}</p>
             </div>
           ) : (
             <div className="space-y-0">
               {/* Header */}
               <div className="grid grid-cols-[1fr_auto_auto] gap-4 pb-2 mb-1 border-b border-border">
-                <span className="text-xs font-medium text-muted-foreground">Interface</span>
-                <span className="text-xs font-medium text-muted-foreground text-center w-20">Health</span>
-                <span className="text-xs font-medium text-muted-foreground text-center w-20">Alerts</span>
+                <span className="text-xs font-medium text-muted-foreground">{t("settings.networkInterfaces.interface")}</span>
+                <span className="text-xs font-medium text-muted-foreground text-center w-20">{t("settings.common.health")}</span>
+                <span className="text-xs font-medium text-muted-foreground text-center w-20">{t("settings.common.alerts")}</span>
               </div>
               
               {/* Interface rows - scrollable container */}
@@ -1461,17 +1471,17 @@ export function Settings() {
                             </Badge>
                             {isDown && !isExcluded && (
                               <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                                DOWN
+                                {t("settings.networkInterfaces.down")}
                               </Badge>
                             )}
                             {isExcluded && (
                               <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-500/10 text-blue-400">
-                                Excluded
+                                {t("settings.networkInterfaces.excluded")}
                               </Badge>
                             )}
                           </div>
                           <span className="text-xs text-muted-foreground">
-                            {iface.ip_address || 'No IP'} {iface.speed > 0 ? `- ${iface.speed} Mbps` : ''}
+                            {iface.ip_address || t("settings.networkInterfaces.noIp")} {iface.speed > 0 ? `- ${iface.speed} Mbps` : ''}
                           </span>
                         </div>
                       </div>
@@ -1524,9 +1534,9 @@ export function Settings() {
               <div className="flex items-start gap-2 mt-3 pt-3 border-t border-border">
                 <Info className="h-3.5 w-3.5 text-blue-400 shrink-0 mt-0.5" />
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  <strong>Health:</strong> When OFF, the interface won't trigger warnings/critical alerts in the Health Monitor.
+                  <strong>{t("settings.common.health")}:</strong> {t("settings.networkInterfaces.healthHelp")}
                   <br />
-                  <strong>Alerts:</strong> When OFF, no notifications will be sent for this interface.
+                  <strong>{t("settings.common.alerts")}:</strong> {t("settings.networkInterfaces.alertsHelp")}
                 </p>
               </div>
             </div>
@@ -1556,27 +1566,26 @@ export function Settings() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-cyan-500" />
-              <CardTitle>Snippets storage</CardTitle>
+              <CardTitle>{t("settings.snippets.title")}</CardTitle>
             </div>
             <CardDescription>
-              Where ProxMenux installs hookscripts (e.g. the GPU passthrough guard for VMs/LXCs).
-              Pick a shared storage in cluster setups so VMs and LXCs migrate cleanly between nodes —
+              {t("settings.snippets.description")}
               <code className="mx-1">local</code>
-              is node-specific and breaks migration.
+              {t("settings.snippets.localNote")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col md:flex-row md:items-center gap-3">
               <Select value={snippetsStorage || ""} onValueChange={saveSnippetsStorage} disabled={snippetsSaving}>
                 <SelectTrigger className="w-full md:w-72">
-                  <SelectValue placeholder="Pick a storage…" />
+                  <SelectValue placeholder={t("settings.snippets.placeholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {snippetsCandidates.map(c => (
                     <SelectItem key={c.name} value={c.name} disabled={!c.active}>
                       {c.name}
                       <span className="ml-2 text-xs text-muted-foreground">
-                        {c.type}{!c.active && " · inactive"}
+                         {c.type}{!c.active && ` · ${t("status.inactive")}`}
                       </span>
                     </SelectItem>
                   ))}
@@ -1585,14 +1594,12 @@ export function Settings() {
               {snippetsSaving && (
                 <span className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Saving…
+                   {t("status.saving")}
                 </span>
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-3">
-              Existing VMs/LXCs already configured with the previous storage keep working.
-              Only new GPU passthrough operations (or running &quot;sync hookscripts&quot; on the host)
-              will use the new selection.
+               {t("settings.snippets.footer")}
             </p>
           </CardContent>
         </Card>
@@ -1603,9 +1610,9 @@ export function Settings() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Wrench className="h-5 w-5 text-orange-500" />
-            <CardTitle>ProxMenux Optimizations</CardTitle>
+            <CardTitle>{t("settings.optimizations.title")}</CardTitle>
           </div>
-          <CardDescription>System optimizations and utilities installed via ProxMenux</CardDescription>
+          <CardDescription>{t("settings.optimizations.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           {loadingTools ? (
@@ -1615,15 +1622,15 @@ export function Settings() {
           ) : proxmenuxTools.length === 0 ? (
             <div className="text-center py-8">
               <Package className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-              <p className="text-muted-foreground">No ProxMenux optimizations installed yet</p>
-              <p className="text-sm text-muted-foreground mt-1">Run ProxMenux to configure system optimizations</p>
+              <p className="text-muted-foreground">{t("settings.optimizations.emptyTitle")}</p>
+              <p className="text-sm text-muted-foreground mt-1">{t("settings.optimizations.emptyDescription")}</p>
             </div>
           ) : (
             <div className="space-y-2">
               <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
-                <span className="text-sm font-medium text-muted-foreground">Installed Tools</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("settings.optimizations.installedTools")}</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-orange-500">{proxmenuxTools.length} active</span>
+                  <span className="text-sm font-semibold text-orange-500">{t("settings.optimizations.activeCount", { count: proxmenuxTools.length })}</span>
                   {/* Sprint 12B: count badge that doubles as the trigger
                       for the multi-select update modal. Only shown when
                       at least one tool has an available update. */}
@@ -1642,10 +1649,10 @@ export function Settings() {
                         setUpdateModalOpen(true)
                       }}
                       className="flex items-center gap-1.5 text-xs font-semibold text-purple-300 bg-purple-500/15 border border-purple-500/40 hover:bg-purple-500/25 transition-colors rounded-full px-3 py-1"
-                      title="View available updates"
+                      title={t("settings.optimizations.viewUpdates")}
                     >
                       <Sparkles className="h-3.5 w-3.5" />
-                      {updatesAvailableCount} {updatesAvailableCount === 1 ? 'update' : 'updates'}
+                      {t("settings.optimizations.updateCount", { count: updatesAvailableCount })}
                     </button>
                   )}
                 </div>
@@ -1669,7 +1676,7 @@ export function Settings() {
                       key={tool.key}
                       onClick={clickable ? () => viewToolSource(tool) : undefined}
                       className={`flex items-center justify-between gap-2 p-3 rounded-lg border transition-colors ${baseClasses} ${clickable ? 'cursor-pointer' : ''}`}
-                      title={clickable ? (isDeprecated ? 'Legacy optimization — click to view source' : 'Click to view source code') : undefined}
+                      title={clickable ? (isDeprecated ? t("settings.optimizations.legacySourceTitle") : t("settings.optimizations.sourceTitle")) : undefined}
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
@@ -1678,7 +1685,7 @@ export function Settings() {
                         <span className="text-sm font-medium truncate">{tool.name}</span>
                         {isDeprecated && (
                           <span className="text-[9px] uppercase tracking-wider text-amber-500 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded flex-shrink-0">
-                            legacy
+                            {t("settings.optimizations.legacy")}
                           </span>
                         )}
                       </div>
@@ -1691,7 +1698,7 @@ export function Settings() {
                             <button
                               onClick={(e) => { e.stopPropagation(); handleSingleToolUpdate(tool) }}
                               className="text-purple-300 hover:text-purple-200 transition-colors"
-                              title={`Update ${tool.name} to v${tool.available_version}`}
+                              title={t("settings.optimizations.updateToolTitle", { name: tool.name, version: tool.available_version || "?" })}
                             >
                               <ArrowUpCircle className="h-4 w-4" />
                             </button>
@@ -1726,7 +1733,7 @@ export function Settings() {
                     <h3 className="text-sm font-semibold truncate">{codeModal.toolName}</h3>
                     {codeModal.deprecated && (
                       <span className="text-[9px] uppercase tracking-wider text-amber-500 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded flex-shrink-0">
-                        legacy
+                        {t("settings.optimizations.legacy")}
                       </span>
                     )}
                   </div>
@@ -1752,10 +1759,10 @@ export function Settings() {
                   <button
                     onClick={copySourceCode}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md bg-muted hover:bg-muted/80 transition-colors"
-                    title="Copy to clipboard"
+                    title={t("actions.copyToClipboard")}
                   >
                     {codeCopied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
-                    {codeCopied ? 'Copied' : 'Copy'}
+                    {codeCopied ? t("actions.copied") : t("actions.copy")}
                   </button>
                 )}
                 <button
@@ -1804,9 +1811,9 @@ export function Settings() {
               <div className="flex items-center gap-3">
                 <Sparkles className="h-5 w-5 text-purple-400" />
                 <div>
-                  <h3 className="text-sm font-semibold">Available updates</h3>
+                  <h3 className="text-sm font-semibold">{t("settings.optimizations.availableUpdates")}</h3>
                   <p className="text-xs text-muted-foreground">
-                    {updatesAvailableCount} {updatesAvailableCount === 1 ? 'optimization' : 'optimizations'} can be updated to a newer version.
+                    {t("settings.optimizations.availableUpdatesDescription", { count: updatesAvailableCount })}
                   </p>
                 </div>
               </div>
@@ -1863,14 +1870,14 @@ export function Settings() {
 
             <div className="flex items-center justify-between p-4 border-t border-border">
               <span className="text-xs text-muted-foreground">
-                {selectedUpdates.size} of {updatesAvailableCount} selected
+                {t("settings.optimizations.selectedCount", { selected: selectedUpdates.size, total: updatesAvailableCount })}
               </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setUpdateModalOpen(false)}
                   className="px-4 py-1.5 text-xs rounded-md bg-muted hover:bg-muted/80 transition-colors"
                 >
-                  Cancel
+                  {t("actions.cancel")}
                 </button>
                 <button
                   disabled={selectedUpdates.size === 0}
@@ -1894,7 +1901,7 @@ export function Settings() {
                   className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-md bg-purple-500 hover:bg-purple-600 text-white transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
                 >
                   <ArrowUpCircle className="h-3.5 w-3.5" />
-                  Update selected
+                  {t("settings.optimizations.updateSelected")}
                 </button>
               </div>
             </div>

@@ -21,6 +21,7 @@ import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
 import DOMPurify from "dompurify"
 import { marked } from "marked"
+import { useT } from "@/lib/i18n/provider"
 
 // Sent by /api/vms only for LXC rows, only when the user has enabled
 // `lxc_updates_available` notifications. The Monitor populates this
@@ -221,11 +222,11 @@ const formatBytes = (bytes: number | undefined, isNetwork: boolean = false): str
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
 }
 
-const formatUptime = (seconds: number) => {
+const formatUptime = (seconds: number, t: (key: string, params?: Record<string, string | number>) => string) => {
   const days = Math.floor(seconds / 86400)
   const hours = Math.floor((seconds % 86400) / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
-  return `${days}d ${hours}h ${minutes}m`
+  return t("vmLxc.duration.dhm", { days, hours, minutes })
 }
 
 const extractIPFromConfig = (config?: VMConfig, lxcIPInfo?: VMDetails["lxc_ip_info"]): string => {
@@ -348,6 +349,7 @@ const getOSIcon = (osInfo: VMDetails["os_info"] | undefined, vmType: string): Re
 // remote mounts. Capacity displays whatever the backend resolved —
 // PVE storage stats, `df` of host path, or n/a for ad-hoc.
 function MountPointCard({ mp }: { mp: LxcMountPoint }) {
+  const t = useT()
   const isStale = mp.runtime_reachable === false
   const isReadonly = !isStale && mp.runtime_readonly === true
   const isDivergent = mp.runtime_mounted === false  // configured but not actually mounted
@@ -375,10 +377,10 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
     ad_hoc: "bg-amber-500/10 text-amber-400 border-amber-500/20",
   }
   const typeLabel: Record<LxcMountPoint["type"], string> = {
-    pve_volume: "PVE volume",
-    pve_storage_bind: "bind from PVE storage",
-    host_bind: "bind from host",
-    ad_hoc: "ad-hoc inside CT",
+    pve_volume: t("vmLxc.details.mountTypes.pveVolume"),
+    pve_storage_bind: t("vmLxc.details.mountTypes.pveStorageBind"),
+    host_bind: t("vmLxc.details.mountTypes.hostBind"),
+    ad_hoc: t("vmLxc.details.mountTypes.adHoc"),
   }
 
   const fmtBytes = (b: number | null | undefined) => {
@@ -444,16 +446,16 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
           }
         >
           {isStale
-            ? "stale"
+            ? t("vmLxc.details.mountStatus.stale")
             : isDivergent
-              ? "not mounted"
+              ? t("vmLxc.details.mountStatus.notMounted")
               : isHostDetached
-                ? "host detached"
+                ? t("vmLxc.details.mountStatus.hostDetached")
                 : isReadonly
-                  ? "read-only"
+                  ? t("vmLxc.details.mountStatus.readOnly")
                   : mp.runtime_mounted === null
-                    ? "stopped"
-                    : "mounted"}
+                    ? t("vmLxc.details.mountStatus.stopped")
+                    : t("vmLxc.details.mountStatus.mounted")}
         </Badge>
       </div>
 
@@ -464,16 +466,16 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
           gets the full host→container path at a glance. */}
       <div className="text-sm space-y-1">
         <div>
-          <span className="text-muted-foreground">Source (host):</span>{" "}
+          <span className="text-muted-foreground">{t("vmLxc.details.sourceHost")}:</span>{" "}
           <span className="font-mono">{mp.origin_label || mp.source}</span>
           {mp.origin_storage && mp.origin_storage_type && (
             <span className="text-muted-foreground ml-2">
-              ({mp.origin_storage_type} storage)
+              ({t("vmLxc.details.storageType", { type: mp.origin_storage_type })})
             </span>
           )}
         </div>
         <div>
-          <span className="text-muted-foreground">Mounted at (CT):</span>{" "}
+          <span className="text-muted-foreground">{t("vmLxc.details.mountedAtCt")}:</span>{" "}
           <span className="font-mono">{mp.target}</span>
         </div>
       </div>
@@ -494,17 +496,17 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
           />
           <div className="grid grid-cols-3 gap-3 text-sm">
             <div>
-              <p className="text-xs text-muted-foreground">Total</p>
+              <p className="text-xs text-muted-foreground">{t("vmLxc.details.total")}</p>
               <p className="font-medium">{fmtBytes(mp.total_bytes)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Used</p>
+              <p className="text-xs text-muted-foreground">{t("vmLxc.details.used")}</p>
               <p className="font-medium">
                 {fmtBytes(mp.used_bytes)} {usedPct != null && `(${usedPct}%)`}
               </p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Available</p>
+              <p className="text-xs text-muted-foreground">{t("vmLxc.details.available")}</p>
               <p className="font-medium">{fmtBytes(mp.available_bytes)}</p>
             </div>
           </div>
@@ -526,7 +528,7 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
         return (
           <div className="mt-3">
             <p className="text-xs text-muted-foreground mb-1.5">
-              Mount attributes (LXC config)
+              {t("vmLxc.details.mountAttributes")}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {configEntries.map((e) => (
@@ -552,7 +554,7 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
       {(mp.runtime_mounted === true) && (keyValues.length > 0 || flags.length > 0) && (
         <div className="mt-3">
           <p className="text-xs text-muted-foreground mb-1.5">
-            Runtime mount options
+            {t("vmLxc.details.runtimeMountOptions")}
           </p>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {flags.map((f) => (
@@ -589,6 +591,7 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
 }
 
 export function VirtualMachines() {
+  const t = useT()
   const {
     data: vmData,
     error,
@@ -939,8 +942,8 @@ export function VirtualMachines() {
       // Surface the failure to the user. Previous behaviour silently swallowed
       // backend errors so the user thought the backup started fine; in reality
       // the request had 4xx/5xx'd and nothing was scheduled.
-      const msg = error instanceof Error ? error.message : "Unknown error"
-      alert(`Failed to start backup: ${msg}`)
+      const msg = error instanceof Error ? error.message : t("vmLxc.errors.unknown")
+      alert(t("vmLxc.errors.backupStartFailed", { message: msg }))
     } finally {
       setCreatingBackup(false)
     }
@@ -961,8 +964,8 @@ export function VirtualMachines() {
       console.error(`Failed to ${action} VM ${vmid}:`, error)
       // Same UX issue as handleCreateBackup: a silent console.error left the
       // user looking at a "Stop"/"Start" button that just never reacted.
-      const msg = error instanceof Error ? error.message : "Unknown error"
-      alert(`Failed to ${action} VM ${vmid}: ${msg}`)
+      const msg = error instanceof Error ? error.message : t("vmLxc.errors.unknown")
+      alert(t("vmLxc.errors.controlFailed", { action, vmid, message: msg }))
     } finally {
       setControlLoading(false)
     }
@@ -980,11 +983,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       const data = await fetchApi(`/api/vms/${vmid}/logs`)
 
       // Format logs as plain text
-      let logText = `=== Logs for ${vmName} (VMID: ${vmid}) ===\n`
-      logText += `Node: ${data.node}\n`
-      logText += `Type: ${data.type}\n`
-      logText += `Total lines: ${data.log_lines}\n`
-      logText += `Generated: ${new Date().toISOString()}\n`
+      let logText = `=== ${t("vmLxc.logs.header", { name: vmName, vmid })} ===\n`
+      logText += `${t("vmLxc.logs.node")}: ${data.node}\n`
+      logText += `${t("vmLxc.logs.type")}: ${data.type}\n`
+      logText += `${t("vmLxc.logs.totalLines")}: ${data.log_lines}\n`
+      logText += `${t("vmLxc.logs.generated")}: ${new Date().toISOString()}\n`
       logText += `\n${"=".repeat(80)}\n\n`
 
       if (data.logs && Array.isArray(data.logs)) {
@@ -1031,6 +1034,16 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     }
   }
 
+  const getStatusLabel = (status: string, uppercase = true) => {
+    const label =
+      status === "running"
+        ? t("vmLxc.running")
+        : status === "stopped"
+        ? t("vmLxc.stopped")
+        : status
+    return uppercase ? label.toUpperCase() : label
+  }
+
   const getTypeBadge = (type: string) => {
     if (type === "lxc") {
       return {
@@ -1074,13 +1087,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       .map((p) => p.name)
       .join(", ")
     const secHint =
-      uc.security_count > 0 ? ` · ${uc.security_count} security` : ""
+      uc.security_count > 0 ? ` · ${uc.security_count} ${t("vmLxc.updatesPanel.security")}` : ""
     // Tooltip leads with the action when the badge is clickable so the
     // affordance is explicit on hover — the chevron at the end of the
     // badge reinforces the same signal visually for users who don't
     // hover (mobile).
-    const tooltipPrefix = onClick ? "Click to view pending packages · " : ""
-    const tooltip = `${tooltipPrefix}Last checked: ${last}${secHint}${topNames ? ` · ${topNames}` : ""}`
+    const tooltipPrefix = onClick ? `${t("vmLxc.updatesPanel.clickToView")} · ` : ""
+    const tooltip = `${tooltipPrefix}${t("vmLxc.updatesPanel.lastChecked")} ${last}${secHint}${topNames ? ` · ${topNames}` : ""}`
     // Compact = mobile card; matches the surrounding 10-12px chrome
     // (ID line, type badge) so the count doesn't visually dominate.
     // Non-compact = desktop card row, sized to match "Uptime: ..." text.
@@ -1107,7 +1120,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
         tabIndex={onClick ? 0 : undefined}
       >
         <Package className={iconSize} />
-        {uc.count} {compact ? "" : (uc.count === 1 ? "update" : "updates")}
+        {uc.count} {compact ? "" : (uc.count === 1 ? t("vmLxc.updatesPanel.updateSingular") : t("vmLxc.updatesPanel.updatePlural"))}
         {/* Chevron only when the badge is wired up as a clickable
             shortcut — its absence on the dashboard card avoids
             implying interactivity where there isn't any (the whole
@@ -1162,6 +1175,18 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     return "text-green-500"
   }
 
+  const formatCoreCount = (count: number) => {
+    const key = count === 1 ? "one" : count >= 2 && count <= 4 ? "few" : "many"
+    return t(`vmLxc.coreCount.${key}`, { count })
+  }
+
+  const displayedFirewallLogs = useMemo(() => {
+    return firewallLogs.filter((entry) => {
+      const text = (entry.t || "").trim().toLowerCase()
+      return text.length > 0 && text !== "no content"
+    })
+  }, [firewallLogs])
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -1169,8 +1194,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           <div className="h-12 w-12 rounded-full border-2 border-muted"></div>
           <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-transparent border-t-primary animate-spin"></div>
         </div>
-        <div className="text-sm font-medium text-foreground">Loading virtual machines...</div>
-        <p className="text-xs text-muted-foreground">Fetching VM and LXC container status</p>
+        <div className="text-sm font-medium text-foreground">{t("vmLxc.loadingTitle")}</div>
+        <p className="text-xs text-muted-foreground">{t("vmLxc.loadingDescription")}</p>
       </div>
     )
   }
@@ -1178,7 +1203,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="text-center py-8 text-red-500">Error loading virtual machines: {error.message}</div>
+        <div className="text-center py-8 text-red-500">{t("vmLxc.loadingError", { error: error.message })}</div>
       </div>
     )
   }
@@ -1231,7 +1256,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       setIsEditingNotes(false)
     } catch (error) {
       console.error("Error saving notes:", error)
-      alert("Error saving notes. Please try again.")
+      alert(t("vmLxc.errors.saveNotesFailed"))
     } finally {
       setSavingNotes(false)
     }
@@ -1312,7 +1337,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           return (
             <Card className="bg-card border-border">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total VMs &amp; LXCs</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t("vmLxc.totalVmLxc")}</CardTitle>
                 <Server className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -1321,17 +1346,23 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     <span className="text-4xl font-bold leading-none text-foreground">{running}</span>
                     <span className="text-lg font-medium ml-1 text-muted-foreground">/ {total}</span>
                   </div>
-                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">{running} running</Badge>
+                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                    {running} {t("vmLxc.running")}
+                  </Badge>
                 </div>
                 <div className="mt-3 flex gap-1 flex-wrap">
                   {vms > 0 && (
-                    <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">{vms} VMs</Badge>
+                    <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                      {vms} {t("vmLxc.vms")}
+                    </Badge>
                   )}
                   {lxc > 0 && (
                     <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">{lxc} LXC</Badge>
                   )}
                   {stopped > 0 && (
-                    <Badge variant="outline" className="bg-muted text-muted-foreground border-border">{stopped} stopped</Badge>
+                    <Badge variant="outline" className="bg-muted text-muted-foreground border-border">
+                      {stopped} {t("vmLxc.stopped")}
+                    </Badge>
                   )}
                 </div>
               </CardContent>
@@ -1351,7 +1382,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           return (
             <Card className="bg-card border-border">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total CPU Allocated</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t("vmLxc.totalCpuAllocated")}</CardTitle>
                 <Cpu className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -1366,7 +1397,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   <div className="flex-1 space-y-2">
                     <div>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Used</span>
+                        <span className="text-muted-foreground">{t("vmLxc.used")}</span>
                         <span className="font-medium font-mono whitespace-nowrap">{Math.round(allocPct)}%</span>
                       </div>
                       <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -1374,11 +1405,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                       </div>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Configured</span>
+                      <span className="text-muted-foreground">{t("vmLxc.configured")}</span>
                       <span className="font-medium font-mono whitespace-nowrap">{configuredVCPU || '—'}{hostThreads ? ` / ${hostThreads}` : ''} vCPU</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">In use</span>
+                      <span className="text-muted-foreground">{t("vmLxc.inUse")}</span>
                       <span className="font-medium font-mono whitespace-nowrap">{inUseVCPU || '—'}{hostThreads ? ` / ${hostThreads}` : ''} vCPU</span>
                     </div>
                   </div>
@@ -1398,7 +1429,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           return (
             <Card className="bg-card border-border">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total Memory</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t("vmLxc.totalMemory")}</CardTitle>
                 <MemoryStick className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -1413,7 +1444,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   <div className="flex-1 space-y-2">
                     <div>
                       <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Used</span>
+                      <span className="text-muted-foreground">{t("vmLxc.used")}</span>
                       <span className="font-medium font-mono whitespace-nowrap">{usedGB.toFixed(1)}</span>
                       </div>
                       <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -1422,7 +1453,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     </div>
                     <div>
                       <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Alloc</span>
+                      <span className="text-muted-foreground">{t("vmLxc.allocated")}</span>
                       <span className="font-medium font-mono whitespace-nowrap">{allocatedMemoryGB.toFixed(1)}</span>
                       </div>
                       <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -1430,7 +1461,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                       </div>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Total</span>
+                      <span className="text-muted-foreground">{t("vmLxc.total")}</span>
                       <span className="font-medium font-mono whitespace-nowrap">{totalGB.toFixed(0)} GB</span>
                     </div>
                   </div>
@@ -1451,24 +1482,26 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           return (
             <Card className="bg-card border-border">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total Disk</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t("vmLxc.totalDisk")}</CardTitle>
                 <HardDrive className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="flex items-end justify-between mb-3">
                   <div>
                     <span className="text-xl lg:text-2xl font-bold leading-none">{formatStorage(usedGB)}</span>
-                    <span className="text-sm font-medium ml-1 text-muted-foreground">used</span>
+                    <span className="text-sm font-medium ml-1 text-muted-foreground">{t("vmLxc.used").toLowerCase()}</span>
                   </div>
-                  <Badge variant="outline" className="bg-muted text-muted-foreground border-border">{Math.round(utilPct)}% util</Badge>
+                  <Badge variant="outline" className="bg-muted text-muted-foreground border-border">
+                    {Math.round(utilPct)}% {t("vmLxc.utilization")}
+                  </Badge>
                 </div>
                 <div className="flex h-1.5 rounded-full overflow-hidden gap-[2px]">
-                  <div style={{ width: `${usedSeg}%`, background: stroke }} title={`Used ${formatStorage(usedGB)}`}></div>
-                  <div style={{ flex: 1, background: 'rgba(168,85,247,0.45)' }} title={`Idle ${formatStorage(idleGB)}`}></div>
+                  <div style={{ width: `${usedSeg}%`, background: stroke }} title={`${t("vmLxc.used")} ${formatStorage(usedGB)}`}></div>
+                  <div style={{ flex: 1, background: 'rgba(168,85,247,0.45)' }} title={`${t("vmLxc.idle")} ${formatStorage(idleGB)}`}></div>
                 </div>
                 <div className="mt-2 flex justify-between text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full" style={{ background: stroke }}></span>Used {formatStorage(usedGB)}</span>
-                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full" style={{ background: 'rgba(168,85,247,0.55)' }}></span>Alloc {formatStorage(allocGB)}</span>
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full" style={{ background: stroke }}></span>{t("vmLxc.used")} {formatStorage(usedGB)}</span>
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full" style={{ background: 'rgba(168,85,247,0.55)' }}></span>{t("vmLxc.allocated")} {formatStorage(allocGB)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -1480,12 +1513,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-xl lg:text-2xl font-bold text-foreground">
             <Server className="h-6 w-6" />
-            Virtual Machines & Containers
+            {t("vmLxc.listTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {safeVMData.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">No virtual machines found</div>
+            <div className="text-center py-8 text-muted-foreground">{t("vmLxc.empty")}</div>
           ) : (
             <div className="space-y-3">
               {safeVMData.map((vm) => {
@@ -1508,7 +1541,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                       <div className="flex items-center gap-2 flex-wrap mb-3">
                         <Badge variant="outline" className={`flex-shrink-0 ${getStatusColor(vm.status)}`}>
                           {getStatusIcon(vm.status)}
-                          {vm.status.toUpperCase()}
+                          {getStatusLabel(vm.status)}
                         </Badge>
                         <Badge variant="outline" className={`flex-shrink-0 ${typeBadge.color}`}>
                           {typeBadge.icon}
@@ -1526,13 +1559,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             IP: {lxcIP}
                           </span>
                         )}
-                        <span className="text-sm text-muted-foreground ml-auto">Uptime: {formatUptime(vm.uptime)}</span>
+                        <span className="text-sm text-muted-foreground ml-auto">
+                          {t("vmLxc.uptime", { uptime: formatUptime(vm.uptime, t) })}
+                        </span>
                         {vm.type === "lxc" && renderLxcUpdateBadge(vm.update_check)}
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">CPU Usage</div>
+                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.cpuUsage")}</div>
                           <div
                             className="cursor-pointer hover:opacity-80 transition-opacity"
                             onClick={() => {
@@ -1552,7 +1587,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         </div>
 
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Memory</div>
+                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.memory")}</div>
                           <div
                             className="cursor-pointer hover:opacity-80 transition-opacity"
                             onClick={() => {
@@ -1572,7 +1607,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         </div>
 
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Disk Usage</div>
+                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.diskUsage")}</div>
                           <div
                             className="cursor-pointer hover:opacity-80 transition-opacity"
                             onClick={() => {
@@ -1592,7 +1627,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         </div>
 
                         <div className="hidden md:block">
-                          <div className="text-xs text-muted-foreground mb-1">Disk I/O</div>
+                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.diskIo")}</div>
                           <div className="text-sm font-semibold space-y-0.5">
                             <div className="flex items-center gap-1">
                               <HardDrive className="h-3 w-3 text-green-500" />
@@ -1606,7 +1641,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         </div>
 
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Network I/O</div>
+                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.networkIo")}</div>
                           <div className="text-sm font-semibold space-y-0.5">
                             <div className="flex items-center gap-1">
                               <Network className="h-3 w-3 text-green-500" />
@@ -1735,11 +1770,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             {getTypeBadge(selectedVM.type).label}
                           </Badge>
                           <Badge variant="outline" className={`${getStatusColor(selectedVM.status)} flex-shrink-0`}>
-                            {selectedVM.status.toUpperCase()}
+                            {getStatusLabel(selectedVM.status)}
                           </Badge>
                           {selectedVM.status === "running" && (
                             <span className="text-sm text-muted-foreground">
-                              Uptime: {formatUptime(selectedVM.uptime)}
+                              {t("vmLxc.uptime", { uptime: formatUptime(selectedVM.uptime, t) })}
                             </span>
                           )}
                           {/* Clickable badge — the sole entry point to
@@ -1771,11 +1806,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           {getTypeBadge(selectedVM.type).label}
                         </Badge>
                         <Badge variant="outline" className={`${getStatusColor(selectedVM.status)} flex-shrink-0`}>
-                          {selectedVM.status.toUpperCase()}
+                          {getStatusLabel(selectedVM.status)}
                         </Badge>
                         {selectedVM.status === "running" && (
                           <span className="text-sm text-muted-foreground">
-                            Uptime: {formatUptime(selectedVM.uptime)}
+                            {t("vmLxc.uptime", { uptime: formatUptime(selectedVM.uptime, t) })}
                           </span>
                         )}
                         {selectedVM.type === "lxc" &&
@@ -1816,7 +1851,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 >
                   <Activity className="h-4 w-4" />
                   <span className={activeModalTab === "status" ? "" : "hidden sm:inline"}>
-                    Status
+                    {t("vmLxc.tabs.status")}
                   </span>
                 </button>
                 {/* Sprint 13.29: Mount Points tab — LXC only, and only
@@ -1833,7 +1868,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   >
                     <HardDrive className="h-4 w-4" />
                     <span className={activeModalTab === "mounts" ? "" : "hidden sm:inline"}>
-                      Mounts
+                      {t("vmLxc.tabs.mounts")}
                     </span>
                     <Badge variant="secondary" className="text-xs h-5 ml-0.5 sm:ml-1">
                       {mountPoints.length + adHocMounts.length}
@@ -1850,7 +1885,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 >
                   <Archive className="h-4 w-4" />
                   <span className={activeModalTab === "backups" ? "" : "hidden sm:inline"}>
-                    Backups
+                    {t("vmLxc.tabs.backups")}
                   </span>
                   {vmBackups.length > 0 && (
                     <Badge variant="secondary" className="text-xs h-5 ml-0.5 sm:ml-1">{vmBackups.length}</Badge>
@@ -1877,7 +1912,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   >
                     <RefreshCw className="h-4 w-4" />
                     <span className={activeModalTab === "updates" ? "" : "hidden sm:inline"}>
-                      Updates
+                      {t("vmLxc.tabs.updates")}
                     </span>
                     {typeof selectedVM.update_check?.count === "number" && selectedVM.update_check.count > 0 && (
                       <Badge variant="secondary" className="text-xs h-5 ml-0.5 sm:ml-1">
@@ -1907,7 +1942,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   >
                     <Shield className="h-4 w-4" />
                     <span className={activeModalTab === "firewall" ? "" : "hidden sm:inline"}>
-                      Firewall
+                      {t("vmLxc.tabs.firewall")}
                     </span>
                   </button>
                 )}
@@ -1930,9 +1965,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               <div>
                                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
                                   <Cpu className="h-3.5 w-3.5" />
-                                  <span>CPU Usage</span>
+                                  <span>{t("vmLxc.cpuUsage")}</span>
                                   {vmDetails?.config?.cores && (
-                                    <span className="text-muted-foreground/60">({vmDetails.config.cores} cores)</span>
+                                    <span className="text-muted-foreground/60">
+                                      ({formatCoreCount(Number(vmDetails.config.cores))})
+                                    </span>
                                   )}
                                 </div>
                                 <div className={`text-base font-semibold mb-2 ${getUsageColor(selectedVM.cpu * 100)}`}>
@@ -1948,7 +1985,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               <div>
                                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
                                   <MemoryStick className="h-3.5 w-3.5" />
-                                  <span>Memory</span>
+                                  <span>{t("vmLxc.memory")}</span>
                                 </div>
                                 <div
                                   className={`text-base font-semibold mb-2 ${getUsageColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
@@ -1966,7 +2003,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               <div>
                                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
                                   <HardDrive className="h-3.5 w-3.5" />
-                                  <span>Disk</span>
+                                  <span>{t("vmLxc.disk")}</span>
                                 </div>
                                 <div
                                   className={`text-base font-semibold mb-2 ${getUsageColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
@@ -1986,7 +2023,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               <div>
                                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
                                   <HardDrive className="h-3.5 w-3.5" />
-                                  <span>Disk I/O <span className="text-[10px] opacity-70">(since boot)</span></span>
+                                  <span>{t("vmLxc.diskIo")} <span className="text-[10px] opacity-70">({t("vmLxc.sinceBoot")})</span></span>
                                 </div>
                                 <div className="space-y-1">
                                   <div className="text-sm text-green-500 flex items-center gap-1">
@@ -2006,7 +2043,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               <div>
                                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
                                   <Network className="h-3.5 w-3.5" />
-                                  <span>Network I/O <span className="text-[10px] opacity-70">(since boot)</span></span>
+                                  <span>{t("vmLxc.networkIo")} <span className="text-[10px] opacity-70">({t("vmLxc.sinceBoot")})</span></span>
                                 </div>
                                 <div className="space-y-1">
                                   <div className="text-sm text-green-500 flex items-center gap-1">
@@ -2029,7 +2066,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                       </div>
 
                       {detailsLoading ? (
-                        <div className="text-center py-8 text-muted-foreground">Loading configuration...</div>
+                        <div className="text-center py-8 text-muted-foreground">{t("vmLxc.loadingConfiguration")}</div>
                       ) : vmDetails?.config ? (
                         <>
                           <Card className="border border-border bg-card/50" key={`config-${selectedVM.vmid}`}>
@@ -2039,7 +2076,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   <div className="p-1.5 rounded-md bg-blue-500/10">
                                     <Cpu className="h-4 w-4 text-blue-500" />
                                   </div>
-                                  <h3 className="text-sm font-semibold text-foreground">Resources</h3>
+                                  <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.resources")}</h3>
                                 </div>
                                 <div className="flex gap-2">
                                   <Button
@@ -2051,12 +2088,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     {showNotes ? (
                                       <>
                                         <ChevronUp className="h-3 w-3 mr-1" />
-                                        Hide Notes
+                                        {t("vmLxc.hideNotes")}
                                       </>
                                     ) : (
                                       <>
                                         <ChevronDown className="h-3 w-3 mr-1" />
-                                        Notes
+                                        {t("vmLxc.notes")}
                                       </>
                                     )}
                                   </Button>
@@ -2069,12 +2106,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     {showAdditionalInfo ? (
                                       <>
                                         <ChevronUp className="h-3 w-3 mr-1" />
-                                        Less Info
+                                        {t("vmLxc.lessInfo")}
                                       </>
                                     ) : (
                                       <>
                                         <ChevronDown className="h-3 w-3 mr-1" />
-                                        + Info
+                                        + {t("vmLxc.info")}
                                       </>
                                     )}
                                   </Button>
@@ -2086,7 +2123,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   <div>
                                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
                                       <Cpu className="h-3.5 w-3.5" />
-                                      <span>CPU Cores</span>
+                                      <span>{t("vmLxc.cpuCores")}</span>
                                     </div>
                                     <div className="font-semibold text-blue-500">{vmDetails.config.cores}</div>
                                   </div>
@@ -2095,7 +2132,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   <div>
                                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
                                       <MemoryStick className="h-3.5 w-3.5" />
-                                      <span>Memory</span>
+                                      <span>{t("vmLxc.memory")}</span>
                                     </div>
                                     <div className="font-semibold text-blue-500">{vmDetails.config.memory} MB</div>
                                   </div>
@@ -2104,7 +2141,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   <div>
                                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
                                       <RotateCcw className="h-3.5 w-3.5" />
-                                      <span>Swap</span>
+                                      <span>{t("vmLxc.details.swap")}</span>
                                     </div>
                                     <div className="font-semibold text-foreground">{vmDetails.config.swap} MB</div>
                                   </div>
@@ -2116,7 +2153,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 <div className="mt-4 lg:mt-6 pt-4 lg:pt-6 border-t border-border">
                                   <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
                                     <Network className="h-4 w-4" />
-                                    IP Addresses
+                                    {t("vmLxc.ipAddresses")}
                                   </h4>
                                   <div className="flex flex-wrap gap-2">
                                     {vmDetails.lxc_ip_info.real_ips.map((ip, index) => (
@@ -2134,7 +2171,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         variant="outline"
                                         className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
                                       >
-                                        {ip} (Bridge)
+                                        {ip} ({t("vmLxc.details.bridge")})
                                       </Badge>
                                     ))}
                                   </div>
@@ -2145,7 +2182,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 <div className="mt-6 pt-6 border-t border-border">
                                   <div className="flex items-center justify-between mb-3">
                                     <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                                      Notes
+                                      {t("vmLxc.notes")}
                                     </h4>
                                     {!isEditingNotes && (
                                       <Button
@@ -2154,7 +2191,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         onClick={handleEditNotes}
                                         className="text-xs bg-transparent"
                                       >
-                                        Edit
+                                        {t("vmLxc.editNotes")}
                                       </Button>
                                     )}
                                   </div>
@@ -2165,7 +2202,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           value={editedNotes}
                                           onChange={(e) => setEditedNotes(e.target.value)}
                                           className="w-full min-h-[200px] p-3 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                                          placeholder="Enter notes here..."
+                                          placeholder={t("vmLxc.enterNotes")}
                                         />
                                         <div className="flex gap-2 justify-end">
                                           <Button
@@ -2174,7 +2211,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             onClick={handleCancelEditNotes}
                                             disabled={savingNotes}
                                           >
-                                            Cancel
+                                            {t("actions.cancel")}
                                           </Button>
                                           <Button
                                             size="sm"
@@ -2182,7 +2219,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             disabled={savingNotes}
                                             className="bg-blue-600 hover:bg-blue-700 text-white"
                                           >
-                                            {savingNotes ? "Saving..." : "Save"}
+                                            {savingNotes ? t("vmLxc.savingNotes") : t("actions.save")}
                                           </Button>
                                         </div>
                                       </div>
@@ -2209,7 +2246,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           } catch {
                                             return (
                                               <div className="text-sm text-red-500">
-                                                Error decoding notes. Please edit to fix.
+                                                {t("vmLxc.notesDecodeError")}
                                               </div>
                                             )
                                           }
@@ -2283,7 +2320,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       </>
                                     ) : (
                                       <div className="text-sm text-muted-foreground italic">
-                                        No notes yet. Click Edit to add notes.
+                                        {t("vmLxc.noNotes")}
                                       </div>
                                     )}
                                   </div>
@@ -2296,7 +2333,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     <div>
                                       <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
                                         <Container className="h-4 w-4" />
-                                        Container Configuration
+                                        {t("vmLxc.containerConfiguration")}
                                       </h4>
                                       <div className="space-y-4">
                                         {/* Privileged Status */}
@@ -2305,7 +2342,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             <div>
                                               <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
                                                 <Shield className="h-3.5 w-3.5" />
-                                                <span>Privilege Level</span>
+                                                <span>{t("vmLxc.details.privilegeLevel")}</span>
                                               </div>
                                               <Badge
                                                 variant="outline"
@@ -2315,7 +2352,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                     : "bg-green-500/10 text-green-500 border-green-500/20"
                                                 }
                                               >
-                                                {vmDetails.hardware_info.privileged ? "Privileged" : "Unprivileged"}
+                                                {vmDetails.hardware_info.privileged ? t("vmLxc.details.privileged") : t("vmLxc.details.unprivileged")}
                                               </Badge>
                                             </div>
                                           )}
@@ -2326,7 +2363,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             <div>
                                               <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
                                                 <Cpu className="h-3.5 w-3.5" />
-                                                <span>GPU Passthrough</span>
+                                                <span>{t("vmLxc.details.gpuPassthrough")}</span>
                                               </div>
                                               <div className="flex flex-wrap gap-2">
                                                 {vmDetails.hardware_info.gpu_passthrough.map((gpu, index) => (
@@ -2352,7 +2389,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             <div>
                                               <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
                                                 <Server className="h-3.5 w-3.5" />
-                                                <span>Hardware Devices</span>
+                                                <span>{t("vmLxc.details.hardwareDevices")}</span>
                                               </div>
                                               <div className="flex flex-wrap gap-2">
                                                 {vmDetails.hardware_info.devices.map((device, index) => (
@@ -2375,18 +2412,18 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   <div>
                                     <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
                                       <Settings2 className="h-4 w-4" />
-                                      Hardware
+                                      {t("vmLxc.details.hardware")}
                                     </h4>
                                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                                       {vmDetails.config.sockets && (
                                         <div>
-                                          <div className="text-xs text-muted-foreground mb-1">CPU Sockets</div>
+                                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.details.cpuSockets")}</div>
                                           <div className="font-medium text-foreground">{vmDetails.config.sockets}</div>
                                         </div>
                                       )}
                                       {vmDetails.config.cpu && (
                                         <div className="col-span-2">
-                                          <div className="text-xs text-muted-foreground mb-1">CPU Type</div>
+                                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.details.cpuType")}</div>
                                           <div className="font-medium text-foreground text-sm font-mono">
                                             {vmDetails.config.cpu}
                                           </div>
@@ -2394,7 +2431,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       )}
                                       {vmDetails.config.numa !== undefined && (
                                         <div>
-                                          <div className="text-xs text-muted-foreground mb-1">NUMA</div>
+                                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.details.numa")}</div>
                                           <Badge
                                             variant="outline"
                                             className={
@@ -2403,31 +2440,31 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                 : "bg-gray-500/10 text-gray-500 border-gray-500/20"
                                             }
                                           >
-                                            {vmDetails.config.numa ? "Enabled" : "Disabled"}
+                                            {vmDetails.config.numa ? t("vmLxc.details.enabled") : t("vmLxc.details.disabled")}
                                           </Badge>
                                         </div>
                                       )}
                                       {vmDetails.config.bios && (
                                         <div>
-                                          <div className="text-xs text-muted-foreground mb-1">BIOS</div>
+                                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.details.bios")}</div>
                                           <div className="font-medium text-foreground">{vmDetails.config.bios}</div>
                                         </div>
                                       )}
                                       {vmDetails.config.machine && (
                                         <div>
-                                          <div className="text-xs text-muted-foreground mb-1">Machine Type</div>
+                                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.details.machineType")}</div>
                                           <div className="font-medium text-foreground">{vmDetails.config.machine}</div>
                                         </div>
                                       )}
                                       {vmDetails.config.vga && (
                                         <div>
-                                          <div className="text-xs text-muted-foreground mb-1">VGA</div>
+                                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.details.vga")}</div>
                                           <div className="font-medium text-foreground">{vmDetails.config.vga}</div>
                                         </div>
                                       )}
                                       {vmDetails.config.agent !== undefined && (
                                         <div>
-                                          <div className="text-xs text-muted-foreground mb-1">QEMU Agent</div>
+                                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.details.qemuAgent")}</div>
                                           <Badge
                                             variant="outline"
                                             className={
@@ -2436,13 +2473,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                 : "bg-gray-500/10 text-gray-500 border-gray-500/20"
                                             }
                                           >
-                                            {vmDetails.config.agent ? "Enabled" : "Disabled"}
+                                            {vmDetails.config.agent ? t("vmLxc.details.enabled") : t("vmLxc.details.disabled")}
                                           </Badge>
                                         </div>
                                       )}
                                       {vmDetails.config.tablet !== undefined && (
                                         <div>
-                                          <div className="text-xs text-muted-foreground mb-1">Tablet Pointer</div>
+                                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.details.tabletPointer")}</div>
                                           <Badge
                                             variant="outline"
                                             className={
@@ -2451,13 +2488,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                 : "bg-gray-500/10 text-gray-500 border-gray-500/20"
                                             }
                                           >
-                                            {vmDetails.config.tablet ? "Enabled" : "Disabled"}
+                                            {vmDetails.config.tablet ? t("vmLxc.details.enabled") : t("vmLxc.details.disabled")}
                                           </Badge>
                                         </div>
                                       )}
                                       {vmDetails.config.localtime !== undefined && (
                                         <div>
-                                          <div className="text-xs text-muted-foreground mb-1">Local Time</div>
+                                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.details.localTime")}</div>
                                           <Badge
                                             variant="outline"
                                             className={
@@ -2466,7 +2503,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                 : "bg-gray-500/10 text-gray-500 border-gray-500/20"
                                             }
                                           >
-                                            {vmDetails.config.localtime ? "Enabled" : "Disabled"}
+                                            {vmDetails.config.localtime ? t("vmLxc.details.enabled") : t("vmLxc.details.disabled")}
                                           </Badge>
                                         </div>
                                       )}
@@ -2550,24 +2587,24 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             )}
                                           </div>
                                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
-                                            {d.volume && <DField label="Volume" value={d.volume} mono />}
-                                            {d.path && <DField label="Path" value={d.path} mono className="break-all" />}
-                                            {d.options.ssd === "1" && <DField label="Media" value="SSD" />}
-                                            {d.options.discard && <DField label="Discard" value={d.options.discard} />}
-                                            {d.options.iothread === "1" && <DField label="IOThread" value="on" />}
-                                            {d.options.cache && <DField label="Cache" value={d.options.cache} />}
+                                            {d.volume && <DField label={t("vmLxc.details.volume")} value={d.volume} mono />}
+                                            {d.path && <DField label={t("vmLxc.details.path")} value={d.path} mono className="break-all" />}
+                                            {d.options.ssd === "1" && <DField label={t("vmLxc.details.media")} value="SSD" />}
+                                            {d.options.discard && <DField label={t("vmLxc.details.discard")} value={d.options.discard} />}
+                                            {d.options.iothread === "1" && <DField label="IOThread" value={t("vmLxc.details.on")} />}
+                                            {d.options.cache && <DField label={t("vmLxc.details.cache")} value={d.options.cache} />}
                                             {d.options.aio && <DField label="AIO" value={d.options.aio} />}
-                                            {d.options.backup === "0" && <DField label="Backup" value="excluded" className="text-red-500" />}
-                                            {d.options.backup === "1" && <DField label="Backup" value="included" />}
-                                            {d.options.replicate === "0" && <DField label="Replicate" value="off" />}
-                                            {d.options.efitype && <DField label="EFI type" value={d.options.efitype} />}
-                                            {d.options.pre_enrolled_keys && <DField label="Pre-enrolled keys" value={d.options.pre_enrolled_keys} />}
-                                            {d.options.serial && <DField label="Serial" value={d.options.serial} mono />}
-                                            {d.options.mp && <DField label="Mount point" value={d.options.mp} mono />}
+                                            {d.options.backup === "0" && <DField label={t("vmLxc.details.backup")} value={t("vmLxc.details.excluded")} className="text-red-500" />}
+                                            {d.options.backup === "1" && <DField label={t("vmLxc.details.backup")} value={t("vmLxc.details.included")} />}
+                                            {d.options.replicate === "0" && <DField label={t("vmLxc.details.replicate")} value={t("vmLxc.details.off")} />}
+                                            {d.options.efitype && <DField label={t("vmLxc.details.efiType")} value={d.options.efitype} />}
+                                            {d.options.pre_enrolled_keys && <DField label={t("vmLxc.details.preEnrolledKeys")} value={d.options.pre_enrolled_keys} />}
+                                            {d.options.serial && <DField label={t("vmLxc.details.serial")} value={d.options.serial} mono />}
+                                            {d.options.mp && <DField label={t("vmLxc.details.mountPoint")} value={d.options.mp} mono />}
                                             {d.options.acl && <DField label="ACL" value={d.options.acl} />}
                                           </div>
                                           <details className="text-xs">
-                                            <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Raw config</summary>
+                                            <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{t("vmLxc.details.rawConfig")}</summary>
                                             <div className="mt-1 font-mono text-foreground break-all bg-background/50 p-2 rounded">
                                               {raw}
                                             </div>
@@ -2579,16 +2616,16 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       <div>
                                         <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
                                           <HardDrive className="h-4 w-4" />
-                                          Storage
+                                          {t("vmLxc.details.storage")}
                                         </h4>
                                         <div className="space-y-3">
                                           {vmDetails.config.scsihw && (
                                             <div className="flex items-center gap-2 text-sm">
-                                              <span className="text-xs uppercase tracking-wide text-muted-foreground">SCSI controller:</span>
+                                              <span className="text-xs uppercase tracking-wide text-muted-foreground">{t("vmLxc.details.scsiController")}:</span>
                                               <span className="font-mono text-foreground">{vmDetails.config.scsihw}</span>
                                             </div>
                                           )}
-                                          {vmDetails.config.rootfs && renderDisk("Root Filesystem", vmDetails.config.rootfs as string, "rootfs")}
+                                          {vmDetails.config.rootfs && renderDisk(t("vmLxc.details.rootFilesystem"), vmDetails.config.rootfs as string, "rootfs")}
                                           {Object.keys(vmDetails.config)
                                             .filter((key) => key.match(/^(scsi|sata|ide|virtio)\d+$/))
                                             .sort()
@@ -2597,13 +2634,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                               vmDetails.config[diskKey] as string,
                                               `disk-${selectedVM.vmid}-${diskKey}`,
                                             ))}
-                                          {vmDetails.config.efidisk0 && renderDisk("EFI Disk", vmDetails.config.efidisk0 as string, "efidisk0")}
-                                          {vmDetails.config.tpmstate0 && renderDisk("TPM State", vmDetails.config.tpmstate0 as string, "tpmstate0")}
+                                          {vmDetails.config.efidisk0 && renderDisk(t("vmLxc.details.efiDisk"), vmDetails.config.efidisk0 as string, "efidisk0")}
+                                          {vmDetails.config.tpmstate0 && renderDisk(t("vmLxc.details.tpmState"), vmDetails.config.tpmstate0 as string, "tpmstate0")}
                                           {Object.keys(vmDetails.config)
                                             .filter((key) => key.match(/^mp\d+$/))
                                             .sort()
                                             .map((mpKey) => renderDisk(
-                                              `Mount Point ${mpKey.replace("mp", "")}`,
+                                              t("vmLxc.details.mountPointIndexed", { index: mpKey.replace("mp", "") }),
                                               vmDetails.config[mpKey] as string,
                                               `mp-${selectedVM.vmid}-${mpKey}`,
                                             ))}
@@ -2616,7 +2653,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   <div>
                                     <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
                                       <Network className="h-4 w-4" />
-                                      Network
+                                      {t("vmLxc.details.network")}
                                     </h4>
                                     <div className="space-y-3">
                                       {/* Network Interfaces with proper keys.
@@ -2664,7 +2701,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                               <div className="flex items-center gap-2 flex-wrap">
                                                 <EthernetPort className="h-4 w-4 text-green-500 flex-shrink-0" />
                                                 <span className="text-sm font-semibold text-foreground">
-                                                  Network Interface {idx}
+                                                  {t("vmLxc.details.networkInterface", { index: idx })}
                                                 </span>
                                                 {parsed.name && (
                                                   <span className="text-xs text-muted-foreground font-mono">
@@ -2672,26 +2709,26 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                   </span>
                                                 )}
                                                 <span className="text-xs text-orange-500 font-mono">
-                                                  host: {hostIface}
+                                                  {t("vmLxc.details.hostInterface", { interface: hostIface })}
                                                 </span>
                                               </div>
                                               <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
-                                                {parsed.bridge && <Field label="Bridge" value={parsed.bridge} mono />}
+                                                {parsed.bridge && <Field label={t("vmLxc.details.bridge")} value={parsed.bridge} mono />}
                                                 {parsed.ip && <Field label="IP" value={parsed.ip} mono />}
                                                 {parsed.ip6 && <Field label="IPv6" value={parsed.ip6} mono />}
-                                                {parsed.gw && <Field label="Gateway" value={parsed.gw} mono />}
-                                                {parsed.gw6 && <Field label="Gateway v6" value={parsed.gw6} mono />}
+                                                {parsed.gw && <Field label={t("vmLxc.details.gateway")} value={parsed.gw} mono />}
+                                                {parsed.gw6 && <Field label={t("vmLxc.details.gatewayV6")} value={parsed.gw6} mono />}
                                                 {parsed.hwaddr && <Field label="MAC" value={parsed.hwaddr.toUpperCase()} mono />}
                                                 {parsed.virtio && <Field label="MAC" value={parsed.virtio.toUpperCase()} mono />}
                                                 {parsed.e1000 && <Field label="MAC" value={parsed.e1000.toUpperCase()} mono />}
-                                                {parsed.type && <Field label="Type" value={parsed.type} mono />}
+                                                {parsed.type && <Field label={t("vmLxc.details.type")} value={parsed.type} mono />}
                                                 {parsed.tag && <Field label="VLAN" value={parsed.tag} mono />}
                                                 {parsed.mtu && <Field label="MTU" value={parsed.mtu} mono />}
-                                                {parsed.rate && <Field label="Rate limit" value={`${parsed.rate} MB/s`} mono />}
-                                                {parsed.firewall === "1" && <Field label="Firewall" value="enabled" />}
+                                                {parsed.rate && <Field label={t("vmLxc.details.rateLimit")} value={`${parsed.rate} MB/s`} mono />}
+                                                {parsed.firewall === "1" && <Field label={t("vmLxc.details.firewall")} value={t("vmLxc.details.enabled")} />}
                                               </div>
                                               <details className="text-xs">
-                                                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Raw config</summary>
+                                                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{t("vmLxc.details.rawConfig")}</summary>
                                                 <div className="mt-1 font-mono text-green-500 break-all bg-background/50 p-2 rounded">
                                                   {raw}
                                                 </div>
@@ -2702,7 +2739,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                                         {vmDetails.config.nameserver && (
                                           <div>
-                                            <div className="text-xs text-muted-foreground mb-1">DNS Nameserver</div>
+                                            <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.details.dnsNameserver")}</div>
                                             <div className="font-medium text-foreground font-mono">
                                               {vmDetails.config.nameserver}
                                             </div>
@@ -2710,7 +2747,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         )}
                                         {vmDetails.config.searchdomain && (
                                           <div>
-                                            <div className="text-xs text-muted-foreground mb-1">Search Domain</div>
+                                            <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.details.searchDomain")}</div>
                                             <div className="font-medium text-foreground">
                                               {vmDetails.config.searchdomain}
                                             </div>
@@ -2718,7 +2755,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         )}
                                         {vmDetails.config.hostname && (
                                           <div>
-                                            <div className="text-xs text-muted-foreground mb-1">Hostname</div>
+                                            <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.details.hostname")}</div>
                                             <div className="font-medium text-foreground">
                                               {vmDetails.config.hostname}
                                             </div>
@@ -2733,7 +2770,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     <div>
                                       <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
                                         <Cpu className="h-4 w-4" />
-                                        PCI Passthrough
+                                        {t("vmLxc.details.pciPassthrough")}
                                       </h4>
                                       <div className="space-y-3">
                                         {Object.keys(vmDetails.config)
@@ -2757,7 +2794,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     <div>
                                       <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
                                         <Server className="h-4 w-4" />
-                                        USB Devices
+                                        {t("vmLxc.details.usbDevices")}
                                       </h4>
                                       <div className="space-y-3">
                                         {Object.keys(vmDetails.config)
@@ -2781,7 +2818,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     <div>
                                       <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
                                         <Terminal className="h-4 w-4" />
-                                        Serial Ports
+                                        {t("vmLxc.details.serialPorts")}
                                       </h4>
                                       <div className="space-y-3">
                                         {Object.keys(vmDetails.config)
@@ -2826,22 +2863,22 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 <Package className="h-4 w-4 text-violet-400" />
                               </div>
                               <h3 className="text-sm font-semibold text-foreground">
-                                Pending package updates
+                                {t("vmLxc.updatesPanel.pendingTitle")}
                               </h3>
                             </div>
                             <Badge
                               variant="outline"
                               className="text-xs bg-violet-500/10 text-violet-400 border-violet-500/30"
                             >
-                              {selectedVM.update_check.count} total
+                              {t("vmLxc.updatesPanel.total", { count: selectedVM.update_check.count })}
                             </Badge>
                           </div>
                           <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
-                            Last checked:{" "}
+                            {t("vmLxc.updatesPanel.lastChecked")}{" "}
                             {selectedVM.update_check.last_check
                               ? new Date(selectedVM.update_check.last_check).toLocaleString()
                               : "—"}
-                            {" · "}Apply with{" "}
+                            {" · "}{t("vmLxc.updatesPanel.applyWith")}{" "}
                             <code className="text-foreground/80">pct enter {selectedVM.vmid}</code>
                             {" → "}
                             <code className="text-foreground/80">apt update &amp;&amp; apt upgrade</code>
@@ -2872,7 +2909,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         {p.security && (
                                           <Shield
                                             className="h-4 w-4 text-green-500 flex-shrink-0"
-                                            aria-label="Security update"
+                                            aria-label={t("vmLxc.updatesPanel.securityUpdate")}
                                           />
                                         )}
                                         <span className="truncate">{p.name}</span>
@@ -2893,21 +2930,19 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 <div className="flex items-center gap-2">
                                   <Package className="h-4 w-4 text-violet-400 flex-shrink-0" />
                                   <span>
-                                    <span className="font-semibold">{total}</span> package
-                                    {total === 1 ? "" : "s"} pending
+                                    {t(total === 1 ? "vmLxc.updatesPanel.packagePending" : "vmLxc.updatesPanel.packagesPending", { count: total })}
                                   </span>
                                 </div>
                                 {sec > 0 && (
                                   <div className="flex items-center gap-2">
                                     <Shield className="h-4 w-4 text-green-500 flex-shrink-0" />
                                     <span>
-                                      <span className="font-semibold">{sec}</span> security update
-                                      {sec === 1 ? "" : "s"}
+                                      {t(sec === 1 ? "vmLxc.updatesPanel.securityUpdatePending" : "vmLxc.updatesPanel.securityUpdatesPending", { count: sec })}
                                     </span>
                                   </div>
                                 )}
                                 <div className="text-xs text-muted-foreground pt-1 leading-relaxed">
-                                  Full list available inside the container:{" "}
+                                  {t("vmLxc.updatesPanel.fullListInside")}{" "}
                                   <code className="text-foreground/80">
                                     pct enter {selectedVM.vmid}
                                   </code>{" "}
@@ -2933,7 +2968,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     {loadingMounts ? (
                       <div className="flex items-center justify-center py-12 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                        Loading mount points…
+                        {t("vmLxc.updatesPanel.loadingMountPoints")}
                       </div>
                     ) : (
                       <>
@@ -2943,7 +2978,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         {adHocMounts.length > 0 && (
                           <>
                             <div className="text-sm font-semibold text-muted-foreground pt-2 border-t border-border">
-                              Mounted from inside the container
+                              {t("vmLxc.mountedFromContainer")}
                             </div>
                             {adHocMounts.map((mp) => (
                               <MountPointCard key={`adhoc-${mp.target}`} mp={mp} />
@@ -2965,7 +3000,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             <div className="p-1.5 rounded-md bg-amber-500/10">
                               <Archive className="h-4 w-4 text-amber-500" />
                             </div>
-                            <h3 className="text-sm font-semibold text-foreground">Backups</h3>
+                            <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.backups.title")}</h3>
                           </div>
                           <Button 
                             size="sm"
@@ -2978,7 +3013,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             ) : (
                               <Plus className="h-3 w-3" />
                             )}
-                            <span>Create Backup</span>
+                            <span>{t("vmLxc.backups.create")}</span>
                           </Button>
                         </div>
                         
@@ -2987,20 +3022,20 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         
                         {/* Backup List */}
                         <div className="flex items-center justify-between mb-3">
-                          <span className="text-xs text-muted-foreground">Available backups</span>
+                          <span className="text-xs text-muted-foreground">{t("vmLxc.backups.available")}</span>
                           <Badge variant="secondary" className="text-xs h-5">{vmBackups.length}</Badge>
                         </div>
                         
                         {loadingBackups ? (
                           <div className="flex items-center justify-center py-6 text-muted-foreground">
                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            <span className="text-sm">Loading backups...</span>
+                            <span className="text-sm">{t("vmLxc.backups.loading")}</span>
                           </div>
                         ) : vmBackups.length === 0 ? (
                           <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                             <Archive className="h-12 w-12 mb-3 opacity-30" />
-                            <span className="text-sm">No backups found</span>
-                            <span className="text-xs mt-1">Create your first backup using the button above</span>
+                            <span className="text-sm">{t("vmLxc.backups.empty")}</span>
+                            <span className="text-xs mt-1">{t("vmLxc.backups.emptyHint")}</span>
                           </div>
                         ) : (
                           <div className="space-y-2">
@@ -3045,10 +3080,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             <div className="p-1.5 rounded-md bg-orange-500/10">
                               <Shield className="h-4 w-4 text-orange-500" />
                             </div>
-                            <h3 className="text-sm font-semibold text-foreground">Firewall Logs</h3>
-                            {firewallEnabled && firewallLogs.length > 0 && (
+                            <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.firewall.title")}</h3>
+                            {firewallEnabled && displayedFirewallLogs.length > 0 && (
                               <Badge variant="secondary" className="text-xs h-5 ml-1">
-                                {firewallLogs.length}
+                                {displayedFirewallLogs.length}
                               </Badge>
                             )}
                           </div>
@@ -3064,7 +3099,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             ) : (
                               <RefreshCw className="h-3 w-3" />
                             )}
-                            <span>Refresh</span>
+                            <span>{t("vmLxc.firewall.refresh")}</span>
                           </Button>
                         </div>
 
@@ -3073,7 +3108,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         {loadingFirewallLog ? (
                           <div className="flex items-center justify-center py-6 text-muted-foreground">
                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            <span className="text-sm">Loading firewall log…</span>
+                            <span className="text-sm">{t("vmLxc.firewall.loading")}</span>
                           </div>
                         ) : !firewallEnabled ? (
                           <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
@@ -3081,15 +3116,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               <Shield className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                               <div className="space-y-2">
                                 <p className="font-medium text-amber-500">
-                                  Firewall is not enabled for this {selectedVM?.type === "lxc" ? "container" : "VM"}
+                                  {t("vmLxc.firewall.disabledTitle", {
+                                    type: selectedVM?.type === "lxc" ? t("vmLxc.guestTypes.container") : t("vmLxc.guestTypes.vm"),
+                                  })}
                                 </p>
                                 <p className="text-xs text-muted-foreground leading-relaxed">
-                                  Enable it in the Proxmox UI under{" "}
-                                  <strong>
-                                    {selectedVM?.type === "lxc" ? "Container" : "VM"} → Firewall → Options
-                                  </strong>{" "}
-                                  and add at least one rule with <code>log: info</code> (or higher) so packets start
-                                  being recorded. New entries will appear here automatically on the next refresh.
+                                  {t("vmLxc.firewall.disabledHint", {
+                                    type: selectedVM?.type === "lxc" ? t("vmLxc.guestTypes.containerUi") : t("vmLxc.guestTypes.vm"),
+                                  })}
                                 </p>
                               </div>
                             </div>
@@ -3099,22 +3133,22 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             <div className="flex items-start gap-2">
                               <Shield className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
                               <div>
-                                <p className="font-medium text-red-500 mb-1">Failed to read firewall log</p>
+                                <p className="font-medium text-red-500 mb-1">{t("vmLxc.firewall.readFailed")}</p>
                                 <p className="text-xs text-muted-foreground break-all">{firewallLogError}</p>
                               </div>
                             </div>
                           </div>
-                        ) : firewallLogs.length === 0 ? (
+                        ) : displayedFirewallLogs.length === 0 ? (
                           <div className="text-center py-6 text-sm text-muted-foreground">
-                            No firewall events recorded yet.
+                            {t("vmLxc.firewall.empty")}
                             <div className="text-xs mt-1">
-                              Rules with <code>log: info</code> (or higher) will populate this view as packets arrive.
+                              {t("vmLxc.firewall.emptyHint")}
                             </div>
                           </div>
                         ) : (
                           <div className="rounded-md border border-border bg-background/50 max-h-[480px] overflow-y-auto">
                             <pre className="text-[11px] font-mono leading-snug whitespace-pre-wrap break-all p-3">
-                              {firewallLogs.map((entry, idx) => {
+                              {displayedFirewallLogs.map((entry, idx) => {
                                 const text = entry.t || ""
                                 // Light colour-coding by the action keyword
                                 // PVE emits in the line itself — purely
@@ -3148,7 +3182,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                       onClick={() => selectedVM && openLxcTerminal(selectedVM.vmid, selectedVM.name)}
                     >
                       <Terminal className="h-4 w-4 mr-2" />
-                      Open Terminal
+                      {t("vmLxc.openTerminal")}
                     </Button>
                   </div>
                 )}
@@ -3159,7 +3193,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "start")}
                   >
                     <Play className="h-4 w-4 mr-2" />
-                    Start
+                    {t("vmLxc.actions.start")}
                   </Button>
                   <Button
                     className="w-full bg-blue-600/20 border border-blue-600/50 text-blue-400 hover:bg-blue-600/30"
@@ -3167,7 +3201,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "shutdown")}
                   >
                     <Power className="h-4 w-4 mr-2" />
-                    Shutdown
+                    {t("vmLxc.actions.shutdown")}
                   </Button>
                   <Button
                     className="w-full bg-blue-600/20 border border-blue-600/50 text-blue-400 hover:bg-blue-600/30"
@@ -3179,7 +3213,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     })}
                   >
                     <RotateCcw className="h-4 w-4 mr-2" />
-                    Reboot
+                    {t("vmLxc.actions.reboot")}
                   </Button>
                   <Button
                     className="w-full bg-red-600/20 border border-red-600/50 text-red-400 hover:bg-red-600/30"
@@ -3191,7 +3225,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     })}
                   >
                     <StopCircle className="h-4 w-4 mr-2" />
-                    Force Stop
+                    {t("vmLxc.actions.forceStop")}
                   </Button>
                 </div>
               </div>
@@ -3223,18 +3257,18 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-500">
               <StopCircle className="h-5 w-5" />
-              {confirmDestructive?.action === "stop" ? "Force Stop" : "Reboot"}{" "}
+              {confirmDestructive?.action === "stop" ? t("vmLxc.confirm.forceStopTitle") : t("vmLxc.confirm.rebootTitle")}{" "}
               VMID {confirmDestructive?.vmid}
             </DialogTitle>
             <DialogDescription>
               {confirmDestructive?.action === "stop"
-                ? "This skips the guest OS shutdown sequence and can corrupt running databases or filesystems. The guest is killed immediately."
-                : "This forces a reboot without waiting for the guest OS to flush pending writes. Use a graceful Shutdown when possible."}
+                ? t("vmLxc.confirm.forceStopDescription")
+                : t("vmLxc.confirm.rebootDescription")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <p className="text-sm">
-              Type <span className="font-mono font-bold">{confirmDestructive?.vmid}</span> to confirm:
+              {t("vmLxc.confirm.typeToConfirm", { vmid: confirmDestructive?.vmid ?? "" })}
             </p>
             <input
               type="text"
@@ -3247,7 +3281,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-500"
             />
             <p className="text-xs text-muted-foreground">
-              Guest: <span className="font-medium">{confirmDestructive?.vmName}</span>
+              {t("vmLxc.confirm.guest")} <span className="font-medium">{confirmDestructive?.vmName}</span>
             </p>
           </div>
           <DialogFooter className="gap-2">
@@ -3259,7 +3293,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               }}
               disabled={controlLoading}
             >
-              Cancel
+              {t("actions.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -3277,10 +3311,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               }}
             >
               {controlLoading
-                ? "Working..."
+                ? t("vmLxc.actions.working")
                 : confirmDestructive?.action === "stop"
-                ? "Force Stop"
-                : "Reboot"}
+                ? t("vmLxc.actions.forceStop")
+                : t("vmLxc.actions.reboot")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -3292,10 +3326,18 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-500">
               <Archive className="h-5 w-5" />
-              Backup {selectedVM?.type?.toUpperCase()} {selectedVM?.vmid} ({selectedVM?.name})
+              {t("vmLxc.backupModal.title", {
+                type: selectedVM?.type?.toUpperCase() ?? "",
+                vmid: selectedVM?.vmid ?? "",
+                name: selectedVM?.name ?? "",
+              })}
             </DialogTitle>
             <DialogDescription>
-              Configure backup options for this {selectedVM?.type === 'lxc' ? 'container' : 'virtual machine'}
+              {t("vmLxc.backupModal.description", {
+                type: selectedVM?.type === "lxc"
+                  ? t("vmLxc.backupModal.typeContainer")
+                  : t("vmLxc.backupModal.typeVirtualMachine"),
+              })}
             </DialogDescription>
           </DialogHeader>
           
@@ -3305,16 +3347,16 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               <div className="space-y-2">
                 <Label className="text-sm flex items-center gap-1.5">
                   <Database className="h-3.5 w-3.5" />
-                  Storage
+                  {t("vmLxc.backupModal.storage")}
                 </Label>
                 <Select value={selectedBackupStorage} onValueChange={setSelectedBackupStorage}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select storage" />
+                    <SelectValue placeholder={t("vmLxc.backupModal.selectStorage")} />
                   </SelectTrigger>
                   <SelectContent>
                     {backupStorages.map((storage) => (
                       <SelectItem key={`modal-storage-${storage.storage}`} value={storage.storage}>
-                        {storage.storage} ({storage.avail_human} free)
+                        {storage.storage} ({storage.avail_human} {t("vmLxc.backupModal.free")})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -3324,16 +3366,16 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               <div className="space-y-2">
                 <Label className="text-sm flex items-center gap-1.5">
                   <Settings2 className="h-3.5 w-3.5" />
-                  Mode
+                  {t("vmLxc.backupModal.mode")}
                 </Label>
                 <Select value={backupMode} onValueChange={setBackupMode}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="snapshot">Snapshot</SelectItem>
-                    <SelectItem value="suspend">Suspend</SelectItem>
-                    <SelectItem value="stop">Stop</SelectItem>
+                    <SelectItem value="snapshot">{t("vmLxc.backupModal.modes.snapshot")}</SelectItem>
+                    <SelectItem value="suspend">{t("vmLxc.backupModal.modes.suspend")}</SelectItem>
+                    <SelectItem value="stop">{t("vmLxc.backupModal.modes.stop")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -3341,19 +3383,19 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
             
             {/* Notification Row */}
             <div className="space-y-2">
-              <Label className="text-sm flex items-center gap-1.5">
-                <Bell className="h-3.5 w-3.5" />
-                Notification
-              </Label>
+                <Label className="text-sm flex items-center gap-1.5">
+                  <Bell className="h-3.5 w-3.5" />
+                  {t("vmLxc.backupModal.notification")}
+                </Label>
               <Select value={backupNotification} onValueChange={setBackupNotification}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="auto">Use global settings</SelectItem>
-                  <SelectItem value="always">Always notify</SelectItem>
-                  <SelectItem value="failure">Notify on failure</SelectItem>
-                  <SelectItem value="never">Never notify</SelectItem>
+                  <SelectItem value="auto">{t("vmLxc.backupModal.useGlobalSettings")}</SelectItem>
+                  <SelectItem value="always">{t("vmLxc.backupModal.alwaysNotify")}</SelectItem>
+                  <SelectItem value="failure">{t("vmLxc.backupModal.notifyOnFailure")}</SelectItem>
+                  <SelectItem value="never">{t("vmLxc.backupModal.neverNotify")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -3367,7 +3409,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               />
               <Label htmlFor="backup-protected" className="text-sm flex items-center gap-1.5 cursor-pointer">
                 <Shield className="h-3.5 w-3.5" />
-                Protected (prevent accidental deletion)
+                {t("vmLxc.backupModal.protected")}
               </Label>
             </div>
             
@@ -3376,17 +3418,17 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               <div className="space-y-2">
                 <Label className="text-sm flex items-center gap-1.5">
                   <Settings2 className="h-3.5 w-3.5" />
-                  PBS change detection mode
-                  <span className="text-xs text-muted-foreground ml-1">(for PBS storage)</span>
+                  {t("vmLxc.backupModal.pbsChangeMode")}
+                  <span className="text-xs text-muted-foreground ml-1">({t("vmLxc.backupModal.forPbsStorage")})</span>
                 </Label>
                 <Select value={backupPbsChangeMode} onValueChange={setBackupPbsChangeMode}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="default">Default</SelectItem>
-                    <SelectItem value="legacy">Legacy</SelectItem>
-                    <SelectItem value="data">Data</SelectItem>
+                    <SelectItem value="default">{t("vmLxc.backupModal.changeModes.default")}</SelectItem>
+                    <SelectItem value="legacy">{t("vmLxc.backupModal.changeModes.legacy")}</SelectItem>
+                    <SelectItem value="data">{t("vmLxc.backupModal.changeModes.data")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -3396,7 +3438,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
             <div className="space-y-2">
               <Label className="text-sm flex items-center gap-1.5">
                 <FileText className="h-3.5 w-3.5" />
-                Notes
+                {t("vmLxc.backupModal.notes")}
               </Label>
               <Textarea 
                 value={backupNotes}
@@ -3405,7 +3447,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 className="min-h-[80px] resize-none"
               />
               <p className="text-xs text-muted-foreground">
-                {'Variables: {{cluster}}, {{guestname}}, {{node}}, {{vmid}}'}
+                {t("vmLxc.backupModal.variables")}
               </p>
             </div>
           </div>
@@ -3416,7 +3458,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               onClick={() => setShowBackupModal(false)}
               className="flex-1 bg-zinc-800/50 border-zinc-700 text-zinc-300 hover:bg-zinc-700/50"
             >
-              Cancel
+              {t("actions.cancel")}
             </Button>
             <Button 
               onClick={handleCreateBackup}
@@ -3426,12 +3468,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               {creatingBackup ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Creating...
+                  {t("vmLxc.backupModal.creating")}
                 </>
               ) : (
                 <>
                   <Archive className="h-4 w-4 mr-2" />
-                  Backup
+                  {t("vmLxc.backupModal.submit")}
                 </>
               )}
             </Button>

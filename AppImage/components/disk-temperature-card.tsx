@@ -6,6 +6,7 @@ import { Badge } from "./ui/badge"
 import { AreaChart, Area, ResponsiveContainer, Tooltip, YAxis } from "recharts"
 import { fetchApi } from "@/lib/api-config"
 import { useDiskTempThresholds } from "@/lib/health-thresholds"
+import { useT } from "@/lib/i18n/provider"
 
 interface TempPoint {
   timestamp: number
@@ -24,11 +25,11 @@ interface DiskTemperatureCardProps {
 // Disk-temperature thresholds come from the user-configurable backend
 // (lib/health-thresholds.ts). The classifier here takes the resolved
 // pair so the consumer can read it from the hook once per render.
-function statusFor(temp: number, t: { warn: number; hot: number }) {
-  if (temp <= 0) return { label: "N/A", className: "bg-gray-500/10 text-gray-500 border-gray-500/20", color: "#6b7280" }
-  if (temp >= t.hot) return { label: "Hot", className: "bg-red-500/10 text-red-500 border-red-500/20", color: "#ef4444" }
-  if (temp >= t.warn) return { label: "Warm", className: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20", color: "#f59e0b" }
-  return { label: "Normal", className: "bg-green-500/10 text-green-500 border-green-500/20", color: "#22c55e" }
+function statusFor(temp: number, thresholds: { warn: number; hot: number }) {
+  if (temp <= 0) return { labelKey: "common.notAvailable", className: "bg-gray-500/10 text-gray-500 border-gray-500/20", color: "#6b7280" }
+  if (temp >= thresholds.hot) return { labelKey: "details.temperature.status.hot", className: "bg-red-500/10 text-red-500 border-red-500/20", color: "#ef4444" }
+  if (temp >= thresholds.warn) return { labelKey: "details.temperature.status.warm", className: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20", color: "#f59e0b" }
+  return { labelKey: "details.temperature.status.normal", className: "bg-green-500/10 text-green-500 border-green-500/20", color: "#22c55e" }
 }
 
 const MiniTooltip = ({ active, payload }: any) => {
@@ -55,6 +56,7 @@ export function DiskTemperatureCard({
   diskType,
   onOpenDetail,
 }: DiskTemperatureCardProps) {
+  const t = useT()
   const [data, setData] = useState<TempPoint[]>([])
   const [loading, setLoading] = useState(true)
   const cancelled = useRef(false)
@@ -98,7 +100,7 @@ export function DiskTemperatureCard({
   })()
   const status = statusFor(liveTemperature, dt)
   const lineColor = status.color
-  const tempDisplay = liveTemperature > 0 ? `${liveTemperature}°C` : "N/A"
+  const tempDisplay = liveTemperature > 0 ? `${liveTemperature}°C` : t("common.notAvailable")
   const samples = data.length
 
   const interactive = !!onOpenDetail
@@ -112,11 +114,11 @@ export function DiskTemperatureCard({
         "w-full text-left border border-white/10 rounded-lg p-3 bg-white/[0.02]",
         interactive ? "cursor-pointer hover:bg-white/[0.04] transition-colors focus:outline-none focus:ring-1 focus:ring-white/20" : "",
       ].join(" ")}
-      title={interactive ? "Open temperature history" : undefined}
+      title={interactive ? t("details.temperature.openHistory") : undefined}
     >
       <div className="flex items-start justify-between gap-3 mb-1.5">
         <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Temperature</p>
+          <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{t("details.temperature.diskTitle")}</p>
           <p className="text-xl font-bold leading-tight mt-0.5" style={{ color: lineColor }}>
             {tempDisplay}
           </p>
@@ -124,7 +126,7 @@ export function DiskTemperatureCard({
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
           <Thermometer className="h-3.5 w-3.5" style={{ color: lineColor }} />
           <Badge variant="outline" className={`${status.className} text-[10px] px-2 py-0`}>
-            {status.label}
+            {t(status.labelKey)}
           </Badge>
         </div>
       </div>
@@ -134,7 +136,7 @@ export function DiskTemperatureCard({
           <div className="h-full w-full animate-pulse bg-white/[0.03] rounded" />
         ) : samples < 2 ? (
           <div className="h-full flex items-center justify-center text-[10px] text-muted-foreground">
-            Collecting samples — chart populates after ~2 minutes
+            {t("details.temperature.collectingSamples")}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">

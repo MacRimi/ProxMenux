@@ -100,6 +100,8 @@ export function ProxmoxDashboard() {
   const [lastScrollY, setLastScrollY] = useState(0)
   const [showHealthModal, setShowHealthModal] = useState(false)
   const { showReleaseNotes, setShowReleaseNotes } = useVersionCheck()
+  const displayServerName = systemStatus.serverName === "Loading..." ? t("app.loading") : systemStatus.serverName
+  const displayUptime = systemStatus.uptime === "Loading..." ? t("app.loading") : systemStatus.uptime || t("app.notAvailable")
 
   // Category keys for health info count calculation
   const HEALTH_CATEGORY_KEYS = [
@@ -296,13 +298,13 @@ export function ProxmoxDashboard() {
     if (
       systemStatus.serverName &&
       systemStatus.serverName !== "Loading..." &&
-      systemStatus.serverName !== "Server Offline"
+      systemStatus.serverName !== t("app.serverOffline")
     ) {
       document.title = `${systemStatus.serverName} - ProxMenux Monitor`
     } else {
       document.title = "ProxMenux Monitor"
     }
-  }, [systemStatus.serverName])
+  }, [systemStatus.serverName, t])
 
   useEffect(() => {
     let hideTimeout: ReturnType<typeof setTimeout> | null = null
@@ -439,7 +441,7 @@ export function ProxmoxDashboard() {
                 <p className="text-xs md:text-sm text-muted-foreground">{t("app.description")}</p>
                 <div className="lg:hidden flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                   <Server className="h-3 w-3" />
-                  <span className="truncate">{t("status.node", { node: systemStatus.serverName })}</span>
+                  <span className="truncate">{t("status.node", { node: displayServerName })}</span>
                 </div>
               </div>
             </div>
@@ -449,7 +451,7 @@ export function ProxmoxDashboard() {
               <div className="flex items-center space-x-2">
                 <Server className="h-4 w-4 text-muted-foreground" />
                 <div className="text-sm">
-                  <div className="font-medium text-foreground">{t("status.node", { node: systemStatus.serverName })}</div>
+                  <div className="font-medium text-foreground">{t("status.node", { node: displayServerName })}</div>
                 </div>
               </div>
 
@@ -467,7 +469,7 @@ export function ProxmoxDashboard() {
               </div>
 
               <div className="text-sm text-muted-foreground whitespace-nowrap">
-                {t("status.uptime", { uptime: systemStatus.uptime || t("app.notAvailable") })}
+                {t("status.uptime", { uptime: displayUptime })}
               </div>
 
               <Button
@@ -553,7 +555,7 @@ export function ProxmoxDashboard() {
               )}
             </div>
             <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {t("status.uptime", { uptime: systemStatus.uptime || t("app.notAvailable") })}
+              {t("status.uptime", { uptime: displayUptime })}
             </span>
           </div>
         </div>

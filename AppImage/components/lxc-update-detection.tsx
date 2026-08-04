@@ -5,6 +5,7 @@ import { Boxes, Info, Loader2, Settings2, CheckCircle2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { fetchApi } from "../lib/api-config"
+import { useT } from "../lib/i18n/provider"
 
 interface DetectionResponse {
   success: boolean
@@ -14,6 +15,7 @@ interface DetectionResponse {
 }
 
 export function LxcUpdateDetection() {
+  const t = useT()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [enabled, setEnabled] = useState<boolean>(true)
@@ -32,11 +34,11 @@ export function LxcUpdateDetection() {
           setEnabled(data.enabled)
           setPending(data.enabled)
         } else {
-          setError(data.message || "Failed to load setting")
+          setError(data.message || t("settings.lxcUpdateDetection.loadFailed"))
         }
       })
       .catch(e => {
-        if (!cancelled) setError(String(e))
+        if (!cancelled) setError(t("settings.lxcUpdateDetection.loadFailed"))
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -77,7 +79,7 @@ export function LxcUpdateDetection() {
         body: JSON.stringify({ enabled: pending }),
       })
       if (!data.success) {
-        setError(data.message || "Failed to save setting")
+        setError(data.message || t("settings.lxcUpdateDetection.saveFailed"))
         return
       }
       setEnabled(pending)
@@ -95,7 +97,7 @@ export function LxcUpdateDetection() {
         )
       }
     } catch (e) {
-      setError(String(e))
+      setError(t("settings.lxcUpdateDetection.saveFailed"))
     } finally {
       setSaving(false)
     }
@@ -111,14 +113,14 @@ export function LxcUpdateDetection() {
               breakpoint thanks to `items-center` + leading-tight title. */}
           <div className="flex items-center gap-2 flex-wrap min-w-0">
             <Boxes className="h-5 w-5 text-purple-500 shrink-0" />
-            <CardTitle className="leading-tight">LXC Update Detection</CardTitle>
+            <CardTitle className="leading-tight">{t("settings.lxcUpdateDetection.title")}</CardTitle>
             {enabled ? (
               <Badge variant="outline" className="text-[10px] border-green-500/30 text-green-500">
-                Active
+                {t("status.active")}
               </Badge>
             ) : (
               <Badge variant="outline" className="text-[10px] border-muted-foreground/30 text-muted-foreground">
-                Disabled
+                {t("status.disabled")}
               </Badge>
             )}
           </div>
@@ -126,7 +128,7 @@ export function LxcUpdateDetection() {
             {saved && (
               <span className="flex items-center gap-1 text-xs text-green-500">
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                Saved
+                {t("status.saved")}
               </span>
             )}
             {error && !editMode && (
@@ -134,7 +136,7 @@ export function LxcUpdateDetection() {
                 className="flex items-center gap-1 text-xs text-red-500 max-w-[40ch] truncate"
                 title={error}
               >
-                Save failed: {error}
+                {t("status.saveFailed")}: {error}
               </span>
             )}
             {editMode ? (
@@ -144,7 +146,7 @@ export function LxcUpdateDetection() {
                   onClick={handleCancel}
                   disabled={saving}
                 >
-                  Cancel
+                  {t("actions.cancel")}
                 </button>
                 <button
                   className="h-7 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1.5"
@@ -152,7 +154,7 @@ export function LxcUpdateDetection() {
                   disabled={saving || !hasChanges}
                 >
                   {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-                  Save
+                  {t("actions.save")}
                 </button>
               </>
             ) : (
@@ -162,16 +164,15 @@ export function LxcUpdateDetection() {
                 disabled={loading}
               >
                 <Settings2 className="h-3 w-3" />
-                Edit
+                {t("actions.edit")}
               </button>
             )}
           </div>
         </div>
         <CardDescription>
-          Periodically check running Debian/Ubuntu/Alpine LXC containers for pending package updates
-          (<code>apt list --upgradable</code> / <code>apk list -u</code>) and surface them on the dashboard. The
-          corresponding notification toggle in <strong>Notifications → Services</strong> appears only while detection
-          is enabled.
+          {t("settings.lxcUpdateDetection.descriptionStart")}{" "}
+          (<code>apt list --upgradable</code> / <code>apk list -u</code>)
+          {t("settings.lxcUpdateDetection.descriptionEnd")}
         </CardDescription>
       </CardHeader>
 
@@ -185,7 +186,7 @@ export function LxcUpdateDetection() {
             <Boxes
               className={`h-4 w-4 shrink-0 ${pending ? "text-purple-500" : "text-muted-foreground"}`}
             />
-            <span className="text-sm font-medium truncate">Enable LXC update detection</span>
+            <span className="text-sm font-medium truncate">{t("settings.lxcUpdateDetection.enableLabel")}</span>
           </div>
           <button
             className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ${
@@ -195,7 +196,7 @@ export function LxcUpdateDetection() {
             disabled={!editMode || saving}
             role="switch"
             aria-checked={pending}
-            aria-label="Enable LXC update detection"
+            aria-label={t("settings.lxcUpdateDetection.enableLabel")}
           >
             <span
               className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
@@ -209,8 +210,7 @@ export function LxcUpdateDetection() {
           <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border border-border">
             <Info className="h-3.5 w-3.5 text-blue-400 shrink-0 mt-0.5" />
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              {lastPurged} LXC entries removed from the registry. Re-enabling detection will repopulate them on the
-              next scan cycle.
+              {t("settings.lxcUpdateDetection.purgedMessage", { count: lastPurged })}
             </p>
           </div>
         )}

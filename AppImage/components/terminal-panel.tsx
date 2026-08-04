@@ -34,6 +34,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import type { CheatSheetResult } from "@/lib/cheat-sheet-result" // Declare CheatSheetResult here
+import { useT } from "@/lib/i18n/provider"
 
 type TerminalPanelProps = {
   websocketUrl?: string
@@ -78,74 +79,30 @@ function getApiUrl(endpoint?: string): string {
 }
 
 const proxmoxCommands = [
-  { cmd: "pvesh get /nodes", desc: "List all Proxmox nodes" },
-  { cmd: "pvesh get /nodes/{node}/qemu", desc: "List VMs on a node" },
-  { cmd: "pvesh get /nodes/{node}/lxc", desc: "List LXC containers on a node" },
-  { cmd: "pvesh get /nodes/{node}/storage", desc: "List storage on a node" },
-  { cmd: "pvesh get /nodes/{node}/network", desc: "List network interfaces" },
-  { cmd: "qm list", desc: "List all QEMU/KVM virtual machines" },
-  { cmd: "qm start <vmid>", desc: "Start a virtual machine" },
-  { cmd: "qm stop <vmid>", desc: "Stop a virtual machine" },
-  { cmd: "qm shutdown <vmid>", desc: "Shutdown a virtual machine gracefully" },
-  { cmd: "qm status <vmid>", desc: "Show VM status" },
-  { cmd: "qm config <vmid>", desc: "Show VM configuration" },
-  { cmd: "qm snapshot <vmid> <snapname>", desc: "Create VM snapshot" },
-  { cmd: "pct list", desc: "List all LXC containers" },
-  { cmd: "pct start <vmid>", desc: "Start LXC container" },
-  { cmd: "pct stop <vmid>", desc: "Stop LXC container" },
-  { cmd: "pct enter <vmid>", desc: "Enter LXC container console" },
-  { cmd: "pct config <vmid>", desc: "Show container configuration" },
-  { cmd: "pvesm status", desc: "Show storage status" },
-  { cmd: "pvesm list <storage>", desc: "List storage content" },
-  { cmd: "pveperf", desc: "Test Proxmox system performance" },
-  { cmd: "pveversion", desc: "Show Proxmox VE version" },
-  { cmd: "systemctl status pve-cluster", desc: "Check cluster status" },
-  { cmd: "pvecm status", desc: "Show cluster status" },
-  { cmd: "pvecm nodes", desc: "List cluster nodes" },
-  { cmd: "zpool status", desc: "Show ZFS pool status" },
-  { cmd: "zpool list", desc: "List all ZFS pools" },
-  { cmd: "zfs list", desc: "List all ZFS datasets" },
-  { cmd: "ls -la", desc: "List all files with details" },
-  { cmd: "cd /path/to/dir", desc: "Change directory" },
-  { cmd: "mkdir dirname", desc: "Create new directory" },
-  { cmd: "rm -rf dirname", desc: "Remove directory recursively" },
-  { cmd: "cp source dest", desc: "Copy files or directories" },
-  { cmd: "mv source dest", desc: "Move or rename files" },
-  { cmd: "cat filename", desc: "Display file contents" },
-  { cmd: "grep 'pattern' file", desc: "Search for pattern in file" },
-  { cmd: "find . -name 'file'", desc: "Find files by name" },
-  { cmd: "chmod 755 file", desc: "Change file permissions" },
-  { cmd: "chown user:group file", desc: "Change file owner" },
-  { cmd: "tar -xzf file.tar.gz", desc: "Extract tar.gz archive" },
-  { cmd: "tar -czf archive.tar.gz dir/", desc: "Create tar.gz archive" },
-  { cmd: "df -h", desc: "Show disk usage" },
-  { cmd: "du -sh *", desc: "Show directory sizes" },
-  { cmd: "free -h", desc: "Show memory usage" },
-  { cmd: "top", desc: "Show running processes" },
-  { cmd: "ps aux | grep process", desc: "Find running process" },
-  { cmd: "kill -9 PID", desc: "Force kill process" },
-  { cmd: "systemctl status service", desc: "Check service status" },
-  { cmd: "systemctl start service", desc: "Start a service" },
-  { cmd: "systemctl stop service", desc: "Stop a service" },
-  { cmd: "systemctl restart service", desc: "Restart a service" },
-  { cmd: "apt update && apt upgrade", desc: "Update Debian/Ubuntu packages" },
-  { cmd: "apt install package", desc: "Install package on Debian/Ubuntu" },
-  { cmd: "apt remove package", desc: "Remove package" },
-  { cmd: "docker ps", desc: "List running containers" },
-  { cmd: "docker images", desc: "List Docker images" },
-  { cmd: "docker exec -it container bash", desc: "Enter container shell" },
-  { cmd: "ip addr show", desc: "Show IP addresses" },
-  { cmd: "ping host", desc: "Test network connectivity" },
-  { cmd: "curl -I url", desc: "Get HTTP headers" },
-  { cmd: "wget url", desc: "Download file from URL" },
-  { cmd: "ssh user@host", desc: "Connect via SSH" },
-  { cmd: "scp file user@host:/path", desc: "Copy file via SSH" },
-  { cmd: "tail -f /var/log/syslog", desc: "Follow log file in real-time" },
-  { cmd: "history", desc: "Show command history" },
-  { cmd: "clear", desc: "Clear terminal screen" },
+  "pvesh get /nodes", "pvesh get /nodes/{node}/qemu", "pvesh get /nodes/{node}/lxc",
+  "pvesh get /nodes/{node}/storage", "pvesh get /nodes/{node}/network", "qm list",
+  "qm start <vmid>", "qm stop <vmid>", "qm shutdown <vmid>", "qm status <vmid>",
+  "qm config <vmid>", "qm snapshot <vmid> <snapname>", "pct list", "pct start <vmid>",
+  "pct stop <vmid>", "pct enter <vmid>", "pct config <vmid>", "pvesm status",
+  "pvesm list <storage>", "pveperf", "pveversion", "systemctl status pve-cluster",
+  "pvecm status", "pvecm nodes", "zpool status", "zpool list", "zfs list", "ls -la",
+  "cd /path/to/dir", "mkdir dirname", "rm -rf dirname", "cp source dest", "mv source dest",
+  "cat filename", "grep 'pattern' file", "find . -name 'file'", "chmod 755 file",
+  "chown user:group file", "tar -xzf file.tar.gz", "tar -czf archive.tar.gz dir/", "df -h",
+  "du -sh *", "free -h", "top", "ps aux | grep process", "kill -9 PID",
+  "systemctl status service", "systemctl start service", "systemctl stop service",
+  "systemctl restart service", "apt update && apt upgrade", "apt install package",
+  "apt remove package", "docker ps", "docker images", "docker exec -it container bash",
+  "ip addr show", "ping host", "curl -I url", "wget url", "ssh user@host",
+  "scp file user@host:/path", "tail -f /var/log/syslog", "history", "clear",
 ]
 
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onClose }) => {
+  const t = useT()
+  const localizedCommands = proxmoxCommands.map((cmd, index) => ({
+    cmd,
+    desc: t(`terminal.commandDescriptions.${index}`),
+  }))
   const [terminals, setTerminals] = useState<TerminalInstance[]>([])
   const [activeTerminalId, setActiveTerminalId] = useState<string>("")
   const [layout, setLayout] = useState<"single" | "grid">("grid")
@@ -154,7 +111,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const [terminalHeight, setTerminalHeight] = useState<number>(500) // altura por defecto en px
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [filteredCommands, setFilteredCommands] = useState<Array<{ cmd: string; desc: string }>>(proxmoxCommands)
+  const [filteredCommands, setFilteredCommands] = useState<Array<{ cmd: string; desc: string }>>(localizedCommands)
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<CheatSheetResult[]>([])
   const [useOnline, setUseOnline] = useState(true)
@@ -272,7 +229,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     const searchCheatSh = async (query: string) => {
       if (!query.trim()) {
         setSearchResults([])
-        setFilteredCommands(proxmoxCommands)
+        setFilteredCommands(localizedCommands)
         return
       }
 
@@ -287,7 +244,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         })
 
         if (!data.success || !data.examples || data.examples.length === 0) {
-          throw new Error("No examples found")
+          throw new Error(t("terminal.noExamplesFound"))
         }
 
 
@@ -300,7 +257,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         setUseOnline(true)
         setSearchResults(formattedResults)
       } catch (error) {
-        const filtered = proxmoxCommands.filter(
+        const filtered = localizedCommands.filter(
           (item) =>
             item.cmd.toLowerCase().includes(query.toLowerCase()) ||
             item.desc.toLowerCase().includes(query.toLowerCase()),
@@ -318,12 +275,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         searchCheatSh(searchQuery)
       } else {
         setSearchResults([])
-        setFilteredCommands(proxmoxCommands)
+        setFilteredCommands(localizedCommands)
       }
     }, 800)
 
     return () => clearTimeout(debounce)
-  }, [searchQuery])
+  }, [searchQuery, t])
 
   // Function to reconnect a terminal when connection is lost
   // This is called when page visibility changes (user returns from another app)
@@ -332,7 +289,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     if (!terminal || !terminal.term) return
     
     // Show reconnecting message
-    terminal.term.writeln('\r\n\x1b[33m[INFO] Reconnecting...\x1b[0m')
+    terminal.term.writeln(`\r\n\x1b[33m[INFO] ${t("terminal.reconnecting")}\x1b[0m`)
 
     const wsUrl = websocketUrl || getWebSocketUrl()
     // Append the single-use auth ticket so the backend handshake can validate.
@@ -358,7 +315,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       setTerminals((prev) =>
         prev.map((t) => (t.id === terminalId ? { ...t, isConnected: true, ws, pingInterval } : t))
       )
-      terminal.term.writeln('\r\n\x1b[32m[INFO] Reconnected successfully\x1b[0m')
+      terminal.term.writeln(`\r\n\x1b[32m[INFO] ${t("terminal.reconnected")}\x1b[0m`)
       
       // Sync terminal size
       if (terminal.fitAddon) {
@@ -384,7 +341,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     }
     
     ws.onerror = () => {
-      terminal.term.writeln('\r\n\x1b[31m[ERROR] Reconnection failed\x1b[0m')
+      terminal.term.writeln(`\r\n\x1b[31m[ERROR] ${t("terminal.reconnectionFailed")}\x1b[0m`)
     }
     
     ws.onclose = () => {
@@ -397,7 +354,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         }
         return t
       }))
-      terminal.term.writeln('\r\n\x1b[33m[INFO] Connection closed\x1b[0m')
+      terminal.term.writeln(`\r\n\x1b[33m[INFO] ${t("terminal.connectionClosed")}\x1b[0m`)
     }
     
     terminal.term.onData((data: string) => {
@@ -415,7 +372,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       ...prev,
       {
         id: newId,
-        title: `Terminal ${prev.length + 1}`,
+        title: t("terminal.terminalTitle", { number: prev.length + 1 }),
         term: null,
         ws: null,
         isConnected: false,
@@ -570,8 +527,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       if (ws.readyState !== WebSocket.OPEN) {
         connectionTimedOut = true
         ws.close()
-        term.writeln('\x1b[31m[ERROR] Connection timeout. Please check your network and try again.\x1b[0m')
-        term.writeln('\x1b[33m[TIP] If using VPN, ensure the connection is stable.\x1b[0m')
+        term.writeln(`\x1b[31m[ERROR] ${t("terminal.connectionTimeout")}\x1b[0m`)
+        term.writeln(`\x1b[33m[TIP] ${t("terminal.vpnTip")}\x1b[0m`)
       }
     }, connectionTimeout)
 
@@ -636,7 +593,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       }))
       // Only show error if not already shown by timeout
       if (!connectionTimedOut) {
-        term.writeln("\r\n\x1b[31m[ERROR] WebSocket connection error\x1b[0m")
+        term.writeln(`\r\n\x1b[31m[ERROR] ${t("terminal.websocketError")}\x1b[0m`)
       }
     }
 
@@ -653,7 +610,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       }))
       // Only show close message if not already shown by timeout
       if (!connectionTimedOut) {
-        term.writeln("\r\n\x1b[33m[INFO] Connection closed\x1b[0m")
+        term.writeln(`\r\n\x1b[33m[INFO] ${t("terminal.connectionClosed")}\x1b[0m`)
       }
     }
 
@@ -816,9 +773,9 @@ const handleClose = () => {
           <Activity className="h-5 w-5 text-blue-500" />
           <div
             className={`w-2 h-2 rounded-full ${activeTerminal?.isConnected ? "bg-green-500" : "bg-red-500"}`}
-            title={activeTerminal?.isConnected ? "Connected" : "Disconnected"}
+            title={activeTerminal?.isConnected ? t("terminal.connected") : t("terminal.disconnected")}
           ></div>
-          <span className="text-xs text-zinc-500">{terminals.length} / 4 terminals</span>
+          <span className="text-xs text-zinc-500">{t("terminal.terminalCount", { count: terminals.length })}</span>
         </div>
 
         <div className="flex gap-2">
@@ -829,7 +786,7 @@ const handleClose = () => {
                 variant="outline"
                 size="sm"
                 className={`h-8 px-2 ${layout === "single" ? "bg-blue-500/20 border-blue-500" : ""}`}
-                title="Vista apilada (filas)"
+                title={t("terminal.stackedLayout")}
               >
                 <AlignJustify className="h-4 w-4" />
               </Button>
@@ -838,7 +795,7 @@ const handleClose = () => {
                 variant="outline"
                 size="sm"
                 className={`h-8 px-2 ${layout === "grid" ? "bg-blue-500/20 border-blue-500" : ""}`}
-                title="Vista cuadrícula 2x2"
+                title={t("terminal.gridLayout")}
               >
                 <Grid2X2 className="h-4 w-4" />
               </Button>
@@ -852,7 +809,7 @@ const handleClose = () => {
             className="h-8 gap-2 bg-green-600/20 hover:bg-green-600/30 border-green-600/50 text-green-400 disabled:opacity-50"
           >
             <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">New</span>
+            <span className="hidden sm:inline">{t("terminal.new")}</span>
           </Button>
           <Button
             onClick={() => setSearchModalOpen(true)}
@@ -862,7 +819,7 @@ const handleClose = () => {
             className="h-8 gap-2 bg-blue-600/20 hover:bg-blue-600/30 border-blue-600/50 text-blue-400 disabled:opacity-50"
           >
             <Search className="h-4 w-4" />
-            <span className="hidden sm:inline">Search</span>
+            <span className="hidden sm:inline">{t("terminal.search")}</span>
           </Button>
           <Button
             onClick={handleClear}
@@ -872,7 +829,7 @@ const handleClose = () => {
             className="h-8 gap-2 bg-yellow-600/20 hover:bg-yellow-600/30 border-yellow-600/50 text-yellow-400 disabled:opacity-50"
           >
             <Trash2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Clear</span>
+            <span className="hidden sm:inline">{t("terminal.clear")}</span>
           </Button>
           <Button
             onClick={handleClose}
@@ -881,7 +838,7 @@ const handleClose = () => {
             className="h-8 gap-2 bg-red-600/20 hover:bg-red-600/30 border-red-600/50 text-red-400"
           >
             <X className="h-4 w-4" />
-            <span className="hidden sm:inline">Close</span>
+            <span className="hidden sm:inline">{t("actions.close")}</span>
           </Button>
         </div>
       </div>
@@ -1075,29 +1032,29 @@ const handleClose = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Control Sequences</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">{t("scriptTerminal.controlSequences")}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => sendSequence("\x03")}>
                 <span className="font-mono text-xs mr-2">Ctrl+C</span>
-                <span className="text-muted-foreground text-xs">Cancel/Interrupt</span>
+                <span className="text-muted-foreground text-xs">{t("scriptTerminal.cancelInterrupt")}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => sendSequence("\x18")}>
                 <span className="font-mono text-xs mr-2">Ctrl+X</span>
-                <span className="text-muted-foreground text-xs">Exit (nano)</span>
+                <span className="text-muted-foreground text-xs">{t("scriptTerminal.exitNano")}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => sendSequence("\x12")}>
                 <span className="font-mono text-xs mr-2">Ctrl+R</span>
-                <span className="text-muted-foreground text-xs">Search history</span>
+                <span className="text-muted-foreground text-xs">{t("scriptTerminal.searchHistory")}</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Clipboard</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">{t("scriptTerminal.clipboard")}</DropdownMenuLabel>
               <DropdownMenuItem onSelect={() => { void handleCopy() }}>
                 <Copy className="h-3.5 w-3.5 mr-2" />
-                <span className="text-xs">Copy selection</span>
+                <span className="text-xs">{t("scriptTerminal.copySelection")}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => { void handlePaste() }}>
                 <Clipboard className="h-3.5 w-3.5 mr-2" />
-                <span className="text-xs">Paste</span>
+                <span className="text-xs">{t("scriptTerminal.paste")}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -1107,22 +1064,22 @@ const handleClose = () => {
       <Dialog open={searchModalOpen} onOpenChange={setSearchModalOpen}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b border-zinc-800">
-            <DialogTitle className="text-xl font-semibold">Search Commands</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">{t("terminal.searchCommands")}</DialogTitle>
             <div className="flex items-center gap-2">
               <div
                 className={`w-2 h-2 rounded-full ${useOnline ? "bg-green-500" : "bg-red-500"}`}
-                title={useOnline ? "Online - Using cheat.sh API" : "Offline - Using local commands"}
+                title={useOnline ? t("terminal.onlineSource") : t("terminal.offlineSource")}
               />
             </div>
           </DialogHeader>
 
-          <DialogDescription className="sr-only">Search for Linux and Proxmox commands</DialogDescription>
+          <DialogDescription className="sr-only">{t("terminal.searchDescription")}</DialogDescription>
 
           <div className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
               <Input
-                placeholder="Search commands... (e.g., tar, docker, qm, systemctl)"
+                placeholder={t("terminal.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 bg-zinc-900 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-base"
@@ -1136,7 +1093,7 @@ const handleClose = () => {
             {isSearching && (
               <div className="text-center py-4 text-zinc-400">
                 <div className="animate-spin inline-block w-6 h-6 border-2 border-current border-t-transparent rounded-full mb-2" />
-                <p className="text-sm">Searching cheat.sh...</p>
+                <p className="text-sm">{t("terminal.searchingCheatSh")}</p>
               </div>
             )}
 
@@ -1164,7 +1121,7 @@ const handleClose = () => {
                   <div className="text-center py-2">
                     <p className="text-xs text-zinc-500">
                       <Lightbulb className="inline-block w-3 h-3 mr-1" />
-                      Powered by cheat.sh
+                      {t("terminal.poweredByCheatSh")}
                     </p>
                   </div>
                 </>
@@ -1190,13 +1147,13 @@ const handleClose = () => {
                         className="shrink-0 h-7 px-2 text-xs"
                       >
                         <Send className="h-3 w-3 mr-1" />
-                        Send
+                        {t("terminal.send")}
                       </Button>
                     </div>
                   </div>
                 ))
               ) : !isSearching && !searchQuery && !useOnline ? (
-                proxmoxCommands.map((item, index) => (
+                localizedCommands.map((item, index) => (
                   <div
                     key={index}
                     onClick={() => sendToActiveTerminal(item.cmd)}
@@ -1217,7 +1174,7 @@ const handleClose = () => {
                         className="shrink-0 h-7 px-2 text-xs"
                       >
                         <Send className="h-3 w-3 mr-1" />
-                        Send
+                        {t("terminal.send")}
                       </Button>
                     </div>
                   </div>
@@ -1228,17 +1185,17 @@ const handleClose = () => {
                     <>
                       <Search className="w-12 h-12 text-zinc-600 mx-auto" />
                       <div>
-                        <p className="text-zinc-400 font-medium">No results found for "{searchQuery}"</p>
-                        <p className="text-xs text-zinc-500 mt-1">Try a different command or check your spelling</p>
+                        <p className="text-zinc-400 font-medium">{t("terminal.noResults", { query: searchQuery })}</p>
+                        <p className="text-xs text-zinc-500 mt-1">{t("terminal.tryDifferentSearch")}</p>
                       </div>
                     </>
                   ) : (
                     <>
                       <Terminal className="w-12 h-12 text-zinc-600 mx-auto" />
                       <div>
-                        <p className="text-zinc-400 font-medium mb-2">Search for any command</p>
+                        <p className="text-zinc-400 font-medium mb-2">{t("terminal.searchAnyCommand")}</p>
                         <div className="text-sm text-zinc-500 space-y-1">
-                          <p>Try searching for:</p>
+                          <p>{t("terminal.trySearchingFor")}</p>
                           <div className="flex flex-wrap justify-center gap-2 mt-2">
                             {["tar", "grep", "docker", "qm", "systemctl"].map((cmd) => (
                               <code
@@ -1255,7 +1212,7 @@ const handleClose = () => {
                       {useOnline && (
                         <div className="flex items-center justify-center gap-2 text-xs text-zinc-600 mt-4">
                           <Lightbulb className="w-3 h-3" />
-                          <span>Powered by cheat.sh</span>
+                          <span>{t("terminal.poweredByCheatSh")}</span>
                         </div>
                       )}
                     </>
@@ -1267,9 +1224,9 @@ const handleClose = () => {
             <div className="pt-2 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
               <div className="flex items-center gap-2">
                 <Lightbulb className="w-3 h-3" />
-                <span>Tip: Search for any Linux command or Proxmox commands (qm, pct, zpool)</span>
+                <span>{t("terminal.searchTip")}</span>
               </div>
-              {useOnline && searchResults.length > 0 && <span className="text-zinc-600">Powered by cheat.sh</span>}
+              {useOnline && searchResults.length > 0 && <span className="text-zinc-600">{t("terminal.poweredByCheatSh")}</span>}
             </div>
           </div>
         </DialogContent>

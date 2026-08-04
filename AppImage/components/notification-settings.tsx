@@ -11,6 +11,7 @@ import { Button } from "./ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
 import { fetchApi } from "../lib/api-config"
+import { useT } from "../lib/i18n/provider"
 import {
   Bell, BellOff, Send, CheckCircle2, XCircle, Loader2,
   AlertTriangle, Info, Settings2, Zap, Eye, EyeOff,
@@ -114,7 +115,7 @@ const DISCORD_WEBHOOK_RE = /^https:\/\/(discord(app)?\.com|ptb\.discord\.com|can
 function validateDiscordWebhook(url: string): { error?: string } {
   if (!url) return {}
   if (!DISCORD_WEBHOOK_RE.test(url.trim())) {
-    return { error: "Must be a Discord webhook URL (https://discord.com/api/webhooks/<id>/<token>)" }
+    return { error: "settings.notifications.validation.discordWebhook" }
   }
   return {}
 }
@@ -125,37 +126,25 @@ function validateGotifyUrl(url: string): { error?: string; warning?: string } {
   try {
     parsed = new URL(url.trim())
   } catch {
-    return { error: "Not a valid URL" }
+    return { error: "settings.notifications.validation.invalidUrl" }
   }
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    return { error: `Unsupported scheme "${parsed.protocol}" — only http(s) is allowed` }
+    return { error: "settings.notifications.validation.unsupportedScheme" }
   }
   // Block the obvious SSRF target: the local PVE API. RFC1918 ranges remain
   // allowed since self-hosted Gotify on a LAN is a normal deployment.
   const host = parsed.hostname.toLowerCase()
   const port = parsed.port
   if ((host === "localhost" || host === "127.0.0.1" || host === "::1") && (port === "8006" || port === "8007")) {
-    return { error: "Cannot point at the local PVE API (localhost:8006/8007)" }
+    return { error: "settings.notifications.validation.localPveApi" }
   }
   if (host === "169.254.169.254") {
-    return { error: "Link-local metadata IP is not a valid Gotify endpoint" }
+    return { error: "settings.notifications.validation.metadataIp" }
   }
   return {}
 }
 
-const EVENT_CATEGORIES = [
-  { key: "vm_ct", label: "VM / CT", desc: "Start, stop, crash, migration" },
-  { key: "backup", label: "Backups", desc: "Backup start, complete, fail" },
-  { key: "resources", label: "Resources", desc: "CPU, memory, temperature" },
-  { key: "storage", label: "Storage", desc: "Disk space, I/O, SMART" },
-  { key: "network", label: "Network", desc: "Connectivity, bond, latency" },
-  { key: "security", label: "Security", desc: "Auth failures, Fail2Ban, firewall" },
-  { key: "cluster", label: "Cluster", desc: "Quorum, split-brain, HA fencing" },
-  { key: "services", label: "Services", desc: "System services, shutdown, reboot" },
-  { key: "health", label: "Health Monitor", desc: "Health checks, degradation, recovery" },
-  { key: "updates", label: "Updates", desc: "System and PVE updates" },
-  { key: "other", label: "Other", desc: "Uncategorized notifications" },
-]
+const EVENT_CATEGORIES = ["vm_ct", "backup", "resources", "storage", "network", "security", "cluster", "services", "health", "updates", "other"].map(key => ({ key }))
 
 const CHANNEL_TYPES = ["telegram", "gotify", "discord", "email", "apprise"] as const
 
@@ -163,7 +152,6 @@ const AI_PROVIDERS = [
   { 
     value: "groq", 
     label: "Groq",
-    description: "Very fast, generous free tier (30 req/min). Ideal to start.",
     keyUrl: "https://console.groq.com/keys",
     icon: "/icons/Groq Logo_White 25.svg",
     iconLight: "/icons/Groq Logo_Black 25.svg"
@@ -171,7 +159,6 @@ const AI_PROVIDERS = [
   { 
     value: "openai", 
     label: "OpenAI",
-    description: "Industry standard. Very accurate and widely used.",
     keyUrl: "https://platform.openai.com/api-keys",
     icon: "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openai.webp",
     iconLight: "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openai-light.webp"
@@ -179,7 +166,6 @@ const AI_PROVIDERS = [
   { 
     value: "anthropic", 
     label: "Anthropic (Claude)",
-    description: "Excellent for writing and translation. Fast and economical.",
     keyUrl: "https://console.anthropic.com/settings/keys",
     icon: "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/claude-light.webp",
     iconLight: "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/claude-dark.webp"
@@ -187,15 +173,13 @@ const AI_PROVIDERS = [
   { 
     value: "gemini", 
     label: "Google Gemini",
-    description: "Free tier available, great quality/price ratio.",
     keyUrl: "https://aistudio.google.com/app/apikey",
     icon: "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/google-gemini.webp",
     iconLight: "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/google-gemini.webp"
   },
   { 
     value: "ollama", 
-    label: "Ollama (Local)",
-    description: "Uses models available on your Ollama server. 100% local, no costs, total privacy.",
+    label: "Ollama",
     keyUrl: "",
     icon: "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ollama.webp",
     iconLight: "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ollama-light.webp"
@@ -203,7 +187,6 @@ const AI_PROVIDERS = [
   { 
     value: "openrouter", 
     label: "OpenRouter",
-    description: "Aggregator with access to 100+ models using a single API key. Maximum flexibility.",
     keyUrl: "https://openrouter.ai/keys",
     icon: "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openrouter-light.webp",
     iconLight: "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openrouter-dark.webp"
@@ -226,11 +209,7 @@ const AI_LANGUAGES = [
   { value: "nl", label: "Nederlands" },
 ]
 
-const AI_DETAIL_LEVELS = [
-  { value: "brief", label: "Brief", desc: "2-3 lines, essential only" },
-  { value: "standard", label: "Standard", desc: "Concise with basic context" },
-  { value: "detailed", label: "Detailed", desc: "Complete technical details" },
-]
+const AI_DETAIL_LEVELS = ["brief", "standard", "detailed"]
 
 // Example custom prompt for users to adapt
 const EXAMPLE_CUSTOM_PROMPT = `You are a notification formatter for ProxMenux Monitor.
@@ -319,6 +298,7 @@ const DEFAULT_CONFIG: NotificationConfig = {
 }
 
 export function NotificationSettings() {
+  const t = useT()
   const { resolvedTheme } = useTheme()
   const [config, setConfig] = useState<NotificationConfig>(DEFAULT_CONFIG)
   const [status, setStatus] = useState<ServiceStatus | null>(null)
@@ -547,10 +527,10 @@ export function NotificationSettings() {
           <div>
             <Label className="text-xs sm:text-sm text-foreground/80 flex items-center gap-2">
               <Moon className="h-4 w-4 text-blue-400" />
-              Quiet hours
+              {t("settings.notifications.ui.quietHours")}
             </Label>
             <p className="text-xs text-muted-foreground mt-1">
-              During this window only CRITICAL events reach this channel.
+              {t("settings.notifications.ui.quietHoursDescription")}
             </p>
           </div>
           <button
@@ -578,7 +558,7 @@ export function NotificationSettings() {
                 every viewport and the touch target stays comfortable. */}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
               <div className="flex items-center gap-2">
-                <Label className="text-xs text-muted-foreground">From</Label>
+                <Label className="text-xs text-muted-foreground">{t("settings.notifications.ui.from")}</Label>
                 <Input
                   type="time"
                   value={start}
@@ -588,7 +568,7 @@ export function NotificationSettings() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <Label className="text-xs text-muted-foreground">Until</Label>
+                <Label className="text-xs text-muted-foreground">{t("settings.notifications.ui.until")}</Label>
                 <Input
                   type="time"
                   value={end}
@@ -600,10 +580,10 @@ export function NotificationSettings() {
             </div>
             <p className="text-xs text-muted-foreground">
               {sameTime
-                ? "Set a different start and end time to activate."
+                ? t("settings.notifications.ui.quietSameTime")
                 : live
-                  ? `Active right now — only CRITICAL events pass until ${end}.`
-                  : `Inactive right now — will start at ${start}.`}
+                  ? t("settings.notifications.ui.quietActive", { time: end })
+                  : t("settings.notifications.ui.quietInactive", { time: start })}
             </p>
           </>
         )}
@@ -624,7 +604,7 @@ export function NotificationSettings() {
       const minsAway = target > cur ? target - cur : 24 * 60 - cur + target
       const h = Math.floor(minsAway / 60)
       const m = minsAway % 60
-      nextLabel = `Next digest in ${h}h ${m}m (at ${time}).`
+      nextLabel = t("settings.notifications.ui.nextDigest", { hours: h, minutes: m, time })
     }
     return (
       <div className="space-y-2 pt-2 border-t border-border/50">
@@ -632,10 +612,10 @@ export function NotificationSettings() {
           <div>
             <Label className="text-xs sm:text-sm text-foreground/80 flex items-center gap-2">
               <Newspaper className="h-4 w-4 text-violet-400" />
-              Daily digest of INFO events
+              {t("settings.notifications.ui.dailyDigest")}
             </Label>
             <p className="text-xs text-muted-foreground mt-1">
-              All INFO events (backups OK, updates available, etc.) accumulate during the day and arrive once at this time as a single summary. CRITICAL and WARNING are never delayed.
+              {t("settings.notifications.ui.dailyDigestDescription")}
             </p>
           </div>
           <button
@@ -656,7 +636,7 @@ export function NotificationSettings() {
         {enabled && (
           <>
             <div className="flex items-center gap-2 pt-1">
-              <Label className="text-xs text-muted-foreground">Send at</Label>
+              <Label className="text-xs text-muted-foreground">{t("settings.notifications.ui.sendAt")}</Label>
               <Input
                 type="time"
                 value={time}
@@ -676,12 +656,17 @@ export function NotificationSettings() {
   const renderChannelCategories = (chName: string) => {
     const overrides = config.channel_overrides?.[chName] || { categories: {}, events: {} }
     const evtByGroup = config.event_types_by_group || {}
+    const eventTitle = (evt: EventTypeInfo) => {
+      const key = `settings.notifications.eventTypes.${evt.type}`
+      const translated = t(key)
+      return translated === key ? evt.title : translated
+    }
 
     return (
       <div className="space-y-1.5 border-t border-border/30 pt-3 mt-3">
         <div className="flex items-center gap-2 mb-2">
           <Bell className="h-3.5 w-3.5 text-muted-foreground" />
-          <Label className="text-[11px] text-muted-foreground">Notification Categories</Label>
+          <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.notificationCategories")}</Label>
         </div>
         <div className="space-y-2">
           {EVENT_CATEGORIES.filter(cat => cat.key !== "other").map(cat => {
@@ -726,7 +711,7 @@ export function NotificationSettings() {
                   <div className="flex-1 min-w-0">
                     <span className={`text-xs sm:text-sm font-medium block ${
                       isEnabled ? "text-green-500" : "text-foreground"
-                    }`}>{cat.label}</span>
+                    }`}>{t(`settings.notifications.categories.${cat.key}.label`)}</span>
                   </div>
 
                   {/* Count badge */}
@@ -781,7 +766,7 @@ export function NotificationSettings() {
                       return (
                         <div key={evt.type} className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted transition-colors">
                           <span className={`text-[11px] sm:text-xs ${evtEnabled ? "text-foreground" : "text-muted-foreground"}`}>
-                            {evt.title}
+                            {eventTitle(evt)}
                           </span>
                           <button
                             type="button"
@@ -821,6 +806,11 @@ export function NotificationSettings() {
       </div>
     )
   }
+
+  const providerLabel = (provider: (typeof AI_PROVIDERS)[number]) =>
+    provider.value === "ollama"
+      ? `${provider.label} (${t("settings.notifications.ai.local")})`
+      : provider.label
 
   /** Flatten the nested NotificationConfig into the flat key-value map the backend expects. */
   const flattenConfig = (cfg: NotificationConfig): Record<string, string> => {
@@ -918,7 +908,7 @@ export function NotificationSettings() {
       loadStatus()
     } catch (err) {
       console.error("Failed to save notification settings:", err)
-      const msg = err instanceof Error ? err.message : "Failed to save notification settings"
+      const msg = err instanceof Error ? err.message : t("settings.notifications.errors.saveFailed")
       setSaveError(msg)
     } finally {
       setSaving(false)
@@ -960,15 +950,15 @@ export function NotificationSettings() {
         const channelResult = data.results[channel]
         if (channelResult) {
           message = channelResult.success
-            ? "Test notification sent successfully"
-            : channelResult.error || "Test failed"
+            ? t("settings.notifications.test.sent")
+            : channelResult.error || t("settings.notifications.test.failed")
         }
       }
       if (!message && data.error) {
         message = data.error
       }
       if (!message) {
-        message = data.success ? "Test notification sent successfully" : "Test failed"
+        message = data.success ? t("settings.notifications.test.sent") : t("settings.notifications.test.failed")
       }
       
       setTestResult({ channel, success: data.success, message })
@@ -1040,7 +1030,7 @@ export function NotificationSettings() {
       const modelToUse = config.ai_model
       
       if (!modelToUse) {
-        setAiTestResult({ success: false, message: "No model selected. Click 'Load' to fetch available models first." })
+        setAiTestResult({ success: false, message: t("settings.notifications.ai.noModelSelected") })
         return
       }
       
@@ -1160,7 +1150,7 @@ export function NotificationSettings() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Bell className="h-5 w-5 text-blue-500" />
-            <CardTitle>Notifications</CardTitle>
+            <CardTitle>{t("settings.notifications.title")}</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -1208,14 +1198,14 @@ export function NotificationSettings() {
           setWebhookSetup({
             status: "failed",
             fallback_commands: setup.fallback_commands || [],
-            error: setup.error || "Unknown error",
+            error: setup.error || t("settings.notifications.errors.unknown"),
           })
         }
       } catch {
         setWebhookSetup({
           status: "failed",
           fallback_commands: [],
-          error: "Could not reach setup endpoint",
+          error: t("settings.notifications.errors.setupUnavailable"),
         })
       }
 
@@ -1236,13 +1226,13 @@ export function NotificationSettings() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <BellOff className="h-5 w-5 text-muted-foreground" />
-            <CardTitle>Notifications</CardTitle>
+            <CardTitle>{t("settings.notifications.title")}</CardTitle>
             <Badge variant="outline" className="text-[10px] border-muted-foreground/30 text-muted-foreground">
-              Disabled
+              {t("status.disabled")}
             </Badge>
           </div>
           <CardDescription>
-            Get real-time alerts about your Proxmox environment via Telegram, Discord, Gotify, or Email.
+            {t("settings.notifications.disabledDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1251,10 +1241,9 @@ export function NotificationSettings() {
               <div className="flex items-start gap-3">
                 <Bell className="h-5 w-5 text-blue-500 mt-0.5 shrink-0" />
                 <div className="space-y-1">
-                  <p className="text-sm font-medium">Enable notification service</p>
+                  <p className="text-sm font-medium">{t("settings.notifications.enableService")}</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Monitor system health, VM/CT events, backups, security alerts, and cluster status.
-                    PVE webhook integration is configured automatically.
+                    {t("settings.notifications.enableServiceDescription")}
                   </p>
                 </div>
               </div>
@@ -1265,7 +1254,7 @@ export function NotificationSettings() {
                   disabled={saving}
                 >
                   {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />}
-                  {saving ? "Configuring..." : "Enable Notifications"}
+                  {saving ? t("settings.notifications.configuring") : t("settings.notifications.enableButton")}
                 </button>
               </div>
 
@@ -1274,7 +1263,7 @@ export function NotificationSettings() {
                 <div className="flex items-start gap-2 p-2 rounded-md bg-green-500/10 border border-green-500/20">
                   <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0 mt-0.5" />
                   <p className="text-[11px] text-green-400 leading-relaxed">
-                    PVE webhook configured automatically. Proxmox will send notifications to ProxMenux.
+                    {t("settings.notifications.webhookConfigured")}
                   </p>
                 </div>
               )}
@@ -1284,10 +1273,10 @@ export function NotificationSettings() {
                     <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
                     <div className="space-y-1">
                       <p className="text-[11px] text-amber-400 leading-relaxed">
-                        Automatic PVE configuration failed: {webhookSetup.error}
+                        {t("settings.notifications.webhookFailed", { error: webhookSetup.error })}
                       </p>
                       <p className="text-[10px] text-muted-foreground">
-                        Notifications are enabled. Run the commands below on the PVE host to complete webhook setup.
+                        {t("settings.notifications.webhookManualSetup")}
                       </p>
                     </div>
                   </div>
@@ -1314,10 +1303,10 @@ export function NotificationSettings() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bell className="h-5 w-5 text-blue-500" />
-            <CardTitle>Notifications</CardTitle>
+            <CardTitle>{t("settings.notifications.title")}</CardTitle>
             {config.enabled && (
               <Badge variant="outline" className="text-[10px] border-green-500/30 text-green-500">
-                Active
+                {t("status.active")}
               </Badge>
             )}
           </div>
@@ -1325,7 +1314,7 @@ export function NotificationSettings() {
             {saved && (
               <span className="flex items-center gap-1 text-xs text-green-500">
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                Saved
+                {t("status.saved")}
               </span>
             )}
             {saveError && (
@@ -1333,7 +1322,7 @@ export function NotificationSettings() {
                 className="flex items-center gap-1 text-xs text-red-500 max-w-[40ch] truncate"
                 title={saveError}
               >
-                Save failed: {saveError}
+                {t("status.saveFailed")}: {saveError}
               </span>
             )}
             {editMode ? (
@@ -1343,7 +1332,7 @@ export function NotificationSettings() {
                   onClick={handleCancel}
                   disabled={saving}
                 >
-                  Cancel
+                  {t("actions.cancel")}
                 </button>
                 <button
                   className="h-7 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1.5"
@@ -1351,7 +1340,7 @@ export function NotificationSettings() {
                   disabled={saving || !hasChanges}
                 >
                   {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-                  Save
+                  {t("actions.save")}
                 </button>
               </>
             ) : (
@@ -1360,13 +1349,13 @@ export function NotificationSettings() {
                 onClick={() => setEditMode(true)}
               >
                 <Settings2 className="h-3 w-3" />
-                Edit
+                {t("actions.edit")}
               </button>
             )}
           </div>
         </div>
         <CardDescription>
-          Configure notification channels and event filters. Receive alerts via Telegram, Gotify, Discord, or Email.
+          {t("settings.notifications.description")}
         </CardDescription>
       </CardHeader>
 
@@ -1377,17 +1366,17 @@ export function NotificationSettings() {
             <div className={`h-2.5 w-2.5 rounded-full ${status.running ? "bg-green-500" : "bg-red-500"}`} />
             <div className="flex-1 min-w-0">
               <span className="text-xs font-medium">
-                {status.running ? "Service running" : "Service stopped"}
+                {status.running ? t("settings.notifications.serviceRunning") : t("settings.notifications.serviceStopped")}
               </span>
               {status.total_sent_24h > 0 && (
                 <span className="text-xs text-muted-foreground ml-2">
-                  {status.total_sent_24h} sent in last 24h
+                  {t("settings.notifications.sentLast24h", { count: status.total_sent_24h })}
                 </span>
               )}
             </div>
             {activeChannels > 0 && (
               <Badge variant="outline" className="text-[10px]">
-                {activeChannels} channel{activeChannels > 1 ? "s" : ""}
+                {t(activeChannels === 1 ? "settings.notifications.channelCountOne" : "settings.notifications.channelCountMany", { count: activeChannels })}
               </Badge>
             )}
           </div>
@@ -1402,8 +1391,8 @@ export function NotificationSettings() {
               <BellOff className="h-4 w-4 text-muted-foreground" />
             )}
             <div>
-              <span className="text-sm font-medium">Enable Notifications</span>
-              <p className="text-[11px] text-muted-foreground">Activate the notification service</p>
+              <span className="text-sm font-medium">{t("settings.notifications.enableButton")}</span>
+              <p className="text-[11px] text-muted-foreground">{t("settings.notifications.activateService")}</p>
             </div>
           </div>
           <button
@@ -1429,7 +1418,7 @@ export function NotificationSettings() {
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Zap className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Channels</span>
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("settings.notifications.channels")}</span>
               </div>
 
               <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
@@ -1456,12 +1445,12 @@ export function NotificationSettings() {
                 <TabsContent value="telegram" className="space-y-3 pt-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Label className="text-xs font-medium">Enable Telegram</Label>
+                      <Label className="text-xs font-medium">{t("settings.notifications.ui.enableTelegram")}</Label>
                       <button
                         onClick={() => setShowTelegramHelp(true)}
                         className="text-[10px] text-blue-500 hover:text-blue-400 hover:underline"
                       >
-                        +setup guide
+                        {t("settings.notifications.ui.setupGuide")}
                       </button>
                     </div>
                     <button
@@ -1481,7 +1470,7 @@ export function NotificationSettings() {
                   {config.channels.telegram?.enabled && (
                     <>
                       <div className="space-y-1.5">
-                        <Label className="text-[11px] text-muted-foreground">Bot Token</Label>
+                        <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.botToken")}</Label>
                         <div className="flex items-center gap-1.5">
                           <Input
                             type={showSecrets["tg_token"] ? "text" : "password"}
@@ -1500,7 +1489,7 @@ export function NotificationSettings() {
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[11px] text-muted-foreground">Chat ID</Label>
+                        <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.chatId")}</Label>
                         <Input
                           className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
                           placeholder="-1001234567890"
@@ -1510,7 +1499,7 @@ export function NotificationSettings() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[11px] text-muted-foreground">Topic ID <span className="text-muted-foreground/60">(optional)</span></Label>
+                        <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.topicId")} <span className="text-muted-foreground/60">({t("settings.notifications.ui.optional")})</span></Label>
                         <Input
                           className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
                           placeholder="123456"
@@ -1518,13 +1507,13 @@ export function NotificationSettings() {
                           onChange={e => updateChannel("telegram", "topic_id", e.target.value)}
                           disabled={!editMode}
                         />
-                        <p className="text-[10px] text-muted-foreground">For supergroups with topics enabled. Leave empty for regular chats.</p>
+                        <p className="text-[10px] text-muted-foreground">{t("settings.notifications.ui.topicHint")}</p>
                       </div>
                       {/* Message format */}
                       <div className="flex items-center justify-between py-1">
                         <div>
-                          <Label className="text-xs font-medium">Rich messages</Label>
-                          <p className="text-[10px] text-muted-foreground">Enrich notifications with contextual emojis and icons</p>
+                          <Label className="text-xs font-medium">{t("settings.notifications.ui.richMessages")}</Label>
+                          <p className="text-[10px] text-muted-foreground">{t("settings.notifications.ui.richMessagesDescription")}</p>
                         </div>
                         <button
                           type="button"
@@ -1554,7 +1543,7 @@ export function NotificationSettings() {
                           disabled={testing === "telegram" || !config.channels.telegram?.bot_token}
                         >
                           {testing === "telegram" ? <Loader2 className="h-3 w-3 animate-spin" /> : <TestTube2 className="h-3 w-3" />}
-                          Send Test
+                          {t("settings.notifications.ui.sendTest")}
                         </button>
                       </div>
                     </>
@@ -1564,7 +1553,7 @@ export function NotificationSettings() {
                 {/* Gotify */}
                 <TabsContent value="gotify" className="space-y-3 pt-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-medium">Enable Gotify</Label>
+                    <Label className="text-xs font-medium">{t("settings.notifications.ui.enableGotify")}</Label>
                     <button
                       className={`relative w-9 h-[18px] rounded-full transition-colors ${
                         config.channels.gotify?.enabled ? "bg-blue-600" : "bg-muted-foreground/20 border border-muted-foreground/40"
@@ -1582,7 +1571,7 @@ export function NotificationSettings() {
                   {config.channels.gotify?.enabled && (
                     <>
                       <div className="space-y-1.5">
-                        <Label className="text-[11px] text-muted-foreground">Server URL</Label>
+                        <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.serverUrl")}</Label>
                         <Input
                           className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
                           placeholder="https://gotify.example.com"
@@ -1592,13 +1581,13 @@ export function NotificationSettings() {
                         />
                         {(() => {
                           const v = validateGotifyUrl(config.channels.gotify?.url || "")
-                          if (v.error) return <p className="text-[10px] text-red-500">{v.error}</p>
+                          if (v.error) return <p className="text-[10px] text-red-500">{t(v.error)}</p>
                           if (v.warning) return <p className="text-[10px] text-yellow-500">{v.warning}</p>
                           return null
                         })()}
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[11px] text-muted-foreground">App Token</Label>
+                        <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.appToken")}</Label>
                         <div className="flex items-center gap-1.5">
                           <Input
                             type={showSecrets["gt_token"] ? "text" : "password"}
@@ -1619,8 +1608,8 @@ export function NotificationSettings() {
                       {/* Message format */}
                       <div className="flex items-center justify-between py-1">
                         <div>
-                          <Label className="text-xs font-medium">Rich messages</Label>
-                          <p className="text-[10px] text-muted-foreground">Enrich notifications with contextual emojis and icons</p>
+                          <Label className="text-xs font-medium">{t("settings.notifications.ui.richMessages")}</Label>
+                          <p className="text-[10px] text-muted-foreground">{t("settings.notifications.ui.richMessagesDescription")}</p>
                         </div>
                         <button
                           type="button"
@@ -1648,7 +1637,7 @@ export function NotificationSettings() {
                           disabled={testing === "gotify" || !config.channels.gotify?.url}
                         >
                           {testing === "gotify" ? <Loader2 className="h-3 w-3 animate-spin" /> : <TestTube2 className="h-3 w-3" />}
-                          Send Test
+                          {t("settings.notifications.ui.sendTest")}
                         </button>
                       </div>
                     </>
@@ -1658,7 +1647,7 @@ export function NotificationSettings() {
                 {/* Discord */}
                 <TabsContent value="discord" className="space-y-3 pt-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-medium">Enable Discord</Label>
+                    <Label className="text-xs font-medium">{t("settings.notifications.ui.enableDiscord")}</Label>
                     <button
                       className={`relative w-9 h-[18px] rounded-full transition-colors ${
                         config.channels.discord?.enabled ? "bg-blue-600" : "bg-muted-foreground/20 border border-muted-foreground/40"
@@ -1676,7 +1665,7 @@ export function NotificationSettings() {
                   {config.channels.discord?.enabled && (
                     <>
                       <div className="space-y-1.5">
-                        <Label className="text-[11px] text-muted-foreground">Webhook URL</Label>
+                        <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.webhookUrl")}</Label>
                         <div className="flex items-center gap-1.5">
                           <Input
                             type={showSecrets["dc_hook"] ? "text" : "password"}
@@ -1695,14 +1684,14 @@ export function NotificationSettings() {
                         </div>
                         {(() => {
                           const v = validateDiscordWebhook(config.channels.discord?.webhook_url || "")
-                          return v.error ? <p className="text-[10px] text-red-500">{v.error}</p> : null
+                          return v.error ? <p className="text-[10px] text-red-500">{t(v.error)}</p> : null
                         })()}
                       </div>
                       {/* Message format */}
                       <div className="flex items-center justify-between py-1">
                         <div>
-                          <Label className="text-xs font-medium">Rich messages</Label>
-                          <p className="text-[10px] text-muted-foreground">Enrich notifications with contextual emojis and icons</p>
+                          <Label className="text-xs font-medium">{t("settings.notifications.ui.richMessages")}</Label>
+                          <p className="text-[10px] text-muted-foreground">{t("settings.notifications.ui.richMessagesDescription")}</p>
                         </div>
                         <button
                           type="button"
@@ -1730,7 +1719,7 @@ export function NotificationSettings() {
                           disabled={testing === "discord" || !config.channels.discord?.webhook_url}
                         >
                           {testing === "discord" ? <Loader2 className="h-3 w-3 animate-spin" /> : <TestTube2 className="h-3 w-3" />}
-                          Send Test
+                          {t("settings.notifications.ui.sendTest")}
                         </button>
                       </div>
                     </>
@@ -1740,7 +1729,7 @@ export function NotificationSettings() {
                 {/* Email */}
                 <TabsContent value="email" className="space-y-3 pt-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-medium">Enable Email</Label>
+                    <Label className="text-xs font-medium">{t("settings.notifications.ui.enableEmail")}</Label>
                     <button
                       className={`relative w-9 h-[18px] rounded-full transition-colors ${
                         config.channels.email?.enabled ? "bg-blue-600" : "bg-muted-foreground/20 border border-muted-foreground/40"
@@ -1759,7 +1748,7 @@ export function NotificationSettings() {
                     <>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div className="space-y-1.5">
-                          <Label className="text-[11px] text-muted-foreground">SMTP Host</Label>
+                          <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.smtpHost")}</Label>
                           <Input
                             className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
                             placeholder="smtp.gmail.com"
@@ -1769,7 +1758,7 @@ export function NotificationSettings() {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-[11px] text-muted-foreground">Port</Label>
+                          <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.port")}</Label>
                           <Input
                             className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
                             placeholder="587"
@@ -1780,7 +1769,7 @@ export function NotificationSettings() {
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[11px] text-muted-foreground">TLS Mode</Label>
+                        <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.tlsMode")}</Label>
                         <Select
                           value={config.channels.email?.tls_mode || "starttls"}
                           onValueChange={v => updateChannel("email", "tls_mode", v)}
@@ -1792,13 +1781,13 @@ export function NotificationSettings() {
                           <SelectContent>
                             <SelectItem value="starttls">STARTTLS (port 587)</SelectItem>
                             <SelectItem value="ssl">SSL/TLS (port 465)</SelectItem>
-                            <SelectItem value="none">None (port 25)</SelectItem>
+                            <SelectItem value="none">{t("settings.notifications.ui.noTls")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div className="space-y-1.5">
-                          <Label className="text-[11px] text-muted-foreground">Username</Label>
+                          <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.username")}</Label>
                           <Input
                             className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
                             placeholder="user@example.com"
@@ -1808,12 +1797,12 @@ export function NotificationSettings() {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-[11px] text-muted-foreground">Password</Label>
+                          <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.password")}</Label>
                           <div className="flex items-center gap-1.5">
                             <Input
                               type={showSecrets["em_pass"] ? "text" : "password"}
                               className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
-                              placeholder="App password"
+                              placeholder={t("settings.notifications.ui.appPassword")}
                               value={secretValue("em_pass", config.channels.email?.password || "")}
                               onChange={e => updateChannel("email", "password", e.target.value)}
                               disabled={!editMode}
@@ -1828,7 +1817,7 @@ export function NotificationSettings() {
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[11px] text-muted-foreground">From Address</Label>
+                        <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.fromAddress")}</Label>
                         <Input
                           className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
                           placeholder="proxmenux@yourdomain.com"
@@ -1838,7 +1827,7 @@ export function NotificationSettings() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[11px] text-muted-foreground">To Addresses (comma-separated)</Label>
+                        <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.toAddresses")}</Label>
                         <Input
                           className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
                           placeholder="admin@example.com, ops@example.com"
@@ -1848,7 +1837,7 @@ export function NotificationSettings() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[11px] text-muted-foreground">Subject Prefix</Label>
+                        <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.subjectPrefix")}</Label>
                         <Input
                           className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
                           placeholder="[ProxMenux]"
@@ -1860,8 +1849,7 @@ export function NotificationSettings() {
                       <div className="flex items-start gap-2 p-2 rounded-md bg-amber-500/10 border border-amber-500/20">
                         <Info className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
                         <p className="text-[10px] text-amber-400/90 leading-relaxed">
-                          Leave SMTP Host empty to use local sendmail (must be installed on the server).
-                          For Gmail, use an App Password instead of your account password.
+                          {t("settings.notifications.ui.emailHint")}
                         </p>
                       </div>
                       {renderChannelCategories("email")}
@@ -1875,7 +1863,7 @@ export function NotificationSettings() {
                           disabled={testing === "email" || !config.channels.email?.to_addresses}
                         >
                           {testing === "email" ? <Loader2 className="h-3 w-3 animate-spin" /> : <TestTube2 className="h-3 w-3" />}
-                          Send Test
+                          {t("settings.notifications.ui.sendTest")}
                         </button>
                       </div>
                     </>
@@ -1892,14 +1880,14 @@ export function NotificationSettings() {
                 <TabsContent value="apprise" className="space-y-3 pt-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Label className="text-xs font-medium">Enable Apprise</Label>
+                      <Label className="text-xs font-medium">{t("settings.notifications.ui.enableApprise")}</Label>
                       <a
                         href="https://github.com/caronc/apprise/wiki"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[10px] text-cyan-500 hover:text-cyan-400 hover:underline"
                       >
-                        +URL formats
+                        {t("settings.notifications.ui.urlFormats")}
                       </a>
                     </div>
                     <button
@@ -1919,7 +1907,7 @@ export function NotificationSettings() {
                   {config.channels.apprise?.enabled && (
                     <>
                       <div className="space-y-1.5 min-w-0">
-                        <Label className="text-[11px] text-muted-foreground">Apprise URL</Label>
+                        <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.appriseUrl")}</Label>
                         <div className="flex items-center gap-1.5 min-w-0">
                           <Input
                             type={showSecrets["apprise_url"] ? "text" : "password"}
@@ -1933,7 +1921,7 @@ export function NotificationSettings() {
                             type="button"
                             className="h-7 w-7 shrink-0 flex items-center justify-center rounded-md border border-border hover:bg-muted text-muted-foreground"
                             onClick={() => toggleSecret("apprise_url")}
-                            title={showSecrets["apprise_url"] ? "Hide URL" : "Show URL"}
+                            title={t(showSecrets["apprise_url"] ? "settings.notifications.ui.hideUrl" : "settings.notifications.ui.showUrl")}
                           >
                             {showSecrets["apprise_url"] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                           </button>
@@ -1946,14 +1934,14 @@ export function NotificationSettings() {
                             wider screens the natural commas/spaces still
                             control wrapping. */}
                         <p className="text-[10px] text-muted-foreground leading-relaxed break-all min-w-0">
-                          A single URL that Apprise routes to the right service. Examples:
+                          {t("settings.notifications.ui.appriseDescription")}
                           <code className="text-foreground/80 mx-0.5">tgram://</code>,
                           <code className="text-foreground/80 mx-0.5">discord://</code>,
                           <code className="text-foreground/80 mx-0.5">slack://</code>,
                           <code className="text-foreground/80 mx-0.5">ntfy://</code>,
                           <code className="text-foreground/80 mx-0.5">matrix://</code>,
                           <code className="text-foreground/80 mx-0.5">pushover://</code>,
-                          <code className="text-foreground/80 mx-0.5">mailto://</code>… See the
+                          <code className="text-foreground/80 mx-0.5">mailto://</code>… {t("settings.notifications.ui.seeThe")}
                           {" "}
                           <a
                             href="https://github.com/caronc/apprise/wiki"
@@ -1961,7 +1949,7 @@ export function NotificationSettings() {
                             rel="noopener noreferrer"
                             className="text-cyan-500 hover:underline"
                           >
-                            full list
+                            {t("settings.notifications.ui.fullList")}
                           </a>.
                         </p>
                       </div>
@@ -1977,7 +1965,7 @@ export function NotificationSettings() {
                           disabled={testing === "apprise" || !config.channels.apprise?.url}
                         >
                           {testing === "apprise" ? <Loader2 className="h-3 w-3 animate-spin" /> : <TestTube2 className="h-3 w-3" />}
-                          Send Test
+                          {t("settings.notifications.ui.sendTest")}
                         </button>
                       </div>
                     </>
@@ -2007,18 +1995,18 @@ export function NotificationSettings() {
             <div className="space-y-2 pb-3 border-b border-border/50">
               <div className="flex items-center gap-2">
                 <Server className="h-4 w-4 text-blue-400" />
-                <Label className="text-xs sm:text-sm text-foreground/80">Display Name</Label>
+                <Label className="text-xs sm:text-sm text-foreground/80">{t("settings.notifications.ui.displayName")}</Label>
               </div>
               <Input
                 className={`h-9 text-sm ${!editMode ? "opacity-50 cursor-not-allowed" : ""}`}
-                placeholder={systemHostname || "System hostname"}
+                placeholder={systemHostname || t("settings.notifications.ui.systemHostname")}
                 value={config.hostname || (editMode ? "" : systemHostname)}
                 onChange={e => updateConfig(p => ({ ...p, hostname: e.target.value }))}
                 disabled={!editMode}
                 readOnly={!editMode}
               />
               <p className="text-xs text-muted-foreground">
-                Name shown in notifications. Edit to customize, or leave empty to use the system hostname.
+                {t("settings.notifications.ui.displayNameHint")}
               </p>
             </div>
 
@@ -2035,14 +2023,14 @@ export function NotificationSettings() {
                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   )}
                   <Sparkles className="h-4 w-4 text-purple-400" />
-                  <span className="font-medium">AI Enhancement</span>
+                  <span className="font-medium">{t("settings.notifications.ai.title")}</span>
                   {config.ai_enabled ? (
                     <Badge variant="outline" className="text-[10px] border-purple-500/40 text-purple-400 ml-1">
-                      Active
+                      {t("status.active")}
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="text-[10px] border-border text-muted-foreground ml-1">
-                      Optional
+                      {t("settings.notifications.ui.optional")}
                     </Badge>
                   )}
                 </button>
@@ -2055,7 +2043,7 @@ export function NotificationSettings() {
                           onClick={handleCancel}
                           disabled={saving}
                         >
-                          Cancel
+                          {t("actions.cancel")}
                         </button>
                         <button
                           className="h-6 px-2 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1"
@@ -2063,7 +2051,7 @@ export function NotificationSettings() {
                           disabled={saving || !hasChanges}
                         >
                           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-                          Save
+                          {t("actions.save")}
                         </button>
                       </>
                     ) : (
@@ -2072,7 +2060,7 @@ export function NotificationSettings() {
                         onClick={() => setEditMode(true)}
                       >
                         <Settings2 className="h-3 w-3" />
-                        Edit
+                        {t("actions.edit")}
                       </button>
                     )}
                   </div>
@@ -2085,8 +2073,8 @@ export function NotificationSettings() {
                       <div className="flex items-start gap-3">
                         <Sparkles className="h-5 w-5 text-purple-400 mt-0.5 shrink-0" />
                         <div>
-                          <span className="text-sm font-medium">AI-Enhanced Messages</span>
-                          <p className="text-xs sm:text-sm text-muted-foreground">Use AI to generate contextual notification messages</p>
+                          <span className="text-sm font-medium">{t("settings.notifications.ai.enhancedMessages")}</span>
+                          <p className="text-xs sm:text-sm text-muted-foreground">{t("settings.notifications.ai.enhancedMessagesDescription")}</p>
                         </div>
                       </div>
                       <button
@@ -2110,7 +2098,7 @@ export function NotificationSettings() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <Cloud className="h-4 w-4 text-purple-400" />
-                          <Label className="text-xs sm:text-sm text-foreground/80">Provider</Label>
+                          <Label className="text-xs sm:text-sm text-foreground/80">{t("settings.notifications.ai.provider")}</Label>
                           <button
                             onClick={() => setShowProviderInfo(true)}
                             className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
@@ -2146,7 +2134,7 @@ export function NotificationSettings() {
                           </SelectTrigger>
                           <SelectContent>
                             {AI_PROVIDERS.map(p => (
-                              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                              <SelectItem key={p.value} value={p.value}>{providerLabel(p)}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -2155,7 +2143,7 @@ export function NotificationSettings() {
                       {/* Ollama URL (conditional) */}
                       {config.ai_provider === "ollama" && (
                         <div className="space-y-2">
-                          <Label className="text-xs sm:text-sm text-foreground/80">Ollama URL</Label>
+                          <Label className="text-xs sm:text-sm text-foreground/80">{t("settings.notifications.ai.ollamaUrl")}</Label>
                           <Input
                             className="h-9 text-sm font-mono"
                             placeholder="http://localhost:11434"
@@ -2170,18 +2158,18 @@ export function NotificationSettings() {
                       {config.ai_provider === "openai" && (
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <Label className="text-xs sm:text-sm text-foreground/80">Custom Base URL</Label>
-                            <span className="text-xs text-muted-foreground">(optional)</span>
+                            <Label className="text-xs sm:text-sm text-foreground/80">{t("settings.notifications.ai.customBaseUrl")}</Label>
+                            <span className="text-xs text-muted-foreground">({t("settings.notifications.ui.optional")})</span>
                           </div>
                           <Input
                             className="h-9 text-sm font-mono"
-                            placeholder="Leave empty for OpenAI, or enter custom endpoint"
+                            placeholder={t("settings.notifications.ai.customBaseUrlPlaceholder")}
                             value={config.ai_openai_base_url}
                             onChange={e => updateConfig(p => ({ ...p, ai_openai_base_url: e.target.value }))}
                             disabled={!editMode}
                           />
                           <p className="text-xs text-muted-foreground">
-                            For OpenAI-compatible APIs: BytePlus, LocalAI, LM Studio, vLLM, etc.
+                            {t("settings.notifications.ai.customBaseUrlHint")}
                           </p>
                         </div>
                       )}
@@ -2190,7 +2178,7 @@ export function NotificationSettings() {
                       {config.ai_provider !== "ollama" && (
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <Label className="text-xs sm:text-sm text-foreground/80">API Key</Label>
+                            <Label className="text-xs sm:text-sm text-foreground/80">{t("settings.notifications.ai.apiKey")}</Label>
                             {AI_PROVIDERS.find(p => p.value === config.ai_provider)?.keyUrl && (
                               <a
                                 href={AI_PROVIDERS.find(p => p.value === config.ai_provider)?.keyUrl}
@@ -2198,7 +2186,7 @@ export function NotificationSettings() {
                                 rel="noopener noreferrer"
                                 className="text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
                               >
-                                Get key <ExternalLink className="h-3 w-3" />
+                                {t("settings.notifications.ai.getKey")} <ExternalLink className="h-3 w-3" />
                               </a>
                             )}
                           </div>
@@ -2231,7 +2219,7 @@ export function NotificationSettings() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <Brain className="h-4 w-4 text-blue-400" />
-                          <Label className="text-xs sm:text-sm text-foreground/80">Model</Label>
+                          <Label className="text-xs sm:text-sm text-foreground/80">{t("settings.notifications.ai.model")}</Label>
                         </div>
                         <div className="flex items-center gap-2">
                           <Select
@@ -2244,8 +2232,8 @@ export function NotificationSettings() {
                             disabled={!editMode || loadingProviderModels || providerModels.length === 0}
                           >
                             <SelectTrigger className="h-9 text-sm font-mono flex-1">
-                              <SelectValue placeholder={providerModels.length === 0 ? "Click 'Load' to fetch models" : "Select model"}>
-                                {config.ai_model || (providerModels.length === 0 ? "Click 'Load' to fetch models" : "Select model")}
+                              <SelectValue placeholder={t(providerModels.length === 0 ? "settings.notifications.ai.loadModelsPlaceholder" : "settings.notifications.ai.selectModel")}>
+                                {config.ai_model || t(providerModels.length === 0 ? "settings.notifications.ai.loadModelsPlaceholder" : "settings.notifications.ai.selectModel")}
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
@@ -2255,7 +2243,7 @@ export function NotificationSettings() {
                                 ))
                               ) : (
                                 <SelectItem value="_none" disabled className="text-muted-foreground">
-                                  No models loaded - click Load button
+                                  {t("settings.notifications.ai.noModelsLoaded")}
                                 </SelectItem>
                               )}
                             </SelectContent>
@@ -2276,13 +2264,13 @@ export function NotificationSettings() {
                             ) : (
                               <>
                                 <RefreshCw className="h-4 w-4 mr-1" />
-                                Load
+                                {t("settings.notifications.ai.load")}
                               </>
                             )}
                           </Button>
                         </div>
                         {providerModels.length > 0 && (
-                          <p className="text-xs text-green-500">{providerModels.length} models available</p>
+                          <p className="text-xs text-green-500">{t("settings.notifications.ai.modelsAvailable", { count: providerModels.length })}</p>
                         )}
                       </div>
                       
@@ -2290,7 +2278,7 @@ export function NotificationSettings() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <MessageSquareText className="h-4 w-4 text-amber-400" />
-                          <Label className="text-xs sm:text-sm text-foreground/80">Prompt Mode</Label>
+                          <Label className="text-xs sm:text-sm text-foreground/80">{t("settings.notifications.ai.promptMode")}</Label>
                         </div>
                         <Select
                           value={config.ai_prompt_mode || "default"}
@@ -2307,8 +2295,8 @@ export function NotificationSettings() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="default">Default Prompt</SelectItem>
-                            <SelectItem value="custom">Custom Prompt</SelectItem>
+                            <SelectItem value="default">{t("settings.notifications.ai.defaultPrompt")}</SelectItem>
+                            <SelectItem value="custom">{t("settings.notifications.ai.customPrompt")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -2320,7 +2308,7 @@ export function NotificationSettings() {
                           <div className="space-y-2">
                             <div className="flex items-center gap-2">
                               <Globe className="h-4 w-4 text-green-400" />
-                              <Label className="text-xs sm:text-sm text-foreground/80">Language</Label>
+                              <Label className="text-xs sm:text-sm text-foreground/80">{t("settings.notifications.ai.language")}</Label>
                             </div>
                             <Select
                               value={config.ai_language || "en"}
@@ -2328,7 +2316,7 @@ export function NotificationSettings() {
                               disabled={!editMode}
                             >
                               <SelectTrigger className="h-9 text-sm">
-                                <SelectValue placeholder="Select language">
+                                <SelectValue placeholder={t("settings.notifications.ai.selectLanguage")}>
                                   {AI_LANGUAGES.find(l => l.value === (config.ai_language || "en"))?.label || "English"}
                                 </SelectValue>
                               </SelectTrigger>
@@ -2342,7 +2330,7 @@ export function NotificationSettings() {
                           
                           {/* Detail Level per Channel */}
                           <div className="space-y-3">
-                            <Label className="text-xs sm:text-sm text-foreground/80">Detail Level per Channel</Label>
+                            <Label className="text-xs sm:text-sm text-foreground/80">{t("settings.notifications.ai.detailLevel")}</Label>
                             <div className="grid grid-cols-2 gap-3">
                               {CHANNEL_TYPES.map(ch => (
                                 <div key={ch} className="flex items-center justify-between gap-2 px-3 py-2 rounded bg-muted/30">
@@ -2359,9 +2347,9 @@ export function NotificationSettings() {
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {AI_DETAIL_LEVELS.map(l => (
-                                        <SelectItem key={l.value} value={l.value} className="text-xs">
-                                          {l.label}
+                                      {AI_DETAIL_LEVELS.map(level => (
+                                        <SelectItem key={level} value={level} className="text-xs">
+                                          {t(`settings.notifications.ai.detailLevels.${level}`)}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -2372,7 +2360,7 @@ export function NotificationSettings() {
                             <div className="flex items-start gap-2 p-3 rounded-md bg-purple-500/10 border border-purple-500/20">
                               <Info className="h-4 w-4 text-purple-400 shrink-0 mt-0.5" />
                               <p className="text-xs sm:text-sm text-purple-400/90 leading-relaxed">
-                                AI translates and formats notifications to your selected language. Each channel can have different detail levels.
+                                {t("settings.notifications.ai.detailHint")}
                               </p>
                             </div>
                           </div>
@@ -2383,11 +2371,11 @@ export function NotificationSettings() {
                               <Lightbulb className="h-5 w-5 text-purple-400 mt-0.5 shrink-0" />
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium">AI Suggestions</span>
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium">BETA</span>
+                                  <span className="text-sm font-medium">{t("settings.notifications.ai.suggestions")}</span>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium">{t("settings.notifications.ai.beta")}</span>
                                 </div>
                                 <p className="text-xs sm:text-sm text-muted-foreground">
-                                  Allow AI to add brief troubleshooting tips based on log context
+                                  {t("settings.notifications.ai.suggestionsDescription")}
                                 </p>
                               </div>
                             </div>
@@ -2420,7 +2408,7 @@ export function NotificationSettings() {
                         <div className="space-y-3 pt-3 border-t border-border/50">
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
-                                <Label className="text-xs sm:text-sm text-foreground/80">Custom Prompt</Label>
+                                <Label className="text-xs sm:text-sm text-foreground/80">{t("settings.notifications.ai.customPrompt")}</Label>
                                 <div className="flex gap-1">
                                   {!editingCustomPrompt ? (
                                     <Button
@@ -2433,7 +2421,7 @@ export function NotificationSettings() {
                                       className="h-7 px-2 text-xs flex items-center gap-1"
                                     >
                                       <Pencil className="h-3 w-3" />
-                                      Edit
+                                      {t("actions.edit")}
                                     </Button>
                                   ) : (
                                     <>
@@ -2446,7 +2434,7 @@ export function NotificationSettings() {
                                         }}
                                         className="h-7 px-2 text-xs"
                                       >
-                                        Cancel
+                                        {t("actions.cancel")}
                                       </Button>
                                       <Button
                                         variant="outline"
@@ -2459,7 +2447,7 @@ export function NotificationSettings() {
                                         className="h-7 px-2 text-xs flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
                                       >
                                         <Save className="h-3 w-3" />
-                                        Save
+                                        {t("actions.save")}
                                       </Button>
                                     </>
                                   )}
@@ -2469,7 +2457,7 @@ export function NotificationSettings() {
                                 value={editingCustomPrompt ? customPromptDraft : (config.ai_custom_prompt || "")}
                                 onChange={e => setCustomPromptDraft(e.target.value)}
                                 disabled={!editingCustomPrompt}
-                                placeholder="Enter your custom prompt instructions for the AI..."
+                                placeholder={t("settings.notifications.ai.customPromptPlaceholder")}
                                 className="w-full h-48 px-3 py-2 text-sm rounded-md border border-border bg-background resize-y focus:outline-none focus:ring-2 focus:ring-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
                               />
                             </div>
@@ -2490,7 +2478,7 @@ export function NotificationSettings() {
                                 className="flex items-center gap-1"
                               >
                                 <Download className="h-4 w-4" />
-                                Export
+                                {t("settings.notifications.ai.export")}
                               </Button>
                               <Button
                                 variant="outline"
@@ -2513,7 +2501,7 @@ export function NotificationSettings() {
                                 className="flex items-center gap-1"
                               >
                                 <Upload className="h-4 w-4" />
-                                Import
+                                {t("settings.notifications.ai.import")}
                               </Button>
                               <a
                                 href="https://github.com/MacRimi/ProxMenux/discussions/categories/share-custom-prompts-for-ai-notifications"
@@ -2521,13 +2509,13 @@ export function NotificationSettings() {
                                 rel="noopener noreferrer"
                                 className="text-xs text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1"
                               >
-                                Community prompts <ExternalLink className="h-3 w-3" />
+                                {t("settings.notifications.ai.communityPrompts")} <ExternalLink className="h-3 w-3" />
                               </a>
                             </div>
                             <div className="flex items-start gap-2 p-3 rounded-md bg-purple-500/10 border border-purple-500/20">
                               <Info className="h-4 w-4 text-purple-400 shrink-0 mt-0.5" />
                               <p className="text-xs sm:text-sm text-purple-400/90 leading-relaxed">
-                                Define your own prompt rules and format. You control the detail level and style of all notifications. Export to share with others or import prompts from the community.
+                                {t("settings.notifications.ai.customPromptHint")}
                               </p>
                           </div>
                         </div>
@@ -2546,9 +2534,9 @@ export function NotificationSettings() {
                           className="w-full h-9 flex items-center justify-center gap-2 rounded-md text-sm font-medium bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           {testingAI ? (
-                            <><Loader2 className="h-4 w-4 animate-spin" /> Testing...</>
+                            <><Loader2 className="h-4 w-4 animate-spin" /> {t("settings.notifications.ai.testing")}</>
                           ) : (
-                            <><Zap className="h-4 w-4" /> Test Connection</>
+                            <><Zap className="h-4 w-4" /> {t("settings.notifications.ai.testConnection")}</>
                           )}
                         </button>
                         
@@ -2587,8 +2575,8 @@ export function NotificationSettings() {
           <Info className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
           <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
             {config.enabled
-              ? "Notifications are active. Each channel sends events based on its own category and event selection."
-              : "Enable notifications to receive alerts about system events, health status changes, and security incidents via Telegram, Gotify, Discord, or Email."}
+              ? t("settings.notifications.ui.activeFooter")
+              : t("settings.notifications.ui.inactiveFooter")}
           </p>
         </div>
       </CardContent>
@@ -2598,7 +2586,7 @@ export function NotificationSettings() {
       <Dialog open={showProviderInfo} onOpenChange={setShowProviderInfo}>
         <DialogContent className="max-w-[90vw] sm:max-w-xl md:max-w-2xl lg:max-w-3xl">
           <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg">AI Providers Information</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">{t("settings.notifications.ai.providersInfo")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
             {AI_PROVIDERS.map(provider => (
@@ -2612,7 +2600,7 @@ export function NotificationSettings() {
                     <div className="w-10 h-10 rounded-md bg-background flex items-center justify-center border border-border shrink-0">
                       <img 
                         src={resolvedTheme === 'light' ? provider.iconLight : provider.icon} 
-                        alt={provider.label}
+                        alt={providerLabel(provider)}
                         className="w-7 h-7 object-contain"
                         onError={(e) => {
                           // Fallback if icon fails to load
@@ -2620,30 +2608,30 @@ export function NotificationSettings() {
                         }}
                       />
                     </div>
-                    <span className="font-medium text-sm sm:text-base">{provider.label}</span>
+                    <span className="font-medium text-sm sm:text-base">{providerLabel(provider)}</span>
                   </div>
                   {provider.value === "ollama" && (
-                    <Badge variant="outline" className="text-xs px-2 py-0.5">Local</Badge>
+                    <Badge variant="outline" className="text-xs px-2 py-0.5">{t("settings.notifications.ai.local")}</Badge>
                   )}
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-2 ml-[52px] leading-relaxed">
-                  {provider.description}
+                  {t(`settings.notifications.ai.providers.${provider.value}`)}
                 </p>
                 <p className="text-xs text-muted-foreground/70 mt-1 ml-[52px]">
-                  Click &apos;Load&apos; to fetch available models from this provider.
+                  {t("settings.notifications.ai.loadModelsHint")}
                 </p>
                 {/* OpenAI compatibility note */}
                 {provider.value === "openai" && (
                   <div className="mt-3 ml-[52px] p-3 rounded-md bg-blue-500/10 border border-blue-500/20">
-                    <p className="text-xs sm:text-sm text-blue-400 font-medium mb-1">OpenAI-Compatible APIs</p>
+                    <p className="text-xs sm:text-sm text-blue-400 font-medium mb-1">{t("settings.notifications.ai.openAiCompatible")}</p>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      You can use any OpenAI-compatible API by setting a custom Base URL. Compatible services include:
+                      {t("settings.notifications.ai.openAiCompatibleDescription")}
                     </p>
                     <ul className="text-xs text-muted-foreground mt-1.5 space-y-0.5 ml-3">
                       <li>BytePlus/ByteDance (Kimi K2.5)</li>
                       <li>LocalAI, LM Studio, vLLM</li>
                       <li>Together AI, Fireworks AI</li>
-                      <li>Any service using OpenAI format</li>
+                      <li>{t("settings.notifications.ai.anyOpenAiService")}</li>
                     </ul>
                   </div>
                 )}
@@ -2657,20 +2645,20 @@ export function NotificationSettings() {
       <Dialog open={showTelegramHelp} onOpenChange={setShowTelegramHelp}>
         <DialogContent className="max-w-[90vw] sm:max-w-xl md:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg">Telegram Bot Setup Guide</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">{t("settings.notifications.telegramGuide.title")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1 text-sm">
             {/* Step 1 */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <span className="h-6 w-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">1</span>
-                <h4 className="font-medium">Create a Bot with BotFather</h4>
+                <h4 className="font-medium">{t("settings.notifications.telegramGuide.createBot")}</h4>
               </div>
               <div className="ml-8 space-y-1 text-muted-foreground text-xs">
-                <p>1. Open Telegram and search for <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">@BotFather</a></p>
-                <p>2. Send the command <code className="bg-muted px-1 rounded">/newbot</code></p>
-                <p>3. Choose a name for your bot (e.g., "ProxMenux Notifications")</p>
-                <p>4. Choose a username ending in "bot" (e.g., "proxmenux_alerts_bot")</p>
+                <p>{t("settings.notifications.telegramGuide.create1")} <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">@BotFather</a></p>
+                <p>{t("settings.notifications.telegramGuide.create2")} <code className="bg-muted px-1 rounded">/newbot</code></p>
+                <p>{t("settings.notifications.telegramGuide.create3")}</p>
+                <p>{t("settings.notifications.telegramGuide.create4")}</p>
               </div>
             </div>
 
@@ -2678,12 +2666,12 @@ export function NotificationSettings() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <span className="h-6 w-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">2</span>
-                <h4 className="font-medium">Get the Bot Token</h4>
+                <h4 className="font-medium">{t("settings.notifications.telegramGuide.getToken")}</h4>
               </div>
               <div className="ml-8 space-y-1 text-muted-foreground text-xs">
-                <p>After creating the bot, BotFather will give you a token like:</p>
+                <p>{t("settings.notifications.telegramGuide.tokenIntro")}</p>
                 <code className="block bg-muted px-2 py-1 rounded text-[11px] mt-1">xxxxxxxxx:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code>
-                <p className="mt-1">Copy this token and paste it in the <strong>Bot Token</strong> field.</p>
+                <p className="mt-1">{t("settings.notifications.telegramGuide.tokenPaste")}</p>
               </div>
             </div>
 
@@ -2691,18 +2679,18 @@ export function NotificationSettings() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <span className="h-6 w-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">3</span>
-                <h4 className="font-medium">Get Your Chat ID</h4>
+                <h4 className="font-medium">{t("settings.notifications.telegramGuide.getChatId")}</h4>
               </div>
               <div className="ml-8 space-y-2 text-muted-foreground text-xs">
-                <p className="font-medium text-foreground/80">Option A: Using a Bot (Easiest)</p>
-                <p>1. Search for <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">@userinfobot</a> or <a href="https://t.me/getmyid_bot" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">@getmyid_bot</a> on Telegram</p>
-                <p>2. Send any message and it will reply with your Chat ID</p>
+                <p className="font-medium text-foreground/80">{t("settings.notifications.telegramGuide.optionA")}</p>
+                <p>{t("settings.notifications.telegramGuide.chat1")} <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">@userinfobot</a> {t("settings.notifications.telegramGuide.or")} <a href="https://t.me/getmyid_bot" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">@getmyid_bot</a></p>
+                <p>{t("settings.notifications.telegramGuide.chat2")}</p>
                 
-                <p className="font-medium text-foreground/80 mt-2">Option B: Manual Method</p>
-                <p>1. Send a message to your new bot</p>
-                <p>2. Open this URL in your browser (replace YOUR_TOKEN):</p>
+                <p className="font-medium text-foreground/80 mt-2">{t("settings.notifications.telegramGuide.optionB")}</p>
+                <p>{t("settings.notifications.telegramGuide.manual1")}</p>
+                <p>{t("settings.notifications.telegramGuide.manual2")}</p>
                 <code className="block bg-muted px-2 py-1 rounded text-[11px] break-all">https://api.telegram.org/botYOUR_TOKEN/getUpdates</code>
-                <p>3. Look for <code className="bg-muted px-1 rounded">"chat":&#123;"id": XXXXXX&#125;</code> - that number is your Chat ID</p>
+                <p>{t("settings.notifications.telegramGuide.manual3")} <code className="bg-muted px-1 rounded">"chat":&#123;"id": XXXXXX&#125;</code></p>
               </div>
             </div>
 
@@ -2710,22 +2698,22 @@ export function NotificationSettings() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <span className="h-6 w-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">4</span>
-                <h4 className="font-medium">For Groups or Channels</h4>
+                <h4 className="font-medium">{t("settings.notifications.telegramGuide.groups")}</h4>
               </div>
               <div className="ml-8 space-y-1 text-muted-foreground text-xs">
-                <p>1. Add your bot to the group/channel as administrator</p>
-                <p>2. Send a message in the group</p>
-                <p>3. Use the getUpdates URL method above to find the group Chat ID</p>
-                <p>4. Group IDs are negative numbers (e.g., <code className="bg-muted px-1 rounded">-1001234567890</code>)</p>
+                <p>{t("settings.notifications.telegramGuide.group1")}</p>
+                <p>{t("settings.notifications.telegramGuide.group2")}</p>
+                <p>{t("settings.notifications.telegramGuide.group3")}</p>
+                <p>{t("settings.notifications.telegramGuide.group4")} <code className="bg-muted px-1 rounded">-1001234567890</code></p>
               </div>
             </div>
 
             {/* Summary */}
             <div className="mt-4 p-3 rounded-md bg-blue-500/10 border border-blue-500/20">
-              <p className="text-xs text-blue-400 font-medium mb-1">Quick Summary</p>
+              <p className="text-xs text-blue-400 font-medium mb-1">{t("settings.notifications.telegramGuide.summary")}</p>
               <ul className="text-xs text-muted-foreground space-y-0.5">
-                <li><strong>Bot Token:</strong> Identifies your bot (from BotFather)</li>
-                <li><strong>Chat ID:</strong> Where to send messages (your ID or group ID)</li>
+                <li><strong>{t("settings.notifications.ui.botToken")}:</strong> {t("settings.notifications.telegramGuide.summaryToken")}</li>
+                <li><strong>{t("settings.notifications.ui.chatId")}:</strong> {t("settings.notifications.telegramGuide.summaryChat")}</li>
               </ul>
             </div>
           </div>
@@ -2738,48 +2726,48 @@ export function NotificationSettings() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
               <Settings2 className="h-5 w-5 text-purple-400" />
-              Custom Prompt Mode
+              {t("settings.notifications.customPromptInfo.title")}
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              Create your own AI prompt for ProxMenux Monitor notifications
+              {t("settings.notifications.customPromptInfo.description")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 text-sm">
             <div className="space-y-2">
-              <h4 className="font-medium text-foreground/90">What is a custom prompt?</h4>
+              <h4 className="font-medium text-foreground/90">{t("settings.notifications.customPromptInfo.whatTitle")}</h4>
               <p className="text-muted-foreground text-xs leading-relaxed">
-                The prompt defines how the AI formats your notifications. With a custom prompt, you control the style, detail level, and format of all messages.
+                {t("settings.notifications.customPromptInfo.whatDescription")}
               </p>
             </div>
             
             <div className="space-y-2">
-              <h4 className="font-medium text-foreground/90">Important requirements</h4>
+              <h4 className="font-medium text-foreground/90">{t("settings.notifications.customPromptInfo.requirements")}</h4>
               <ul className="text-muted-foreground text-xs space-y-1.5">
                 <li className="flex items-start gap-2">
                   <span className="text-purple-400 mt-0.5">1.</span>
-                  <span>Your prompt must output in this format:<br/>
-                    <code className="bg-muted px-1.5 py-0.5 rounded text-[11px]">[TITLE]</code> followed by the title, then <code className="bg-muted px-1.5 py-0.5 rounded text-[11px]">[BODY]</code> followed by the message
+                  <span>{t("settings.notifications.customPromptInfo.formatIntro")}<br/>
+                    <code className="bg-muted px-1.5 py-0.5 rounded text-[11px]">[TITLE]</code> {t("settings.notifications.customPromptInfo.formatTitleThen")} <code className="bg-muted px-1.5 py-0.5 rounded text-[11px]">[BODY]</code> {t("settings.notifications.customPromptInfo.formatBodyThen")}
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-400 mt-0.5">2.</span>
-                  <span>Use plain text only (no markdown) for compatibility with all channels</span>
+                  <span>{t("settings.notifications.customPromptInfo.plainText")}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-400 mt-0.5">3.</span>
-                  <span>The prompt receives raw Proxmox event data as input</span>
+                  <span>{t("settings.notifications.customPromptInfo.rawData")}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-400 mt-0.5">4.</span>
-                  <span>Define the output language in your prompt (the Language selector only applies to Default mode)</span>
+                  <span>{t("settings.notifications.customPromptInfo.language")}</span>
                 </li>
               </ul>
             </div>
 
             <div className="space-y-2">
-              <h4 className="font-medium text-foreground/90">Getting started</h4>
+              <h4 className="font-medium text-foreground/90">{t("settings.notifications.customPromptInfo.gettingStarted")}</h4>
               <p className="text-muted-foreground text-xs leading-relaxed">
-                We have added an example prompt to get you started. You can adapt it, export it to share with others, or import prompts from the community.
+                {t("settings.notifications.customPromptInfo.gettingStartedDescription")}
               </p>
             </div>
 
@@ -2795,7 +2783,7 @@ export function NotificationSettings() {
                 }}
                 className="flex-1"
               >
-                Load Example
+                {t("settings.notifications.customPromptInfo.loadExample")}
               </Button>
               <Button
                 size="sm"
@@ -2806,7 +2794,7 @@ export function NotificationSettings() {
                 }}
                 className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
               >
-                Start from Scratch
+                {t("settings.notifications.customPromptInfo.startFromScratch")}
               </Button>
             </div>
           </div>

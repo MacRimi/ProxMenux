@@ -5,6 +5,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Loader2 } from 'lucide-react'
 import { fetchApi } from "../lib/api-config"
 import { getNetworkUnit } from "../lib/format-network"
+import { useT } from "../lib/i18n/provider"
 
 interface NetworkMetricsData {
   time: string
@@ -50,6 +51,7 @@ export function NetworkTrafficChart({
   refreshInterval = 60000,
   networkUnit: networkUnitProp, // Rename prop to avoid conflict
 }: NetworkTrafficChartProps) {
+  const t = useT()
   const [data, setData] = useState<NetworkMetricsData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -114,7 +116,7 @@ export function NetworkTrafficChart({
       const result = await fetchApi<any>(apiPath)
 
       if (!result.data || !Array.isArray(result.data)) {
-        throw new Error("Invalid data format received from server")
+        throw new Error(t("network.chart.invalidDataFormat"))
       }
 
       if (result.data.length === 0) {
@@ -207,7 +209,7 @@ export function NetworkTrafficChart({
       }
     } catch (err: any) {
       console.error("Error fetching network metrics:", err)
-      setError(err.message || "Error loading metrics")
+      setError(err.message || t("network.chart.loadError"))
     } finally {
       setLoading(false)
     }
@@ -255,7 +257,7 @@ export function NetworkTrafficChart({
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-[300px] gap-2">
-        <p className="text-muted-foreground text-sm">Network metrics not available yet</p>
+        <p className="text-muted-foreground text-sm">{t("overview.networkMetricsUnavailable")}</p>
         <p className="text-xs text-red-500">{error}</p>
       </div>
     )
@@ -264,7 +266,7 @@ export function NetworkTrafficChart({
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-[300px]">
-        <p className="text-muted-foreground text-sm">No network metrics available</p>
+        <p className="text-muted-foreground text-sm">{t("overview.noNetworkMetrics")}</p>
       </div>
     )
   }
@@ -295,7 +297,7 @@ export function NetworkTrafficChart({
           }}
           domain={[0, "auto"]}
         />
-        <Tooltip content={<CustomNetworkTooltip networkUnit={networkUnit} />} /> // Pass networkUnit to tooltip
+        <Tooltip content={<CustomNetworkTooltip networkUnit={networkUnit} />} />
         <Legend verticalAlign="top" height={36} content={renderLegend} />
         <Area
           type="monotone"
@@ -304,7 +306,7 @@ export function NetworkTrafficChart({
           strokeWidth={2}
           fill="#10b981"
           fillOpacity={0.3}
-          name="Received"
+          name={t("overview.receivedShort")}
           hide={!visibleLines.netIn}
           isAnimationActive={true}
           animationDuration={300}
@@ -317,7 +319,7 @@ export function NetworkTrafficChart({
           strokeWidth={2}
           fill="#3b82f6"
           fillOpacity={0.3}
-          name="Sent"
+          name={t("overview.sentShort")}
           hide={!visibleLines.netOut}
           isAnimationActive={true}
           animationDuration={300}

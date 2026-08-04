@@ -5,6 +5,7 @@ import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
+import { useT } from "../lib/i18n/provider"
 
 const APP_VERSION = "1.2.4.1-beta" // Sync with AppImage/package.json
 
@@ -247,6 +248,7 @@ interface ReleaseNotesModalProps {
 }
 
 export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
+  const t = useT()
   const [dontShowAgain, setDontShowAgain] = useState(false)
 
   const handleClose = () => {
@@ -259,7 +261,7 @@ export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 border-0 bg-transparent">
-        <DialogTitle className="sr-only">Release Notes - Version {APP_VERSION}</DialogTitle>
+        <DialogTitle className="sr-only">{t("releaseNotes.dialogTitle", { version: APP_VERSION })}</DialogTitle>
         <div className="relative bg-card rounded-lg shadow-2xl h-full flex flex-col max-h-[85vh]">
           <Button
             variant="ghost"
@@ -285,10 +287,10 @@ export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
           <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-4 md:space-y-6 min-h-0">
             <div className="space-y-2">
               <h2 className="text-xl md:text-2xl font-bold text-foreground text-balance">
-                What's New in Version {APP_VERSION}
+                {t("releaseNotes.title", { version: APP_VERSION })}
               </h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                We've added exciting new features and improvements to make ProxMenux Monitor even better!
+                {t("releaseNotes.intro")}
               </p>
             </div>
 
@@ -299,7 +301,9 @@ export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
                   className="flex items-start gap-2 md:gap-3 p-3 rounded-lg bg-muted/50 border border-border/50 hover:bg-muted/70 transition-colors"
                 >
                   <div className="text-orange-500 mt-0.5 flex-shrink-0">{feature.icon}</div>
-                  <p className="text-xs md:text-sm text-foreground leading-relaxed">{feature.text}</p>
+                  <p className="text-xs md:text-sm text-foreground leading-relaxed">
+                    {t(index === 0 ? "releaseNotes.currentFeatures.hostUpdate" : "releaseNotes.currentFeatures.mobileInstall")}
+                  </p>
                 </div>
               ))}
             </div>
@@ -312,7 +316,7 @@ export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
                 className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
-                Got it!
+                {t("releaseNotes.gotIt")}
               </Button>
 
               <div className="flex items-center justify-center gap-2">
@@ -325,7 +329,7 @@ export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
                   htmlFor="dont-show-version-again"
                   className="text-xs md:text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none"
                 >
-                  Don't show again for this version
+                  {t("releaseNotes.dontShowAgain")}
                 </label>
               </div>
             </div>

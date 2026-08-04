@@ -23,8 +23,8 @@ import { useT } from "../lib/i18n/provider"
 // without re-cluttering the dashboard footer.
 
 interface LinkRow {
-  label: string
-  description: string
+  labelKey: string
+  descriptionKey: string
   href: string
   Icon: React.ComponentType<{ className?: string }>
   accent?: keyof typeof ACCENT_CLASSES
@@ -43,29 +43,29 @@ const ACCENT_CLASSES = {
 
 const PROJECT_LINKS: LinkRow[] = [
   {
-    label: "GitHub repository",
-    description: "Source code, releases and issue tracker.",
+    labelKey: "about.links.repository.label",
+    descriptionKey: "about.links.repository.description",
     href: "https://github.com/MacRimi/ProxMenux",
     Icon: Github,
     accent: "gray",
   },
   {
-    label: "Documentation",
-    description: "Full user guide for ProxMenux and the Monitor.",
+    labelKey: "about.links.documentation.label",
+    descriptionKey: "about.links.documentation.description",
     href: "https://proxmenux.com",
     Icon: BookOpen,
     accent: "blue",
   },
   {
-    label: "Discussions",
-    description: "Ask questions, share custom AI prompts, swap ideas.",
+    labelKey: "about.links.discussions.label",
+    descriptionKey: "about.links.discussions.description",
     href: "https://github.com/MacRimi/ProxMenux/discussions",
     Icon: MessageSquare,
     accent: "purple",
   },
   {
-    label: "Report a bug or request a feature",
-    description: "Open an issue on GitHub — bugs, ideas, regressions.",
+    labelKey: "about.links.issues.label",
+    descriptionKey: "about.links.issues.description",
     href: "https://github.com/MacRimi/ProxMenux/issues",
     Icon: Bug,
     accent: "red",
@@ -74,8 +74,8 @@ const PROJECT_LINKS: LinkRow[] = [
 
 const SUPPORT_LINKS: LinkRow[] = [
   {
-    label: "Support the project on Ko-fi",
-    description: "ProxMenux is free and open source. Donations cover hosting and dev time.",
+    labelKey: "about.links.support.label",
+    descriptionKey: "about.links.support.description",
     href: "https://ko-fi.com/macrimi",
     Icon: Heart,
     accent: "pink",
@@ -83,6 +83,7 @@ const SUPPORT_LINKS: LinkRow[] = [
 ]
 
 function LinkCard({ row }: { row: LinkRow }) {
+  const t = useT()
   const accentClass = ACCENT_CLASSES[row.accent ?? "blue"]
   // Style mirrors the PCI Devices cards in the Hardware tab: subtle
   // translucent background by default, slightly lighter on hover, no
@@ -102,10 +103,10 @@ function LinkCard({ row }: { row: LinkRow }) {
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-          {row.label}
+          {t(row.labelKey)}
           <ExternalLink className="h-3 w-3 text-muted-foreground" />
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{row.description}</p>
+        <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{t(row.descriptionKey)}</p>
       </div>
     </a>
   )
@@ -122,7 +123,7 @@ export function About() {
             <div className="relative w-24 h-24 md:w-28 md:h-28 flex-shrink-0">
               <Image
                 src="/images/proxmenux-logo.png"
-                alt="ProxMenux logo"
+                alt={t("about.logoAlt")}
                 fill
                 priority
                 className="object-contain"
@@ -133,9 +134,7 @@ export function About() {
                 ProxMenux Monitor
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
-                A web dashboard and management layer for Proxmox VE — health monitoring,
-                notifications, terminal, optimization tracker and more, packaged as a single
-                AppImage.
+                {t("about.heroDescription")}
               </p>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-3">
                 <span className="inline-flex items-center gap-1.5 rounded-md bg-blue-500/10 text-blue-500 border border-blue-500/30 px-2.5 py-1 text-xs font-mono">
@@ -177,9 +176,9 @@ export function About() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Github className="h-4 w-4 text-muted-foreground" />
-            Project
+            {t("about.project.title")}
           </CardTitle>
-          <CardDescription>Repository, documentation and community channels.</CardDescription>
+          <CardDescription>{t("about.project.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -197,11 +196,10 @@ export function About() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Heart className="h-4 w-4 text-pink-500" />
-            Support &amp; License
+            {t("about.support.title")}
           </CardTitle>
           <CardDescription>
-            ProxMenux is free and open source under the GPL-3.0 license. If it&apos;s useful to
-            you, a one-off contribution helps keep it that way.
+            {t("about.support.description")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -220,11 +218,11 @@ export function About() {
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                  GPL-3.0 license
+                  {t("about.license.label")}
                   <ExternalLink className="h-3 w-3 text-muted-foreground" />
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
-                  Free software — see the LICENSE file for the full text.
+                  {t("about.license.description")}
                 </p>
               </div>
             </a>
