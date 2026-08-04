@@ -14,7 +14,7 @@ export interface SupportedLanguage {
 
 export const SUPPORTED_LANGUAGES: SupportedLanguage[] = [
   { code: "en", englishName: "English", nativeName: "English", status: "complete" },
-  { code: "sk", englishName: "Slovak", nativeName: "Slovenčina", status: "partial" },
+  { code: "sk", englishName: "Slovak", nativeName: "Slovenčina", status: "complete" },
   { code: "es", englishName: "Spanish", nativeName: "Español", status: "needs-translation" },
   { code: "fr", englishName: "French", nativeName: "Français", status: "needs-translation" },
   { code: "de", englishName: "German", nativeName: "Deutsch", status: "needs-translation" },

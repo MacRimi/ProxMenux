@@ -3,7 +3,7 @@
 The ProxMenux Monitor dashboard uses a small client-side i18n layer.
 
 - English (`en`) is the source language and the fallback.
-- Slovak (`sk`) is partially translated.
+- Slovak (`sk`) is complete.
 - Spanish, French, German, Italian and Portuguese are registered as
   community translation targets and currently fall back to English.
 
