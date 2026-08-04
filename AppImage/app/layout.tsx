@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono"
 import { ThemeProvider } from "../components/theme-provider"
 import { PwaRegister } from "../components/pwa-register"
 import { PwaInstallPrompt } from "../components/pwa-install-prompt"
+import { I18nProvider } from "../lib/i18n/provider"
 import { Suspense } from "react"
 import "./globals.css"
 
@@ -44,9 +45,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${GeistSans.variable} ${GeistMono.variable} antialiased bg-background text-foreground`}>
         <Suspense fallback={<div>Loading...</div>}>
-          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-            {children}
-          </ThemeProvider>
+          <I18nProvider>
+            <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+              {children}
+            </ThemeProvider>
+          </I18nProvider>
         </Suspense>
         <PwaRegister />
         <PwaInstallPrompt />

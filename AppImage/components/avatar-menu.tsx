@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu"
 import { fetchApi, getApiUrl, getAuthToken } from "../lib/api-config"
+import { useT } from "../lib/i18n/provider"
 
 interface AuthStatus {
   auth_enabled?: boolean
@@ -57,6 +58,8 @@ interface AvatarMenuProps {
  * proper /api/auth/logout that revokes the JWT server-side too.
  */
 export function AvatarMenu({ size = "lg", onOpenSecurity, onOpenProfile }: AvatarMenuProps) {
+  const t = useT()
+
   // IMPORTANT — all hooks must run unconditionally on every render. The
   // previous version short-circuited with `if (!auth_enabled) return null`
   // BEFORE the avatar blob hooks, so the hook count changed between
@@ -201,7 +204,7 @@ export function AvatarMenu({ size = "lg", onOpenSecurity, onOpenProfile }: Avata
         <DropdownMenuTrigger asChild>
           <button
             className="rounded-full hover:ring-2 hover:ring-cyan-500/30 transition-all relative z-50 focus:outline-none focus-visible:outline-none active:outline-none data-[state=open]:outline-none data-[state=open]:ring-0 select-none"
-            aria-label="Open user menu"
+            aria-label={t("actions.openUserMenu")}
             // WebKit ignores `outline` for the tap-highlight overlay
             // shown on iOS / Android Chrome after a touch. That overlay
             // was the white border that lingered on the avatar after
@@ -248,7 +251,7 @@ export function AvatarMenu({ size = "lg", onOpenSecurity, onOpenProfile }: Avata
                 <div className="text-xs text-muted-foreground truncate">{username}</div>
               )}
               {!profile?.display_name && (
-                <div className="text-xs text-muted-foreground truncate">Signed in</div>
+                <div className="text-xs text-muted-foreground truncate">{t("account.signedIn")}</div>
               )}
             </div>
           </div>
@@ -257,13 +260,13 @@ export function AvatarMenu({ size = "lg", onOpenSecurity, onOpenProfile }: Avata
         {onOpenProfile && (
           <DropdownMenuItem onClick={onOpenProfile}>
             <User className="h-4 w-4 mr-2" />
-            View profile
+            {t("account.viewProfile")}
           </DropdownMenuItem>
         )}
         {onOpenSecurity && (
           <DropdownMenuItem onClick={onOpenSecurity}>
             <Shield className="h-4 w-4 mr-2" />
-            Security
+            {t("account.security")}
           </DropdownMenuItem>
         )}
         {(onOpenProfile || onOpenSecurity) && <DropdownMenuSeparator />}
@@ -272,7 +275,7 @@ export function AvatarMenu({ size = "lg", onOpenSecurity, onOpenProfile }: Avata
           className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
         >
           <LogOut className="h-4 w-4 mr-2" />
-          Sign out
+          {t("account.signOut")}
         </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

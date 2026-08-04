@@ -2789,7 +2789,7 @@ class NotificationManager:
                 # injection lands in the system prompt verbatim. Audit Tier 3.2 #4.
                 _ALLOWED_DETAIL_LEVELS = ('brief', 'standard', 'detailed')
                 _ALLOWED_AI_LANGUAGES = (
-                    'en', 'es', 'fr', 'de', 'it', 'pt', 'ru',
+                    'en', 'sk', 'es', 'fr', 'de', 'it', 'pt', 'ru',
                     'ja', 'zh', 'ko', 'pl', 'nl', 'tr', 'ar',
                 )
                 if short_key.endswith('.ai_detail_level') or short_key == 'ai_detail_level':

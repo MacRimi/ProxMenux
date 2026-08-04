@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { APP_VERSION } from "./release-notes-modal"
+import { useT } from "../lib/i18n/provider"
 
 // Issue #191: a dedicated About tab. Centralises project metadata
 // (version, license, author) and every external link the project
@@ -111,6 +112,7 @@ function LinkCard({ row }: { row: LinkRow }) {
 }
 
 export function About() {
+  const t = useT()
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Hero — logo, name, version, one-line description. */}
@@ -151,7 +153,7 @@ export function About() {
                   const href = isPrerelease
                     ? "https://github.com/MacRimi/ProxMenux/releases"
                     : "https://proxmenux.com/en/changelog"
-                  const label = isPrerelease ? "Release notes" : "Changelog"
+                  const label = isPrerelease ? t("about.releaseNotes") : t("about.changelog")
                   return (
                     <a
                       href={href}

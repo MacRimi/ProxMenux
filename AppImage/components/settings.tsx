@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
-import { Wrench, Package, Ruler, HeartPulse, Cpu, MemoryStick, HardDrive, CircleDot, Network, Server, Settings2, FileText, RefreshCw, Shield, AlertTriangle, Info, Loader2, Check, Database, CloudOff, Code, X, Copy, Sparkles, ArrowUpCircle, BellOff } from "lucide-react"
+import { Wrench, Package, Ruler, HeartPulse, Cpu, MemoryStick, HardDrive, CircleDot, Network, Server, Settings2, FileText, RefreshCw, Shield, AlertTriangle, Info, Loader2, Check, Database, CloudOff, Code, X, Copy, Sparkles, ArrowUpCircle, BellOff, Globe2 } from "lucide-react"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { NotificationSettings } from "./notification-settings"
@@ -14,6 +14,8 @@ import { Switch } from "./ui/switch"
 import { Input } from "./ui/input"
 import { getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
+import { SUPPORTED_LANGUAGES, useI18n } from "../lib/i18n/provider"
+import type { LanguageCode, LanguageStatus } from "../lib/i18n/languages"
 
 // GitHub Dark color palette for bash syntax highlighting
 const BASH_KEYWORDS = new Set([
@@ -297,6 +299,7 @@ interface NetworkInterface {
 }
 
 export function Settings() {
+  const { language, setLanguage, t } = useI18n()
   const [proxmenuxTools, setProxmenuxTools] = useState<ProxMenuxTool[]>([])
   const [updatesAvailableCount, setUpdatesAvailableCount] = useState(0)
   const [loadingTools, setLoadingTools] = useState(true)
@@ -899,21 +902,82 @@ export function Settings() {
     k => pendingChanges[k] !== -2
   )
 
+  const getLanguageStatusLabel = (status: LanguageStatus) => {
+    switch (status) {
+      case "complete":
+        return t("settings.interfaceLanguage.statusComplete")
+      case "partial":
+        return t("settings.interfaceLanguage.statusPartial")
+      case "needs-translation":
+        return t("settings.interfaceLanguage.statusNeedsTranslation")
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground mt-2">Manage your dashboard preferences</p>
+        <h1 className="text-3xl font-bold">{t("settings.title")}</h1>
+        <p className="text-muted-foreground mt-2">{t("settings.description")}</p>
       </div>
+
+      {/* Interface Language Settings */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Globe2 className="h-5 w-5 text-blue-500" />
+            <CardTitle>{t("settings.interfaceLanguage.title")}</CardTitle>
+          </div>
+          <CardDescription>{t("settings.interfaceLanguage.description")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-sm font-medium text-foreground">{t("settings.interfaceLanguage.label")}</div>
+              <p className="text-xs text-muted-foreground mt-1">{t("settings.interfaceLanguage.fallbackNote")}</p>
+            </div>
+            <Select value={language} onValueChange={(value) => setLanguage(value as LanguageCode)}>
+              <SelectTrigger className="w-full sm:w-64">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SUPPORTED_LANGUAGES.map((item) => (
+                  <SelectItem key={item.code} value={item.code}>
+                    {item.nativeName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {SUPPORTED_LANGUAGES.map((item) => (
+              <div
+                key={item.code}
+                className={`rounded-md border px-3 py-2 text-sm ${
+                  item.code === language ? "border-blue-500 bg-blue-500/10" : "border-border bg-muted/20"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium">{item.nativeName}</span>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                    {item.code}
+                  </Badge>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">{getLanguageStatusLabel(item.status)}</div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Network Units Settings */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Ruler className="h-5 w-5 text-green-500" />
-            <CardTitle>Network Units</CardTitle>
+            <CardTitle>{t("settings.networkUnits.title")}</CardTitle>
           </div>
-          <CardDescription>Change how network traffic is displayed</CardDescription>
+          <CardDescription>{t("settings.networkUnits.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           {loadingUnitSettings ? (
@@ -922,7 +986,7 @@ export function Settings() {
             </div>
           ) : (
             <div className="text-foreground flex items-center justify-between">
-              <div className="flex items-center">Network Unit Display</div>
+              <div className="flex items-center">{t("settings.networkUnits.label")}</div>
               <Select value={networkUnitSettings} onValueChange={changeNetworkUnit}>
                 <SelectTrigger className="w-28 h-8 text-xs">
                   <SelectValue />

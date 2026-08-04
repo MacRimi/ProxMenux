@@ -1,0 +1,132 @@
+{
+  "app": {
+    "title": "ProxMenux Monitor",
+    "description": "Systémový prehľad Proxmoxu",
+    "loading": "Načítava sa...",
+    "connecting": "Pripájam sa k ProxMenux Monitoru",
+    "unknown": "Neznáme",
+    "notAvailable": "Nedostupné",
+    "serverOffline": "Server je offline",
+    "supportProject": "Podporte projekt alebo prispejte vlastnými úpravami"
+  },
+  "actions": {
+    "refresh": "Obnoviť",
+    "toggleTheme": "Prepnúť vzhľad",
+    "openUserMenu": "Otvoriť používateľské menu",
+    "cancel": "Zrušiť",
+    "save": "Uložiť",
+    "edit": "Upraviť",
+    "close": "Zavrieť"
+  },
+  "navigation": {
+    "overview": "Prehľad",
+    "storage": "Úložiská",
+    "network": "Sieť",
+    "virtualMachines": "VM a LXC",
+    "hardware": "Hardvér",
+    "backup": "Záloha",
+    "terminal": "Terminál",
+    "systemLogs": "Systémové logy",
+    "security": "Bezpečnosť",
+    "settings": "Nastavenia",
+    "about": "O projekte",
+    "profile": "Profil",
+    "node": "Server",
+    "admin": "Správa",
+    "menu": "Navigačné menu"
+  },
+  "status": {
+    "healthy": "V poriadku",
+    "warning": "Upozornenie",
+    "critical": "Problém",
+    "uptime": "Beží: {uptime}",
+    "node": "Server: {node}",
+    "connectionFailed": "Nepodarilo sa pripojiť k ProxMenux serveru",
+    "checkService": "Skontrolujte, či služba monitor.service beží správne.",
+    "serverPort": "ProxMenux server by sa mal spustiť automaticky na porte 8008",
+    "tryAccessing": "Skúste otvoriť:"
+  },
+  "settings": {
+    "title": "Nastavenia",
+    "description": "Spravujte správanie dashboardu",
+    "interfaceLanguage": {
+      "title": "Jazyk rozhrania",
+      "description": "Vyberte jazyk, ktorý bude používať Monitor dashboard. Texty bez prekladu sa zobrazia po anglicky.",
+      "label": "Jazyk dashboardu",
+      "fallbackNote": "Nepreložené texty zostanú po anglicky, kým ich komunita nedoplní.",
+      "statusComplete": "hotové",
+      "statusPartial": "čiastočne preložené",
+      "statusNeedsTranslation": "čaká na komunitný preklad"
+    },
+    "networkUnits": {
+      "title": "Jednotky siete",
+      "description": "Zmeňte, ako sa zobrazuje sieťová prevádzka",
+      "label": "Zobrazovanie sieťových jednotiek"
+    }
+  },
+  "login": {
+    "subtitle": "Prihláste sa do dashboardu",
+    "username": "Používateľské meno",
+    "password": "Heslo",
+    "usernamePlaceholder": "Zadajte používateľské meno",
+    "passwordPlaceholder": "Zadajte heslo",
+    "rememberMe": "Zapamätať si ma",
+    "missingCredentials": "Zadajte používateľské meno aj heslo",
+    "missingTotp": "Zadajte 2FA kód",
+    "loginFailed": "Prihlásenie zlyhalo",
+    "signingIn": "Prihlasujem...",
+    "signIn": "Prihlásiť sa",
+    "twoFactorTitle": "Dvojfaktorové overenie",
+    "twoFactorDescription": "Zadajte 6-miestny kód z overovacej aplikácie",
+    "authenticationCode": "Overovací kód",
+    "backupCodeHint": "Môžete použiť aj záložný kód vo formáte XXXX-XXXX",
+    "backToLogin": "Späť na prihlásenie",
+    "verifyCode": "Overiť kód",
+    "version": "ProxMenux Monitor v1.2.4.1-beta"
+  },
+  "account": {
+    "signedIn": "Prihlásený",
+    "viewProfile": "Zobraziť profil",
+    "security": "Bezpečnosť",
+    "signOut": "Odhlásiť sa"
+  },
+  "authSetup": {
+    "choiceTitle": "Nastavenie ochrany dashboardu",
+    "passwordTitle": "Vytvoriť heslo",
+    "protectTitle": "Chcete chrániť dashboard?",
+    "protectDescription": "Pridajte ďalšiu vrstvu ochrany pre svoje Proxmox dáta, hlavne pri prístupe mimo súkromnej siete.",
+    "setupPassword": "Áno, nastaviť heslo",
+    "skipProtection": "Nie, pokračovať bez ochrany",
+    "enableLater": "Ochranu môžete zapnúť aj neskôr v Nastaveniach",
+    "setupTitle": "Nastavenie prihlásenia",
+    "setupDescription": "Vytvorte používateľské meno a heslo na ochranu dashboardu",
+    "fillFields": "Vyplňte všetky polia",
+    "passwordMismatch": "Heslá sa nezhodujú",
+    "passwordTooShort": "Heslo musí mať aspoň 6 znakov",
+    "skipFailed": "Nepodarilo sa preskočiť prihlásenie",
+    "savePreferenceFailed": "Nepodarilo sa uložiť nastavenie",
+    "setupFailed": "Nepodarilo sa nastaviť prihlásenie",
+    "username": "Používateľské meno",
+    "usernamePlaceholder": "Zadajte používateľské meno",
+    "password": "Heslo",
+    "passwordPlaceholder": "Zadajte heslo",
+    "confirmPassword": "Potvrdiť heslo",
+    "confirmPasswordPlaceholder": "Zadajte heslo znova",
+    "profileOptional": "Profil · voliteľné",
+    "displayName": "Zobrazované meno",
+    "displayNamePlaceholder": "Zobrazí sa nad používateľským menom v menu",
+    "displayNameHint": "Ak pole necháte prázdne, zobrazí sa samotné používateľské meno. Najviac 64 znakov.",
+    "avatar": "Avatar",
+    "change": "Zmeniť",
+    "chooseImage": "Vybrať obrázok",
+    "clear": "Vymazať",
+    "avatarHint": "PNG, JPEG, WebP alebo GIF · najviac 2 MB · najlepšie funguje štvorcový obrázok.",
+    "settingUp": "Nastavujem...",
+    "setupAuthentication": "Nastaviť prihlásenie",
+    "back": "Späť"
+  },
+  "about": {
+    "releaseNotes": "Poznámky k vydaniu",
+    "changelog": "Zoznam zmien"
+  }
+}

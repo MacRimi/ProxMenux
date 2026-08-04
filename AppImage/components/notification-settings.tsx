@@ -212,6 +212,7 @@ const AI_PROVIDERS = [
 
 const AI_LANGUAGES = [
   { value: "en", label: "English" },
+  { value: "sk", label: "Slovenčina" },
   { value: "es", label: "Espanol" },
   { value: "fr", label: "Francais" },
   { value: "de", label: "Deutsch" },

@@ -5,8 +5,10 @@ import { ProxmoxDashboard } from "../components/proxmox-dashboard"
 import { Login } from "../components/login"
 import { AuthSetup } from "../components/auth-setup"
 import { getApiUrl } from "../lib/api-config"
+import { useT } from "../lib/i18n/provider"
 
 export default function Home() {
+  const t = useT()
   const [authStatus, setAuthStatus] = useState<{
     loading: boolean
     authEnabled: boolean
@@ -113,8 +115,8 @@ export default function Home() {
             <div className="h-12 w-12 rounded-full border-2 border-muted"></div>
             <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-transparent border-t-primary animate-spin"></div>
           </div>
-          <div className="text-sm font-medium text-foreground">Loading...</div>
-          <p className="text-xs text-muted-foreground">Connecting to ProxMenux Monitor</p>
+          <div className="text-sm font-medium text-foreground">{t("app.loading")}</div>
+          <p className="text-xs text-muted-foreground">{t("app.connecting")}</p>
         </div>
       </div>
     )

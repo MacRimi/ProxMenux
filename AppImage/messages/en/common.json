@@ -1,0 +1,132 @@
+{
+  "app": {
+    "title": "ProxMenux Monitor",
+    "description": "Proxmox System Dashboard",
+    "loading": "Loading...",
+    "connecting": "Connecting to ProxMenux Monitor",
+    "unknown": "Unknown",
+    "notAvailable": "N/A",
+    "serverOffline": "Server Offline",
+    "supportProject": "Support and contribute to the project"
+  },
+  "actions": {
+    "refresh": "Refresh",
+    "toggleTheme": "Toggle theme",
+    "openUserMenu": "Open user menu",
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "close": "Close"
+  },
+  "navigation": {
+    "overview": "Overview",
+    "storage": "Storage",
+    "network": "Network",
+    "virtualMachines": "VMs & LXCs",
+    "hardware": "Hardware",
+    "backup": "Backup",
+    "terminal": "Terminal",
+    "systemLogs": "System Logs",
+    "security": "Security",
+    "settings": "Settings",
+    "about": "About",
+    "profile": "Profile",
+    "node": "Node",
+    "admin": "Admin",
+    "menu": "Navigation Menu"
+  },
+  "status": {
+    "healthy": "Healthy",
+    "warning": "Warning",
+    "critical": "Critical",
+    "uptime": "Uptime: {uptime}",
+    "node": "Node: {node}",
+    "connectionFailed": "ProxMenux Server Connection Failed",
+    "checkService": "Check that the monitor.service is running correctly.",
+    "serverPort": "The ProxMenux server should start automatically on port 8008",
+    "tryAccessing": "Try accessing:"
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Manage your dashboard preferences",
+    "interfaceLanguage": {
+      "title": "Interface language",
+      "description": "Choose the language used by the Monitor dashboard. Missing translations fall back to English.",
+      "label": "Dashboard language",
+      "fallbackNote": "Untranslated text is shown in English until the community fills it in.",
+      "statusComplete": "complete",
+      "statusPartial": "partial",
+      "statusNeedsTranslation": "community translation needed"
+    },
+    "networkUnits": {
+      "title": "Network Units",
+      "description": "Change how network traffic is displayed",
+      "label": "Network Unit Display"
+    }
+  },
+  "login": {
+    "subtitle": "Sign in to access your dashboard",
+    "username": "Username",
+    "password": "Password",
+    "usernamePlaceholder": "Enter your username",
+    "passwordPlaceholder": "Enter your password",
+    "rememberMe": "Remember me",
+    "missingCredentials": "Please enter username and password",
+    "missingTotp": "Please enter your 2FA code",
+    "loginFailed": "Login failed",
+    "signingIn": "Signing in...",
+    "signIn": "Sign In",
+    "twoFactorTitle": "Two-Factor Authentication",
+    "twoFactorDescription": "Enter the 6-digit code from your authentication app",
+    "authenticationCode": "Authentication Code",
+    "backupCodeHint": "You can also use a backup code (format: XXXX-XXXX)",
+    "backToLogin": "Back to login",
+    "verifyCode": "Verify Code",
+    "version": "ProxMenux Monitor v1.2.4.1-beta"
+  },
+  "account": {
+    "signedIn": "Signed in",
+    "viewProfile": "View profile",
+    "security": "Security",
+    "signOut": "Sign out"
+  },
+  "authSetup": {
+    "choiceTitle": "Setup Dashboard Protection",
+    "passwordTitle": "Create Password",
+    "protectTitle": "Protect Your Dashboard?",
+    "protectDescription": "Add an extra layer of security to protect your Proxmox data when accessing from non-private networks.",
+    "setupPassword": "Yes, Setup Password",
+    "skipProtection": "No, Continue Without Protection",
+    "enableLater": "You can always enable this later in Settings",
+    "setupTitle": "Setup Authentication",
+    "setupDescription": "Create a username and password to protect your dashboard",
+    "fillFields": "Please fill in all fields",
+    "passwordMismatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "skipFailed": "Failed to skip authentication",
+    "savePreferenceFailed": "Failed to save preference",
+    "setupFailed": "Failed to setup authentication",
+    "username": "Username",
+    "usernamePlaceholder": "Enter username",
+    "password": "Password",
+    "passwordPlaceholder": "Enter password",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "Confirm password",
+    "profileOptional": "Profile · optional",
+    "displayName": "Display name",
+    "displayNamePlaceholder": "Shown above the username in the menu",
+    "displayNameHint": "Leave empty to render the username itself. Up to 64 characters.",
+    "avatar": "Avatar",
+    "change": "Change",
+    "chooseImage": "Choose image",
+    "clear": "Clear",
+    "avatarHint": "PNG, JPEG, WebP or GIF · up to 2 MB · pre-crop square for best results.",
+    "settingUp": "Setting up...",
+    "setupAuthentication": "Setup Authentication",
+    "back": "Back"
+  },
+  "about": {
+    "releaseNotes": "Release notes",
+    "changelog": "Changelog"
+  }
+}
