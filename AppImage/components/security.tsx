@@ -251,6 +251,15 @@ export function Security() {
   })
   const [f2bSavingConfig, setF2bSavingConfig] = useState(false)
   const [f2bApplyingJails, setF2bApplyingJails] = useState(false)
+  const [f2bTrustedNetworks, setF2bTrustedNetworks] = useState<Array<{value: string; protected: boolean}>>([])
+  const [f2bDetectedIp, setF2bDetectedIp] = useState("")
+  const [f2bTrustedInput, setF2bTrustedInput] = useState("")
+  const [f2bSavingTrusted, setF2bSavingTrusted] = useState(false)
+  const [f2bRemovingTrusted, setF2bRemovingTrusted] = useState<string | null>(null)
+  const [f2bShowTrustedForm, setF2bShowTrustedForm] = useState(false)
+  const [f2bEditingTrusted, setF2bEditingTrusted] = useState<string | null>(null)
+  const [f2bTrustedEditInput, setF2bTrustedEditInput] = useState("")
+  const [f2bTrustedNotice, setF2bTrustedNotice] = useState<{type: "success" | "error"; text: string} | null>(null)
 
   // SSL/HTTPS state
   const [sslEnabled, setSslEnabled] = useState(false)
@@ -380,9 +389,10 @@ export function Security() {
   const loadFail2banDetails = async () => {
     try {
       setF2bDetailsLoading(true)
-      const [detailsRes, activityRes] = await Promise.all([
+      const [detailsRes, activityRes, trustedRes] = await Promise.all([
         fetchApi("/api/security/fail2ban/details"),
         fetchApi("/api/security/fail2ban/activity"),
+        fetchApi("/api/security/fail2ban/trusted-networks"),
       ])
       if (detailsRes.success) {
         setF2bDetails({
@@ -395,10 +405,94 @@ export function Security() {
       if (activityRes.success) {
         setF2bActivity(activityRes.events || [])
       }
+      if (trustedRes.success) {
+        setF2bTrustedNetworks(trustedRes.entries || [])
+        setF2bDetectedIp(trustedRes.detected_ip || "")
+      }
     } catch {
       // Silently fail
     } finally {
       setF2bDetailsLoading(false)
+    }
+  }
+
+  const trustedNetworkError = (message?: string) => {
+    if (message?.includes("already trusted")) return st("errors.trustedNetworkExists")
+    if (message?.includes("Invalid IP") || message?.includes("Enter one IP")) return st("errors.invalidTrustedNetwork")
+    return st("errors.updateTrustedNetworksFailed")
+  }
+
+  const handleAddTrustedNetwork = async (value?: string) => {
+    const candidate = (value || f2bTrustedInput).trim()
+    if (!candidate) {
+      setF2bTrustedNotice({ type: "error", text: st("errors.invalidTrustedNetwork") })
+      return
+    }
+    setF2bSavingTrusted(true)
+    setF2bTrustedNotice(null)
+    try {
+      const data = await fetchApi("/api/security/fail2ban/trusted-networks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: candidate }),
+      })
+      if (data.success) {
+        setF2bTrustedNotice({ type: "success", text: st("messages.trustedNetworkAdded", { value: data.value || candidate }) })
+        setF2bTrustedInput("")
+        setF2bShowTrustedForm(false)
+        await loadFail2banDetails()
+      } else {
+        setF2bTrustedNotice({ type: "error", text: trustedNetworkError(data.message) })
+      }
+    } catch (err) {
+      setF2bTrustedNotice({ type: "error", text: trustedNetworkError(err instanceof Error ? err.message : undefined) })
+    } finally {
+      setF2bSavingTrusted(false)
+    }
+  }
+
+  const handleRemoveTrustedNetwork = async (value: string) => {
+    setF2bRemovingTrusted(value)
+    setF2bTrustedNotice(null)
+    try {
+      const data = await fetchApi("/api/security/fail2ban/trusted-networks", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value }),
+      })
+      if (data.success) {
+        setF2bTrustedNotice({ type: "success", text: st("messages.trustedNetworkRemoved", { value }) })
+        await loadFail2banDetails()
+      } else {
+        setF2bTrustedNotice({ type: "error", text: st("errors.updateTrustedNetworksFailed") })
+      }
+    } catch {
+      setF2bTrustedNotice({ type: "error", text: st("errors.updateTrustedNetworksFailed") })
+    } finally {
+      setF2bRemovingTrusted(null)
+    }
+  }
+
+  const handleUpdateTrustedNetwork = async () => {
+    if (!f2bEditingTrusted || !f2bTrustedEditInput.trim()) return
+    setF2bSavingTrusted(true)
+    setF2bTrustedNotice(null)
+    try {
+      const data = await fetchApi("/api/security/fail2ban/trusted-networks", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ old_value: f2bEditingTrusted, new_value: f2bTrustedEditInput.trim() }),
+      })
+      if (data.success) {
+        setF2bTrustedNotice({ type: "success", text: st("messages.trustedNetworkUpdated", { value: data.value }) })
+        setF2bEditingTrusted(null)
+        setF2bTrustedEditInput("")
+        await loadFail2banDetails()
+      }
+    } catch (err) {
+      setF2bTrustedNotice({ type: "error", text: trustedNetworkError(err instanceof Error ? err.message : undefined) })
+    } finally {
+      setF2bSavingTrusted(false)
     }
   }
 
@@ -3350,32 +3444,147 @@ ${(report.sections && report.sections.length > 0) ? `
 
               {fail2banInfo.active && f2bDetails && (
                 <>
-                  {/* Summary stats - inline */}
-                  <div className="flex items-center gap-4 flex-wrap px-3 py-2.5 bg-muted/30 rounded-lg border border-border">
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <span className="text-muted-foreground">{st("fail2ban.jails")}:</span>
-                      <span className="font-bold">{f2bDetails.jails.length}</span>
+                  {/* Global Fail2Ban allowlist */}
+                  <div className="rounded-lg border border-green-500/15 overflow-hidden shadow-sm">
+                    <div className="flex items-start justify-between gap-3 p-3 bg-gradient-to-r from-green-500/[0.07] via-green-500/[0.03] to-transparent border-l-2 border-green-500/60">
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-md bg-green-500/10 flex items-center justify-center shrink-0">
+                          <Network className="h-4 w-4 text-green-500" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold">{st("fail2ban.trustedNetworks.title")}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{st("fail2ban.trustedNetworks.description")}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setF2bShowTrustedForm(!f2bShowTrustedForm); setF2bTrustedNotice(null) }}
+                        className="h-7 text-xs text-orange-500 border-orange-500/30 hover:bg-orange-500/10 bg-transparent shrink-0"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        {st("fail2ban.trustedNetworks.addRule")}
+                      </Button>
                     </div>
-                    <div className="w-px h-4 bg-border" />
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <span className="text-muted-foreground">{st("fail2ban.bannedIps")}:</span>
-                      <span className={`font-bold ${f2bDetails.jails.reduce((a, j) => a + j.currently_banned, 0) > 0 ? "text-red-500" : "text-green-500"}`}>
+
+                    {f2bTrustedNotice && (
+                      <div className={`mx-3 mt-3 rounded-md border px-3 py-2 text-xs ${f2bTrustedNotice.type === "success" ? "border-green-500/20 bg-green-500/10 text-green-500" : "border-red-500/20 bg-red-500/10 text-red-500"}`}>
+                        {f2bTrustedNotice.text}
+                      </div>
+                    )}
+
+                    {f2bShowTrustedForm && (
+                      <div className="m-3 rounded-lg border border-border bg-muted/20 p-3 space-y-3">
+                        <div>
+                          <Label className="text-[10px] text-muted-foreground uppercase">{st("fail2ban.trustedNetworks.addressOrNetwork")}</Label>
+                          <Input
+                            value={f2bTrustedInput}
+                            onChange={(event) => setF2bTrustedInput(event.target.value)}
+                            onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); handleAddTrustedNetwork() } }}
+                            placeholder={st("fail2ban.trustedNetworks.placeholder")}
+                            className="h-8 font-mono text-xs mt-1"
+                          />
+                          <p className="mt-1.5 text-[10px] text-muted-foreground">{st("fail2ban.trustedNetworks.example")}</p>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          {f2bDetectedIp && !f2bTrustedNetworks.some((entry) => entry.value === f2bDetectedIp) ? (
+                            <Button variant="ghost" size="sm" onClick={() => setF2bTrustedInput(f2bDetectedIp)} className="h-7 text-xs text-blue-400">
+                              {st("fail2ban.trustedNetworks.useCurrent", { ip: f2bDetectedIp })}
+                            </Button>
+                          ) : <span />}
+                          <div className="flex gap-2 ml-auto">
+                            <Button variant="ghost" size="sm" onClick={() => { setF2bShowTrustedForm(false); setF2bTrustedInput("") }} className="h-7 text-xs text-muted-foreground">
+                              {t("actions.cancel")}
+                            </Button>
+                            <Button size="sm" onClick={() => handleAddTrustedNetwork()} disabled={f2bSavingTrusted || !f2bTrustedInput.trim()} className="h-7 text-xs bg-orange-600 hover:bg-orange-700 text-white">
+                              {f2bSavingTrusted ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent mr-1" /> : <Plus className="h-3 w-3 mr-1" />}
+                              {st("fail2ban.trustedNetworks.add")}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="hidden sm:grid grid-cols-[1.1fr_0.65fr_2fr_1.5fr] gap-3 border-t border-border bg-muted/20 px-3 py-2 text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
+                      <span>{st("fail2ban.trustedNetworks.columns.status")}</span>
+                      <span>{st("fail2ban.trustedNetworks.columns.type")}</span>
+                      <span>{st("fail2ban.trustedNetworks.columns.address")}</span>
+                      <span className="text-right">{st("fail2ban.trustedNetworks.columns.actions")}</span>
+                    </div>
+
+                    <div className="divide-y divide-border border-t border-border sm:border-t-0">
+                      {f2bTrustedNetworks.map((entry) => (
+                        <div key={entry.value} className="px-3 py-2.5 transition-colors hover:bg-muted/20">
+                          {f2bEditingTrusted === entry.value ? (
+                            <div className="flex flex-col sm:flex-row gap-2 items-end">
+                              <div className="flex-1 w-full">
+                                <Label className="text-[10px] text-muted-foreground uppercase">{st("fail2ban.trustedNetworks.addressOrNetwork")}</Label>
+                                <Input value={f2bTrustedEditInput} onChange={(event) => setF2bTrustedEditInput(event.target.value)} className="h-8 font-mono text-xs mt-1" />
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => setF2bEditingTrusted(null)} className="h-7 text-xs text-muted-foreground">{t("actions.cancel")}</Button>
+                              <Button variant="outline" size="sm" onClick={handleUpdateTrustedNetwork} disabled={f2bSavingTrusted || !f2bTrustedEditInput.trim()} className="h-7 text-xs text-green-500 border-green-500/30 hover:bg-green-500/10 bg-transparent">
+                                <Check className="h-3 w-3 mr-1" />{st("fail2ban.trustedNetworks.save")}
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-[1.1fr_0.65fr_2fr_1.5fr] gap-2 sm:gap-3 items-center">
+                              <div className="flex items-center gap-2">
+                                <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${entry.protected ? "bg-slate-500/15 text-slate-400 border border-slate-500/20" : "bg-green-500/15 text-green-500 border border-green-500/20"}`}>
+                                  {entry.protected ? st("fail2ban.trustedNetworks.system") : st("fail2ban.trustedNetworks.trusted")}
+                                </span>
+                              </div>
+                              <div>
+                                <span className={`inline-flex rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${entry.value.includes("/") ? "bg-purple-500/15 text-purple-400" : "bg-blue-500/15 text-blue-400"}`}>
+                                  {entry.value.includes("/") ? "CIDR" : "IP"}
+                                </span>
+                              </div>
+                              <code className="text-xs text-muted-foreground font-mono break-all">{entry.value}</code>
+                              <div className="flex gap-2 sm:justify-end shrink-0">
+                                {!entry.protected ? (
+                                  <>
+                                  <Button variant="outline" size="sm" onClick={() => { setF2bEditingTrusted(entry.value); setF2bTrustedEditInput(entry.value); setF2bTrustedNotice(null) }} className="h-7 text-xs text-blue-400 border-blue-400/30 hover:bg-blue-400/10 bg-transparent">
+                                    <Pencil className="h-3 w-3 mr-1" />{st("fail2ban.trustedNetworks.edit")}
+                                  </Button>
+                                  <Button variant="outline" size="sm" onClick={() => handleRemoveTrustedNetwork(entry.value)} disabled={f2bRemovingTrusted === entry.value} className="h-7 text-xs text-red-500 border-red-500/30 hover:bg-red-500/10 bg-transparent">
+                                    {f2bRemovingTrusted === entry.value ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent mr-1" /> : <Trash2 className="h-3 w-3 mr-1" />}
+                                    {st("fail2ban.trustedNetworks.delete")}
+                                  </Button>
+                                  </>
+                                ) : (
+                                  <span className="inline-flex items-center text-[10px] text-muted-foreground"><Lock className="h-3 w-3 mr-1" />{st("fail2ban.trustedNetworks.required")}</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex items-start gap-2 border-t border-border bg-amber-500/5 px-3 py-2 text-[11px] text-amber-500">
+                      <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                      <p>{st("fail2ban.trustedNetworks.warning")}</p>
+                    </div>
+                  </div>
+
+                  {/* Summary stats */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="p-3 bg-muted/50 rounded-lg border border-border text-center">
+                      <p className="text-lg font-bold text-foreground">{f2bDetails.jails.length}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{st("fail2ban.jails")}</p>
+                    </div>
+                    <div className={`p-3 rounded-lg border text-center ${f2bDetails.jails.reduce((a, j) => a + j.currently_banned, 0) > 0 ? "bg-red-500/5 border-red-500/20" : "bg-muted/50 border-border"}`}>
+                      <p className={`text-lg font-bold ${f2bDetails.jails.reduce((a, j) => a + j.currently_banned, 0) > 0 ? "text-red-500" : "text-foreground"}`}>
                         {f2bDetails.jails.reduce((a, j) => a + j.currently_banned, 0)}
-                      </span>
+                      </p>
+                      <p className={`text-[10px] uppercase tracking-wider ${f2bDetails.jails.reduce((a, j) => a + j.currently_banned, 0) > 0 ? "text-red-500/70" : "text-muted-foreground"}`}>{st("fail2ban.bannedIps")}</p>
                     </div>
-                    <div className="w-px h-4 bg-border" />
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <span className="text-muted-foreground">{st("fail2ban.totalBans")}:</span>
-                      <span className="font-bold text-orange-500">
-                        {f2bDetails.jails.reduce((a, j) => a + j.total_banned, 0)}
-                      </span>
+                    <div className="p-3 bg-orange-500/5 rounded-lg border border-orange-500/20 text-center">
+                      <p className="text-lg font-bold text-orange-500">{f2bDetails.jails.reduce((a, j) => a + j.total_banned, 0)}</p>
+                      <p className="text-[10px] text-orange-500/70 uppercase tracking-wider">{st("fail2ban.totalBans")}</p>
                     </div>
-                    <div className="w-px h-4 bg-border" />
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <span className="text-muted-foreground">{st("fail2ban.failedAttempts")}:</span>
-                      <span className="font-bold text-yellow-500">
-                        {f2bDetails.jails.reduce((a, j) => a + j.total_failed, 0)}
-                      </span>
+                    <div className="p-3 bg-yellow-500/5 rounded-lg border border-yellow-500/20 text-center">
+                      <p className="text-lg font-bold text-yellow-500">{f2bDetails.jails.reduce((a, j) => a + j.total_failed, 0)}</p>
+                      <p className="text-[10px] text-yellow-500/70 uppercase tracking-wider">{st("fail2ban.failedAttempts")}</p>
                     </div>
                   </div>
 
