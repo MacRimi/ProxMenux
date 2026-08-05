@@ -82,14 +82,20 @@ export function Login({ onLogin }: LoginProps) {
 
       const data = await response.json()
 
-      if (data.requires_totp) {
+      if (response.ok && data.requires_totp) {
         setRequiresTotp(true)
         setLoading(false)
         return
       }
 
       if (!response.ok) {
-        throw new Error(data.message || t("login.loginFailed"))
+        if (response.status === 429) {
+          throw new Error(t("login.tooManyAttempts"))
+        }
+        if (response.status === 401) {
+          throw new Error(data.requires_totp ? t("login.invalidTotp") : t("login.invalidCredentials"))
+        }
+        throw new Error(t("login.loginFailed"))
       }
 
       localStorage.setItem("proxmenux-auth-token", data.token)
