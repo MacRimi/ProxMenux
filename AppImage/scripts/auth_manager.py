@@ -653,12 +653,13 @@ def setup_auth(username, password):
     Set up authentication with username and password
     Returns (success: bool, message: str)
     """
-    # Refuse if auth has already been configured. Without this guard an
+    # Refuse if real credentials already exist. Without this guard an
     # unauthenticated POST to /api/auth/setup would let an attacker overwrite
-    # the existing admin credentials and take over the account. See audit
-    # Tier 1 #4.
+    # the existing admin credentials and take over the account. A declined
+    # setup is marked configured but deliberately has no credentials, so it
+    # must remain possible to finish setup later. See audit Tier 1 #4.
     existing = load_auth_config()
-    if existing.get("configured", False):
+    if existing.get("username") and existing.get("password_hash"):
         return False, "Authentication is already configured"
 
     if not username or not password:
@@ -668,7 +669,7 @@ def setup_auth(username, password):
     if pw_err:
         return False, pw_err
 
-    config = {
+    existing.update({
         "enabled": True,
         "username": username,
         "password_hash": hash_password(password),
@@ -677,9 +678,9 @@ def setup_auth(username, password):
         "totp_enabled": False,
         "totp_secret": None,
         "backup_codes": []
-    }
+    })
 
-    if save_auth_config(config):
+    if save_auth_config(existing):
         return True, "Authentication configured successfully"
     else:
         return False, "Failed to save authentication configuration"
