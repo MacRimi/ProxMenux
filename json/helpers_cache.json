@@ -35,42 +35,6 @@
     "os": "debian"
   },
   {
-    "name": "Portainer",
-    "slug": "Portainer",
-    "desc": "<p><strong>Portainer Community Edition</strong> is a lightweight service delivery platform for containerized applications that can be used to manage Docker, Swarm, Kubernetes and ACI environments. It is designed to be as simple to deploy as it is to use. The application allows you to manage all your orchestrator resources (containers, images, volumes, networks and more) through a &lsquo;smart&rsquo; GUI and/or an extensive API.</p>",
-    "script": "tools/addon/Portainer.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/Portainer.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/addon/Portainer.sh",
-    "type": "addon",
-    "type_id": "88xtxy57q80v38v",
-    "categories": [
-      "scriptcat00003"
-    ],
-    "category_names": [
-      "Containers & Docker"
-    ],
-    "notes": [
-      "This is an addon script intended to be used on top of an existing Docker container.",
-      "Execute within an existing LXC console (Debian / Ubuntu / Alpine supported)",
-      "To update, run the addon script again and select Update, or use: bash <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/portainer.sh)"
-    ],
-    "warnings": [],
-    "port": 9443,
-    "website": "https://www.portainer.io/",
-    "documentation": "https://docs.portainer.io/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/portainer.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": true,
-    "is_dev": false,
-    "execute_in": [
-      "lxc",
-      "vm"
-    ],
-    "config_path": "/opt/portainer/compose.yaml",
-    "os": ""
-  },
-  {
     "name": "Actual Budget Prometheus Exporter",
     "slug": "actual-budget-prometheus-exporter",
     "desc": "Prometheus exporter for Actual Budget. Exposes account balances, budget balances, transaction counts and uncategorized/transfer counts as metrics on /metrics. Installs as an addon into an existing LXC (e.g. alongside your Actual Budget server) and builds from source with Node.js.",
@@ -17110,6 +17074,42 @@
       "password": "Portabase123!"
     },
     "os": "debian"
+  },
+  {
+    "name": "Portainer",
+    "slug": "portainer",
+    "desc": "<p><strong>Portainer Community Edition</strong> is a lightweight service delivery platform for containerized applications that can be used to manage Docker, Swarm, Kubernetes and ACI environments. It is designed to be as simple to deploy as it is to use. The application allows you to manage all your orchestrator resources (containers, images, volumes, networks and more) through a &lsquo;smart&rsquo; GUI and/or an extensive API.</p>",
+    "script": "tools/addon/portainer.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/portainer.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/addon/portainer.sh",
+    "type": "addon",
+    "type_id": "88xtxy57q80v38v",
+    "categories": [
+      "scriptcat00003"
+    ],
+    "category_names": [
+      "Containers & Docker"
+    ],
+    "notes": [
+      "This is an addon script intended to be used on top of an existing Docker container.",
+      "Execute within an existing LXC console (Debian / Ubuntu / Alpine supported)",
+      "To update, run the addon script again and select Update, or use: bash <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/portainer.sh)"
+    ],
+    "warnings": [],
+    "port": 9443,
+    "website": "https://www.portainer.io/",
+    "documentation": "https://docs.portainer.io/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/portainer.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": true,
+    "is_dev": false,
+    "execute_in": [
+      "lxc",
+      "vm"
+    ],
+    "config_path": "/opt/portainer/compose.yaml",
+    "os": ""
   },
   {
     "name": "PBS Post Install",
