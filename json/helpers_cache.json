@@ -684,14 +684,14 @@
     "has_arm": true,
     "is_dev": false,
     "execute_in": [
-      "pve"
+      "lxc"
     ],
     "config_path": "",
     "default_credentials": {
       "username": "root",
-      "password": "alpine"
+      "password": ""
     },
-    "os": "debian"
+    "os": "alpine"
   },
   {
     "name": "Alpine-BorgBackup-Server",
@@ -854,7 +854,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": false,
+    "is_dev": true,
     "execute_in": [
       "lxc"
     ],
@@ -1051,7 +1051,7 @@
     "port": 8080,
     "website": "https://apps.ankiweb.net/",
     "documentation": "https://docs.ankiweb.net/sync-server.html",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/anki.webp",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/anki-sync-server.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": true,
@@ -1539,11 +1539,11 @@
     "name": "ARR-Stack",
     "slug": "arr-stack",
     "desc": "Proxmox VE Helper Scripts for setting up a stack of applications for use with Prowlarr, Sonarr, Radarr, Lidarr, Seerr, and qBittorrent.",
-    "script": "tools/addon/arr-stack.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/arr-stack.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/addon/arr-stack.sh",
-    "type": "addon",
-    "type_id": "88xtxy57q80v38v",
+    "script": "ct/arr-stack.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/arr-stack.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/arr-stack.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
     "categories": [
       "scriptcat00012"
     ],
@@ -4392,7 +4392,7 @@
     "has_arm": true,
     "is_dev": false,
     "execute_in": [
-      "pve"
+      "lxc"
     ],
     "config_path": "",
     "default_credentials": {
@@ -4759,7 +4759,7 @@
     ],
     "config_path": "",
     "default_credentials": {
-      "username": "admin@directus.local",
+      "username": "admin@community-scripts.org",
       "password": ""
     },
     "os": "debian"
@@ -7133,11 +7133,11 @@
     "name": "garmin-grafana",
     "slug": "garmin-grafana",
     "desc": "A self-hosted solution to fetch data from Garmin servers and store it in a local InfluxDB database for visualization with Grafana.",
-    "script": "tools/addon/garmin-grafana.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/garmin-grafana.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/addon/garmin-grafana.sh",
-    "type": "addon",
-    "type_id": "88xtxy57q80v38v",
+    "script": "ct/garmin-grafana.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/garmin-grafana.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/garmin-grafana.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
     "categories": [
       "scriptcat00009"
     ],
@@ -7158,11 +7158,10 @@
     "has_arm": false,
     "is_dev": true,
     "execute_in": [
-      "lxc",
-      "vm"
+      "lxc"
     ],
     "config_path": "",
-    "os": ""
+    "os": "debian"
   },
   {
     "name": "gatus",
@@ -20194,7 +20193,8 @@
       "Finance & Budgeting"
     ],
     "notes": [
-      "App startup could be slow. Once the app has started, complete the setup wizard via the web interface on first access."
+      "App startup could be slow. Once the app has started, complete the setup wizard via the web interface on first access.",
+      "Reverse proxy: the container ships with HTTPS disabled and its bundled webserver bound to all hostnames, so terminate TLS on your proxy (HAProxy, nginx, Traefik, Cloudflare) and forward to http://<ip>:8765. To let the app manage its own certificate instead, set SOLIDINVOICE_DOMAIN and disable SOLIDINVOICE_DISABLE_HTTPS in /etc/solidinvoice/solidinvoice.env."
     ],
     "warnings": [],
     "port": 8765,
@@ -20905,7 +20905,7 @@
   {
     "name": "Stoatchat",
     "slug": "stoatchat",
-    "desc": "<p>A self-hostable open-source chat platform and community server. Stoatchat is a fork of Revolt, featuring real-time messaging, voice channels, file sharing, and a full-featured web client. Built with Rust (backend) and SolidJS (frontend).</p>",
+    "desc": "A self-hostable open-source chat platform and community server. Stoatchat is a fork of Revolt, featuring real-time messaging, voice channels, file sharing, and a full-featured web client. Built with Rust (backend) and SolidJS (frontend).",
     "script": "ct/stoatchat.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/stoatchat.sh",
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/stoatchat.sh",
@@ -20928,7 +20928,7 @@
     "port": 80,
     "website": "https://stoat.chat",
     "documentation": "https://github.com/stoatchat/self-hosted",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/stoat.webp",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/stoatchat.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": false,
@@ -22812,7 +22812,7 @@
   {
     "name": "Ubuntu",
     "slug": "ubuntu",
-    "desc": "Ubuntu is a distribution based on Debian, designed to have regular releases and a consistent user experience.",
+    "desc": "Ubuntu is a popular Debian-based Linux distribution with regular releases and long-term support editions.",
     "script": "ct/ubuntu.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/ubuntu.sh",
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/ubuntu.sh",
@@ -22828,21 +22828,21 @@
     "warnings": [],
     "port": 0,
     "website": "https://ubuntu.com/",
-    "documentation": "",
+    "documentation": "https://help.ubuntu.com/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ubuntu.webp",
     "updateable": true,
-    "privileged": false,
+    "privileged": true,
     "has_arm": true,
     "is_dev": false,
     "execute_in": [
-      "pve"
+      "lxc"
     ],
     "config_path": "",
     "default_credentials": {
       "username": "root",
       "password": ""
     },
-    "os": "debian"
+    "os": "ubuntu"
   },
   {
     "name": "Ubuntu 22.04",
