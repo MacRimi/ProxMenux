@@ -1502,6 +1502,9 @@
       "auditFailed": "Audit zlyhal",
       "startAuditFailed": "Nepodarilo sa spustiť audit",
       "updateJailConfigFailed": "Nepodarilo sa uložiť nastavenie ochrany",
+      "invalidTrustedNetwork": "Zadajte jednu platnú IP adresu alebo sieť v tvare CIDR.",
+      "trustedNetworkExists": "Táto IP adresa alebo sieť už je medzi dôveryhodnými.",
+      "updateTrustedNetworksFailed": "Nepodarilo sa upraviť dôveryhodné IP adresy a siete.",
       "ruleNeedsPortOrSource": "Najprv zadajte cieľový port alebo zdrojovú adresu.",
       "addRuleFailed": "Nepodarilo sa pridať pravidlo",
       "deleteRuleFailed": "Nepodarilo sa vymazať pravidlo",
@@ -1537,6 +1540,9 @@
       "missingJailsApplied": "Chýbajúce ochrany boli doplnené.",
       "auditCompleted": "Lynis audit je hotový.",
       "jailConfigUpdated": "Nastavenie ochrany bolo uložené.",
+      "trustedNetworkAdded": "Fail2Ban už nebude blokovať {value}.",
+      "trustedNetworkRemoved": "{value} bola odstránená z dôveryhodných sietí.",
+      "trustedNetworkUpdated": "Dôveryhodná položka bola zmenená na {value}.",
       "ruleAdded": "Firewall pravidlo bolo pridané.",
       "ruleDeleted": "Firewall pravidlo bolo vymazané.",
       "ruleUpdated": "Firewall pravidlo bolo upravené.",
@@ -1825,6 +1831,33 @@
         "maxRetries": "5",
         "banTime": "3600",
         "findTime": "600"
+      },
+      "trustedNetworks": {
+        "title": "Dôveryhodné IP adresy a siete",
+        "description": "Tieto adresy Fail2Ban nikdy nezablokuje.",
+        "required": "Povinné",
+        "remove": "Odstrániť z dôveryhodných sietí",
+        "placeholder": "192.168.1.25 alebo 192.168.1.0/24",
+        "add": "Pridať",
+        "addCurrent": "Pridať moju IP ({ip})",
+        "addRule": "Pridať adresu / sieť",
+        "addressOrNetwork": "IP adresa alebo sieť v tvare CIDR",
+        "example": "Jedna adresa: 192.168.1.25 · Celá sieť: 192.168.1.0/24",
+        "useCurrent": "Použiť moju aktuálnu IP: {ip}",
+        "singleIp": "IP adresa",
+        "network": "Sieť",
+        "edit": "Upraviť",
+        "delete": "Vymazať",
+        "save": "Uložiť zmeny",
+        "trusted": "Dôveryhodná",
+        "system": "Systémová",
+        "columns": {
+          "status": "Stav",
+          "type": "Typ",
+          "address": "Adresa / sieť",
+          "actions": "Akcie"
+        },
+        "warning": "Dôverujte iba adresám, ktoré máte pod kontrolou. Pri celej sieti bude Fail2Ban ignorovať aj napadnuté zariadenie v tejto sieti."
       }
     },
     "lynis": {

@@ -1502,6 +1502,9 @@
       "auditFailed": "Audit failed",
       "startAuditFailed": "Failed to start audit",
       "updateJailConfigFailed": "Failed to save protection settings",
+      "invalidTrustedNetwork": "Enter one valid IP address or CIDR network.",
+      "trustedNetworkExists": "This IP address or network is already trusted.",
+      "updateTrustedNetworksFailed": "Failed to update trusted IP addresses and networks.",
       "ruleNeedsPortOrSource": "Add a destination port or source address first.",
       "addRuleFailed": "Failed to add rule",
       "deleteRuleFailed": "Failed to delete rule",
@@ -1537,6 +1540,9 @@
       "missingJailsApplied": "Missing protections were added.",
       "auditCompleted": "Lynis audit completed.",
       "jailConfigUpdated": "Protection settings were saved.",
+      "trustedNetworkAdded": "{value} is now trusted by Fail2Ban.",
+      "trustedNetworkRemoved": "{value} was removed from trusted networks.",
+      "trustedNetworkUpdated": "Trusted entry was changed to {value}.",
       "ruleAdded": "Firewall rule was added.",
       "ruleDeleted": "Firewall rule was deleted.",
       "ruleUpdated": "Firewall rule was updated.",
@@ -1825,6 +1831,33 @@
         "maxRetries": "5",
         "banTime": "3600",
         "findTime": "600"
+      },
+      "trustedNetworks": {
+        "title": "Trusted IP addresses and networks",
+        "description": "Fail2Ban will never block these addresses.",
+        "required": "Required",
+        "remove": "Remove from trusted networks",
+        "placeholder": "192.168.1.25 or 192.168.1.0/24",
+        "add": "Add",
+        "addCurrent": "Add my IP ({ip})",
+        "addRule": "Add address / network",
+        "addressOrNetwork": "IP address or CIDR network",
+        "example": "One address: 192.168.1.25 · Entire network: 192.168.1.0/24",
+        "useCurrent": "Use my current IP: {ip}",
+        "singleIp": "IP address",
+        "network": "Network",
+        "edit": "Edit",
+        "delete": "Delete",
+        "save": "Save changes",
+        "trusted": "Trusted",
+        "system": "System",
+        "columns": {
+          "status": "Status",
+          "type": "Type",
+          "address": "Address / network",
+          "actions": "Actions"
+        },
+        "warning": "Trust only addresses you control. If you trust a whole network, Fail2Ban will also ignore a compromised device in that network."
       }
     },
     "lynis": {
