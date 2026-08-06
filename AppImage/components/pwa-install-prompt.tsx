@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { Plus, Share, X } from "lucide-react"
+import { useT } from "../lib/i18n/provider"
 
 // ==========================================================
 // PwaInstallPrompt
@@ -58,6 +59,7 @@ function isIOS(): boolean {
 }
 
 export function PwaInstallPrompt() {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const [platform, setPlatform] = useState<"ios" | "android" | null>(null)
 
@@ -131,7 +133,7 @@ export function PwaInstallPrompt() {
           <button
             type="button"
             onClick={handleClose}
-            aria-label="Close"
+            aria-label={t("actions.close")}
             className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors"
           >
             <X className="h-4 w-4" />
@@ -143,12 +145,12 @@ export function PwaInstallPrompt() {
             </div>
             <div className="flex-1 min-w-0">
               <h3 id="pwa-install-title" className="text-[17px] font-bold leading-tight tracking-tight text-foreground">
-                Install ProxMenux Monitor
+                {t("pwaInstall.title")}
               </h3>
               <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
                 {platform === "ios"
-                  ? "Add the Monitor to your home screen for quick access."
-                  : "Add the Monitor as an app to launch it like a native application."}
+                  ? t("pwaInstall.iosDescription")
+                  : t("pwaInstall.androidDescription")}
               </p>
             </div>
           </div>
@@ -160,12 +162,12 @@ export function PwaInstallPrompt() {
                   1
                 </span>
                 <span>
-                  Tap the{" "}
+                  {t("pwaInstall.ios.stepShareBefore")}{" "}
                   <span className="inline-flex items-center gap-1 font-semibold text-primary">
                     <Share className="h-4 w-4" aria-hidden="true" />
-                    Share
+                    {t("pwaInstall.ios.share")}
                   </span>{" "}
-                  button in the bottom bar
+                  {t("pwaInstall.ios.stepShareAfter")}
                 </span>
               </li>
               <li className="flex items-center gap-3 rounded-xl bg-primary/10 px-3.5 py-3 text-[13.5px] leading-tight">
@@ -173,10 +175,10 @@ export function PwaInstallPrompt() {
                   2
                 </span>
                 <span>
-                  Choose{" "}
+                  {t("pwaInstall.ios.stepChooseBefore")}{" "}
                   <span className="inline-flex items-center gap-1 font-semibold text-primary">
                     <Plus className="h-4 w-4" aria-hidden="true" />
-                    Add to Home Screen
+                    {t("pwaInstall.addToHomeScreen")}
                   </span>
                 </span>
               </li>
@@ -185,15 +187,15 @@ export function PwaInstallPrompt() {
                   3
                 </span>
                 <span>
-                  Confirm by tapping <b>Add</b> in the top-right
+                  {t("pwaInstall.ios.stepConfirmBefore")} <b>{t("pwaInstall.ios.add")}</b> {t("pwaInstall.ios.stepConfirmAfter")}
                 </span>
               </li>
             </ol>
           ) : (
             <div className="mb-4 rounded-lg border border-border bg-muted/50 px-3.5 py-3 text-[13px] leading-relaxed text-muted-foreground">
-              Open the browser menu <b className="text-foreground">⋮</b> →{" "}
-              <b className="text-foreground">Add to Home Screen</b> → confirm by tapping{" "}
-              <b className="text-foreground">Install</b>.
+              {t("pwaInstall.android.stepOpenMenu")} <b className="text-foreground">⋮</b> →{" "}
+              <b className="text-foreground">{t("pwaInstall.addToHomeScreen")}</b> → {t("pwaInstall.android.stepConfirm")}{" "}
+              <b className="text-foreground">{t("pwaInstall.android.install")}</b>.
             </div>
           )}
 
@@ -203,14 +205,14 @@ export function PwaInstallPrompt() {
               onClick={handleNotNow}
               className="rounded-lg py-2.5 text-center text-[13.5px] font-semibold text-muted-foreground hover:bg-muted transition-colors"
             >
-              Not now
+              {t("pwaInstall.notNow")}
             </button>
             <button
               type="button"
               onClick={handleNeverAgain}
               className="rounded-lg py-2.5 text-center text-[13.5px] font-semibold text-amber-700 dark:text-amber-500 hover:bg-muted transition-colors"
             >
-              Don&apos;t show again
+              {t("pwaInstall.neverAgain")}
             </button>
           </div>
         </div>

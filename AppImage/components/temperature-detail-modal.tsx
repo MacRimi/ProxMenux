@@ -8,12 +8,13 @@ import { Thermometer, TrendingDown, TrendingUp, Minus } from "lucide-react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { useIsMobile } from "../hooks/use-mobile"
 import { fetchApi } from "@/lib/api-config"
+import { useT } from "@/lib/i18n/provider"
 
 const TIMEFRAME_OPTIONS = [
-  { value: "hour", label: "1 Hour" },
-  { value: "day", label: "24 Hours" },
-  { value: "week", label: "7 Days" },
-  { value: "month", label: "30 Days" },
+  { value: "hour", labelKey: "overview.timeframes.hour" },
+  { value: "day", labelKey: "overview.timeframes.day" },
+  { value: "week", labelKey: "overview.timeframes.week" },
+  { value: "month", labelKey: "overview.timeframes.month" },
 ]
 
 interface TempHistoryPoint {
@@ -70,6 +71,7 @@ const getStatusInfo = (temp: number) => {
 }
 
 export function TemperatureDetailModal({ open, onOpenChange, liveTemperature }: TemperatureDetailModalProps) {
+  const t = useT()
   // Default to 24 h — matches the disk temperature modal and is the
   // useful timeframe for spotting trends; the 1-h view rarely tells
   // you anything that the live reading doesn't already show.
@@ -138,7 +140,7 @@ export function TemperatureDetailModal({ open, onOpenChange, liveTemperature }: 
           <div className="flex items-center justify-between pr-6">
             <DialogTitle className="text-foreground flex items-center gap-2">
               <Thermometer className="h-5 w-5" />
-              CPU Temperature
+              {t("details.temperature.title")}
             </DialogTitle>
             <Select value={timeframe} onValueChange={setTimeframe}>
               <SelectTrigger className="w-[130px] bg-card border-border">
@@ -147,7 +149,7 @@ export function TemperatureDetailModal({ open, onOpenChange, liveTemperature }: 
               <SelectContent>
                 {TIMEFRAME_OPTIONS.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -158,24 +160,24 @@ export function TemperatureDetailModal({ open, onOpenChange, liveTemperature }: 
         {/* Stats bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           <div className={`rounded-lg p-3 text-center ${currentStatus.color}`}>
-            <div className="text-xs opacity-80 mb-1">Current</div>
+            <div className="text-xs opacity-80 mb-1">{t("details.temperature.current")}</div>
             <div className="text-lg font-bold">{currentTemp}°C</div>
           </div>
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <div className="text-xs text-muted-foreground mb-1 flex items-center justify-center gap-1">
-              <TrendingDown className="h-3 w-3" /> Min
+              <TrendingDown className="h-3 w-3" /> {t("details.temperature.min")}
             </div>
             <div className="text-lg font-bold text-green-500">{stats.min}°C</div>
           </div>
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <div className="text-xs text-muted-foreground mb-1 flex items-center justify-center gap-1">
-              <Minus className="h-3 w-3" /> Avg
+              <Minus className="h-3 w-3" /> {t("details.temperature.avg")}
             </div>
             <div className="text-lg font-bold text-foreground">{stats.avg}°C</div>
           </div>
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <div className="text-xs text-muted-foreground mb-1 flex items-center justify-center gap-1">
-              <TrendingUp className="h-3 w-3" /> Max
+              <TrendingUp className="h-3 w-3" /> {t("details.temperature.max")}
             </div>
             <div className="text-lg font-bold text-red-500">{stats.max}°C</div>
           </div>
@@ -194,8 +196,8 @@ export function TemperatureDetailModal({ open, onOpenChange, liveTemperature }: 
             <div className="h-full flex items-center justify-center text-muted-foreground">
               <div className="text-center">
                 <Thermometer className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No temperature data available for this period</p>
-                <p className="text-sm mt-1">Data is collected every 60 seconds</p>
+                <p>{t("details.temperature.noData")}</p>
+                <p className="text-sm mt-1">{t("details.temperature.collectionHint")}</p>
               </div>
             </div>
           ) : (
@@ -228,7 +230,7 @@ export function TemperatureDetailModal({ open, onOpenChange, liveTemperature }: 
                 <Area
                   type="monotone"
                   dataKey="value"
-                  name="Temperature"
+                  name={t("details.temperature.seriesName")}
                   stroke={chartColor}
                   strokeWidth={2}
                   fill="url(#tempGradient)"

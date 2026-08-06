@@ -6,6 +6,9 @@ import { Wifi, Zap } from 'lucide-react'
 import { useState, useEffect } from "react"
 import { fetchApi } from "../lib/api-config"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
+import { useT } from "../lib/i18n/provider"
+
+type TFunction = (key: string, params?: Record<string, string | number>) => string
 
 interface NetworkCardProps {
   interface_: {
@@ -32,43 +35,51 @@ interface NetworkCardProps {
   onClick?: () => void
 }
 
-const getInterfaceTypeBadge = (type: string) => {
+const getInterfaceTypeBadge = (type: string, t: TFunction) => {
   switch (type) {
     case "physical":
-      return { color: "bg-blue-500/10 text-blue-500 border-blue-500/20", label: "Physical" }
+      return { color: "bg-blue-500/10 text-blue-500 border-blue-500/20", label: t("network.interfaceTypes.physical") }
     case "bridge":
-      return { color: "bg-green-500/10 text-green-500 border-green-500/20", label: "Bridge" }
+      return { color: "bg-green-500/10 text-green-500 border-green-500/20", label: t("network.interfaceTypes.bridge") }
     case "bond":
-      return { color: "bg-purple-500/10 text-purple-500 border-purple-500/20", label: "Bond" }
+      return { color: "bg-purple-500/10 text-purple-500 border-purple-500/20", label: t("network.interfaceTypes.bond") }
     case "vlan":
-      return { color: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20", label: "VLAN" }
+      return { color: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20", label: t("network.interfaceTypes.vlan") }
     case "vm_lxc":
-      return { color: "bg-orange-500/10 text-orange-500 border-orange-500/20", label: "Virtual" }
+      return { color: "bg-orange-500/10 text-orange-500 border-orange-500/20", label: t("network.interfaceTypes.virtual") }
     case "virtual":
-      return { color: "bg-orange-500/10 text-orange-500 border-orange-500/20", label: "Virtual" }
+      return { color: "bg-orange-500/10 text-orange-500 border-orange-500/20", label: t("network.interfaceTypes.virtual") }
     default:
-      return { color: "bg-gray-500/10 text-gray-500 border-gray-500/20", label: "Unknown" }
+      return { color: "bg-gray-500/10 text-gray-500 border-gray-500/20", label: t("common.unknown") }
   }
 }
 
-const getVMTypeBadge = (vmType: string | undefined) => {
+const getVMTypeBadge = (vmType: string | undefined, t: TFunction) => {
   if (vmType === "lxc") {
     return { color: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20", label: "LXC" }
   } else if (vmType === "vm") {
     return { color: "bg-purple-500/10 text-purple-500 border-purple-500/20", label: "VM" }
   }
-  return { color: "bg-gray-500/10 text-gray-500 border-gray-500/20", label: "Unknown" }
+  return { color: "bg-gray-500/10 text-gray-500 border-gray-500/20", label: t("common.unknown") }
 }
 
-const formatSpeed = (speed: number): string => {
-  if (speed === 0) return "N/A"
+const formatInterfaceStatus = (status: string | undefined, t: TFunction): string => {
+  const normalized = (status || "").toLowerCase()
+  if (normalized === "up") return t("network.status.up")
+  if (normalized === "down") return t("network.status.down")
+  return status || t("common.unknown")
+}
+
+const formatSpeed = (speed: number, unavailable = "N/A"): string => {
+  if (speed === 0) return unavailable
   if (speed >= 1000) return `${(speed / 1000).toFixed(1)} Gbps`
   return `${speed} Mbps`
 }
 
 export function NetworkCard({ interface_, timeframe, onClick }: NetworkCardProps) {
-  const typeBadge = getInterfaceTypeBadge(interface_.type)
-  const vmTypeBadge = interface_.vm_type ? getVMTypeBadge(interface_.vm_type) : null
+  const t = useT()
+  const typeBadge = getInterfaceTypeBadge(interface_.type, t)
+  const vmTypeBadge = interface_.vm_type ? getVMTypeBadge(interface_.vm_type, t) : null
 
   const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">(getNetworkUnit())
 
@@ -125,17 +136,17 @@ export function NetworkCard({ interface_, timeframe, onClick }: NetworkCardProps
   const getTimeframeLabel = () => {
     switch (timeframe) {
       case "hour":
-        return "Last Hour"
+        return t("network.timeframes.last.hour")
       case "day":
-        return "Last 24 Hours"
+        return t("network.timeframes.last.day")
       case "week":
-        return "Last 7 Days"
+        return t("network.timeframes.last.week")
       case "month":
-        return "Last 30 Days"
+        return t("network.timeframes.last.month")
       case "year":
-        return "Last Year"
+        return t("network.timeframes.last.year")
       default:
-        return "Last 24 Hours"
+        return t("network.timeframes.last.day")
     }
   }
 
@@ -174,7 +185,7 @@ export function NetworkCard({ interface_, timeframe, onClick }: NetworkCardProps
                   : "bg-red-500/10 text-red-500 border-red-500/20"
               }
             >
-              {interface_.status.toUpperCase()}
+              {formatInterfaceStatus(interface_.status, t)}
             </Badge>
           </div>
 
@@ -182,22 +193,22 @@ export function NetworkCard({ interface_, timeframe, onClick }: NetworkCardProps
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <div className="text-muted-foreground text-xs">
-                {interface_.type === "vm_lxc" ? "VMID" : "IP Address"}
+                {interface_.type === "vm_lxc" ? "VMID" : t("network.labels.ipAddress")}
               </div>
               <div className="font-medium text-foreground font-mono text-sm truncate">
                 {interface_.type === "vm_lxc"
-                  ? (interface_.vmid ?? "N/A")
+                  ? (interface_.vmid ?? t("common.notAvailable"))
                   : interface_.addresses.length > 0
                     ? interface_.addresses[0].ip
-                    : "N/A"}
+                    : t("common.notAvailable")}
               </div>
             </div>
 
             <div>
-              <div className="text-muted-foreground text-xs">Speed</div>
+              <div className="text-muted-foreground text-xs">{t("network.labels.speed")}</div>
               <div className="font-medium text-foreground flex items-center gap-1 text-xs">
                 <Zap className="h-3 w-3" />
-                {formatSpeed(interface_.speed)}
+                {formatSpeed(interface_.speed, t("common.notAvailable"))}
               </div>
             </div>
 

@@ -8,12 +8,13 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useIsMobile } from "../hooks/use-mobile"
 import { fetchApi } from "@/lib/api-config"
 import { useDiskTempThresholds, type DiskTempThreshold } from "@/lib/health-thresholds"
+import { useT } from "@/lib/i18n/provider"
 
 const TIMEFRAME_OPTIONS = [
-  { value: "hour", label: "1 Hour" },
-  { value: "day", label: "24 Hours" },
-  { value: "week", label: "7 Days" },
-  { value: "month", label: "30 Days" },
+  { value: "hour", labelKey: "details.temperature.timeframes.hour" },
+  { value: "day", labelKey: "details.temperature.timeframes.day" },
+  { value: "week", labelKey: "details.temperature.timeframes.week" },
+  { value: "month", labelKey: "details.temperature.timeframes.month" },
 ]
 
 interface TempHistoryPoint {
@@ -69,10 +70,10 @@ function colorFor(temp: number, t: DiskTempThreshold): string {
 }
 
 function statusInfoFor(temp: number, t: DiskTempThreshold) {
-  if (temp <= 0) return { status: "N/A", color: "bg-gray-500/10 text-gray-500 border-gray-500/20" }
-  if (temp >= t.hot) return { status: "Hot", color: "bg-red-500/10 text-red-500 border-red-500/20" }
-  if (temp >= t.warn) return { status: "Warm", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" }
-  return { status: "Normal", color: "bg-green-500/10 text-green-500 border-green-500/20" }
+  if (temp <= 0) return { color: "bg-gray-500/10 text-gray-500 border-gray-500/20" }
+  if (temp >= t.hot) return { color: "bg-red-500/10 text-red-500 border-red-500/20" }
+  if (temp >= t.warn) return { color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" }
+  return { color: "bg-green-500/10 text-green-500 border-green-500/20" }
 }
 
 export function DiskTemperatureDetailModal({
@@ -83,6 +84,7 @@ export function DiskTemperatureDetailModal({
   liveTemperature,
   diskType,
 }: DiskTemperatureDetailModalProps) {
+  const t = useT()
   const [timeframe, setTimeframe] = useState("day")
   const [data, setData] = useState<TempHistoryPoint[]>([])
   const [stats, setStats] = useState<TempStats>({ min: 0, max: 0, avg: 0, current: 0 })
@@ -168,7 +170,7 @@ export function DiskTemperatureDetailModal({
               <SelectContent>
                 {TIMEFRAME_OPTIONS.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -181,24 +183,24 @@ export function DiskTemperatureDetailModal({
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           <div className={`rounded-lg p-3 text-center border ${currentStatus.color}`}>
-            <div className="text-xs opacity-80 mb-1">Current</div>
-            <div className="text-lg font-bold">{currentTemp > 0 ? `${currentTemp}°C` : "N/A"}</div>
+            <div className="text-xs opacity-80 mb-1">{t("details.temperature.current")}</div>
+            <div className="text-lg font-bold">{currentTemp > 0 ? `${currentTemp}°C` : t("common.notAvailable")}</div>
           </div>
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <div className="text-xs text-muted-foreground mb-1 flex items-center justify-center gap-1">
-              <TrendingDown className="h-3 w-3" /> Min
+              <TrendingDown className="h-3 w-3" /> {t("details.temperature.min")}
             </div>
             <div className="text-lg font-bold text-green-500">{stats.min}°C</div>
           </div>
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <div className="text-xs text-muted-foreground mb-1 flex items-center justify-center gap-1">
-              <Minus className="h-3 w-3" /> Avg
+              <Minus className="h-3 w-3" /> {t("details.temperature.avg")}
             </div>
             <div className="text-lg font-bold text-foreground">{stats.avg}°C</div>
           </div>
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <div className="text-xs text-muted-foreground mb-1 flex items-center justify-center gap-1">
-              <TrendingUp className="h-3 w-3" /> Max
+              <TrendingUp className="h-3 w-3" /> {t("details.temperature.max")}
             </div>
             <div className="text-lg font-bold text-red-500">{stats.max}°C</div>
           </div>
@@ -216,8 +218,8 @@ export function DiskTemperatureDetailModal({
             <div className="h-full flex items-center justify-center text-muted-foreground">
               <div className="text-center">
                 <Thermometer className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No temperature data yet for this disk</p>
-                <p className="text-sm mt-1">Samples are collected every 60 seconds</p>
+                <p>{t("details.temperature.noData")}</p>
+                <p className="text-sm mt-1">{t("details.temperature.sampleInterval")}</p>
               </div>
             </div>
           ) : (
@@ -250,7 +252,7 @@ export function DiskTemperatureDetailModal({
                 <Area
                   type="monotone"
                   dataKey="value"
-                  name="Temperature"
+                  name={t("details.temperature.seriesName")}
                   stroke={chartColor}
                   strokeWidth={2}
                   fill={`url(#diskTempGradient-${diskName})`}

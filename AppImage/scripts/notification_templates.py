@@ -1976,6 +1976,7 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
 # Supported languages for AI translation
 AI_LANGUAGES = {
     'en': 'English',
+    'sk': 'Slovak',
     'es': 'Spanish',
     'fr': 'French',
     'de': 'German',

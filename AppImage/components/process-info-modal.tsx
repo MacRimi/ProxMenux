@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ScrollArea } from "./ui/scroll-area"
 import { Activity, FileText, HardDrive, Clock, Info } from "lucide-react"
 import { fetchApi } from "@/lib/api-config"
+import { useI18n } from "../lib/i18n/provider"
 
 interface ProcessDetail {
   pid: number
@@ -59,22 +60,24 @@ const formatBytes = (b: number | null | undefined): string => {
 // Linux process states from /proc/<pid>/status. The first char of `State:`
 // is the canonical letter — the rest of the field is a human label like
 // "(running)". We expand the bare letter to something readable.
-const stateLabel = (state: string): string => {
-  const letter = (state || "").trim().charAt(0).toUpperCase()
+const stateLabel = (state: string, t: (key: string) => string): string => {
+  const rawLetter = (state || "").trim().charAt(0)
+  const letter = rawLetter.toUpperCase()
   const map: Record<string, string> = {
-    R: "Running",
-    S: "Sleeping",
-    D: "Disk wait",
-    Z: "Zombie",
-    T: "Stopped",
-    t: "Tracing stop",
-    X: "Dead",
-    I: "Idle",
+    R: "running",
+    S: "sleeping",
+    D: "diskWait",
+    Z: "zombie",
+    T: rawLetter === "t" ? "tracingStop" : "stopped",
+    X: "dead",
+    I: "idle",
   }
-  return map[letter] || state || "—"
+  const key = map[letter]
+  return key ? t(`details.processInfo.states.${key}`) : state || "—"
 }
 
 export function ProcessInfoModal({ pid, accent, onClose }: ProcessInfoModalProps) {
+  const { language, t } = useI18n()
   const [data, setData] = useState<ProcessDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -105,7 +108,7 @@ export function ProcessInfoModal({ pid, accent, onClose }: ProcessInfoModalProps
         setExited(true)
         stopPolling()
       } else {
-        setError(e?.message || "Failed to fetch process")
+        setError(t("details.processInfo.fetchFailed"))
       }
     } finally {
       if (!silent) setLoading(false)
@@ -136,15 +139,13 @@ export function ProcessInfoModal({ pid, accent, onClose }: ProcessInfoModalProps
               className="w-2 h-2 rounded-full flex-shrink-0"
               style={{ background: accent.dot }}
             />
-            <span className="truncate font-mono text-base">{data?.comm || "Process"}</span>
+            <span className="truncate font-mono text-base">{data?.comm || t("details.processInfo.titleFallback")}</span>
             <span className="text-xs text-muted-foreground font-mono flex-shrink-0">PID {pid}</span>
           </DialogTitle>
           <DialogDescription className="text-xs">
-            {exited ? (
-              <>Last snapshot from <span className="font-mono">/proc/{pid}</span> before the process finished.</>
-            ) : (
-              <>Live snapshot from <span className="font-mono">/proc/{pid}</span>. Auto-refreshes every {REFRESH_MS / 1000} s while open.</>
-            )}
+            {exited
+              ? t("details.processInfo.descriptionExited", { pid: pid ?? "" })
+              : t("details.processInfo.descriptionLive", { pid: pid ?? "", seconds: REFRESH_MS / 1000 })}
           </DialogDescription>
         </DialogHeader>
 
@@ -154,9 +155,9 @@ export function ProcessInfoModal({ pid, accent, onClose }: ProcessInfoModalProps
           <div className="flex items-start gap-2 px-3 py-2 rounded-md border border-amber-500/30 bg-amber-500/10 text-xs text-amber-300">
             <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
             <div>
-              <div className="font-medium text-amber-200">This process has finished</div>
+              <div className="font-medium text-amber-200">{t("details.processInfo.finishedTitle")}</div>
               <div className="text-amber-300/80 mt-0.5">
-                It was likely a short-lived helper (a script, a <span className="font-mono">pct exec</span>, or a one-shot command) that completed while the modal was open. The data below is the last snapshot captured before it exited — not a stale or broken read.
+                {t("details.processInfo.finishedDescription")}
               </div>
             </div>
           </div>
@@ -166,44 +167,44 @@ export function ProcessInfoModal({ pid, accent, onClose }: ProcessInfoModalProps
           <div className="text-sm text-red-500 py-4">{error}</div>
         ) : !data ? (
           <div className="text-sm text-muted-foreground py-8 text-center">
-            {loading ? "Loading…" : "—"}
+            {loading ? t("details.processInfo.loading") : "—"}
           </div>
         ) : (
           <ScrollArea className={`max-h-[480px] pr-2 ${exited ? "opacity-75" : ""}`}>
             <div className="space-y-4">
               {/* Overview */}
-              <Section icon={<Activity className="h-4 w-4 text-blue-400" />} title="Overview">
-                <Row label="State" value={exited ? "Exited" : stateLabel(data.state)} />
-                <Row label="Parent" value={data.parent_name ? `${data.parent_name} (PID ${data.ppid})` : `PID ${data.ppid}`} mono />
-                <Row label="Threads" value={String(data.threads)} mono />
-                <Row label="Open FDs" value={data.fd_count != null ? String(data.fd_count) : "—"} mono />
-                <Row label="User" value={`${data.user} (${data.uid})`} mono />
-                <Row label="Group" value={`${data.group} (${data.gid})`} mono />
+              <Section icon={<Activity className="h-4 w-4 text-blue-400" />} title={t("details.processInfo.sections.overview")}>
+                <Row label={t("details.processInfo.labels.state")} value={exited ? t("details.processInfo.states.exited") : stateLabel(data.state, t)} />
+                <Row label={t("details.processInfo.labels.parent")} value={data.parent_name ? `${data.parent_name} (PID ${data.ppid})` : `PID ${data.ppid}`} mono />
+                <Row label={t("details.processInfo.labels.threads")} value={String(data.threads)} mono />
+                <Row label={t("details.processInfo.labels.openFds")} value={data.fd_count != null ? String(data.fd_count) : "—"} mono />
+                <Row label={t("details.processInfo.labels.user")} value={`${data.user} (${data.uid})`} mono />
+                <Row label={t("details.processInfo.labels.group")} value={`${data.group} (${data.gid})`} mono />
               </Section>
 
               {/* Resources */}
-              <Section icon={<HardDrive className="h-4 w-4 text-amber-400" />} title="Resources">
-                <Row label="CPU" value={`${data.cpu.toFixed(1)} %`} mono valueClass={accent.text} />
-                <Row label="Memory" value={`${data.mem.toFixed(1)} %`} mono valueClass={accent.text} />
-                <Row label="Resident (RSS)" value={formatKb(data.vm_rss_kb)} mono />
-                <Row label="Virtual size" value={formatKb(data.vm_size_kb)} mono />
-                <Row label="Swap" value={formatKb(data.vm_swap_kb)} mono />
-                <Row label="I/O read" value={formatBytes(data.io_read_bytes)} mono />
-                <Row label="I/O write" value={formatBytes(data.io_write_bytes)} mono />
+              <Section icon={<HardDrive className="h-4 w-4 text-amber-400" />} title={t("details.processInfo.sections.resources")}>
+                <Row label={t("details.processInfo.labels.cpu")} value={`${data.cpu.toFixed(1)} %`} mono valueClass={accent.text} />
+                <Row label={t("details.processInfo.labels.memory")} value={`${data.mem.toFixed(1)} %`} mono valueClass={accent.text} />
+                <Row label={t("details.processInfo.labels.residentRss")} value={formatKb(data.vm_rss_kb)} mono />
+                <Row label={t("details.processInfo.labels.virtualSize")} value={formatKb(data.vm_size_kb)} mono />
+                <Row label={t("details.processInfo.labels.swap")} value={formatKb(data.vm_swap_kb)} mono />
+                <Row label={t("details.processInfo.labels.ioRead")} value={formatBytes(data.io_read_bytes)} mono />
+                <Row label={t("details.processInfo.labels.ioWrite")} value={formatBytes(data.io_write_bytes)} mono />
               </Section>
 
               {/* Command */}
-              <Section icon={<FileText className="h-4 w-4 text-purple-400" />} title="Command">
-                <Row label="Name" value={data.comm} mono />
-                <Row label="Command line" value={data.cmdline || data.comm} mono wrap />
-                <Row label="Executable" value={data.exe || "—"} mono wrap />
-                <Row label="Working dir" value={data.cwd || "—"} mono wrap />
+              <Section icon={<FileText className="h-4 w-4 text-purple-400" />} title={t("details.processInfo.sections.command")}>
+                <Row label={t("details.processInfo.labels.name")} value={data.comm} mono />
+                <Row label={t("details.processInfo.labels.commandLine")} value={data.cmdline || data.comm} mono wrap />
+                <Row label={t("details.processInfo.labels.executable")} value={data.exe || "—"} mono wrap />
+                <Row label={t("details.processInfo.labels.workingDir")} value={data.cwd || "—"} mono wrap />
               </Section>
 
               {/* Times */}
-              <Section icon={<Clock className="h-4 w-4 text-emerald-400" />} title="Lifetime">
-                <Row label="Started" value={data.start_time || "—"} mono />
-                <Row label="Running for" value={data.elapsed || "—"} mono />
+              <Section icon={<Clock className="h-4 w-4 text-emerald-400" />} title={t("details.processInfo.sections.lifetime")}>
+                <Row label={t("details.processInfo.labels.started")} value={data.start_time || "—"} mono />
+                <Row label={t("details.processInfo.labels.runningFor")} value={data.elapsed || "—"} mono />
               </Section>
             </div>
           </ScrollArea>
@@ -211,7 +212,8 @@ export function ProcessInfoModal({ pid, accent, onClose }: ProcessInfoModalProps
 
         {data?.captured_at && (
           <div className="text-[10px] text-muted-foreground text-right mt-1">
-            {exited ? "Last seen" : "Captured"} {new Date(data.captured_at * 1000).toLocaleTimeString()}
+            {exited ? t("details.processInfo.lastSeen") : t("details.processInfo.captured")}{" "}
+            {new Date(data.captured_at * 1000).toLocaleTimeString(language)}
             {error ? ` · ${error}` : ""}
           </div>
         )}

@@ -20,6 +20,7 @@ import {
   Waves,
 } from "lucide-react"
 import { getApiUrl, getAuthToken } from "../lib/api-config"
+import { useT } from "../lib/i18n/provider"
 
 // Local fetch wrapper that *preserves* the JSON body on non-2xx
 // responses so we can surface backend validation messages
@@ -282,6 +283,11 @@ function computeVisualRange(
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function HealthThresholds() {
+  const t = useT()
+  const tFallback = (key: string, fallback: string) => {
+    const translated = t(key)
+    return translated === key ? fallback : translated
+  }
   const [tree, setTree] = useState<ThresholdsTree | null>(null)
   const [loading, setLoading] = useState(true)
   const [editMode, setEditMode] = useState(false)
@@ -299,7 +305,7 @@ export function HealthThresholds() {
       )
       if (res?.success && res.thresholds) setTree(res.thresholds)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load thresholds")
+      setError(err instanceof Error ? err.message : t("settings.healthThresholds.loadFailed"))
     } finally {
       setLoading(false)
     }
@@ -322,7 +328,7 @@ export function HealthThresholds() {
       if (trimmed === "") continue
       const num = Number(trimmed)
       if (!isFinite(num)) {
-        setError(`Invalid value for ${key}: must be a number`)
+        setError(t("settings.healthThresholds.invalidValue", { key }))
         return null
       }
       // Walk into payload mirroring the path
@@ -362,7 +368,7 @@ export function HealthThresholds() {
         { method: "PUT", body: JSON.stringify(payload) },
       )
       if (!data.success || !data.thresholds) {
-        setError(data.message || "Save failed")
+        setError(data.message || t("status.saveFailed"))
         return
       }
       setTree(data.thresholds)
@@ -371,14 +377,16 @@ export function HealthThresholds() {
       setSavedFlash(true)
       setTimeout(() => setSavedFlash(false), 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error while saving")
+      setError(err instanceof Error ? err.message : t("status.networkErrorWhileSaving"))
     } finally {
       setSaving(false)
     }
   }
 
   const handleResetSection = async (sectionId: string) => {
-    if (!confirm(`Reset all "${SECTIONS.find((s) => s.id === sectionId)?.title}" thresholds to recommended values?`))
+    const section = SECTIONS.find((s) => s.id === sectionId)
+    const sectionTitle = section ? tFallback(`settings.healthThresholds.sections.${section.id}.title`, section.title) : sectionId
+    if (!confirm(t("settings.healthThresholds.resetSectionConfirm", { section: sectionTitle })))
       return
     try {
       const data = await fetchJson<{ success: boolean; thresholds: ThresholdsTree; message?: string }>(
@@ -386,7 +394,7 @@ export function HealthThresholds() {
         { method: "POST" },
       )
       if (!data.success || !data.thresholds) {
-        setError(data.message || "Reset failed")
+        setError(data.message || t("settings.healthThresholds.resetFailed"))
         return
       }
       setTree(data.thresholds)
@@ -400,25 +408,25 @@ export function HealthThresholds() {
         return next
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error while resetting")
+      setError(err instanceof Error ? err.message : t("settings.healthThresholds.networkErrorWhileResetting"))
     }
   }
 
   const handleResetAll = async () => {
-    if (!confirm("Reset ALL thresholds to recommended values? This affects every section.")) return
+    if (!confirm(t("settings.healthThresholds.resetAllConfirm"))) return
     try {
       const data = await fetchJson<{ success: boolean; thresholds: ThresholdsTree; message?: string }>(
         "/api/health/thresholds/reset",
         { method: "POST" },
       )
       if (!data.success || !data.thresholds) {
-        setError(data.message || "Reset failed")
+        setError(data.message || t("settings.healthThresholds.resetFailed"))
         return
       }
       setTree(data.thresholds)
       setPending({})
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error while resetting")
+      setError(err instanceof Error ? err.message : t("settings.healthThresholds.networkErrorWhileResetting"))
     }
   }
 
@@ -441,7 +449,7 @@ export function HealthThresholds() {
     const isCustomised = leaf.customised && !(key in pending)
     const customisedClass = "border-blue-500 bg-blue-500/10 focus-visible:border-blue-500"
     const fieldClass = isCustomised ? customisedClass : severityClass
-    const recommendedTooltip = `Recommended: ${leaf.recommended}${leaf.unit}`
+    const recommendedTooltip = `${t("settings.healthThresholds.recommended")}: ${leaf.recommended}${leaf.unit}`
     return (
       <div key={key} className="flex items-center justify-between gap-2 py-1.5 px-1">
         <span className="text-xs sm:text-sm text-foreground/90 min-w-0">
@@ -524,12 +532,12 @@ export function HealthThresholds() {
             value={val}
             onChange={(e) => setPending((p) => ({ ...p, [key]: e.target.value }))}
             className={`absolute inset-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-moz-range-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-8 [&::-webkit-slider-thumb]:w-8 sm:[&::-webkit-slider-thumb]:h-4 sm:[&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:h-8 [&::-moz-range-thumb]:w-8 sm:[&::-moz-range-thumb]:h-4 sm:[&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-background ${handleClass}`}
-            title={`Recommended: ${leaf.recommended}${unit}`}
+            title={`${t("settings.healthThresholds.recommended")}: ${leaf.recommended}${unit}`}
           />
         </div>
         <div className="grid grid-cols-2 gap-2 mt-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-          <span>OK &lt; {val}{unit}</span>
-          <span className="text-right">{severity === "critical" ? "CRIT" : "WARN"} &gt; {val}{unit}</span>
+          <span>{t("settings.healthThresholds.ok")} &lt; {val}{unit}</span>
+          <span className="text-right">{severity === "critical" ? t("settings.healthThresholds.crit") : t("settings.healthThresholds.warn")} &gt; {val}{unit}</span>
         </div>
       </div>
     )
@@ -641,7 +649,7 @@ export function HealthThresholds() {
             value={wVal}
             onChange={(e) => setVal(wKey, Number(e.target.value), cVal, true)}
             className="absolute inset-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-moz-range-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-8 [&::-webkit-slider-thumb]:w-8 sm:[&::-webkit-slider-thumb]:h-4 sm:[&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-500 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:h-8 [&::-moz-range-thumb]:w-8 sm:[&::-moz-range-thumb]:h-4 sm:[&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-amber-500 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-background"
-            title={`Warning (recommended: ${wLeaf.recommended}${unit})`}
+            title={`${t("settings.healthThresholds.warning")} (${t("settings.healthThresholds.recommended").toLowerCase()}: ${wLeaf.recommended}${unit})`}
           />
           <input
             type="range"
@@ -652,7 +660,7 @@ export function HealthThresholds() {
             value={cVal}
             onChange={(e) => setVal(cKey, Number(e.target.value), wVal, false)}
             className="absolute inset-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-moz-range-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-8 [&::-webkit-slider-thumb]:w-8 sm:[&::-webkit-slider-thumb]:h-4 sm:[&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-red-500 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:h-8 [&::-moz-range-thumb]:w-8 sm:[&::-moz-range-thumb]:h-4 sm:[&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-red-500 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-background"
-            title={`Critical (recommended: ${cLeaf.recommended}${unit})`}
+            title={`${t("settings.healthThresholds.critical")} (${t("settings.healthThresholds.recommended").toLowerCase()}: ${cLeaf.recommended}${unit})`}
           />
         </div>
 
@@ -660,9 +668,9 @@ export function HealthThresholds() {
             "warn" starts and ends without having to read the handles. */}
         {!options?.hideLabels && (
           <div className="grid grid-cols-3 gap-2 mt-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-            <span>OK &lt; {wVal}{unit}</span>
-            <span className="text-center">WARN {wVal}–{cVal}{unit}</span>
-            <span className="text-right">CRIT &gt; {cVal}{unit}</span>
+            <span>{t("settings.healthThresholds.ok")} &lt; {wVal}{unit}</span>
+            <span className="text-center">{t("settings.healthThresholds.warn")} {wVal}–{cVal}{unit}</span>
+            <span className="text-right">{t("settings.healthThresholds.crit")} &gt; {cVal}{unit}</span>
           </div>
         )}
       </div>
@@ -675,14 +683,14 @@ export function HealthThresholds() {
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 min-w-0">
             <SlidersHorizontal className="h-5 w-5 text-amber-500" />
-            <CardTitle>Health Monitor Thresholds</CardTitle>
+            <CardTitle>{t("settings.healthThresholds.title")}</CardTitle>
           </div>
           {!loading && (
             <div className="flex items-center gap-2">
               {savedFlash && (
                 <span className="flex items-center gap-1 text-xs text-green-500">
                   <Check className="h-3.5 w-3.5" />
-                  Saved
+                  {t("status.saved")}
                 </span>
               )}
               {editMode ? (
@@ -692,7 +700,7 @@ export function HealthThresholds() {
                     onClick={handleCancel}
                     disabled={saving}
                   >
-                    Cancel
+                    {t("actions.cancel")}
                   </button>
                   <button
                     className="h-7 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1.5"
@@ -704,7 +712,7 @@ export function HealthThresholds() {
                     ) : (
                       <Check className="h-3 w-3" />
                     )}
-                    Save
+                    {t("actions.save")}
                   </button>
                 </>
               ) : (
@@ -712,17 +720,17 @@ export function HealthThresholds() {
                   <button
                     className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors text-muted-foreground flex items-center gap-1.5"
                     onClick={handleResetAll}
-                    title="Reset every threshold to its recommended value"
+                    title={t("settings.healthThresholds.resetAllTitle")}
                   >
                     <RotateCcw className="h-3 w-3" />
-                    Reset all
+                    {t("actions.resetAll")}
                   </button>
                   <button
                     className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5"
                     onClick={handleEdit}
                   >
                     <Settings2 className="h-3 w-3" />
-                    Edit
+                    {t("actions.edit")}
                   </button>
                 </>
               )}
@@ -730,10 +738,7 @@ export function HealthThresholds() {
           )}
         </div>
         <CardDescription>
-          The Health Monitor and notifications fire when these thresholds are crossed.
-          Drag the amber handle to set the warning level and the red handle to set the
-          critical level. Values that differ from the recommended default appear in blue —
-          hover a handle to see the recommendation, or use Reset to restore it.
+          {t("settings.healthThresholds.description")}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -742,7 +747,7 @@ export function HealthThresholds() {
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : !tree ? (
-          <div className="text-sm text-muted-foreground">Failed to load thresholds.</div>
+          <div className="text-sm text-muted-foreground">{t("settings.healthThresholds.loadFailed")}</div>
         ) : (
           <div>
             {error && (
@@ -767,13 +772,13 @@ export function HealthThresholds() {
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2 min-w-0">
                       <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <h4 className="text-sm font-medium">{section.title}</h4>
+                      <h4 className="text-sm font-medium">{tFallback(`settings.healthThresholds.sections.${section.id}.title`, section.title)}</h4>
                     </div>
                     {editMode && (
                       <button
                         className="h-6 w-6 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors flex items-center justify-center"
                         onClick={() => handleResetSection(section.id)}
-                        title="Reset this section to recommended"
+                        title={t("settings.healthThresholds.resetSectionTitle")}
                       >
                         <RotateCcw className="h-3 w-3" />
                       </button>
@@ -781,7 +786,7 @@ export function HealthThresholds() {
                   </div>
                   {section.description && (
                     <p className="text-[11px] text-muted-foreground mb-1.5 leading-snug">
-                      {section.description}
+                      {tFallback(`settings.healthThresholds.sections.${section.id}.description`, section.description)}
                     </p>
                   )}
                   <div>
@@ -806,12 +811,12 @@ export function HealthThresholds() {
                       // visual language end to end.
                       <>
                         <div className="text-[11px] uppercase tracking-wider text-muted-foreground px-1">
-                          RAM
+                          {t("settings.healthThresholds.ram")}
                         </div>
                         {renderThresholdRange(["memory"])}
                         <div className="border-t border-border/40">
                           <div className="text-[11px] uppercase tracking-wider text-muted-foreground px-1 pt-1.5">
-                            Swap (critical only)
+                            {t("settings.healthThresholds.swapCriticalOnly")}
                           </div>
                           {renderSingleThresholdSlider(["memory", "swap_critical"], "critical")}
                         </div>

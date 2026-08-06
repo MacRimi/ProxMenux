@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Activity } from "lucide-react"
+import { useT } from "../lib/i18n/provider"
 
 // One animated comet-trail pulse. Returned as DATA from the layout
 // renderers instead of an SVG string so the parent component can
@@ -23,6 +24,12 @@ type PulseData = {
   // escalate the head's glow when a guest is a heavy consumer
   // (1 MB/s → warm, 30 MB/s → hot).
   rate?: number
+}
+
+type FlowLabels = {
+  down: string
+  active: string
+  standby: string
 }
 
 // ─── Public types — match the /api/network shape ────────────
@@ -126,14 +133,15 @@ function resolveBonds(data: NetworkFlowData): {
 // Sub-label under a NIC. In active-backup the role is the useful bit
 // (which cable is actually carrying traffic right now); in every other
 // mode all slaves transmit, so the link speed stays.
-function nicSubLabel(n: NIC): string {
-  if (n.status === "down") return "down"
+function nicSubLabel(n: NIC, labels: FlowLabels): string {
+  if (n.status === "down") return labels.down
   const role = n.role === "standby" || n.role === "active" ? n.role : ""
   if (!role) return n.link
   // A NIC that doesn't report a negotiated speed renders its link as
   // "—"; pairing that with the role would read as "— · active".
-  if (!n.link || n.link === "—") return role
-  return `${n.link} · ${role}`
+  const roleLabel = role === "active" ? labels.active : labels.standby
+  if (!n.link || n.link === "—") return roleLabel
+  return `${n.link} · ${roleLabel}`
 }
 
 function fmt(v: number): string {
@@ -214,7 +222,7 @@ function curvedTap(cx: number, busY: number, targetY: number, r = 14): string {
 }
 
 // ─── Renderer: returns full SVG markup string for a given width ──
-function renderHorizontal(data: NetworkFlowData, W: number): { svg: string; pulses: PulseData[]; height: number } {
+function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels): { svg: string; pulses: PulseData[]; height: number } {
   const top = activeConsumers(data.consumers)
   const bridges = visibleBridges(data.bridges, top)
   const host = data.consumers.find((c) => c.kind === "host")
@@ -343,7 +351,7 @@ function renderHorizontal(data: NetworkFlowData, W: number): { svg: string; puls
       <circle class="nf-circle" cx="${nicX}" cy="${y}" r="${radNic}" stroke="${stroke}" />
       ${svgIcon("nic", nicX, y, 18, stroke)}
       <text class="nf-label" x="${nicX}" y="${y + radNic + 14}">${n.id}</text>
-      <text class="nf-sub"   x="${nicX}" y="${y + radNic + 26}">${nicSubLabel(n)}</text>
+      <text class="nf-sub"   x="${nicX}" y="${y + radNic + 26}">${nicSubLabel(n, labels)}</text>
     </g>`)
   })
 
@@ -591,7 +599,7 @@ function renderHorizontal(data: NetworkFlowData, W: number): { svg: string; puls
 //   own sub-trunk lives at SUB_TRUNK_X and fans out to its guests in
 //   an arc (some above, some below the bridge.cy). All elbows use Q
 //   curves; no sharp 90° corners anywhere.
-function renderVertical(data: NetworkFlowData): { svg: string; pulses: PulseData[]; height: number; viewBox: string } {
+function renderVertical(data: NetworkFlowData, labels: FlowLabels): { svg: string; pulses: PulseData[]; height: number; viewBox: string } {
   // Smaller W → SVG scales up on the mobile screen, nodes look bigger.
   // All four x-columns evenly spaced so curve→target distances are
   // homogeneous (host→bridge, bridge→spine, spine→guest all ~60 px).
@@ -768,7 +776,7 @@ function renderVertical(data: NetworkFlowData): { svg: string; pulses: PulseData
       <circle class="nf-circle" cx="${cx}" cy="${cy}" r="${r}" stroke="${color}" />
       ${svgIcon("nic", cx, cy, 13, color)}
       <text class="nf-label" x="${cx}" y="${cy + r + LABEL_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${n.id}</text>
-      <text class="nf-sub"   x="${cx}" y="${cy + r + SUB_OFFSET_Y}" text-anchor="middle" style="font-size:11px">${nicSubLabel(n)}</text>
+      <text class="nf-sub"   x="${cx}" y="${cy + r + SUB_OFFSET_Y}" text-anchor="middle" style="font-size:11px">${nicSubLabel(n, labels)}</text>
     </g>`)
   })
 
@@ -936,6 +944,15 @@ export function NetworkFlow({
   // opens the per-interface details modal.
   onNodeClick?: (name: string, kind: "nic" | "host" | "bond" | "bridge" | "lxc" | "vm") => void
 }) {
+  const t = useT()
+  const labels = useMemo<FlowLabels>(
+    () => ({
+      down: t("network.status.down"),
+      active: t("network.roles.active"),
+      standby: t("network.roles.standby"),
+    }),
+    [t],
+  )
   const ref = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(1320)
   const [mode, setMode] = useState<"desktop" | "tablet" | "mobile">("desktop")
@@ -985,21 +1002,21 @@ export function NetworkFlow({
 
   const { svgContent, pulses, viewBox, height } = useMemo(() => {
     if (mode === "mobile") {
-      const out = renderVertical(data)
+      const out = renderVertical(data, labels)
       return { svgContent: out.svg, pulses: out.pulses, viewBox: out.viewBox, height: out.height }
     }
     const W = mode === "tablet" ? 1100 : 1320
-    const out = renderHorizontal(data, W)
+    const out = renderHorizontal(data, W, labels)
     return { svgContent: out.svg, pulses: out.pulses, viewBox: `0 0 ${W} ${out.height}`, height: out.height }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [memoKey])
+  }, [memoKey, labels])
 
   return (
     <Card className="bg-card border-border">
       <CardHeader>
         <CardTitle className="text-foreground flex items-center text-base">
           <Activity className="h-5 w-5 mr-2" />
-          Network Flow (PoC)
+          {t("network.flow.title")}
         </CardTitle>
       </CardHeader>
       <CardContent>

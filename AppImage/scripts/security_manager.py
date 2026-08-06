@@ -1460,10 +1460,13 @@ def run_lynis_audit():
         global _lynis_audit_running, _lynis_audit_progress
         try:
             _lynis_audit_progress = "running"
-            # Remove old report so lynis creates a fresh one
-            report_file = "/var/log/lynis-report.dat"
-            if os.path.isfile(report_file):
-                os.remove(report_file)
+            # Remove old generated files so a failed or interrupted run does
+            # not get mixed with data from an earlier audit. Keep
+            # /var/log/lynis.log: Lynis owns that file and can use it as a
+            # fallback source when terminal capture is unavailable.
+            for report_path in ["/var/log/lynis-report.dat", "/var/log/lynis-output.log"]:
+                if os.path.isfile(report_path):
+                    os.remove(report_path)
 
             # Capture full formatted output. Lynis suppresses its nice
             # formatted output ([+] sections) when stdout is not a tty.
@@ -1573,6 +1576,7 @@ def parse_lynis_report():
     """
     report_file = "/var/log/lynis-report.dat"
     output_file = "/var/log/lynis-output.log"
+    lynis_log_file = "/var/log/lynis.log"
     # Need at least one data source
     if not os.path.isfile(report_file) and not os.path.isfile(output_file):
         return None
@@ -1594,6 +1598,8 @@ def parse_lynis_report():
         "kernel_version": "",
         "firewall_active": False,
         "malware_scanner": False,
+        "is_complete": False,
+        "parse_issue": "",
     }
 
     # Collect all raw key-value pairs first for flexible matching
@@ -1720,9 +1726,30 @@ def parse_lynis_report():
     # archivo entero a memoria 2 veces.
     report["sections"] = []
     output_file = "/var/log/lynis-output.log"
-    log_file = output_file if os.path.isfile(output_file) else "/var/log/lynis.log"
+    log_file = ""
     _log_lines = []
-    if os.path.isfile(log_file):
+
+    def _usable_lynis_log(path):
+        if not os.path.isfile(path):
+            return False
+        try:
+            if os.path.getsize(path) <= 0:
+                return False
+            # Avoid mixing a newly created sparse report with a stale log from
+            # an older run. A fresh Lynis log should be at least as recent as
+            # the current report, allowing a small clock/file-system margin.
+            if os.path.isfile(report_file):
+                return os.path.getmtime(path) >= os.path.getmtime(report_file) - 300
+            return True
+        except Exception:
+            return False
+
+    for candidate in [output_file, lynis_log_file]:
+        if _usable_lynis_log(candidate):
+            log_file = candidate
+            break
+
+    if log_file:
         try:
             with open(log_file, 'r') as f:
                 _log_lines = f.readlines()
@@ -1799,7 +1826,7 @@ def parse_lynis_report():
                 # Format: "Key:           value" or "Key : value"
                 if ":" in stripped:
                     if not report["hardening_index"] and "Hardening index" in stripped:
-                        m = re.search(r'Hardening index\s*:\s*(\d+)', stripped)
+                        m = re.search(r'Hardening index\s*:?\s*\[?(\d+)\]?', stripped)
                         if m:
                             report["hardening_index"] = int(m.group(1))
                     elif report["tests_performed"] == 0 and "Tests performed" in stripped:
@@ -1961,6 +1988,15 @@ def parse_lynis_report():
                             report["firewall_active"] = True
                         if "malware" in sw_name and sw_status == "V":
                             report["malware_scanner"] = True
+
+                # lynis.log does not contain the formatted "Software
+                # components" block, but it does log the underlying result
+                # lines. Use those as a fallback for the quick status cards.
+                s_lower = sstripped.lower()
+                if "host based firewall or packet filter is active" in s_lower:
+                    report["firewall_active"] = True
+                if "no malware scanner found" in s_lower:
+                    report["malware_scanner"] = False
 
                 # Parse warning lines: "! Warning text [TEST-ID]"
                 if in_warnings and sstripped.startswith('!'):
@@ -2210,10 +2246,12 @@ def parse_lynis_report():
     # Calculate Proxmox-adjusted score
     # Lynis score is based on total tests and findings.
     # We boost the score proportionally to the expected items.
-    raw_score = report["hardening_index"] or 0
+    raw_score = report["hardening_index"]
     total_findings = len(report["warnings"]) + len(report["suggestions"])
     expected_findings = pve_expected_warnings + pve_expected_suggestions
-    if total_findings > 0 and raw_score > 0:
+    if raw_score is None:
+        adjusted_score = None
+    elif total_findings > 0 and raw_score > 0:
         # Each finding roughly reduces the score. Expected findings should
         # not penalize. We estimate the boost proportionally.
         penalty_per_finding = (100 - raw_score) / max(total_findings, 1)
@@ -2226,6 +2264,9 @@ def parse_lynis_report():
     report["proxmox_expected_warnings"] = pve_expected_warnings
     report["proxmox_expected_suggestions"] = pve_expected_suggestions
     report["proxmox_context_applied"] = True
+    report["is_complete"] = report["hardening_index"] is not None and report["tests_performed"] > 0
+    if not report["is_complete"]:
+        report["parse_issue"] = "Lynis report is incomplete: hardening index or test count is missing."
 
     return report
 

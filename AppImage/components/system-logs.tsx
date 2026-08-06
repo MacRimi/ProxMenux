@@ -29,6 +29,7 @@ import {
 } from "lucide-react"
 import { useState, useEffect, useMemo } from "react"
 import { API_PORT, fetchApi, getApiUrl, getAuthToken } from "@/lib/api-config"
+import { useT } from "@/lib/i18n/provider"
 
 interface Backup {
   volid: string
@@ -88,6 +89,7 @@ interface CombinedLogEntry {
 }
 
 export function SystemLogs() {
+  const t = useT()
   const [logs, setLogs] = useState<SystemLog[]>([])
   const [backups, setBackups] = useState<Backup[]>([])
   const [events, setEvents] = useState<Event[]>([])
@@ -150,7 +152,7 @@ export function SystemLogs() {
         setLogsCounts(countsRes)
       } catch (err) {
         if (cancelled) return
-        setError("Failed to connect to server")
+        setError(t("systemLogs.errors.connectFailed"))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -177,7 +179,7 @@ export function SystemLogs() {
       const data = await fetchApi<{ logs?: SystemLog[] } | SystemLog[]>(apiUrl)
       return Array.isArray(data) ? data : data.logs || []
     } catch {
-      setError("Failed to load logs. Please try again.")
+      setError(t("systemLogs.errors.loadFailed"))
       return []
     }
   }
@@ -203,26 +205,26 @@ export function SystemLogs() {
 
       // Generate log content
       const logContent = [
-        `Proxmox System Logs & Events Export`,
-        `Generated: ${new Date().toISOString()}`,
-        `Total Entries: ${filteredCombinedLogs.length.toLocaleString()}`,
+        t("systemLogs.export.title"),
+        `${t("systemLogs.fields.generated")}: ${new Date().toISOString()}`,
+        `${t("systemLogs.cards.totalEntries")}: ${filteredCombinedLogs.length.toLocaleString()}`,
         ``,
-        `Filters Applied:`,
-        `- Date Range: ${dateFilter === "custom" ? `${customDays} days ago` : `${dateFilter} day(s) ago`}`,
-        `- Level: ${levelFilter === "all" ? "All Levels" : levelFilter}`,
-        `- Service: ${serviceFilter === "all" ? "All Services" : serviceFilter}`,
-        `- Search: ${searchTerm || "None"}`,
+        `${t("systemLogs.export.filtersApplied")}:`,
+        `- ${t("systemLogs.filters.dateRange")}: ${t("systemLogs.filters.daysAgo", { count: dateFilter === "custom" ? customDays : dateFilter })}`,
+        `- ${t("systemLogs.fields.level")}: ${levelFilter === "all" ? t("systemLogs.filters.allLevels") : levelLabel(levelFilter)}`,
+        `- ${t("systemLogs.fields.service")}: ${serviceFilter === "all" ? t("systemLogs.filters.allServices") : serviceFilter}`,
+        `- ${t("systemLogs.fields.search")}: ${searchTerm || t("systemLogs.fields.none")}`,
         ``,
         `${"=".repeat(80)}`,
         ``,
         ...filteredCombinedLogs.map((log) => {
           const lines = [
-            `[${log.timestamp}] ${log.level.toUpperCase()} - ${log.service}${log.isEvent ? " [EVENT]" : ""}`,
-            `Message: ${log.message}`,
-            `Source: ${log.source}`,
+            `[${log.timestamp}] ${levelLabel(log.level)} - ${log.service}${log.isEvent ? ` [${t("systemLogs.badges.event")}]` : ""}`,
+            `${t("systemLogs.fields.message")}: ${log.message}`,
+            `${t("systemLogs.fields.source")}: ${log.source}`,
           ]
           if (log.pid) lines.push(`PID: ${log.pid}`)
-          if (log.hostname) lines.push(`Hostname: ${log.hostname}`)
+          if (log.hostname) lines.push(`${t("systemLogs.fields.hostname")}: ${log.hostname}`)
           lines.push(`${"-".repeat(80)}`)
           return lines.join("\n")
         }),
@@ -273,13 +275,13 @@ export function SystemLogs() {
           // Download the complete task log
           const blob = new Blob(
             [
-              `Proxmox Task Log\n`,
+              `${t("systemLogs.download.taskLog")}\n`,
               `================\n\n`,
               `UPID: ${upid}\n`,
-              `Timestamp: ${notification.timestamp}\n`,
-              `Service: ${notification.service}\n`,
-              `Source: ${notification.source}\n\n`,
-              `Complete Task Log:\n`,
+              `${t("systemLogs.fields.timestamp")}: ${notification.timestamp}\n`,
+              `${t("systemLogs.fields.service")}: ${notification.service}\n`,
+              `${t("systemLogs.fields.source")}: ${notification.source}\n\n`,
+              `${t("systemLogs.download.completeTaskLog")}:\n`,
               `${"-".repeat(80)}\n`,
               `${taskLog}\n`,
             ],
@@ -303,13 +305,13 @@ export function SystemLogs() {
       // If no UPID or failed to fetch task log, download the notification message
       const blob = new Blob(
         [
-          `Notification Details\n`,
+          `${t("systemLogs.modals.notificationTitle")}\n`,
           `==================\n\n`,
-          `Timestamp: ${notification.timestamp}\n`,
-          `Type: ${notification.type}\n`,
-          `Service: ${notification.service}\n`,
-          `Source: ${notification.source}\n\n`,
-          `Complete Message:\n`,
+          `${t("systemLogs.fields.timestamp")}: ${notification.timestamp}\n`,
+          `${t("systemLogs.fields.type")}: ${notification.type}\n`,
+          `${t("systemLogs.fields.service")}: ${notification.service}\n`,
+          `${t("systemLogs.fields.source")}: ${notification.source}\n\n`,
+          `${t("systemLogs.download.completeMessage")}:\n`,
           `${notification.message}\n`,
         ],
         { type: "text/plain" },
@@ -342,7 +344,7 @@ export function SystemLogs() {
           level: event.level,
           service: event.type,
           message: `${event.type}${event.vmid ? ` (VM/CT ${event.vmid})` : ""} - ${event.status}`,
-          source: `Node: ${event.node} • User: ${event.user}`,
+          source: `${t("systemLogs.fields.node")}: ${event.node} • ${t("systemLogs.fields.user")}: ${event.user}`,
           isEvent: true,
           eventData: event,
           sortTimestamp: new Date(event.starttime).getTime(),
@@ -390,6 +392,12 @@ export function SystemLogs() {
       default:
         return "bg-gray-500/10 text-gray-500 border-gray-500/20"
     }
+  }
+
+  const levelLabel = (level: string) => {
+    const key = `systemLogs.levels.${safeToLowerCase(level)}`
+    const translated = t(key)
+    return translated === key ? String(level).toUpperCase() : translated
   }
 
   const getLevelIcon = (level: string) => {
@@ -551,15 +559,15 @@ export function SystemLogs() {
   const getSectionLabel = (section: string) => {
     switch (section) {
       case "logs":
-        return "Logs"
+        return t("systemLogs.tabs.logs")
       case "events":
-        return "Events"
+        return t("systemLogs.tabs.events")
       case "backups":
-        return "Backups"
+        return t("systemLogs.tabs.backups")
       case "notifications":
-        return "Notifications"
+        return t("systemLogs.tabs.notifications")
       default:
-        return "Logs"
+        return t("systemLogs.tabs.logs")
     }
   }
 
@@ -570,8 +578,8 @@ export function SystemLogs() {
           <div className="h-12 w-12 rounded-full border-2 border-muted"></div>
           <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-transparent border-t-primary animate-spin"></div>
         </div>
-        <div className="text-sm font-medium text-foreground">Loading logs...</div>
-        <p className="text-xs text-muted-foreground">Fetching system logs and events</p>
+        <div className="text-sm font-medium text-foreground">{t("systemLogs.loading.title")}</div>
+        <p className="text-xs text-muted-foreground">{t("systemLogs.loading.description")}</p>
       </div>
     )
   }
@@ -585,7 +593,7 @@ export function SystemLogs() {
               <div className="h-10 w-10 rounded-full border-2 border-muted"></div>
               <div className="absolute inset-0 h-10 w-10 rounded-full border-2 border-transparent border-t-primary animate-spin"></div>
             </div>
-            <div className="text-sm font-medium text-foreground">Loading logs...</div>
+            <div className="text-sm font-medium text-foreground">{t("systemLogs.loading.title")}</div>
           </div>
         </div>
       )}
@@ -594,42 +602,42 @@ export function SystemLogs() {
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 xl:gap-6">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Entries</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("systemLogs.cards.totalEntries")}</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
               {(logsCounts?.total ?? 0).toLocaleString("fr-FR")}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">In selected range</p>
+            <p className="text-xs text-muted-foreground mt-2">{t("systemLogs.cards.selectedRange")}</p>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Errors</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("systemLogs.cards.errors")}</CardTitle>
             <XCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-500">{(logsCounts?.errors ?? 0).toLocaleString("fr-FR")}</div>
-            <p className="text-xs text-muted-foreground mt-2">Requires attention</p>
+            <p className="text-xs text-muted-foreground mt-2">{t("systemLogs.cards.requiresAttention")}</p>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Warnings</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("systemLogs.cards.warnings")}</CardTitle>
             <AlertTriangle className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-500">{(logsCounts?.warnings ?? 0).toLocaleString("fr-FR")}</div>
-            <p className="text-xs text-muted-foreground mt-2">Monitor closely</p>
+            <p className="text-xs text-muted-foreground mt-2">{t("systemLogs.cards.monitorClosely")}</p>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Backups</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("systemLogs.cards.backups")}</CardTitle>
             <Database className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
@@ -645,11 +653,11 @@ export function SystemLogs() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-foreground flex items-center">
               <Activity className="h-5 w-5 mr-2" />
-              System Logs & Events
+              {t("systemLogs.title")}
             </CardTitle>
             <Button variant="outline" size="sm" onClick={refreshData} disabled={loading}>
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-              Refresh
+              {t("actions.refresh")}
             </Button>
           </div>
         </CardHeader>
@@ -658,18 +666,18 @@ export function SystemLogs() {
             <TabsList className="hidden md:grid w-full grid-cols-3">
               <TabsTrigger value="logs" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
                 <Terminal className="h-4 w-4 mr-2" />
-                Logs
+                {t("systemLogs.tabs.logs")}
               </TabsTrigger>
               <TabsTrigger value="backups" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
                 <Database className="h-4 w-4 mr-2" />
-                Backups
+                {t("systemLogs.tabs.backups")}
               </TabsTrigger>
               <TabsTrigger
                 value="notifications"
                 className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
               >
                 <Bell className="h-4 w-4 mr-2" />
-                Notifications
+                {t("systemLogs.tabs.notifications")}
               </TabsTrigger>
             </TabsList>
 
@@ -691,7 +699,7 @@ export function SystemLogs() {
                 </SheetTrigger>
                 <SheetContent side="left" className="w-[280px]">
                   <SheetHeader>
-                    <SheetTitle>Sections</SheetTitle>
+                    <SheetTitle>{t("systemLogs.sections")}</SheetTitle>
                   </SheetHeader>
                   <div className="mt-6 space-y-2">
                     <Button
@@ -707,7 +715,7 @@ export function SystemLogs() {
                       }}
                     >
                       <Terminal className="h-4 w-4" />
-                      Logs
+                      {t("systemLogs.tabs.logs")}
                     </Button>
                     <Button
                       variant="ghost"
@@ -722,7 +730,7 @@ export function SystemLogs() {
                       }}
                     >
                       <Database className="h-4 w-4" />
-                      Backups
+                      {t("systemLogs.tabs.backups")}
                     </Button>
                     <Button
                       variant="ghost"
@@ -737,7 +745,7 @@ export function SystemLogs() {
                       }}
                     >
                       <Bell className="h-4 w-4" />
-                      Notifications
+                      {t("systemLogs.tabs.notifications")}
                     </Button>
                   </div>
                 </SheetContent>
@@ -751,7 +759,7 @@ export function SystemLogs() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search logs & events..."
+                      placeholder={t("systemLogs.filters.searchPlaceholder")}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10 bg-background border-border"
@@ -761,22 +769,22 @@ export function SystemLogs() {
 
                 <Select value={dateFilter} onValueChange={setDateFilter}>
                   <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
-                    <SelectValue placeholder="Time range" />
+                    <SelectValue placeholder={t("systemLogs.filters.timeRange")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">1 day ago</SelectItem>
-                    <SelectItem value="3">3 days ago</SelectItem>
-                    <SelectItem value="7">1 week ago</SelectItem>
-                    <SelectItem value="14">2 weeks ago</SelectItem>
-                    <SelectItem value="30">1 month ago</SelectItem>
-                    <SelectItem value="custom">Custom days</SelectItem>
+                    <SelectItem value="1">{t("systemLogs.filters.oneDay")}</SelectItem>
+                    <SelectItem value="3">{t("systemLogs.filters.threeDays")}</SelectItem>
+                    <SelectItem value="7">{t("systemLogs.filters.oneWeek")}</SelectItem>
+                    <SelectItem value="14">{t("systemLogs.filters.twoWeeks")}</SelectItem>
+                    <SelectItem value="30">{t("systemLogs.filters.oneMonth")}</SelectItem>
+                    <SelectItem value="custom">{t("systemLogs.filters.customDays")}</SelectItem>
                   </SelectContent>
                 </Select>
 
                 {dateFilter === "custom" && (
                   <Input
                     type="number"
-                    placeholder="Days ago"
+                    placeholder={t("systemLogs.filters.daysAgoPlaceholder")}
                     value={customDays}
                     onChange={(e) => setCustomDays(e.target.value)}
                     className="w-full sm:w-[120px] bg-background border-border"
@@ -786,23 +794,23 @@ export function SystemLogs() {
 
                 <Select value={levelFilter} onValueChange={setLevelFilter}>
                   <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
-                    <SelectValue placeholder="Filter by level" />
+                    <SelectValue placeholder={t("systemLogs.filters.byLevel")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Levels</SelectItem>
-                    <SelectItem value="error">Error</SelectItem>
-                    <SelectItem value="warning">Warning</SelectItem>
-                    <SelectItem value="info">Info</SelectItem>
+                    <SelectItem value="all">{t("systemLogs.filters.allLevels")}</SelectItem>
+                    <SelectItem value="error">{t("systemLogs.levels.error")}</SelectItem>
+                    <SelectItem value="warning">{t("systemLogs.levels.warning")}</SelectItem>
+                    <SelectItem value="info">{t("systemLogs.levels.info")}</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={serviceFilter} onValueChange={setServiceFilter}>
                   <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
-                    <SelectValue placeholder="Filter by service" />
+                    <SelectValue placeholder={t("systemLogs.filters.byService")} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem key="service-all" value="all">
-                      All Services
+                      {t("systemLogs.filters.allServices")}
                     </SelectItem>
                     {uniqueServices.map((service) => (
                       <SelectItem key={`service-${service}`} value={service}>
@@ -814,7 +822,7 @@ export function SystemLogs() {
 
                 <Button variant="outline" className="border-border bg-transparent" onClick={handleDownloadLogs}>
                   <Download className="h-4 w-4 mr-2" />
-                  Export Logs
+                  {t("systemLogs.export.button")}
                 </Button>
               </div>
 
@@ -844,12 +852,12 @@ export function SystemLogs() {
                         <div className="flex-shrink-0 flex gap-2 flex-wrap">
                           <Badge variant="outline" className={getLevelColor(log.level)}>
                             {getLevelIcon(log.level)}
-                            {log.level.toUpperCase()}
+                            {levelLabel(log.level)}
                           </Badge>
                           {log.eventData && (
                             <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
                               <Activity className="h-3 w-3 mr-1" />
-                              EVENT
+                              {t("systemLogs.badges.event")}
                             </Badge>
                           )}
                         </div>
@@ -866,9 +874,9 @@ export function SystemLogs() {
                           </div>
                           <div className="text-xs text-muted-foreground truncate overflow-hidden">
                             {log.source}
-                            {log.unit && log.unit !== log.service && ` • Unit: ${log.unit}`}
+                            {log.unit && log.unit !== log.service && ` • ${t("systemLogs.fields.unit")}: ${log.unit}`}
                             {log.pid && ` • PID: ${log.pid}`}
-                            {log.hostname && ` • Host: ${log.hostname}`}
+                            {log.hostname && ` • ${t("systemLogs.fields.host")}: ${log.hostname}`}
                           </div>
                         </div>
                       </div>
@@ -878,7 +886,7 @@ export function SystemLogs() {
                   {displayedLogs.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                       <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No logs found matching your criteria</p>
+                      <p>{t("systemLogs.empty.logs")}</p>
                     </div>
                   )}
 
@@ -890,7 +898,7 @@ export function SystemLogs() {
                         className="border-border"
                       >
                         <RefreshCw className="h-4 w-4 mr-2" />
-                        Load More ({filteredCombinedLogs.length - displayedLogsCount} remaining)
+                        {t("systemLogs.loadMore", { count: filteredCombinedLogs.length - displayedLogsCount })}
                       </Button>
                     </div>
                   )}
@@ -906,19 +914,19 @@ export function SystemLogs() {
                   <Card className="bg-card/50 border-border">
                     <CardContent className="pt-6">
                       <div className="text-2xl font-bold text-cyan-500">{backupStats.qemu}</div>
-                      <p className="text-xs text-muted-foreground mt-1">VM Backups</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t("systemLogs.backups.vm")}</p>
                     </CardContent>
                   </Card>
                   <Card className="bg-card/50 border-border">
                     <CardContent className="pt-6">
                       <div className="text-2xl font-bold text-orange-500">{backupStats.lxc}</div>
-                      <p className="text-xs text-muted-foreground mt-1">LXC Backups</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t("systemLogs.backups.lxc")}</p>
                     </CardContent>
                   </Card>
                   <Card className="bg-card/50 border-border hidden md:block">
                     <CardContent className="pt-6">
                       <div className="text-2xl font-bold text-foreground">{formatBytes(backupStats.totalSize)}</div>
-                      <p className="text-xs text-muted-foreground mt-1">Total Size</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t("systemLogs.backups.totalSize")}</p>
                     </CardContent>
                   </Card>
                 </div>
@@ -927,7 +935,7 @@ export function SystemLogs() {
                 <Card className="bg-card/50 border-border md:hidden">
                   <CardContent className="pt-6">
                     <div className="text-2xl font-bold text-foreground">{formatBytes(backupStats.totalSize)}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Total Size</p>
+                    <p className="text-xs text-muted-foreground mt-1">{t("systemLogs.backups.totalSize")}</p>
                   </CardContent>
                 </Card>
               </div>
@@ -967,7 +975,7 @@ export function SystemLogs() {
                               {backup.size_human}
                             </Badge>
                           </div>
-                          <div className="text-xs text-muted-foreground mb-1 truncate">Storage: {backup.storage}</div>
+                          <div className="text-xs text-muted-foreground mb-1 truncate">{t("systemLogs.fields.storage")}: {backup.storage}</div>
                           <div className="text-xs text-muted-foreground flex items-center">
                             <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
                             <span className="truncate">{backup.created}</span>
@@ -980,7 +988,7 @@ export function SystemLogs() {
                   {backups.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                       <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No backups found</p>
+                      <p>{t("systemLogs.empty.backups")}</p>
                     </div>
                   )}
                 </div>
@@ -1006,12 +1014,12 @@ export function SystemLogs() {
                       >
                         <div className="flex-shrink-0 flex gap-2 flex-wrap">
                           <Badge variant="outline" className={getNotificationTypeColor(notification.type)}>
-                            {(notification.type || "unknown").toUpperCase()}
+                            {notification.type ? levelLabel(notification.type) : t("app.unknown")}
                           </Badge>
                           <Badge variant="outline" className={getNotificationSourceColor(notification.source)}>
                             {notification.source === "task-log" && <Activity className="h-3 w-3 mr-1" />}
                             {notification.source === "journal" && <FileText className="h-3 w-3 mr-1" />}
-                            {(notification.source || "unknown").toUpperCase()}
+                            {notification.source ? notification.source.toUpperCase() : t("app.unknown")}
                           </Badge>
                         </div>
 
@@ -1026,7 +1034,7 @@ export function SystemLogs() {
                             {notification.message}
                           </div>
                           <div className="text-xs text-muted-foreground break-words overflow-hidden">
-                            Service: {notification.service} • Source: {notification.source}
+                            {t("systemLogs.fields.service")}: {notification.service} • {t("systemLogs.fields.source")}: {notification.source}
                           </div>
                         </div>
                       </div>
@@ -1036,7 +1044,7 @@ export function SystemLogs() {
                   {notifications.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                       <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No notifications found</p>
+                      <p>{t("systemLogs.empty.notifications")}</p>
                     </div>
                   )}
                 </div>
@@ -1051,55 +1059,55 @@ export function SystemLogs() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Log Details
+              {t("systemLogs.modals.logTitle")}
             </DialogTitle>
-            <DialogDescription>Complete information about this log entry</DialogDescription>
+            <DialogDescription>{t("systemLogs.modals.logDescription")}</DialogDescription>
           </DialogHeader>
           {selectedLog && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Level</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.level")}</div>
                   <Badge variant="outline" className={getLevelColor(selectedLog.level)}>
                     {getLevelIcon(selectedLog.level)}
-                    {selectedLog.level.toUpperCase()}
+                    {levelLabel(selectedLog.level)}
                   </Badge>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Service</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.service")}</div>
                   <div className="text-sm text-foreground break-all overflow-hidden">{selectedLog.service}</div>
                 </div>
                 <div className="sm:col-span-2">
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Timestamp</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.timestamp")}</div>
                   <div className="text-sm text-foreground font-mono break-all overflow-hidden">
                     {selectedLog.timestamp}
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Source</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.source")}</div>
                   <div className="text-sm text-foreground break-all overflow-hidden">{selectedLog.source}</div>
                 </div>
                 {selectedLog.unit && (
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground mb-1">Systemd Unit</div>
+                    <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.systemdUnit")}</div>
                     <div className="text-sm text-foreground font-mono break-all overflow-hidden">{selectedLog.unit}</div>
                   </div>
                 )}
                 {selectedLog.pid && (
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground mb-1">Process ID</div>
+                    <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.processId")}</div>
                     <div className="text-sm text-foreground font-mono">{selectedLog.pid}</div>
                   </div>
                 )}
                 {selectedLog.hostname && (
                   <div className="sm:col-span-2">
-                    <div className="text-sm font-medium text-muted-foreground mb-1">Hostname</div>
+                    <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.hostname")}</div>
                     <div className="text-sm text-foreground break-all overflow-hidden">{selectedLog.hostname}</div>
                   </div>
                 )}
               </div>
               <div>
-                <div className="text-sm font-medium text-muted-foreground mb-2">Message</div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">{t("systemLogs.fields.message")}</div>
                 <div className="p-4 rounded-lg bg-muted/50 border border-border overflow-hidden">
                   <pre className="text-sm text-foreground whitespace-pre-wrap break-all overflow-hidden">
                     {selectedLog.message}
@@ -1116,37 +1124,37 @@ export function SystemLogs() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
-              Event Details
+              {t("systemLogs.modals.eventTitle")}
             </DialogTitle>
-            <DialogDescription>Complete information about this event</DialogDescription>
+            <DialogDescription>{t("systemLogs.modals.eventDescription")}</DialogDescription>
           </DialogHeader>
           {selectedEvent && (
             <div className="space-y-4">
               <div className="flex gap-2">
                 <Badge variant="outline" className={getLevelColor(selectedEvent.level)}>
                   {getLevelIcon(selectedEvent.level)}
-                  {selectedEvent.level.toUpperCase()}
+                  {levelLabel(selectedEvent.level)}
                 </Badge>
                 <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
                   <Activity className="h-3 w-3 mr-1" />
-                  EVENT
+                  {t("systemLogs.badges.event")}
                 </Badge>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Message</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.message")}</div>
                   <div className="text-sm text-foreground break-words">{selectedEvent.status}</div>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.type")}</div>
                   <div className="text-sm text-foreground break-words">{selectedEvent.type}</div>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Node</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.node")}</div>
                   <div className="text-sm text-foreground">{selectedEvent.node}</div>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">User</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.user")}</div>
                   <div className="text-sm text-foreground break-words">{selectedEvent.user}</div>
                 </div>
                 {selectedEvent.vmid && (
@@ -1156,15 +1164,15 @@ export function SystemLogs() {
                   </div>
                 )}
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Duration</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.duration")}</div>
                   <div className="text-sm text-foreground">{selectedEvent.duration}</div>
                 </div>
                 <div className="sm:col-span-2">
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Start Time</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.startTime")}</div>
                   <div className="text-sm text-foreground break-words">{selectedEvent.starttime}</div>
                 </div>
                 <div className="sm:col-span-2">
-                  <div className="text-sm font-medium text-muted-foreground mb-1">End Time</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.endTime")}</div>
                   <div className="text-sm text-foreground break-words">{selectedEvent.endtime}</div>
                 </div>
               </div>
@@ -1186,31 +1194,31 @@ export function SystemLogs() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Database className="h-5 w-5" />
-              Backup Details
+              {t("systemLogs.modals.backupTitle")}
             </DialogTitle>
-            <DialogDescription>Complete information about this backup</DialogDescription>
+            <DialogDescription>{t("systemLogs.modals.backupDescription")}</DialogDescription>
           </DialogHeader>
           {selectedBackup && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.type")}</div>
                   <Badge variant="outline" className={getBackupTypeColor(selectedBackup.volid)}>
                     {getBackupTypeLabel(selectedBackup.volid)}
                   </Badge>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Storage Type</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.storageType")}</div>
                   <Badge variant="outline" className={getBackupStorageColor(selectedBackup.volid)}>
                     {getBackupStorageLabel(selectedBackup.volid)}
                   </Badge>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Storage</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.storage")}</div>
                   <div className="text-sm text-foreground break-words">{selectedBackup.storage}</div>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Size</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.size")}</div>
                   <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
                     {selectedBackup.size_human}
                   </Badge>
@@ -1222,12 +1230,12 @@ export function SystemLogs() {
                   </div>
                 )}
                 <div className="sm:col-span-2">
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Created</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">{t("systemLogs.fields.created")}</div>
                   <div className="text-sm text-foreground break-words">{selectedBackup.created}</div>
                 </div>
               </div>
               <div>
-                <div className="text-sm font-medium text-muted-foreground mb-2">Volume ID</div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">{t("systemLogs.fields.volumeId")}</div>
                 <div className="p-4 rounded-lg bg-muted/50 border border-border">
                   <pre className="text-sm text-foreground font-mono whitespace-pre-wrap break-all">
                     {selectedBackup.volid}
@@ -1244,38 +1252,38 @@ export function SystemLogs() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base sm:text-lg pr-8">
               <Bell className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-              <span className="truncate">Notification Details</span>
+              <span className="truncate">{t("systemLogs.modals.notificationTitle")}</span>
             </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
-              Complete information about this notification
+              {t("systemLogs.modals.notificationDescription")}
             </DialogDescription>
           </DialogHeader>
           {selectedNotification && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Type</div>
+                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">{t("systemLogs.fields.type")}</div>
                   <Badge variant="outline" className={`${getNotificationTypeColor(selectedNotification.type)} text-xs`}>
-                    {(selectedNotification.type || "unknown").toUpperCase()}
+                    {selectedNotification.type ? levelLabel(selectedNotification.type) : t("app.unknown")}
                   </Badge>
                 </div>
                 <div>
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Timestamp</div>
+                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">{t("systemLogs.fields.timestamp")}</div>
                   <div className="text-xs sm:text-sm text-foreground font-mono break-all">
                     {selectedNotification.timestamp}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Service</div>
+                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">{t("systemLogs.fields.service")}</div>
                   <div className="text-xs sm:text-sm text-foreground break-words">{selectedNotification.service}</div>
                 </div>
                 <div>
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Source</div>
+                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">{t("systemLogs.fields.source")}</div>
                   <div className="text-xs sm:text-sm text-foreground break-words">{selectedNotification.source}</div>
                 </div>
               </div>
               <div>
-                <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Message</div>
+                <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">{t("systemLogs.fields.message")}</div>
                 <div className="p-3 sm:p-4 rounded-lg bg-muted/50 border border-border max-h-[180px] sm:max-h-[300px] overflow-y-auto">
                   <pre className="text-xs sm:text-sm text-foreground whitespace-pre-wrap break-all font-mono">
                     {selectedNotification.message}
@@ -1289,7 +1297,7 @@ export function SystemLogs() {
                   className="border-border w-full sm:w-auto text-xs sm:text-sm h-9 sm:h-10"
                 >
                   <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                  <span className="truncate">Download Complete Message</span>
+                  <span className="truncate">{t("systemLogs.download.completeMessageButton")}</span>
                 </Button>
               </div>
             </div>
