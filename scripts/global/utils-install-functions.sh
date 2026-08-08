@@ -278,6 +278,7 @@ $PMX_NIC_LINK_MARKER
 
 [Match]
 MACAddress=$mac
+Kind=!bridge
 
 [Link]
 Name=$iface
