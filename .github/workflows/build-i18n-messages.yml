@@ -1,0 +1,108 @@
+name: Build i18n messages
+
+# Auto-translate missing keys in AppImage/messages/<locale>/common.json
+# against the English source whenever the source changes.
+#
+# The Monitor's i18n layer (AppImage/lib/i18n/provider.tsx) does its own
+# runtime fallback (locale → en → key), so this workflow doesn't break
+# anything if it misses a key: it just eliminates the visible-English
+# blocks in non-en locales.
+#
+# Guardrails baked into build_i18n_messages.py:
+#   - Never overwrites a key whose target value differs from EN (i.e.
+#     already translated by a human).
+#   - `{placeholder}` tokens are protected end-to-end.
+#   - `sk` is excluded from the default list — Vaso73's locale is
+#     human-curated and full. Add it back via workflow_dispatch inputs
+#     if you ever want auto-fill for the ~200 keys added post his last
+#     PR (only missing keys will be touched; existing ones are safe).
+#
+# Triggers:
+#   - push to develop touching AppImage/messages/en/common.json
+#   - manual via workflow_dispatch
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'AppImage/messages/en/common.json'
+      - '.github/scripts/build_i18n_messages.py'
+      - '.github/workflows/build-i18n-messages.yml'
+  workflow_dispatch:
+    inputs:
+      refresh:
+        description: 'Re-translate every key (overwrites human translations!)'
+        type: boolean
+        default: false
+      languages:
+        description: 'Comma-separated locales. Default: es,de,fr,it,pt (sk skipped).'
+        default: 'es,de,fr,it,pt'
+
+# Prevent two runs from racing on the same branch and fighting over the
+# auto-commit. cancel-in-progress:false because a full first-run may take
+# ~30 min for the initial bootstrap and interrupting mid-flight would
+# waste the calls already made.
+concurrency:
+  group: build-i18n-messages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # auto-commit AppImage/messages/*/common.json to develop
+    # First-run bootstrap of ~5 locales × 3.8k keys can take a while at
+    # 0.15s/call with rate-limit backoffs. 90 min headroom.
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          # Full history so the auto-commit doesn't drift when another
+          # push landed between trigger and this job start.
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install googletrans
+        run: |
+          python -m pip install --upgrade pip
+          # Same pinning as build-translation-cache.yml so the two
+          # workflows share behavior. Bump both in lockstep.
+          pip install 'googletrans==4.0.0-rc1' 'httpx==0.13.3' 'httpcore==0.9.1' 'h11==0.9.0'
+
+      - name: Translate missing keys
+        run: |
+          REFRESH_FLAG=""
+          if [[ "${{ github.event.inputs.refresh }}" == "true" ]]; then
+            REFRESH_FLAG="--refresh"
+          fi
+          LANGS="${{ github.event.inputs.languages }}"
+          LANGS="${LANGS:-es,de,fr,it,pt}"
+          python .github/scripts/build_i18n_messages.py \
+            --source AppImage/messages/en/common.json \
+            --messages-dir AppImage/messages \
+            --languages "$LANGS" \
+            --provider googletrans \
+            $REFRESH_FLAG
+
+      - name: Commit + push if changed
+        run: |
+          if git diff --quiet -- AppImage/messages/; then
+            echo "No translation changes — skipping commit."
+            exit 0
+          fi
+          git config user.name  "ProxMenuxBot"
+          git config user.email "bot@proxmenux.local"
+          git add AppImage/messages/
+          git commit -m "chore(i18n): auto-fill missing translations in messages/{locale}/common.json
+
+          Source: ${GITHUB_SHA::7}
+          Triggered by: ${{ github.event_name }}"
+          git push origin develop
