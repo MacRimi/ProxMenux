@@ -5882,7 +5882,106 @@ def _get_lxc_update_status_map() -> dict:
             'error': update.get('error'),
             # Cap packages list shipped to UI — modal uses first 30 max
             'packages': (update.get('_packages') or [])[:30],
+            # OCI-image CTs: suppress apt/apk detection (managed_installs
+            # short-circuits the checker), UI hides the "N packages
+            # pending" badge and shows a dedicated OCI panel in the
+            # Updates modal instead.
+            'is_oci_lxc': bool(it.get('_is_oci')),
+            # Community-scripts convention: /usr/bin/update present in
+            # the CT AND the app is marked `updateable: true` in the
+            # helpers_cache. Only then does the modal offer the
+            # "Apply application update" button — 47/733 apps ship an
+            # updater that's known to fail, so blindly running
+            # /usr/bin/update on every CT would be a footgun.
+            'app_updater_present': bool(it.get('_has_app_updater')),
+            # App identity + updateable-known flag for the modal:
+            # when we detected /usr/bin/update but the slug wasn't in
+            # the cache, `app_updater_present` is False and
+            # `helper_updateable_known` is False — the modal renders a
+            # neutral "Unknown app" hint instead of the Apply button.
+            # When we know the slug but it's flagged updateable=false,
+            # `app_updater_present` is False and `helper_updateable_known`
+            # is True — the modal shows an explicit "This app doesn't
+            # support in-place updates" note so the user isn't left
+            # wondering why the button is missing.
+            'helper_slug': it.get('_helper_slug'),
+            'helper_app_name': it.get('_helper_app_name'),
+            'helper_updateable_known': bool(it.get('_helper_updateable_known')),
+            # ProxMenux-managed OCI apps (Secure Gateway / Tailscale etc)
+            # share the same underlying LXC. When set, the Updates modal
+            # redirects to the OCI dashboard's own updater instead of
+            # exposing our generic apt/apk flow — those apps carry
+            # per-package hooks (e.g. tailscale service restart) that
+            # the generic runner is blind to.
+            'managed_oci_app': it.get('_managed_oci_app'),
+            'os_family': it.get('_os_family'),
         }
+    return out
+
+
+def _get_lxc_app_watch_map() -> dict:
+    """Read every /etc/proxmenux/apps/<vmid>.json sidecar into a
+    ``{vmid_str: summary}`` lookup, so `/api/vms` can decorate each
+    LXC row without a second frontend call. Never triggers a check —
+    that's the caller's responsibility (the daily poll or the modal's
+    "Check now" button).
+
+    For CTs managed by oci_manager (Secure Gateway etc.) we synthesise
+    a matching summary from that module's own state so the App tab
+    doesn't ask the user to "register" what ProxMenux itself
+    installed. The synthesised entry carries `managed_oci_app_id` so
+    the frontend renders a read-only view + wires the Update button
+    to /api/oci/installed/<app_id>/update instead of user CRUD.
+    Managed data always wins over any stale user sidecar for the same
+    vmid (rare, but possible if a CT was registered before it got
+    adopted by oci_manager).
+    """
+    # {vmid_str: [app_summary, ...]} — user-registered apps
+    out: dict = {}
+    try:
+        import lxc_apps
+        out.update(lxc_apps.get_active_apps() or {})
+    except Exception:
+        pass
+
+    # Overlay managed OCI-app state. Managed apps prepend a synthetic
+    # entry with `managed_oci_app_id` set — the frontend renders it
+    # read-only and never allows user CRUD on it.
+    try:
+        import managed_installs
+        items = managed_installs.get_active_items() or []
+        for it in items:
+            if it.get("type") != "oci_app":
+                continue
+            vmid = it.get("_vmid")
+            if vmid is None:
+                continue
+            uc = it.get("update_check") or {}
+            managed_entry = {
+                "id": f"managed:{it.get('_oci_app_id')}",
+                "name": it.get("name") or "Managed app",
+                "installed_via": "managed",
+                "ports": [],
+                "health_path": None,
+                "installed_version": it.get("current_version") or uc.get("current"),
+                "latest_version": uc.get("latest"),
+                "update_available": bool(uc.get("available")),
+                "error": uc.get("error"),
+                "checked_at": uc.get("last_check"),
+                "has_repo": False,
+                "managed_oci_app_id": it.get("_oci_app_id"),
+                # `packages` mirrors the Security page — a short list
+                # of "N other packages pending" alongside the primary
+                # tailscale bump.
+                "packages": (uc.get("_packages") or [])[:30],
+            }
+            existing = out.get(str(vmid)) or []
+            # Managed goes first; user-registered apps follow.
+            out[str(vmid)] = [managed_entry] + [a for a in existing
+                                                if not a.get("managed_oci_app_id")]
+    except Exception as e:
+        print(f"[ProxMenux] lxc_apps overlay for managed OCI failed: {e}")
+
     return out
 
 
@@ -5891,6 +5990,7 @@ def get_proxmox_vms():
     try:
         all_vms = []
         lxc_updates_map = _get_lxc_update_status_map()
+        lxc_app_map = _get_lxc_app_watch_map()
 
         try:
             # local_node = socket.gethostname()
@@ -5931,6 +6031,13 @@ def get_proxmox_vms():
                         upd = lxc_updates_map.get(str(resource.get('vmid')))
                         if upd is not None:
                             vm_data['update_check'] = upd
+                        # App Watch (Phase 2c) — list of registered
+                        # apps per CT (0..N). Populates header badge,
+                        # Updates modal connected row, and the App
+                        # tab. Absent key = no apps registered.
+                        app_list = lxc_app_map.get(str(resource.get('vmid')))
+                        if app_list:
+                            vm_data['app_watches'] = app_list
 
                     # PVE's cluster resources API reports disk=0 for most
                     # QEMU VMs — it can't see inside the guest filesystem
@@ -12345,6 +12452,273 @@ def api_lxc_updates_detection_set():
         })
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# ─── LXC App Watch (Phase 2c) ───────────────────────────────────────────────
+# Per-CT user-registered application metadata + upstream version tracking.
+# Sidecar at /etc/proxmenux/apps/<vmid>.json managed by the lxc_apps module.
+# Endpoints kept in the same "/api/vms/<vmid>/…" family so the UI's fetch
+# footprint stays symmetric with the rest of the per-CT resources.
+#
+# Notification (`app_update_available`) is fired from `check_app` — not from
+# here — so scheduled re-checks and on-demand /check both trigger it.
+
+# Per-CT App Watch CRUD. Multi-app: each sidecar is a list of apps.
+#   GET    /api/vms/<vmid>/apps              → list all apps for this CT
+#   POST   /api/vms/<vmid>/apps              → add a new app (server assigns id)
+#   PUT    /api/vms/<vmid>/apps/<app_id>     → update an existing app
+#   DELETE /api/vms/<vmid>/apps/<app_id>     → remove one app
+#   DELETE /api/vms/<vmid>/apps              → remove all apps for this CT
+#   POST   /api/vms/<vmid>/apps/<app_id>/check → force check one app
+#   POST   /api/vms/<vmid>/apps/check        → force check every app
+#   GET    /api/vms/<vmid>/apps/suggestions  → name + listening ports hint
+#   POST   /api/vms/<vmid>/apps/dismiss      → hide an auto-detected chip
+
+@app.route('/api/vms/<int:vmid>/apps', methods=['GET'])
+@require_auth
+def api_vm_apps_get(vmid):
+    try:
+        import lxc_apps
+        sidecar = lxc_apps.load_sidecar(vmid)
+        if not sidecar:
+            return jsonify({'vmid': vmid, 'apps': []}), 200
+        return jsonify(sidecar)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps', methods=['POST'])
+@require_auth
+def api_vm_apps_add(vmid):
+    payload = request.get_json(silent=True) or {}
+    try:
+        import lxc_apps
+        ok, result = lxc_apps.add_app(vmid, payload)
+        if not ok:
+            return jsonify({'error': result}), 400
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps/<app_id>', methods=['PUT'])
+@require_auth
+def api_vm_apps_update(vmid, app_id):
+    payload = request.get_json(silent=True) or {}
+    try:
+        import lxc_apps
+        ok, result = lxc_apps.update_app(vmid, app_id, payload)
+        if not ok:
+            code = 404 if 'not found' in str(result).lower() else 400
+            return jsonify({'error': result}), code
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps/<app_id>', methods=['DELETE'])
+@require_auth
+def api_vm_apps_delete_one(vmid, app_id):
+    try:
+        import lxc_apps
+        ok = lxc_apps.delete_app(vmid, app_id)
+        return jsonify({'success': ok, 'vmid': vmid, 'app_id': app_id}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps', methods=['DELETE'])
+@require_auth
+def api_vm_apps_delete_all(vmid):
+    try:
+        import lxc_apps
+        ok = lxc_apps.delete_all(vmid)
+        return jsonify({'success': ok, 'vmid': vmid}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps/<app_id>/check', methods=['POST'])
+@require_auth
+def api_vm_apps_check_one(vmid, app_id):
+    try:
+        import lxc_apps
+        sidecar = lxc_apps.check_app(vmid, app_id, force=True)
+        if not sidecar:
+            return jsonify({'error': 'app not found'}), 404
+        return jsonify(sidecar)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps/check', methods=['POST'])
+@require_auth
+def api_vm_apps_check_all(vmid):
+    try:
+        import lxc_apps
+        sidecar = lxc_apps.check_all(vmid, force=True)
+        if not sidecar:
+            return jsonify({'vmid': vmid, 'apps': []}), 200
+        return jsonify(sidecar)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/schedule', methods=['GET', 'PUT', 'DELETE'])
+@require_auth
+def api_vm_apps_schedule(vmid):
+    """Scheduled update CRUD. GET returns the current schedule (or
+    {} if unset), PUT persists a new one, DELETE removes it entirely
+    (equivalent to setting enabled=false + wiping the cron). Handled
+    on the sidecar directly by lxc_apps — the scheduler thread reads
+    the same source of truth on its next tick."""
+    try:
+        import lxc_apps
+    except Exception as e:
+        return jsonify({'error': f'lxc_apps unavailable: {e}'}), 500
+    if request.method == 'GET':
+        sched = lxc_apps.get_schedule(vmid) or {}
+        # Enrich with detection of any host-level community-scripts
+        # update cron so the UI can render the "leverage what's
+        # already there" state without a second round-trip.
+        try:
+            ext = lxc_apps.detect_external_update_cron()
+        except Exception:
+            ext = None
+        if ext:
+            sched = dict(sched)
+            sched["external_cron"] = ext
+        return jsonify(sched)
+    if request.method == 'DELETE':
+        ok = lxc_apps.delete_schedule(vmid)
+        return jsonify({'success': bool(ok), 'vmid': vmid}), 200
+    payload = request.get_json(silent=True) or {}
+    ok, result = lxc_apps.update_schedule(vmid, payload)
+    if not ok:
+        return jsonify({'error': result}), 400
+    return jsonify(result)
+
+
+@app.route('/api/vms/<int:vmid>/apps/suggestions', methods=['GET'])
+@require_auth
+def api_vm_apps_suggestions(vmid):
+    try:
+        import lxc_apps
+        return jsonify(lxc_apps.get_suggestions(vmid))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/catalog', methods=['GET'])
+@require_auth
+def api_apps_catalog():
+    """Compact catalog of every registerable app the frontend picker
+    can offer — [{slug, name, logo, default_port, has_tracking}].
+    Cache-friendly: same content for every user, only changes when
+    helpers_cache.json or app_tracking_hints.json refresh."""
+    try:
+        import lxc_apps
+        return jsonify(lxc_apps.get_catalog())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/catalog/<slug>', methods=['GET'])
+@require_auth
+def api_apps_catalog_slug(slug):
+    """Detail for a single catalog slug — used to seed the editor
+    after the user picks an app in the Name Combobox. Includes the
+    curated tracking_suggestion when we have one for the slug."""
+    try:
+        import lxc_apps
+        entry = lxc_apps.get_catalog_entry(slug)
+        if entry is None:
+            return jsonify({'error': 'not found'}), 404
+        return jsonify(entry)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps/dismiss', methods=['POST'])
+@require_auth
+def api_vm_apps_dismiss(vmid):
+    """Persist a per-CT dismiss / un-dismiss for an auto-detected
+    slug. Body: ``{"slug": str, "dismissed": bool}``. Detected chips
+    hidden this way don't come back on future page loads.
+    """
+    try:
+        import lxc_apps
+        payload = request.get_json(silent=True) or {}
+        slug = payload.get('slug', '')
+        dismissed = bool(payload.get('dismissed', True))
+        ok, result = lxc_apps.set_dismissed_slug(vmid, slug, dismissed)
+        if not ok:
+            return jsonify({'error': result}), 400
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ─── LXC Update — post-apply hook ───────────────────────────────────────────
+# Called by the UI right after `apply_updates.sh` exits in the
+# ScriptTerminalModal. Two responsibilities:
+#   1. Emit the `lxc_update_applied` notification event with the actual
+#      exit code + duration + target, so the user's chosen channels
+#      (Telegram/Discord/email/…) confirm completion. Firing from here
+#      keeps the shell script free of Python coupling.
+#   2. Force-refresh the affected CT's update state so the badge in
+#      the VMs & Containers list disappears immediately instead of
+#      waiting for the next 24 h polling cycle.
+@app.route('/api/lxc-updates/<int:vmid>/applied', methods=['POST'])
+@require_auth
+def api_lxc_updates_applied(vmid):
+    payload = request.get_json(silent=True) or {}
+    success = bool(payload.get('success'))
+    target = str(payload.get('target') or 'os').lower()
+    duration_seconds = payload.get('duration_seconds')
+    ct_name = str(payload.get('ct_name') or f'CT-{vmid}')
+
+    # Duration formatting mirrors the backup runner's convention:
+    # <60s → seconds, otherwise Nm Ms.
+    try:
+        secs = int(duration_seconds) if duration_seconds is not None else 0
+    except (TypeError, ValueError):
+        secs = 0
+    duration_str = f'{secs}s' if secs < 60 else f'{secs // 60}m {secs % 60}s'
+
+    # Fire via notification_manager.emit_event — same public API the
+    # health monitor uses (see line 1328 for the reference call), so we
+    # inherit templating, per-channel fan-out and suppression logic.
+    try:
+        notification_manager.emit_event(
+            event_type='lxc_update_applied',
+            severity='INFO' if success else 'WARNING',
+            data={
+                'hostname': get_proxmox_node_name(),
+                'vmid': vmid,
+                'ct_name': ct_name,
+                'target': target,
+                'result': 'succeeded' if success else 'failed',
+                'duration': duration_str,
+            },
+            source='api',
+            entity='ct',
+            entity_id=str(vmid),
+        )
+    except Exception as e:
+        # Don't fail the whole hook on notif error — the refresh below
+        # is still valuable, and the UI already saw the exit code.
+        print(f'[ProxMenux] lxc_update_applied notif enqueue failed: {e}')
+
+    # Force-refresh the LXC update check so the badge state matches
+    # reality without the 24 h wait.
+    try:
+        import managed_installs
+        managed_installs.check_for_updates(force=True)
+    except Exception as e:
+        print(f'[ProxMenux] managed_installs.check_for_updates failed: {e}')
+
+    return jsonify({'success': True})
 
 
 @app.route('/api/health/thresholds', methods=['GET'])
@@ -19257,6 +19631,154 @@ def api_proxmenux_self_update_status():
     return jsonify(_action_state('proxmenux-action-self-update'))
 
 
+# ── Scheduled LXC updates ───────────────────────────────────────────
+#
+# Ticks every 60s. For every sidecar with an enabled schedule whose
+# cron matches the current minute, invokes `apply_updates.sh` in a
+# subprocess with the schedule's env vars, then records the outcome
+# back to the sidecar via `record_schedule_run`. UPDATE_COMMAND for
+# `target in (app, both)` chains each registered app's own
+# `update_command` with `;` so a failure in one doesn't abort the
+# rest. The community-scripts helper `/usr/bin/update` is handled
+# by apply_updates.sh itself (invoked from host with CTID env).
+#
+# Runs are dedup-guarded by minute+vmid so a schedule that fires at
+# `* * * * *` doesn't ever double-fire on the same minute inside
+# one process. Nothing races against manual applies — those go
+# through the WS terminal path and the shell script itself takes
+# care of concurrent invocation (last one wins with vzdump lock).
+
+_APPLY_UPDATES_SCRIPT = "/usr/local/share/proxmenux/scripts/lxc/apply_updates.sh"
+_scheduled_fired_this_minute: set = set()
+
+
+def _compose_scheduled_update_command(vmid: int, target: str) -> str:
+    """Chain every registered app's own `update_command` for the
+    scheduled run. Returns empty string when target == "os" or when
+    no custom commands are registered. The helper `/usr/bin/update`
+    is handled internally by apply_updates.sh (invoked from host
+    with CTID env), so it does NOT belong in UPDATE_COMMAND."""
+    if target not in ("app", "both"):
+        return ""
+    try:
+        import lxc_apps
+        sidecar = lxc_apps._read_sidecar(vmid) or {}
+    except Exception:
+        return ""
+    apps = sidecar.get("apps") or []
+    parts: list = []
+    for a in apps:
+        if a.get("managed_oci_app_id"):
+            continue
+        cmd = (a.get("update_command") or "").strip()
+        if cmd:
+            parts.append(cmd)
+    return "; ".join(parts)
+
+
+def _run_scheduled_update(vmid: int, sched: dict) -> str:
+    """Fire `apply_updates.sh` headless with the schedule's env vars.
+    Returns "success" | "failure" | "skipped" — the last one when the
+    script binary isn't installed. Blocks until the run completes;
+    caller runs us in a worker thread so the 60s scheduler tick isn't
+    held up by a long-running apply."""
+    if not os.path.isfile(_APPLY_UPDATES_SCRIPT):
+        return "skipped"
+    target = sched.get("target") or "both"
+    env = dict(os.environ)
+    env["VMID"] = str(vmid)
+    env["TARGET"] = target
+    env["BACKUP"] = "1" if sched.get("backup") else "0"
+    env["BACKUP_STORAGE"] = sched.get("backup_storage") or ""
+    env["RESTART"] = "1" if sched.get("restart") else "0"
+    env["UPDATE_COMMAND"] = _compose_scheduled_update_command(vmid, target)
+    env["APP_NAME"] = ""
+    # HELPER_SLUG lets apply_updates.sh run the community-scripts helper
+    # from host even when /usr/bin/update was removed inside the CT
+    # (older installs). Read from the same source the UI uses.
+    try:
+        import managed_installs as _mi
+        for _it in _mi.get_active_items() or []:
+            if _it.get("type") == "lxc" and str(_it.get("_vmid")) == str(vmid):
+                env["HELPER_SLUG"] = _it.get("_helper_slug") or ""
+                break
+        else:
+            env["HELPER_SLUG"] = ""
+    except Exception:
+        env["HELPER_SLUG"] = ""
+    try:
+        r = subprocess.run(
+            ["bash", _APPLY_UPDATES_SCRIPT],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=60 * 60,  # 1h hard cap so a stuck run doesn't
+                              # block the queue forever
+        )
+        return "success" if r.returncode == 0 else "failure"
+    except subprocess.TimeoutExpired:
+        return "failure"
+    except Exception:
+        return "failure"
+
+
+def _scheduler_loop():
+    """Every 60s, sweep every sidecar with an enabled schedule and
+    fire the ones whose cron matches the current minute. Each fire
+    runs in its own worker thread so a slow apply on one CT doesn't
+    delay the next tick or hold up other CTs' schedules."""
+    global _scheduled_fired_this_minute
+    # Wait a bit after startup so we don't race with the initial
+    # sidecar load / migration path.
+    time.sleep(30)
+    print("[ProxMenux] LXC update scheduler started (60s interval)")
+    last_minute_key = None
+    while True:
+        try:
+            now = datetime.now()
+            minute_key = now.strftime("%Y-%m-%d %H:%M")
+            if minute_key != last_minute_key:
+                _scheduled_fired_this_minute = set()
+                last_minute_key = minute_key
+            try:
+                import lxc_apps
+                items = lxc_apps.get_all_schedules() or []
+            except Exception as e:
+                print(f"[ProxMenux] scheduler: reading schedules failed: {e}")
+                items = []
+            for entry in items:
+                vmid = entry.get("vmid")
+                sched = entry.get("schedule") or {}
+                if not sched.get("enabled") or not sched.get("cron"):
+                    continue
+                if vmid in _scheduled_fired_this_minute:
+                    continue
+                try:
+                    if not lxc_apps.cron_matches(sched["cron"], now):
+                        continue
+                except Exception:
+                    continue
+                _scheduled_fired_this_minute.add(vmid)
+                # Fire in a worker so we don't block the loop.
+                def _worker(_vmid=vmid, _sched=dict(sched)):
+                    print(f"[ProxMenux] scheduler: firing update for CT {_vmid} "
+                          f"(target={_sched.get('target')}, backup={_sched.get('backup')})")
+                    status = _run_scheduled_update(_vmid, _sched)
+                    try:
+                        lxc_apps.record_schedule_run(_vmid, status, _sched.get("target") or "both")
+                    except Exception as e:
+                        print(f"[ProxMenux] scheduler: could not record run for {_vmid}: {e}")
+                    print(f"[ProxMenux] scheduler: CT {_vmid} finished with status={status}")
+                threading.Thread(target=_worker, daemon=True).start()
+        except Exception as e:
+            print(f"[ProxMenux] scheduler loop error: {e}")
+        # Sleep to the next minute boundary + a small offset so we
+        # tick predictably in phase with the wall clock's minute.
+        now = datetime.now()
+        secs_left = 60 - now.second
+        time.sleep(max(1, secs_left) + 2)
+
+
 if __name__ == '__main__':
     import sys
     import logging
@@ -19460,6 +19982,18 @@ if __name__ == '__main__':
             print("[ProxMenux] Notification service loaded (disabled - configure in Settings)")
     except Exception as e:
         print(f"[ProxMenux] Notification service failed to start: {e}")
+
+    # ── Scheduled LXC update scheduler ──
+    # Ticks every minute, fires apply_updates.sh headless for CTs
+    # whose schedule cron matches. Runs go through the same shell
+    # script as the manual "Apply update" flow so behaviour stays
+    # identical (backup, restart, /usr/bin/update + custom command
+    # chain) between manual and scheduled invocations.
+    try:
+        scheduler_thread = threading.Thread(target=_scheduler_loop, daemon=True)
+        scheduler_thread.start()
+    except Exception as e:
+        print(f"[ProxMenux] LXC update scheduler failed to start: {e}")
 
     # Check for SSL configuration
     ssl_ctx = None

@@ -1,0 +1,751 @@
+{
+  "adguard": {
+    "binary_path": "/opt/AdGuardHome/AdGuardHome",
+    "default_ports": [
+      80
+    ],
+    "github_source": "releases",
+    "installed_via": "binary",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/adguard-home.webp",
+    "repo": "AdguardTeam/AdGuardHome",
+    "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+    "website": "https://adguard.com/en/adguard-home/overview.html"
+  },
+  "agentdvr": {
+    "default_ports": [
+      8090
+    ],
+    "file_path": "/root/.agentdvr",
+    "file_regex": "Agent_[^/]+_([0-9]+(?:_[0-9]+){3})\\.zip",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/agent-dvr.webp",
+    "repo": "ispysoftware/agent-install-scripts",
+    "tag_regex": "v?(\\d+(?:\\.\\d+){3})",
+    "website": "https://www.ispyconnect.com/"
+  },
+  "audiobookshelf": {
+    "default_ports": [
+      13378
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/audiobookshelf.webp",
+    "package": "audiobookshelf",
+    "repo": "advplyr/audiobookshelf",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://www.audiobookshelf.org/"
+  },
+  "cloudflared": {
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cloudflare.webp",
+    "package": "cloudflared",
+    "repo": "cloudflare/cloudflared",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://www.cloudflare.com/"
+  },
+  "cockpit": {
+    "default_ports": [
+      9090
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cockpit.webp",
+    "package": "cockpit",
+    "repo": "cockpit-project/cockpit",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://cockpit-project.org/"
+  },
+  "ddclient": {
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ddclient.webp",
+    "package": "ddclient",
+    "repo": "ddclient/ddclient",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://ddclient.net/"
+  },
+  "docker": {
+    "binary_path": "/usr/bin/docker",
+    "installed_via": "binary",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/docker.webp",
+    "repo": "moby/moby",
+    "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+    "website": "https://docs.docker.com/engine/"
+  },
+  "docmost": {
+    "default_ports": [
+      3000
+    ],
+    "file_fallbacks": [
+      {
+        "path": "/root/.docmost",
+        "regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    ],
+    "file_path": "/opt/docmost/package.json",
+    "file_regex": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+\\.\\d+)\"",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/docmost.webp",
+    "repo": "docmost/docmost",
+    "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+    "website": "https://docmost.com/"
+  },
+  "emby": {
+    "binary_path": "/opt/emby-server/bin/emby-server",
+    "default_ports": [
+      8096
+    ],
+    "github_source": "releases",
+    "installed_via": "binary",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/emby.webp",
+    "repo": "MediaBrowser/Emby.Releases",
+    "tag_regex": "(\\d+\\.\\d+\\.\\d+\\.\\d+)",
+    "website": "https://emby.media/"
+  },
+  "evcc": {
+    "default_ports": [
+      7070
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/evcc.webp",
+    "package": "evcc",
+    "repo": "evcc-io/evcc",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://evcc.io/en/"
+  },
+  "globaleaks": {
+    "default_ports": [
+      443
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/globaleaks.webp",
+    "package": "globaleaks",
+    "repo": "globaleaks/globaleaks-whistleblowing-software",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://www.globaleaks.org/"
+  },
+  "grafana": {
+    "alt_detectors": [
+      {
+        "binary_args": [
+          "server",
+          "-v"
+        ],
+        "binary_path": "grafana",
+        "container_name": "grafana",
+        "installed_via": "docker_exec"
+      }
+    ],
+    "default_ports": [
+      3000
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/grafana.webp",
+    "package": "grafana",
+    "repo": "grafana/grafana",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://grafana.com/"
+  },
+  "homebridge": {
+    "default_ports": [
+      8581
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/homebridge.webp",
+    "package": "homebridge",
+    "repo": "homebridge/homebridge",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://homebridge.io/"
+  },
+  "hyperhdr": {
+    "default_ports": [
+      8090
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hyperhdr.webp",
+    "package": "hyperhdr",
+    "repo": "awawa-dev/HyperHDR",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://github.com/awawa-dev/HyperHDR"
+  },
+  "hyperion": {
+    "default_ports": [
+      8090
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hyperion.webp",
+    "package": "hyperion",
+    "repo": "hyperion-project/hyperion.ng",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://hyperion-project.org/forum/"
+  },
+  "infisical": {
+    "default_ports": [
+      8080
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/infisical.webp",
+    "package": "infisical-core",
+    "repo": "Infisical/infisical",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://infisical.com/"
+  },
+  "influxdb": {
+    "default_ports": [
+      8086
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/influxdb.webp",
+    "package": "influxdb",
+    "repo": "influxdata/influxdb",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://www.influxdata.com/"
+  },
+  "inventree": {
+    "default_ports": [
+      80
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/inventree.webp",
+    "package": "inventree",
+    "repo": "inventree/InvenTree",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://inventree.org"
+  },
+  "jellyfin": {
+    "default_ports": [
+      8096
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jellyfin.webp",
+    "package": "jellyfin",
+    "repo": "jellyfin/jellyfin",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://jellyfin.org/"
+  },
+  "jenkins": {
+    "default_ports": [
+      8080
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/jenkins.webp",
+    "package": "jenkins",
+    "repo": "jenkinsci/jenkins",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://www.jenkins.io/"
+  },
+  "kiwix": {
+    "default_ports": [
+      8080
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kiwix.webp",
+    "package": "kiwix-tools",
+    "repo": "kiwix/kiwix-tools",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://www.kiwix.org"
+  },
+  "lldap": {
+    "default_ports": [
+      17170
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/lldap.webp",
+    "package": "lldap",
+    "repo": "lldap/lldap",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://github.com/lldap/lldap"
+  },
+  "loki": {
+    "default_ports": [
+      3100
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/loki.webp",
+    "package": "loki",
+    "repo": "grafana/loki",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://github.com/grafana/loki"
+  },
+  "mattermost": {
+    "default_ports": [
+      8065
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mattermost.webp",
+    "package": "mattermost",
+    "repo": "mattermost/mattermost",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://mattermost.com/"
+  },
+  "neo4j": {
+    "default_ports": [
+      7474
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/neo4j.webp",
+    "package": "neo4j",
+    "repo": "neo4j/neo4j",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://neo4j.com/product/neo4j-graph-database/"
+  },
+  "netbird": {
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/netbird.webp",
+    "package": "netbird",
+    "repo": "netbirdio/netbird",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://netbird.io/"
+  },
+  "nginxproxymanager": {
+    "default_ports": [
+      81
+    ],
+    "file_fallbacks": [
+      {
+        "path": "/app/package.json",
+        "regex": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+\\.\\d+)\""
+      },
+      {
+        "path": "/root/.nginxproxymanager",
+        "regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    ],
+    "file_path": "/opt/nginxproxymanager/backend/package.json",
+    "file_regex": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+\\.\\d+)\"",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nginx-proxy-manager.webp",
+    "repo": "NginxProxyManager/nginx-proxy-manager",
+    "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+    "website": "https://nginxproxymanager.com/"
+  },
+  "notifiarr": {
+    "default_ports": [
+      5454
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/notifiarr.webp",
+    "package": "notifiarr",
+    "repo": "Notifiarr/notifiarr",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://notifiarr.com/"
+  },
+  "ntfy": {
+    "default_ports": [
+      80
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ntfy.webp",
+    "package": "ntfy",
+    "repo": "binwiederhier/ntfy",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://ntfy.sh/"
+  },
+  "nzbget": {
+    "default_ports": [
+      6789
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nzbget.webp",
+    "package": "nzbget",
+    "repo": "nzbget/nzbget",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://nzbget.com/"
+  },
+  "odoo": {
+    "alt_detectors": [
+      {
+        "binary_path": "/usr/bin/odoo",
+        "installed_via": "binary"
+      }
+    ],
+    "default_ports": [
+      8069
+    ],
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/odoo.webp",
+    "package": "odoo",
+    "tag_regex": "(\\d+\\.\\d+(?:\\.\\d+)?)",
+    "website": "https://www.odoo.com/"
+  },
+  "onlyoffice": {
+    "default_ports": [
+      80
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/onlyoffice.webp",
+    "package": "onlyoffice-documentserver",
+    "repo": "ONLYOFFICE/DocumentServer",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://onlyoffice.com/"
+  },
+  "openproject": {
+    "default_ports": [
+      80
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openproject.webp",
+    "package": "openproject",
+    "repo": "opf/openproject",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://www.openproject.org"
+  },
+  "openwebui": {
+    "default_ports": [
+      8080
+    ],
+    "distribution": "open-webui",
+    "github_source": "releases",
+    "installed_via": "python_dist",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/open-webui.webp",
+    "python_path": "/root/.local/share/uv/tools/open-webui/bin/python",
+    "repo": "open-webui/open-webui",
+    "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+    "website": "https://openwebui.com/"
+  },
+  "openziti-controller": {
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openziti.webp",
+    "package": "openziti-controller",
+    "repo": "openziti/ziti",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://www.openziti.io/"
+  },
+  "pairdrop": {
+    "default_ports": [
+      3000
+    ],
+    "file_fallbacks": [
+      {
+        "path": "/root/.pairdrop",
+        "regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    ],
+    "file_path": "/opt/pairdrop/package.json",
+    "file_regex": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+\\.\\d+)\"",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pairdrop.webp",
+    "repo": "schlagmichdoch/PairDrop",
+    "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+    "website": "https://github.com/schlagmichdoch/PairDrop"
+  },
+  "paperless-ngx": {
+    "alt_detectors": [
+      {
+        "file_path": "/opt/paperless/src/paperless/version.py",
+        "file_regex": "__version__[^\\n=]*=\\s*\\((\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)\\)",
+        "installed_via": "file"
+      }
+    ],
+    "container_name": "paperless-webserver-1",
+    "default_ports": [
+      8000
+    ],
+    "github_source": "releases",
+    "installed_via": "docker_label",
+    "label": "org.opencontainers.image.version",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/paperless-ngx.webp",
+    "repo": "paperless-ngx/paperless-ngx",
+    "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+    "website": "https://docs.paperless-ngx.com/"
+  },
+  "photoprism": {
+    "binary_path": "/opt/photoprism/bin/photoprism",
+    "default_ports": [
+      2342
+    ],
+    "github_source": "releases",
+    "installed_via": "binary",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/photoprism.webp",
+    "repo": "photoprism/photoprism",
+    "tag_regex": "(\\d{6})",
+    "website": "https://photoprism.app/"
+  },
+  "pihole": {
+    "binary_path": "/usr/local/bin/pihole",
+    "default_ports": [
+      80
+    ],
+    "installed_via": "binary",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pi-hole.webp",
+    "repo": "pi-hole/pi-hole",
+    "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+    "website": "https://pi-hole.net/"
+  },
+  "plex": {
+    "default_ports": [
+      32400
+    ],
+    "installed_via": "dpkg",
+    "package": "plexmediaserver",
+    "installed_regex": "(\\d+\\.\\d+\\.\\d+\\.\\d+)",
+    "upstream_type": "http_json",
+    "upstream_url": "https://plex.tv/api/downloads/5.json?channel=8",
+    "upstream_json_path": "computer.Linux.version",
+    "tag_regex": "(\\d+\\.\\d+\\.\\d+\\.\\d+)",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/plex.webp",
+    "website": "https://www.plex.tv/"
+  },
+  "podman": {
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/podman.webp",
+    "package": "podman",
+    "repo": "containers/podman",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://podman.io/"
+  },
+  "prometheus": {
+    "alt_detectors": [
+      {
+        "binary_path": "/usr/local/bin/prometheus",
+        "installed_via": "binary"
+      }
+    ],
+    "binary_args": [
+      "--version"
+    ],
+    "binary_path": "/bin/prometheus",
+    "container_name": "prometheus",
+    "default_ports": [
+      9090
+    ],
+    "github_source": "releases",
+    "installed_via": "docker_exec",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/prometheus.webp",
+    "repo": "prometheus/prometheus",
+    "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+    "website": "https://prometheus.io/"
+  },
+  "proxmox-backup-server": {
+    "default_ports": [
+      8007
+    ],
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp",
+    "package": "proxmox-backup-server",
+    "tag_regex": "(\\d+\\.\\d+\\.\\d+)",
+    "website": "https://www.proxmox.com/en/proxmox-backup-server/overview"
+  },
+  "qbittorrent": {
+    "binary_path": "/opt/qbittorrent/qbittorrent-nox",
+    "default_ports": [
+      8090
+    ],
+    "github_source": "releases",
+    "installed_via": "binary",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/qbittorrent.webp",
+    "repo": "userdocs/qbittorrent-nox-static",
+    "tag_regex": "(?i)(?:release-)?(\\d+\\.\\d+\\.\\d+)",
+    "website": "https://www.qbittorrent.org/"
+  },
+  "rabbitmq": {
+    "default_ports": [
+      15672
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/rabbitmq.webp",
+    "package": "rabbitmq-server",
+    "repo": "rabbitmq/rabbitmq-server",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://www.rabbitmq.com/"
+  },
+  "redis": {
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/redis.webp",
+    "package": "redis",
+    "repo": "redis/redis",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://redis.io/"
+  },
+  "sftpgo": {
+    "default_ports": [
+      8080
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/sftpgo.webp",
+    "package": "sftpgo",
+    "repo": "drakkan/sftpgo",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://github.com/drakkan/sftpgo"
+  },
+  "smokeping": {
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/smokeping.webp",
+    "package": "smokeping",
+    "repo": "oetiker/SmokePing",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://oss.oetiker.ch/smokeping/"
+  },
+  "squid": {
+    "default_ports": [
+      3128
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/squid.webp",
+    "package": "squid",
+    "repo": "squid-cache/squid",
+    "tag_regex": "(?i)(?:SQUID_)?(\\d+(?:[._]\\d+){1,3})",
+    "website": "https://www.squid-cache.org/"
+  },
+  "step-ca": {
+    "default_ports": [
+      443
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/step-ca.webp",
+    "package": "step-ca",
+    "repo": "smallstep/certificates",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://github.com/smallstep/certificates"
+  },
+  "syncthing": {
+    "default_ports": [
+      8384
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/syncthing.webp",
+    "package": "syncthing",
+    "repo": "syncthing/syncthing",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://syncthing.net/"
+  },
+  "tandoor": {
+    "default_ports": [
+      8002
+    ],
+    "file_fallbacks": [
+      {
+        "path": "/root/.tandoor",
+        "regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    ],
+    "file_path": "/opt/tandoor/cookbook/version_info.py",
+    "file_regex": "TANDOOR_VERSION\\s*=\\s*[\"']v?(\\d+\\.\\d+\\.\\d+)",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tandoor-recipes.webp",
+    "repo": "TandoorRecipes/recipes",
+    "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+    "website": "https://tandoor.dev/"
+  },
+  "telegraf": {
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/telegraf.webp",
+    "package": "telegraf",
+    "repo": "influxdata/telegraf",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://github.com/influxdata/telegraf"
+  },
+  "teleport": {
+    "default_ports": [
+      3080
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/teleport.webp",
+    "package": "teleport",
+    "repo": "gravitational/teleport",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://goteleport.com/"
+  },
+  "unbound": {
+    "default_ports": [
+      5335
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/unbound.webp",
+    "package": "unbound",
+    "repo": "NLnetLabs/unbound",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://www.nlnetlabs.nl/projects/unbound/about/"
+  },
+  "urbackupserver": {
+    "default_ports": [
+      55414
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/urbackup.webp",
+    "package": "urbackup-server",
+    "repo": "uroni/urbackup_backend",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://www.urbackup.org/"
+  },
+  "valkey": {
+    "default_ports": [
+      6379
+    ],
+    "github_source": "releases",
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/valkey.webp",
+    "package": "valkey",
+    "repo": "valkey-io/valkey",
+    "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+    "website": "https://valkey.io/"
+  },
+  "vaultwarden": {
+    "alt_detectors": [
+      {
+        "file_path": "/root/.vaultwarden",
+        "file_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+        "installed_via": "file"
+      }
+    ],
+    "binary_path": "/opt/vaultwarden/bin/vaultwarden",
+    "default_ports": [
+      8000
+    ],
+    "github_source": "releases",
+    "installed_via": "binary",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/vaultwarden.webp",
+    "repo": "dani-garcia/vaultwarden",
+    "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+    "website": "https://github.com/dani-garcia/vaultwarden/"
+  },
+  "wireguard": {
+    "installed_via": "dpkg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wireguard.webp",
+    "package": "wireguard-tools",
+    "repo": "WireGuard/wireguard-tools",
+    "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+    "website": "https://www.wireguard.com/"
+  }
+}

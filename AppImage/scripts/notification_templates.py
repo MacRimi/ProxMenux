@@ -510,6 +510,27 @@ TEMPLATES = {
         'group': 'vm_ct',
         'default_enabled': False,
     },
+    'lxc_update_applied': {
+        'title': '{hostname}: LXC {ct_name} ({vmid}) update {result}',
+        'body': (
+            'Container {ct_name} (CT {vmid}) — update {result}.\n'
+            'Target: {target}    Duration: {duration}'
+        ),
+        'label': 'LXC update applied',
+        'group': 'vm_ct',
+        'default_enabled': True,
+    },
+    'app_update_available': {
+        'title': '{hostname}: {app_name} update available on CT {vmid}',
+        'body': (
+            '{app_name} on CT {vmid} ({ct_name}) has a new version:\n'
+            '    {installed} → {latest}\n'
+            'Registered via ProxMenux App Watch.'
+        ),
+        'label': 'App update available (App Watch)',
+        'group': 'vm_ct',
+        'default_enabled': False,
+    },
     'vm_start': {
         'title': '{hostname}: VM {vmname} ({vmid}) started',
         'body': 'Virtual machine {vmname} (ID: {vmid}) is now running.',
@@ -1696,6 +1717,8 @@ CATEGORY_EMOJI = {
 EVENT_EMOJI = {
     # VM / CT
     'lxc_updates_available': '\U0001F4E6',     # \uD83D\uDCE6 package \u2014 pending CT updates
+    'lxc_update_applied':   '\u2705',           # \u2705 check \u2014 update applied
+    'app_update_available': '\U0001F195',  # \ud83c\udd95 NEW \u2014 upstream app release
     'vm_start':             '\u25B6\uFE0F',    # play button
     'vm_start_warning':     '\u26A0\uFE0F',     # warning sign - started with warnings
     'vm_stop':              '\u23F9\uFE0F',     # stop button
