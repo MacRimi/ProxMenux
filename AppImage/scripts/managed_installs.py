@@ -297,8 +297,38 @@ def _detect_oci_apps() -> list[dict]:
             # Stash the raw app_id so the checker can find it without
             # parsing the prefixed registry id.
             "_oci_app_id": app_id,
+            # Cache the CT vmid so `_detect_lxc_containers` can flag the
+            # matching LXC row as OCI-managed (avoids the LXC update flow
+            # competing with the Secure Gateway panel's own updater).
+            "_vmid": app.get("vmid"),
         })
     return out
+
+
+def _get_oci_managed_vmids() -> dict[str, str]:
+    """Return {vmid_str: oci_app_id} for every CT under oci_manager.
+    Used by `_detect_lxc_containers` to route those CTs through the
+    Secure Gateway update flow instead of the generic apt/apk path —
+    the two share the same `apk upgrade` at the bottom but the OCI
+    manager also does app-specific hooks (e.g. restarting tailscale
+    when the package moved) that the generic runner is blind to.
+    """
+    try:
+        import oci_manager
+    except Exception:
+        return {}
+    try:
+        installed = oci_manager.list_installed_apps() or []
+    except Exception:
+        return {}
+    mapping: dict[str, str] = {}
+    for app in installed:
+        vmid = app.get("vmid")
+        app_id = app.get("id") or app.get("app_id")
+        if vmid is None or not app_id:
+            continue
+        mapping[str(vmid)] = str(app_id)
+    return mapping
 
 
 # ── LXC containers (Phase 1: apt-based update detection) ────────────
@@ -461,6 +491,246 @@ def _list_pve_lxcs() -> list[dict]:
 
 _SUPPORTED_OS_FAMILIES = ("debian", "ubuntu", "alpine")
 
+# Detectors for the CT origin. `pct config` writes machine-friendly
+# keys that reveal how a container was created. The most reliable
+# OCI-image indicator across PVE 9.1+ is `lxc.environment.runtime:` —
+# it's populated from every Dockerfile ENV (nearly universal) whereas
+# `entrypoint:` requires the image to define ENTRYPOINT (CMD-only
+# images lack it). We match by prefix, one hit is enough.
+_OCI_LXC_MARKERS = (
+    "lxc.environment.runtime:",
+    "lxc.init.cwd:",
+    "lxc.signal.halt:",
+)
+
+
+def _probe_lxc_is_oci(vmid: str) -> bool:
+    """Return True if the CT was created from an OCI (Docker) image via
+    PVE 9.1+'s native ``pct create <vmid> <oci-ref>`` path.
+
+    OCI-image containers are IMMUTABLE by design — running apt/apk
+    upgrade inside them contradicts the container model and can break
+    the image (bootstrap deps, baked-in configs). The correct workflow
+    is to pull a newer image tag and rebuild. We use this probe to
+    SUPPRESS the apt/apk detection for these CTs so the UI doesn't
+    show a misleading "packages pending" badge that would nudge users
+    toward the anti-pattern.
+
+    Reads the CT config file directly (cheaper than `pct config`) —
+    the file lives at /etc/pve/lxc/<vmid>.conf and is always present
+    on the node hosting the CT.
+    """
+    conf_path = f"/etc/pve/lxc/{vmid}.conf"
+    try:
+        with open(conf_path) as f:
+            for line in f:
+                stripped = line.lstrip()
+                for marker in _OCI_LXC_MARKERS:
+                    if stripped.startswith(marker):
+                        return True
+    except (FileNotFoundError, PermissionError, OSError):
+        pass
+    return False
+
+
+# Cross-reference against the ProxMenux helpers catalogue (generated
+# by .github/scripts/generate_helpers_cache.py from the
+# community-scripts registry). Each entry carries `updateable: bool`
+# — the community-scripts folks know which of their apps ship a
+# working updater and which don't (47 out of 733 at last count are
+# updateable=false). Without this we'd offer an Apply button on
+# every CT with /usr/bin/update, and 6-7% of them would fail hard.
+_HELPERS_CACHE_URL = (
+    "https://raw.githubusercontent.com/MacRimi/ProxMenux/"
+    "refs/heads/main/json/helpers_cache.json"
+)
+_HELPERS_CACHE_DISK = "/var/lib/proxmenux/helpers_cache.json"
+_HELPERS_CACHE_TTL = 7 * 24 * 3600  # 7 days — the catalogue changes rarely
+_HELPERS_CACHE_HTTP_TIMEOUT = 10
+_helpers_cache_lock = threading.RLock()
+_helpers_cache: Optional[dict] = None
+_helpers_cache_ts: float = 0.0
+
+_UPDATE_SLUG_RE = re.compile(r"ct/([a-z0-9_-]+)\.sh")
+
+
+def _fetch_helpers_cache() -> dict:
+    """Return the slug→metadata index for community-scripts apps.
+
+    Shape: ``{slug: {"name": str, "updateable": bool}}``. Fetched on
+    demand from the ProxMenux repo, cached in memory for 7 days and
+    persisted to :data:`_HELPERS_CACHE_DISK` so a Monitor restart
+    doesn't refetch. On any network failure returns the last known
+    good copy — never raises, so callers can just ``.get(slug)``.
+    """
+    global _helpers_cache, _helpers_cache_ts
+    with _helpers_cache_lock:
+        now = time.time()
+        if _helpers_cache is not None and (now - _helpers_cache_ts) < _HELPERS_CACHE_TTL:
+            return _helpers_cache
+        # In-memory expired or empty — try network first, then disk.
+        try:
+            req = urllib.request.Request(
+                _HELPERS_CACHE_URL,
+                headers={"User-Agent": "ProxMenux-Monitor"},
+            )
+            with urllib.request.urlopen(req, timeout=_HELPERS_CACHE_HTTP_TIMEOUT) as r:
+                raw = json.loads(r.read().decode("utf-8"))
+            index: dict = {}
+            for entry in raw or []:
+                slug = entry.get("slug")
+                if not slug:
+                    continue
+                # `default_port` powers the App tab's port pre-fill
+                # fallback for apps that don't have a curated
+                # default_ports entry in app_tracking_hints.json.
+                # `logo` is the selfh.st/icons URL from the
+                # community-scripts catalog — fallback for slugs
+                # whose curated tracking hint doesn't ship one.
+                index[slug] = {
+                    "name": entry.get("name") or slug,
+                    "updateable": bool(entry.get("updateable")),
+                    "default_port": entry.get("port") or 0,
+                    "logo": entry.get("logo") or "",
+                }
+            _helpers_cache = index
+            _helpers_cache_ts = now
+            try:
+                os.makedirs(os.path.dirname(_HELPERS_CACHE_DISK), exist_ok=True)
+                tmp = f"{_HELPERS_CACHE_DISK}.tmp.{os.getpid()}"
+                with open(tmp, "w") as f:
+                    json.dump({"ts": now, "index": index}, f)
+                os.replace(tmp, _HELPERS_CACHE_DISK)
+            except OSError:
+                # Persistence is best-effort — memory copy is enough.
+                pass
+            return index
+        except Exception:
+            # Network failed. Fall back to whatever we have in memory,
+            # then to the on-disk copy from a previous run.
+            if _helpers_cache is not None:
+                return _helpers_cache
+            try:
+                with open(_HELPERS_CACHE_DISK) as f:
+                    disk = json.load(f)
+                _helpers_cache = disk.get("index") or {}
+                _helpers_cache_ts = float(disk.get("ts") or 0)
+                return _helpers_cache
+            except (OSError, json.JSONDecodeError):
+                _helpers_cache = {}
+                _helpers_cache_ts = now  # avoid hammering the retry loop
+                return _helpers_cache
+
+
+def _probe_helper_scripts_slug(vmid: str) -> Optional[str]:
+    """Return the community-scripts app slug for a CT by extracting the
+    ``ct/<slug>.sh`` reference embedded in ``/usr/bin/update``.
+
+    The community-scripts installers write ``/usr/bin/update`` as a
+    single line: ``bash -c "$(curl -fsSL …/ct/<slug>.sh)"``. Parsing
+    that URL gives us both the app identity AND a stable key into
+    :func:`_fetch_helpers_cache`. Returns None when the file is
+    missing, unreadable, or doesn't match the expected pattern.
+    """
+    try:
+        r = subprocess.run(
+            [_PCT_BIN, "exec", str(vmid), "--", "cat", "/usr/bin/update"],
+            capture_output=True, text=True,
+            timeout=_LXC_OS_PROBE_TIMEOUT_SEC,
+        )
+        if r.returncode != 0:
+            return None
+        m = _UPDATE_SLUG_RE.search(r.stdout)
+        return m.group(1) if m else None
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return None
+
+
+# Tags the community-scripts installers stamp on the CT config so we
+# can recognise a CT as a helper-scripts install even when /usr/bin/
+# update has been deleted or was never created (very old installs).
+_HELPER_SCRIPTS_TAGS = frozenset({"proxmox-helper-scripts", "community-scripts"})
+
+
+def _probe_lxc_tags(vmid: str) -> set:
+    """Return the set of tags configured on the CT (from ``pct config``).
+    Returns empty set on any failure — never raises.
+    """
+    try:
+        r = subprocess.run(
+            [_PCT_BIN, "config", str(vmid)],
+            capture_output=True, text=True, timeout=5,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return set()
+    if r.returncode != 0:
+        return set()
+    for line in r.stdout.splitlines():
+        if line.startswith("tags:"):
+            raw = line.split(":", 1)[1].strip()
+            return {t.strip().lower() for t in raw.split(";") if t.strip()}
+    return set()
+
+
+def _normalize_for_fuzzy(s: str) -> str:
+    """Lowercase + strip non-alphanumeric, for hostname↔slug matching."""
+    return "".join(ch for ch in (s or "").lower() if ch.isalnum())
+
+
+def _guess_helper_slug_from_hostname(hostname: str) -> Optional[str]:
+    """Fuzzy-match a CT hostname against community-scripts catalog slugs.
+
+    Tried in this order:
+      1. Exact-normalized match — the safest and only unambiguous case
+      2. Prefix match (hostname is a proper prefix of the slug —
+         e.g. `nginxproxy` → `nginxproxymanager`) — only accepted when
+         there is EXACTLY ONE candidate. A hostname like `paperless`
+         matching all of {paperless-ai, paperless-gpt, paperless-ngx}
+         returns None: the guess would be wrong more often than right.
+      3. Contains match — same "unique or bust" rule.
+
+    Ambiguity → None. The user then goes through the catalog picker
+    or types the app name themselves — accurate manual choice beats
+    silently-wrong auto-suggestion.
+    """
+    norm_host = _normalize_for_fuzzy(hostname)
+    if not norm_host:
+        return None
+    cache = _fetch_helpers_cache() or {}
+    if not cache:
+        return None
+    norm_slugs = {slug: _normalize_for_fuzzy(slug) for slug in cache}
+    for slug, ns in norm_slugs.items():
+        if ns == norm_host:
+            return slug
+    prefix = [slug for slug, ns in norm_slugs.items() if ns.startswith(norm_host)]
+    if len(prefix) == 1:
+        return prefix[0]
+    if prefix:
+        return None  # ambiguous — refuse to guess
+    contains = [slug for slug, ns in norm_slugs.items() if norm_host in ns]
+    if len(contains) == 1:
+        return contains[0]
+    return None
+
+
+def _infer_helper_slug(vmid: str, hostname: str) -> Optional[str]:
+    """Best-effort identification of the community-scripts slug for a CT.
+
+    Primary: extract from /usr/bin/update (present on installs from a
+    reasonably modern community-scripts installer). Fallback: if the
+    CT carries a helper-scripts tag but /usr/bin/update is missing
+    (very old installs, or the file was removed), guess by
+    fuzzy-matching the hostname against the helpers_cache slug list.
+    """
+    slug = _probe_helper_scripts_slug(vmid)
+    if slug:
+        return slug
+    tags = _probe_lxc_tags(vmid)
+    if not (tags & _HELPER_SCRIPTS_TAGS):
+        return None
+    return _guess_helper_slug_from_hostname(hostname)
+
 
 def _probe_lxc_os(vmid: str) -> Optional[str]:
     """Return a normalized family identifier (``debian`` / ``ubuntu`` /
@@ -531,6 +801,12 @@ def _detect_lxc_containers() -> list[dict]:
     }
 
     cts = _list_pve_lxcs()
+    # Set of CTs currently managed by oci_manager (Secure Gateway etc).
+    # Their update path is the OCI app's own updater — we mark them so
+    # the LXC row in the UI redirects the user there instead of running
+    # our generic apt/apk flow.
+    oci_managed = _get_oci_managed_vmids()
+
     out: list[dict] = []
     for ct in cts:
         if ct["status"] != "running":
@@ -538,15 +814,56 @@ def _detect_lxc_containers() -> list[dict]:
         vmid = ct["vmid"]
         cid = f"lxc:{vmid}"
         prior = existing_by_id.get(cid) or {}
+
+        # OCI-image marker is cached — the CT origin doesn't change
+        # over its lifetime, and reading the pct config file is cheap
+        # enough that we don't gain much from skipping the re-probe.
+        is_oci = _probe_lxc_is_oci(vmid)
+
+        # Managed OCI-app membership (Secure Gateway / Tailscale / any
+        # future ProxMenux-shipped OCI app).
+        managed_oci_app = oci_managed.get(str(vmid))
+
+        # OS family is only meaningful for non-OCI CTs. We still cache
+        # it for OCI (some images ARE Ubuntu/Debian underneath and
+        # future features might use it), but we don't require it.
         os_family = prior.get("_os_family")
         if not os_family:
             os_family = _probe_lxc_os(vmid)
-            if os_family not in _SUPPORTED_OS_FAMILIES:
-                # Distribution we don't yet have a package-manager
-                # parser for. Skip silently. The framework marks any
-                # existing entry as removed_at if it stops appearing
-                # in the detector output.
+            if not is_oci and os_family not in _SUPPORTED_OS_FAMILIES:
+                # Non-OCI, non-supported family — the framework has
+                # no way to check its updates. Skip silently.
                 continue
+
+        # Helper-scripts updater detection — only meaningful for
+        # non-OCI, non-managed CTs. Managed OCI apps have their own
+        # updater; OCI-image CTs almost never carry /usr/bin/update
+        # since apps are baked into the image at build time.
+        #
+        # `_has_app_updater` gates whether the "Apply application
+        # update" button appears in the modal. It's only True when
+        # BOTH:
+        #   (a) /usr/bin/update exists AND we can extract the
+        #       community-scripts slug from it, and
+        #   (b) that slug is marked `updateable: true` in the
+        #       helpers_cache — 47/733 entries are false, and running
+        #       their updaters is a known-broken action.
+        # `_helper_slug` and `_helper_app_name` are surfaced to the UI
+        # so users see which app they'd be updating (e.g. "Update
+        # Jellyfin" rather than a generic "Update").
+        has_app_updater = False
+        helper_slug: Optional[str] = None
+        helper_app_name: Optional[str] = None
+        helper_updateable_known = False  # True when we found the slug in the cache
+        if not is_oci and not managed_oci_app:
+            helper_slug = _infer_helper_slug(vmid, ct.get("name") or "")
+            if helper_slug:
+                entry = _fetch_helpers_cache().get(helper_slug)
+                if entry:
+                    helper_updateable_known = True
+                    helper_app_name = entry.get("name") or helper_slug
+                    has_app_updater = bool(entry.get("updateable"))
+
         out.append({
             "id": cid,
             "type": "lxc",
@@ -556,8 +873,12 @@ def _detect_lxc_containers() -> list[dict]:
             "menu_script": None,
             "_vmid": vmid,
             "_os_family": os_family,
-            # Phase 2 hook: populate `_helper_script_app` here once we
-            # learn how to read the community-scripts marker.
+            "_is_oci": is_oci,
+            "_managed_oci_app": managed_oci_app,
+            "_has_app_updater": has_app_updater,
+            "_helper_slug": helper_slug,
+            "_helper_app_name": helper_app_name,
+            "_helper_updateable_known": helper_updateable_known,
         })
     return out
 
@@ -1111,6 +1432,24 @@ def _check_lxc_updates(entry: dict) -> dict:
         return {
             "available": False, "latest": None,
             "last_check": _now_iso(), "error": "no vmid in entry",
+        }
+
+    # OCI-image CTs are immutable by design — apt/apk upgrade inside
+    # them is the wrong workflow (update = rebuild from a newer image
+    # tag). Skip the package-manager probe entirely so the UI doesn't
+    # surface a misleading "N packages pending" badge that would nudge
+    # users toward the anti-pattern. The Updates modal renders a
+    # dedicated OCI-container panel using the flag propagated below.
+    #
+    # Same treatment for CTs managed by oci_manager (Secure Gateway
+    # etc.) — those have their own dashboard-driven updater with
+    # app-specific hooks; running our generic apt/apk in parallel
+    # would race and could restart the wrong services.
+    if entry.get("_is_oci") or entry.get("_managed_oci_app"):
+        return {
+            "available": False, "latest": None,
+            "last_check": _now_iso(), "error": None,
+            "_count": 0, "_security_count": 0, "_packages": [],
         }
 
     refresh_diag = _refresh_lxc_pkg_cache_if_stale(vmid, family)

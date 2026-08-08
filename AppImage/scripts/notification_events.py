@@ -3508,6 +3508,17 @@ class PollingCollector:
             print(f"[PollingCollector] managed_installs update run failed: {e}")
             return
 
+        # Piggy-back on the same 24 h cycle to refresh every
+        # user-registered app watch. Keeps the header badge accurate
+        # in the VMs list without needing a dedicated timer. Errors
+        # are absorbed inside refresh_all_apps — one broken CT never
+        # blocks the others.
+        try:
+            import lxc_apps
+            lxc_apps.refresh_all_apps(force=False)
+        except Exception as e:
+            print(f"[PollingCollector] lxc_apps refresh failed: {e}")
+
         # Split LXC updates out of the per-item event stream — they get
         # one grouped notification per cycle instead of one per CT, to
         # avoid spamming the user when 15 CTs have pending updates the

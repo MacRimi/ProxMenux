@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-08-06",
+  "notes": "Runtime-verified detectors for the LXC app catalog. Every entry is a detector proven to work on a real container. Contribution rules \u2014 accept ONLY: `detector` (required, with installed_via + method-specific fields + repo/tag_regex), optional `alt_detectors` (cross-method fallbacks), optional `file_fallbacks` (same-method secondary paths). REJECT anything that identifies a host: no IP addresses, no VMIDs, no hostnames, no `evidence` blocks with those fields. Report reproduction context in the PR description instead \u2014 the committed JSON must stay generic.",
+  "apps": {
+    "qbittorrent": {
+      "detector": {
+        "installed_via": "binary",
+        "binary_path": "/opt/qbittorrent/qbittorrent-nox",
+        "repo": "userdocs/qbittorrent-nox-static",
+        "github_source": "releases",
+        "tag_regex": "(?i)(?:release-)?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "tandoor": {
+      "detector": {
+        "installed_via": "file",
+        "file_path": "/opt/tandoor/cookbook/version_info.py",
+        "file_regex": "TANDOOR_VERSION\\s*=\\s*[\"']v?(\\d+\\.\\d+\\.\\d+)",
+        "repo": "TandoorRecipes/recipes",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      },
+      "file_fallbacks": [
+        {
+          "path": "/root/.tandoor",
+          "regex": "v?(\\d+\\.\\d+\\.\\d+)"
+        }
+      ]
+    },
+    "openwebui": {
+      "operational": false,
+      "remove_from_v1": true,
+      "detector": {
+        "installed_via": "python_dist",
+        "python_path": "/root/.local/share/uv/tools/open-webui/bin/python",
+        "distribution": "open-webui",
+        "repo": "open-webui/open-webui",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "proxmox-backup-server": {
+      "detector": {
+        "installed_via": "dpkg",
+        "package": "proxmox-backup-server",
+        "tag_regex": "(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "adguard": {
+      "detector": {
+        "installed_via": "binary",
+        "binary_path": "/opt/AdGuardHome/AdGuardHome",
+        "repo": "AdguardTeam/AdGuardHome",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "nginxproxymanager": {
+      "detector": {
+        "installed_via": "file",
+        "file_path": "/opt/nginxproxymanager/backend/package.json",
+        "file_regex": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+\\.\\d+)\"",
+        "repo": "NginxProxyManager/nginx-proxy-manager",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      },
+      "file_fallbacks": [
+        {
+          "path": "/app/package.json",
+          "regex": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+\\.\\d+)\""
+        },
+        {
+          "path": "/root/.nginxproxymanager",
+          "regex": "v?(\\d+\\.\\d+\\.\\d+)"
+        }
+      ]
+    },
+    "pairdrop": {
+      "detector": {
+        "installed_via": "file",
+        "file_path": "/opt/pairdrop/package.json",
+        "file_regex": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+\\.\\d+)\"",
+        "repo": "schlagmichdoch/PairDrop",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      },
+      "file_fallbacks": [
+        {
+          "path": "/root/.pairdrop",
+          "regex": "v?(\\d+\\.\\d+\\.\\d+)"
+        }
+      ]
+    },
+    "vaultwarden": {
+      "detector": {
+        "installed_via": "binary",
+        "binary_path": "/opt/vaultwarden/bin/vaultwarden",
+        "repo": "dani-garcia/vaultwarden",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      },
+      "alt_detectors": [
+        {
+          "installed_via": "file",
+          "file_path": "/root/.vaultwarden",
+          "file_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+        }
+      ]
+    },
+    "docmost": {
+      "detector": {
+        "installed_via": "file",
+        "file_path": "/opt/docmost/package.json",
+        "file_regex": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+\\.\\d+)\"",
+        "repo": "docmost/docmost",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      },
+      "file_fallbacks": [
+        {
+          "path": "/root/.docmost",
+          "regex": "v?(\\d+\\.\\d+\\.\\d+)"
+        }
+      ]
+    },
+    "agentdvr": {
+      "detector": {
+        "installed_via": "file",
+        "file_path": "/root/.agentdvr",
+        "file_regex": "Agent_[^/]+_([0-9]+(?:_[0-9]+){3})\\.zip",
+        "repo": "ispysoftware/agent-install-scripts",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+(?:\\.\\d+){3})"
+      }
+    },
+    "odoo": {
+      "detector": {
+        "installed_via": "dpkg",
+        "package": "odoo",
+        "tag_regex": "(\\d+\\.\\d+(?:\\.\\d+)?)"
+      },
+      "alt_detectors": [
+        {
+          "installed_via": "binary",
+          "binary_path": "/usr/bin/odoo"
+        }
+      ]
+    },
+    "paperless-ngx": {
+      "operational": false,
+      "detector": {
+        "installed_via": "docker_label",
+        "container_name": "paperless-webserver-1",
+        "label": "org.opencontainers.image.version",
+        "repo": "paperless-ngx/paperless-ngx",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      },
+      "alt_detectors": [
+        {
+          "installed_via": "file",
+          "file_path": "/opt/paperless/src/paperless/version.py",
+          "file_regex": "__version__[^\\n=]*=\\s*\\((\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)\\)"
+        }
+      ]
+    },
+    "plex": {
+      "operational": true,
+      "detector": {
+        "installed_via": "dpkg",
+        "package": "plexmediaserver",
+        "installed_regex": "(\\d+\\.\\d+\\.\\d+\\.\\d+)",
+        "upstream_type": "http_json",
+        "upstream_url": "https://plex.tv/api/downloads/5.json?channel=8",
+        "upstream_json_path": "computer.Linux.version",
+        "tag_regex": "(\\d+\\.\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "prometheus": {
+      "operational": false,
+      "detector": {
+        "installed_via": "docker_exec",
+        "container_name": "prometheus",
+        "binary_path": "/bin/prometheus",
+        "binary_args": [
+          "--version"
+        ],
+        "repo": "prometheus/prometheus",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "grafana": {
+      "operational": false,
+      "detector": {
+        "installed_via": "docker_exec",
+        "container_name": "grafana",
+        "binary_path": "grafana",
+        "binary_args": [
+          "server",
+          "-v"
+        ],
+        "repo": "grafana/grafana",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    }
+  }
+}
