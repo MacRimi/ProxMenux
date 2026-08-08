@@ -1093,7 +1093,7 @@ enable_zfs_autotrim() {
 
 
 setup_persistent_network() {
-    local FUNC_VERSION="1.1"
+    local FUNC_VERSION="1.2"
     # description: Pin NIC names to MAC addresses via systemd .link files so kernel updates don't shuffle interface names.
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)

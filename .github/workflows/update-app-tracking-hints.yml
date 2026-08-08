@@ -1,0 +1,160 @@
+name: Update App Tracking Hints
+
+on:
+  # Manual trigger from the Actions UI
+  workflow_dispatch:
+
+  # Re-merge whenever the generator, workflow, or the maintainer-
+  # curated runtime overrides change. `runtime_verified_overrides.json`
+  # is the file to edit when a real LXC reveals a canonical path the
+  # community-scripts helper doesn't ship (legacy /app/package.json,
+  # /opt/vaultwarden/bin/vaultwarden, etc.) — the generator folds it
+  # into the operational catalog every run.
+  push:
+    branches: [main]
+    paths:
+      - ".github/scripts/generate_app_tracking_catalog.py"
+      - ".github/workflows/update-app-tracking-hints.yml"
+      - "json/runtime_verified_overrides.json"
+
+  # Regen every 6h — picks up new community-scripts LXC apps and
+  # detector-relevant script edits without needing a manual trigger.
+  schedule:
+    - cron: "0 */6 * * *"
+
+jobs:
+  update-hints:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: ⬇️ Checkout the repository
+        uses: actions/checkout@v6
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: ⚙️ Generate app_tracking_hints.generated.json (intermediate)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # The generator writes 4 files; only `.generated.json` is
+        # consumed downstream by the merge step. The v2 catalog and
+        # per-app audit are useful for local review but not kept in
+        # the repo — written under /tmp so they never appear as
+        # dirty files here.
+        #
+        # `--runtime-overrides` folds real-CT evidence into the
+        # operational hints (canonical paths, cross-method fallbacks
+        # per app) so the runtime doesn't get fed helper-marker
+        # false-positives.
+        run: |
+          python .github/scripts/generate_app_tracking_catalog.py \
+            --helpers-cache json/helpers_cache.json \
+            --existing json/app_tracking_hints.json \
+            --runtime-overrides json/runtime_verified_overrides.json \
+            --output json/app_tracking_hints.generated.json \
+            --v2-output /tmp/app_tracking_catalog.v2.json \
+            --audit-output /tmp/app_tracking_hints.audit.json
+
+      - name: 🧬 Smart-merge generated into app_tracking_hints.json
+        # Single source of truth: `app_tracking_hints.json` is the ONE
+        # file. It contains 3 kinds of entries:
+        #   1. Auto-verified from community-scripts (the generator
+        #      manages every "generator-owned" field on these).
+        #   2. User-edited additions to those entries — extra fields
+        #      the generator doesn't touch (default_ports,
+        #      file_fallbacks, custom logo overrides…).
+        #   3. User-only entries the generator can't verify (Docker,
+        #      AdGuard, Pi-hole, WireGuard, …) — left alone.
+        # Merge rule: for slugs the generator produces, refresh only
+        # the whitelisted fields; preserve everything else. For slugs
+        # NOT in the generator's output, keep the existing entry
+        # untouched.
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          GEN = Path("json/app_tracking_hints.generated.json")
+          OUT = Path("json/app_tracking_hints.json")
+
+          # Fields owned by the generator — refreshed on every run.
+          # These are all populated deterministically by the generator
+          # (the audit script folds `runtime_verified_overrides.json`
+          # in as it runs), so a local hand-edit for a generator-known
+          # slug would get overwritten on the next tick. To add a new
+          # canonical path or a cross-method fallback for a slug the
+          # generator already knows, edit `runtime_verified_overrides
+          # .json` — that file IS the maintainer-controlled input.
+          #
+          # For user-only slugs (Docker, WireGuard, Pi-hole and any
+          # other entry not in the generator's output) EVERY field is
+          # preserved verbatim by the merge below — the whitelist only
+          # governs generator-covered slugs.
+          GENERATOR_FIELDS = {
+              "installed_via", "package", "file_path", "file_regex",
+              "binary_path", "repo", "github_source", "tag_regex",
+              "installed_regex",
+              # Upstream source discriminator + per-type fields
+              # (http_json + docker_hub). Kept in the whitelist so a
+              # curated entry in runtime_verified_overrides.json can
+              # supply them and the smart merge won't drop them on the
+              # next regeneration.
+              "upstream_type", "upstream_url", "upstream_json_path",
+              "docker_image",
+              "logo", "website",
+              "default_ports", "file_fallbacks", "alt_detectors",
+          }
+
+          generated = json.loads(GEN.read_text(encoding="utf-8"))
+          existing = {}
+          if OUT.is_file():
+              try:
+                  existing = json.loads(OUT.read_text(encoding="utf-8"))
+                  if not isinstance(existing, dict):
+                      existing = {}
+              except json.JSONDecodeError:
+                  existing = {}
+
+          merged = {}
+          for slug, gen_entry in generated.items():
+              base = dict(existing.get(slug) or {})
+              # Refresh generator-owned fields (add/update).
+              for k, v in gen_entry.items():
+                  if k in GENERATOR_FIELDS:
+                      base[k] = v
+              # Drop generator-owned fields that the generator no
+              # longer emits for this slug (e.g. path renamed away).
+              for k in list(base):
+                  if k in GENERATOR_FIELDS and k not in gen_entry:
+                      del base[k]
+              merged[slug] = base
+          # Preserve user-only entries the generator can't verify.
+          for slug, entry in existing.items():
+              if slug not in generated and isinstance(entry, dict):
+                  merged[slug] = dict(entry)
+
+          OUT.write_text(json.dumps(merged, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+          added = sorted(set(generated) - set(existing))
+          removed = sorted(set(existing) - set(generated) - {s for s, e in existing.items() if not (
+              set(e.keys()) - GENERATOR_FIELDS
+          )})
+          print(f"merged: {len(merged)} entries "
+                f"(generated={len(generated)}, existing={len(existing)})")
+          if added:
+              print(f"  new from generator: {len(added)}")
+          # Clean up the intermediate file so it doesn't get committed.
+          GEN.unlink()
+          PY
+
+      - name: 📤 Commit + push if changed
+        run: |
+          git config user.name "ProxMenuxBot"
+          git config user.email "bot@proxmenux.local"
+          git add json/app_tracking_hints.json
+          git diff --cached --quiet || git commit -m "Update app tracking hints"
+          git push

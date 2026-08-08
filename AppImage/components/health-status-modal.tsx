@@ -32,7 +32,7 @@ import {
   FileText,
   RefreshCw,
   Shield,
-  Download,
+  ArrowUpCircle,
   X,
   Clock,
   BellOff,
@@ -777,7 +777,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                               onClick={() => setShowUpdateTerminal(true)}
                               className="bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 hover:text-purple-200"
                             >
-                              <Download className="h-4 w-4 mr-1.5" />
+                              <ArrowUpCircle className="h-4 w-4 mr-1.5" />
                               {t("healthStatus.updateNow")}
                             </Button>
                           </div>

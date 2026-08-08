@@ -8,14 +8,18 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Pencil, Trash2, Check, AlertTriangle } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
+import { Switch } from "./ui/switch"
 import { Textarea } from "./ui/textarea"
+import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
+import { ScriptTerminalModal } from "./script-terminal-modal"
+import { LxcAppPanel } from "./lxc-app-panel"
 import { formatStorage } from "../lib/utils"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
@@ -41,6 +45,66 @@ interface LxcUpdateCheck {
   latest: string | null
   error: string | null
   packages: LxcPackageUpdate[]
+  // Added Phase 2a/b — surfaced by managed_installs when the CT
+  // originates from an OCI image (apt/apk detection is suppressed
+  // for those) or when the community-scripts convention
+  // /usr/bin/update is present in the CT.
+  is_oci_lxc?: boolean
+  app_updater_present?: boolean
+  // ProxMenux-managed OCI app id (e.g. "secure-gateway") — when set,
+  // this CT is driven by the OCI dashboard's own updater and the
+  // Updates modal redirects there instead of running our apt flow.
+  managed_oci_app?: string | null
+  // Community-scripts identity + updateable-known flag. Backed by the
+  // ProxMenux helpers_cache (46 apps flagged updateable:false at
+  // last count). The modal renders three shapes:
+  //   • helper_updateable_known=true + app_updater_present=true → Apply button
+  //   • helper_updateable_known=true + app_updater_present=false → "not updateable" note
+  //   • helper_updateable_known=false → neutral hint (unknown/unlisted app)
+  helper_slug?: string | null
+  helper_app_name?: string | null
+  helper_updateable_known?: boolean
+  os_family?: string | null
+}
+
+// Summary attached to LXC rows in /api/vms when the user has
+// registered an application watch for the CT. Populates the header
+// badge + the Updates modal "App upstream" row.
+interface LxcAppPort {
+  port: number
+  description?: string
+  scheme?: "http" | "https"
+  web_path?: string
+}
+interface LxcAppWatch {
+  id: string
+  name: string | null
+  installed_via?: string | null
+  ports?: LxcAppPort[]
+  health_path?: string | null
+  installed_version: string | null
+  latest_version: string | null
+  update_available: boolean | null
+  error: string | null
+  checked_at: string | null
+  has_repo?: boolean
+  // Set for the synthetic entry that represents a ProxMenux-managed
+  // OCI app (Secure Gateway). The frontend renders it read-only +
+  // wires the Update action to /api/oci/installed/<id>/update.
+  managed_oci_app_id?: string | null
+  packages?: Array<{ name: string; current?: string; latest?: string }>
+  // Updates tab: freeform bash the user wired up as the app's own
+  // update method. When set, the Updates tab renders an "Apply {app}"
+  // button that runs `pct exec vmid -- sh -c "$update_command"`.
+  update_command?: string
+  // Updates tab: per-app dismiss for the "no update method defined"
+  // notice. Only hides the notice — the App tab still shows purple ⬆
+  // when an update is available upstream.
+  hide_no_updater_notice?: boolean
+  // Community-scripts slug set by the App tab Register flow. Lets the
+  // Updates tab helper-scripts section find its matching registered
+  // app to pull installed/upstream version data from.
+  helper_slug?: string
 }
 
 interface VMData {
@@ -61,6 +125,9 @@ interface VMData {
   diskwrite?: number
   ip?: string
   update_check?: LxcUpdateCheck
+  // List of registered apps (0..N). Managed entries (Secure Gateway)
+  // always come first when present.
+  app_watches?: LxcAppWatch[]
 }
 
 interface VMConfig {
@@ -649,7 +716,7 @@ export function VirtualMachines() {
   const [backupPbsChangeMode, setBackupPbsChangeMode] = useState<string>("default")
   
   // Tab state for modal
-  const [activeModalTab, setActiveModalTab] = useState<"status" | "mounts" | "backups" | "updates" | "firewall">("status")
+  const [activeModalTab, setActiveModalTab] = useState<"status" | "mounts" | "backups" | "app" | "updates" | "firewall">("status")
 
   // Firewall log state — fetched only when the operator opens that tab
   // so a CT/VM without firewall use doesn't pay the pvesh cost on every
@@ -1062,6 +1129,371 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   // Ensure vmData is always an array (backend may return object on error)
   const safeVMData = Array.isArray(vmData) ? vmData : []
 
+  // Status filter for the "Virtual Machines & Containers" list. Persisted
+  // to localStorage so a reload keeps the operator's last view.
+  const [statusFilter, setStatusFilter] = useState<"all" | "running" | "stopped">(() => {
+    if (typeof window === "undefined") return "all"
+    const stored = window.localStorage.getItem("proxmenux.vmListFilter")
+    return stored === "running" || stored === "stopped" ? stored : "all"
+  })
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("proxmenux.vmListFilter", statusFilter)
+    }
+  }, [statusFilter])
+
+  const statusCounts = useMemo(() => ({
+    all: safeVMData.length,
+    running: safeVMData.filter((vm) => vm.status === "running").length,
+    stopped: safeVMData.filter((vm) => vm.status === "stopped").length,
+  }), [safeVMData])
+
+  const filteredVMs = useMemo(() => {
+    if (statusFilter === "all") return safeVMData
+    return safeVMData.filter((vm) => vm.status === statusFilter)
+  }, [safeVMData, statusFilter])
+
+  // ── LXC update apply flow (Phase 2a/b) ────────────────────────────
+  // Users pick a target (OS, App, both) + backup / restart options,
+  // click Apply, and the ScriptTerminalModal streams the apply run.
+  // On successful close, POST /api/lxc-updates/<vmid>/applied fires
+  // the notification and forces a badge recheck.
+  const [applyOpen, setApplyOpen] = useState(false)
+  const [applyVmid, setApplyVmid] = useState<number | null>(null)
+  const [applyTarget, setApplyTarget] = useState<"os" | "app" | "both">("os")
+  const [applyBackup, setApplyBackup] = useState(true)
+  const [applyBackupStorage, setApplyBackupStorage] = useState<string>("")
+  const [applyRestart, setApplyRestart] = useState(false)
+  const [applyStartedAt, setApplyStartedAt] = useState<number>(0)
+  // Extra state carried alongside applyTarget when the App branch is
+  // driven by a user-defined `update_command` on a specific registered
+  // app (not the CT-wide /usr/bin/update). Passed to the terminal
+  // script as UPDATE_COMMAND env var; the script uses it in preference
+  // to /usr/bin/update when present.
+  const [applyUpdateCommand, setApplyUpdateCommand] = useState<string>("")
+  const [applyAppName, setApplyAppName] = useState<string>("")
+
+  // Updates tab — inline custom-command editor state. Keyed on app.id
+  // so the user can open one editor at a time; opening a second closes
+  // the first (kept in localState because there's never a need to edit
+  // two at once). `showHiddenNotices` opts back into displaying the
+  // Case-3a "no method" cards the user previously dismissed.
+  const [customCmdEditingApp, setCustomCmdEditingApp] = useState<string | null>(null)
+  const [customCmdDraft, setCustomCmdDraft] = useState<string>("")
+  const [customCmdSaving, setCustomCmdSaving] = useState(false)
+  const [showHiddenNotices, setShowHiddenNotices] = useState(false)
+
+  const openCustomCmdEditor = (app: LxcAppWatch) => {
+    setCustomCmdEditingApp(app.id)
+    setCustomCmdDraft(app.update_command || "")
+  }
+
+  // ── Options card unified state ──────────────────────────────────
+  // Single source of truth for apply preferences (backup + restart)
+  // used by BOTH the manual "Apply update" buttons AND the scheduled
+  // runs — persisted per-CT in the sidecar's schedule object. Also
+  // holds the schedule config itself and any external host cron
+  // detected via the community-scripts pattern. All loaded once when
+  // the user opens the Updates tab of a specific LXC.
+  const [scheduleLoaded, setScheduleLoaded] = useState<number | null>(null)
+  const [scheduleEnabled, setScheduleEnabled] = useState(false)
+  const [scheduleCron, setScheduleCron] = useState("0 3 * * *")
+  const [schedulePreset, setSchedulePreset] = useState<string>("daily-3am")
+  const [scheduleTarget, setScheduleTarget] = useState<"os" | "app" | "both">("both")
+  const [scheduleLastRunAt, setScheduleLastRunAt] = useState<string | null>(null)
+  const [scheduleLastRunStatus, setScheduleLastRunStatus] = useState<string | null>(null)
+  const [scheduleSaving, setScheduleSaving] = useState(false)
+  const [scheduleError, setScheduleError] = useState<string | null>(null)
+  const [externalCron, setExternalCron] = useState<{
+    source: string
+    cron_line: string
+    cron: string
+    human_schedule: string
+    type: string
+    variant?: string
+    scope?: string
+  } | null>(null)
+  // True when the server returned a schedule with a non-empty `cron`
+  // field — lets the view mode distinguish "configured but disabled"
+  // (Switch is off but a schedule exists) from "nothing scheduled".
+  const [scheduleConfigured, setScheduleConfigured] = useState(false)
+  // Options card edit-mode toggle. View mode shows persisted config
+  // read-only; edit mode swaps to the sunken-input pattern per the
+  // global card-contrast rule (see project memory).
+  const [optionsEditMode, setOptionsEditMode] = useState(false)
+  // Snapshot of state at the moment Edit is entered so Cancel can
+  // fully restore. Save wipes it after PUTting.
+  const [optionsSnapshot, setOptionsSnapshot] = useState<any>(null)
+
+  // Cron presets — every entry maps a friendly label to a real
+  // 5-field cron expression the backend parser accepts. Order + slugs
+  // stable so the Select value round-trips a saved schedule.
+  const CRON_PRESETS: { value: string; label: string; cron: string }[] = [
+    { value: "hourly", label: t("vmLxc.cronPresets.hourly"), cron: "0 * * * *" },
+    { value: "daily-3am", label: t("vmLxc.cronPresets.dailyAt3"), cron: "0 3 * * *" },
+    { value: "daily-noon", label: t("vmLxc.cronPresets.dailyAtNoon"), cron: "0 12 * * *" },
+    { value: "weekly-sun-3am", label: t("vmLxc.cronPresets.weeklySun3"), cron: "0 3 * * 0" },
+    { value: "monthly-1st-3am", label: t("vmLxc.cronPresets.monthly1st3"), cron: "0 3 1 * *" },
+    { value: "custom", label: t("vmLxc.cronPresets.custom"), cron: "" },
+  ]
+
+  const loadSchedule = async (vmid: number) => {
+    setScheduleError(null)
+    try {
+      const s: any = await fetchApi(`/api/vms/${vmid}/schedule`)
+      if (s && typeof s === "object") {
+        setScheduleEnabled(!!s.enabled)
+        setScheduleConfigured(!!s.cron)
+        const cron = s.cron || "0 3 * * *"
+        setScheduleCron(cron)
+        const matched = CRON_PRESETS.find((p) => p.value !== "custom" && p.cron === cron)
+        setSchedulePreset(matched ? matched.value : "custom")
+        setScheduleTarget(s.target || "both")
+        // Unified apply options — backup/restart/storage feed BOTH
+        // manual applies and scheduled runs. Values live in the
+        // schedule object even when enabled=false so preferences
+        // survive toggling the schedule off.
+        if (s.backup !== undefined) setApplyBackup(!!s.backup)
+        if (s.backup_storage) setApplyBackupStorage(s.backup_storage)
+        if (s.restart !== undefined) setApplyRestart(!!s.restart)
+        setScheduleLastRunAt(s.last_run_at || null)
+        setScheduleLastRunStatus(s.last_run_status || null)
+        setExternalCron(s.external_cron || null)
+      }
+    } catch (e: any) {
+      setScheduleError(e?.message || "Could not load schedule")
+    } finally {
+      setScheduleLoaded(vmid)
+    }
+  }
+
+  const saveSchedule = async (vmid: number) => {
+    setScheduleSaving(true)
+    setScheduleError(null)
+    // Only persist a cron when the user actually wants a schedule.
+    // Prevents the delete-then-save recreation bug: after Delete we
+    // leave scheduleConfigured=false and Save PUTs cron="" so the
+    // backend doesn't resurrect the schedule.
+    const cronToSave = scheduleEnabled || scheduleConfigured ? scheduleCron : ""
+    try {
+      await fetchApi(`/api/vms/${vmid}/schedule`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enabled: scheduleEnabled,
+          cron: cronToSave,
+          target: scheduleTarget,
+          backup: applyBackup,
+          backup_storage: applyBackupStorage || selectedBackupStorage || "",
+          restart: applyRestart,
+        }),
+      })
+      if (cronToSave.trim()) setScheduleConfigured(true)
+    } catch (e: any) {
+      setScheduleError(e?.message || "Save failed")
+    } finally {
+      setScheduleSaving(false)
+    }
+  }
+
+  const enterOptionsEdit = () => {
+    setOptionsSnapshot({
+      backup: applyBackup,
+      backup_storage: applyBackupStorage,
+      restart: applyRestart,
+      scheduleEnabled: scheduleEnabled,
+      scheduleCron: scheduleCron,
+      schedulePreset: schedulePreset,
+      scheduleTarget: scheduleTarget,
+    })
+    setOptionsEditMode(true)
+  }
+  const cancelOptionsEdit = () => {
+    if (optionsSnapshot) {
+      setApplyBackup(optionsSnapshot.backup)
+      setApplyBackupStorage(optionsSnapshot.backup_storage)
+      setApplyRestart(optionsSnapshot.restart)
+      setScheduleEnabled(optionsSnapshot.scheduleEnabled)
+      setScheduleCron(optionsSnapshot.scheduleCron)
+      setSchedulePreset(optionsSnapshot.schedulePreset)
+      setScheduleTarget(optionsSnapshot.scheduleTarget)
+    }
+    setOptionsSnapshot(null)
+    setOptionsEditMode(false)
+  }
+  const saveOptionsEdit = async () => {
+    if (!selectedVM) return
+    await saveSchedule(selectedVM.vmid)
+    setOptionsSnapshot(null)
+    setOptionsEditMode(false)
+  }
+  const deleteScheduleFromOptions = async () => {
+    if (!selectedVM) return
+    if (!confirm(t("vmLxc.scheduled.deleteConfirm"))) return
+    setScheduleSaving(true)
+    try {
+      await fetchApi(`/api/vms/${selectedVM.vmid}/schedule`, { method: "DELETE" })
+      setScheduleEnabled(false)
+      setScheduleConfigured(false)
+      setScheduleCron("0 3 * * *")
+      setSchedulePreset("daily-3am")
+      setScheduleLastRunAt(null)
+      setScheduleLastRunStatus(null)
+    } catch (e: any) {
+      setScheduleError(e?.message || "Delete failed")
+    } finally {
+      setScheduleSaving(false)
+    }
+  }
+
+  // Turn a 5-field cron into a plain-English label — mirrors the
+  // backend's _humanise_cron so view mode matches the picker's
+  // preset labels.
+  const humanCron = (expr: string): string => {
+    if (!expr) return ""
+    const parts = expr.trim().split(/\s+/)
+    if (parts.length !== 5) return expr
+    const [m, h, d, mo, w] = parts
+    const hhmm = () => {
+      const hn = parseInt(h, 10), mn = parseInt(m, 10)
+      if (isNaN(hn) || isNaN(mn)) return `${h}:${m}`
+      return `${String(hn).padStart(2, "0")}:${String(mn).padStart(2, "0")}`
+    }
+    if (d === "*" && mo === "*" && w === "*" && /^\d+$/.test(m) && /^\d+$/.test(h)) return `Daily at ${hhmm()}`
+    if (d === "*" && mo === "*" && /^\d+$/.test(w) && /^\d+$/.test(m) && /^\d+$/.test(h)) {
+      const wdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+      const wn = parseInt(w, 10)
+      const wname = (wn >= 0 && wn <= 6) ? wdays[wn] : w
+      return `Weekly (${wname} ${hhmm()})`
+    }
+    if (mo === "*" && w === "*" && /^\d+$/.test(d) && /^\d+$/.test(m) && /^\d+$/.test(h)) return `Monthly (day ${parseInt(d, 10)} at ${hhmm()})`
+    if (h === "*" && d === "*" && mo === "*" && w === "*" && m === "0") return "Hourly"
+    return expr
+  }
+
+  // Load the schedule once whenever the user opens the Updates tab
+  // of a specific LXC. Keying on vmid keeps us from re-fetching on
+  // every render but also refetches after switching CTs.
+  useEffect(() => {
+    if (activeModalTab !== "updates") return
+    if (!selectedVM || selectedVM.type !== "lxc") return
+    if (scheduleLoaded === selectedVM.vmid) return
+    loadSchedule(selectedVM.vmid)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeModalTab, selectedVM?.vmid])
+  const closeCustomCmdEditor = () => {
+    setCustomCmdEditingApp(null)
+    setCustomCmdDraft("")
+  }
+  // Persists a partial update to /api/vms/<vmid>/apps/<app_id>. The
+  // update_app validator on the backend performs a full-config
+  // replace, so we hydrate the current app payload with the patch
+  // before PUTting to preserve every other field the user set.
+  const patchAppWatch = async (
+    vmid: number,
+    app: LxcAppWatch,
+    patch: Record<string, any>,
+  ) => {
+    // Fetch the full current config for this app so we can echo it
+    // back with the patch applied — the backend replaces the whole
+    // record and would drop any field we omitted.
+    const full: any = await fetchApi(`/api/vms/${vmid}/apps`)
+    const current = (full?.apps || []).find((a: any) => a.id === app.id)
+    if (!current) throw new Error("app not found in sidecar")
+    const { id: _id, state: _state, created_at: _created, ...rest } = current
+    const payload = { ...rest, ...patch }
+    await fetchApi(`/api/vms/${vmid}/apps/${app.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+    mutate()
+  }
+  const saveCustomCommand = async (vmid: number, app: LxcAppWatch) => {
+    setCustomCmdSaving(true)
+    try {
+      await patchAppWatch(vmid, app, {
+        update_command: customCmdDraft.trim(),
+        // Saving a command implicitly re-enables the notice (moot —
+        // the notice only shows when there is no command).
+        hide_no_updater_notice: false,
+      })
+      closeCustomCmdEditor()
+    } catch (e) {
+      alert(`Could not save custom command: ${(e as any)?.message || e}`)
+    } finally {
+      setCustomCmdSaving(false)
+    }
+  }
+  const removeCustomCommand = async (vmid: number, app: LxcAppWatch) => {
+    if (!confirm(`Remove the custom update command for "${app.name}"?`)) return
+    setCustomCmdSaving(true)
+    try {
+      await patchAppWatch(vmid, app, { update_command: "" })
+      closeCustomCmdEditor()
+    } catch (e) {
+      alert(`Could not remove custom command: ${(e as any)?.message || e}`)
+    } finally {
+      setCustomCmdSaving(false)
+    }
+  }
+  const hideNoUpdaterNotice = async (vmid: number, app: LxcAppWatch) => {
+    try {
+      await patchAppWatch(vmid, app, { hide_no_updater_notice: true })
+    } catch (e) {
+      alert(`Could not hide notice: ${(e as any)?.message || e}`)
+    }
+  }
+
+  const openApplyTerminal = (
+    vmid: number,
+    target: "os" | "app" | "both",
+    opts?: { updateCommand?: string; appName?: string },
+  ) => {
+    setApplyVmid(vmid)
+    setApplyTarget(target)
+    setApplyUpdateCommand(opts?.updateCommand || "")
+    setApplyAppName(opts?.appName || "")
+    // Default storage to the same one the manual backup modal picked
+    // (already resolved to the first vzdump-capable storage).
+    if (!applyBackupStorage && selectedBackupStorage) {
+      setApplyBackupStorage(selectedBackupStorage)
+    } else if (!applyBackupStorage && backupStorages.length > 0) {
+      setApplyBackupStorage(backupStorages[0].storage)
+    }
+    setApplyStartedAt(Date.now())
+    setApplyOpen(true)
+  }
+  const handleApplyComplete = async () => {
+    if (applyVmid == null) return
+    const duration = Math.max(0, Math.round((Date.now() - applyStartedAt) / 1000))
+    // The modal fires onComplete on any WS close (success or user cancel);
+    // we always report the attempt so the notification records it and
+    // the badge is force-refreshed. success=true is optimistic — the
+    // script's own exit code is the ground truth surfaced in the log
+    // the user just watched.
+    try {
+      await fetchApi(`/api/lxc-updates/${applyVmid}/applied`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          success: true,
+          target: applyTarget,
+          duration_seconds: duration,
+          ct_name: selectedVM?.name || `CT-${applyVmid}`,
+        }),
+      })
+    } catch {
+      // Non-fatal — the notification is a nice-to-have.
+    }
+    // Backend's POST /applied handler already force-refreshes the
+    // managed_installs snapshot, so the next natural /api/vms poll
+    // (every 2.5s via SWR refreshInterval) picks up the post-update
+    // counts on its own. We deliberately avoid mutate() or explicit
+    // fetch here — those trigger re-render cascades that can close
+    // the parent modal.
+  }
+
   // Render the "📦 N updates / 🛡 N security" badge next to an LXC in
   // the dashboard list. Used ONLY in the card row alongside Uptime —
   // the modal surfaces the same info via a dedicated tab instead of
@@ -1126,6 +1558,55 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
             implying interactivity where there isn't any (the whole
             row is the click target there). */}
         {onClick && <ChevronRight className={`${iconSize} -mr-0.5 opacity-80`} />}
+      </Badge>
+    )
+  }
+
+  // App Watch badge (Phase 2c) — shown next to the update badge in
+  // the header, and inline on the desktop card row. Three states:
+  //   • up-to-date (installed==latest) → green filled
+  //   • update available               → orange filled
+  //   • no upstream check / no version → neutral outline
+  // Clicking always opens the App tab.
+  const renderLxcAppBadge = (
+    aw?: LxcAppWatch | null,
+    compact = false,
+    onClick?: () => void,
+  ) => {
+    if (!aw?.name) return null
+    const installed = aw.installed_version
+    const hasUpdate = aw.update_available === true
+    const upToDate = aw.update_available === false && !!installed
+    const color = hasUpdate
+      ? "bg-purple-600/15 text-purple-300 border-purple-500/40"
+      : upToDate
+        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+        : "bg-muted text-muted-foreground border-border"
+    const sizing = compact
+      ? "text-[11px] gap-1 px-1.5 py-0"
+      : "text-sm gap-1.5 px-2 py-0.5"
+    const iconSize = compact ? "h-3 w-3" : "h-4 w-4"
+    const clickable = onClick
+      ? "cursor-pointer hover:brightness-125 transition-all focus:outline-none focus:ring-0"
+      : ""
+    const tooltipParts: string[] = []
+    if (installed) tooltipParts.push(`Installed: ${installed}`)
+    if (aw.latest_version) tooltipParts.push(`Latest: ${aw.latest_version}`)
+    if (aw.checked_at) tooltipParts.push(`Checked: ${new Date(aw.checked_at).toLocaleString()}`)
+    if (aw.error) tooltipParts.push(`Note: ${aw.error}`)
+    const tooltip = (onClick ? "Click to open App tab · " : "") + tooltipParts.join(" · ")
+    return (
+      <Badge
+        variant="outline"
+        className={`flex items-center flex-shrink-0 ${sizing} ${color} ${clickable}`}
+        title={tooltip}
+        onClick={onClick}
+        role={onClick ? "button" : undefined}
+        tabIndex={onClick ? 0 : undefined}
+      >
+        <Package className={iconSize} />
+        <span className="truncate max-w-[180px]">{aw.name}</span>
+        {installed && <span className="font-mono opacity-80">{installed}</span>}
       </Badge>
     )
   }
@@ -1510,18 +1991,62 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       </div>
 
       <Card className="bg-card border-border">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <CardTitle className="flex items-center gap-2 text-xl lg:text-2xl font-bold text-foreground">
             <Server className="h-6 w-6" />
             {t("vmLxc.listTitle")}
           </CardTitle>
+          <div
+            role="tablist"
+            aria-label="Filter by status"
+            className="inline-flex w-full sm:w-auto rounded-lg border border-border bg-muted/40 p-1 gap-1"
+          >
+            {(["all", "running", "stopped"] as const).map((key) => {
+              const active = statusFilter === key
+              const label = key === "all" ? "All" : key === "running" ? "Running" : "Stopped"
+              // Icon color: white when the tab is active (over the blue fill);
+              // green / red on inactive tabs so the state mapping stays legible
+              // before selection. The black-text variant was tested and dropped
+              // — white reads cleaner alongside the sidebar/nav blue treatment.
+              const iconClass = active
+                ? "h-3.5 w-3.5 text-white"
+                : key === "running"
+                  ? "h-3.5 w-3.5 text-green-500 fill-green-500/25"
+                  : "h-3.5 w-3.5 text-red-500 fill-red-500/25"
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setStatusFilter(key)}
+                  className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    active
+                      ? "bg-blue-500 text-white shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-background/60"
+                  }`}
+                >
+                  {key === "running" && <Play className={iconClass} />}
+                  {key === "stopped" && <Square className={iconClass} />}
+                  <span>{label}</span>
+                  <span className={`ml-0.5 text-xs tabular-nums ${active ? "text-white/80" : "opacity-70"}`}>
+                    {statusCounts[key]}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </CardHeader>
         <CardContent>
           {safeVMData.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">{t("vmLxc.empty")}</div>
+          ) : filteredVMs.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No {statusFilter === "running" ? "running" : "stopped"} virtual machines
+            </div>
           ) : (
             <div className="space-y-3">
-              {safeVMData.map((vm) => {
+              {filteredVMs.map((vm) => {
                 const cpuPercent = (vm.cpu * 100).toFixed(1)
                 const memPercent = vm.maxmem > 0 ? ((vm.mem / vm.maxmem) * 100).toFixed(1) : "0"
                 const memGB = (vm.mem / 1024 ** 3).toFixed(1)
@@ -1788,6 +2313,22 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               false,
                               () => setActiveModalTab("updates"),
                             )}
+                          {/* Header badges — one per user-registered
+                              app (skip managed entries; those surface
+                              from Security → Secure Gateway). Docker
+                              apps have no version to show but still
+                              render as a name chip so users see them
+                              at a glance. Capped at 3 to keep the
+                              row honest on narrow viewports. */}
+                          {selectedVM.type === "lxc" &&
+                            (selectedVM.app_watches || [])
+                              .filter((a) => !a.managed_oci_app_id)
+                              .slice(0, 3)
+                              .map((a) => (
+                                <span key={a.id}>
+                                  {renderLxcAppBadge(a, false, () => setActiveModalTab("app"))}
+                                </span>
+                              ))}
                         </div>
                       </>
                     )}
@@ -1854,9 +2395,56 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     {t("vmLxc.tabs.status")}
                   </span>
                 </button>
+                {/* App tab — user-registered application metadata +
+                    upstream version watch. Placed right after Status so
+                    the operator's mental flow is "state → what's inside
+                    → what needs updating → mounts/backups/firewall". */}
+                {selectedVM?.type === "lxc" && (
+                  <button
+                    onClick={() => setActiveModalTab("app")}
+                    className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
+                      activeModalTab === "app"
+                        ? "border-emerald-500 text-emerald-500"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Package className="h-4 w-4" />
+                    <span className={activeModalTab === "app" ? "" : "hidden sm:inline"}>
+                      App
+                    </span>
+                    {(selectedVM.app_watches || []).some(
+                      (a) => a.update_available && !a.managed_oci_app_id,
+                    ) && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ml-0.5" title="Update available" />
+                    )}
+                  </button>
+                )}
+                {/* Updates tab — LXC only, always visible so users can
+                    trigger a check-now anytime; empty state renders
+                    inside. Mobile UX collapses inactive tabs to
+                    icon-only so the row doesn't overflow. */}
+                {selectedVM?.type === "lxc" && (
+                  <button
+                    onClick={() => setActiveModalTab("updates")}
+                    className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
+                      activeModalTab === "updates"
+                        ? "border-purple-500 text-purple-500"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    <span className={activeModalTab === "updates" ? "" : "hidden sm:inline"}>
+                      {t("vmLxc.tabs.updates")}
+                    </span>
+                    {typeof selectedVM.update_check?.count === "number" && selectedVM.update_check.count > 0 && (
+                      <Badge variant="secondary" className="text-xs h-5 ml-0.5 sm:ml-1">
+                        {selectedVM.update_check.count}
+                      </Badge>
+                    )}
+                  </button>
+                )}
                 {/* Sprint 13.29: Mount Points tab — LXC only, and only
-                    when at least one mp / ad-hoc remote mount exists.
-                    A CT without mounts gets no empty tab. */}
+                    when at least one mp / ad-hoc remote mount exists. */}
                 {selectedVM?.type === "lxc" && (mountPoints.length > 0 || adHocMounts.length > 0) && (
                   <button
                     onClick={() => setActiveModalTab("mounts")}
@@ -1891,36 +2479,6 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     <Badge variant="secondary" className="text-xs h-5 ml-0.5 sm:ml-1">{vmBackups.length}</Badge>
                   )}
                 </button>
-                {/* Updates tab — re-added as a first-class nav entry now
-                    that the mobile UX collapses inactive tabs to
-                    icon-only (so the row no longer overflows on narrow
-                    viewports the way it did before v1.2.1.3). LXC only,
-                    rendered only when the managed-installs registry has
-                    flagged pending updates for this CT, so a CT with
-                    nothing pending doesn't get an empty tab. The violet
-                    badge in the header stays as a complementary entry
-                    point — both routes lead to the same `updates` panel
-                    below. */}
-                {selectedVM?.type === "lxc" && selectedVM?.update_check?.available && (
-                  <button
-                    onClick={() => setActiveModalTab("updates")}
-                    className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
-                      activeModalTab === "updates"
-                        ? "border-purple-500 text-purple-500"
-                        : "border-transparent text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    <span className={activeModalTab === "updates" ? "" : "hidden sm:inline"}>
-                      {t("vmLxc.tabs.updates")}
-                    </span>
-                    {typeof selectedVM.update_check?.count === "number" && selectedVM.update_check.count > 0 && (
-                      <Badge variant="secondary" className="text-xs h-5 ml-0.5 sm:ml-1">
-                        {selectedVM.update_check.count}
-                      </Badge>
-                    )}
-                  </button>
-                )}
                 {/* Firewall tab — issue #14554 from the helper-scripts
                     discussions ("view individual VM/CT firewall logs").
                     Always rendered for VMs and CTs; if the guest doesn't
@@ -2847,115 +3405,1019 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 </div>
                 )}
 
-                {/* Updates Tab — LXC only, conditionally rendered.
-                    Lives in its own tab so the per-package list (up to
-                    30 rows) doesn't blow up the Status tab on mobile.
-                    Violet matches the shared "managed updates" theme. */}
-                {activeModalTab === "updates" &&
-                  selectedVM?.type === "lxc" &&
-                  selectedVM?.update_check?.available && (
-                    <div className="space-y-4" key={`updates-${selectedVM.vmid}`}>
-                      <Card className="border border-border bg-card/50">
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                            <div className="flex items-center gap-2">
-                              <div className="p-1.5 rounded-md bg-violet-500/10">
-                                <Package className="h-4 w-4 text-violet-400" />
-                              </div>
-                              <h3 className="text-sm font-semibold text-foreground">
-                                {t("vmLxc.updatesPanel.pendingTitle")}
-                              </h3>
-                            </div>
-                            <Badge
-                              variant="outline"
-                              className="text-xs bg-violet-500/10 text-violet-400 border-violet-500/30"
-                            >
-                              {t("vmLxc.updatesPanel.total", { count: selectedVM.update_check.count })}
-                            </Badge>
-                          </div>
-                          <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
-                            {t("vmLxc.updatesPanel.lastChecked")}{" "}
-                            {selectedVM.update_check.last_check
-                              ? new Date(selectedVM.update_check.last_check).toLocaleString()
-                              : "—"}
-                            {" · "}{t("vmLxc.updatesPanel.applyWith")}{" "}
-                            <code className="text-foreground/80">pct enter {selectedVM.vmid}</code>
-                            {" → "}
-                            <code className="text-foreground/80">apt update &amp;&amp; apt upgrade</code>
-                          </div>
-                          {/* Two render modes:
-                              • Full list when every pending package fits
-                                (registry cap is 30 packages per CT — so
-                                CTs with ≤30 updates show every row).
-                              • Summary when the CT has more pending than
-                                the registry stored. Showing 30 random
-                                rows out of 139 misleads the user — a
-                                count + security count + "inspect inside"
-                                hint is honester. */}
-                          {(() => {
-                            const stored = selectedVM.update_check.packages?.length || 0
-                            const total = selectedVM.update_check.count || 0
-                            const sec = selectedVM.update_check.security_count || 0
-                            const truncated = total > stored
-                            if (!truncated && stored > 0) {
-                              return (
-                                <div className="border-t border-border divide-y divide-border/50">
-                                  {selectedVM.update_check.packages.map((p) => (
-                                    <div
-                                      key={p.name}
-                                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2 py-2 text-sm"
-                                    >
-                                      <span className="font-mono text-foreground/90 flex items-center gap-2 min-w-0">
-                                        {p.security && (
-                                          <Shield
-                                            className="h-4 w-4 text-green-500 flex-shrink-0"
-                                            aria-label={t("vmLxc.updatesPanel.securityUpdate")}
-                                          />
-                                        )}
-                                        <span className="truncate">{p.name}</span>
-                                      </span>
-                                      <span className="flex items-center gap-1.5 text-muted-foreground flex-shrink-0 font-mono text-xs sm:text-sm">
-                                        <span>{p.current || "—"}</span>
-                                        <span>→</span>
-                                        <span className="text-foreground">{p.latest}</span>
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )
+                {/* Updates Tab — LXC only. Three render branches:
+                     (1) OCI-image CT      → immutable-image info panel
+                     (2) OS packages       → pending list + Apply
+                     (3) Helper-scripts app → Apply /usr/bin/update
+                    Options row (backup + restart + storage) sits at the
+                    bottom and gates both Apply buttons. */}
+                {/* App Tab — user-registered application watch. Its own
+                    self-contained component so this file stays sane;
+                    calls the parent's mutate() on save/delete so the
+                    header badge + Updates tab pick up the new state. */}
+                {activeModalTab === "app" && selectedVM?.type === "lxc" && (() => {
+                  const managedEntry = (selectedVM.app_watches || []).find(
+                    (a) => a.managed_oci_app_id,
+                  )
+                  // Prefer vmDetails.lxc_ip_info (loaded per-modal, always
+                  // up to date) over the bulk-fetched vmConfigs which may
+                  // still be pending on first open. Fallback chain
+                  // guarantees the panel gets an IP whenever the modal
+                  // itself can display one in the header.
+                  const ctIp =
+                    (vmDetails as any)?.lxc_ip_info?.primary_ip ||
+                    (vmDetails as any)?.lxc_ip_info?.real_ips?.[0] ||
+                    vmConfigs[selectedVM.vmid] ||
+                    null
+                  return (
+                    <LxcAppPanel
+                      vmid={selectedVM.vmid}
+                      ctIp={ctIp}
+                      onChange={() => mutate()}
+                      managed={
+                        managedEntry
+                          ? {
+                              managed_oci_app_id: managedEntry.managed_oci_app_id!,
+                              name: managedEntry.name || "Managed app",
+                              installed_version: managedEntry.installed_version,
+                              latest_version: managedEntry.latest_version,
+                              update_available: managedEntry.update_available,
+                              checked_at: managedEntry.checked_at,
+                              error: managedEntry.error,
                             }
-                            // Truncated OR no per-package detail — render a summary.
-                            return (
-                              <div className="border-t border-border pt-3 space-y-2 text-sm">
-                                <div className="flex items-center gap-2">
-                                  <Package className="h-4 w-4 text-violet-400 flex-shrink-0" />
-                                  <span>
-                                    {t(total === 1 ? "vmLxc.updatesPanel.packagePending" : "vmLxc.updatesPanel.packagesPending", { count: total })}
+                          : null
+                      }
+                    />
+                  )
+                })()}
+
+                {activeModalTab === "updates" && selectedVM?.type === "lxc" && (
+                  <div className="space-y-4" key={`updates-${selectedVM.vmid}`}>
+                    {/* Branch 0 — ProxMenux-managed OCI app (Secure Gateway).
+                        Same state + Update button as the App tab so
+                        the two panels never disagree, and either
+                        origin (this tab / the App tab / Security →
+                        Secure Gateway) triggers the same underlying
+                        oci_manager action. */}
+                    {/* Managed OCI-app updates — matches the Security →
+                        Secure Gateway panel exactly (same layout, same
+                        translucent purple button, same version
+                        strings). Update triggered from either place
+                        calls /api/oci/installed/<app_id>/update. Uses
+                        `latest_version` (anchored to Tailscale by
+                        oci_manager) so the button text agrees with
+                        Security instead of drifting to alpine-base or
+                        any other package that happens to be first
+                        alphabetically. */}
+                    {selectedVM.update_check?.managed_oci_app && (() => {
+                      const aw = (selectedVM.app_watches || []).find(
+                        (a) => a.managed_oci_app_id,
+                      )
+                      const appId = selectedVM.update_check.managed_oci_app
+                      const hasUpdate = aw?.update_available === true
+                      const upToDate = aw?.update_available === false && !!aw?.installed_version
+                      const pkgCount = aw?.packages?.length || 0
+                      const others = pkgCount > 1 ? pkgCount - 1 : 0
+                      const lastChecked = aw?.checked_at
+                        ? new Date(aw.checked_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                        : "—"
+                      return (
+                        <Card className="border border-border bg-card/50">
+                          <CardContent className="p-4 space-y-3">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2">
+                                <div className="p-1.5 rounded-md bg-emerald-500/10">
+                                  <Shield className="h-4 w-4 text-emerald-400" />
+                                </div>
+                                <h3 className="text-sm font-semibold text-foreground">
+                                  {aw?.name || "Managed app"}
+                                </h3>
+                              </div>
+                              <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                                managed
+                              </Badge>
+                            </div>
+                            {hasUpdate ? (
+                              <>
+                                <div className="text-xs text-muted-foreground">
+                                  Last checked: {lastChecked} ·{" "}
+                                  <span className="text-purple-400 font-medium">
+                                    Tailscale v{aw?.latest_version} available
                                   </span>
                                 </div>
-                                {sec > 0 && (
-                                  <div className="flex items-center gap-2">
-                                    <Shield className="h-4 w-4 text-green-500 flex-shrink-0" />
-                                    <span>
-                                      {t(sec === 1 ? "vmLxc.updatesPanel.securityUpdatePending" : "vmLxc.updatesPanel.securityUpdatesPending", { count: sec })}
-                                    </span>
+                                <div>
+                                  <Button
+                                    size="sm"
+                                    onClick={async () => {
+                                      try {
+                                        await fetchApi(`/api/oci/installed/${appId}/update`, { method: "POST" })
+                                        mutate()
+                                      } catch { /* opening the App tab surfaces the error */ }
+                                    }}
+                                    className="bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 hover:text-purple-200"
+                                  >
+                                    <ArrowUpCircle className="h-4 w-4 mr-1.5" />
+                                    Update to v{aw?.latest_version}
+                                  </Button>
+                                </div>
+                                {others > 0 && (
+                                  <div className="text-[11px] text-muted-foreground">
+                                    +{others} other package{others === 1 ? "" : "s"} pending in the container
                                   </div>
                                 )}
-                                <div className="text-xs text-muted-foreground pt-1 leading-relaxed">
-                                  {t("vmLxc.updatesPanel.fullListInside")}{" "}
-                                  <code className="text-foreground/80">
-                                    pct enter {selectedVM.vmid}
-                                  </code>{" "}
-                                  →{" "}
-                                  <code className="text-foreground/80">apt list --upgradable</code>
-                                </div>
+                              </>
+                            ) : upToDate ? (
+                              <div className="text-xs text-muted-foreground">
+                                Last checked: {lastChecked}
+                                {aw?.installed_version && <> · Tailscale v{aw.installed_version}</>}
+                                {" · "}<span className="text-emerald-400/90">{t("vmLxc.updates.noUpdatesAvailableChip")}</span>
                               </div>
-                            )
-                          })()}
+                            ) : (
+                              <div className="text-xs text-muted-foreground">
+                                No update information yet — check from Security → Secure Gateway.
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )
+                    })()}
+
+                    {/* Branch 1 — OCI-image container */}
+                    {!selectedVM.update_check?.managed_oci_app &&
+                      selectedVM.update_check?.is_oci_lxc && (
+                      <Card className="border border-border bg-card/50">
+                        <CardContent className="p-4 space-y-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="p-1.5 rounded-md bg-blue-500/10">
+                              <Container className="h-4 w-4 text-blue-400" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-foreground">
+                              OCI image container
+                            </h3>
+                          </div>
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            This container was created from an OCI (Docker) image.
+                            Update management for OCI containers is coming with
+                            the upcoming OCI install feature — updates will
+                            rebuild the container from a newer image tag rather
+                            than patching packages inside.
+                          </p>
                         </CardContent>
                       </Card>
-                    </div>
-                  )}
+                    )}
+
+                    {/* Unified Updates card + Options card. When the CT
+                        is a regular (non-OCI, non-managed-OCI) LXC, ALL
+                        update paths live inside a single card so section
+                        styling and the button footer stay uniform. The
+                        Options card below carries manual toggles
+                        (backup, restart) + a placeholder for the
+                        upcoming scheduled-updates (cron) feature.
+
+                        Button state → color:
+                          • Purple  = updates pending  (Apply X, arrow icon)
+                          • Green   = up to date       (X, no icon, no "Apply")
+                        Combined button surfaces only when exactly ONE
+                        app method (helper /usr/bin/update OR a single
+                        registered app with `update_command`) is present.
+                        With zero the button makes no sense; with N > 1
+                        we can't know which app to invoke, so the user
+                        picks individually via section-level buttons. */}
+                    {!selectedVM.update_check?.managed_oci_app &&
+                      !selectedVM.update_check?.is_oci_lxc && (() => {
+                        const uc = selectedVM.update_check
+                        const hasOsUpdates = !!uc?.available
+                        const helperExists = !!uc?.app_updater_present
+                        const helperName = uc?.helper_app_name || null
+                        const helperKnownNotUpdateable = !helperExists && !!uc?.helper_slug && !!uc?.helper_updateable_known
+                        const helperUnlisted = !helperExists && !!uc?.helper_slug && !uc?.helper_updateable_known
+                        const trackedApps = (selectedVM.app_watches || []).filter(
+                          (a) => !a.managed_oci_app_id && !!a.installed_via,
+                        )
+                        const customCmdApps = trackedApps.filter(
+                          (a) => !!(a.update_command && a.update_command.trim()),
+                        )
+                        // Apps eligible for a section in the unified
+                        // card. Rules:
+                        //  • Any app with a `update_command` gets its
+                        //    own section (always).
+                        //  • Any other app gets its own section UNLESS:
+                        //    - it is the specific app the CT-wide
+                        //      helper section is already covering
+                        //      (matched by helper_slug), OR
+                        //    - its install method is dpkg/apk — those
+                        //      packages are already updated as part
+                        //      of the OS section's `apt/apk upgrade`
+                        //      run, so a dedicated "no method" notice
+                        //      is misleading (Redis, PostgreSQL, etc).
+                        //      The App-tab purple ⬆ still surfaces the
+                        //      version delta; user just clicks Apply
+                        //      OS update to pick it up.
+                        const appSections = trackedApps.filter((a) => {
+                          const hasCmd = !!(a.update_command && a.update_command.trim())
+                          if (hasCmd) return true
+                          const isHelperOwnedApp = helperExists && !!a.helper_slug && a.helper_slug === uc?.helper_slug
+                          if (isHelperOwnedApp) return false
+                          if (a.installed_via === "dpkg" || a.installed_via === "apk") return false
+                          return true
+                        })
+                        const anyAppPending =
+                          (helperExists && trackedApps.some((a) => a.update_available === true))
+                          || customCmdApps.some((a) => a.update_available === true)
+                        const singleAppMethod = (helperExists ? 1 : 0) + customCmdApps.length === 1
+                        const combinedApp: { name: string; cmd: string; isHelper: boolean } | null = helperExists
+                          ? { name: helperName || "application", cmd: "", isHelper: true }
+                          : customCmdApps.length === 1
+                            ? { name: customCmdApps[0].name || "application", cmd: customCmdApps[0].update_command!, isHelper: false }
+                            : null
+                        const pendingBtnCls = "bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 hover:text-purple-200"
+                        const upToDateBtnCls = "bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 text-green-400 hover:text-green-300"
+                        return (
+                          <>
+                            <Card className="border border-border bg-card/50">
+                              <CardContent className="p-4 divide-y divide-border/50">
+                                {/* OS section */}
+                                <div className="pb-4">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <Package className="h-4 w-4 text-muted-foreground" />
+                                    <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.updates.osPackagesTitle")}</h3>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                                    {t("vmLxc.updates.lastCheckedPrefix")}{" "}
+                                    {uc?.last_check ? new Date(uc.last_check).toLocaleString() : "—"}
+                                    {uc?.os_family && (
+                                      <> · {t("vmLxc.updates.familyLabel")} <code className="text-foreground/80">{uc.os_family}</code></>
+                                    )}
+                                  </div>
+                                  {hasOsUpdates ? (() => {
+                                    const stored = uc!.packages?.length || 0
+                                    const total = uc!.count || 0
+                                    const sec = uc!.security_count || 0
+                                    const truncated = total > stored
+                                    if (!truncated && stored > 0) {
+                                      return (
+                                        <div className="divide-y divide-border/50">
+                                          {uc!.packages.map((p) => (
+                                            <div key={p.name} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2 py-2 text-sm">
+                                              <span className="font-mono text-foreground/90 flex items-center gap-2 min-w-0">
+                                                {p.security && (
+                                                  <Shield className="h-4 w-4 text-green-500 flex-shrink-0" aria-label={t("vmLxc.updates.securityUpdateAria")} />
+                                                )}
+                                                <span className="truncate">{p.name}</span>
+                                              </span>
+                                              <span className="flex items-center gap-1.5 text-muted-foreground flex-shrink-0 font-mono text-xs sm:text-sm">
+                                                <span>{p.current || "—"}</span>
+                                                <span>→</span>
+                                                <span className="text-foreground">{p.latest}</span>
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )
+                                    }
+                                    return (
+                                      <div className="space-y-2 text-sm">
+                                        <div className="flex items-center gap-2">
+                                          <Package className="h-4 w-4 text-purple-300 flex-shrink-0" />
+                                          <span><span className="font-semibold">{total}</span> {t(total === 1 ? "vmLxc.updates.packagePendingLabel" : "vmLxc.updates.packagesPendingLabel")}</span>
+                                        </div>
+                                        {sec > 0 && (
+                                          <div className="flex items-center gap-2">
+                                            <Shield className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                            <span><span className="font-semibold">{sec}</span> {t(sec === 1 ? "vmLxc.updates.securityUpdateLabel" : "vmLxc.updates.securityUpdatesLabel")}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )
+                                  })() : (
+                                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                      <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                      {t("vmLxc.updates.noOsUpdatesPending")}
+                                    </div>
+                                  )}
+                                  <div className="mt-3 flex justify-end">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => openApplyTerminal(selectedVM.vmid, "os")}
+                                      className={hasOsUpdates ? pendingBtnCls : upToDateBtnCls}
+                                    >
+                                      {hasOsUpdates && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
+                                      {hasOsUpdates ? t("vmLxc.updates.applyOsUpdate") : t("vmLxc.updates.osUpToDate")}
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                {/* Helper-scripts section — reuses the
+                                    same header + body pattern as the
+                                    custom-command app sections below so
+                                    the two look homogeneous. Gated on
+                                    the presence of a REGISTERED App
+                                    Watch entry with matching helper_slug
+                                    — we don't surface helper info for
+                                    apps the user hasn't explicitly
+                                    opted into. This keeps Updates tab
+                                    honest: an unregistered auto-detected
+                                    app has zero action here. When the
+                                    matching entry exists, we render
+                                    installed/upstream versions and the
+                                    Apply button. Non-updateable and
+                                    unlisted variants are also gated on
+                                    registration so they don't nag about
+                                    apps the user chose not to manage. */}
+                                {(helperExists || helperKnownNotUpdateable || helperUnlisted) && (() => {
+                                  const matchApp = trackedApps.find(
+                                    (a) => a.helper_slug === uc?.helper_slug && !a.update_command
+                                  ) || null
+                                  if (!matchApp) return null
+                                  const hasUpd = helperExists && matchApp.update_available === true
+                                  const upToD = helperExists && matchApp.update_available === false && !!matchApp.installed_version
+                                  return (
+                                    <div className="py-4">
+                                      <div className="flex items-center gap-2 mb-3 min-w-0">
+                                        <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                        <h3 className="text-sm font-semibold text-foreground truncate">
+                                          {helperName || t("vmLxc.updates.applicationDefaultName")}
+                                        </h3>
+                                      </div>
+                                      {matchApp?.checked_at && (
+                                        <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                                          {t("vmLxc.updates.lastCheckedPrefix")} {new Date(matchApp.checked_at).toLocaleString()}
+                                        </div>
+                                      )}
+                                      {/* Educational note — apps installed via
+                                          Proxmox community-scripts (helper
+                                          scripts) update through the built-in
+                                          `/usr/bin/update` script that each
+                                          helper drops on install. Surface the
+                                          origin so the user knows why the
+                                          Apply button here doesn't invoke
+                                          apt/apk/custom_command flows. Only in
+                                          the Updates tab — the App tab is
+                                          about registration, not update
+                                          plumbing. */}
+                                      {helperExists && (
+                                        <div className="mb-3 flex items-start gap-2.5">
+                                          <img
+                                            src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp"
+                                            alt=""
+                                            className="h-7 w-7 rounded-sm object-contain flex-shrink-0"
+                                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
+                                          />
+                                          <span className="text-xs text-muted-foreground leading-relaxed">
+                                            {t("vmLxc.updates.installedByHelperPrefix")} <span className="text-foreground/80">{t("vmLxc.updates.helperScriptsName")}</span>
+                                            {" "}{t("vmLxc.updates.helperUpdatesRun")}
+                                          </span>
+                                        </div>
+                                      )}
+                                      {hasUpd ? (
+                                        <div className="space-y-2 text-sm">
+                                          <div className="flex items-center gap-2">
+                                            <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                            <span>{t("vmLxc.updates.installedLabel")} <code className="text-foreground/80">{matchApp!.installed_version}</code></span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <ArrowUpCircle className="h-4 w-4 text-purple-400 flex-shrink-0" />
+                                            <span>upstream <code className="text-purple-300">{matchApp!.latest_version}</code> available</span>
+                                          </div>
+                                        </div>
+                                      ) : upToD ? (
+                                        <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                          <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                          <span>{t("vmLxc.updates.upToDateAtLabel")} <code className="text-foreground/80">{matchApp!.installed_version}</code></span>
+                                        </div>
+                                      ) : helperExists ? (
+                                        <p className="text-xs text-muted-foreground leading-relaxed">
+                                          {t("vmLxc.updates.versionTrackingPending")}
+                                        </p>
+                                      ) : null}
+                                      {helperExists && (() => {
+                                        // Button state uses the matched
+                                        // App Watch entry when present.
+                                        // Without it we DON'T know the
+                                        // version delta — showing "Up to
+                                        // date" would be a false claim,
+                                        // and "Apply update" implies a
+                                        // pending upgrade we can't
+                                        // confirm. Fall back to a neutral
+                                        // "Run updater" so the user can
+                                        // still force the helper's own
+                                        // update script.
+                                        const noState = !hasUpd && !upToD
+                                        const neutralBtnCls = "bg-muted/40 hover:bg-muted/60 border border-border text-foreground/80 hover:text-foreground"
+                                        const cls = hasUpd ? pendingBtnCls : upToD ? upToDateBtnCls : neutralBtnCls
+                                        const label = hasUpd ? t("vmLxc.updates.applyUpdate") : upToD ? t("vmLxc.updates.upToDate") : t("vmLxc.updates.runUpdater")
+                                        return (
+                                          <div className="mt-3 flex justify-end">
+                                            <Button size="sm" onClick={() => openApplyTerminal(selectedVM.vmid, "app")} className={cls}>
+                                              {hasUpd && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
+                                              {noState && <RefreshCw className="h-4 w-4 mr-1.5" />}
+                                              {label}
+                                            </Button>
+                                          </div>
+                                        )
+                                      })()}
+                                      {!helperExists && (
+                                        helperKnownNotUpdateable ? (
+                                          <p className="text-xs text-amber-400/90 leading-relaxed">
+                                            The community-scripts registry marks this app as not updateable
+                                            in place. Apply updates manually or reinstall with a newer
+                                            helper-script.
+                                          </p>
+                                        ) : (
+                                          <p className="text-xs text-muted-foreground leading-relaxed">
+                                            Detected a helper-scripts updater
+                                            (<code className="text-foreground/80">{uc?.helper_slug}</code>)
+                                            but it isn't listed in the ProxMenux helpers catalogue.
+                                            Applying manually is safest.
+                                          </p>
+                                        )
+                                      )}
+                                    </div>
+                                  )
+                                })()}
+
+                                {/* Registered-app sections — one per app
+                                    that either has a custom_command wired
+                                    up (Case 3b) or has no update method at
+                                    all when the CT lacks a helper updater
+                                    (Case 3a). Same header pattern; the
+                                    body swaps between an info line + Edit
+                                    link, a "no method + Add" prompt, or an
+                                    inline editor form when adding /
+                                    editing. */}
+                                {appSections.map((aw) => {
+                                  const hasCmd = !!(aw.update_command && aw.update_command.trim())
+                                  const editing = customCmdEditingApp === aw.id
+                                  const hasUpdate = aw.update_available === true
+                                  const upToDate = aw.update_available === false && !!aw.installed_version
+                                  return (
+                                    <div key={`app-${aw.id}`} className={editing ? "py-4 -mx-4 px-4 bg-card" : "py-4"}>
+                                      <div className="flex items-center gap-2 mb-3 min-w-0">
+                                        <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                        <h3 className="text-sm font-semibold text-foreground truncate">
+                                          {aw.name}
+                                        </h3>
+                                      </div>
+                                      {aw.checked_at && !editing && (
+                                        <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                                          {t("vmLxc.updates.lastCheckedPrefix")} {new Date(aw.checked_at).toLocaleString()}
+                                        </div>
+                                      )}
+                                      {editing ? (
+                                        <div className="space-y-3">
+                                          <div>
+                                            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                                              {t("vmLxc.updates.customCommandLabel")}
+                                            </Label>
+                                            <Textarea
+                                              value={customCmdDraft}
+                                              onChange={(e) => setCustomCmdDraft(e.target.value)}
+                                              placeholder={t("vmLxc.updates.customCommandPlaceholder")}
+                                              className="font-mono text-xs mt-2 min-h-[100px]"
+                                              maxLength={4096}
+                                            />
+                                          </div>
+                                          <div className="flex items-center justify-between gap-2">
+                                            <div>
+                                              {hasCmd && (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => removeCustomCommand(selectedVM.vmid, aw)}
+                                                  disabled={customCmdSaving}
+                                                  className="h-8 px-3 text-xs rounded-md border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
+                                                >
+                                                  <Trash2 className="h-3.5 w-3.5" />
+                                                  {t("vmLxc.updates.removeButton")}
+                                                </button>
+                                              )}
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <button
+                                                type="button"
+                                                onClick={closeCustomCmdEditor}
+                                                disabled={customCmdSaving}
+                                                className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
+                                              >
+                                                {t("vmLxc.updates.cancelButton")}
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => saveCustomCommand(selectedVM.vmid, aw)}
+                                                disabled={customCmdSaving || !customCmdDraft.trim() || customCmdDraft.trim() === (aw.update_command || "").trim()}
+                                                className="h-8 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+                                              >
+                                                {customCmdSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                                                {t("vmLxc.updates.saveButton")}
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ) : hasCmd ? (
+                                        <>
+                                          {hasUpdate ? (
+                                            <div className="space-y-2 text-sm">
+                                              <div className="flex items-center gap-2">
+                                                <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                                <span>{t("vmLxc.updates.installedLabel")} <code className="text-foreground/80">{aw.installed_version}</code></span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <ArrowUpCircle className="h-4 w-4 text-purple-400 flex-shrink-0" />
+                                                <span>upstream <code className="text-purple-300">{aw.latest_version}</code> available</span>
+                                              </div>
+                                            </div>
+                                          ) : upToDate ? (
+                                            <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                              <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                              <span>{t("vmLxc.updates.upToDateAtLabel")} <code className="text-foreground/80">{aw.installed_version}</code></span>
+                                            </div>
+                                          ) : (
+                                            <div className="text-sm text-muted-foreground">
+                                              {t("vmLxc.updates.versionTrackingPendingShort")}
+                                            </div>
+                                          )}
+                                          {/* Buttons stacked bottom-right:
+                                              primary Apply on top, secondary
+                                              Edit below. Keeps Apply position
+                                              consistent with the helper and
+                                              OS sections (also right-aligned
+                                              inline buttons) and never wraps
+                                              awkwardly with the info block. */}
+                                          <div className="mt-3 flex flex-col items-end gap-2">
+                                            <Button
+                                              size="sm"
+                                              onClick={() => openApplyTerminal(
+                                                selectedVM.vmid,
+                                                "app",
+                                                { updateCommand: aw.update_command!, appName: aw.name || "" },
+                                              )}
+                                              className={hasUpdate ? pendingBtnCls : upToDateBtnCls}
+                                            >
+                                              {hasUpdate && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
+                                              {hasUpdate ? t("vmLxc.updates.applyUpdate") : t("vmLxc.updates.upToDate")}
+                                            </Button>
+                                            <button
+                                              type="button"
+                                              onClick={() => openCustomCmdEditor(aw)}
+                                              className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5"
+                                            >
+                                              <Pencil className="h-3.5 w-3.5" />
+                                              {t("vmLxc.updates.editCommandButton")}
+                                            </button>
+                                          </div>
+                                        </>
+                                      ) : (
+                                        <div className="flex items-center justify-between flex-wrap gap-2">
+                                          <p className="text-xs text-muted-foreground leading-relaxed min-w-0">
+                                            {t("vmLxc.updates.noMethodBody")}
+                                          </p>
+                                          <button
+                                            type="button"
+                                            onClick={() => openCustomCmdEditor(aw)}
+                                            className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 flex-shrink-0"
+                                          >
+                                            <Plus className="h-3.5 w-3.5" />
+                                            {t("vmLxc.updates.wireUpCommandButton")}
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
+                                })}
+
+                                {/* Footer actions — up to 3 buttons: OS,
+                                    Combined only. Individual Apply buttons
+                                    live inside each section above (Option
+                                    A pattern): OS section owns its OS
+                                    button, each app section owns its own
+                                    Apply. Footer's sole role is the "run
+                                    everything in one shot" convenience:
+                                      • Single method  → "OS + {name}"
+                                      • Multi custom-only → "OS + Apps"
+                                        (concatenate customs via `;`, run
+                                        as one sh -c invocation)
+                                      • Mixed helper + custom → hidden
+                                        for now (needs backend chain, M5).
+                                    Purple when any part pending; green
+                                    when everything up to date. */}
+                                {(() => {
+                                  const hasAnyAppMethod = helperExists || customCmdApps.length > 0
+                                  if (!hasAnyAppMethod) return null
+                                  // Single method — reuse the existing
+                                  // TARGET=both path so the script picks
+                                  // the right updater. Helper case has
+                                  // NO UPDATE_COMMAND (script falls
+                                  // through to /usr/bin/update); custom
+                                  // case passes its command directly.
+                                  if (singleAppMethod && combinedApp) {
+                                    return (
+                                      <div className="pt-4 flex justify-end">
+                                        <Button
+                                          size="sm"
+                                          onClick={() => openApplyTerminal(
+                                            selectedVM.vmid,
+                                            "both",
+                                            combinedApp.isHelper ? undefined : { updateCommand: combinedApp.cmd, appName: combinedApp.name },
+                                          )}
+                                          className={(hasOsUpdates || anyAppPending) ? pendingBtnCls : upToDateBtnCls}
+                                        >
+                                          {(hasOsUpdates || anyAppPending) && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
+                                          {(hasOsUpdates || anyAppPending) ? t("vmLxc.updates.applyOsAppsFooter", { appName: combinedApp.name }) : t("vmLxc.updates.osAppsFooter", { appName: combinedApp.name })}
+                                        </Button>
+                                      </div>
+                                    )
+                                  }
+                                  // Multi-app case — build a single
+                                  // UPDATE_COMMAND that chains every app
+                                  // method with `;`. Helper (if present)
+                                  // goes first as its full invocation
+                                  // (PHS_SILENT=1 bash /usr/bin/update),
+                                  // then each custom_command. Runs as
+                                  // one `pct exec sh -c` — no backend
+                                  // script change needed.
+                                  const parts: string[] = []
+                                  if (helperExists) {
+                                    parts.push("PHS_SILENT=1 bash /usr/bin/update")
+                                  }
+                                  for (const a of customCmdApps) {
+                                    parts.push(a.update_command!.trim())
+                                  }
+                                  const chained = parts.join("; ")
+                                  return (
+                                    <div className="pt-4 flex justify-end">
+                                      <Button
+                                        size="sm"
+                                        onClick={() => openApplyTerminal(
+                                          selectedVM.vmid,
+                                          "both",
+                                          { updateCommand: chained, appName: "Apps" },
+                                        )}
+                                        className={(hasOsUpdates || anyAppPending) ? pendingBtnCls : upToDateBtnCls}
+                                      >
+                                        {(hasOsUpdates || anyAppPending) && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
+                                        {(hasOsUpdates || anyAppPending) ? t("vmLxc.updates.applyOsAppsFooterPlural") : t("vmLxc.updates.osAppsFooterPlural")}
+                                      </Button>
+                                    </div>
+                                  )
+                                })()}
+                              </CardContent>
+                            </Card>
+
+                            {/* Options card — unified apply preferences
+                                + scheduled updates. Backup/restart live
+                                in ONE place and drive both manual clicks
+                                and scheduled cron runs (no duplicated
+                                config).
+                                View mode: read-only summary + Edit btn.
+                                Edit mode: card opaque `bg-card` + inputs
+                                sunken (project-wide card-contrast rule
+                                per feedback_card_contrast_edit_mode.md).
+                                Scheduled section shows one of four
+                                states: not scheduled, external-only
+                                (community-scripts host cron), ProxMenux
+                                only, or both (external + ProxMenux). */}
+                            <Card className={optionsEditMode ? "border border-border bg-card" : "border border-border bg-card/50"}>
+                              <CardContent className="p-4 space-y-4">
+                                <h3 className="text-sm font-semibold text-foreground">
+                                  {t("vmLxc.options.title")}
+                                </h3>
+
+                                {/* Two-mode rendering — VIEW mode is a
+                                    compact scannable summary (green ✓
+                                    for enabled, hollow ○ for disabled +
+                                    a plain-English label). EDIT mode
+                                    shows the actual checkboxes and
+                                    inputs so the user can change values.
+                                    Users saw both variants and preferred
+                                    the icon+text view: it reads faster,
+                                    doesn't look like "broken" disabled
+                                    checkboxes, and clearly differentiates
+                                    "reading current state" from "editing
+                                    the form". */}
+                                {!optionsEditMode ? (
+                                  <div className="text-sm space-y-2">
+                                    <div className="flex items-center gap-2">
+                                      {applyBackup ? (
+                                        <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                      ) : (
+                                        <div className="h-4 w-4 rounded-full border border-muted-foreground/40 flex-shrink-0" />
+                                      )}
+                                      <span>
+                                        {applyBackup
+                                          ? <>{t("vmLxc.options.snapshotBefore")} <span className="text-muted-foreground">— on <code className="text-foreground/80">{applyBackupStorage || selectedBackupStorage || t("vmLxc.options.storageAuto")}</code></span></>
+                                          : <span className="text-muted-foreground">{t("vmLxc.options.noSnapshot")}</span>}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {applyRestart ? (
+                                        <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                      ) : (
+                                        <div className="h-4 w-4 rounded-full border border-muted-foreground/40 flex-shrink-0" />
+                                      )}
+                                      <span>
+                                        {applyRestart
+                                          ? t("vmLxc.options.restartAfter")
+                                          : <span className="text-muted-foreground">{t("vmLxc.options.noRestart")}</span>}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-3">
+                                    <div className="flex items-start gap-2 text-sm">
+                                      <Checkbox
+                                        id="apply-backup"
+                                        checked={applyBackup}
+                                        onCheckedChange={(v) => setApplyBackup(Boolean(v))}
+                                        className="mt-0.5"
+                                      />
+                                      <Label htmlFor="apply-backup" className="leading-tight cursor-pointer">
+                                        <span>{t("vmLxc.options.snapshotLabel")}</span>
+                                        <div className="text-xs text-muted-foreground mt-0.5">
+                                          {t("vmLxc.options.appliesToBoth")}
+                                        </div>
+                                      </Label>
+                                    </div>
+                                    {applyBackup && backupStorages.length > 0 && (
+                                      <div className="pl-6">
+                                        <Label className="text-xs text-muted-foreground">{t("vmLxc.options.backupStorage")}</Label>
+                                        <Select
+                                          value={applyBackupStorage || selectedBackupStorage}
+                                          onValueChange={setApplyBackupStorage}
+                                        >
+                                          <SelectTrigger className="h-8 text-sm mt-1 max-w-xs">
+                                            <SelectValue placeholder={t("vmLxc.options.pickStorage")} />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {backupStorages.map((s) => (
+                                              <SelectItem key={s.storage} value={s.storage}>
+                                                {s.storage}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    )}
+                                    <div className="flex items-start gap-2 text-sm">
+                                      <Checkbox
+                                        id="apply-restart"
+                                        checked={applyRestart}
+                                        onCheckedChange={(v) => setApplyRestart(Boolean(v))}
+                                        className="mt-0.5"
+                                      />
+                                      <Label htmlFor="apply-restart" className="leading-tight cursor-pointer">
+                                        <span>{t("vmLxc.options.restartAfter")}</span>
+                                        <div className="text-xs text-muted-foreground mt-0.5">
+                                          {t("vmLxc.options.appliesToBoth")}
+                                        </div>
+                                      </Label>
+                                    </div>
+                                  </div>
+                                )}
+
+                                <div className="pt-4 border-t border-border/50 space-y-3">
+                                  {/* Scheduled updates header. Switch
+                                      is visible ANY time a cron config
+                                      exists (view or edit mode) so the
+                                      user always sees whether it's on
+                                      or off; interactive only in edit
+                                      mode. Trash lives next to it in
+                                      edit mode when a cron exists.
+                                      In edit mode with NO cron yet we
+                                      still show the Switch (it flips
+                                      the form open so the user can fill
+                                      in the cron + save). */}
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <div className="text-sm font-medium text-foreground">
+                                        {t("vmLxc.scheduled.title")}
+                                      </div>
+                                      {optionsEditMode && (
+                                        <div className="text-xs text-muted-foreground mt-0.5">
+                                          {scheduleEnabled
+                                            ? t("vmLxc.scheduled.enabledHelper")
+                                            : t("vmLxc.scheduled.disabledHelper")}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <Switch
+                                      checked={scheduleEnabled}
+                                      onCheckedChange={(v) => { if (optionsEditMode) setScheduleEnabled(v) }}
+                                      disabled={!optionsEditMode}
+                                      className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-input border border-border"
+                                    />
+                                  </div>
+
+                                  {/* View mode — compact chip line only.
+                                      NO form fields, NO raw cron string:
+                                      user sees the human label + target +
+                                      last run and stops there. Three
+                                      chip states based on config +
+                                      enabled: active / disabled-but-
+                                      configured / nothing (falls through
+                                      to external chip or "Not scheduled"
+                                      below). */}
+                                  {!optionsEditMode && scheduleConfigured && (
+                                    <div className="text-sm space-y-1.5">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className={"h-2 w-2 rounded-full flex-shrink-0 " + (scheduleEnabled ? "bg-green-500" : "bg-muted-foreground/40")} />
+                                        <span className={scheduleEnabled ? "" : "text-muted-foreground"}>
+                                          <span className="text-foreground/80">{t("vmLxc.scheduled.chipLabel")}</span> — {humanCron(scheduleCron)}
+                                          {!scheduleEnabled && <span className="text-muted-foreground"> {t("vmLxc.scheduled.disabledSuffix")}</span>}
+                                        </span>
+                                      </div>
+                                      <div className="text-xs text-muted-foreground pl-4">
+                                        {t("vmLxc.scheduled.whatLabel")} {scheduleTarget === "os" ? t("vmLxc.scheduled.targetOs") : scheduleTarget === "app" ? t("vmLxc.scheduled.targetApp") : t("vmLxc.scheduled.targetBoth")}
+                                      </div>
+                                      {scheduleLastRunAt && (
+                                        <div className="text-xs text-muted-foreground pl-4">
+                                          {t("vmLxc.scheduled.lastRun", { date: new Date(scheduleLastRunAt).toLocaleString() })}
+                                          {scheduleLastRunStatus && (
+                                            <> · <span className={scheduleLastRunStatus === "success" ? "text-green-400" : "text-red-400"}>
+                                              {scheduleLastRunStatus === "success" ? t("vmLxc.scheduled.runSuccess") : t("vmLxc.scheduled.runFailed")}
+                                            </span></>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                  {!optionsEditMode && !scheduleConfigured && !externalCron && (
+                                    <div className="text-sm flex items-center gap-2 text-muted-foreground">
+                                      <div className="h-4 w-4 rounded-full border border-muted-foreground/40 flex-shrink-0" />
+                                      <span>{t("vmLxc.scheduled.notScheduled")}</span>
+                                    </div>
+                                  )}
+
+                                  {/* External helper cron chip — shown
+                                      in BOTH view + edit modes when
+                                      detected. Includes the helper-
+                                      scripts logo per the user's ask. */}
+                                  {externalCron && optionsEditMode && (() => {
+                                    const variantLabel = externalCron.variant === "tteck-legacy"
+                                      ? t("vmLxc.cronChip.variantTteck")
+                                      : externalCron.variant === "unknown"
+                                        ? t("vmLxc.cronChip.variantCustom")
+                                        : t("vmLxc.cronChip.variantCommunityScripts")
+                                    const scopeText = externalCron.scope === "os"
+                                      ? t("vmLxc.cronChip.scopeAptApk")
+                                      : t("vmLxc.cronChip.scopeUnknown")
+                                    return (
+                                      <div className="flex items-start gap-2 text-xs text-muted-foreground p-2 rounded-md bg-muted/40 border border-border/50">
+                                        <img
+                                          src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp"
+                                          alt=""
+                                          className="h-5 w-5 rounded-sm object-contain flex-shrink-0 mt-0.5"
+                                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                          <div className="text-foreground">
+                                            <span className="text-foreground/80">{variantLabel}</span> {t("vmLxc.cronChip.detected")}
+                                          </div>
+                                          <div className="mt-0.5">
+                                            {externalCron.human_schedule} — {scopeText}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )
+                                  })()}
+
+                                  {/* Form fields — edit mode only.
+                                      In view mode the compact chip
+                                      above already summarises the
+                                      config; the raw dropdowns / cron
+                                      input would just be noise. */}
+                                  {optionsEditMode && scheduleEnabled && (
+                                    <div className="space-y-3">
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                          <Label className="text-xs text-muted-foreground">{t("vmLxc.scheduled.frequency")}</Label>
+                                          <Select
+                                            value={schedulePreset}
+                                            onValueChange={(v) => {
+                                              setSchedulePreset(v)
+                                              const preset = CRON_PRESETS.find((p) => p.value === v)
+                                              if (preset && preset.cron) setScheduleCron(preset.cron)
+                                            }}
+                                            disabled={!optionsEditMode}
+                                          >
+                                            <SelectTrigger className="h-8 text-sm mt-1">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {CRON_PRESETS.map((p) => (
+                                                <SelectItem key={p.value} value={p.value}>
+                                                  {p.label}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        <div>
+                                          <Label className="text-xs text-muted-foreground">{t("vmLxc.scheduled.cronExpression")}</Label>
+                                          <Input
+                                            value={scheduleCron}
+                                            onChange={(e) => {
+                                              setScheduleCron(e.target.value)
+                                              setSchedulePreset("custom")
+                                            }}
+                                            disabled={!optionsEditMode}
+                                            placeholder={t("vmLxc.scheduled.cronPlaceholder")}
+                                            className="h-8 text-sm mt-1 font-mono"
+                                          />
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <Label className="text-xs text-muted-foreground">{t("vmLxc.scheduled.whatToUpdate")}</Label>
+                                        <Select
+                                          value={scheduleTarget}
+                                          onValueChange={(v) => setScheduleTarget(v as any)}
+                                          disabled={!optionsEditMode}
+                                        >
+                                          <SelectTrigger className="h-8 text-sm mt-1 max-w-xs">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="os">{t("vmLxc.scheduled.targetOptionOs")}</SelectItem>
+                                            <SelectItem value="app">{t("vmLxc.scheduled.targetOptionApp")}</SelectItem>
+                                            <SelectItem value="both">{t("vmLxc.scheduled.targetOptionBoth")}</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      {scheduleLastRunAt && (
+                                        <div className="text-xs text-muted-foreground">
+                                          Last run: {new Date(scheduleLastRunAt).toLocaleString()}
+                                          {scheduleLastRunStatus && (
+                                            <> · <span className={scheduleLastRunStatus === "success" ? "text-green-400" : "text-red-400"}>
+                                              {scheduleLastRunStatus === "success" ? "✓ success" : "✗ failed"}
+                                            </span></>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {optionsEditMode && scheduleConfigured && (
+                                    <div className="flex justify-end">
+                                      <button
+                                        type="button"
+                                        onClick={deleteScheduleFromOptions}
+                                        disabled={scheduleSaving}
+                                        className="h-8 px-3 text-xs rounded-md border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        {t("vmLxc.scheduled.deleteButton")}
+                                      </button>
+                                    </div>
+                                  )}
+
+
+                                  {scheduleError && (
+                                    <div className="text-xs text-red-400">{scheduleError}</div>
+                                  )}
+                                </div>
+
+                                {/* Footer — Edit (view) or Cancel + Save
+                                    (edit). Delete schedule lives next
+                                    to the Switch above, not here. */}
+                                <div className="pt-4 border-t border-border/50 flex items-center justify-end gap-2">
+                                  {!optionsEditMode ? (
+                                    <button
+                                      type="button"
+                                      onClick={enterOptionsEdit}
+                                      className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5"
+                                    >
+                                      <Settings2 className="h-3.5 w-3.5" />
+                                      {t("vmLxc.options.editButton")}
+                                    </button>
+                                  ) : (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={cancelOptionsEdit}
+                                        disabled={scheduleSaving}
+                                        className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
+                                      >
+                                        {t("vmLxc.options.cancelButton")}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={saveOptionsEdit}
+                                        disabled={scheduleSaving}
+                                        className="h-8 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-40 inline-flex items-center gap-1.5"
+                                      >
+                                        {scheduleSaving
+                                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                          : <Check className="h-3.5 w-3.5" />}
+                                        {t("vmLxc.options.saveButton")}
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </>
+                        )
+                      })()}
+                  </div>
+                )}
 
                 {/* Sprint 13.29: Mount Points Tab — LXC only.
                     Renders configured mpX entries first, then any
@@ -3492,6 +4954,41 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           }}
           vmid={terminalVmid}
           vmName={terminalVmName}
+        />
+      )}
+
+      {/* LXC Update Apply Terminal — streams the apply_updates.sh
+          script over WS/PTY (same wiring as the hardware installers).
+          On modal close we POST /applied so the notification fires
+          and the badge is force-refreshed without waiting 24 h. */}
+      {applyVmid !== null && (
+        <ScriptTerminalModal
+          open={applyOpen}
+          onClose={() => {
+            setApplyOpen(false)
+            setApplyVmid(null)
+          }}
+          onComplete={handleApplyComplete}
+          scriptPath="/usr/local/share/proxmenux/scripts/lxc/apply_updates.sh"
+          scriptName="lxc_apply_updates"
+          title={`Apply updates — CT ${applyVmid}`}
+          description={
+            applyTarget === "os"
+              ? "Applying OS package updates inside the container..."
+              : applyTarget === "app"
+                ? "Running the application updater inside the container..."
+                : "Applying OS package + application updates inside the container..."
+          }
+          params={{
+            VMID: String(applyVmid),
+            TARGET: applyTarget,
+            BACKUP: applyBackup ? "1" : "0",
+            BACKUP_STORAGE: applyBackupStorage || selectedBackupStorage || "",
+            RESTART: applyRestart ? "1" : "0",
+            UPDATE_COMMAND: applyUpdateCommand || "",
+            APP_NAME: applyAppName || "",
+            HELPER_SLUG: selectedVM?.update_check?.helper_slug || "",
+          }}
         />
       )}
     </div>
