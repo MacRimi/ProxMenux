@@ -5,6 +5,8 @@ ProxMenux Security Routes
 Flask blueprint for firewall management and security tool detection.
 """
 
+import ipaddress
+
 from flask import Blueprint, jsonify, request
 from jwt_middleware import require_auth
 
@@ -230,6 +232,80 @@ def fail2ban_jail_config():
             return jsonify({"success": True, "message": message})
         else:
             return jsonify({"success": False, "message": message}), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@security_bp.route('/api/security/fail2ban/trusted-networks', methods=['GET'])
+@require_auth
+def fail2ban_trusted_networks():
+    """List global IP/CIDR addresses excluded from all Fail2Ban jails."""
+    if not security_manager:
+        return jsonify({"success": False, "message": "Security manager not available"}), 500
+    try:
+        detected_ip = request.remote_addr
+        try:
+            parsed_ip = ipaddress.ip_address(detected_ip) if detected_ip else None
+            if isinstance(parsed_ip, ipaddress.IPv6Address) and parsed_ip.ipv4_mapped:
+                parsed_ip = parsed_ip.ipv4_mapped
+            if not parsed_ip or parsed_ip.is_loopback:
+                detected_ip = None
+            else:
+                detected_ip = str(parsed_ip)
+        except ValueError:
+            detected_ip = None
+        return jsonify({
+            "success": True,
+            "entries": security_manager.get_fail2ban_trusted_networks(),
+            "detected_ip": detected_ip,
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@security_bp.route('/api/security/fail2ban/trusted-networks', methods=['POST'])
+@require_auth
+def fail2ban_add_trusted_network():
+    """Add one global Fail2Ban IP/CIDR exclusion."""
+    if not security_manager:
+        return jsonify({"success": False, "message": "Security manager not available"}), 500
+    try:
+        data = request.json or {}
+        success, message, value = security_manager.add_fail2ban_trusted_network(data.get("value", ""))
+        status = 200 if success else 400
+        return jsonify({"success": success, "message": message, "value": value}), status
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@security_bp.route('/api/security/fail2ban/trusted-networks', methods=['DELETE'])
+@require_auth
+def fail2ban_remove_trusted_network():
+    """Remove one user-managed global Fail2Ban IP/CIDR exclusion."""
+    if not security_manager:
+        return jsonify({"success": False, "message": "Security manager not available"}), 500
+    try:
+        data = request.json or {}
+        success, message = security_manager.remove_fail2ban_trusted_network(data.get("value", ""))
+        status = 200 if success else 400
+        return jsonify({"success": success, "message": message}), status
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@security_bp.route('/api/security/fail2ban/trusted-networks', methods=['PUT'])
+@require_auth
+def fail2ban_update_trusted_network():
+    """Replace one user-managed global Fail2Ban IP/CIDR exclusion."""
+    if not security_manager:
+        return jsonify({"success": False, "message": "Security manager not available"}), 500
+    try:
+        data = request.json or {}
+        success, message, value = security_manager.update_fail2ban_trusted_network(
+            data.get("old_value", ""), data.get("new_value", "")
+        )
+        status = 200 if success else 400
+        return jsonify({"success": success, "message": message, "value": value}), status
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 

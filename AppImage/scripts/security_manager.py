@@ -11,6 +11,8 @@ import subprocess
 import re
 import fcntl
 import threading
+import ipaddress
+import tempfile
 from contextlib import contextmanager
 
 # =================================================================
@@ -79,6 +81,10 @@ def _is_pve_rule_line(stripped):
 # (`jail_name='ssh\n[DEFAULT]\nbantime=1\n['` would corrupt the DEFAULT section)
 # and quote/escape tricks. See audit Tier 1 #12b.
 _JAIL_NAME_RE = re.compile(r'^[A-Za-z0-9_][A-Za-z0-9_-]{0,63}$')
+
+FAIL2BAN_TRUSTED_NETWORKS_FILE = "/etc/fail2ban/jail.d/99-proxmenux-ignore.local"
+FAIL2BAN_LEGACY_GLOBAL_FILE = "/etc/fail2ban/jail.local"
+_FAIL2BAN_PROTECTED_NETWORKS = ("127.0.0.0/8", "::1")
 
 # Whitelist for the `level` argument to firewall functions. The audit flagged
 # that an unconstrained value here could one day be extended to `vm` and become
@@ -922,6 +928,192 @@ def classify_ip(ip_address):
         return "local"
 
     return "external"
+
+
+def _normalise_ip_or_network(value):
+    """Return a canonical IP/CIDR string, or raise ValueError."""
+    if not isinstance(value, str):
+        raise ValueError("Enter an IP address or CIDR network")
+    candidate = value.strip()
+    if not candidate or len(candidate) > 128 or any(ch.isspace() for ch in candidate):
+        raise ValueError("Enter one IP address or CIDR network at a time")
+    try:
+        if "/" in candidate:
+            parsed = ipaddress.ip_network(candidate, strict=False)
+            if parsed.prefixlen == 0 or parsed.is_multicast or parsed.is_unspecified:
+                raise ValueError
+            return parsed.with_prefixlen
+        parsed = ipaddress.ip_address(candidate)
+        if parsed.is_multicast or parsed.is_unspecified:
+            raise ValueError
+        return str(parsed)
+    except ValueError:
+        raise ValueError("Invalid IP address or CIDR network")
+
+
+def _parse_default_ignoreip(path):
+    """Read ignoreip values from the [DEFAULT] section of one config file."""
+    if not os.path.isfile(path):
+        return []
+    values = []
+    in_default = False
+    try:
+        with open(path, "r") as config_file:
+            for raw_line in config_file:
+                stripped = raw_line.strip()
+                if stripped.startswith("[") and stripped.endswith("]"):
+                    in_default = stripped.upper() == "[DEFAULT]"
+                    continue
+                if not in_default or not stripped or stripped.startswith(("#", ";")):
+                    continue
+                match = re.match(r"^ignoreip\s*=\s*(.*)$", stripped, re.IGNORECASE)
+                if match:
+                    raw_values = re.split(r"[\s,]+", match.group(1).strip())
+                    values.extend(value for value in raw_values if value)
+    except OSError:
+        return []
+    return values
+
+
+def _trusted_network_entries():
+    source = (FAIL2BAN_TRUSTED_NETWORKS_FILE
+              if os.path.isfile(FAIL2BAN_TRUSTED_NETWORKS_FILE)
+              else FAIL2BAN_LEGACY_GLOBAL_FILE)
+    entries = []
+    for value in (*_FAIL2BAN_PROTECTED_NETWORKS, *_parse_default_ignoreip(source)):
+        try:
+            normalised = _normalise_ip_or_network(value)
+        except ValueError:
+            continue
+        if normalised not in entries:
+            entries.append(normalised)
+    return entries
+
+
+def get_fail2ban_trusted_networks():
+    """Return the global Fail2Ban IP/CIDR allowlist managed by the Monitor."""
+    protected = {_normalise_ip_or_network(value) for value in _FAIL2BAN_PROTECTED_NETWORKS}
+    return [
+        {"value": value, "protected": value in protected}
+        for value in _trusted_network_entries()
+    ]
+
+
+def _write_trusted_networks(entries):
+    target = FAIL2BAN_TRUSTED_NETWORKS_FILE
+    directory = os.path.dirname(target)
+    os.makedirs(directory, exist_ok=True)
+    content = (
+        "# Managed by ProxMenux Monitor. Use the Security page to edit.\n"
+        "[DEFAULT]\n"
+        f"ignoreip = {' '.join(entries)}\n"
+        "ignoreself = true\n"
+    )
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", dir=directory, prefix=".proxmenux-ignore-", delete=False
+        ) as temp_file:
+            temp_file.write(content)
+            temp_path = temp_file.name
+        os.chmod(temp_path, 0o640)
+        os.replace(temp_path, target)
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+
+def _save_trusted_networks(entries):
+    """Persist and reload atomically; restore the previous file on failure."""
+    target = FAIL2BAN_TRUSTED_NETWORKS_FILE
+    lock_path = target + ".lock"
+    with _exclusive_file_lock(lock_path):
+        previous = None
+        existed = os.path.isfile(target)
+        if existed:
+            with open(target, "rb") as current_file:
+                previous = current_file.read()
+
+        _write_trusted_networks(entries)
+        rc, _, err = _run_cmd(["fail2ban-client", "reload"])
+        if rc == 0:
+            return True, "Fail2Ban trusted networks updated"
+
+        try:
+            if existed:
+                with open(target, "wb") as restore_file:
+                    restore_file.write(previous or b"")
+            elif os.path.exists(target):
+                os.unlink(target)
+            _run_cmd(["fail2ban-client", "reload"])
+        except OSError:
+            pass
+        return False, f"Fail2Ban rejected the configuration: {err or 'reload failed'}"
+
+
+def add_fail2ban_trusted_network(value):
+    try:
+        normalised = _normalise_ip_or_network(value)
+    except ValueError as exc:
+        return False, str(exc), None
+
+    entries = _trusted_network_entries()
+    candidate_network = ipaddress.ip_network(normalised, strict=False)
+    if any(
+        candidate_network.version == ipaddress.ip_network(entry, strict=False).version
+        and candidate_network.subnet_of(ipaddress.ip_network(entry, strict=False))
+        for entry in entries
+    ):
+        return False, "This IP address or network is already trusted", normalised
+    entries.append(normalised)
+    success, message = _save_trusted_networks(entries)
+    return success, message, normalised
+
+
+def remove_fail2ban_trusted_network(value):
+    try:
+        normalised = _normalise_ip_or_network(value)
+    except ValueError as exc:
+        return False, str(exc)
+
+    protected = {_normalise_ip_or_network(item) for item in _FAIL2BAN_PROTECTED_NETWORKS}
+    if normalised in protected:
+        return False, "Required local addresses cannot be removed"
+
+    entries = _trusted_network_entries()
+    if normalised not in entries:
+        return False, "Trusted IP address or network was not found"
+    entries.remove(normalised)
+    return _save_trusted_networks(entries)
+
+
+def update_fail2ban_trusted_network(old_value, new_value):
+    try:
+        old_normalised = _normalise_ip_or_network(old_value)
+        new_normalised = _normalise_ip_or_network(new_value)
+    except ValueError as exc:
+        return False, str(exc), None
+
+    protected = {_normalise_ip_or_network(item) for item in _FAIL2BAN_PROTECTED_NETWORKS}
+    if old_normalised in protected:
+        return False, "Required local addresses cannot be changed", None
+
+    entries = _trusted_network_entries()
+    if old_normalised not in entries:
+        return False, "Trusted IP address or network was not found", None
+
+    other_entries = [entry for entry in entries if entry != old_normalised]
+    candidate_network = ipaddress.ip_network(new_normalised, strict=False)
+    if any(
+        candidate_network.version == ipaddress.ip_network(entry, strict=False).version
+        and candidate_network.subnet_of(ipaddress.ip_network(entry, strict=False))
+        for entry in other_entries
+    ):
+        return False, "This IP address or network is already trusted", new_normalised
+
+    entries[entries.index(old_normalised)] = new_normalised
+    success, message = _save_trusted_networks(entries)
+    return success, message, new_normalised
 
 
 def update_jail_config(jail_name, maxretry=None, bantime=None, findtime=None):
