@@ -1229,12 +1229,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   // 5-field cron expression the backend parser accepts. Order + slugs
   // stable so the Select value round-trips a saved schedule.
   const CRON_PRESETS: { value: string; label: string; cron: string }[] = [
-    { value: "hourly", label: "Hourly", cron: "0 * * * *" },
-    { value: "daily-3am", label: "Daily at 3:00", cron: "0 3 * * *" },
-    { value: "daily-noon", label: "Daily at 12:00", cron: "0 12 * * *" },
-    { value: "weekly-sun-3am", label: "Weekly (Sunday 3:00)", cron: "0 3 * * 0" },
-    { value: "monthly-1st-3am", label: "Monthly (1st at 3:00)", cron: "0 3 1 * *" },
-    { value: "custom", label: "Custom cron…", cron: "" },
+    { value: "hourly", label: t("vmLxc.cronPresets.hourly"), cron: "0 * * * *" },
+    { value: "daily-3am", label: t("vmLxc.cronPresets.dailyAt3"), cron: "0 3 * * *" },
+    { value: "daily-noon", label: t("vmLxc.cronPresets.dailyAtNoon"), cron: "0 12 * * *" },
+    { value: "weekly-sun-3am", label: t("vmLxc.cronPresets.weeklySun3"), cron: "0 3 * * 0" },
+    { value: "monthly-1st-3am", label: t("vmLxc.cronPresets.monthly1st3"), cron: "0 3 1 * *" },
+    { value: "custom", label: t("vmLxc.cronPresets.custom"), cron: "" },
   ]
 
   const loadSchedule = async (vmid: number) => {
@@ -1329,7 +1329,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   }
   const deleteScheduleFromOptions = async () => {
     if (!selectedVM) return
-    if (!confirm("Remove the scheduled updates for this container? Apply defaults (backup + restart) are kept.")) return
+    if (!confirm(t("vmLxc.scheduled.deleteConfirm"))) return
     setScheduleSaving(true)
     try {
       await fetchApi(`/api/vms/${selectedVM.vmid}/schedule`, { method: "DELETE" })
@@ -3530,7 +3530,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               <div className="text-xs text-muted-foreground">
                                 Last checked: {lastChecked}
                                 {aw?.installed_version && <> · Tailscale v{aw.installed_version}</>}
-                                {" · "}<span className="text-emerald-400/90">No updates available</span>
+                                {" · "}<span className="text-emerald-400/90">{t("vmLxc.updates.noUpdatesAvailableChip")}</span>
                               </div>
                             ) : (
                               <div className="text-xs text-muted-foreground">
@@ -3640,13 +3640,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 <div className="pb-4">
                                   <div className="flex items-center gap-2 mb-3">
                                     <Package className="h-4 w-4 text-muted-foreground" />
-                                    <h3 className="text-sm font-semibold text-foreground">OS packages</h3>
+                                    <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.updates.osPackagesTitle")}</h3>
                                   </div>
                                   <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
-                                    Last checked:{" "}
+                                    {t("vmLxc.updates.lastCheckedPrefix")}{" "}
                                     {uc?.last_check ? new Date(uc.last_check).toLocaleString() : "—"}
                                     {uc?.os_family && (
-                                      <> · Family: <code className="text-foreground/80">{uc.os_family}</code></>
+                                      <> · {t("vmLxc.updates.familyLabel")} <code className="text-foreground/80">{uc.os_family}</code></>
                                     )}
                                   </div>
                                   {hasOsUpdates ? (() => {
@@ -3661,7 +3661,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             <div key={p.name} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2 py-2 text-sm">
                                               <span className="font-mono text-foreground/90 flex items-center gap-2 min-w-0">
                                                 {p.security && (
-                                                  <Shield className="h-4 w-4 text-green-500 flex-shrink-0" aria-label="Security update" />
+                                                  <Shield className="h-4 w-4 text-green-500 flex-shrink-0" aria-label={t("vmLxc.updates.securityUpdateAria")} />
                                                 )}
                                                 <span className="truncate">{p.name}</span>
                                               </span>
@@ -3679,12 +3679,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       <div className="space-y-2 text-sm">
                                         <div className="flex items-center gap-2">
                                           <Package className="h-4 w-4 text-purple-300 flex-shrink-0" />
-                                          <span><span className="font-semibold">{total}</span> package{total === 1 ? "" : "s"} pending</span>
+                                          <span><span className="font-semibold">{total}</span> {t(total === 1 ? "vmLxc.updates.packagePendingLabel" : "vmLxc.updates.packagesPendingLabel")}</span>
                                         </div>
                                         {sec > 0 && (
                                           <div className="flex items-center gap-2">
                                             <Shield className="h-4 w-4 text-green-500 flex-shrink-0" />
-                                            <span><span className="font-semibold">{sec}</span> security update{sec === 1 ? "" : "s"}</span>
+                                            <span><span className="font-semibold">{sec}</span> {t(sec === 1 ? "vmLxc.updates.securityUpdateLabel" : "vmLxc.updates.securityUpdatesLabel")}</span>
                                           </div>
                                         )}
                                       </div>
@@ -3692,7 +3692,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   })() : (
                                     <div className="text-sm text-muted-foreground flex items-center gap-2">
                                       <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                                      No OS updates pending
+                                      {t("vmLxc.updates.noOsUpdatesPending")}
                                     </div>
                                   )}
                                   <div className="mt-3 flex justify-end">
@@ -3702,7 +3702,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       className={hasOsUpdates ? pendingBtnCls : upToDateBtnCls}
                                     >
                                       {hasOsUpdates && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
-                                      {hasOsUpdates ? "Apply OS update" : "OS up to date"}
+                                      {hasOsUpdates ? t("vmLxc.updates.applyOsUpdate") : t("vmLxc.updates.osUpToDate")}
                                     </Button>
                                   </div>
                                 </div>
@@ -3736,12 +3736,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       <div className="flex items-center gap-2 mb-3 min-w-0">
                                         <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                         <h3 className="text-sm font-semibold text-foreground truncate">
-                                          {helperName || "Application"}
+                                          {helperName || t("vmLxc.updates.applicationDefaultName")}
                                         </h3>
                                       </div>
                                       {matchApp?.checked_at && (
                                         <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
-                                          Last checked: {new Date(matchApp.checked_at).toLocaleString()}
+                                          {t("vmLxc.updates.lastCheckedPrefix")} {new Date(matchApp.checked_at).toLocaleString()}
                                         </div>
                                       )}
                                       {/* Educational note — apps installed via
@@ -3764,8 +3764,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
                                           />
                                           <span className="text-xs text-muted-foreground leading-relaxed">
-                                            Installed by <span className="text-foreground/80">Proxmox Helper-Scripts</span>
-                                            {" "}— updates run the community-scripts helper.
+                                            {t("vmLxc.updates.installedByHelperPrefix")} <span className="text-foreground/80">{t("vmLxc.updates.helperScriptsName")}</span>
+                                            {" "}{t("vmLxc.updates.helperUpdatesRun")}
                                           </span>
                                         </div>
                                       )}
@@ -3773,7 +3773,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         <div className="space-y-2 text-sm">
                                           <div className="flex items-center gap-2">
                                             <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                            <span>installed <code className="text-foreground/80">{matchApp!.installed_version}</code></span>
+                                            <span>{t("vmLxc.updates.installedLabel")} <code className="text-foreground/80">{matchApp!.installed_version}</code></span>
                                           </div>
                                           <div className="flex items-center gap-2">
                                             <ArrowUpCircle className="h-4 w-4 text-purple-400 flex-shrink-0" />
@@ -3783,12 +3783,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       ) : upToD ? (
                                         <div className="text-sm text-muted-foreground flex items-center gap-2">
                                           <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                                          <span>Up to date at <code className="text-foreground/80">{matchApp!.installed_version}</code></span>
+                                          <span>{t("vmLxc.updates.upToDateAtLabel")} <code className="text-foreground/80">{matchApp!.installed_version}</code></span>
                                         </div>
                                       ) : helperExists ? (
                                         <p className="text-xs text-muted-foreground leading-relaxed">
-                                          Version tracking pending — the next scheduled check will
-                                          populate installed and upstream numbers.
+                                          {t("vmLxc.updates.versionTrackingPending")}
                                         </p>
                                       ) : null}
                                       {helperExists && (() => {
@@ -3806,7 +3805,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         const noState = !hasUpd && !upToD
                                         const neutralBtnCls = "bg-muted/40 hover:bg-muted/60 border border-border text-foreground/80 hover:text-foreground"
                                         const cls = hasUpd ? pendingBtnCls : upToD ? upToDateBtnCls : neutralBtnCls
-                                        const label = hasUpd ? "Apply update" : upToD ? "Up to date" : "Run updater"
+                                        const label = hasUpd ? t("vmLxc.updates.applyUpdate") : upToD ? t("vmLxc.updates.upToDate") : t("vmLxc.updates.runUpdater")
                                         return (
                                           <div className="mt-3 flex justify-end">
                                             <Button size="sm" onClick={() => openApplyTerminal(selectedVM.vmid, "app")} className={cls}>
@@ -3861,19 +3860,19 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       </div>
                                       {aw.checked_at && !editing && (
                                         <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
-                                          Last checked: {new Date(aw.checked_at).toLocaleString()}
+                                          {t("vmLxc.updates.lastCheckedPrefix")} {new Date(aw.checked_at).toLocaleString()}
                                         </div>
                                       )}
                                       {editing ? (
                                         <div className="space-y-3">
                                           <div>
                                             <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                                              Custom update command
+                                              {t("vmLxc.updates.customCommandLabel")}
                                             </Label>
                                             <Textarea
                                               value={customCmdDraft}
                                               onChange={(e) => setCustomCmdDraft(e.target.value)}
-                                              placeholder="e.g., cd /opt/<your-app> && git pull && systemctl restart <your-app>"
+                                              placeholder={t("vmLxc.updates.customCommandPlaceholder")}
                                               className="font-mono text-xs mt-2 min-h-[100px]"
                                               maxLength={4096}
                                             />
@@ -3888,7 +3887,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                   className="h-8 px-3 text-xs rounded-md border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
                                                 >
                                                   <Trash2 className="h-3.5 w-3.5" />
-                                                  Remove
+                                                  {t("vmLxc.updates.removeButton")}
                                                 </button>
                                               )}
                                             </div>
@@ -3899,7 +3898,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                 disabled={customCmdSaving}
                                                 className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
                                               >
-                                                Cancel
+                                                {t("vmLxc.updates.cancelButton")}
                                               </button>
                                               <button
                                                 type="button"
@@ -3908,7 +3907,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                 className="h-8 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
                                               >
                                                 {customCmdSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                                                Save
+                                                {t("vmLxc.updates.saveButton")}
                                               </button>
                                             </div>
                                           </div>
@@ -3919,7 +3918,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             <div className="space-y-2 text-sm">
                                               <div className="flex items-center gap-2">
                                                 <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                                <span>installed <code className="text-foreground/80">{aw.installed_version}</code></span>
+                                                <span>{t("vmLxc.updates.installedLabel")} <code className="text-foreground/80">{aw.installed_version}</code></span>
                                               </div>
                                               <div className="flex items-center gap-2">
                                                 <ArrowUpCircle className="h-4 w-4 text-purple-400 flex-shrink-0" />
@@ -3929,11 +3928,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           ) : upToDate ? (
                                             <div className="text-sm text-muted-foreground flex items-center gap-2">
                                               <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                                              <span>Up to date at <code className="text-foreground/80">{aw.installed_version}</code></span>
+                                              <span>{t("vmLxc.updates.upToDateAtLabel")} <code className="text-foreground/80">{aw.installed_version}</code></span>
                                             </div>
                                           ) : (
                                             <div className="text-sm text-muted-foreground">
-                                              Version tracking pending.
+                                              {t("vmLxc.updates.versionTrackingPendingShort")}
                                             </div>
                                           )}
                                           {/* Buttons stacked bottom-right:
@@ -3954,7 +3953,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                               className={hasUpdate ? pendingBtnCls : upToDateBtnCls}
                                             >
                                               {hasUpdate && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
-                                              {hasUpdate ? "Apply update" : "Up to date"}
+                                              {hasUpdate ? t("vmLxc.updates.applyUpdate") : t("vmLxc.updates.upToDate")}
                                             </Button>
                                             <button
                                               type="button"
@@ -3962,16 +3961,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                               className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5"
                                             >
                                               <Pencil className="h-3.5 w-3.5" />
-                                              Edit command
+                                              {t("vmLxc.updates.editCommandButton")}
                                             </button>
                                           </div>
                                         </>
                                       ) : (
                                         <div className="flex items-center justify-between flex-wrap gap-2">
                                           <p className="text-xs text-muted-foreground leading-relaxed min-w-0">
-                                            No update method available. Update from the app itself, or
-                                            wire up a custom command that ProxMenux will run inside the
-                                            container.
+                                            {t("vmLxc.updates.noMethodBody")}
                                           </p>
                                           <button
                                             type="button"
@@ -3979,7 +3976,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 flex-shrink-0"
                                           >
                                             <Plus className="h-3.5 w-3.5" />
-                                            Add custom update command
+                                            {t("vmLxc.updates.wireUpCommandButton")}
                                           </button>
                                         </div>
                                       )}
@@ -4024,7 +4021,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           className={(hasOsUpdates || anyAppPending) ? pendingBtnCls : upToDateBtnCls}
                                         >
                                           {(hasOsUpdates || anyAppPending) && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
-                                          {(hasOsUpdates || anyAppPending) ? `Apply OS + ${combinedApp.name} updates` : `OS + ${combinedApp.name} updates`}
+                                          {(hasOsUpdates || anyAppPending) ? t("vmLxc.updates.applyOsAppsFooter", { appName: combinedApp.name }) : t("vmLxc.updates.osAppsFooter", { appName: combinedApp.name })}
                                         </Button>
                                       </div>
                                     )
@@ -4057,7 +4054,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         className={(hasOsUpdates || anyAppPending) ? pendingBtnCls : upToDateBtnCls}
                                       >
                                         {(hasOsUpdates || anyAppPending) && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
-                                        {(hasOsUpdates || anyAppPending) ? "Apply OS + Apps updates" : "OS + Apps updates"}
+                                        {(hasOsUpdates || anyAppPending) ? t("vmLxc.updates.applyOsAppsFooterPlural") : t("vmLxc.updates.osAppsFooterPlural")}
                                       </Button>
                                     </div>
                                   )
@@ -4081,7 +4078,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             <Card className={optionsEditMode ? "border border-border bg-card" : "border border-border bg-card/50"}>
                               <CardContent className="p-4 space-y-4">
                                 <h3 className="text-sm font-semibold text-foreground">
-                                  Options
+                                  {t("vmLxc.options.title")}
                                 </h3>
 
                                 {/* Two-mode rendering — VIEW mode is a
@@ -4106,8 +4103,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       )}
                                       <span>
                                         {applyBackup
-                                          ? <>Snapshot before applying <span className="text-muted-foreground">— on <code className="text-foreground/80">{applyBackupStorage || selectedBackupStorage || "auto"}</code></span></>
-                                          : <span className="text-muted-foreground">No pre-apply snapshot</span>}
+                                          ? <>{t("vmLxc.options.snapshotBefore")} <span className="text-muted-foreground">— on <code className="text-foreground/80">{applyBackupStorage || selectedBackupStorage || t("vmLxc.options.storageAuto")}</code></span></>
+                                          : <span className="text-muted-foreground">{t("vmLxc.options.noSnapshot")}</span>}
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -4118,8 +4115,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       )}
                                       <span>
                                         {applyRestart
-                                          ? "Restart the container after applying"
-                                          : <span className="text-muted-foreground">No post-apply restart</span>}
+                                          ? t("vmLxc.options.restartAfter")
+                                          : <span className="text-muted-foreground">{t("vmLxc.options.noRestart")}</span>}
                                       </span>
                                     </div>
                                   </div>
@@ -4133,21 +4130,21 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         className="mt-0.5"
                                       />
                                       <Label htmlFor="apply-backup" className="leading-tight cursor-pointer">
-                                        <span>Snapshot the container before applying (vzdump)</span>
+                                        <span>{t("vmLxc.options.snapshotLabel")}</span>
                                         <div className="text-xs text-muted-foreground mt-0.5">
-                                          Applies to manual + scheduled runs.
+                                          {t("vmLxc.options.appliesToBoth")}
                                         </div>
                                       </Label>
                                     </div>
                                     {applyBackup && backupStorages.length > 0 && (
                                       <div className="pl-6">
-                                        <Label className="text-xs text-muted-foreground">Backup storage</Label>
+                                        <Label className="text-xs text-muted-foreground">{t("vmLxc.options.backupStorage")}</Label>
                                         <Select
                                           value={applyBackupStorage || selectedBackupStorage}
                                           onValueChange={setApplyBackupStorage}
                                         >
                                           <SelectTrigger className="h-8 text-sm mt-1 max-w-xs">
-                                            <SelectValue placeholder="Pick a storage" />
+                                            <SelectValue placeholder={t("vmLxc.options.pickStorage")} />
                                           </SelectTrigger>
                                           <SelectContent>
                                             {backupStorages.map((s) => (
@@ -4167,9 +4164,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         className="mt-0.5"
                                       />
                                       <Label htmlFor="apply-restart" className="leading-tight cursor-pointer">
-                                        <span>Restart the container after applying</span>
+                                        <span>{t("vmLxc.options.restartAfter")}</span>
                                         <div className="text-xs text-muted-foreground mt-0.5">
-                                          Applies to manual + scheduled runs.
+                                          {t("vmLxc.options.appliesToBoth")}
                                         </div>
                                       </Label>
                                     </div>
@@ -4191,13 +4188,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   <div className="flex items-start justify-between gap-3">
                                     <div className="min-w-0">
                                       <div className="text-sm font-medium text-foreground">
-                                        Scheduled updates
+                                        {t("vmLxc.scheduled.title")}
                                       </div>
                                       {optionsEditMode && (
                                         <div className="text-xs text-muted-foreground mt-0.5">
                                           {scheduleEnabled
-                                            ? "Runs in the background using the apply options above."
-                                            : "Enable to run updates automatically on a cron schedule."}
+                                            ? t("vmLxc.scheduled.enabledHelper")
+                                            : t("vmLxc.scheduled.disabledHelper")}
                                         </div>
                                       )}
                                     </div>
@@ -4223,19 +4220,19 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       <div className="flex items-center gap-2 flex-wrap">
                                         <span className={"h-2 w-2 rounded-full flex-shrink-0 " + (scheduleEnabled ? "bg-green-500" : "bg-muted-foreground/40")} />
                                         <span className={scheduleEnabled ? "" : "text-muted-foreground"}>
-                                          <span className="text-foreground/80">Schedule</span> — {humanCron(scheduleCron)}
-                                          {!scheduleEnabled && <span className="text-muted-foreground"> (disabled)</span>}
+                                          <span className="text-foreground/80">{t("vmLxc.scheduled.chipLabel")}</span> — {humanCron(scheduleCron)}
+                                          {!scheduleEnabled && <span className="text-muted-foreground"> {t("vmLxc.scheduled.disabledSuffix")}</span>}
                                         </span>
                                       </div>
                                       <div className="text-xs text-muted-foreground pl-4">
-                                        What: {scheduleTarget === "os" ? "OS packages" : scheduleTarget === "app" ? "Application" : "OS + application"}
+                                        {t("vmLxc.scheduled.whatLabel")} {scheduleTarget === "os" ? t("vmLxc.scheduled.targetOs") : scheduleTarget === "app" ? t("vmLxc.scheduled.targetApp") : t("vmLxc.scheduled.targetBoth")}
                                       </div>
                                       {scheduleLastRunAt && (
                                         <div className="text-xs text-muted-foreground pl-4">
-                                          Last run: {new Date(scheduleLastRunAt).toLocaleString()}
+                                          {t("vmLxc.scheduled.lastRun", { date: new Date(scheduleLastRunAt).toLocaleString() })}
                                           {scheduleLastRunStatus && (
                                             <> · <span className={scheduleLastRunStatus === "success" ? "text-green-400" : "text-red-400"}>
-                                              {scheduleLastRunStatus === "success" ? "✓ success" : "✗ failed"}
+                                              {scheduleLastRunStatus === "success" ? t("vmLxc.scheduled.runSuccess") : t("vmLxc.scheduled.runFailed")}
                                             </span></>
                                           )}
                                         </div>
@@ -4245,7 +4242,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   {!optionsEditMode && !scheduleConfigured && !externalCron && (
                                     <div className="text-sm flex items-center gap-2 text-muted-foreground">
                                       <div className="h-4 w-4 rounded-full border border-muted-foreground/40 flex-shrink-0" />
-                                      <span>Not scheduled</span>
+                                      <span>{t("vmLxc.scheduled.notScheduled")}</span>
                                     </div>
                                   )}
 
@@ -4255,13 +4252,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       scripts logo per the user's ask. */}
                                   {externalCron && optionsEditMode && (() => {
                                     const variantLabel = externalCron.variant === "tteck-legacy"
-                                      ? "tteck (legacy)"
+                                      ? t("vmLxc.cronChip.variantTteck")
                                       : externalCron.variant === "unknown"
-                                        ? "custom"
-                                        : "community-scripts"
+                                        ? t("vmLxc.cronChip.variantCustom")
+                                        : t("vmLxc.cronChip.variantCommunityScripts")
                                     const scopeText = externalCron.scope === "os"
-                                      ? "apt/apk on all CTs"
-                                      : "scope unknown"
+                                      ? t("vmLxc.cronChip.scopeAptApk")
+                                      : t("vmLxc.cronChip.scopeUnknown")
                                     return (
                                       <div className="flex items-start gap-2 text-xs text-muted-foreground p-2 rounded-md bg-muted/40 border border-border/50">
                                         <img
@@ -4272,7 +4269,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         />
                                         <div className="flex-1 min-w-0">
                                           <div className="text-foreground">
-                                            <span className="text-foreground/80">{variantLabel}</span> host cron detected
+                                            <span className="text-foreground/80">{variantLabel}</span> {t("vmLxc.cronChip.detected")}
                                           </div>
                                           <div className="mt-0.5">
                                             {externalCron.human_schedule} — {scopeText}
@@ -4291,7 +4288,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     <div className="space-y-3">
                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div>
-                                          <Label className="text-xs text-muted-foreground">Frequency</Label>
+                                          <Label className="text-xs text-muted-foreground">{t("vmLxc.scheduled.frequency")}</Label>
                                           <Select
                                             value={schedulePreset}
                                             onValueChange={(v) => {
@@ -4314,7 +4311,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           </Select>
                                         </div>
                                         <div>
-                                          <Label className="text-xs text-muted-foreground">Cron expression</Label>
+                                          <Label className="text-xs text-muted-foreground">{t("vmLxc.scheduled.cronExpression")}</Label>
                                           <Input
                                             value={scheduleCron}
                                             onChange={(e) => {
@@ -4322,13 +4319,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                               setSchedulePreset("custom")
                                             }}
                                             disabled={!optionsEditMode}
-                                            placeholder="e.g., 0 3 * * *"
+                                            placeholder={t("vmLxc.scheduled.cronPlaceholder")}
                                             className="h-8 text-sm mt-1 font-mono"
                                           />
                                         </div>
                                       </div>
                                       <div>
-                                        <Label className="text-xs text-muted-foreground">What to update</Label>
+                                        <Label className="text-xs text-muted-foreground">{t("vmLxc.scheduled.whatToUpdate")}</Label>
                                         <Select
                                           value={scheduleTarget}
                                           onValueChange={(v) => setScheduleTarget(v as any)}
@@ -4338,9 +4335,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             <SelectValue />
                                           </SelectTrigger>
                                           <SelectContent>
-                                            <SelectItem value="os">OS packages only</SelectItem>
-                                            <SelectItem value="app">Application only</SelectItem>
-                                            <SelectItem value="both">OS + application</SelectItem>
+                                            <SelectItem value="os">{t("vmLxc.scheduled.targetOptionOs")}</SelectItem>
+                                            <SelectItem value="app">{t("vmLxc.scheduled.targetOptionApp")}</SelectItem>
+                                            <SelectItem value="both">{t("vmLxc.scheduled.targetOptionBoth")}</SelectItem>
                                           </SelectContent>
                                         </Select>
                                       </div>
@@ -4366,7 +4363,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         className="h-8 px-3 text-xs rounded-md border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
                                       >
                                         <Trash2 className="h-3.5 w-3.5" />
-                                        Delete schedule
+                                        {t("vmLxc.scheduled.deleteButton")}
                                       </button>
                                     </div>
                                   )}
@@ -4388,7 +4385,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5"
                                     >
                                       <Settings2 className="h-3.5 w-3.5" />
-                                      Edit
+                                      {t("vmLxc.options.editButton")}
                                     </button>
                                   ) : (
                                     <>
@@ -4398,7 +4395,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         disabled={scheduleSaving}
                                         className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
                                       >
-                                        Cancel
+                                        {t("vmLxc.options.cancelButton")}
                                       </button>
                                       <button
                                         type="button"
@@ -4409,7 +4406,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         {scheduleSaving
                                           ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                           : <Check className="h-3.5 w-3.5" />}
-                                        Save
+                                        {t("vmLxc.options.saveButton")}
                                       </button>
                                     </>
                                   )}

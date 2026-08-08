@@ -33,6 +33,7 @@ import { Label } from "./ui/label"
 import { Badge } from "./ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { fetchApi } from "../lib/api-config"
+import { useT } from "@/lib/i18n/provider"
 
 // installed_via is optional now — an empty value means "register only,
 // no version tracking, no warnings, just a clickable link". Docker
@@ -216,6 +217,7 @@ function suggestPackageName(name: string) {
 }
 
 export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
+  const t = useT()
   const [loading, setLoading] = useState(true)
   const [sidecar, setSidecar] = useState<SidecarResponse | null>(null)
   const [suggestions, setSuggestions] = useState<Suggestions | null>(null)
@@ -474,7 +476,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
       setEditing(null)
       onChange?.()
     } catch (e: any) {
-      setError(e?.message || "Save failed")
+      setError(e?.message || t("vmLxc.appEditor.saveFailed"))
     } finally {
       setSaving(false)
     }
@@ -517,7 +519,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
   // waiting for the round-trip, then persist to the server. If the
   // POST fails, reload from server to resync.
   const dismissDetection = async (slug: string, name: string) => {
-    if (!confirm(`Hide the "${name}" detection permanently on this container?\n\nTo bring it back later, click "Register a different app" — the hidden list appears there with a Restore option.`)) return
+    if (!confirm(t("vmLxc.appEditor.confirmHide", { name }))) return
     setSidecar((prev) => prev
       ? { ...prev, dismissed_slugs: [...(prev.dismissed_slugs || []), slug] }
       : prev,
@@ -679,11 +681,11 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
               <div className={"mt-3 grid gap-3 " + (repo ? "grid-cols-2" : "grid-cols-1")}>
                 {managed.installed_version && (
                   <div className="p-3 rounded-md bg-muted/40">
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Installed</div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t("vmLxc.appEditor.installedStatus")}</div>
                     <div className="text-lg font-semibold font-mono text-foreground flex items-center gap-2">
                       {managed.installed_version}
                       {upToDate && (
-                        <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" aria-label="Up to date" />
+                        <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" aria-label={t("vmLxc.appEditor.upToDateBadge")} />
                       )}
                     </div>
                   </div>
@@ -694,9 +696,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                       Latest upstream
                     </div>
                     <div className={"text-lg font-semibold font-mono flex items-center gap-2 " + (hasUpdate ? "text-purple-400" : "text-foreground")}>
-                      {managed.latest_version || <span className="text-muted-foreground text-base font-normal">checking…</span>}
+                      {managed.latest_version || <span className="text-muted-foreground text-base font-normal">{t("vmLxc.appEditor.checkingStatus")}</span>}
                       {hasUpdate && managed.latest_version && (
-                        <ArrowUpCircle className="h-5 w-5 text-purple-400 flex-shrink-0" aria-label="Update available" />
+                        <ArrowUpCircle className="h-5 w-5 text-purple-400 flex-shrink-0" aria-label={t("vmLxc.appEditor.updateAvailableBadge")} />
                       )}
                     </div>
                   </div>
@@ -715,7 +717,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                 CT's lifecycle is owned by ProxMenux (not user CRUD). */}
             <div className="mt-4 p-2.5 rounded-md bg-green-500/10 border border-green-500/30 flex items-center gap-2 text-sm">
               <ShieldCheck className="h-4 w-4 text-green-400 flex-shrink-0" />
-              <span className="text-green-300">Installed and managed by ProxMenux</span>
+              <span className="text-green-300">{t("vmLxc.appEditor.installedManaged")}</span>
             </div>
           </CardContent>
         </Card>
@@ -789,7 +791,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
         <Card className="border border-border bg-card">
           <CardContent className="p-4 space-y-4">
             <div className="relative">
-              <Label htmlFor="app-name">Name</Label>
+              <Label htmlFor="app-name">{t("vmLxc.appEditor.nameLabel")}</Label>
               <Input
                 id="app-name"
                 value={draft.name}
@@ -815,7 +817,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                 return (
                   <div className="absolute z-20 left-0 right-0 mt-1 max-h-72 overflow-y-auto rounded-md border border-border bg-popover shadow-lg">
                     <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/60">
-                      {matches.length === 20 ? "Top 20 matches — narrow the query for more" : `${matches.length} match${matches.length === 1 ? "" : "es"}`}
+                      {matches.length === 20 ? t("vmLxc.appEditor.top20Matches") : `${matches.length} match${matches.length === 1 ? "" : "es"}`}
                     </div>
                     {matches.map((c) => (
                       <button
@@ -899,7 +901,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                 type="url"
                 value={draft.logo_url || ""}
                 onChange={(e) => setField({ logo_url: e.target.value })}
-                placeholder="e.g., https://example.com/logo.webp"
+                placeholder={t("vmLxc.appEditor.portLogoPlaceholder")}
                 maxLength={512}
                 className="text-sm mt-2 font-mono"
               />
@@ -968,7 +970,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                       type="number"
                       value={entry.port}
                       onChange={(e) => setPort(i, { port: e.target.value ? Number(e.target.value) : "" })}
-                      placeholder="port"
+                      placeholder={t("vmLxc.appEditor.portPortPlaceholder")}
                       min={1}
                       max={65535}
                       className="text-sm"
@@ -976,7 +978,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                     <Input
                       value={entry.description || ""}
                       onChange={(e) => setPort(i, { description: e.target.value })}
-                      placeholder="Description (e.g. Web UI, go2rtc, admin)"
+                      placeholder={t("vmLxc.appEditor.portDescriptionPlaceholder")}
                       maxLength={64}
                       className="text-sm"
                     />
@@ -986,7 +988,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                       size="sm"
                       onClick={() => removePort(i)}
                       className="text-red-400 hover:text-red-300"
-                      aria-label="Remove port"
+                      aria-label={t("vmLxc.appEditor.removePortTooltip")}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -996,7 +998,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                     <Input
                       value={entry.logo_url || ""}
                       onChange={(e) => setPort(i, { logo_url: e.target.value })}
-                      placeholder="Logo URL for this link (optional)"
+                      placeholder={t("vmLxc.appEditor.portLogoLabel")}
                       maxLength={512}
                       className="col-start-1 col-end-4 text-xs font-mono h-8 opacity-70 focus:opacity-100"
                       type="url"
@@ -1048,7 +1050,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <Label htmlFor="app-method">Installed via</Label>
+                      <Label htmlFor="app-method">{t("vmLxc.appEditor.installedViaLabel")}</Label>
                       <Select
                         value={method || "none"}
                         onValueChange={(v) =>
@@ -1057,23 +1059,23 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                       >
                         <SelectTrigger id="app-method"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">None (link only)</SelectItem>
-                          <SelectItem value="dpkg">dpkg package (Debian/Ubuntu)</SelectItem>
-                          <SelectItem value="apk">apk package (Alpine)</SelectItem>
-                          <SelectItem value="binary">binary --version</SelectItem>
-                          <SelectItem value="file">file + regex</SelectItem>
-                          <SelectItem value="python_dist">python distribution (importlib.metadata)</SelectItem>
-                          <SelectItem value="docker_label">docker inspect (OCI label)</SelectItem>
-                          <SelectItem value="docker_exec">docker exec (binary in container)</SelectItem>
-                          <SelectItem value="command">command (advanced — argv)</SelectItem>
-                          <SelectItem value="manual">manual (I type the version)</SelectItem>
+                          <SelectItem value="none">{t("vmLxc.appEditor.methodNone")}</SelectItem>
+                          <SelectItem value="dpkg">{t("vmLxc.appEditor.methodDpkg")}</SelectItem>
+                          <SelectItem value="apk">{t("vmLxc.appEditor.methodApk")}</SelectItem>
+                          <SelectItem value="binary">{t("vmLxc.appEditor.binaryVersionHint")}</SelectItem>
+                          <SelectItem value="file">{t("vmLxc.appEditor.methodFile")}</SelectItem>
+                          <SelectItem value="python_dist">{t("vmLxc.appEditor.methodPython")}</SelectItem>
+                          <SelectItem value="docker_label">{t("vmLxc.appEditor.methodDockerLabel")}</SelectItem>
+                          <SelectItem value="docker_exec">{t("vmLxc.appEditor.methodDockerExec")}</SelectItem>
+                          <SelectItem value="command">{t("vmLxc.appEditor.methodCommand")}</SelectItem>
+                          <SelectItem value="manual">{t("vmLxc.appEditor.methodManual")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     {isPackaged && (
                       <div>
-                        <Label htmlFor="app-package">Package identifier</Label>
+                        <Label htmlFor="app-package">{t("vmLxc.appEditor.packageIdentifierLabel")}</Label>
                         <Input
                           id="app-package"
                           value={draft.package || ""}
@@ -1092,12 +1094,12 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
 
                     {method === "binary" && (
                       <div>
-                        <Label htmlFor="app-binary">Binary path</Label>
+                        <Label htmlFor="app-binary">{t("vmLxc.appEditor.binaryPathLabel")}</Label>
                         <Input
                           id="app-binary"
                           value={draft.binary_path || ""}
                           onChange={(e) => setField({ binary_path: e.target.value })}
-                          placeholder="e.g., /opt/<your-app>/binary"
+                          placeholder={t("vmLxc.appEditor.binaryPathPlaceholder")}
                           className="font-mono text-xs"
                         />
                         <div className="text-[10px] text-muted-foreground mt-1">
@@ -1112,7 +1114,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                   {method === "file" && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <Label htmlFor="app-file-path">File path</Label>
+                        <Label htmlFor="app-file-path">{t("vmLxc.appEditor.filePathLabel")}</Label>
                         <Input
                           id="app-file-path"
                           value={draft.file_path || ""}
@@ -1122,12 +1124,12 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="app-file-regex">Regex (with capture group)</Label>
+                        <Label htmlFor="app-file-regex">{t("vmLxc.appEditor.regexCaptureGroupLabel")}</Label>
                         <Input
                           id="app-file-regex"
                           value={draft.file_regex || ""}
                           onChange={(e) => setField({ file_regex: e.target.value })}
-                          placeholder="version:\\s*(\\d+\\.\\d+\\.\\d+)"
+                          placeholder={t("vmLxc.appEditor.regexPlaceholderVersion")}
                           className="font-mono text-xs"
                         />
                       </div>
@@ -1137,22 +1139,22 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                   {method === "python_dist" && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <Label htmlFor="app-py-path">Python interpreter path</Label>
+                        <Label htmlFor="app-py-path">{t("vmLxc.appEditor.pythonInterpreterLabel")}</Label>
                         <Input
                           id="app-py-path"
                           value={draft.python_path || ""}
                           onChange={(e) => setField({ python_path: e.target.value })}
-                          placeholder="e.g., /opt/<your-app>/venv/bin/python"
+                          placeholder={t("vmLxc.appEditor.pythonInterpreterPlaceholder")}
                           className="font-mono text-xs"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="app-py-dist">Distribution name (pip package)</Label>
+                        <Label htmlFor="app-py-dist">{t("vmLxc.appEditor.pipDistLabel")}</Label>
                         <Input
                           id="app-py-dist"
                           value={draft.distribution || ""}
                           onChange={(e) => setField({ distribution: e.target.value })}
-                          placeholder="e.g., <your-pip-package>"
+                          placeholder={t("vmLxc.appEditor.pipDistPlaceholder")}
                           className="font-mono text-xs"
                         />
                       </div>
@@ -1162,22 +1164,22 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                   {method === "docker_label" && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <Label htmlFor="app-dl-container">Container name</Label>
+                        <Label htmlFor="app-dl-container">{t("vmLxc.appEditor.containerNameLabel")}</Label>
                         <Input
                           id="app-dl-container"
                           value={draft.container_name || ""}
                           onChange={(e) => setField({ container_name: e.target.value })}
-                          placeholder="e.g., <your-container-name>"
+                          placeholder={t("vmLxc.appEditor.containerNamePlaceholder")}
                           className="font-mono text-xs"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="app-dl-label">OCI label key</Label>
+                        <Label htmlFor="app-dl-label">{t("vmLxc.appEditor.ociLabelKeyLabel")}</Label>
                         <Input
                           id="app-dl-label"
                           value={draft.label || ""}
                           onChange={(e) => setField({ label: e.target.value })}
-                          placeholder="org.opencontainers.image.version"
+                          placeholder={t("vmLxc.appEditor.ociLabelPlaceholder")}
                           className="font-mono text-xs"
                         />
                       </div>
@@ -1187,38 +1189,38 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                   {method === "docker_exec" && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <Label htmlFor="app-de-container">Container name</Label>
+                        <Label htmlFor="app-de-container">{t("vmLxc.appEditor.containerNameLabel")}</Label>
                         <Input
                           id="app-de-container"
                           value={draft.container_name || ""}
                           onChange={(e) => setField({ container_name: e.target.value })}
-                          placeholder="e.g., <your-container-name>"
+                          placeholder={t("vmLxc.appEditor.containerNamePlaceholder")}
                           className="font-mono text-xs"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="app-de-binary">Binary (absolute path or bare name)</Label>
+                        <Label htmlFor="app-de-binary">{t("vmLxc.appEditor.binaryPathBare")}</Label>
                         <Input
                           id="app-de-binary"
                           value={draft.binary_path || ""}
                           onChange={(e) => setField({ binary_path: e.target.value })}
-                          placeholder="e.g., myapp  (or absolute path)"
+                          placeholder={t("vmLxc.appEditor.binaryPathBarePlaceholder")}
                           className="font-mono text-xs"
                         />
                       </div>
                       <div className="sm:col-span-2">
-                        <Label htmlFor="app-de-args">Binary args (comma-separated, optional)</Label>
+                        <Label htmlFor="app-de-args">{t("vmLxc.appEditor.binaryArgsLabel")}</Label>
                         <Input
                           id="app-de-args"
                           value={(draft.binary_args || []).join(", ")}
                           onChange={(e) => setField({
                             binary_args: e.target.value.split(",").map(s => s.trim()).filter(Boolean),
                           })}
-                          placeholder="e.g., --version  (comma-separated)"
+                          placeholder={t("vmLxc.appEditor.binaryArgsPlaceholder")}
                           className="font-mono text-xs"
                         />
                         <div className="text-[10px] text-muted-foreground mt-1">
-                          Left empty defaults to <code className="text-foreground/70">--version</code>. Grafana needs <code className="text-foreground/70">server, -v</code>.
+                          {t("vmLxc.appEditor.binaryArgsHintPrefix")} <code className="text-foreground/70">--version</code>. {t("vmLxc.appEditor.binaryArgsHintGrafana")} <code className="text-foreground/70">server, -v</code>.
                         </div>
                       </div>
                     </div>
@@ -1226,26 +1228,26 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
 
                   {method === "command" && (
                     <div>
-                      <Label htmlFor="app-cmd-argv">Command (comma-separated argv, no shell)</Label>
+                      <Label htmlFor="app-cmd-argv">{t("vmLxc.appEditor.commandLabel")}</Label>
                       <Input
                         id="app-cmd-argv"
                         value={(draft.command_argv || []).join(", ")}
                         onChange={(e) => setField({
                           command_argv: e.target.value.split(",").map(s => s.trim()).filter(Boolean),
                         })}
-                        placeholder="myapp, version, --json"
+                        placeholder={t("vmLxc.appEditor.commandPlaceholder")}
                         className="font-mono text-xs"
                       />
                       <div className="text-[10px] text-muted-foreground mt-1">
                         Runs argv-style inside the CT as root — never through a shell. You are responsible for what the command does. Use <code className="text-foreground/70">installed_regex</code> below to extract the version from the output.
                       </div>
                       <div className="mt-2">
-                        <Label htmlFor="app-cmd-regex">Installed version regex (capture group)</Label>
+                        <Label htmlFor="app-cmd-regex">{t("vmLxc.appEditor.installedVersionRegexLabel")}</Label>
                         <Input
                           id="app-cmd-regex"
                           value={draft.installed_regex || ""}
                           onChange={(e) => setField({ installed_regex: e.target.value })}
-                          placeholder="v?(\\d+\\.\\d+\\.\\d+)"
+                          placeholder={t("vmLxc.appEditor.tagRegexBare")}
                           className="font-mono text-xs mt-1"
                         />
                       </div>
@@ -1254,7 +1256,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
 
                   {method === "manual" && (
                     <div>
-                      <Label htmlFor="app-manual-ver">Installed version</Label>
+                      <Label htmlFor="app-manual-ver">{t("vmLxc.appEditor.installedVersionLabel")}</Label>
                       <Input
                         id="app-manual-ver"
                         value={draft.installed_version || ""}
@@ -1298,17 +1300,17 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                     return (
                       <>
                         <div>
-                          <Label htmlFor="app-upstream-type">Upstream version source (optional)</Label>
+                          <Label htmlFor="app-upstream-type">{t("vmLxc.appEditor.upstreamSourceLabel")}</Label>
                           <Select
                             value={upstreamType || "none"}
                             onValueChange={(v) => setUpstream(v === "none" ? "" : (v as any))}
                           >
                             <SelectTrigger id="app-upstream-type"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="none">none (skip upstream check)</SelectItem>
-                              <SelectItem value="github">GitHub repo</SelectItem>
-                              <SelectItem value="http_json">HTTP JSON endpoint</SelectItem>
-                              <SelectItem value="docker_hub">Docker Hub image</SelectItem>
+                              <SelectItem value="none">{t("vmLxc.appEditor.upstreamNone")}</SelectItem>
+                              <SelectItem value="github">{t("vmLxc.appEditor.upstreamGithub")}</SelectItem>
+                              <SelectItem value="http_json">{t("vmLxc.appEditor.upstreamHttp")}</SelectItem>
+                              <SelectItem value="docker_hub">{t("vmLxc.appEditor.upstreamDocker")}</SelectItem>
                             </SelectContent>
                           </Select>
                           <div className="text-[10px] text-muted-foreground mt-1">
@@ -1319,27 +1321,27 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                         {upstreamType === "github" && (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                              <Label htmlFor="app-repo">GitHub repo</Label>
+                              <Label htmlFor="app-repo">{t("vmLxc.appEditor.githubRepoLabel")}</Label>
                               <Input
                                 id="app-repo"
                                 value={draft.repo || ""}
                                 onChange={(e) => setField({ repo: e.target.value })}
-                                placeholder="e.g., owner/name"
+                                placeholder={t("vmLxc.appEditor.githubRepoPlaceholder")}
                               />
                               <div className="text-[10px] text-muted-foreground mt-1">
                                 Public GitHub repository where releases or tags are published.
                               </div>
                             </div>
                             <div>
-                              <Label htmlFor="app-source">Latest from</Label>
+                              <Label htmlFor="app-source">{t("vmLxc.appEditor.latestFromLabel")}</Label>
                               <Select
                                 value={draft.github_source || "releases"}
                                 onValueChange={(v) => setField({ github_source: v as GithubSource })}
                               >
                                 <SelectTrigger id="app-source"><SelectValue /></SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="releases">releases</SelectItem>
-                                  <SelectItem value="tags">tags</SelectItem>
+                                  <SelectItem value="releases">{t("vmLxc.appEditor.sourceReleases")}</SelectItem>
+                                  <SelectItem value="tags">{t("vmLxc.appEditor.sourceTags")}</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -1349,13 +1351,13 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                         {upstreamType === "http_json" && (
                           <div className="space-y-3">
                             <div>
-                              <Label htmlFor="app-upstream-url">Endpoint URL</Label>
+                              <Label htmlFor="app-upstream-url">{t("vmLxc.appEditor.endpointUrlLabel")}</Label>
                               <Input
                                 id="app-upstream-url"
                                 type="url"
                                 value={draft.upstream_url || ""}
                                 onChange={(e) => setField({ upstream_url: e.target.value })}
-                                placeholder="e.g., https://vendor.example.com/api/latest.json"
+                                placeholder={t("vmLxc.appEditor.endpointUrlPlaceholder")}
                                 className="font-mono text-xs"
                                 maxLength={512}
                               />
@@ -1364,12 +1366,12 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                               </div>
                             </div>
                             <div>
-                              <Label htmlFor="app-upstream-path">JSON path</Label>
+                              <Label htmlFor="app-upstream-path">{t("vmLxc.appEditor.jsonPathLabel")}</Label>
                               <Input
                                 id="app-upstream-path"
                                 value={draft.upstream_json_path || ""}
                                 onChange={(e) => setField({ upstream_json_path: e.target.value })}
-                                placeholder="e.g., data.version  or  releases[0].tag_name"
+                                placeholder={t("vmLxc.appEditor.jsonPathPlaceholder")}
                                 className="font-mono text-xs"
                                 maxLength={128}
                               />
@@ -1382,12 +1384,12 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
 
                         {upstreamType === "docker_hub" && (
                           <div>
-                            <Label htmlFor="app-docker-image">Docker Hub image</Label>
+                            <Label htmlFor="app-docker-image">{t("vmLxc.appEditor.dockerImageLabel")}</Label>
                             <Input
                               id="app-docker-image"
                               value={draft.docker_image || ""}
                               onChange={(e) => setField({ docker_image: e.target.value })}
-                              placeholder="e.g., linuxserver/plex  or  nginx"
+                              placeholder={t("vmLxc.appEditor.dockerImagePlaceholder")}
                               className="font-mono text-xs"
                               maxLength={255}
                             />
@@ -1402,13 +1404,13 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                         {upstreamType && (
                           <div>
                             <Label htmlFor="app-tag-regex">
-                              {upstreamType === "docker_hub" ? "Tag filter regex (optional)" : "Version regex (optional)"}
+                              {upstreamType === "docker_hub" ? t("vmLxc.appEditor.tagFilterRegexOptional") : t("vmLxc.appEditor.versionRegexOptional")}
                             </Label>
                             <Input
                               id="app-tag-regex"
                               value={draft.tag_regex || ""}
                               onChange={(e) => setField({ tag_regex: e.target.value })}
-                              placeholder="e.g., v?(\\d+\\.\\d+\\.\\d+)"
+                              placeholder={t("vmLxc.appEditor.tagRegexPlaceholder")}
                               className="font-mono text-xs"
                             />
                             <div className="text-[10px] text-muted-foreground mt-1">
@@ -1433,14 +1435,14 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
             )}
 
             <div className="flex flex-wrap gap-2 justify-end pt-2">
-              <Button variant="ghost" onClick={closeEditor} disabled={saving}>Cancel</Button>
+              <Button variant="ghost" onClick={closeEditor} disabled={saving}>{t("vmLxc.appEditor.cancelButton")}</Button>
               <Button
                 onClick={save}
                 disabled={saving || !draft.name.trim()}
                 className="bg-blue-500 hover:bg-blue-600 text-white"
               >
                 {saving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
-                Save
+                {t("vmLxc.appEditor.saveButton")}
               </Button>
             </div>
           </CardContent>
@@ -1466,7 +1468,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
           )}
           <div className="min-w-0">
             <div className="text-sm font-semibold text-foreground truncate">{d.name}</div>
-            <div className="text-xs text-muted-foreground">Currently hidden — will re-appear in the detection list</div>
+            <div className="text-xs text-muted-foreground">{t("vmLxc.appEditor.hiddenBadge")}</div>
           </div>
         </div>
         <Button
@@ -1506,7 +1508,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
           )}
           <div className="min-w-0">
             <div className="text-sm font-semibold text-foreground truncate">{d.name}</div>
-            <div className="text-xs text-emerald-400/90">Detected on this container</div>
+            <div className="text-xs text-emerald-400/90">{t("vmLxc.appEditor.detectedInContainer")}</div>
           </div>
         </div>
         <div className="flex flex-row gap-2 flex-shrink-0 sm:justify-end w-full sm:w-auto">
@@ -1523,11 +1525,11 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
             variant="ghost"
             onClick={() => dismissDetection(d.slug, d.name)}
             aria-label={`Hide ${d.name} detection`}
-            title="Hide this detection permanently"
+            title={t("vmLxc.appEditor.hidePermanentlyTooltip")}
             className="flex-1 sm:flex-none bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300"
           >
             <EyeOff className="h-3.5 w-3.5 sm:mr-1" />
-            <span className="hidden sm:inline">Hide</span>
+            <span className="hidden sm:inline">{t("vmLxc.appEditor.hideButton")}</span>
           </Button>
         </div>
       </div>
@@ -1546,19 +1548,19 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Register a different app</h3>
+                <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.appEditor.registerDifferent")}</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  You have {hiddenDetections.length} hidden detection{hiddenDetections.length === 1 ? "" : "s"}. Restore one to bring it back, or register a custom app manually.
+                  {t(hiddenDetections.length === 1 ? "vmLxc.appEditor.hiddenDetectionsHelpSingular" : "vmLxc.appEditor.hiddenDetectionsHelpPlural", { count: hiddenDetections.length })}
                 </p>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setBrowseOpen(false)}
-                aria-label="Close panel"
+                aria-label={t("vmLxc.appEditor.closePanel")}
                 className="text-muted-foreground hover:text-foreground"
               >
-                Cancel
+                {t("vmLxc.appEditor.cancelButton")}
               </Button>
             </div>
             {hiddenDetections.length > 0 && (
@@ -1572,7 +1574,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                 className="bg-blue-500 hover:bg-blue-600 text-white"
               >
                 <PlusCircle className="h-4 w-4 mr-1.5" />
-                Register a custom app
+                {t("vmLxc.appEditor.registerCustom")}
               </Button>
             </div>
           </CardContent>
@@ -1590,12 +1592,10 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
               <Package className="h-5 w-5 text-emerald-400" />
             </div>
             <h3 className="text-sm font-semibold text-foreground text-center">
-              No applications registered
+              {t("vmLxc.appEditor.noAppsTitle")}
             </h3>
             <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed text-center">
-              Register each application running in this container. Get
-              clickable web links, and — optionally — upstream version
-              tracking + notifications for new releases.
+              {t("vmLxc.appEditor.noAppsBody")}
             </p>
             {visibleDetected.length > 0 && (
               <div className="space-y-2 pt-2">
@@ -1606,10 +1606,10 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
               <Button onClick={openBrowseOrEditor} variant={visibleDetected.length > 0 ? "outline" : "default"}
                       className={visibleDetected.length > 0 ? "" : "bg-blue-500 hover:bg-blue-600 text-white"}>
                 <PlusCircle className="h-4 w-4 mr-1.5" />
-                {visibleDetected.length > 0 ? "Register a different app" : "Register application"}
+                {visibleDetected.length > 0 ? t("vmLxc.appEditor.registerDifferent") : t("vmLxc.appEditor.registerApplication")}
                 {hiddenDetections.length > 0 && (
                   <span className="ml-2 text-[10px] opacity-70">
-                    · {hiddenDetections.length} hidden
+                    · {t("vmLxc.appEditor.hiddenSuffix", { count: hiddenDetections.length })}
                   </span>
                 )}
               </Button>
@@ -1705,11 +1705,11 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                   <div className={"mb-3 grid gap-3 " + (hasUpstream ? "grid-cols-2" : "grid-cols-1")}>
                     {st?.installed_version && (
                       <div className="p-3 rounded-md bg-muted/40">
-                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Installed</div>
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t("vmLxc.appEditor.installedStatus")}</div>
                         <div className="text-lg font-semibold font-mono text-foreground flex items-center gap-2">
                           {st.installed_version}
                           {upToDate && (
-                            <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" aria-label="Up to date" />
+                            <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" aria-label={t("vmLxc.appEditor.upToDateBadge")} />
                           )}
                         </div>
                       </div>
@@ -1720,9 +1720,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                           Latest upstream
                         </div>
                         <div className={"text-lg font-semibold font-mono flex items-center gap-2 " + (hasUpdate ? "text-purple-400" : "text-foreground")}>
-                          {st?.latest_version || <span className="text-muted-foreground text-base font-normal">checking…</span>}
+                          {st?.latest_version || <span className="text-muted-foreground text-base font-normal">{t("vmLxc.appEditor.checkingStatus")}</span>}
                           {hasUpdate && st?.latest_version && (
-                            <ArrowUpCircle className="h-5 w-5 text-purple-400 flex-shrink-0" aria-label="Update available" />
+                            <ArrowUpCircle className="h-5 w-5 text-purple-400 flex-shrink-0" aria-label={t("vmLxc.appEditor.updateAvailableBadge")} />
                           )}
                         </div>
                       </div>
