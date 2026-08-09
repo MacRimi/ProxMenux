@@ -50,12 +50,14 @@ interface ScriptTerminalModalProps {
   description: string
   scriptName?: string
   params?: Record<string, string>
+  completedSuccessfullyMessage?: string
+  completedWithErrorMessage?: (exitCode: number) => string
   // Optional callback fired when the script's WebSocket closes
   // (script_runner sends an exit code and then closes). Lets the
   // parent auto-dismiss the modal — used by host-backup's Restore
   // flow so "Press Enter to close" in the bash script actually
   // closes the modal without an extra click. Other callers ignore.
-  onComplete?: () => void
+  onComplete?: (exitCode?: number) => void
 }
 
 export function ScriptTerminalModal({
@@ -65,6 +67,8 @@ export function ScriptTerminalModal({
   title,
   description,
   params = { EXECUTION_MODE: "web" },
+  completedSuccessfullyMessage,
+  completedWithErrorMessage,
   onComplete,
 }: ScriptTerminalModalProps) {
   const t = useT()
@@ -85,6 +89,7 @@ export function ScriptTerminalModal({
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const reconnectAttemptsRef = useRef(0)
   const keepAliveIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const completionReceivedRef = useRef(false)
   const [isMobile, setIsMobile] = useState(false)
   const [isTablet, setIsTablet] = useState(false)
 
@@ -96,6 +101,14 @@ export function ScriptTerminalModal({
   const resizeBarRef = useRef<HTMLDivElement>(null)
   const modalHeightRef = useRef(600)
 
+  const getCompletionMessage = useCallback(
+    (exitCode: number) =>
+      exitCode === 0
+        ? (completedSuccessfullyMessage ?? t("scriptTerminal.completedSuccessfully"))
+        : (completedWithErrorMessage?.(exitCode) ?? t("scriptTerminal.completedWithError", { code: exitCode })),
+    [completedSuccessfullyMessage, completedWithErrorMessage, t],
+  )
+
   const terminalContainerRef = useRef<HTMLDivElement>(null)
   const paramsRef = useRef(params)
   
@@ -106,7 +119,7 @@ export function ScriptTerminalModal({
 
   // Same trick for onComplete — we want the latest callback inside
   // the ws.onclose handler without re-running the connection effect.
-  const onCompleteRef = useRef<(() => void) | undefined>(undefined)
+  const onCompleteRef = useRef<((exitCode?: number) => void) | undefined>(undefined)
   useEffect(() => {
     onCompleteRef.current = onComplete
   }, [onComplete])
@@ -167,6 +180,23 @@ const initMessage = {
           if (event.data === '{"type": "pong"}' || event.data === '{"type":"pong"}') {
             return
           }
+
+          // The PTY worker always emits this final line.  Treat it as a
+          // completion fallback because some WebSocket servers tear down the
+          // connection before the following structured message is flushed.
+          const exitMatch = typeof event.data === "string"
+            ? event.data.match(/\[Script exited with code (-?\d+)\]/)
+            : null
+          if (exitMatch) {
+            const exitCode = Number(exitMatch[1])
+            termRef.current?.write(event.data)
+            completionReceivedRef.current = true
+            setIsComplete(true)
+            termRef.current?.writeln(`\x1b[${exitCode === 0 ? "32" : "31"}m${getCompletionMessage(exitCode)}\x1b[0m`)
+            onCompleteRef.current?.(exitCode)
+            if (ws.readyState === WebSocket.OPEN) ws.close(1000, "script complete")
+            return
+          }
           
           try {
             const msg = JSON.parse(event.data)
@@ -189,6 +219,15 @@ const initMessage = {
               termRef.current?.writeln(`\x1b[31m${msg.message}\x1b[0m`)
               return
             }
+            if (msg.type === "script_complete") {
+              const exitCode = Number(msg.exit_code ?? 1)
+              completionReceivedRef.current = true
+              setIsComplete(true)
+              termRef.current?.writeln(`\x1b[${exitCode === 0 ? "32" : "31"}m${getCompletionMessage(exitCode)}\x1b[0m`)
+              onCompleteRef.current?.(exitCode)
+              if (ws.readyState === WebSocket.OPEN) ws.close(1000, "script complete")
+              return
+            }
           } catch {}
           termRef.current?.write(event.data)
           setIsWaitingNextInteraction(false)
@@ -199,6 +238,9 @@ const initMessage = {
 
         ws.onerror = () => {
           setConnectionStatus("offline")
+          if (!completionReceivedRef.current) {
+            termRef.current?.writeln(`\x1b[31m${t("scriptTerminal.websocketError")}\x1b[0m`)
+          }
         }
 
         ws.onclose = (event) => {
@@ -207,16 +249,19 @@ const initMessage = {
             clearInterval(keepAliveIntervalRef.current)
             keepAliveIntervalRef.current = null
           }
+          if (completionReceivedRef.current) {
+            return
+          }
           if (!isComplete && reconnectAttemptsRef.current < 3) {
             reconnectTimeoutRef.current = setTimeout(attemptReconnect, 2000)
           } else {
             setIsComplete(true)
-            onCompleteRef.current?.()
+            onCompleteRef.current?.(-1)
           }
         }
       }
     }, 1000)
-  }, [isOpen, isComplete, scriptPath])
+  }, [isOpen, isComplete, scriptPath, getCompletionMessage, t])
 
   const sendKey = useCallback((key: string) => {
     if (!termRef.current) return
@@ -352,6 +397,23 @@ const initMessage = {
       if (event.data === '{"type": "pong"}' || event.data === '{"type":"pong"}') {
         return
       }
+
+      // See the reconnect handler above.  The exit line is guaranteed to be
+      // sent with the PTY output and is therefore a robust fallback when a
+      // final JSON frame is lost during server-side socket teardown.
+      const exitMatch = typeof event.data === "string"
+        ? event.data.match(/\[Script exited with code (-?\d+)\]/)
+        : null
+      if (exitMatch) {
+        const exitCode = Number(exitMatch[1])
+        term.write(event.data)
+        completionReceivedRef.current = true
+        setIsComplete(true)
+        term.writeln(`\x1b[${exitCode === 0 ? "32" : "31"}m${getCompletionMessage(exitCode)}\x1b[0m`)
+        onCompleteRef.current?.(exitCode)
+        if (ws.readyState === WebSocket.OPEN) ws.close(1000, "script complete")
+        return
+      }
       
       try {
         const msg = JSON.parse(event.data)
@@ -376,6 +438,15 @@ const initMessage = {
           term.writeln(`\x1b[31m${msg.message}\x1b[0m`)
           return
         }
+        if (msg.type === "script_complete") {
+          const exitCode = Number(msg.exit_code ?? 1)
+          completionReceivedRef.current = true
+          setIsComplete(true)
+          term.writeln(`\x1b[${exitCode === 0 ? "32" : "31"}m${getCompletionMessage(exitCode)}\x1b[0m`)
+          onCompleteRef.current?.(exitCode)
+          if (ws.readyState === WebSocket.OPEN) ws.close(1000, "script complete")
+          return
+        }
       } catch {
         // Not JSON, es output normal de terminal
       }
@@ -390,21 +461,25 @@ const initMessage = {
 
     ws.onerror = (error) => {
       setConnectionStatus("offline")
-      term.writeln(`\x1b[31m${t("scriptTerminal.websocketError")}\x1b[0m`)
+      if (!completionReceivedRef.current) {
+        term.writeln(`\x1b[31m${t("scriptTerminal.websocketError")}\x1b[0m`)
+      }
     }
 
     ws.onclose = (event) => {
       setConnectionStatus("offline")
-      term.writeln(`\x1b[33m${t("scriptTerminal.connectionClosed")}\x1b[0m`)
+      if (!completionReceivedRef.current) {
+        term.writeln(`\x1b[33m${t("scriptTerminal.connectionClosed")}\x1b[0m`)
+      }
 
       if (keepAliveIntervalRef.current) {
         clearInterval(keepAliveIntervalRef.current)
         keepAliveIntervalRef.current = null
       }
 
-      if (!isComplete) {
+      if (!completionReceivedRef.current && !isComplete) {
         setIsComplete(true)
-        onCompleteRef.current?.()
+        onCompleteRef.current?.(-1)
       }
     }
 
@@ -491,6 +566,7 @@ const initMessage = {
 
       sessionIdRef.current = Math.random().toString(36).substring(2, 8)
       reconnectAttemptsRef.current = 0
+      completionReceivedRef.current = false
       setIsComplete(false)
       setInteractionInput("")
       setCurrentInteraction(null)

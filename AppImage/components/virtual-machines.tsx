@@ -1464,7 +1464,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     setApplyStartedAt(Date.now())
     setApplyOpen(true)
   }
-  const handleApplyComplete = async () => {
+  const handleApplyComplete = async (exitCode = 0) => {
     if (applyVmid == null) return
     const duration = Math.max(0, Math.round((Date.now() - applyStartedAt) / 1000))
     // The modal fires onComplete on any WS close (success or user cancel);
@@ -1477,7 +1477,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          success: true,
+          success: exitCode === 0,
           target: applyTarget,
           duration_seconds: duration,
           ct_name: selectedVM?.name || `CT-${applyVmid}`,
@@ -4967,13 +4967,17 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           onComplete={handleApplyComplete}
           scriptPath="/usr/local/share/proxmenux/scripts/lxc/apply_updates.sh"
           scriptName="lxc_apply_updates"
-          title={`Apply updates — CT ${applyVmid}`}
+          title={t("vmLxc.updates.terminalTitle", { vmid: applyVmid })}
+          completedSuccessfullyMessage={t("vmLxc.updates.terminalCompletedSuccessfully")}
+          completedWithErrorMessage={(exitCode) =>
+            t("vmLxc.updates.terminalCompletedWithError", { code: exitCode })
+          }
           description={
             applyTarget === "os"
-              ? "Applying OS package updates inside the container..."
+              ? t("vmLxc.updates.terminalDescriptionOs")
               : applyTarget === "app"
-                ? "Running the application updater inside the container..."
-                : "Applying OS package + application updates inside the container..."
+                ? t("vmLxc.updates.terminalDescriptionApp")
+                : t("vmLxc.updates.terminalDescriptionBoth")
           }
           params={{
             VMID: String(applyVmid),
