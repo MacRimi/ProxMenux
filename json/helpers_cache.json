@@ -4596,7 +4596,8 @@
       "Miscellaneous"
     ],
     "notes": [
-      "Add extension store repositories in Settings after first start (official repo: https://github.com/fccview/fccview-degoog-extensions)."
+      "Add extension store repositories in Settings after first start (official repo: https://github.com/fccview/fccview-degoog-extensions).",
+      "If you need to access to settings page, you can find the password here `cat /opt/degoog/.env`."
     ],
     "warnings": [
       "Project is currently marked beta upstream and not intended for production use yet."
