@@ -2410,12 +2410,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   >
                     <Package className="h-4 w-4" />
                     <span className={activeModalTab === "app" ? "" : "hidden sm:inline"}>
-                      App
+                      {t("vmLxc.tabs.app")}
                     </span>
                     {(selectedVM.app_watches || []).some(
                       (a) => a.update_available && !a.managed_oci_app_id,
                     ) && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ml-0.5" title="Update available" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ml-0.5" title={t("vmLxc.appEditor.updateAvailableBadge")} />
                     )}
                   </button>
                 )}
@@ -3438,7 +3438,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         managedEntry
                           ? {
                               managed_oci_app_id: managedEntry.managed_oci_app_id!,
-                              name: managedEntry.name || "Managed app",
+                              name: managedEntry.name || t("vmLxc.appEditor.managedApp"),
                               installed_version: managedEntry.installed_version,
                               latest_version: managedEntry.latest_version,
                               update_available: managedEntry.update_available,
@@ -3490,19 +3490,19 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   <Shield className="h-4 w-4 text-emerald-400" />
                                 </div>
                                 <h3 className="text-sm font-semibold text-foreground">
-                                  {aw?.name || "Managed app"}
+                                  {aw?.name || t("vmLxc.updates.managedApp")}
                                 </h3>
                               </div>
                               <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
-                                managed
+                                {t("vmLxc.updates.managedBadge")}
                               </Badge>
                             </div>
                             {hasUpdate ? (
                               <>
                                 <div className="text-xs text-muted-foreground">
-                                  Last checked: {lastChecked} ·{" "}
+                                  {t("vmLxc.updates.lastCheckedAt", { date: lastChecked })} ·{" "}
                                   <span className="text-purple-400 font-medium">
-                                    Tailscale v{aw?.latest_version} available
+                                    {t("vmLxc.updates.tailscaleAvailable", { version: aw?.latest_version || "" })}
                                   </span>
                                 </div>
                                 <div>
@@ -3517,24 +3517,24 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     className="bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 hover:text-purple-200"
                                   >
                                     <ArrowUpCircle className="h-4 w-4 mr-1.5" />
-                                    Update to v{aw?.latest_version}
+                                    {t("vmLxc.updates.updateToVersion", { version: aw?.latest_version || "" })}
                                   </Button>
                                 </div>
                                 {others > 0 && (
                                   <div className="text-[11px] text-muted-foreground">
-                                    +{others} other package{others === 1 ? "" : "s"} pending in the container
+                                    {t(others === 1 ? "vmLxc.updates.otherPackagePending" : "vmLxc.updates.otherPackagesPending", { count: others })}
                                   </div>
                                 )}
                               </>
                             ) : upToDate ? (
                               <div className="text-xs text-muted-foreground">
-                                Last checked: {lastChecked}
+                                {t("vmLxc.updates.lastCheckedAt", { date: lastChecked })}
                                 {aw?.installed_version && <> · Tailscale v{aw.installed_version}</>}
                                 {" · "}<span className="text-emerald-400/90">{t("vmLxc.updates.noUpdatesAvailableChip")}</span>
                               </div>
                             ) : (
                               <div className="text-xs text-muted-foreground">
-                                No update information yet — check from Security → Secure Gateway.
+                                {t("vmLxc.updates.noManagedUpdateInfo")}
                               </div>
                             )}
                           </CardContent>
@@ -3552,15 +3552,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               <Container className="h-4 w-4 text-blue-400" />
                             </div>
                             <h3 className="text-sm font-semibold text-foreground">
-                              OCI image container
+                              {t("vmLxc.updates.ociTitle")}
                             </h3>
                           </div>
                           <p className="text-sm text-muted-foreground leading-relaxed">
-                            This container was created from an OCI (Docker) image.
-                            Update management for OCI containers is coming with
-                            the upcoming OCI install feature — updates will
-                            rebuild the container from a newer image tag rather
-                            than patching packages inside.
+                            {t("vmLxc.updates.ociBody")}
                           </p>
                         </CardContent>
                       </Card>
@@ -3777,7 +3773,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           </div>
                                           <div className="flex items-center gap-2">
                                             <ArrowUpCircle className="h-4 w-4 text-purple-400 flex-shrink-0" />
-                                            <span>upstream <code className="text-purple-300">{matchApp!.latest_version}</code> available</span>
+                                            <span>{t("vmLxc.updates.upstreamAvailable", { version: matchApp!.latest_version || "" })}</span>
                                           </div>
                                         </div>
                                       ) : upToD ? (
@@ -3819,16 +3815,16 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       {!helperExists && (
                                         helperKnownNotUpdateable ? (
                                           <p className="text-xs text-amber-400/90 leading-relaxed">
-                                            The community-scripts registry marks this app as not updateable
+                                            {t("vmLxc.updates.helperNotUpdateable")}
                                             in place. Apply updates manually or reinstall with a newer
                                             helper-script.
                                           </p>
                                         ) : (
                                           <p className="text-xs text-muted-foreground leading-relaxed">
-                                            Detected a helper-scripts updater
+                                            {t("vmLxc.updates.helperDetectedTitle")}
                                             (<code className="text-foreground/80">{uc?.helper_slug}</code>)
                                             but it isn't listed in the ProxMenux helpers catalogue.
-                                            Applying manually is safest.
+                                            {t("vmLxc.updates.helperDetectedBody")}
                                           </p>
                                         )
                                       )}
@@ -3922,7 +3918,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                               </div>
                                               <div className="flex items-center gap-2">
                                                 <ArrowUpCircle className="h-4 w-4 text-purple-400 flex-shrink-0" />
-                                                <span>upstream <code className="text-purple-300">{aw.latest_version}</code> available</span>
+                                                <span>{t("vmLxc.updates.upstreamAvailable", { version: aw.latest_version || "" })}</span>
                                               </div>
                                             </div>
                                           ) : upToDate ? (
@@ -4103,7 +4099,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       )}
                                       <span>
                                         {applyBackup
-                                          ? <>{t("vmLxc.options.snapshotBefore")} <span className="text-muted-foreground">— on <code className="text-foreground/80">{applyBackupStorage || selectedBackupStorage || t("vmLxc.options.storageAuto")}</code></span></>
+                                          ? <>{t("vmLxc.options.snapshotBefore")} <span className="text-muted-foreground">{t("vmLxc.options.snapshotOn", { storage: applyBackupStorage || selectedBackupStorage || t("vmLxc.options.storageAuto") })}</span></>
                                           : <span className="text-muted-foreground">{t("vmLxc.options.noSnapshot")}</span>}
                                       </span>
                                     </div>

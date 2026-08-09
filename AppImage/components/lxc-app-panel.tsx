@@ -275,7 +275,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
         setSuggestions(s)
       } catch { /* non-fatal */ }
     } catch (e: any) {
-      setError(e?.message || "Could not load app configuration")
+      setError(e?.message || t("vmLxc.appEditor.loadFailed"))
     } finally {
       setLoading(false)
     }
@@ -492,7 +492,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
       setSidecar(r)
       onChange?.()
     } catch (e: any) {
-      setError(e?.message || "Check failed")
+      setError(e?.message || t("vmLxc.appEditor.checkFailed"))
     } finally {
       setBusyAppId(null)
     }
@@ -508,7 +508,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
       await load()
       onChange?.()
     } catch (e: any) {
-      setError(e?.message || "Delete failed")
+      setError(e?.message || t("vmLxc.appEditor.deleteFailed"))
     } finally {
       setBusyAppId(null)
     }
@@ -532,7 +532,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
       })
       setSidecar(r)
     } catch (e: any) {
-      setError(e?.message || "Could not dismiss detection")
+      setError(e?.message || t("vmLxc.appEditor.dismissFailed"))
       await load()  // resync on failure
     }
   }
@@ -554,7 +554,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
       })
       setSidecar(r)
     } catch (e: any) {
-      setError(e?.message || "Could not restore detection")
+      setError(e?.message || t("vmLxc.appEditor.restoreFailed"))
       await load()
     }
   }
@@ -571,7 +571,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
     // in an Alpine CT). When we add more OCI apps we'll swap this to
     // a lookup keyed on managed_oci_app_id → catalog metadata.
     const isSecureGateway = managed.managed_oci_app_id === "secure-gateway"
-    const displayName = isSecureGateway ? "Secure Gateway" : (managed.name || "Managed app")
+    const displayName = isSecureGateway ? "Secure Gateway" : (managed.name || t("vmLxc.appEditor.managedApp"))
     const displaySubtitle = isSecureGateway ? "Tailscale VPN Gateway" : ""
     // Two variants — the selfh.st mark (dark logo on light bg) reads
     // better in light mode; the homarr-labs "-light" variant (light
@@ -585,7 +585,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
       : ""
     const upstreamName = isSecureGateway ? "Tailscale" : ""
     const repo = isSecureGateway ? "tailscale/tailscale" : ""
-    const methodLine = isSecureGateway ? "apk · tailscale · managed" : "managed"
+    const methodLine = isSecureGateway ? `apk · tailscale · ${t("vmLxc.appEditor.managedStatus")}` : t("vmLxc.appEditor.managedStatus")
     const hasUpdate = managed.update_available === true
     const upToDate = managed.update_available === false && !!managed.installed_version
     const showVersions = !!(managed.installed_version || managed.latest_version || repo)
@@ -646,7 +646,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                       <div className="text-xs text-muted-foreground mt-0.5">{methodLine}</div>
                       {managed.checked_at && (
                         <div className="text-[10px] text-muted-foreground/80 mt-0.5">
-                          Checked {new Date(managed.checked_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
+                          {t("vmLxc.appEditor.checkedAt", { date: new Date(managed.checked_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) })}
                         </div>
                       )}
                       {repo && (
@@ -693,7 +693,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                 {repo && (
                   <div className="p-3 rounded-md bg-muted/40">
                     <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
-                      Latest upstream
+                      {t("vmLxc.appEditor.latestUpstream")}
                     </div>
                     <div className={"text-lg font-semibold font-mono flex items-center gap-2 " + (hasUpdate ? "text-purple-400" : "text-foreground")}>
                       {managed.latest_version || <span className="text-muted-foreground text-base font-normal">{t("vmLxc.appEditor.checkingStatus")}</span>}
@@ -729,7 +729,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
     return (
       <div className="flex items-center justify-center py-12 text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin mr-2" />
-        Loading applications…
+        {t("vmLxc.appEditor.loadingApplications")}
       </div>
     )
   }
@@ -798,7 +798,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                 onChange={(e) => { setName(e.target.value); setPickerOpen(true) }}
                 onFocus={() => setPickerOpen(true)}
                 onBlur={() => setTimeout(() => setPickerOpen(false), 150)}
-                placeholder={suggestions?.name_suggestion || "Type to search 700+ apps, or type your own"}
+                placeholder={suggestions?.name_suggestion || t("vmLxc.appEditor.nameSearchPlaceholder")}
                 maxLength={64}
                 autoComplete="off"
               />
@@ -817,7 +817,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                 return (
                   <div className="absolute z-20 left-0 right-0 mt-1 max-h-72 overflow-y-auto rounded-md border border-border bg-popover shadow-lg">
                     <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/60">
-                      {matches.length === 20 ? t("vmLxc.appEditor.top20Matches") : `${matches.length} match${matches.length === 1 ? "" : "es"}`}
+                      {matches.length === 20 ? t("vmLxc.appEditor.top20Matches") : t("vmLxc.appEditor.matchCount", { count: matches.length })}
                     </div>
                     {matches.map((c) => (
                       <button
@@ -876,8 +876,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                           <div className="text-sm text-foreground truncate">{c.name}</div>
                           <div className="text-[10px] text-muted-foreground">
                             {c.slug}
-                            {c.default_port ? ` · port ${c.default_port}` : ""}
-                            {c.has_tracking ? " · tracking available" : ""}
+                            {c.default_port ? ` · ${t("vmLxc.appEditor.catalogPort", { port: c.default_port })}` : ""}
+                            {c.has_tracking ? ` · ${t("vmLxc.appEditor.trackingAvailable")}` : ""}
                           </div>
                         </div>
                       </button>
@@ -894,7 +894,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                 app card header. */}
             <div className="pt-2 border-t border-border/50">
               <Label htmlFor="app-logo" className="text-xs uppercase tracking-wider text-muted-foreground">
-                Logo URL <span className="normal-case tracking-normal text-[10px] opacity-70">(optional)</span>
+                {t("vmLxc.appEditor.logoUrlLabel")} <span className="normal-case tracking-normal text-[10px] opacity-70">{t("vmLxc.appEditor.optionalSuffix")}</span>
               </Label>
               <Input
                 id="app-logo"
@@ -913,11 +913,11 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
             <div className="pt-2 border-t border-border/50">
               <div className="flex items-center justify-between mb-2">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Web links
+                  {t("vmLxc.appEditor.webLinks")}
                 </Label>
                 <Button type="button" variant="ghost" size="sm" onClick={addEmptyPort}>
                   <PlusCircle className="h-3.5 w-3.5 mr-1" />
-                  Add port
+                  {t("vmLxc.appEditor.addPort")}
                 </Button>
               </div>
 
@@ -928,7 +928,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
               {suggestable.length > 0 && (
                 <div className="mb-2 flex flex-wrap gap-1 items-center">
                   <span className="text-[10px] text-muted-foreground pr-1">
-                    Ports detected in the container — click to add:
+                    {t("vmLxc.appEditor.detectedPorts")}
                   </span>
                   {suggestable.map((p) => (
                     <button
@@ -945,8 +945,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
 
               {draft.ports.length === 0 && suggestable.length === 0 && (
                 <div className="text-xs text-muted-foreground italic">
-                  No web ports listening. Use "Add port" if you'd still
-                  like to register one manually.
+                  {t("vmLxc.appEditor.noWebPorts")}
                 </div>
               )}
 
@@ -1025,15 +1024,15 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                 ) : (
                   <ChevronRight className="h-3.5 w-3.5" />
                 )}
-                Track upstream version (optional)
+                {t("vmLxc.appEditor.trackUpstream")}
                 {!showAdvanced && !method && (
                   <span className="ml-auto text-[10px] normal-case tracking-normal">
-                    Off — link only
+                    {t("vmLxc.appEditor.trackOff")}
                   </span>
                 )}
                 {!showAdvanced && method && (
                   <span className="ml-auto text-[10px] normal-case tracking-normal text-emerald-400/80">
-                    On · {method}
+                    {t("vmLxc.appEditor.trackOn", { method })}
                   </span>
                 )}
               </button>
@@ -1041,11 +1040,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
               {showAdvanced && (
                 <div className="mt-3 space-y-3">
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Optional. When enabled, ProxMenux checks the installed
-                    version inside the container and compares it against
-                    a GitHub repo — you'll see "update available" and get
-                    an optional notification. Skip this if you only want
-                    a clickable link.
+                    {t("vmLxc.appEditor.trackHelp")}
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1239,7 +1234,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                         className="font-mono text-xs"
                       />
                       <div className="text-[10px] text-muted-foreground mt-1">
-                        Runs argv-style inside the CT as root — never through a shell. You are responsible for what the command does. Use <code className="text-foreground/70">installed_regex</code> below to extract the version from the output.
+                        {t("vmLxc.appEditor.commandSafetyHelp")}
                       </div>
                       <div className="mt-2">
                         <Label htmlFor="app-cmd-regex">{t("vmLxc.appEditor.installedVersionRegexLabel")}</Label>
@@ -1266,7 +1261,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                         className="font-mono text-xs"
                       />
                       <div className="text-[10px] text-muted-foreground mt-1">
-                        Type the version you have installed. If <code className="text-foreground/70">repo</code> is set below, ProxMenux still checks upstream and notifies on updates — after upgrading the app, come back here and update this string.
+                        {t("vmLxc.appEditor.manualVersionHelp")}
                       </div>
                     </div>
                   )}
@@ -1314,7 +1309,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                             </SelectContent>
                           </Select>
                           <div className="text-[10px] text-muted-foreground mt-1">
-                            How ProxMenux finds the latest version to compare against your installed one.
+                            {t("vmLxc.appEditor.upstreamHelp")}
                           </div>
                         </div>
 
@@ -1329,7 +1324,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                                 placeholder={t("vmLxc.appEditor.githubRepoPlaceholder")}
                               />
                               <div className="text-[10px] text-muted-foreground mt-1">
-                                Public GitHub repository where releases or tags are published.
+                                {t("vmLxc.appEditor.githubRepoHelp")}
                               </div>
                             </div>
                             <div>
@@ -1362,7 +1357,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                                 maxLength={512}
                               />
                               <div className="text-[10px] text-muted-foreground mt-1">
-                                Public JSON endpoint that returns a version somewhere in the payload.
+                                {t("vmLxc.appEditor.httpJsonHelp")}
                               </div>
                             </div>
                             <div>
@@ -1376,7 +1371,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                                 maxLength={128}
                               />
                               <div className="text-[10px] text-muted-foreground mt-1">
-                                Dotted path with optional <code className="text-foreground/70">[N]</code> array indices.
+                                {t("vmLxc.appEditor.jsonPathHelp")}
                               </div>
                             </div>
                           </div>
@@ -1478,7 +1473,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
           className="w-full sm:w-auto"
         >
           <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-          Restore
+          {t("vmLxc.appEditor.restoreButton")}
         </Button>
       </div>
     </div>
@@ -1518,7 +1513,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
             className="flex-[3] sm:flex-none bg-blue-500 hover:bg-blue-600 text-white"
           >
             <PlusCircle className="h-3.5 w-3.5 mr-1" />
-            Register
+            {t("vmLxc.appEditor.registerButton")}
           </Button>
           <Button
             size="sm"
@@ -1717,7 +1712,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                     {hasUpstream && (
                       <div className="p-3 rounded-md bg-muted/40">
                         <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
-                          Latest upstream
+                          {t("vmLxc.appEditor.latestUpstream")}
                         </div>
                         <div className={"text-lg font-semibold font-mono flex items-center gap-2 " + (hasUpdate ? "text-purple-400" : "text-foreground")}>
                           {st?.latest_version || <span className="text-muted-foreground text-base font-normal">{t("vmLxc.appEditor.checkingStatus")}</span>}
@@ -1796,7 +1791,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                     className="h-8 px-3 text-xs rounded-md border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    Remove
+                    {t("vmLxc.appEditor.removeButton")}
                   </button>
                   <div className="ml-auto flex flex-wrap gap-2">
                     {tracking && (
@@ -1809,7 +1804,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                         {busyAppId === app.id
                           ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           : <RefreshCw className="h-3.5 w-3.5" />}
-                        Check
+                        {t("vmLxc.appEditor.checkButton")}
                       </button>
                     )}
                     <button
@@ -1818,7 +1813,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                       className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5"
                     >
                       <Settings2 className="h-3.5 w-3.5" />
-                      Edit fields
+                      {t("vmLxc.appEditor.editFieldsButton")}
                     </button>
                   </div>
                 </div>
@@ -1836,7 +1831,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
       {apps.length > 0 && unregisteredDetected.length > 0 && (
         <div className="space-y-2">
           <div className="text-xs uppercase tracking-wider text-muted-foreground">
-            Also detected on this container
+            {t("vmLxc.appEditor.alsoDetectedContainer")}
           </div>
           {unregisteredDetected.map(renderDetectionChip)}
         </div>
@@ -1857,10 +1852,10 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
             disabled={editMode}
           >
             <PlusCircle className="h-4 w-4 mr-1.5" />
-            Add another application
+            {t("vmLxc.appEditor.addAnotherApplication")}
             {hiddenDetections.length > 0 && (
               <span className="ml-2 text-[10px] opacity-70">
-                · {hiddenDetections.length} hidden
+                · {t("vmLxc.appEditor.hiddenSuffix", { count: hiddenDetections.length })}
               </span>
             )}
           </Button>
@@ -1872,12 +1867,12 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
             {editMode ? (
               <>
                 <Check className="h-3.5 w-3.5" />
-                Done
+                {t("vmLxc.appEditor.doneButton")}
               </>
             ) : (
               <>
                 <Pencil className="h-3.5 w-3.5" />
-                Edit
+                {t("vmLxc.appEditor.editButton")}
               </>
             )}
           </button>
