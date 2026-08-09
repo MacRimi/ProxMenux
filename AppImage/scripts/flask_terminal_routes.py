@@ -478,6 +478,15 @@ def script_websocket(ws, session_id):
         preexec_fn=os.setsid,
         env=env
     )
+
+    # The child inherited the slave side of the PTY.  Keeping the parent's
+    # duplicate open can prevent the reader from seeing EOF after the script
+    # exits, which in turn hides the final script_complete message.
+    try:
+        os.close(slave_fd)
+        slave_fd = None
+    except OSError:
+        pass
     
     # Set non-blocking mode for master_fd
     flags = fcntl.fcntl(master_fd, fcntl.F_GETFL)
@@ -573,6 +582,13 @@ def script_websocket(ws, session_id):
         
         try:
             ws.send(f'\r\n[Script exited with code {exit_code}]\r\n')
+            # Send an explicit terminal result before the connection is
+            # closed.  The browser previously saw the worker disappear as a
+            # generic WebSocket failure even when the script exited with 0.
+            ws.send(json.dumps({
+                'type': 'script_complete',
+                'exit_code': exit_code,
+            }))
         except Exception as e:
             pass
     
@@ -581,10 +597,16 @@ def script_websocket(ws, session_id):
     
     try:
         while True:
-            data = ws.receive(timeout=None)
+            data = ws.receive(timeout=0.25)
             
             if data is None:
-                break
+                if script_process.poll() is not None:
+                    # The output worker owns the final PTY drain and emits
+                    # both `[Script exited with code N]` and
+                    # `script_complete`.  Wait briefly for it before cleanup.
+                    output_thread.join(timeout=2.0)
+                    break
+                continue
             
             try:
                 msg = json.loads(data)
@@ -625,6 +647,14 @@ def script_websocket(ws, session_id):
                     break
             
             if script_process.poll() is not None:
+                # The output worker owns the final PTY drain and emits both
+                # `[Script exited with code N]` and `script_complete`.  A
+                # resize/ping arriving just after process exit used to make
+                # this receive loop enter cleanup immediately, closing the
+                # socket before those final frames were sent.  Wait briefly
+                # for the worker so a normal script exit is delivered before
+                # teardown.
+                output_thread.join(timeout=2.0)
                 break
                 
     except Exception as e:
@@ -644,10 +674,11 @@ def script_websocket(ws, session_id):
         except:
             pass
         
-        try:
-            os.close(slave_fd)
-        except:
-            pass
+        if slave_fd is not None:
+            try:
+                os.close(slave_fd)
+            except:
+                pass
         
         try:
             os.close(web_log_fd)
