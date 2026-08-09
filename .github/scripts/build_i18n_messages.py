@@ -12,9 +12,9 @@ Guardrails:
     are extracted before translation and restored afterwards, so the
     interpolation contract stays intact regardless of what the
     translation provider does with the surrounding text.
-  - `sk` is skipped by default; override with --languages es,de,fr,it,pt,sk
-    if you ever want to include it (which will only fill missing keys,
-    not overwrite the existing 3632).
+  - `sk` IS translated by default too. Guardrail #1 protects every key
+    Vaso73 has curated by hand; auto-translation only fills the keys
+    that are still on the English fallback in sk.
 
 Reuses the same translation providers as build_translation_cache.py so
 the CI environment (googletrans pinning, AppImage provider) stays
@@ -40,10 +40,14 @@ from build_translation_cache import (  # noqa: E402
 )
 
 
-# sk is human-curated (Vaso73); default set excludes it so a naive
-# workflow run cannot accidentally overwrite curated strings. Users can
-# still pass --languages ...,sk if they want auto-fill for missing keys.
-DEFAULT_LANGUAGES = ("es", "de", "fr", "it", "pt")
+# sk IS included in the default. Guardrail #1 (never overwrite a key
+# whose target value differs from EN) protects every string Vaso73 has
+# already curated by hand — auto-translation only ever touches keys
+# that are still on the English fallback in sk. Trade-off accepted:
+# users on sk see a decent auto-translation for new keys instead of raw
+# English while the human maintainer catches up, and Vaso73 keeps full
+# ownership of the wording via follow-up PRs.
+DEFAULT_LANGUAGES = ("es", "de", "fr", "it", "pt", "sk", "sv")
 DEFAULT_CONTEXT = "Context: Technical UI text for a Proxmox management dashboard. Translate:"
 
 # next-intl / ICU-style placeholders: {name}, {vmid}, {count}, {app_name}.
@@ -169,9 +173,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--languages",
         default=",".join(DEFAULT_LANGUAGES),
         help=(
-            "Comma-separated target locales. Default excludes sk "
-            "(human-curated by Vaso73). Adding sk here only fills "
-            "keys that are still identical to the English fallback."
+            "Comma-separated target locales. Includes sk by default; "
+            "guardrail #1 never overwrites keys whose sk value differs "
+            "from EN, so Vaso73's curated translations are safe."
         ),
     )
     parser.add_argument(

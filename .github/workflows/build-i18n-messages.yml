@@ -10,12 +10,11 @@ name: Build i18n messages
 #
 # Guardrails baked into build_i18n_messages.py:
 #   - Never overwrites a key whose target value differs from EN (i.e.
-#     already translated by a human).
+#     already translated by a human). This is what makes it safe to
+#     include sk in the default set: Vaso73's curated strings are
+#     protected end-to-end; auto only fills keys still on the EN
+#     fallback.
 #   - `{placeholder}` tokens are protected end-to-end.
-#   - `sk` is excluded from the default list — Vaso73's locale is
-#     human-curated and full. Add it back via workflow_dispatch inputs
-#     if you ever want auto-fill for the ~200 keys added post his last
-#     PR (only missing keys will be touched; existing ones are safe).
 #
 # Triggers:
 #   - push to develop touching AppImage/messages/en/common.json
@@ -35,8 +34,8 @@ on:
         type: boolean
         default: false
       languages:
-        description: 'Comma-separated locales. Default: es,de,fr,it,pt (sk skipped).'
-        default: 'es,de,fr,it,pt'
+        description: 'Comma-separated locales. Default: es,de,fr,it,pt,sk,sv (guardrail protects Vaso73 sk).'
+        default: 'es,de,fr,it,pt,sk,sv'
 
 # Prevent two runs from racing on the same branch and fighting over the
 # auto-commit. cancel-in-progress:false because a full first-run may take
