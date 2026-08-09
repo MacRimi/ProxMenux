@@ -1548,11 +1548,15 @@ def proxmox_webhook():
             return _reject(400, 'missing_title', 400)
         if not isinstance(message, str):
             message = str(message) if message is not None else ''
-        # Bound runaway sizes — webhooks shouldn't exceed a few KB of text.
+        # Keep the full webhook body for downstream parsers. PVE vzdump
+        # reports can legitimately exceed Telegram's 4096-character delivery
+        # limit when a job covers many VM/CT guests. Truncating here can cut a
+        # table row in half before notification_templates._parse_vzdump_message
+        # sees it, which makes a successful backup look like a failed one.
+        # Channel-specific senders (for example TelegramChannel._split_message)
+        # are responsible for splitting the final formatted notification.
         if len(title) > 256:
             payload['title'] = title[:256]
-        if len(message) > 4096:
-            payload['message'] = message[:4096]
         # Severity normalisation: accept the canonical set, default to 'info'.
         sev = (payload.get('severity') or '').lower()
         if sev not in {'info', 'warning', 'critical', 'error', 'notice'}:
