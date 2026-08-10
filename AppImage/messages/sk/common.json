@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "ProxMenux Monitor",
-    "description": "Proxmox System Dashboard",
+    "description": "Systémový prehľad Proxmoxu",
     "loading": "Načítava sa...",
     "connecting": "Pripájam sa k ProxMenux Monitoru",
     "unknown": "Neznáme",
@@ -143,7 +143,7 @@
       "year": "1 rok"
     },
     "stats": {
-      "avg": "avg",
+      "avg": "priemer",
       "max": "max",
       "min": "min"
     },
@@ -839,7 +839,7 @@
       "topCount": "Prvých {shown} z {total} procesov",
       "loadFailed": "Nepodarilo sa načítať procesy",
       "lifetimeAverageTitle": "Priemerné CPU % za celý život procesu - užitočné pri hľadaní procesov, ktoré dlho bežia potichu na pozadí",
-      "averageShort": "avg"
+      "averageShort": "priem."
     },
     "processInfo": {
       "titleFallback": "Proces",
@@ -4208,7 +4208,7 @@
     "title": "Stav systému",
     "description": "Podrobná kontrola všetkých častí systému",
     "status": {
-      "ok": "OK",
+      "ok": "V poriadku",
       "info": "Info",
       "warning": "Upozornenie",
       "critical": "Problém",
@@ -4218,7 +4218,7 @@
       "total": "Spolu",
       "healthy": "V poriadku",
       "info": "Info",
-      "warning": "Upozornenie",
+      "warning": "Upozornenia",
       "critical": "Problémy",
       "unknown": "Neznáme"
     },

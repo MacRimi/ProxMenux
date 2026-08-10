@@ -3522,6 +3522,7 @@
       "deletePbsDescription": "Dadurch wird der PBS-Snapshot aus dem Datenspeicher entfernt.",
       "deletePbsTitle": "PBS-Snapshot löschen",
       "companionFile": "Begleitdatei",
+      "descriptionAfter": "",
       "descriptionBefore": "Durchsuchen Sie die gefundenen Backups und stellen Sie sie wieder her",
       "downloadTitle": "Laden Sie dieses Backup herunter",
       "emptyAfter": "Backups noch nicht.",

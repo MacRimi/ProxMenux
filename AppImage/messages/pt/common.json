@@ -3522,6 +3522,7 @@
       "deletePbsDescription": "Isso remove o instantâneo do PBS do armazenamento de dados.",
       "deletePbsTitle": "Excluir instantâneo do PBS",
       "companionFile": "arquivo complementar",
+      "descriptionAfter": "",
       "descriptionBefore": "Procure e restaure backups encontrados em",
       "downloadTitle": "Baixe este backup",
       "emptyAfter": "backups ainda.",
