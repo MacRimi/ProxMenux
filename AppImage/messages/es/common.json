@@ -1001,7 +1001,7 @@
       "backup": "Respaldo",
       "replicate": "Reproducir exactamente",
       "volume": "Volumen",
-      "path": "Camino",
+      "path": "Ruta",
       "media": "Medios de comunicación",
       "discard": "Desechar",
       "cache": "Cache",
@@ -1174,7 +1174,7 @@
     "cronChip": {
       "detected": "cron del host detectado",
       "variantTteck": "tteck (legado)",
-      "variantCustom": "costumbre",
+      "variantCustom": "personalizado",
       "variantCommunityScripts": "guiones comunitarios",
       "scopeAptApk": "apt/apk en todos los CT",
       "scopeUnknown": "alcance desconocido"
@@ -1296,7 +1296,7 @@
       "methodCommand": "comando (avanzado - argv)",
       "methodManual": "manual (escribo la versión)",
       "packageIdentifierLabel": "Identificador de paquete",
-      "binaryPathLabel": "camino binario",
+      "binaryPathLabel": "Ruta del binario",
       "binaryPathPlaceholder": "por ejemplo, /opt/<tu-aplicación>/binary",
       "binaryPathBare": "Binario (ruta absoluta o nombre simple)",
       "binaryPathBarePlaceholder": "por ejemplo, myapp (o ruta absoluta)",
@@ -1469,7 +1469,7 @@
         "1w": "1 semana",
         "1m": "1 mes",
         "1y": "1 año",
-        "custom": "Costumbre",
+        "custom": "Personalizado",
         "permanent": "Permanente"
       },
       "categories": {
@@ -2144,7 +2144,7 @@
       "httpNoSsl": "El panel utiliza HTTP simple.",
       "usingCertificate": "Usando el certificado {source}.",
       "proxmoxHost": "anfitrión Proxmox",
-      "custom": "costumbre",
+      "custom": "personalizado",
       "unencryptedHttp": "El tráfico no está cifrado a través de HTTP.",
       "activeCertificate": "Certificado activo",
       "cert": "Certificado",
@@ -3281,13 +3281,13 @@
       "speed": "Velocidad",
       "vendor": "Proveedor",
       "pciSlot": "Ranura PCI",
-      "driver": "Conductor",
+      "driver": "Controlador",
       "kernelModule": "Módulo del núcleo",
       "kernelDriver": "Controlador del núcleo",
       "kernelModules": "Módulos del núcleo",
       "lastChecked": "Última comprobación",
       "switchMode": "Modo de cambio",
-      "currentDriver": "Conductor actual",
+      "currentDriver": "Controlador actual",
       "consumer": "Consumidor",
       "graphicsClock": "Reloj de gráficos",
       "memoryClock": "Reloj de memoria",
@@ -3358,7 +3358,7 @@
       "stopped": "interrumpido",
       "unused": "no usado",
       "unbound": "sin consolidar",
-      "driversReady": "Conductores listos",
+      "driversReady": "Controladores listos",
       "driversNotInstalled": "Controladores no instalados",
       "programmed": "Programado (tiempo de ejecución cargado)",
       "unprogrammed": "No programado (tiempo de ejecución no cargado)",
@@ -3428,9 +3428,9 @@
       "readyForVm": "Listo para el paso de VM",
       "modeUnknown": "Modo desconocido",
       "virtualFunctionsExternal": "Funciones virtuales gestionadas externamente",
-      "nativeDriverActive": "Conductor nativo activo",
+      "nativeDriverActive": "Controlador nativo activo",
       "vfioDriverActive": "Controlador VFIO-PCI activo",
-      "noDriverDetected": "No se detectó ningún conductor",
+      "noDriverDetected": "No se detectó ningún controlador",
       "virtualFunction": "Función Virtual",
       "virtualFunctionWithParent": "Función virtual · PF principal {parent}",
       "physicalFunction": "1 PF + {count} VF",
@@ -3475,7 +3475,7 @@
       "switchModeTitle": "Modo de cambio de GPU → {mode}",
       "switchModeDescription": "Cambiando GPU {slot} al modo {mode}...",
       "switchModeVm": "VM (transmisión VFIO)",
-      "switchModeLxc": "LXC (conductor nativo)"
+      "switchModeLxc": "LXC (controlador nativo)"
     }
   },
   "backup": {
@@ -3623,7 +3623,7 @@
       "localAttachHelpBefore": "Utilice una ruta local montada. Para unidades USB, móntelas primero en",
       "localAttachHelpMiddle": "unidades USB",
       "localManualPickHelp": "Elija una ruta local para la salida de respaldo de una sola vez.",
-      "localPathHelpAfter": "u otro camino montado.",
+      "localPathHelpAfter": "u otra ruta montada.",
       "localPathHelpBefore": "Ejemplo:",
       "localPickHelpBefore": "Elija una carpeta local o una ruta USB montada.",
       "localUsb": "Local/USB",
@@ -3770,7 +3770,7 @@
       "ownerLabel": "Dueño",
       "passphrase": "frase de contraseña",
       "password": "Contraseña",
-      "pathLabel": "Camino",
+      "pathLabel": "Ruta",
       "pbsRepository": "repositorio de PBS",
       "profileLabel": "Perfil",
       "pveJobLabel": "trabajo PvE",
@@ -3977,7 +3977,7 @@
     },
     "paths": {
       "count": "{count} rutas",
-      "title": "Caminos"
+      "title": "Rutas"
     },
     "placeholders": {
       "autoFromPveStorage": "auto desde el almacenamiento PVE",
@@ -4026,13 +4026,13 @@
       "zfsPoolsCount": "{count} Grupos ZFS"
     },
     "profile": {
-      "custom": "Costumbre",
+      "custom": "Personalizado",
       "customDescription": "Elija exactamente qué rutas deben incluirse.",
       "default": "Por defecto",
       "defaultDescription": "Configuración de host recomendada y datos de ProxMenux.",
       "defaultDescriptionShort": "Configuración de host recomendada.",
-      "pathsToInclude": "Caminos a incluir",
-      "pickPaths": "Elige caminos",
+      "pathsToInclude": "Rutas a incluir",
+      "pickPaths": "Elige rutas",
       "title": "Perfil"
     },
     "recovery": {
@@ -4056,11 +4056,11 @@
       "completeTitle": "restauración completa",
       "crossKernelDescription": "Tanto la restauración completa como la personalizada omiten automáticamente las rutas vinculadas al kernel/arranque para evitar un pánico del kernel en el siguiente arranque. Todo lo demás (VM, LXC, red, componentes, rutas personalizadas) se restaura normalmente.",
       "crossKernelTitle": "Restauración entre núcleos: solo subconjunto seguro",
-      "customByPaths": "Personalizado por caminos",
+      "customByPaths": "Personalizado por rutas",
       "customByPathsDescription": "Elija exactamente qué rutas restaurar. Muestra lo que hay realmente en esta copia de seguridad (perfil predeterminado + sus rutas personalizadas).",
       "customByPathsTitle": "Restauración personalizada por rutas",
       "customPickDescriptionAfter": "env var: el mismo código descendente que la TUI. El flujo de bash detectará las rutas necesarias para el reinicio (kernel, módulos, fstab, etc.) y podrá programarlas para el próximo arranque desde allí.",
-      "customPickDescriptionBefore": "Elija los caminos para restaurar. Tus feeds de selección",
+      "customPickDescriptionBefore": "Elija las rutas para restaurar. Su selección alimenta",
       "customPickDescriptionMiddle": "a través del",
       "destructiveTitle": "La restauración completa QUITARÁ lo siguiente (creado después de la copia de seguridad)",
       "noPathsMatch": "Ninguna ruta coincide con el filtro.",
@@ -4072,7 +4072,7 @@
       "pathsSelected": "{count} rutas seleccionadas",
       "pathsSkipped": "Rutas que se omitirán ({count})",
       "permanentlyDelete": "eliminar permanentemente",
-      "pickPathError": "Elija al menos un camino para continuar.",
+      "pickPathError": "Elija al menos una ruta para continuar.",
       "preparationFailedTitle": "La preparación de la restauración falló",
       "selectedCount": "Seleccionado: {selected} / {total}{shown}",
       "shownCount": "(Se muestra {count})",
