@@ -2,7 +2,7 @@
   "_meta": "Community translation target. Copy keys from ../en/common.json and translate the values.",
   "app": {
     "title": "ProxMenux Monitor",
-    "description": "Panel de control del sistema Proxmox",
+    "description": "Proxmox System Dashboard",
     "loading": "Cargando...",
     "connecting": "Conexión al ProxMenux Monitor",
     "unknown": "Desconocido",
@@ -21,7 +21,7 @@
     "cancel": "Cancelar",
     "save": "Ahorrar",
     "edit": "Editar",
-    "close": "Cerca",
+    "close": "Cerrar",
     "resetAll": "Restablecer todo",
     "undo": "Deshacer",
     "copy": "Copiar",
@@ -94,10 +94,10 @@
     "cached": "En caché",
     "total": "Total",
     "free": "Gratis",
-    "activeVmLxc": "Máquina virtual activa y LXC",
+    "activeVmLxc": "VM y LXC activos",
     "runningCount": "{count} en ejecución",
-    "vmsCount": "{count} máquinas virtuales",
-    "stoppedCount": "{count} detenido",
+    "vmsCount": "{count} VMs",
+    "stoppedCount": "{count} detenidos",
     "temperature": "Temperatura",
     "noSensorAvailable": "No hay sensores disponibles",
     "collectingData": "Recopilando datos...",
@@ -144,9 +144,9 @@
       "year": "1 año"
     },
     "stats": {
-      "avg": "promedio",
-      "max": "máximo",
-      "min": "mín."
+      "avg": "avg",
+      "max": "max",
+      "min": "min"
     },
     "errors": {
       "serverUnavailableTitle": "El servidor de monitor no está disponible",
@@ -322,7 +322,7 @@
       "statusValues": {
         "passed": "Aprobado",
         "failed": "Fallido",
-        "running": "Correr",
+        "running": "En ejecución",
         "aborted": "Abortado",
         "unknown": "Desconocido"
       }
@@ -457,7 +457,7 @@
         "recommendations": "Recomendaciones"
       },
       "statusValues": {
-        "ok": "DE ACUERDO",
+        "ok": "OK",
         "warning": "Advertencia",
         "critical": "Crítico",
         "failed": "Fallido",
@@ -840,7 +840,7 @@
       "topCount": "Principales {shown} de {total} procesos",
       "loadFailed": "No se pudieron recuperar los procesos",
       "lifetimeAverageTitle": "% de CPU promedio durante la vida útil de este proceso: útil para encontrar líneas de base inactivas de larga duración",
-      "averageShort": "promedio"
+      "averageShort": "avg"
     },
     "processInfo": {
       "titleFallback": "Proceso",
@@ -880,7 +880,7 @@
         "runningFor": "Corriendo por"
       },
       "states": {
-        "running": "Correr",
+        "running": "En ejecución",
         "sleeping": "Durmiendo",
         "diskWait": "espera de disco",
         "zombie": "Zombi",
@@ -896,7 +896,7 @@
     "loadingTitle": "Cargando máquinas virtuales y LXC...",
     "loadingDescription": "Obteniendo el estado del contenedor VM y LXC",
     "loadingError": "Error al cargar máquinas virtuales: {error}",
-    "totalVmLxc": "Total de máquinas virtuales y LXC",
+    "totalVmLxc": "Total de VM y LXC",
     "totalCpuAllocated": "CPU total asignada",
     "totalMemory": "Memoria Total",
     "totalDisk": "Disco total",
@@ -1032,11 +1032,11 @@
     },
     "tabs": {
       "status": "Estado",
-      "mounts": "monturas",
-      "backups": "Copias de seguridad",
-      "updates": "Actualizaciones",
+      "mounts": "Montajes",
+      "backups": "Copias",
+      "updates": "Actualiz.",
       "firewall": "Cortafuegos",
-      "app": "Aplicación"
+      "app": "App"
     },
     "actions": {
       "start": "Comenzar",
@@ -1879,7 +1879,7 @@
       "recommended": "Recomendado",
       "warning": "Advertencia",
       "critical": "Crítico",
-      "ok": "DE ACUERDO",
+      "ok": "OK",
       "warn": "ADVERTIR",
       "crit": "CRÍTICO",
       "ram": "RAM",
@@ -1979,7 +1979,7 @@
     "avatar": "Avatar",
     "change": "Cambiar",
     "chooseImage": "Elige imagen",
-    "clear": "Claro",
+    "clear": "Limpiar",
     "avatarHint": "PNG, JPEG, WebP o GIF · hasta 2 MB · cuadrado precortado para obtener mejores resultados.",
     "settingUp": "Configurando...",
     "setupAuthentication": "Configurar autenticación",
@@ -3486,7 +3486,7 @@
       "apply": "Aplicar",
       "back": "Atrás",
       "change": "Cambiar",
-      "clear": "Claro",
+      "clear": "Limpiar",
       "delete": "Borrar",
       "disable": "Desactivar",
       "download": "Descargar",
@@ -3969,7 +3969,7 @@
       "inProgress": "Copia de seguridad manual en progreso",
       "oneShotDescription": "Las copias de seguridad únicas se mantienen como trabajos congelados para que puedas inspeccionar su registro más tarde.",
       "reopenLogTitle": "Reabrir registro",
-      "run": "Correr",
+      "run": "Ejecutar",
       "runBackup": "Ejecutar copia de seguridad",
       "runOneShotBackup": "Ejecute una copia de seguridad única",
       "title": "Copia de seguridad manual",
@@ -4003,7 +4003,7 @@
         "blocked": "Obstruido",
         "error": "Error",
         "failed": "Fallido",
-        "ok": "DE ACUERDO",
+        "ok": "OK",
         "unknown": "Desconocido",
         "warn": "Advertencia"
       },
@@ -4208,7 +4208,7 @@
     "title": "Estado de salud del sistema",
     "description": "Comprobaciones detalladas de todos los componentes del sistema.",
     "status": {
-      "ok": "DE ACUERDO",
+      "ok": "OK",
       "info": "Información",
       "warning": "Advertencia",
       "critical": "Crítico",
@@ -4218,7 +4218,7 @@
       "total": "Total",
       "healthy": "Saludable",
       "info": "Información",
-      "warning": "Advertir",
+      "warning": "Advertencia",
       "critical": "Crítico",
       "unknown": "Desconocido"
     },
@@ -4470,7 +4470,7 @@
     },
     "componentStatus": {
       "installing": "instalando",
-      "ok": "DE ACUERDO",
+      "ok": "OK",
       "failed": "fallido"
     },
     "time": {
@@ -4547,7 +4547,7 @@
     "gridLayout": "vista de cuadrícula 2×2",
     "new": "Nuevo",
     "search": "Buscar",
-    "clear": "Claro",
+    "clear": "Limpiar",
     "searchCommands": "Comandos de búsqueda",
     "onlineSource": "En línea: utilizando la API Cheat.sh",
     "offlineSource": "Sin conexión: usando comandos locales",
@@ -4594,6 +4594,6 @@
     "yes": "Sí",
     "yourInput": "Su entrada:",
     "submit": "Entregar",
-    "ok": "DE ACUERDO"
+    "ok": "OK"
   }
 }

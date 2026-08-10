@@ -15,7 +15,7 @@ import { Input } from "./ui/input"
 import { getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
 import { SUPPORTED_LANGUAGES, useI18n } from "../lib/i18n/provider"
-import type { LanguageCode, LanguageStatus } from "../lib/i18n/languages"
+import type { LanguageCode } from "../lib/i18n/languages"
 
 // GitHub Dark color palette for bash syntax highlighting
 const BASH_KEYWORDS = new Set([
@@ -917,17 +917,6 @@ export function Settings() {
     k => pendingChanges[k] !== -2
   )
 
-  const getLanguageStatusLabel = (status: LanguageStatus) => {
-    switch (status) {
-      case "complete":
-        return t("settings.interfaceLanguage.statusComplete")
-      case "partial":
-        return t("settings.interfaceLanguage.statusPartial")
-      case "needs-translation":
-        return t("settings.interfaceLanguage.statusNeedsTranslation")
-    }
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -962,25 +951,6 @@ export function Settings() {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {SUPPORTED_LANGUAGES.map((item) => (
-              <div
-                key={item.code}
-                className={`rounded-md border px-3 py-2 text-sm ${
-                  item.code === language ? "border-blue-500 bg-blue-500/10" : "border-border bg-muted/20"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{item.nativeName}</span>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                    {item.code}
-                  </Badge>
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">{getLanguageStatusLabel(item.status)}</div>
-              </div>
-            ))}
           </div>
         </CardContent>
       </Card>

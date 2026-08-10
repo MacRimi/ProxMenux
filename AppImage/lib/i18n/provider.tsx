@@ -2,12 +2,13 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
 import enMessages from "../../messages/en/common.json"
-import skMessages from "../../messages/sk/common.json"
+import deMessages from "../../messages/de/common.json"
 import esMessages from "../../messages/es/common.json"
 import frMessages from "../../messages/fr/common.json"
-import deMessages from "../../messages/de/common.json"
 import itMessages from "../../messages/it/common.json"
 import ptMessages from "../../messages/pt/common.json"
+import skMessages from "../../messages/sk/common.json"
+import svMessages from "../../messages/sv/common.json"
 import {
   DEFAULT_LANGUAGE,
   LANGUAGE_STORAGE_KEY,
@@ -22,12 +23,13 @@ type TranslationParams = Record<string, string | number>
 
 const MESSAGE_CATALOG: Record<LanguageCode, MessageTree> = {
   en: enMessages as MessageTree,
-  sk: skMessages as MessageTree,
+  de: deMessages as MessageTree,
   es: esMessages as MessageTree,
   fr: frMessages as MessageTree,
-  de: deMessages as MessageTree,
   it: itMessages as MessageTree,
   pt: ptMessages as MessageTree,
+  sk: skMessages as MessageTree,
+  sv: svMessages as MessageTree,
 }
 
 interface I18nContextValue {

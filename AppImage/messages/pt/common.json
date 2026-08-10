@@ -2,7 +2,7 @@
   "_meta": "Community translation target. Copy keys from ../en/common.json and translate the values.",
   "app": {
     "title": "ProxMenux Monitor",
-    "description": "Painel do sistema Proxmox",
+    "description": "Proxmox System Dashboard",
     "loading": "Carregando...",
     "connecting": "Conectando ao ProxMenux Monitor",
     "unknown": "Desconhecido",
@@ -144,8 +144,8 @@
       "year": "1 ano"
     },
     "stats": {
-      "avg": "média",
-      "max": "máx.",
+      "avg": "avg",
+      "max": "max",
       "min": "min"
     },
     "errors": {
@@ -840,7 +840,7 @@
       "topCount": "Principais {shown} dos {total} processos",
       "loadFailed": "Falha ao buscar processos",
       "lifetimeAverageTitle": "% média de CPU ao longo da vida útil deste processo - útil para encontrar linhas de base ociosas de longa duração",
-      "averageShort": "média"
+      "averageShort": "avg"
     },
     "processInfo": {
       "titleFallback": "Processo",
@@ -4218,7 +4218,7 @@
       "total": "Total",
       "healthy": "Saudável",
       "info": "Informações",
-      "warning": "Avisar",
+      "warning": "Aviso",
       "critical": "Crítico",
       "unknown": "Desconhecido"
     },

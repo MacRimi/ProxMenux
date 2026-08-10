@@ -14,13 +14,13 @@ export interface SupportedLanguage {
 
 export const SUPPORTED_LANGUAGES: SupportedLanguage[] = [
   { code: "en", englishName: "English", nativeName: "English", status: "complete" },
+  { code: "de", englishName: "German", nativeName: "Deutsch", status: "complete" },
+  { code: "es", englishName: "Spanish", nativeName: "Español", status: "complete" },
+  { code: "fr", englishName: "French", nativeName: "Français", status: "complete" },
+  { code: "it", englishName: "Italian", nativeName: "Italiano", status: "complete" },
+  { code: "pt", englishName: "Portuguese", nativeName: "Português", status: "complete" },
   { code: "sk", englishName: "Slovak", nativeName: "Slovenčina", status: "complete" },
-  { code: "es", englishName: "Spanish", nativeName: "Español", status: "needs-translation" },
-  { code: "fr", englishName: "French", nativeName: "Français", status: "needs-translation" },
-  { code: "de", englishName: "German", nativeName: "Deutsch", status: "needs-translation" },
-  { code: "it", englishName: "Italian", nativeName: "Italiano", status: "needs-translation" },
-  { code: "pt", englishName: "Portuguese", nativeName: "Português", status: "needs-translation" },
-  { code: "sv", englishName: "Swedish", nativeName: "Svenska", status: "needs-translation" },
+  { code: "sv", englishName: "Swedish", nativeName: "Svenska", status: "complete" },
 ]
 
 export function isSupportedLanguage(value: string | null | undefined): value is LanguageCode {

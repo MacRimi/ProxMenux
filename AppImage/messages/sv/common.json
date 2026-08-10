@@ -144,7 +144,7 @@
       "year": "1 år"
     },
     "stats": {
-      "avg": "snitt",
+      "avg": "avg",
       "max": "max",
       "min": "min"
     },
@@ -351,7 +351,7 @@
       "date": "Datum",
       "device": "Anordning",
       "executiveSummary": "Sammanfattning",
-    "smartStatus": "SMART-status",
+      "smartStatus": "SMART-status",
       "healthAssessment": "Diskhälsobedömning",
       "passedUpper": "GODKÄND",
       "testAgeWarning": "Den här rapporten är baserad på ett SMART-test utfört för {days} dagar sedan ({date}). Diskens hälsa kan ha ändrats sedan dess. Vi rekommenderar att du kör ett nytt SMART-test för att få uppdaterade resultat.",
@@ -840,7 +840,7 @@
       "topCount": "Topp {shown} av {total} processer",
       "loadFailed": "Det gick inte att hämta processer",
       "lifetimeAverageTitle": "Genomsnittlig CPU% över hela processens livstid - användbart för att hitta långvariga inaktiva baslinjer",
-      "averageShort": "snitt"
+      "averageShort": "avg"
     },
     "processInfo": {
       "titleFallback": "Behandla",
@@ -4218,7 +4218,7 @@
       "total": "Total",
       "healthy": "Hälsosam",
       "info": "Info",
-      "warning": "Varna",
+      "warning": "Varning",
       "critical": "Kritisk",
       "unknown": "Okänd"
     },

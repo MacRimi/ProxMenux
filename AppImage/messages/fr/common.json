@@ -2,7 +2,7 @@
   "_meta": "Community translation target. Copy keys from ../en/common.json and translate the values.",
   "app": {
     "title": "ProxMenux Monitor",
-    "description": "Tableau de bord du système Proxmox",
+    "description": "Proxmox System Dashboard",
     "loading": "Chargement...",
     "connecting": "Connexion au ProxMenux Monitor",
     "unknown": "Inconnu",
@@ -144,8 +144,8 @@
       "year": "1 an"
     },
     "stats": {
-      "avg": "moyenne",
-      "max": "maximum",
+      "avg": "avg",
+      "max": "max",
       "min": "min"
     },
     "errors": {
@@ -457,7 +457,7 @@
         "recommendations": "Recommandations"
       },
       "statusValues": {
-        "ok": "D'ACCORD",
+        "ok": "OK",
         "warning": "Avertissement",
         "critical": "Critique",
         "failed": "Échoué",
@@ -840,7 +840,7 @@
       "topCount": "{shown} principaux processus sur {total}",
       "loadFailed": "Échec de la récupération des processus",
       "lifetimeAverageTitle": "% CPU moyen sur la durée de vie de ce processus - utile pour trouver des lignes de base d'inactivité de longue durée",
-      "averageShort": "moyenne"
+      "averageShort": "avg"
     },
     "processInfo": {
       "titleFallback": "Processus",
@@ -1879,7 +1879,7 @@
       "recommended": "Recommandé",
       "warning": "Avertissement",
       "critical": "Critique",
-      "ok": "D'ACCORD",
+      "ok": "OK",
       "warn": "AVERTIR",
       "crit": "CRIT",
       "ram": "RAM",
@@ -4003,7 +4003,7 @@
         "blocked": "Bloqué",
         "error": "Erreur",
         "failed": "Échoué",
-        "ok": "D'ACCORD",
+        "ok": "OK",
         "unknown": "Inconnu",
         "warn": "Avertissement"
       },
@@ -4208,7 +4208,7 @@
     "title": "État de santé du système",
     "description": "Vérifications détaillées de tous les composants du système",
     "status": {
-      "ok": "D'ACCORD",
+      "ok": "OK",
       "info": "Informations",
       "warning": "Avertissement",
       "critical": "Critique",
@@ -4218,7 +4218,7 @@
       "total": "Total",
       "healthy": "En bonne santé",
       "info": "Informations",
-      "warning": "Avertir",
+      "warning": "Avertissement",
       "critical": "Critique",
       "unknown": "Inconnu"
     },
@@ -4470,7 +4470,7 @@
     },
     "componentStatus": {
       "installing": "installation",
-      "ok": "D'ACCORD",
+      "ok": "OK",
       "failed": "échoué"
     },
     "time": {
@@ -4594,6 +4594,6 @@
     "yes": "Oui",
     "yourInput": "Votre contribution :",
     "submit": "Soumettre",
-    "ok": "D'ACCORD"
+    "ok": "OK"
   }
 }
