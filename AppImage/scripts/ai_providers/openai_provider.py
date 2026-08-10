@@ -183,6 +183,12 @@ class OpenAIProvider(AIProvider):
             ],
         }
 
+        # Custom OpenAI-compatible endpoints often expose opaque aliases whose
+        # upstream capabilities are known only to the proxy. Do not infer
+        # sampling or reasoning parameters from those aliases; let the proxy
+        # apply model-specific defaults.
+        if self.base_url:
+            payload['max_tokens'] = max_tokens
         # Reasoning models (o1/o3/o4/gpt-5*, excluding *-chat-latest) use a
         # different parameter contract: max_completion_tokens instead of
         # max_tokens, and no temperature field. Sending the classic chat
@@ -196,7 +202,7 @@ class OpenAIProvider(AIProvider):
         # exactly what this pipeline wants. OpenAI documents 'minimal',
         # 'low', 'medium', 'high' — 'minimal' is the right setting for a
         # straightforward translate+explain task.
-        if self._is_reasoning_model(self.model):
+        elif self._is_reasoning_model(self.model):
             payload['max_completion_tokens'] = max_tokens
             payload['reasoning_effort'] = 'minimal'
         else:
