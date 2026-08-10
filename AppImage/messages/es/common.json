@@ -19,7 +19,7 @@
     "toggleTheme": "Alternar tema",
     "openUserMenu": "Abrir menú de usuario",
     "cancel": "Cancelar",
-    "save": "Ahorrar",
+    "save": "Guardar",
     "edit": "Editar",
     "close": "Cerrar",
     "resetAll": "Restablecer todo",
@@ -935,7 +935,7 @@
     "noNotes": "Aún no hay notas. Haga clic en Editar para agregar notas.",
     "containerConfiguration": "Configuración del contenedor",
     "mountedFromContainer": "Montado desde el interior del contenedor.",
-    "openTerminal": "Terminal abierta",
+    "openTerminal": "Terminal",
     "coreCount": {
       "one": "{count} núcleo",
       "few": "{count} núcleos",
@@ -1039,7 +1039,7 @@
       "app": "App"
     },
     "actions": {
-      "start": "Comenzar",
+      "start": "Iniciar",
       "shutdown": "Cerrar",
       "reboot": "Reiniciar",
       "forceStop": "Forzar parada",
@@ -1136,15 +1136,15 @@
       "snapshotBefore": "Instantánea antes de aplicar",
       "snapshotOn": "— el {storage}",
       "noSnapshot": "Sin instantánea previa a la solicitud",
-      "restartAfter": "Reinicie el contenedor después de aplicar.",
+      "restartAfter": "Reiniciar el contenedor después de aplicar.",
       "noRestart": "Sin reinicio posterior a la aplicación",
-      "snapshotLabel": "Instantánea del contenedor antes de aplicar (vzdump)",
+      "snapshotLabel": "Backup del contenedor antes de aplicar (vzdump)",
       "appliesToBoth": "Aplica para ejecuciones manuales + programadas.",
       "backupStorage": "Almacenamiento de respaldo",
       "pickStorage": "Elige un almacenamiento",
       "editButton": "Editar",
       "cancelButton": "Cancelar",
-      "saveButton": "Ahorrar",
+      "saveButton": "Guardar",
       "storageAuto": "auto"
     },
     "scheduled": {
@@ -1191,7 +1191,7 @@
       "osPackagesTitle": "Paquetes de sistema operativo",
       "lastCheckedPrefix": "Última comprobación:",
       "familyLabel": "Familia:",
-      "applyOsUpdate": "Aplicar actualización del sistema operativo",
+      "applyOsUpdate": "Aplicar actualizaciones de SO",
       "osUpToDate": "SO actualizado",
       "installedByHelperPrefix": "Instalado por",
       "helperScriptsName": "Proxmox Helper-Scripts",
@@ -1240,7 +1240,7 @@
       "customCommandPlaceholder": "por ejemplo, cd /opt/<tu-aplicación> && git pull && systemctl restart <tu-aplicación>",
       "removeButton": "Eliminar",
       "cancelButton": "Cancelar",
-      "saveButton": "Ahorrar",
+      "saveButton": "Guardar",
       "editCommandButton": "Editar comando",
       "wireUpCommandButton": "Agregar comando de actualización personalizado",
       "versionTrackingPendingShort": "Seguimiento de versión pendiente.",
@@ -1269,7 +1269,7 @@
     "appEditor": {
       "closePanel": "Cerrar panel",
       "cancelButton": "Cancelar",
-      "saveButton": "Ahorrar",
+      "saveButton": "Guardar",
       "hideButton": "Esconder",
       "hidePermanentlyTooltip": "Ocultar esta detección permanentemente",
       "hiddenBadge": "Actualmente oculto: volverá a aparecer en la lista de detección",
@@ -2673,7 +2673,7 @@
         "uptime": "tiempo de actividad"
       },
       "actions": {
-        "start": "Comenzar",
+        "start": "Iniciar",
         "stop": "Detener",
         "restart": "Reanudar",
         "logs": "Registros",
@@ -3236,7 +3236,7 @@
     },
     "sections": {
       "systemInformation": "Información del sistema",
-      "motherboard": "Placa madre",
+      "motherboard": "Placa base",
       "memoryModules": "Módulos de memoria",
       "thermalMonitoring": "Monitoreo Térmico",
       "otherSensors": "Otro",
