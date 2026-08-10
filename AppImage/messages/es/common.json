@@ -3522,6 +3522,7 @@
       "deletePbsDescription": "Esto elimina la instantánea de PBS del almacén de datos.",
       "deletePbsTitle": "Eliminar instantánea de PBS",
       "companionFile": "archivo complementario",
+      "descriptionAfter": "",
       "descriptionBefore": "Explorar y restaurar copias de seguridad encontradas en",
       "downloadTitle": "Descarga esta copia de seguridad",
       "emptyAfter": "copias de seguridad todavía.",

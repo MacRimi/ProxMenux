@@ -3522,6 +3522,7 @@
       "deletePbsDescription": "Cela supprime l'instantané PBS de la banque de données.",
       "deletePbsTitle": "Supprimer l'instantané PBS",
       "companionFile": "fichier compagnon",
+      "descriptionAfter": "",
       "descriptionBefore": "Parcourez et restaurez les sauvegardes trouvées dans",
       "downloadTitle": "Téléchargez cette sauvegarde",
       "emptyAfter": "sauvegardes encore.",

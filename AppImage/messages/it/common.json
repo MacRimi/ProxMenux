@@ -3522,6 +3522,7 @@
       "deletePbsDescription": "Ciò rimuove lo snapshot PBS dall'archivio dati.",
       "deletePbsTitle": "Elimina istantanea PBS",
       "companionFile": "file compagno",
+      "descriptionAfter": "",
       "descriptionBefore": "Sfoglia e ripristina i backup trovati in",
       "downloadTitle": "Scarica questo backup",
       "emptyAfter": "backup ancora.",
