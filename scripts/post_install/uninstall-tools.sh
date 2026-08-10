@@ -456,7 +456,8 @@ uninstall_network_optimization() {
     systemctl disable --now proxmenux-fwbr-tune.service >/dev/null 2>&1 || true
     rm -f /etc/systemd/system/proxmenux-fwbr-tune.service
     rm -f /usr/local/sbin/proxmenux-fwbr-tune
-    rm -f /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
+    rm -f /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules \
+        /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules
     udevadm control --reload-rules >/dev/null 2>&1 || true
 
     systemctl daemon-reload >/dev/null 2>&1 || true

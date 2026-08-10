@@ -497,7 +497,7 @@ force_apt_ipv4() {
 # ==========================================================
 
 apply_network_optimizations() {
-  local FUNC_VERSION="1.1"
+  local FUNC_VERSION="1.2"
   # description: Tune TCP buffers, somaxconn, IPv4 hardening and disable rp_filter on fw bridges (PVE 9 compatible).
   msg_info "$(translate "Optimizing network settings...")"
   NECESSARY_REBOOT=1
@@ -594,14 +594,16 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 EOF
 
-  cat > /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules <<'EOF'
+  rm -f /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
+
+  cat > /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules <<'EOF'
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwbr*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwln*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwpr*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="tap*",  RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 EOF
-  chmod 0644 /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
-  chown root:root /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
+  chmod 0644 /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules
+  chown root:root /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules
 
   systemctl daemon-reload >/dev/null 2>&1 || true
   udevadm control --reload-rules >/dev/null 2>&1 || true
