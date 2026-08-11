@@ -5658,7 +5658,7 @@
       "pve"
     ],
     "config_path": "/var/lib/emby/config/system.xml",
-    "os": "debian"
+    "os": "ubuntu"
   },
   {
     "name": "EMQX",
