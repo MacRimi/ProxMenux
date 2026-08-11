@@ -81,6 +81,7 @@ from notification_manager import notification_manager  # noqa: E402
 import post_install_versions  # noqa: E402  — Sprint 12A: detect post-install function updates
 from jwt_middleware import require_auth, require_auth_or_ticket, require_admin_scope  # noqa: E402
 import auth_manager  # noqa: E402
+import security_headers  # noqa: E402
 
 # -------------------------------------------------------------------
 # Logging
@@ -237,24 +238,23 @@ init_terminal_routes(app)
 #   printable report use inline styles by design.
 # `connect-src` includes `wss:` for terminal WebSockets and `https:` for
 #   third-party AI providers (OpenAI / Anthropic).
+# `frame-ancestors` defaults to `'none'`. Operators can explicitly allow
+#   trusted embedding parents with PROXMENUX_ALLOWED_FRAME_ANCESTORS.
 @app.after_request
 def _apply_security_headers(response):
+    frame_ancestors = security_headers.get_allowed_frame_ancestors()
+
     # Don't override if a downstream handler already set a custom CSP.
     if 'Content-Security-Policy' not in response.headers:
         response.headers['Content-Security-Policy'] = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
-            "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data: blob: https:; "
-            "font-src 'self' data:; "
-            "connect-src 'self' ws: wss: https:; "
-            "frame-ancestors 'none'; "
-            "base-uri 'self'; "
-            "form-action 'self'"
+            security_headers.build_content_security_policy(frame_ancestors)
         )
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
     response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
-    response.headers.setdefault('X-Frame-Options', 'DENY')
+    if security_headers.should_emit_x_frame_options(frame_ancestors):
+        response.headers.setdefault('X-Frame-Options', 'DENY')
+    else:
+        response.headers.pop('X-Frame-Options', None)
     return response
 
 
