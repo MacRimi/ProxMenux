@@ -201,6 +201,20 @@ After setting up your password, you can enable 2FA using any TOTP authenticator 
 
 ![2FA Setup](https://raw.githubusercontent.com/MacRimi/ProxMenux/main/web/public/monitor/2fa-setup.png)
 
+### Embedding in Trusted Iframes
+
+By default, ProxMenux Monitor blocks embedding in iframes with `frame-ancestors 'none'` and `X-Frame-Options: DENY`.
+
+If you run a trusted local portal or monitoring page and need to embed the Monitor, set `PROXMENUX_ALLOWED_FRAME_ANCESTORS` to the exact parent origins that may frame it:
+
+```bash
+PROXMENUX_ALLOWED_FRAME_ANCESTORS="https://portal.example.com http://raspberrypi.local:8080"
+```
+
+Only exact `http://` or `https://` origins are accepted. Paths, wildcards, broad schemes, credentials, and malformed values are ignored. When this setting is present, the Monitor sends a matching CSP `frame-ancestors` allowlist and omits `X-Frame-Options`, because that legacy header cannot express multiple allowed parents.
+
+`ALLOWED_FRAME_ANCESTORS` is also accepted as a compatibility alias when `PROXMENUX_ALLOWED_FRAME_ANCESTORS` is not set.
+
 ### Security Best Practices for API Tokens
 
 **IMPORTANT**: Never hardcode your API tokens directly in configuration files or scripts. Instead, use environment variables or secrets management.
