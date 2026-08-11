@@ -39,7 +39,6 @@ export default async function VmsLxcsTabPage({
         mountTypesItems: string[]
         mountStateItems: string[]
         backupsItems: string[]
-        updatesPanelItems: string[]
         firewallItems: string[]
         lifecycleRows: LifecycleRow[]
       }
@@ -56,7 +55,6 @@ export default async function VmsLxcsTabPage({
   const mountTypesItems = v.drillIn.mountTypesItems
   const mountStateItems = v.drillIn.mountStateItems
   const backupsItems = v.drillIn.backupsItems
-  const updatesPanelItems = v.drillIn.updatesPanelItems
   const firewallItems = v.drillIn.firewallItems
   const lifecycleRows = v.drillIn.lifecycleRows
   const dataRows = v.dataCollected.rows
@@ -227,6 +225,40 @@ export default async function VmsLxcsTabPage({
       <h4 className="text-base font-semibold mt-6 mb-2 text-gray-900">{t("drillIn.ipsTitle")}</h4>
       <p className="mb-6 text-gray-800 leading-relaxed">{t("drillIn.ipsBody")}</p>
 
+      <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">App</h3>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        The <strong>App</strong> section lets you register the applications running inside an LXC, wire quick web
+        links, and optionally track installed vs. upstream versions. Registrations feed the App-level notifications
+        and the update flows on the next section.
+      </p>
+      <p className="mb-6 text-gray-800 leading-relaxed">
+        See the{" "}
+        <Link
+          href="/docs/monitor/dashboard/vms-lxcs/app"
+          className="text-blue-600 hover:underline"
+        >
+          dedicated App page
+        </Link>{" "}
+        for the catalog, manual registration, version-tracking methods and regex patterns.
+      </p>
+
+      <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">Updates</h3>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        The <strong>Updates</strong> section covers OS package updates (APT / APK) and application updates via
+        Community Scripts helpers or custom commands. Detection runs unconditionally on running LXCs; whether pending
+        updates also trigger a notification is controlled from <strong>Settings → Notifications</strong>.
+      </p>
+      <p className="mb-6 text-gray-800 leading-relaxed">
+        See the{" "}
+        <Link
+          href="/docs/monitor/dashboard/vms-lxcs/updates"
+          className="text-blue-600 hover:underline"
+        >
+          dedicated Updates page
+        </Link>{" "}
+        for the decision matrix, custom-command guidance, backup / restart preferences and scheduled updates.
+      </p>
+
       <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.mountsTitle")}</h3>
 
       <figure className="my-4">
@@ -285,45 +317,6 @@ export default async function VmsLxcsTabPage({
       </ul>
       <p className="mb-6 text-gray-800 leading-relaxed">
         {t.rich("drillIn.backupsOutro", { strong })}
-      </p>
-
-      <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.updatesTitle")}</h3>
-
-      <figure className="my-4">
-        <img
-          src="/monitor/vms-modal-lxc-updates.png"
-          alt={t("drillIn.updatesImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
-        />
-        <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
-          {t("drillIn.updatesImageCaption")}
-        </figcaption>
-      </figure>
-
-      <p className="mb-4 text-gray-800 leading-relaxed">
-        {t.rich("drillIn.updatesIntro", { strong, code })}
-      </p>
-
-      <h4 className="text-base font-semibold mt-6 mb-2 text-gray-900">{t("drillIn.updatesPanelTitle")}</h4>
-      <ul className="list-disc pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
-        {updatesPanelItems.map((_, idx) => (
-          <li key={idx}>{t.rich(`drillIn.updatesPanelItems.${idx}`, { strong })}</li>
-        ))}
-      </ul>
-
-      <h4 className="text-base font-semibold mt-6 mb-2 text-gray-900">{t("drillIn.updatesScopeTitle")}</h4>
-      <p className="mb-4 text-gray-800 leading-relaxed">
-        {t.rich("drillIn.updatesScopeBody", { strong, em, code })}
-      </p>
-
-      <h4 className="text-base font-semibold mt-6 mb-2 text-gray-900">{t("drillIn.updatesToggleTitle")}</h4>
-      <Callout variant="info" title={t("drillIn.updatesToggleCalloutTitle")}>
-        {t.rich("drillIn.updatesToggleCalloutBody", { strong, code })}
-      </Callout>
-
-      <h4 className="text-base font-semibold mt-6 mb-2 text-gray-900">{t("drillIn.updatesApplyTitle")}</h4>
-      <p className="mb-6 text-gray-800 leading-relaxed">
-        {t.rich("drillIn.updatesApplyBody", { code })}
       </p>
 
       <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.firewallTitle")}</h3>

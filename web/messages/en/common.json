@@ -62,6 +62,8 @@
       "dashboardStorage": "Storage tab",
       "dashboardNetwork": "Network tab",
       "dashboardVmsLxcs": "VMs & LXCs tab",
+      "dashboardVmsLxcsApp": "App",
+      "dashboardVmsLxcsUpdates": "Updates",
       "dashboardHardware": "Hardware tab",
       "dashboardSystemLogs": "System Logs tab",
       "dashboardTerminal": "Terminal tab",

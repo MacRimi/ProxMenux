@@ -62,6 +62,8 @@
       "dashboardStorage": "Karta Úložisko",
       "dashboardNetwork": "Karta Sieť",
       "dashboardVmsLxcs": "Karta VM a LXC",
+      "dashboardVmsLxcsApp": "App",
+      "dashboardVmsLxcsUpdates": "Updates",
       "dashboardHardware": "Karta Hardvér",
       "dashboardSystemLogs": "Karta Systémové logy",
       "dashboardTerminal": "Karta Terminál",

@@ -62,6 +62,8 @@
       "dashboardStorage": "Pestaña Almacenamiento",
       "dashboardNetwork": "Pestaña Red",
       "dashboardVmsLxcs": "Pestaña VMs y LXCs",
+      "dashboardVmsLxcsApp": "App",
+      "dashboardVmsLxcsUpdates": "Updates",
       "dashboardHardware": "Pestaña Hardware",
       "dashboardSystemLogs": "Pestaña Logs del sistema",
       "dashboardTerminal": "Pestaña Terminal",

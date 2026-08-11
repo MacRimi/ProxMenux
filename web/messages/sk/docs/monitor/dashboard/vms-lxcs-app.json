@@ -1,0 +1,272 @@
+{
+  "meta": {
+    "title": "App — register and monitor LXC applications | ProxMenux",
+    "description": "Declare the apps running inside an LXC container from the ProxMenux Monitor and optionally track their versions."
+  },
+  "header": {
+    "title": "App — register and monitor LXC applications",
+    "description": "Declare the apps running inside a container, wire quick web links, and optionally track installed vs. upstream versions."
+  },
+  "intro": {
+    "p1": "The <strong>App</strong> tab records which applications run inside an LXC container. Each registered app can expose a display name, an icon, one or several web links and — optionally — its version status.",
+    "p2": "A single LXC can host several registered applications. A main service can share the container with an administration interface, an API or any other application reachable on a different port.",
+    "p3": "Registering an application does not modify it or update it. This tab is about identification and display. The mechanisms that <em>execute</em> an update are configured and used from the <link>Updates tab</link>."
+  },
+  "whatYouGet": {
+    "heading": "What you get by registering an app",
+    "lead": "Depending on the data configured, ProxMenux can surface:",
+    "items": [
+      "A one-click shortcut to the application's web UI.",
+      "Multiple links when the LXC exposes more than one service or port.",
+      "The version currently installed.",
+      "The latest version published by the project.",
+      "A notice when a newer version is available.",
+      "Notifications on new releases if enabled in Monitor settings."
+    ],
+    "trailing": "Version tracking is optional. An app can be registered purely to keep its name, icon and web links handy.",
+    "callout": "The <strong>Update available</strong> label means ProxMenux found a difference between the installed and the published version. It does not automatically mean it also knows how to upgrade the app — that is a separate setup, done on the Updates tab."
+  },
+  "firstOpening": {
+    "heading": "First time opening the App tab",
+    "p1": "On first open, ProxMenux tries to recognise apps in the container using the information it has: the installer used when the LXC was created, detected services, and ports that are listening.",
+    "p2": "When matches are found, they show up as suggestions. Always review the proposal before saving — auto-detection speeds up registration, but it cannot guarantee that every detected service corresponds exactly to the app you intended."
+  },
+  "figures": {
+    "f01": {
+      "alt": "Empty App tab showing detected app suggestions",
+      "caption": "Empty state with one or more detected suggestions"
+    },
+    "f02": {
+      "alt": "Catalog search showing matches for the typed name",
+      "caption": "Catalog search and match selection"
+    },
+    "f03": {
+      "alt": "App registration form with name, icon and two web links",
+      "caption": "Basic form with name, icon and two web links"
+    },
+    "f04": {
+      "alt": "LXC with Docmost and Redis both registered as separate apps, each with its own version state",
+      "caption": "Two apps in the same LXC — a file-tracked app and a dpkg-tracked one, each with its own version state"
+    },
+    "f05": {
+      "alt": "Advanced tracking options showing the installed-version method and the upstream source",
+      "caption": "Advanced options with the installed-version method and the upstream source"
+    },
+    "f06": {
+      "alt": "Registered app card with the installed version, the latest upstream version and an Update available indicator",
+      "caption": "A wired card shows Installed, Latest upstream, an Update-available arrow when they differ, and the web link"
+    },
+    "f07": {
+      "alt": "Minimal registered app showing just its name and a single web link, no version tracking",
+      "caption": "Link-only record — just a name and a web link, without version tracking"
+    }
+  },
+  "registerSuggested": {
+    "heading": "Registering a suggested app",
+    "steps": [
+      "Open the LXC from the <strong>VMs & LXCs</strong> card.",
+      "Select the <strong>App</strong> tab.",
+      "Locate the suggested app.",
+      "Press <strong>Register</strong>.",
+      "Check the name, links and auto-filled data.",
+      "Save the app."
+    ],
+    "trailing": "If a suggestion doesn't match anything you actually want to register, you can hide it. Hidden suggestions can be brought back from <strong>Register a different app</strong>."
+  },
+  "catalog": {
+    "heading": "Using the catalog",
+    "p1": "The catalog helps you find known applications and pre-fill some of their data. Typing into the name field shows the closest matches — picking one can autofill the name, icon, typical ports and, when a verified profile exists, the version-tracking options too.",
+    "p2": "The catalog is a helper, not a complete list of every piece of software an LXC might host. Some entries only carry basic information; others also include a ready-made way to read the installed version.",
+    "p3": "If the application isn't in the catalog, register it manually."
+  },
+  "manual": {
+    "heading": "Register an application manually",
+    "p1": "Use <strong>Register a different app</strong> when the LXC has no apps yet. If it already has at least one, use <strong>Add another application</strong>.",
+    "p2": "The basic configuration only needs a name. Everything else is added according to what you want to display.",
+    "nameHeading": "Name and icon",
+    "nameBody": "Give the app a name that makes it easy to recognise. The icon is optional and can be supplied as a URL.",
+    "linksHeading": "Web links and ports",
+    "linksLead": "Each link can carry:",
+    "linksItems": [
+      "Protocol <code>http</code> or <code>https</code>.",
+      "Port.",
+      "Description, such as <em>Web UI</em>, <em>Administration</em> or <em>API</em>.",
+      "An optional per-link icon."
+    ],
+    "linksTrailing": "ProxMenux combines protocol and port with the LXC's IP address to build the URL. Add as many links as the app needs when a single container exposes several related services.",
+    "linksConfirm": "Before saving, confirm the port really corresponds to the service and that you can reach it from the browser."
+  },
+  "multiple": {
+    "heading": "Registering several apps in the same LXC",
+    "intro": "After saving the first app, press <strong>Add another application</strong> and repeat. Each record keeps its own links, detection method and version state independently.",
+    "usefulLead": "This is useful when:",
+    "usefulItems": [
+      "An LXC hosts several independent services.",
+      "An installation includes a main app plus companion tooling.",
+      "Each service has its own web interface or its own release cycle."
+    ],
+    "dontGroup": "Don't group under a single record programs that publish and update independently. Registering them separately makes it clear which one has a new release and lets each one carry its own update method on the Updates tab."
+  },
+  "tracking": {
+    "heading": "Version tracking",
+    "intro": "Open the advanced options in the form to configure version tracking. Two different pieces of information are needed:",
+    "ingredients": [
+      "<strong>Installed version</strong> — how to read the version currently running inside the LXC.",
+      "<strong>Latest available version</strong> — where to read the version published by the project."
+    ],
+    "trailing": "If only the installed version is configured, ProxMenux can show it, but cannot tell whether an update exists. For an <strong>Update available</strong> label to appear, both values have to be readable and comparable.",
+    "methodsHeading": "Methods to read the installed version",
+    "methodsLead": "Pick the method that matches how the app was installed:",
+    "methodsTable": {
+      "colMethod": "Method",
+      "colWhen": "When to use it",
+      "rows": [
+        { "method": "None (link only)", "when": "You only need the name and web links." },
+        { "method": "dpkg package", "when": "The application is installed as a Debian or Ubuntu package." },
+        { "method": "apk package", "when": "The application is installed as an Alpine package." },
+        { "method": "Binary", "when": "An executable returns its version through an argument like --version." },
+        { "method": "File + regex", "when": "The version string is written inside a file." },
+        { "method": "Python distribution", "when": "The application is installed as a Python package." },
+        { "method": "Command", "when": "A specific command must be executed to obtain the version." },
+        { "method": "Manual", "when": "The user enters the installed version by hand." }
+      ]
+    },
+    "methodsTrailing": "Use the most direct and stable method. If the application comes from a system package, prefer querying that package over parsing the output of a generic command.",
+    "commandHeading": "The Command method does not update the app",
+    "commandP1": "In this form, <strong>Command</strong> serves exclusively to read the installed version. Its arguments are entered comma-separated and ProxMenux runs them directly, without a shell interpreter.",
+    "commandP2": "If your usual query is:",
+    "commandExample1": "myapp version --short",
+    "commandP3": "Form arguments would be:",
+    "commandExample2": "myapp, version, --short",
+    "commandP4": "Don't use operators like <code>&&</code>, redirections or pipes here. If you need a full procedure to upgrade the application, that is configured later on the Updates tab.",
+    "sourceHeading": "Source for the latest available version",
+    "sourceLead": "ProxMenux can query a public source of the project, for example:",
+    "sourceItems": [
+      "The releases or tags of a GitHub repository.",
+      "An HTTP endpoint that returns the version inside a JSON response."
+    ],
+    "sourceTrailing": "Always use the app's official source. A fork or a third-party endpoint may announce versions that don't match the installation in the LXC.",
+    "regexHeading": "Version regular expressions",
+    "regexIntro": "A regular expression, or <strong>regex</strong>, isolates the version number inside a longer text. Most projects don't publish a ready-made regex — the user builds one from real output or a real release name.",
+    "regexOptional": "It is not always needed. Leave it empty first if the source already returns a clean value like <code>2.14.3</code>. Add one only when ProxMenux needs to separate the version from other words, symbols or numbers.",
+    "regexTwoHeading": "There are two different regex fields",
+    "regexTwoItems": [
+      "<strong>Installed version regex</strong> is applied to the output read inside the LXC.",
+      "<strong>Version regex</strong> or <strong>Tag regex</strong> is applied to the release / tag name published by the external source."
+    ],
+    "regexTwoTrailing": "Both must produce comparable values. For instance, if the local app returns <code>MyApp v2.14.3</code> and GitHub publishes <code>release-2.14.3</code>, both expressions should extract <code>2.14.3</code>.",
+    "step1Heading": "1. Capture a real sample",
+    "step1P1": "Before writing the pattern, capture exactly the text ProxMenux will have to interpret.",
+    "step1P2": "For the installed version, run the same binary and arguments configured in the form from the LXC console. Depending on the method, you may also query the corresponding package or file.",
+    "step1P3": "For example:",
+    "step1Cmd": "myapp --version",
+    "step1P4": "Suppose the real output is:",
+    "step1Output": "MyApp version v2.14.3 (stable)",
+    "step1P5": "For the published version, check the exact release or tag name in the official repository. If you use a JSON endpoint, inspect the value the configured path returns.",
+    "step1P6": "Do not build the pattern against an invented example — a single space, prefix or extra number can change the result.",
+    "step2Heading": "2. Identify the part to keep",
+    "step2Lead": "In the example above we want to keep <code>2.14.3</code> and drop:",
+    "step2Items": [
+      "The text <code>MyApp version</code>.",
+      "The letter <code>v</code>.",
+      "The text <code>(stable)</code>."
+    ],
+    "step2Recommended": "The recommended expression:",
+    "step2Regex": "version[ :=]+v?([0-9]+\\.[0-9]+\\.[0-9]+)",
+    "step2ReadLead": "Read piece by piece:",
+    "step2Breakdown": {
+      "colPart": "Fragment",
+      "colMeaning": "Meaning",
+      "rows": [
+        { "part": "version", "meaning": "Anchors the search on that word to avoid matching an unrelated number." },
+        { "part": "[ :=]+", "meaning": "Accepts one or more spaces, colons or equal signs." },
+        { "part": "v?", "meaning": "The letter v may appear once or not at all." },
+        { "part": "( and )", "meaning": "Mark the portion ProxMenux should keep." },
+        { "part": "[0-9]+", "meaning": "Matches one or more digits." },
+        { "part": "\\.", "meaning": "Matches a literal dot between the numbers." }
+      ]
+    },
+    "step2DotNote": "The dot is written as <code>\\.</code> because, in a regex, a bare dot means \"any character\".",
+    "step3Heading": "3. Pick a pattern that fits the format",
+    "step3Lead": "These patterns cover the most common cases:",
+    "step3Examples": {
+      "colText": "Sample text",
+      "colRegex": "Recommended regex",
+      "colResult": "Result",
+      "rows": [
+        { "text": "v2.14.3", "regex": "v?([0-9]+\\.[0-9]+\\.[0-9]+)", "result": "2.14.3" },
+        { "text": "Version: 2.14", "regex": "Version[ :=]+v?([0-9]+(?:\\.[0-9]+){1,3})", "result": "2.14" },
+        { "text": "release-2.14.3.1", "regex": "release-v?([0-9]+(?:\\.[0-9]+){1,3})", "result": "2.14.3.1" },
+        { "text": "build 2026.08.10", "regex": "build[ :=]+([0-9]{4}\\.[0-9]{1,2}\\.[0-9]{1,2})", "result": "2026.08.10" },
+        { "text": "{\"version\":\"2.14.3\"}", "regex": "\"version\"\\s*:\\s*\"v?([0-9]+(?:\\.[0-9]+){1,3})\"", "result": "2.14.3" }
+      ]
+    },
+    "step3Note1": "<code>(?: ... )</code> groups a fragment of the pattern without producing an extra output value. This form is convenient to accept versions with two, three or four blocks without complicating the result.",
+    "step3Note2": "Enter the regex exactly as shown in the table: without surrounding quotes and without the <code>/.../</code> delimiters some online tools use.",
+    "step4Heading": "4. Prefer a single capture",
+    "step4Intro": "ProxMenux uses capture groups to decide which value to return:",
+    "step4Items": [
+      "With no capture groups it keeps the whole match.",
+      "With one capture, it keeps that capture's content.",
+      "With several captures, it joins them with dots."
+    ],
+    "step4Trailing": "For predictable results, wrap the whole version in a single capture and use <code>(?: ... )</code> for helper groups.",
+    "step4RecLabel": "Recommended:",
+    "step4RecRegex": "v?([0-9]+(?:\\.[0-9]+){1,3})",
+    "step4LessLabel": "Less clear for beginners:",
+    "step4LessRegex": "v?([0-9]+)\\.([0-9]+)\\.([0-9]+)",
+    "step4Note": "Both can produce <code>2.14.3</code>, but the first is easier to maintain if the format changes.",
+    "step5Heading": "5. Avoid overly broad matches",
+    "step5Lead": "A pattern like this one is usually too open:",
+    "step5Regex": "([0-9.]+)",
+    "step5P1": "It can capture a year, a port, a dependency version or the first number that appears in the output. Anchor it with a nearby word such as <code>version</code>, <code>release</code> or <code>build</code> when the text carries several numbers.",
+    "step5P2": "Also confirm the upstream source isn't mixing stable releases with beta, nightly or development builds. The regex must select the same channel that is installed in the LXC.",
+    "step6Heading": "6. Save and verify the result",
+    "step6Lead": "After saving the app, press <strong>Check</strong> and read the two values ProxMenux reports:",
+    "step6Output": "Installed: 2.14.3\nLatest:    2.15.0",
+    "step6CorrectLead": "The regex is correct when:",
+    "step6CorrectItems": [
+      "Both fields contain only the expected version.",
+      "The application name and extra text are not captured.",
+      "The version is not confused with any other number.",
+      "Local and published values use the same format."
+    ],
+    "step6ErrorNote": "If the match errors out, capture the real output again and compare it character by character. Pay particular attention to uppercase, spaces, hyphens, the letter <code>v</code> and the number of version blocks.",
+    "step6Callout": "If you can't build a reliable pattern, prefer to disable upstream tracking temporarily and keep the app as a link-only record. A wrong regex can raise false alerts or hide a real update."
+  },
+  "state": {
+    "heading": "Reading an app's state",
+    "lead": "A registered app can display any of the following states:",
+    "items": [
+      "<strong>Up to date</strong> — versions match.",
+      "<strong>Update available</strong> — the source publishes a newer version.",
+      "<strong>Checking</strong> — the check is in progress.",
+      "<strong>Version tracking pending</strong> — no check has completed yet.",
+      "<strong>Error</strong> — one of the versions could not be read or parsed."
+    ],
+    "trailing": "Use <strong>Check</strong> to repeat the query manually after tweaking the configuration. If an error appears, review the installed-version method, the upstream source and the regex patterns first."
+  },
+  "manage": {
+    "heading": "Managing existing records",
+    "lead": "Enter management mode to:",
+    "items": [
+      "Re-check an app.",
+      "Edit its name, links or version tracking.",
+      "Delete a record that is no longer needed.",
+      "Add another app to the same LXC."
+    ],
+    "trailing": "Deleting a record does not uninstall or stop the app. It only removes the information ProxMenux uses to display it and monitor its version."
+  },
+  "notDetected": {
+    "heading": "If the app is not detected",
+    "intro": "Automatic detection is not required to use this feature. If no suggestion appears:",
+    "steps": [
+      "Register the app manually.",
+      "Add its known links and ports.",
+      "Leave it as <strong>None (link only)</strong> if you only need a shortcut.",
+      "Configure version tracking only when a reliable source has been identified for both values.",
+      "Configure the update method later from <link>Updates</link>, if you want ProxMenux to run it."
+    ],
+    "trailing": "Don't invent a package name, path or regex just to fill the form. A simple, correct record beats an automatic tracking based on unverified data."
+  }
+}
