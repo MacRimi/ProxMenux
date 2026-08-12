@@ -2515,7 +2515,7 @@
     "port": 8081,
     "website": "https://github.com/karanhudia/borg-ui",
     "documentation": "https://github.com/karanhudia/borg-ui#readme",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/borgbackup.webp",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/borg-ui.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": true,
@@ -11344,11 +11344,11 @@
     ],
     "notes": [
       "On first start llama-server downloads the model set in LLAMA_ARG_HF_REPO (default: ggml-org/gemma-3-1b-it-GGUF, roughly 800 MB) into /opt/llama-cpp_data/models, so the container is usable straight away. Swap it for any GGUF repo, or point LLAMA_ARG_MODEL at a local file, then restart.",
-      "This is the CPU build (LLAMA_ARG_N_GPU_LAYERS=0). For GPU offload pass a card through and install the matching build - the release also ships vulkan, rocm and sycl variants. Adjust the asset name in the script accordingly.",
+      "The build variant is chosen at install time: cpu, vulkan or rocm, or auto to follow the passed-through GPU. Upstream publishes no Linux CUDA build, so an NVIDIA card is served by the vulkan build and needs NVIDIA's Vulkan driver in the container. The choice is remembered in /opt/llama-cpp_data/.backend so updates keep it.",
       "RAM is the limiting factor: the model must fit alongside the KV cache. 8 GB comfortably runs models up to roughly 7B at Q4. Raise LLAMA_ARG_CTX_SIZE only if you have headroom."
     ],
     "warnings": [
-      "The web UI and the OpenAI-compatible API share port 8080: /v1/chat/completions, /v1/models and friends. There is no authentication - set LLAMA_ARG_API_KEY in /opt/llama-cpp.env or keep it off untrusted networks."
+      "The web UI and the OpenAI-compatible API share port 8080: /v1/chat/completions, /v1/models and friends. There is no authentication unless an API key is set - supply one at install time or set LLAMA_ARG_API_KEY in /opt/llama-cpp.env."
     ],
     "port": 8080,
     "website": "https://github.com/ggml-org/llama.cpp",
@@ -11637,7 +11637,7 @@
     "port": 41337,
     "website": "https://epicgames.github.io/lore/",
     "documentation": "https://epicgames.github.io/lore/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/lore.webp",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/lore-epic-games.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": false,
@@ -13586,7 +13586,7 @@
     "port": 8042,
     "website": "https://ozarkconnect.net/network-optimizer",
     "documentation": "https://github.com/Ozark-Connect/NetworkOptimizer",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/networkoptimizer.webp",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/network-optimizer.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": true,
@@ -17178,7 +17178,7 @@
     "has_arm": false,
     "is_dev": false,
     "execute_in": [
-      "pve"
+      "pdm"
     ],
     "config_path": "",
     "os": ""
@@ -19860,7 +19860,7 @@
     "port": 8111,
     "website": "https://shokoanime.com/",
     "documentation": "https://docs.shokoanime.com/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/shoko.webp",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/shoko-server.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": false,
@@ -23774,7 +23774,8 @@
       "AI / Coding & Dev-Tools"
     ],
     "notes": [
-      "The model to serve is set via VLLM_MODEL in /opt/vllm/vllm.env (default Qwen/Qwen2.5-0.5B-Instruct). Restart the service after changing it: systemctl restart vllm",
+      "Model, port, dtype, VRAM share and HuggingFace token can be chosen up front in the script generator; they are written to /opt/vllm/vllm.env. Restart the service after changing the file: systemctl restart vllm",
+      "Flags not covered by a field go into VLLM_SERVE_ARGS in /opt/vllm/vllm.env, which is appended to 'vllm serve' verbatim.",
       "The configured model is downloaded from HuggingFace on first service start, which needs internet access and disk space. For gated/private models set HF_TOKEN in /opt/vllm/vllm.env. Resource needs scale heavily with the chosen model."
     ],
     "warnings": [
