@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Activity } from "lucide-react"
 import { useT } from "../lib/i18n/provider"
+import { getNetworkUnit, type NetworkUnit } from "../lib/format-network"
 
 // One animated comet-trail pulse. Returned as DATA from the layout
 // renderers instead of an SVG string so the parent component can
@@ -144,7 +145,15 @@ function nicSubLabel(n: NIC, labels: FlowLabels): string {
   return `${n.link} · ${roleLabel}`
 }
 
-function fmt(v: number): string {
+function fmt(v: number, unit: NetworkUnit = "Bytes"): string {
+  if (unit === "Bits") {
+    // MB/s (base 2) → bits/s, then decimal SI prefixes (Kb/Mb use ×1000, networking convention).
+    const bps = (v || 0) * 1024 * 1024 * 8
+    if (!bps) return "0 b/s"
+    if (bps < 1000) return `${Math.round(bps)} b/s`
+    if (bps < 1_000_000) return `${(bps / 1000).toFixed(0)} Kb/s`
+    return `${(bps / 1_000_000).toFixed(1)} Mb/s`
+  }
   if (!v) return "0 B/s"
   // Below 1 KB/s show B/s — the previous "—" hid real-but-low traffic.
   if (v < 0.001) return `${Math.round(v * 1024 * 1024)} B/s`
@@ -222,7 +231,7 @@ function curvedTap(cx: number, busY: number, targetY: number, r = 14): string {
 }
 
 // ─── Renderer: returns full SVG markup string for a given width ──
-function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels): { svg: string; pulses: PulseData[]; height: number } {
+function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels, unit: NetworkUnit): { svg: string; pulses: PulseData[]; height: number } {
   const top = activeConsumers(data.consumers)
   const bridges = visibleBridges(data.bridges, top)
   const host = data.consumers.find((c) => c.kind === "host")
@@ -384,7 +393,7 @@ function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels):
       ${svgIcon("bond", bondX, y, 16, stroke)}
       <text class="nf-label" x="${bondX}" y="${y + radBond + 14}">${b.id}</text>
       <text class="nf-sub"   x="${bondX}" y="${y + radBond + 26}">${b.mode || "bond"}</text>
-      <text class="nf-sub"   x="${bondX}" y="${y + radBond + 38}">${fmt(b.rx + b.tx)}</text>
+      <text class="nf-sub"   x="${bondX}" y="${y + radBond + 38}">${fmt(b.rx + b.tx, unit)}</text>
     </g>`)
   })
 
@@ -392,7 +401,7 @@ function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels):
     <circle class="nf-circle" cx="${hostX}" cy="${hostY}" r="${radHost}" stroke="${COLORS.host}" stroke-width="2.5" />
     ${svgIcon("host", hostX, hostY, 24, COLORS.host)}
     <text class="nf-label" x="${hostX}" y="${hostY + radHost + 14}" font-weight="600">PROXMOX</text>
-    <text class="nf-sub"   x="${hostX}" y="${hostY + radHost + 26}">${fmt((host?.rx || 0) + (host?.tx || 0))}</text>
+    <text class="nf-sub"   x="${hostX}" y="${hostY + radHost + 26}">${fmt((host?.rx || 0) + (host?.tx || 0), unit)}</text>
   </g>`)
 
   // Logarithmic mapping rate (MB/s) → pulse animation duration (s),
@@ -440,7 +449,7 @@ function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels):
       <circle class="nf-circle" cx="${bridgesX}" cy="${sec.bridgeY}" r="${radBridge}" stroke="${COLORS.bridge}" />
       ${svgIcon("bridge", bridgesX, sec.bridgeY, 16, COLORS.bridge)}
       <text class="nf-label" x="${bridgesX}" y="${sec.bridgeY + radBridge + 14}">${sec.b.id}</text>
-      <text class="nf-sub"   x="${bridgesX}" y="${sec.bridgeY + radBridge + 26}">${fmt(bridgeRate)}</text>
+      <text class="nf-sub"   x="${bridgesX}" y="${sec.bridgeY + radBridge + 26}">${fmt(bridgeRate, unit)}</text>
     </g>`)
 
     // Trunk lines are STATIC only — every per-guest path will travel
@@ -475,7 +484,7 @@ function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels):
           <circle class="nf-circle" cx="${cx}" cy="${circleY}" r="${radGuest}" stroke="${stroke}" />
           ${svgIcon(g.kind, cx, circleY, 14, stroke)}
           <text class="nf-label" x="${cx}" y="${labelY}">${g.label}</text>
-          <text class="nf-sub"   x="${cx}" y="${subY}">${fmt(g.rx + g.tx)}</text>
+          <text class="nf-sub"   x="${cx}" y="${subY}">${fmt(g.rx + g.tx, unit)}</text>
         </g>`)
       }
 
@@ -599,7 +608,7 @@ function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels):
 //   own sub-trunk lives at SUB_TRUNK_X and fans out to its guests in
 //   an arc (some above, some below the bridge.cy). All elbows use Q
 //   curves; no sharp 90° corners anywhere.
-function renderVertical(data: NetworkFlowData, labels: FlowLabels): { svg: string; pulses: PulseData[]; height: number; viewBox: string } {
+function renderVertical(data: NetworkFlowData, labels: FlowLabels, unit: NetworkUnit): { svg: string; pulses: PulseData[]; height: number; viewBox: string } {
   // Smaller W → SVG scales up on the mobile screen, nodes look bigger.
   // All four x-columns evenly spaced so curve→target distances are
   // homogeneous (host→bridge, bridge→spine, spine→guest all ~60 px).
@@ -794,7 +803,7 @@ function renderVertical(data: NetworkFlowData, labels: FlowLabels): { svg: strin
       ${svgIcon("bond", cx, cy, 13, color)}
       <text class="nf-label" x="${cx}" y="${cy + r + LABEL_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${b.id}</text>
       <text class="nf-sub"   x="${cx}" y="${cy + r + SUB_OFFSET_Y}" text-anchor="middle" style="font-size:11px">${b.mode || "bond"}</text>
-      <text class="nf-sub"   x="${cx}" y="${cy + r + BOND_TEXT_H}" text-anchor="middle" style="font-size:11px">${fmt(rate)}</text>
+      <text class="nf-sub"   x="${cx}" y="${cy + r + BOND_TEXT_H}" text-anchor="middle" style="font-size:11px">${fmt(rate, unit)}</text>
     </g>`)
   })
 
@@ -803,7 +812,7 @@ function renderVertical(data: NetworkFlowData, labels: FlowLabels): { svg: strin
     <circle class="nf-circle" cx="${HOST_X}" cy="${hostY}" r="${RAD_HOST}" stroke="${COLORS.host}" stroke-width="2.5" />
     ${svgIcon("host", HOST_X, hostY, 20, COLORS.host)}
     <text class="nf-label" x="${HOST_X}" y="${hostY + RAD_HOST + LABEL_OFFSET_Y}" text-anchor="middle" font-weight="700" style="font-size:13px">PROXMOX</text>
-    <text class="nf-sub"   x="${HOST_X}" y="${hostY + RAD_HOST + SUB_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${fmt((host?.rx || 0) + (host?.tx || 0))}</text>
+    <text class="nf-sub"   x="${HOST_X}" y="${hostY + RAD_HOST + SUB_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${fmt((host?.rx || 0) + (host?.tx || 0), unit)}</text>
   </g>`)
 
   // ─── 3. Bridges + guests, ARC layout around each bridge ──
@@ -870,7 +879,7 @@ function renderVertical(data: NetworkFlowData, labels: FlowLabels): { svg: strin
       <circle class="nf-circle" cx="${cx}" cy="${cy}" r="${r}" stroke="${COLORS.bridge}" />
       ${svgIcon("bridge", cx, cy, 13, COLORS.bridge)}
       <text class="nf-label" x="${cx}" y="${cy + r + LABEL_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${b.id}</text>
-      <text class="nf-sub"   x="${cx}" y="${cy + r + SUB_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${fmt(rate)}</text>
+      <text class="nf-sub"   x="${cx}" y="${cy + r + SUB_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${fmt(rate, unit)}</text>
     </g>`)
 
     if (guests.length === 0) return
@@ -913,7 +922,7 @@ function renderVertical(data: NetworkFlowData, labels: FlowLabels): { svg: strin
         <circle class="nf-circle" cx="${gCx}" cy="${gCy}" r="${gR}" stroke="${stroke}" />
         ${svgIcon(g.kind, gCx, gCy, 13, stroke)}
         <text class="nf-label" x="${gCx}" y="${gCy + gR + LABEL_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${g.label}</text>
-        <text class="nf-sub"   x="${gCx}" y="${gCy + gR + SUB_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${fmt(gRate)}</text>
+        <text class="nf-sub"   x="${gCx}" y="${gCy + gR + SUB_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${fmt(gRate, unit)}</text>
       </g>`)
     })
   })
@@ -956,6 +965,7 @@ export function NetworkFlow({
   const ref = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(1320)
   const [mode, setMode] = useState<"desktop" | "tablet" | "mobile">("desktop")
+  const [networkUnit, setNetworkUnit] = useState<NetworkUnit>("Bytes")
 
   useEffect(() => {
     const update = () => {
@@ -968,6 +978,16 @@ export function NetworkFlow({
     update()
     window.addEventListener("resize", update)
     return () => window.removeEventListener("resize", update)
+  }, [])
+
+  useEffect(() => {
+    setNetworkUnit(getNetworkUnit())
+    const onChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail as NetworkUnit | undefined
+      setNetworkUnit(detail ?? getNetworkUnit())
+    }
+    window.addEventListener("networkUnitChanged", onChange)
+    return () => window.removeEventListener("networkUnitChanged", onChange)
   }, [])
 
   // Stable memo key: the SVG is regenerated ONLY when something
@@ -997,16 +1017,16 @@ export function NetworkFlow({
       `${c.id}:${c.bridge}:${c.kind}:${c.offline ? 1 : 0}:${bucket(c.rx)}:${bucket(c.tx)}:${sig(c.rx)}:${sig(c.tx)}`
     ).join("|")
     const bridges = data.bridges.map((b) => `${b.id}:${b.parent || ""}`).join("|")
-    return `${mode}|${width}|${nics}||${bonds}||${guests}||${bridges}`
-  }, [data, mode, width])
+    return `${mode}|${width}|${networkUnit}|${nics}||${bonds}||${guests}||${bridges}`
+  }, [data, mode, width, networkUnit])
 
   const { svgContent, pulses, viewBox, height } = useMemo(() => {
     if (mode === "mobile") {
-      const out = renderVertical(data, labels)
+      const out = renderVertical(data, labels, networkUnit)
       return { svgContent: out.svg, pulses: out.pulses, viewBox: out.viewBox, height: out.height }
     }
     const W = mode === "tablet" ? 1100 : 1320
-    const out = renderHorizontal(data, W, labels)
+    const out = renderHorizontal(data, W, labels, networkUnit)
     return { svgContent: out.svg, pulses: out.pulses, viewBox: `0 0 ${W} ${out.height}`, height: out.height }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memoKey, labels])
