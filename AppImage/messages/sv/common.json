@@ -1409,7 +1409,14 @@
       "alsoDetectedContainer": "Detekteras även på denna behållare",
       "addAnotherApplication": "Lägg till ytterligare ett program",
       "doneButton": "Gjort",
-      "editButton": "Redigera"
+      "editButton": "Redigera",
+      "upstreamErrorTimeout": "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Översätt: Nätverkstimeout vid kontakt uppströms",
+      "upstreamErrorNetwork": "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Översätt: Nätverksfel: {detail}",
+      "upstreamErrorGeneric": "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Översätt: Uppströmskontroll misslyckades: {detail}",
+      "notificationsEnabled": "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Översätt: Uppströmsuppdateringsmeddelanden PÅ – klicka för att stänga av ljudet",
+      "notificationsMuted": "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Översätt: Uppströmsuppdateringsmeddelanden AVSTÄLLD – klicka för att aktivera",
+      "notifyUpstreamLabel": "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Översätt: Meddela mig när en ny uppströmsversion är tillgänglig",
+      "notifyUpstreamHelp": "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Översätt: Skickar `app_update_available` till de kanaler som är aktiverade i Inställningar → Aviseringar.Stäng av om den här appen inte kan uppdateras på din box."
     }
   },
   "settings": {
@@ -1679,7 +1686,8 @@
         "post_install_update": "ProxMenux optimeringsuppdateringar tillgängliga",
         "secure_gateway_update_available": "Secure Gateway uppdatering tillgänglig",
         "nvidia_driver_update_available": "NVIDIA drivrutinsuppdatering tillgänglig",
-        "coral_driver_update_available": "Coral TPU drivrutinsuppdatering tillgänglig"
+        "coral_driver_update_available": "Coral TPU drivrutinsuppdatering tillgänglig",
+        "app_update_available": "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Översätt: Appuppdatering tillgänglig"
       },
       "ui": {
         "quietHours": "Tysta timmar",

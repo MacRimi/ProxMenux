@@ -1408,7 +1408,14 @@
       "alsoDetectedContainer": "Ďalšie aplikácie nájdené v kontajneri",
       "addAnotherApplication": "Pridať ďalšiu aplikáciu",
       "doneButton": "Hotovo",
-      "editButton": "Upraviť"
+      "editButton": "Upraviť",
+      "upstreamErrorTimeout": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Časový limit siete pri kontaktovaní upstream",
+      "upstreamErrorNetwork": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Chyba siete: {detail}",
+      "upstreamErrorGeneric": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Kontrola proti prúdu zlyhala: {detail}",
+      "notificationsEnabled": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Upozornenia na upstream aktualizácie sú ZAPNUTÉ – kliknutím ich stlmíte",
+      "notificationsMuted": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Upstream upozornenia na aktualizácie MUTED – kliknutím povolíte",
+      "notifyUpstreamLabel": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Upozorniť ma, keď bude k dispozícii nová upstream verzia",
+      "notifyUpstreamHelp": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Odošle `app_update_available` do kanálov povolených v Nastaveniach → Upozornenia.Vypnite, ak túto aplikáciu nie je možné aktualizovať na vašom boxe."
     }
   },
   "settings": {
@@ -1678,7 +1685,8 @@
         "post_install_update": "Dostupné aktualizácie optimalizácií ProxMenux",
         "secure_gateway_update_available": "K dispozícii je aktualizácia Secure Gateway",
         "nvidia_driver_update_available": "Dostupná aktualizácia ovládača NVIDIA",
-        "coral_driver_update_available": "Dostupná aktualizácia ovládača Coral TPU"
+        "coral_driver_update_available": "Dostupná aktualizácia ovládača Coral TPU",
+        "app_update_available": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: K dispozícii je aktualizácia aplikácie"
       },
       "ui": {
         "quietHours": "Tiché hodiny",
