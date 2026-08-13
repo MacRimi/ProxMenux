@@ -244,18 +244,29 @@ def main() -> int:
         locale_path = messages_dir / lang / "common.json"
         target_flat = flatten(read_json(locale_path))
 
-        # Decide what needs translating.
-        #   - refresh=True  → every EN key
-        #   - refresh=False → only keys where target is empty OR equals EN
-        #                     (i.e. "not yet translated by a human")
+        # Decide what needs translating. Same rule as
+        # build_translation_cache.py: only touch keys whose target
+        # value is empty. Never overwrite an existing value — that
+        # covers three legitimate cases in one line:
+        #   1. Human-curated translations (protected trivially).
+        #   2. Universal tokens the maintainer left equal to EN on
+        #      purpose (Hardware, Terminal, Normal, SMART, OK, CPU %,
+        #      {count}h, product names, etc.). Around 120 keys in
+        #      es/common.json — the old `existing == en_value` rule
+        #      kept resending these to Google every run, and the
+        #      provider sometimes mangled them (`Terminal` →
+        #      `terminal`, `CPU %` → `% de CPU`, ...).
+        #   3. Auto-fills from prior runs whose output happened to
+        #      match EN — leaving them alone is the intended
+        #      steady-state, not a bug.
+        # When someone genuinely wants to redo everything, --refresh
+        # is still available (and is destructive by design).
         missing: list[str] = []
         for key, en_value in en_flat.items():
             if not en_value:
                 continue
             existing = target_flat.get(key, "")
-            if args.refresh:
-                missing.append(key)
-            elif not existing or existing == en_value:
+            if args.refresh or not existing:
                 missing.append(key)
 
         if args.limit > 0:
