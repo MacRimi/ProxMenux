@@ -1409,7 +1409,14 @@
       "alsoDetectedContainer": "Également détecté sur ce conteneur",
       "addAnotherApplication": "Ajouter une autre application",
       "doneButton": "Fait",
-      "editButton": "Modifier"
+      "editButton": "Modifier",
+      "upstreamErrorTimeout": "expiration du délai d'attente du réseau lors du contact en amont",
+      "upstreamErrorNetwork": "Erreur réseau : {detail}",
+      "upstreamErrorGeneric": "Échec de la vérification en amont : {detail}",
+      "notificationsEnabled": "Notifications de mise à jour en amont activées – cliquez pour désactiver le son",
+      "notificationsMuted": "Notifications de mise à jour en amont MUTED – cliquez pour activer",
+      "notifyUpstreamLabel": "Me prévenir lorsqu'une nouvelle version en amont est disponible",
+      "notifyUpstreamHelp": "envoie `app_update_available` aux canaux activés dans Paramètres → Notifications.Désactivez-la si cette application ne peut pas être mise à jour sur votre box."
     }
   },
   "settings": {
@@ -1679,7 +1686,8 @@
         "post_install_update": "Mises à jour d'optimisation de ProxMenux disponibles",
         "secure_gateway_update_available": "Mise à jour de Secure Gateway disponible",
         "nvidia_driver_update_available": "Mise à jour du pilote NVIDIA disponible",
-        "coral_driver_update_available": "Mise à jour du pilote Coral TPU disponible"
+        "coral_driver_update_available": "Mise à jour du pilote Coral TPU disponible",
+        "app_update_available": "mise à jour de l'application disponible"
       },
       "ui": {
         "quietHours": "Heures calmes",
