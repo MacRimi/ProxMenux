@@ -2591,7 +2591,13 @@ class HealthMonitor:
             # the `removable` flag, since USB-NVMe and USB-HDD both report
             # `removable=0` even though they ARE USB.
             attempts = []
-            if _is_disk_usb(disk_name) or _is_disk_removable(disk_name):
+            # SNT drivers are NVMe-Storage-Namespace-Transport — only
+            # meaningful when the underlying device is NVMe. Restricting
+            # to `nvme*` kernel nodes stops `sd*` USB-SATA (TerraMaster
+            # DAS, USB HDD/SSD enclosures) from paying 3×5 s of dead
+            # smartctl timeouts before the plain probe runs (GH #293).
+            is_nvme_class = disk_name.startswith('nvme')
+            if is_nvme_class and (_is_disk_usb(disk_name) or _is_disk_removable(disk_name)):
                 for drv in _USB_NVME_DRIVERS:
                     attempts.append(['smartctl', '-i', '-j', '-d', drv, dev_path])
             attempts.append(['smartctl', '-i', '-j', dev_path])
@@ -2656,7 +2662,11 @@ class HealthMonitor:
             # USB detection uses the sysfs path so USB-NVMe bridges (which
             # report removable=0) are caught too.
             attempts = []
-            if _is_disk_usb(disk_name) or _is_disk_removable(disk_name):
+            # Same NVMe-class guard as `_get_disk_identity` — see the
+            # comment there. Prevents USB-SATA drives from wasting
+            # timeouts on drivers that will never respond (GH #293).
+            is_nvme_class = disk_name.startswith('nvme')
+            if is_nvme_class and (_is_disk_usb(disk_name) or _is_disk_removable(disk_name)):
                 for drv in _USB_NVME_DRIVERS:
                     attempts.append(['smartctl', '-n', 'standby', '--health', '-j', '-d', drv, dev_path])
             attempts.append(['smartctl', '-n', 'standby', '--health', '-j', dev_path])

@@ -4,7 +4,7 @@ Provides decorator to protect Flask routes with JWT authentication
 Automatically checks auth status and validates tokens
 """
 
-from flask import request, jsonify
+from flask import request, jsonify, g
 from functools import wraps
 from auth_manager import load_auth_config, verify_token, verify_token_full
 
@@ -26,9 +26,20 @@ def require_auth(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # Internal calls (background prewarmers, in-process cache
+        # refresh) bypass auth. Set `g._internal_call = True` inside
+        # an `app.test_request_context()` block before invoking a
+        # decorated handler — the flag lives only for that context so
+        # a real HTTP request can never accidentally inherit it.
+        try:
+            if getattr(g, '_internal_call', False):
+                return f(*args, **kwargs)
+        except RuntimeError:
+            pass  # No request context yet — treat as normal auth flow.
+
         # Check if authentication is enabled
         config = load_auth_config()
-        
+
         # If auth is disabled or declined, allow access
         if not config.get("enabled", False) or config.get("declined", False):
             return f(*args, **kwargs)

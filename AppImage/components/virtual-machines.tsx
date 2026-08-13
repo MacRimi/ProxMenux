@@ -2,7 +2,8 @@
 
 import type React from "react"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
+import { fetchLxcApps, getLxcAppsCached, invalidateLxcApps, seedLxcAppsCache } from "../lib/lxc-apps-cache"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
@@ -674,6 +675,22 @@ export function VirtualMachines() {
 
   const [selectedVM, setSelectedVM] = useState<VMData | null>(null)
   const [vmDetails, setVMDetails] = useState<VMDetails | null>(null)
+  // Cross-open cache: last-known payloads keyed by vmid, persisted
+  // across modal open/close for the lifetime of this component. When
+  // a user reopens the same guest, we prime the UI from this ref
+  // instantly, so no tab shows "Loading…" between openings. A fresh
+  // fetch still runs and refreshes both the state and the ref — the
+  // backend's per-vmid TTL cache (see flask_server.py) makes that
+  // revalidation cheap.
+  const vmModalCacheRef = useRef({
+    details: new Map<number, any>(),
+    backups: new Map<number, VMBackup[]>(),
+    // NOTE: apps payload lives in the shared module `lxc-apps-cache`
+    // (dedup between this parent and LxcAppPanel — see fetchLxcApps).
+    schedule: new Map<number, any>(),
+    mountPoints: new Map<number, { mount_points: LxcMountPoint[]; ad_hoc: LxcMountPoint[] }>(),
+    firewall: new Map<number, any>(),
+  })
   const [controlLoading, setControlLoading] = useState(false)
   // Destructive control confirmation. `Force Stop` and `Reboot` skip the OS
   // shutdown sequence and can corrupt running guests; gate them behind a
@@ -751,29 +768,29 @@ export function VirtualMachines() {
   }, [])
 
   useEffect(() => {
-    // `cancelled` short-circuits setState calls if the component unmounts
-    // mid-fetch (user navigates away while we're still iterating LXCs in
-    // batches). Without it, React logs "state update on unmounted
-    // component" and we leak the closure that holds the configs map.
+    // Fetch IPs for LXCs that aren't in `vmConfigs` yet. Previously
+    // gated on `ipsLoaded` (single latch) — with `forceMount` on the
+    // parent the component never re-mounts, so a new LXC appearing
+    // mid-session, or a fetch that failed the first time, stayed
+    // without an IP forever. Now we compare `vmData` against
+    // `vmConfigs` on every SWR poll and fetch only the delta.
     let cancelled = false
 
     const fetchLXCIPs = async () => {
-      if (!vmData || ipsLoaded || loadingIPs) return
+      if (!vmData || loadingIPs) return
 
-      const lxcs = vmData.filter((vm) => vm.type === "lxc")
-
-      if (lxcs.length === 0) {
-        if (!cancelled) setIpsLoaded(true)
-        return
-      }
+      const missing = vmData.filter(
+        (vm) => vm.type === "lxc" && !(vm.vmid in vmConfigs),
+      )
+      if (missing.length === 0) return
 
       setLoadingIPs(true)
       const configs: Record<number, string> = {}
 
       const batchSize = 5
-      for (let i = 0; i < lxcs.length; i += batchSize) {
+      for (let i = 0; i < missing.length; i += batchSize) {
         if (cancelled) return
-        const batch = lxcs.slice(i, i + batchSize)
+        const batch = missing.slice(i, i + batchSize)
 
         await Promise.all(
           batch.map(async (lxc) => {
@@ -781,7 +798,7 @@ export function VirtualMachines() {
               const controller = new AbortController()
               const timeoutId = setTimeout(() => controller.abort(), 10000)
 
-              const details = await fetchApi(`/api/vms/${lxc.vmid}`)
+              const details = await fetchApi<VMDetails>(`/api/vms/${lxc.vmid}`)
 
               clearTimeout(timeoutId)
 
@@ -789,6 +806,8 @@ export function VirtualMachines() {
                 configs[lxc.vmid] = details.lxc_ip_info.primary_ip
               } else if (details.config) {
                 configs[lxc.vmid] = extractIPFromConfig(details.config, details.lxc_ip_info)
+              } else {
+                configs[lxc.vmid] = "N/A"
               }
             } catch (error) {
               console.log(`Could not fetch IP for LXC ${lxc.vmid}`)
@@ -803,14 +822,14 @@ export function VirtualMachines() {
 
       if (cancelled) return
       setLoadingIPs(false)
-      setIpsLoaded(true)
     }
 
     fetchLXCIPs()
     return () => {
       cancelled = true
     }
-  }, [vmData, ipsLoaded, loadingIPs])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vmData, loadingIPs])
 
   // Load initial network unit and listen for changes
   useEffect(() => {
@@ -846,39 +865,144 @@ export function VirtualMachines() {
     setShowNotes(false)
     setIsEditingNotes(false)
     setEditedNotes("")
-    setDetailsLoading(true)
     setActiveModalTab("status")
-    // Reset Sprint 13.29 mount-points state from any previous selection
-    // so the new modal doesn't briefly flash data from another LXC.
-    setMountPoints([])
-    setAdHocMounts([])
     // Reset firewall log state — fetched lazily when the user opens
     // that tab, since most operators won't visit it on every modal open.
     setFirewallLogs([])
     setFirewallLogError(null)
     setFirewallEnabled(true)
 
+    // Prime UI from last-known payloads so a reopened guest never
+    // flashes "Loading…" — the backend and this cache both revalidate
+    // in the background right after.
+    const cache = vmModalCacheRef.current
+    const seedDetails = cache.details.get(vm.vmid) as VMDetails | undefined
+    const seedBackups = cache.backups.get(vm.vmid)
+    const seedMounts = cache.mountPoints.get(vm.vmid)
+    setVMDetails(seedDetails ?? null)
+    setVmBackups(seedBackups ?? [])
+    setMountPoints(seedMounts?.mount_points ?? [])
+    setAdHocMounts(seedMounts?.ad_hoc ?? [])
+    setDetailsLoading(!seedDetails)
+    setLoadingBackups(!seedBackups)
+    if (vm.type === "lxc") setLoadingMounts(!seedMounts)
+
     // Load backups immediately (independent of config)
     fetchBackupStorages()
     fetchVmBackups(vm.vmid)
 
-    // Sprint 13.29: load LXC mount points alongside backups so
-    // switching to that tab is instant. Only LXCs have mpX entries —
-    // qemu VMs use disks, not mount points, so we skip the request
-    // and simply hide the tab below.
+    // Fire every LXC-only tab payload in parallel too, so switching to
+    // App / Updates never pays a fresh round-trip. Apps and schedule
+    // are background: the App tab's own component still owns its fetch
+    // (that request hits the backend TTL cache and returns in ~5 ms),
+    // and loadSchedule reads the seeded ref cache when the user hits
+    // Updates. Sprint 13.29 already did this for mount-points; this
+    // extends the same idea to the two tabs still on lazy-fetch.
     if (vm.type === "lxc") {
       fetchMountPoints(vm.vmid)
+      // Shared cache dedup: if a hover already fired this, we share
+      // the same promise (no duplicate backend work). The App panel
+      // reads from the same cache, so switching to that tab either
+      // finds the data ready or awaits the SAME in-flight fetch.
+      fetchLxcApps(vm.vmid)
+      const cache = vmModalCacheRef.current
+      fetchApi(`/api/vms/${vm.vmid}/schedule`)
+        .then((s: any) => { if (s && typeof s === "object") cache.schedule.set(vm.vmid, s) })
+        .catch(() => { /* silent — Updates tab will retry on activation */ })
     }
 
     try {
-      const details = await fetchApi(`/api/vms/${vm.vmid}`)
+      const details = await fetchApi<VMDetails>(`/api/vms/${vm.vmid}`)
       setVMDetails(details)
+      cache.details.set(vm.vmid, details)
     } catch (error) {
       console.error("Error fetching VM details:", error)
     } finally {
       setDetailsLoading(false)
     }
   }
+
+  // Hover-prefetch is a no-op now: every modal payload
+  // (details / backups / apps / schedule / mount-points) is
+  // already in the ref cache from the bulk hydration on page
+  // load. Kept as an empty callback so the JSX handler stays
+  // stable and the intent is documented — if a new lazy field
+  // appears later, warming it on hover goes here.
+  const prefetchVM = (_vm: VMData) => { /* no-op */ }
+
+  // Stable identity for the guest list — only changes when a guest is
+  // ADDED or REMOVED. Prevents the prefetch effect below from being
+  // torn down every SWR poll (2.5 s), which used to cancel every
+  // in-flight fetch before it could populate the cache (the cancel
+  // flag flipped between the fetch dispatch and its .then, so the
+  // Map.set never ran). With this key, running/stopped status changes
+  // — the only thing that fluctuates poll-to-poll — no longer disturb
+  // the prefetch queue.
+  const vmidsKey = useMemo(
+    () => (vmData ? vmData.map((v) => `${v.vmid}:${v.type}`).sort().join(",") : ""),
+    [vmData],
+  )
+
+  // Bulk hydration: one request to `/api/vms/modal-cache-all`
+  // seeds the entire ref cache (details + backups + apps + schedule
+  // for every guest) so opening any modal is instant. Replaces the
+  // previous fan-out of ~4×N per-guest fetches that hit the server
+  // on every page load. Fires again if guests are added/removed.
+  //
+  // Server serves this from its in-memory prewarmer cache (see
+  // `_vm_modal_prewarmer_loop` in flask_server.py) — one dict read
+  // per guest, entire response <20 ms typical.
+  //
+  // Fields returned `null` mean "not yet cached on the server"
+  // (only happens in the 20-70 s window right after a service
+  // restart). Individual modal handlers already fall back to a
+  // dirigido fetch when the ref cache miss, so those guests
+  // recover transparently.
+  useEffect(() => {
+    if (!vmData || vmData.length === 0) return
+    let cancelled = false
+    fetchApi<{
+      guests: Array<{
+        vmid: number
+        type: "qemu" | "lxc"
+        details: any | null
+        backups: { backups?: VMBackup[] } | null
+        apps?: { apps?: any[] } | null
+        schedule?: any | null
+        mount_points?: { ok?: boolean; mount_points?: LxcMountPoint[]; ad_hoc?: LxcMountPoint[] } | null
+      }>
+    }>(`/api/vms/modal-cache-all`)
+      .then((payload) => {
+        if (cancelled || !payload?.guests) return
+        const cache = vmModalCacheRef.current
+        for (const g of payload.guests) {
+          if (g.details) cache.details.set(g.vmid, g.details)
+          if (g.backups?.backups) cache.backups.set(g.vmid, g.backups.backups)
+          if (g.type === "lxc") {
+            if (g.apps) {
+              // Route lxc apps through the shared module so
+              // LxcAppPanel and this component read the same object.
+              seedLxcAppsCache(g.vmid, g.apps)
+            }
+            if (g.schedule && typeof g.schedule === "object") {
+              cache.schedule.set(g.vmid, g.schedule)
+            }
+            if (g.mount_points?.ok) {
+              cache.mountPoints.set(g.vmid, {
+                mount_points: g.mount_points.mount_points || [],
+                ad_hoc: g.mount_points.ad_hoc || [],
+              })
+            }
+          }
+        }
+      })
+      .catch(() => {
+        // Silent — modal open handlers fall back to individual
+        // fetches if the ref cache is empty.
+      })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vmidsKey])
 
   const fetchMountPoints = async (vmid: number) => {
     setLoadingMounts(true)
@@ -890,8 +1014,11 @@ export function VirtualMachines() {
         ad_hoc: LxcMountPoint[]
       }>(`/api/lxc/${vmid}/mount-points`)
       if (response?.ok) {
-        setMountPoints(response.mount_points || [])
-        setAdHocMounts(response.ad_hoc || [])
+        const mp = response.mount_points || []
+        const adhoc = response.ad_hoc || []
+        setMountPoints(mp)
+        setAdHocMounts(adhoc)
+        vmModalCacheRef.current.mountPoints.set(vmid, { mount_points: mp, ad_hoc: adhoc })
       } else {
         setMountPoints([])
         setAdHocMounts([])
@@ -931,9 +1058,10 @@ export function VirtualMachines() {
   const fetchVmBackups = async (vmid: number) => {
     setLoadingBackups(true)
     try {
-      const response = await fetchApi(`/api/vms/${vmid}/backups`)
+      const response = await fetchApi<{ backups?: VMBackup[] }>(`/api/vms/${vmid}/backups`)
       if (response.backups) {
         setVmBackups(response.backups)
+        vmModalCacheRef.current.backups.set(vmid, response.backups)
       }
     } catch (error) {
       console.error("Error fetching VM backups:", error)
@@ -948,23 +1076,41 @@ export function VirtualMachines() {
   // says the firewall is OFF for that guest; in that case we render
   // a callout instead of an empty viewer.
   const fetchFirewallLog = async (vmid: number) => {
-    setLoadingFirewallLog(true)
-    setFirewallLogError(null)
+    // Seed from ref cache so tab-switching to Firewall doesn't flash
+    // "Loading…" when the payload was already prefetched. Backend
+    // revalidates on top so a fresh log line lands on the next poll.
+    const seed = vmModalCacheRef.current.firewall.get(vmid)
+    if (seed) {
+      setFirewallEnabled(seed.firewall_enabled !== false)
+      setFirewallLogs(Array.isArray(seed.logs) ? seed.logs : [])
+      if (seed.error && seed.firewall_enabled !== false) {
+        setFirewallLogError(seed.error)
+      } else {
+        setFirewallLogError(null)
+      }
+    }
+    setLoadingFirewallLog(!seed)
+    if (!seed) setFirewallLogError(null)
     try {
       const response = await fetchApi<{
         logs?: FirewallLogEntry[]
         firewall_enabled?: boolean
         error?: string
       }>(`/api/vms/${vmid}/firewall/log?limit=500`)
+      vmModalCacheRef.current.firewall.set(vmid, response)
       setFirewallEnabled(response.firewall_enabled !== false)
       setFirewallLogs(Array.isArray(response.logs) ? response.logs : [])
       if (response.error && response.firewall_enabled !== false) {
         setFirewallLogError(response.error)
+      } else {
+        setFirewallLogError(null)
       }
     } catch (error) {
-      setFirewallEnabled(true)
-      setFirewallLogs([])
-      setFirewallLogError(error instanceof Error ? error.message : String(error))
+      if (!seed) {
+        setFirewallEnabled(true)
+        setFirewallLogs([])
+        setFirewallLogError(error instanceof Error ? error.message : String(error))
+      }
     } finally {
       setLoadingFirewallLog(false)
     }
@@ -1023,6 +1169,20 @@ export function VirtualMachines() {
         method: "POST",
         body: JSON.stringify({ action }),
       })
+
+      // Any control action can change what the guest reports: a stop
+      // hides runtime-only fields, a start may bring a new config that
+      // the user edited on the Proxmox UI while the guest was down,
+      // and a reboot re-runs LXC init which can change installed
+      // versions of tracked apps. Drop every local + shared cache for
+      // this vmid so the next open pulls a fresh scan across all tabs.
+      const cache = vmModalCacheRef.current
+      cache.details.delete(vmid)
+      cache.backups.delete(vmid)
+      cache.mountPoints.delete(vmid)
+      cache.schedule.delete(vmid)
+      cache.firewall.delete(vmid)
+      invalidateLxcApps(vmid)
 
       mutate()
       setSelectedVM(null)
@@ -1237,28 +1397,34 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     { value: "custom", label: t("vmLxc.cronPresets.custom"), cron: "" },
   ]
 
+  const applySchedulePayload = (s: any) => {
+    if (!s || typeof s !== "object") return
+    setScheduleEnabled(!!s.enabled)
+    setScheduleConfigured(!!s.cron)
+    const cron = s.cron || "0 3 * * *"
+    setScheduleCron(cron)
+    const matched = CRON_PRESETS.find((p) => p.value !== "custom" && p.cron === cron)
+    setSchedulePreset(matched ? matched.value : "custom")
+    setScheduleTarget(s.target || "both")
+    if (s.backup !== undefined) setApplyBackup(!!s.backup)
+    if (s.backup_storage) setApplyBackupStorage(s.backup_storage)
+    if (s.restart !== undefined) setApplyRestart(!!s.restart)
+    setScheduleLastRunAt(s.last_run_at || null)
+    setScheduleLastRunStatus(s.last_run_status || null)
+    setExternalCron(s.external_cron || null)
+  }
+
   const loadSchedule = async (vmid: number) => {
     setScheduleError(null)
+    // Seed from ref cache so tab-switching to Updates isn't a "Loading…"
+    // moment when the payload was already fetched this session.
+    const cachedSched = vmModalCacheRef.current.schedule.get(vmid)
+    if (cachedSched) applySchedulePayload(cachedSched)
     try {
       const s: any = await fetchApi(`/api/vms/${vmid}/schedule`)
       if (s && typeof s === "object") {
-        setScheduleEnabled(!!s.enabled)
-        setScheduleConfigured(!!s.cron)
-        const cron = s.cron || "0 3 * * *"
-        setScheduleCron(cron)
-        const matched = CRON_PRESETS.find((p) => p.value !== "custom" && p.cron === cron)
-        setSchedulePreset(matched ? matched.value : "custom")
-        setScheduleTarget(s.target || "both")
-        // Unified apply options — backup/restart/storage feed BOTH
-        // manual applies and scheduled runs. Values live in the
-        // schedule object even when enabled=false so preferences
-        // survive toggling the schedule off.
-        if (s.backup !== undefined) setApplyBackup(!!s.backup)
-        if (s.backup_storage) setApplyBackupStorage(s.backup_storage)
-        if (s.restart !== undefined) setApplyRestart(!!s.restart)
-        setScheduleLastRunAt(s.last_run_at || null)
-        setScheduleLastRunStatus(s.last_run_status || null)
-        setExternalCron(s.external_cron || null)
+        vmModalCacheRef.current.schedule.set(vmid, s)
+        applySchedulePayload(s)
       }
     } catch (e: any) {
       setScheduleError(e?.message || "Could not load schedule")
@@ -1407,6 +1573,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
+    // Drop the shared apps cache so the next open/refresh pulls fresh
+    // data. The panel's own load() picks it up on the next tick.
+    invalidateLxcApps(vmid)
     mutate()
   }
   const saveCustomCommand = async (vmid: number, app: LxcAppWatch) => {
@@ -1486,6 +1655,16 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     } catch {
       // Non-fatal — the notification is a nice-to-have.
     }
+    // The apply ran an updater inside the CT which likely changed the
+    // installed_version of tracked apps AND the OS-package snapshot.
+    // Drop this vmid from every cache so the next open re-scans and
+    // the "Update available" badge doesn't linger with stale data.
+    // Without this, users had to close and reopen the whole Monitor
+    // for the modal to reflect the post-update state.
+    const c = vmModalCacheRef.current
+    c.details.delete(applyVmid)
+    c.schedule.delete(applyVmid)
+    invalidateLxcApps(applyVmid)
     // Backend's POST /applied handler already force-refreshes the
     // managed_installs snapshot, so the next natural /api/vms poll
     // (every 2.5s via SWR refreshInterval) picks up the post-update
@@ -1551,8 +1730,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
         role={onClick ? "button" : undefined}
         tabIndex={onClick ? 0 : undefined}
       >
-        <Package className={iconSize} />
-        {uc.count} {compact ? "" : (uc.count === 1 ? t("vmLxc.updatesPanel.updateSingular") : t("vmLxc.updatesPanel.updatePlural"))}
+        {/* Icon-only badge: `↑` (ArrowUpCircle, same glyph as the
+            Apply update buttons) + count. Dropped the "N updates" /
+            "N update" text so we don't need to translate the label
+            into every locale, and the badge takes less horizontal
+            space — matters most on the LXC card row where uptime,
+            IP and other chips compete for width. Count alone with
+            the up-arrow reads unambiguously as "pending updates". */}
+        <ArrowUpCircle className={iconSize} />
+        {uc.count}
         {/* Chevron only when the badge is wired up as a clickable
             shortcut — its absence on the dashboard card avoids
             implying interactivity where there isn't any (the whole
@@ -2055,15 +2241,48 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 const diskGB = (vm.disk / 1024 ** 3).toFixed(1)
                 const maxDiskGB = (vm.maxdisk / 1024 ** 3).toFixed(1)
                 const typeBadge = getTypeBadge(vm.type)
-                const lxcIP = vm.type === "lxc" ? vmConfigs[vm.vmid] : null
+                // IP resolution — try both sources so a card never
+                // ends up with an empty slot while one path is still
+                // in flight:
+                //   1) `vmConfigs` — populated by the dedicated
+                //      LXC-IP-fetch effect (batches of 5, gated by
+                //      `ipsLoaded` so it only runs once per mount).
+                //   2) `vmModalCacheRef.details` — populated by the
+                //      background prefetcher that warms every guest's
+                //      /api/vms/<vmid> payload. Contains the same
+                //      `lxc_ip_info.primary_ip` the effect uses; if
+                //      the prefetch landed first, we surface the IP
+                //      immediately without waiting for the batch.
+                let lxcIP: string | null | undefined = null
+                if (vm.type === "lxc") {
+                  lxcIP = vmConfigs[vm.vmid]
+                  if (!lxcIP) {
+                    const cached = vmModalCacheRef.current.details.get(vm.vmid) as any
+                    lxcIP = cached?.lxc_ip_info?.primary_ip
+                      || (cached?.config ? extractIPFromConfig(cached.config, cached.lxc_ip_info) : null)
+                  }
+                }
 
                 return (
                   <div key={vm.vmid}>
                     <div
                       className="hidden sm:block p-4 rounded-lg border border-border bg-card hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
                       onClick={() => handleVMClick(vm)}
+                      onMouseEnter={() => prefetchVM(vm)}
                     >
-                      <div className="flex items-center gap-2 flex-wrap mb-3">
+                      {/* Row 1 — identity header. Just badges + name
+                          + ID + update badge, no uptime/IP here. On
+                          `lg+` (≥1024 px, e.g. iPad landscape and up)
+                          uptime + IP show up in the row-2 left column;
+                          on smaller viewports (tablet portrait, narrow
+                          desktops) they disappear entirely — that
+                          width is pre-mobile territory where the
+                          metrics grid needs the whole card width and
+                          a stray uptime line just competes for space.
+                          Users who need uptime/IP on narrow screens
+                          still see them inside the modal's Status
+                          tab. */}
+                      <div className="flex items-center gap-x-2 gap-y-1 flex-wrap mb-3">
                         <Badge variant="outline" className={`flex-shrink-0 ${getStatusColor(vm.status)}`}>
                           {getStatusIcon(vm.status)}
                           {getStatusLabel(vm.status)}
@@ -2072,109 +2291,123 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           {typeBadge.icon}
                           {typeBadge.label}
                         </Badge>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-foreground truncate">
-                            {vm.name}
-                            <span className="hidden lg:inline text-sm text-muted-foreground ml-2">ID: {vm.vmid}</span>
+                        <span className="font-semibold text-foreground truncate min-w-0">{vm.name}</span>
+                        <span className="text-sm text-muted-foreground whitespace-nowrap flex-shrink-0">ID: {vm.vmid}</span>
+                        {vm.type === "lxc" && (
+                          <div className="ml-auto flex-shrink-0">
+                            {renderLxcUpdateBadge(vm.update_check)}
                           </div>
-                          <div className="text-[10px] text-muted-foreground lg:hidden">ID: {vm.vmid}</div>
-                        </div>
-                        {lxcIP && (
-                          <span className={`text-sm ${lxcIP === "DHCP" ? "text-yellow-500" : "text-green-500"}`}>
-                            IP: {lxcIP}
-                          </span>
                         )}
-                        <span className="text-sm text-muted-foreground ml-auto">
-                          {t("vmLxc.uptime", { uptime: formatUptime(vm.uptime, t) })}
-                        </span>
-                        {vm.type === "lxc" && renderLxcUpdateBadge(vm.update_check)}
                       </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                        <div>
-                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.cpuUsage")}</div>
-                          <div
-                            className="cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => {
-                              setSelectedMetric("cpu") // undeclared variable fix
-                            }}
-                          >
+                      {/* Row 2 — 2-column layout on wide viewports
+                          (`lg+`, ≥1024 px, iPad landscape and up):
+                          left slot carries uptime + IP (as originally
+                          designed), right slot the 5-column metrics
+                          grid. Below `lg` the left slot is hidden
+                          and the grid spans the full card width. */}
+                      <div className="flex flex-row gap-3 lg:gap-4">
+                        {vm.status === "running" && (
+                          <div className="hidden lg:block lg:min-w-[180px] lg:flex-shrink-0">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                {t("vmLxc.uptime", { uptime: formatUptime(vm.uptime, t) })}
+                              </span>
+                              {lxcIP && lxcIP !== "DHCP" && lxcIP !== "N/A" && (
+                                <span className="text-sm text-foreground flex items-center gap-1">
+                                  <Network className="h-3 w-3 text-green-500" />
+                                  {lxcIP}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex-1 grid grid-cols-5 gap-2 lg:gap-3 min-w-0">
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.cpuUsage")}</div>
                             <div
-                              className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(cpuPercent))}`}
+                              className="cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => {
+                                setSelectedMetric("cpu")
+                              }}
                             >
-                              {cpuPercent}%
+                              <div
+                                className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(cpuPercent))}`}
+                              >
+                                {cpuPercent}%
+                              </div>
+                              <Progress
+                                value={Number.parseFloat(cpuPercent)}
+                                className={`h-1.5 ${getProgressColor(Number.parseFloat(cpuPercent))}`}
+                              />
                             </div>
-                            <Progress
-                              value={Number.parseFloat(cpuPercent)}
-                              className={`h-1.5 ${getProgressColor(Number.parseFloat(cpuPercent))}`}
-                            />
                           </div>
-                        </div>
 
-                        <div>
-                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.memory")}</div>
-                          <div
-                            className="cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => {
-                              setSelectedMetric("memory")
-                            }}
-                          >
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.memory")}</div>
                             <div
-                              className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(memPercent))}`}
+                              className="cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => {
+                                setSelectedMetric("memory")
+                              }}
                             >
-                              {memGB} / {maxMemGB} GB
+                              <div
+                                className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(memPercent))}`}
+                              >
+                                {memGB} / {maxMemGB} GB
+                              </div>
+                              <Progress
+                                value={Number.parseFloat(memPercent)}
+                                className={`h-1.5 ${getProgressColor(Number.parseFloat(memPercent))}`}
+                              />
                             </div>
-                            <Progress
-                              value={Number.parseFloat(memPercent)}
-                              className={`h-1.5 ${getProgressColor(Number.parseFloat(memPercent))}`}
-                            />
                           </div>
-                        </div>
 
-                        <div>
-                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.diskUsage")}</div>
-                          <div
-                            className="cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => {
-                              setSelectedMetric("disk")
-                            }}
-                          >
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.diskUsage")}</div>
                             <div
-                              className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(diskPercent))}`}
+                              className="cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => {
+                                setSelectedMetric("disk")
+                              }}
                             >
-                              {diskGB} / {maxDiskGB} GB
-                            </div>
-                            <Progress
-                              value={Number.parseFloat(diskPercent)}
-                              className={`h-1.5 ${getProgressColor(Number.parseFloat(diskPercent))}`}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="hidden md:block">
-                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.diskIo")}</div>
-                          <div className="text-sm font-semibold space-y-0.5">
-                            <div className="flex items-center gap-1">
-                              <HardDrive className="h-3 w-3 text-green-500" />
-                              <span className="text-green-500">↓ {formatBytes(vm.diskread, false)}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <HardDrive className="h-3 w-3 text-blue-500" />
-                              <span className="text-blue-500">↑ {formatBytes(vm.diskwrite, false)}</span>
+                              <div
+                                className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(diskPercent))}`}
+                              >
+                                {diskGB} / {maxDiskGB} GB
+                              </div>
+                              <Progress
+                                value={Number.parseFloat(diskPercent)}
+                                className={`h-1.5 ${getProgressColor(Number.parseFloat(diskPercent))}`}
+                              />
                             </div>
                           </div>
-                        </div>
 
-                        <div>
-                          <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.networkIo")}</div>
-                          <div className="text-sm font-semibold space-y-0.5">
-                            <div className="flex items-center gap-1">
-                              <Network className="h-3 w-3 text-green-500" />
-                              <span className="text-green-500">↓ {formatBytes(vm.netin, true)}</span>
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.diskIo")}</div>
+                            <div className="text-sm font-semibold space-y-0.5">
+                              <div className="flex items-center gap-1">
+                                <HardDrive className="h-3 w-3 text-green-500" />
+                                <span className="text-green-500 truncate">↓ {formatBytes(vm.diskread, false)}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <HardDrive className="h-3 w-3 text-blue-500" />
+                                <span className="text-blue-500 truncate">↑ {formatBytes(vm.diskwrite, false)}</span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <Network className="h-3 w-3 text-blue-500" />
-                              <span className="text-blue-500">↑ {formatBytes(vm.netout, true)}</span>
+                          </div>
+
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.networkIo")}</div>
+                            <div className="text-sm font-semibold space-y-0.5">
+                              <div className="flex items-center gap-1">
+                                <Network className="h-3 w-3 text-green-500" />
+                                <span className="text-green-500">↓ {formatBytes(vm.netin, true)}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Network className="h-3 w-3 text-blue-500" />
+                                <span className="text-blue-500">↑ {formatBytes(vm.netout, true)}</span>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -2196,13 +2429,22 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           {getTypeBadge(vm.type).label}
                         </Badge>
 
-                        {/* Name and ID */}
+                        {/* Name and ID.
+                            Update indicator is icon-only (no count, no
+                            badge chrome) sitting next to `ID: N` — the
+                            purple up-arrow alone signals "this CT has
+                            pending updates" without stealing width from
+                            the name, which was getting truncated to 4-5
+                            chars before. The full count still shows on
+                            the desktop card and inside the modal. */}
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-foreground truncate flex items-center gap-1.5">
-                            <span className="truncate">{vm.name}</span>
-                            {vm.type === "lxc" && renderLxcUpdateBadge(vm.update_check, true)}
+                          <div className="font-semibold text-foreground truncate">{vm.name}</div>
+                          <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <span>ID: {vm.vmid}</span>
+                            {vm.type === "lxc" && vm.update_check?.available && (vm.update_check?.count ?? 0) > 0 && (
+                              <ArrowUpCircle className="h-3 w-3 text-violet-400 flex-shrink-0" />
+                            )}
                           </div>
-                          <div className="text-[10px] text-muted-foreground">ID: {vm.vmid}</div>
                         </div>
 
                         <div className="flex items-center gap-3 flex-shrink-0">
@@ -3434,6 +3676,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                       vmid={selectedVM.vmid}
                       ctIp={ctIp}
                       onChange={() => mutate()}
+                      initialData={getLxcAppsCached(selectedVM.vmid) ?? null}
                       managed={
                         managedEntry
                           ? {
@@ -3620,8 +3863,28 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         const anyAppPending =
                           (helperExists && trackedApps.some((a) => a.update_available === true))
                           || customCmdApps.some((a) => a.update_available === true)
-                        const singleAppMethod = (helperExists ? 1 : 0) + customCmdApps.length === 1
-                        const combinedApp: { name: string; cmd: string; isHelper: boolean } | null = helperExists
+                        // The combined "Apply OS + <app>" button requires
+                        // the app to be REGISTERED by the user AND actually
+                        // tracked. Two independent gates:
+                        //   1. helper_slug must match the CT's helper — a
+                        //      detected-but-not-registered app (e.g. AdGuard
+                        //      shown as "Detected" in the App tab) has no
+                        //      entry here and never triggers the button.
+                        //   2. The registered entry must show evidence of
+                        //      tracking — installed_version present, or
+                        //      update_available defined either way. This
+                        //      guards against the catalog picker auto-filling
+                        //      helper_slug when the user picked the app only
+                        //      for its weblink and never configured updates;
+                        //      until a check has run, no combined button.
+                        const helperRegistered = helperExists && trackedApps.some(
+                          (a) =>
+                            !!a.helper_slug
+                            && a.helper_slug === uc?.helper_slug
+                            && (!!a.installed_version || a.update_available !== undefined),
+                        )
+                        const singleAppMethod = (helperRegistered ? 1 : 0) + customCmdApps.length === 1
+                        const combinedApp: { name: string; cmd: string; isHelper: boolean } | null = helperRegistered
                           ? { name: helperName || "application", cmd: "", isHelper: true }
                           : customCmdApps.length === 1
                             ? { name: customCmdApps[0].name || "application", cmd: customCmdApps[0].update_command!, isHelper: false }
@@ -3847,7 +4110,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   const hasUpdate = aw.update_available === true
                                   const upToDate = aw.update_available === false && !!aw.installed_version
                                   return (
-                                    <div key={`app-${aw.id}`} className={editing ? "py-4 -mx-4 px-4 bg-card" : "py-4"}>
+                                    <div key={`app-${aw.id}`} className={editing ? "py-4 -mx-4 px-4 bg-accent [&_input]:bg-background [&_textarea]:bg-background [&_[role=combobox]]:bg-background" : "py-4"}>
                                       <div className="flex items-center gap-2 mb-3 min-w-0">
                                         <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                         <h3 className="text-sm font-semibold text-foreground truncate">
@@ -3996,7 +4259,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     Purple when any part pending; green
                                     when everything up to date. */}
                                 {(() => {
-                                  const hasAnyAppMethod = helperExists || customCmdApps.length > 0
+                                  // Same gate as `helperRegistered` above —
+                                  // a detected-but-not-registered helper
+                                  // must NOT surface any combined-apply
+                                  // button, single or multi. Without this
+                                  // the multi-app branch below still fired
+                                  // "Apply OS + Apps updates" for CTs whose
+                                  // only "app method" was an unregistered
+                                  // helper.sh on disk.
+                                  const hasAnyAppMethod = helperRegistered || customCmdApps.length > 0
                                   if (!hasAnyAppMethod) return null
                                   // Single method — reuse the existing
                                   // TARGET=both path so the script picks
@@ -4024,20 +4295,27 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   }
                                   // Multi-app case — build a single
                                   // UPDATE_COMMAND that chains every app
-                                  // method with `;`. Helper (if present)
-                                  // goes first as its full invocation
-                                  // (PHS_SILENT=1 bash /usr/bin/update),
-                                  // then each custom_command. Runs as
-                                  // one `pct exec sh -c` — no backend
-                                  // script change needed.
+                                  // method with `;`. Helper only chains
+                                  // when the user has REGISTERED the app
+                                  // it manages (same rule as the single
+                                  // case), so an unregistered helper.sh
+                                  // on disk never gets executed via the
+                                  // combined button.
                                   const parts: string[] = []
-                                  if (helperExists) {
+                                  if (helperRegistered) {
                                     parts.push("PHS_SILENT=1 bash /usr/bin/update")
                                   }
                                   for (const a of customCmdApps) {
                                     parts.push(a.update_command!.trim())
                                   }
-                                  const chained = parts.join("; ")
+                                  // Join with `&&` (fail-fast) so a mid-chain
+                                  // command failure aborts the rest and the
+                                  // final exit code reflects the failure.
+                                  // With `;`, `sh -c` returned only the last
+                                  // command's exit code and a broken update
+                                  // could look successful because a trailing
+                                  // no-op finished cleanly.
+                                  const chained = parts.join(" && ")
                                   return (
                                     <div className="pt-4 flex justify-end">
                                       <Button
@@ -4632,60 +4910,78 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               </div>
 
               <div className="border-t border-border bg-background px-6 py-4 mt-auto shrink-0">
-                {/* Terminal button for LXC containers - only when running */}
-                {selectedVM?.type === "lxc" && selectedVM?.status === "running" && (
-                  <div className="mb-3">
-                    <Button
-                      className="w-full bg-zinc-600/20 border border-zinc-600/50 text-zinc-300 hover:bg-zinc-600/30"
-                      onClick={() => selectedVM && openLxcTerminal(selectedVM.vmid, selectedVM.name)}
-                    >
-                      <Terminal className="h-4 w-4 mr-2" />
-                      {t("vmLxc.openTerminal")}
-                    </Button>
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    className="w-full bg-green-600/20 border border-green-600/50 text-green-400 hover:bg-green-600/30"
-                    disabled={selectedVM?.status === "running" || controlLoading}
-                    onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "start")}
-                  >
-                    <Play className="h-4 w-4 mr-2" />
-                    {t("vmLxc.actions.start")}
-                  </Button>
-                  <Button
-                    className="w-full bg-blue-600/20 border border-blue-600/50 text-blue-400 hover:bg-blue-600/30"
-                    disabled={selectedVM?.status !== "running" || controlLoading}
-                    onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "shutdown")}
-                  >
-                    <Power className="h-4 w-4 mr-2" />
-                    {t("vmLxc.actions.shutdown")}
-                  </Button>
-                  <Button
-                    className="w-full bg-blue-600/20 border border-blue-600/50 text-blue-400 hover:bg-blue-600/30"
-                    disabled={selectedVM?.status !== "running" || controlLoading}
-                    onClick={() => selectedVM && setConfirmDestructive({
-                      action: "reboot",
-                      vmid: selectedVM.vmid,
-                      vmName: selectedVM.name,
-                    })}
-                  >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    {t("vmLxc.actions.reboot")}
-                  </Button>
-                  <Button
-                    className="w-full bg-red-600/20 border border-red-600/50 text-red-400 hover:bg-red-600/30"
-                    disabled={selectedVM?.status !== "running" || controlLoading}
-                    onClick={() => selectedVM && setConfirmDestructive({
-                      action: "stop",
-                      vmid: selectedVM.vmid,
-                      vmName: selectedVM.name,
-                    })}
-                  >
-                    <StopCircle className="h-4 w-4 mr-2" />
-                    {t("vmLxc.actions.forceStop")}
-                  </Button>
-                </div>
+                {/* Footer controls — responsive layout:
+                    • Mobile (<sm): 4-col grid. Terminal spans all 4
+                      in row 1; the 4 control buttons show as icon-only
+                      in row 2 (labels re-appear at sm+). Two rows max.
+                    • Tablet portrait (sm..lg): 4-col grid with labels
+                      back. Terminal still full-width row → 2 rows.
+                    • Desktop / tablet landscape (lg+): everything sits
+                      on a single 5-col row when Terminal is present,
+                      or a 4-col row when it isn't.
+                    Previously this stacked as 3 rows on mobile and 2
+                    rows on desktop, eating scroll space with each new
+                    tab we added. */}
+                {(() => {
+                  const hasTerminal = selectedVM?.type === "lxc" && selectedVM?.status === "running"
+                  return (
+                    <div className={`grid gap-2 sm:gap-3 ${hasTerminal ? "grid-cols-4 lg:grid-cols-5" : "grid-cols-4"}`}>
+                      {hasTerminal && (
+                        <Button
+                          className="w-full bg-zinc-600/20 border border-zinc-600/50 text-zinc-300 hover:bg-zinc-600/30 col-span-4 lg:col-span-1"
+                          onClick={() => selectedVM && openLxcTerminal(selectedVM.vmid, selectedVM.name)}
+                        >
+                          <Terminal className="h-4 w-4 mr-2" />
+                          {t("vmLxc.openTerminal")}
+                        </Button>
+                      )}
+                      <Button
+                        className="w-full bg-green-600/20 border border-green-600/50 text-green-400 hover:bg-green-600/30"
+                        disabled={selectedVM?.status === "running" || controlLoading}
+                        onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "start")}
+                        title={t("vmLxc.actions.start")}
+                      >
+                        <Play className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">{t("vmLxc.actions.start")}</span>
+                      </Button>
+                      <Button
+                        className="w-full bg-blue-600/20 border border-blue-600/50 text-blue-400 hover:bg-blue-600/30"
+                        disabled={selectedVM?.status !== "running" || controlLoading}
+                        onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "shutdown")}
+                        title={t("vmLxc.actions.shutdown")}
+                      >
+                        <Power className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">{t("vmLxc.actions.shutdown")}</span>
+                      </Button>
+                      <Button
+                        className="w-full bg-blue-600/20 border border-blue-600/50 text-blue-400 hover:bg-blue-600/30"
+                        disabled={selectedVM?.status !== "running" || controlLoading}
+                        onClick={() => selectedVM && setConfirmDestructive({
+                          action: "reboot",
+                          vmid: selectedVM.vmid,
+                          vmName: selectedVM.name,
+                        })}
+                        title={t("vmLxc.actions.reboot")}
+                      >
+                        <RotateCcw className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">{t("vmLxc.actions.reboot")}</span>
+                      </Button>
+                      <Button
+                        className="w-full bg-red-600/20 border border-red-600/50 text-red-400 hover:bg-red-600/30"
+                        disabled={selectedVM?.status !== "running" || controlLoading}
+                        onClick={() => selectedVM && setConfirmDestructive({
+                          action: "stop",
+                          vmid: selectedVM.vmid,
+                          vmName: selectedVM.name,
+                        })}
+                        title={t("vmLxc.actions.forceStop")}
+                      >
+                        <StopCircle className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">{t("vmLxc.actions.forceStop")}</span>
+                      </Button>
+                    </div>
+                  )
+                })()}
               </div>
             </>
           ) : (
@@ -4780,7 +5076,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
       {/* Backup Configuration Modal */}
       <Dialog open={showBackupModal} onOpenChange={setShowBackupModal}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[640px] bg-accent">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-500">
               <Archive className="h-5 w-5" />
@@ -4808,7 +5104,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   {t("vmLxc.backupModal.storage")}
                 </Label>
                 <Select value={selectedBackupStorage} onValueChange={setSelectedBackupStorage}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-background">
                     <SelectValue placeholder={t("vmLxc.backupModal.selectStorage")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -4827,7 +5123,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   {t("vmLxc.backupModal.mode")}
                 </Label>
                 <Select value={backupMode} onValueChange={setBackupMode}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-background">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -4846,7 +5142,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   {t("vmLxc.backupModal.notification")}
                 </Label>
               <Select value={backupNotification} onValueChange={setBackupNotification}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -4880,7 +5176,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   <span className="text-xs text-muted-foreground ml-1">({t("vmLxc.backupModal.forPbsStorage")})</span>
                 </Label>
                 <Select value={backupPbsChangeMode} onValueChange={setBackupPbsChangeMode}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-background">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -4898,11 +5194,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 <FileText className="h-3.5 w-3.5" />
                 {t("vmLxc.backupModal.notes")}
               </Label>
-              <Textarea 
+              <Textarea
                 value={backupNotes}
                 onChange={(e) => setBackupNotes(e.target.value)}
                 placeholder="{{guestname}}"
-                className="min-h-[80px] resize-none"
+                className="min-h-[80px] resize-none bg-background"
               />
               <p className="text-xs text-muted-foreground">
                 {t("vmLxc.backupModal.variables")}

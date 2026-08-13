@@ -25,6 +25,7 @@ import {
   Loader2, Save, RefreshCw, Trash2, Package, ExternalLink,
   AlertTriangle, Info, PlusCircle, Pencil, ChevronDown, ChevronRight, EyeOff,
   ArrowUpCircle, RotateCcw, Check, Settings2, ShieldCheck, CheckCircle2,
+  Bell, BellOff,
 } from "lucide-react"
 import { Card, CardContent } from "./ui/card"
 import { Button } from "./ui/button"
@@ -33,6 +34,7 @@ import { Label } from "./ui/label"
 import { Badge } from "./ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { fetchApi } from "../lib/api-config"
+import { fetchLxcApps, getLxcAppsCached, invalidateLxcApps } from "../lib/lxc-apps-cache"
 import { useT } from "@/lib/i18n/provider"
 
 // installed_via is optional now — an empty value means "register only,
@@ -82,6 +84,10 @@ interface AppConfig {
   health_path?: string
   logo_url?: string
   helper_slug?: string
+  // Per-app opt-out for the `app_update_available` notification.
+  // Absent / true = notify; false = silenced. Set from the bell
+  // toggle on each app card and/or the Edit form's checkbox.
+  notifications_enabled?: boolean
 }
 
 interface DetectedApp {
@@ -174,6 +180,15 @@ interface Props {
   ctIp?: string | null
   onChange?: () => void
   managed?: ManagedAppInfo | null
+  // Optional seed payload from the parent's cross-open ref cache. When
+  // supplied, the panel renders with real content on the very first
+  // frame and only revalidates silently in the background — no
+  // "Loading applications…" flash on tab switch or modal reopen. Must
+  // include BOTH sidecar and suggestions — the panel's empty-state and
+  // detected-chip strip both depend on suggestions, so seeding sidecar
+  // alone briefly flashes "no apps registered" until suggestions
+  // arrives from the network.
+  initialData?: { sidecar: SidecarResponse; suggestions: Suggestions | null } | null
 }
 
 const EMPTY_APP: AppConfig = {
@@ -216,11 +231,16 @@ function suggestPackageName(name: string) {
     .replace(/^-+|-+$/g, "")
 }
 
-export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
+export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Props) {
   const t = useT()
-  const [loading, setLoading] = useState(true)
-  const [sidecar, setSidecar] = useState<SidecarResponse | null>(null)
-  const [suggestions, setSuggestions] = useState<Suggestions | null>(null)
+  // Seed from `initialData` first, then fall back to the shared cache
+  // module. Together those two sources cover every reopen scenario
+  // without flashing a spinner — see lxc-apps-cache.ts for the dedup
+  // logic that also keeps concurrent fetches from racing.
+  const seed = initialData ?? getLxcAppsCached(vmid) ?? null
+  const [loading, setLoading] = useState(!seed)
+  const [sidecar, setSidecar] = useState<SidecarResponse | null>(seed?.sidecar ?? null)
+  const [suggestions, setSuggestions] = useState<Suggestions | null>(seed?.suggestions ?? null)
   const [error, setError] = useState<string | null>(null)
   // Editor state
   const [editing, setEditing] = useState<{ appId: string | null; draft: AppConfig } | null>(null)
@@ -257,31 +277,54 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
 
   const load = useCallback(async () => {
     if (managed) { setLoading(false); return }
-    setLoading(true)
+    // Only show the spinner on cold loads. When we came in seeded via
+    // `initialData` or the shared cache, the sidecar is already
+    // populated and the user shouldn't see a flash of "Loading…"
+    // while we revalidate.
+    if (!sidecar) setLoading(true)
     setError(null)
     try {
-      const r: SidecarResponse = await fetchApi(`/api/vms/${vmid}/apps`)
-      setSidecar(r)
-      // Always fetch suggestions — used both by the empty-state form
-      // seed AND by the "Also detected on this container" chip strip
-      // that surfaces unregistered detections even after the CT already
-      // has ≥1 registered app. Previously gated on `!r.apps?.length`,
-      // which meant a CT with 1 registered + 1 detected-but-not-yet-
-      // registered app never showed the second app until the user
-      // opened + cancelled the editor (which triggered a re-load path
-      // that happened to fetch it).
-      try {
-        const s: Suggestions = await fetchApi(`/api/vms/${vmid}/apps/suggestions`)
-        setSuggestions(s)
-      } catch { /* non-fatal */ }
+      // `fetchLxcApps` bundles sidecar + suggestions in one shared
+      // in-flight promise. If the parent already fired this fetch on
+      // modal open (see prefetchVM / handleVMClick in
+      // virtual-machines.tsx), we await the SAME promise instead of
+      // duplicating the request against the backend — this eliminates
+      // the "Loading applications…" flash that used to show while a
+      // second, racing fetch caught up.
+      const bundle = await fetchLxcApps(vmid)
+      if (bundle) {
+        setSidecar(bundle.sidecar)
+        setSuggestions(bundle.suggestions)
+      }
     } catch (e: any) {
       setError(e?.message || t("vmLxc.appEditor.loadFailed"))
     } finally {
       setLoading(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vmid, managed])
 
   useEffect(() => { load() }, [load])
+
+  // Turn a raw backend error string ("network error: The read operation
+  // timed out", etc.) into a localized message. Upstream check errors
+  // are surfaced verbatim by `lxc_apps.py:_fetch_upstream()`, and the
+  // panel used to render them in English regardless of locale. Match
+  // the two shapes the backend produces today and fall back to the
+  // original string so unknown errors still show something useful.
+  const localizeUpstreamError = (msg: string | null | undefined): string => {
+    if (!msg) return ""
+    const trimmed = msg.trim()
+    const lower = trimmed.toLowerCase()
+    if (lower.startsWith("network error:")) {
+      const detail = trimmed.slice("network error:".length).trim()
+      if (detail.toLowerCase().includes("timed out") || detail.toLowerCase().includes("timeout")) {
+        return t("vmLxc.appEditor.upstreamErrorTimeout")
+      }
+      return t("vmLxc.appEditor.upstreamErrorNetwork", { detail })
+    }
+    return msg
+  }
 
   // Fetch the picker catalog once per panel mount. Best-effort — if
   // the API is unreachable, the picker just stays empty and users
@@ -473,6 +516,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
       })
       if ((r as any).error) throw new Error((r as any).error)
       setSidecar(r)
+      invalidateLxcApps(vmid)
       setEditing(null)
       onChange?.()
     } catch (e: any) {
@@ -490,9 +534,36 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
         method: "POST",
       })
       setSidecar(r)
+      invalidateLxcApps(vmid)
       onChange?.()
     } catch (e: any) {
       setError(e?.message || t("vmLxc.appEditor.checkFailed"))
+    } finally {
+      setBusyAppId(null)
+    }
+  }
+
+  // Silence / re-enable `app_update_available` for this specific
+  // app. Full-record PUT because the backend replaces the whole
+  // config on update — omit a field and it disappears. We hydrate
+  // from the current app entry, flip the flag, and post it back.
+  const toggleAppNotifications = async (app: AppEntry) => {
+    setBusyAppId(app.id)
+    setError(null)
+    try {
+      const { id: _id, state: _state, created_at: _created, ...rest } = app
+      const nextEnabled = app.notifications_enabled === false
+      const payload = { ...rest, notifications_enabled: nextEnabled }
+      const r: SidecarResponse = await fetchApi(`/api/vms/${vmid}/apps/${app.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      setSidecar(r)
+      invalidateLxcApps(vmid)
+      onChange?.()
+    } catch (e: any) {
+      setError(e?.message || t("vmLxc.appEditor.saveFailed"))
     } finally {
       setBusyAppId(null)
     }
@@ -505,6 +576,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
     try {
       await fetchApi(`/api/vms/${vmid}/apps/${appId}`, { method: "DELETE" })
       // Reload from server so the empty state re-fetches suggestions
+      invalidateLxcApps(vmid)
       await load()
       onChange?.()
     } catch (e: any) {
@@ -531,6 +603,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
         body: JSON.stringify({ slug, dismissed: true }),
       })
       setSidecar(r)
+      invalidateLxcApps(vmid)
     } catch (e: any) {
       setError(e?.message || t("vmLxc.appEditor.dismissFailed"))
       await load()  // resync on failure
@@ -553,6 +626,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
         body: JSON.stringify({ slug, dismissed: false }),
       })
       setSidecar(r)
+      invalidateLxcApps(vmid)
     } catch (e: any) {
       setError(e?.message || t("vmLxc.appEditor.restoreFailed"))
       await load()
@@ -709,7 +783,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
             {managed.error && (
               <div className="mt-3 p-2 rounded-md bg-amber-500/10 border border-amber-500/30 flex items-start gap-2">
                 <Info className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                <div className="text-xs text-amber-300">{managed.error}</div>
+                <div className="text-xs text-amber-300">{localizeUpstreamError(managed.error)}</div>
               </div>
             )}
 
@@ -781,14 +855,16 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
 
     return (
       <div className="space-y-4">
-        {/* Editor card — opaque `bg-card` (not the `/50` used by
-            view-mode cards) so the darker `bg-background` inputs sit
-            visibly recessed against it. Matches the sunken-input
-            pattern used in the PBS setup wizard: card = surface,
-            fields = wells inside the surface. Reverts to `bg-card/50`
+        {/* Editor card — raised to `bg-accent` (matches the tone
+            clickable cards get on hover) so the `bg-background` inputs
+            sit clearly recessed against it. The three descendant
+            selectors push every Input / Textarea / SelectTrigger
+            (role="combobox") under this card down to `bg-background`
+            in one shot, so future fields inherit the sunken look
+            without per-input styling. Reverts to `bg-card/50`
             automatically because this render branch only fires when
             `editing !== null`. */}
-        <Card className="border border-border bg-card">
+        <Card className="border border-border bg-accent [&_input]:bg-background [&_textarea]:bg-background [&_[role=combobox]]:bg-background">
           <CardContent className="p-4 space-y-4">
             <div className="relative">
               <Label htmlFor="app-name">{t("vmLxc.appEditor.nameLabel")}</Label>
@@ -1422,6 +1498,28 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
               )}
             </div>
 
+            {/* Per-app notification opt-out. Only makes sense for
+                apps with tracking configured — without an upstream
+                source there's no `app_update_available` event to
+                mute. Default is ON (checkbox checked); the bell
+                toggle on each card is a shortcut to the same field. */}
+            {method && (
+              <div className="pt-2 border-t border-border/50">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={draft.notifications_enabled !== false}
+                    onChange={(e) => setField({ notifications_enabled: e.target.checked })}
+                    className="mt-0.5 h-4 w-4 rounded border-border accent-blue-500"
+                  />
+                  <div className="text-sm">
+                    <div className="text-foreground">{t("vmLxc.appEditor.notifyUpstreamLabel")}</div>
+                    <div className="text-xs text-muted-foreground mt-1">{t("vmLxc.appEditor.notifyUpstreamHelp")}</div>
+                  </div>
+                </label>
+              </div>
+            )}
+
             {error && (
               <div className="text-xs text-red-400 flex items-start gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
@@ -1729,7 +1827,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
               {tracking && st?.error && (
                 <div className="mb-3 p-2 rounded-md bg-amber-500/10 border border-amber-500/30 flex items-start gap-2">
                   <Info className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                  <div className="text-xs text-amber-300">{st.error}</div>
+                  <div className="text-xs text-amber-300">{localizeUpstreamError(st.error)}</div>
                 </div>
               )}
 
@@ -1794,6 +1892,27 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed }: Props) {
                     {t("vmLxc.appEditor.removeButton")}
                   </button>
                   <div className="ml-auto flex flex-wrap gap-2">
+                    {tracking && (
+                      <button
+                        type="button"
+                        onClick={() => toggleAppNotifications(app)}
+                        disabled={busyAppId === app.id}
+                        title={
+                          app.notifications_enabled === false
+                            ? t("vmLxc.appEditor.notificationsMuted")
+                            : t("vmLxc.appEditor.notificationsEnabled")
+                        }
+                        className={
+                          app.notifications_enabled === false
+                            ? "h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 disabled:opacity-60 text-muted-foreground"
+                            : "h-8 px-3 text-xs rounded-md border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
+                        }
+                      >
+                        {app.notifications_enabled === false
+                          ? <BellOff className="h-3.5 w-3.5" />
+                          : <Bell className="h-3.5 w-3.5" />}
+                      </button>
+                    )}
                     {tracking && (
                       <button
                         type="button"

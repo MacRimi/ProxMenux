@@ -784,7 +784,15 @@ export function ProxmoxDashboard() {
 
       <div className="container mx-auto px-4 md:px-6 py-4 md:py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
-          <TabsContent value="overview" className="space-y-4 md:space-y-6 mt-0">
+          {/* forceMount so SystemOverview mounts at dashboard load and
+              never gets torn down when the user visits another tab.
+              Without this, every return to Overview re-fires ~7 fetches
+              (system, vms, storage, proxmox-storage, network, node
+              metrics, network chart) and the user waited for the
+              cascade to complete each time. With forceMount, the
+              5 s / 59 s refresh intervals keep the data fresh in the
+              background — reopening the tab is instant. */}
+          <TabsContent value="overview" forceMount className="space-y-4 md:space-y-6 mt-0 data-[state=inactive]:hidden">
             <SystemOverview key={`overview-${componentKey}`} />
           </TabsContent>
 
@@ -796,7 +804,13 @@ export function ProxmoxDashboard() {
             <NetworkMetrics key={`network-${componentKey}`} />
           </TabsContent>
 
-          <TabsContent value="vms" className="space-y-4 md:space-y-6 mt-0">
+          {/* forceMount so the modal-data prefetcher (inside VirtualMachines)
+              starts warming caches from the moment the dashboard loads,
+              not the first time the user clicks the VMs tab. Kept
+              visually hidden with data-attribute selector when the tab
+              is inactive — mount cost is ~zero (no polling loop that
+              other components run). */}
+          <TabsContent value="vms" forceMount className="space-y-4 md:space-y-6 mt-0 data-[state=inactive]:hidden">
             <VirtualMachines key={`vms-${componentKey}`} />
           </TabsContent>
 

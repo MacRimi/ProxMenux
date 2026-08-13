@@ -3516,6 +3516,17 @@ class PollingCollector:
         try:
             import lxc_apps
             lxc_apps.refresh_all_apps(force=False)
+            # After the refresh, emit `app_update_available` for every
+            # sidecar entry currently flagged with a pending upstream
+            # release. `check_app(force=False)` short-circuits on a
+            # fresh `checked_at` and never reaches the emit path, so
+            # without this call the notification only ever fired on
+            # the exact tick where a new version was FIRST observed —
+            # missed forever if the user had the toggle off at that
+            # moment. `notification_manager` dedups by entity_id
+            # (vmid + app_id + latest_version) so repeated calls only
+            # deliver one notification per release.
+            lxc_apps.emit_all_pending_updates()
         except Exception as e:
             print(f"[PollingCollector] lxc_apps refresh failed: {e}")
 

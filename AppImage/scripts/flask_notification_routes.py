@@ -1212,9 +1212,13 @@ def setup_pve_webhook_core() -> dict:
         # `could not decode UTF8 string from base64, key 'X-Webhook-Secret' (500)`
         # whenever `token_urlsafe` produced `-` or `_` chars (GH #198).
         secret_b64 = base64.b64encode(secret.encode()).decode()
+        # PVE parses /etc/pve/*.cfg TAB-strict. The endpoint_block above
+        # indents with `\t`; the priv_block MUST too, or PVE silently
+        # ignores the `secret` line and never sends `X-Webhook-Secret`,
+        # so every remote delivery lands as 401 invalid_secret. GH #294.
         priv_block = (
             f"webhook: {_PVE_ENDPOINT_ID}\n"
-            f"        secret name=X-Webhook-Secret,value={secret_b64}\n"
+            f"\tsecret name=X-Webhook-Secret,value={secret_b64}\n"
         )
         
         if priv_text is not None:
@@ -1234,9 +1238,14 @@ def setup_pve_webhook_core() -> dict:
             result['error'] = f'Permission denied writing {_PVE_PRIV_CFG}'
             result['fallback_commands'] = _build_webhook_fallback()
             return result
-        except Exception:
-            pass
-        
+        except Exception as e:
+            # Silently swallowing this here would report configured:True
+            # while PVE has no valid secret — exactly the failure mode of
+            # GH #294. Surface it so the caller can flag the setup.
+            result['error'] = f'Failed writing {_PVE_PRIV_CFG}: {e}'
+            result['fallback_commands'] = _build_webhook_fallback()
+            return result
+
         result['configured'] = True
         result['secret'] = secret
         return result
@@ -1489,19 +1498,37 @@ def proxmox_webhook():
             if not hmac.compare_digest(configured_secret, request_secret):
                 return _reject(401, 'invalid_secret', 401)
         
-        # Layer 3: Anti-replay timestamp
+        # Layer 3: Anti-replay timestamp.
+        # PVE's webhook notification target can only send a static secret
+        # header + a Handlebars-templated body; it cannot inject a custom
+        # dynamic header, so `X-ProxMenux-Timestamp` never arrives from a
+        # PVE-origin delivery (GH #294). Our own PVE endpoint template
+        # already embeds `"timestamp":"{{ timestamp }}"` (Unix epoch), so
+        # accept the body value as a fallback when the header is absent.
+        # The replay cache in Layer 4 still binds every accepted request
+        # to (timestamp, raw_body), so this widens the source of the
+        # timestamp without weakening the anti-replay guarantee.
+        raw_body = request.get_data(as_text=True) or ''
         ts_header = request.headers.get('X-ProxMenux-Timestamp', '')
-        if not ts_header:
+        ts_value = None
+        if ts_header:
+            try:
+                ts_value = int(ts_header)
+            except (ValueError, TypeError):
+                return _reject(401, 'invalid_timestamp', 401)
+        elif raw_body:
+            try:
+                body_ts = json.loads(raw_body).get('timestamp')
+                if body_ts is not None:
+                    ts_value = int(str(body_ts).strip())
+            except (ValueError, TypeError, json.JSONDecodeError, AttributeError):
+                ts_value = None
+        if ts_value is None:
             return _reject(401, 'missing_timestamp', 401)
-        try:
-            ts_value = int(ts_header)
-        except (ValueError, TypeError):
-            return _reject(401, 'invalid_timestamp', 401)
         if abs(time.time() - ts_value) > _TIMESTAMP_MAX_DRIFT:
             return _reject(401, 'timestamp_expired', 401)
-        
+
         # Layer 4: Replay cache
-        raw_body = request.get_data(as_text=True) or ''
         signature = hashlib.sha256(f"{ts_value}:{raw_body}".encode(errors='replace')).hexdigest()
         if _replay_cache.check_and_record(signature):
             return _reject(409, 'replay_detected', 409)

@@ -796,6 +796,16 @@ def validate_config(payload: dict) -> tuple[bool, Any]:
     if hn is not None:
         conf["hide_no_updater_notice"] = bool(hn)
 
+    # Optional per-app switch for `app_update_available` notifications.
+    # Default is True (opt-out). Set to False from the App tab when the
+    # user knows an app can't be updated on their box (compat, forked
+    # setup, etc.) and wants to keep the "you have updates" badge but
+    # silence the outbound notification for THIS app only, without
+    # touching the global toggle.
+    ne = payload.get("notifications_enabled")
+    if ne is not None:
+        conf["notifications_enabled"] = bool(ne)
+
     return True, conf
 
 
@@ -1575,6 +1585,12 @@ def record_schedule_run(vmid, status: str, target: str) -> bool:
 
 
 def _fire_update_notification(vmid, app: dict) -> None:
+    # Per-app opt-out: user flipped the bell icon off for this specific
+    # app (because they know it can't be updated on their box or they
+    # just don't care). Field defaults to True — an app registered
+    # before this feature landed keeps receiving notifications.
+    if app.get("notifications_enabled", True) is False:
+        return
     try:
         from notification_manager import notification_manager
         import socket
@@ -1708,7 +1724,6 @@ def check_app(vmid, app_id: str, force: bool = False) -> Optional[dict]:
 
         err = inst_err or up_err
         update_available = compare(installed, latest) if (installed and latest) else None
-        prev_latest = state.get("latest_version")
 
         app["state"] = {
             "installed_version": installed,
@@ -1720,10 +1735,73 @@ def check_app(vmid, app_id: str, force: bool = False) -> Optional[dict]:
         sidecar["updated_at"] = _now_iso()
         _write_sidecar(vmid, sidecar)
 
-        if update_available and latest and latest != prev_latest:
+        # Emit every time an update is pending. The old `latest !=
+        # prev_latest` guard tried to prevent spam by only firing on
+        # the first observation of each new upstream version, but it
+        # also swallowed the emit whenever the notification setting
+        # was toggled off → on after the first observation (the
+        # sidecar already had `latest_version` recorded, so subsequent
+        # checks looked like "same latest, nothing to do"). Anti-spam
+        # is the notification manager's job: it dedups by `entity_id`
+        # (vmid + app_id + latest_version) with its cooldown, and only
+        # a genuinely new upstream release changes the entity_id and
+        # triggers a fresh delivery.
+        if update_available and latest:
             _fire_update_notification(vmid, app)
 
         return sidecar
+
+
+def emit_all_pending_updates() -> int:
+    """Walk every sidecar and emit `app_update_available` for each
+    app currently marked with a pending upstream release. Safe to
+    call repeatedly — `notification_manager` dedups by entity_id
+    (vmid + app_id + latest_version), so a given release only sends
+    once until a newer version appears.
+
+    Needed because `check_app(force=False)` short-circuits on a fresh
+    `checked_at` and never reaches the emit path. The 24 h
+    PollingCollector runs `refresh_all_apps(force=False)`, so without
+    this helper the notification only ever fired on the exact tick
+    where a new upstream version was FIRST observed — and even that
+    was silenced when the user's setting was OFF at the time.
+    Returns the number of emits attempted (delivery still depends on
+    channel enablement + cooldown + rate limit)."""
+    try:
+        entries = sorted(os.listdir(_APPS_DIR))
+    except (FileNotFoundError, OSError):
+        print("[ProxMenux] emit_all_pending_updates: _APPS_DIR missing", flush=True)
+        return 0
+    n = 0
+    print(f"[ProxMenux] emit_all_pending_updates: scanning {len(entries)} sidecar file(s)", flush=True)
+    for name in entries:
+        if not name.endswith(".json"):
+            continue
+        try:
+            vmid = int(name[:-5])
+        except ValueError:
+            continue
+        try:
+            sidecar = _read_sidecar(vmid)
+            if not sidecar:
+                print(f"[ProxMenux] emit_all_pending_updates: CT {vmid} sidecar empty", flush=True)
+                continue
+            apps = sidecar.get("apps") or []
+            pending = [a for a in apps
+                       if (a.get("state") or {}).get("update_available")
+                       and (a.get("state") or {}).get("latest_version")]
+            print(f"[ProxMenux] emit_all_pending_updates: CT {vmid} apps={len(apps)} pending={len(pending)}", flush=True)
+            for app in pending:
+                try:
+                    _fire_update_notification(vmid, app)
+                    n += 1
+                    print(f"[ProxMenux] emit_all_pending_updates: CT {vmid} emit '{app.get('name')}'", flush=True)
+                except Exception as inner:
+                    print(f"[ProxMenux] emit_all_pending_updates: CT {vmid} emit '{app.get('name')}' FAILED: {inner}", flush=True)
+        except Exception as e:
+            print(f"[ProxMenux] emit_all_pending_updates: CT {vmid} outer failure: {e}", flush=True)
+    print(f"[ProxMenux] emit_all_pending_updates: {n} emit(s) attempted total", flush=True)
+    return n
 
 
 def check_all(vmid, force: bool = False) -> Optional[dict]:

@@ -130,13 +130,30 @@ export function PwaInstallPrompt() {
       >
         <div className="relative px-5 pt-5">
           <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" aria-hidden="true" />
+          {/* Hardened close button — the X wasn't reliably closing
+              the sheet on iOS/Android. Fixes:
+                * `stopPropagation` so the click never bubbles up to
+                  the backdrop handler (which was seeing the target
+                  and might have been running its own logic against
+                  the same tap on some mobile browsers).
+                * `z-10` puts it above any sibling absolute layers
+                  (drag handle, headings) in case one silently ate
+                  the tap.
+                * 40 × 40 hit area — comfortable Apple/Google minimum
+                  for a touch target; the 32 × 32 we had was fine on
+                  desktop but easy to miss with a thumb.
+                * `onPointerDown` as a secondary handler covers the
+                  iOS Safari case where a fast tap on a nested
+                  `<button>` inside a `role="dialog"` can lose the
+                  click event to the parent overlay. */}
           <button
             type="button"
-            onClick={handleClose}
+            onClick={(e) => { e.stopPropagation(); handleClose() }}
+            onPointerDown={(e) => { e.stopPropagation() }}
             aria-label={t("actions.close")}
-            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors"
+            className="absolute right-2 top-2 z-10 flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted active:bg-muted transition-colors touch-manipulation"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
 
           <div className="mb-4 flex items-start gap-3.5">

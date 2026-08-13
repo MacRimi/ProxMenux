@@ -1338,6 +1338,9 @@
       "latestFromLabel": "Latest from",
       "upToDateBadge": "Up to date",
       "updateAvailableBadge": "Update available",
+      "upstreamErrorTimeout": "Network timeout while contacting upstream",
+      "upstreamErrorNetwork": "Network error: {detail}",
+      "upstreamErrorGeneric": "Upstream check failed: {detail}",
       "portDescriptionPlaceholder": "Description (e.g. Web UI, go2rtc, admin)",
       "portPortPlaceholder": "port",
       "portHttp": "http",
@@ -1408,7 +1411,11 @@
       "alsoDetectedContainer": "Also detected on this container",
       "addAnotherApplication": "Add another application",
       "doneButton": "Done",
-      "editButton": "Edit"
+      "editButton": "Edit",
+      "notificationsEnabled": "Upstream update notifications ON — click to mute",
+      "notificationsMuted": "Upstream update notifications MUTED — click to enable",
+      "notifyUpstreamLabel": "Notify me when a new upstream version is available",
+      "notifyUpstreamHelp": "Sends `app_update_available` to the channels enabled in Settings → Notifications. Turn off if this app can't be updated on your box."
     }
   },
   "settings": {
@@ -1663,9 +1670,10 @@
         "health_persistent": "Active health issues (daily)",
         "health_issue_new": "New health issue",
         "health_issue_resolved": "Health issue resolved",
-        "update_summary": "Updates available",
+        "update_summary": "Host package updates",
         "pve_update": "Proxmox VE update available",
-        "update_complete": "Update completed",
+        "update_complete": "Host update completed",
+        "app_update_available": "App update available",
         "ai_model_migrated": "AI model updated automatically",
         "proxmenux_update": "ProxMenux update available",
         "mount_stale": "Remote mount is stale",

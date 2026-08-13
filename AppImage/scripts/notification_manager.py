@@ -398,7 +398,13 @@ GROUP_RATE_LIMITS = {
     'backup':    {'max_per_minute': 5,  'max_per_hour': 30},
     'services':  {'max_per_minute': 5,  'max_per_hour': 30},
     'health':    {'max_per_minute': 3,  'max_per_hour': 20},
-    'updates':   {'max_per_minute': 3,  'max_per_hour': 15},
+    # Bumped from 3/min-15/hour: startup reset re-fires every update
+    # event (app_update x N + nvidia + secure_gateway + post_install
+    # + summary…) in a single burst; a 3/min ceiling silently dropped
+    # everything past the third. Steady-state update noise is very
+    # low (one event per upstream release), so a wider window costs
+    # nothing.
+    'updates':   {'max_per_minute': 15, 'max_per_hour': 60},
     'other':     {'max_per_minute': 5,  'max_per_hour': 30},
 }
 
@@ -507,6 +513,13 @@ _DEFAULT_AGGREGATION = {'window': 60, 'min_count': 2, 'burst_type': 'burst_gener
 # recovery is per-event; collapsing them adds zero information.
 _AGGREGATION_EXEMPT_EVENTS = frozenset({
     'error_resolved',
+    # Per-app upstream update. Each event carries a distinct app name,
+    # version and CT id — collapsing "5 app updates burst" into a
+    # summary hides exactly the information the user wants (which
+    # apps, which versions). Startup emit fires all pending updates
+    # at once, so without this exemption only the first 1-2 land and
+    # the rest get buffered into a useless summary.
+    'app_update_available',
 })
 
 
@@ -1940,14 +1953,19 @@ class NotificationManager:
     # (log_critical_*, disk errors, smart_*, …) — preserves the
     # anti-flood guarantee for sources that can burst.
     _EVENT_TYPES_RESET_ON_START = (
-        # Update-status reports
+        # Update-status reports — re-fire on Monitor restart so the
+        # user gets a fresh "here's what's pending" as a health check
+        # that the notification pipeline is alive. Steady-state 24 h
+        # cooldown resumes after that first post-restart send.
         'update_summary',
         'proxmenux_update',
         'post_install_update',
         'pve_update',
         'update_available',
         'nvidia_driver_update_available',
+        'coral_driver_update_available',
         'secure_gateway_update_available',
+        'app_update_available',
         # Security events that must not be silenced by stale cooldowns
         # following a Monitor reinstall (Pedro Rico, 19/05).
         'auth_fail',

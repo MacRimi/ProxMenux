@@ -524,12 +524,21 @@ TEMPLATES = {
         'title': '{hostname}: {app_name} update available on CT {vmid}',
         'body': (
             '{app_name} on CT {vmid} ({ct_name}) has a new version:\n'
-            '    {installed} → {latest}\n'
-            'Registered via ProxMenux App Watch.'
+            '    {installed} → {latest}'
         ),
-        'label': 'App update available (App Watch)',
-        'group': 'vm_ct',
-        'default_enabled': False,
+        'label': 'App update available',
+        # Grouped under `updates` (not `vm_ct`) so the user can toggle
+        # per-app upstream notifications independently from VM/CT
+        # lifecycle events (start/stop/reboot). Sitting alongside the
+        # other update templates keeps the Settings UI consistent and
+        # leaves the group ready for future OCI-image notifications
+        # that share the same "an upstream release is available"
+        # semantics.
+        'group': 'updates',
+        # Every other update template ships enabled by default; leaving
+        # this one off meant users who registered apps in the App tab
+        # never received the notification they explicitly asked for.
+        'default_enabled': True,
     },
     'vm_start': {
         'title': '{hostname}: VM {vmname} ({vmid}) started',
@@ -1076,7 +1085,7 @@ TEMPLATES = {
             'Kernel updates: {kernel_count}\n'
             'Important packages:\n{important_list}'
         ),
-        'label': 'Updates available',
+        'label': 'Host package updates',
         'group': 'updates',
         'default_enabled': True,
     },
@@ -1090,7 +1099,7 @@ TEMPLATES = {
     'update_complete': {
         'title': '{hostname}: System update completed',
         'body': 'System packages have been successfully updated.\n{details}',
-        'label': 'Update completed',
+        'label': 'Host update completed',
         'group': 'updates',
         'default_enabled': False,
     },
