@@ -2676,7 +2676,7 @@
     ],
     "warnings": [
       "xcaddy needs to be updated manually after a caddy update!",
-      "if you want ton use xcaddy, modify RAM to 2048MB, before or during installation."
+      "if you want to use xcaddy, modify RAM to 2048MB, before or during installation."
     ],
     "port": 80,
     "website": "https://caddyserver.com/",
@@ -2713,7 +2713,7 @@
     ],
     "warnings": [
       "xcaddy needs to be updated manually after a caddy update!",
-      "if you want ton use xcaddy, modify RAM to 2048MB, before or during installation."
+      "if you want to use xcaddy, modify RAM to 2048MB, before or during installation."
     ],
     "port": 80,
     "website": "https://caddyserver.com/",
@@ -21798,7 +21798,7 @@
       "Authentication & Security"
     ],
     "notes": [
-      "After installation finishes, do `cat ~/teleportadmin.creds` inside LXC to get admin creation URL."
+      "After installation finishes, do `cat ~/teleportadmin.txt` inside LXC to get admin creation URL."
     ],
     "warnings": [],
     "port": 3080,
