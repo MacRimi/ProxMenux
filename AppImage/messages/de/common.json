@@ -1409,7 +1409,14 @@
       "alsoDetectedContainer": "Auch auf diesem Container erkannt",
       "addAnotherApplication": "Fügen Sie eine weitere Anwendung hinzu",
       "doneButton": "Erledigt",
-      "editButton": "Bearbeiten"
+      "editButton": "Bearbeiten",
+      "upstreamErrorTimeout": "Netzwerk-Timeout beim Kontaktieren des Upstreams",
+      "upstreamErrorNetwork": "Netzwerkfehler: {detail}",
+      "upstreamErrorGeneric": "Upstream-Prüfung fehlgeschlagen: {detail}",
+      "notificationsEnabled": "Upstream-Update-Benachrichtigungen EIN – zum Stummschalten klicken",
+      "notificationsMuted": "Upstream-Update-Benachrichtigungen stummgeschaltet – zum Aktivieren klicken",
+      "notifyUpstreamLabel": "Benachrichtigen Sie mich, wenn eine neue Upstream-Version verfügbar ist",
+      "notifyUpstreamHelp": "Sendet „app_update_available“ an die Kanäle, die in Einstellungen → Benachrichtigungen aktiviert sind.Deaktivieren Sie diese Option, wenn diese App auf Ihrer Box nicht aktualisiert werden kann."
     }
   },
   "settings": {
@@ -1679,7 +1686,8 @@
         "post_install_update": "ProxMenux-Optimierungsupdates verfügbar",
         "secure_gateway_update_available": "Secure Gateway-Update verfügbar",
         "nvidia_driver_update_available": "NVIDIA-Treiberupdate verfügbar",
-        "coral_driver_update_available": "Update des Coral TPU-Treibers verfügbar"
+        "coral_driver_update_available": "Update des Coral TPU-Treibers verfügbar",
+        "app_update_available": "App-Update verfügbar"
       },
       "ui": {
         "quietHours": "Ruhige Stunden",
