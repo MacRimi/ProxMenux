@@ -83,7 +83,10 @@ jobs:
             REFRESH_FLAG="--refresh"
           fi
           LANGS="${{ github.event.inputs.languages }}"
-          LANGS="${LANGS:-es,de,fr,it,pt}"
+          # Keep this fallback in sync with the workflow_dispatch input
+          # default above AND with DEFAULT_LANGUAGES in the Python script —
+          # `push` triggers hit this branch (inputs are empty on push).
+          LANGS="${LANGS:-es,de,fr,it,pt,sk,sv}"
           python .github/scripts/build_i18n_messages.py \
             --source AppImage/messages/en/common.json \
             --messages-dir AppImage/messages \
