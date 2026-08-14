@@ -1264,11 +1264,11 @@
       "helperNotUpdateable": "Register community-scripts označuje túto aplikáciu ako neaktualizovateľnú.",
       "helperDetectedTitle": "Našiel sa aktualizačný skript z helper-scripts",
       "helperDetectedBody": "Najbezpečnejšie je spustiť aktualizáciu ručne.",
-      "postApplyChecking": "",
-      "postApplyAllOk": "",
-      "postApplyNothingPending": "",
-      "postApplyPartial": "",
-      "postApplyPartialSubline": ""
+      "postApplyChecking": "Overuje sa výsledok aktualizácie…",
+      "postApplyAllOk": "{count} balíkov bolo úspešne použitých – nič sa nečaká.",
+      "postApplyNothingPending": "Nič sa nečaká – všetko je aktuálne.",
+      "postApplyPartial": "{pending} balíkov, ktoré po spustení stále čakajú.",
+      "postApplyPartialSubline": "Použilo sa {applied}.Niektoré aktualizácie sa nedokončili – skontrolujte výstup terminálu vyššie."
     },
     "appEditor": {
       "closePanel": "Zavrieť panel",
@@ -1414,13 +1414,13 @@
       "addAnotherApplication": "Pridať ďalšiu aplikáciu",
       "doneButton": "Hotovo",
       "editButton": "Upraviť",
-      "upstreamErrorTimeout": "",
-      "upstreamErrorNetwork": "",
-      "upstreamErrorGeneric": "",
-      "notificationsEnabled": "",
-      "notificationsMuted": "",
-      "notifyUpstreamLabel": "",
-      "notifyUpstreamHelp": ""
+      "upstreamErrorTimeout": "Časový limit siete pri kontaktovaní upstream",
+      "upstreamErrorNetwork": "Chyba siete: {detail}",
+      "upstreamErrorGeneric": "Kontrola proti prúdu zlyhala: {detail}",
+      "notificationsEnabled": "Upozornenia na upstream aktualizácie sú ZAPNUTÉ – kliknutím ich stlmíte",
+      "notificationsMuted": "Upstream upozornenia na aktualizácie MUTED – kliknutím aktivujete",
+      "notifyUpstreamLabel": "Upozorniť ma, keď bude k dispozícii nová upstream verzia",
+      "notifyUpstreamHelp": "Odošle `app_update_available` do kanálov povolených v Nastaveniach → Upozornenia.Vypnite, ak túto aplikáciu nie je možné aktualizovať na vašom boxe."
     }
   },
   "settings": {
@@ -1691,7 +1691,7 @@
         "secure_gateway_update_available": "K dispozícii je aktualizácia Secure Gateway",
         "nvidia_driver_update_available": "Dostupná aktualizácia ovládača NVIDIA",
         "coral_driver_update_available": "Dostupná aktualizácia ovládača Coral TPU",
-        "app_update_available": ""
+        "app_update_available": "K dispozícii je aktualizácia aplikácie"
       },
       "ui": {
         "quietHours": "Tiché hodiny",
@@ -3000,12 +3000,12 @@
     "currentFeatures": {
       "hostUpdate": "Aktualizácia hosta jedným kliknutím z kontroly stavu. Nové tlačidlo Aktualizovať teraz v časti systémových aktualizácií spustí aktualizáciu Proxmoxu priamo v termináli dashboardu, bez odchodu z prehliadača.",
       "mobileInstall": "Výzva na inštaláciu aplikácie v mobile. Prví návštevníci v Androide a iOS Safari uvidia jednoduchý spodný panel s krokmi na pridanie Monitoru na domovskú obrazovku.",
-      "pageSpeed": "",
-      "appTab": "",
-      "updatesTab": "",
-      "backupNoTimeout": "",
-      "vmDiskUsage": "",
-      "pwaInstall": ""
+      "pageSpeed": "Rýchlejšie načítanie stránok a plynulejšia navigácia na informačnom paneli.Prehľad sa otvorí okamžite a stránka VMs & LXCs už nikdy medzi hosťovskými modálmi nebliká „Načítava sa...“.",
+      "appTab": "Nová karta aplikácie vo vnútri modálu VM a LXC – najmä pre LXC.Zaregistrujte aplikácie nainštalované v kontajneri, zaznamenajte ich webové odkazy a získajte upozornenia, keď sa odošle nová upstream verzia.",
+      "updatesTab": "Karta Prepracované aktualizácie pre LXC: použite balíky OS a aktualizácie registrovaných aplikácií jediným tlačidlom a naplánujte si opakujúcu sa úlohu automatickej aktualizácie, ktorá skontroluje OS kontajnera a jeho sledovanú aplikáciu pri každom spustení.",
+      "backupNoTimeout": "Dlhé úlohy zálohovania už nekončia.Zálohy VM a LXC spustené z monitora teraz bežia na pozadí, kým sa prirodzene neskončia, takže 30-minútová záloha PBS dokončí to isté ako 10-sekundová lokálna záloha.",
+      "vmDiskUsage": "Virtuálne počítače so systémom QEMU Guest Agent (qemu-hosť-agent) teraz hlásia skutočne využité/celkové údaje o disku na dashboarde namiesto '0 GB', ktoré PVE vracia pre hosťom spravované súborové systémy.",
+      "pwaInstall": "Prvým návštevníkom v prehliadači Safari pre Android a iOS sa teraz zobrazí výzva na inštaláciu v aplikácii s jasnými krokmi na pridanie monitora na svoju domovskú obrazovku ako PWA."
     }
   },
   "network": {

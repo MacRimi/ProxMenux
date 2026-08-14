@@ -1265,11 +1265,11 @@
       "helperNotUpdateable": "Community-scripts-registret markerar denna app som inte uppdateringsbar.",
       "helperDetectedTitle": "Upptäckte en hjälparskriptuppdatering",
       "helperDetectedBody": "Att applicera manuellt är säkrast.",
-      "postApplyChecking": "",
-      "postApplyAllOk": "",
-      "postApplyNothingPending": "",
-      "postApplyPartial": "",
-      "postApplyPartialSubline": ""
+      "postApplyChecking": "Verifierar uppdateringsresultat...",
+      "postApplyAllOk": "{count} paket(en) har tillämpats framgångsrikt — inget väntande.",
+      "postApplyNothingPending": "Inget väntande — allt är uppdaterat.",
+      "postApplyPartial": "{pending} paket som fortfarande väntar efter körningen.",
+      "postApplyPartialSubline": "{applied} tillämpas.Vissa uppdateringar slutfördes inte – granska terminalutgången ovan."
     },
     "appEditor": {
       "closePanel": "Stäng panelen",
@@ -1415,13 +1415,13 @@
       "addAnotherApplication": "Lägg till ytterligare ett program",
       "doneButton": "Gjort",
       "editButton": "Redigera",
-      "upstreamErrorTimeout": "",
-      "upstreamErrorNetwork": "",
-      "upstreamErrorGeneric": "",
-      "notificationsEnabled": "",
-      "notificationsMuted": "",
-      "notifyUpstreamLabel": "",
-      "notifyUpstreamHelp": ""
+      "upstreamErrorTimeout": "Nätverkstimeout vid kontakt uppströms",
+      "upstreamErrorNetwork": "Nätverksfel: {detail}",
+      "upstreamErrorGeneric": "Uppströmskontroll misslyckades: {detail}",
+      "notificationsEnabled": "Uppströmsuppdateringsmeddelanden PÅ – klicka för att stänga av ljudet",
+      "notificationsMuted": "Uppströmsuppdateringsmeddelanden AVSTÄLLD – klicka för att aktivera",
+      "notifyUpstreamLabel": "Meddela mig när en ny uppströmsversion är tillgänglig",
+      "notifyUpstreamHelp": "Skickar `app_update_available` till de kanaler som är aktiverade i Inställningar → Aviseringar.Stäng av om den här appen inte kan uppdateras på din box."
     }
   },
   "settings": {
@@ -1692,7 +1692,7 @@
         "secure_gateway_update_available": "Secure Gateway uppdatering tillgänglig",
         "nvidia_driver_update_available": "NVIDIA drivrutinsuppdatering tillgänglig",
         "coral_driver_update_available": "Coral TPU drivrutinsuppdatering tillgänglig",
-        "app_update_available": ""
+        "app_update_available": "Appuppdatering tillgänglig"
       },
       "ui": {
         "quietHours": "Tysta timmar",
@@ -3001,12 +3001,12 @@
     "currentFeatures": {
       "hostUpdate": "Värduppdatering med ett klick från Health Monitor. Den nya knappen Uppdatera nu i Systemuppdateringar kör Proxmox-uppdateringsflödet i en instrumentpanelsterminal utan att lämna webbläsaren.",
       "mobileInstall": "Uppmaning om installation i appen för mobil. Förstagångsbesökare på Android och iOS Safari ser nu enkla steg för att lägga till monitorn på sin startskärm som en PWA.",
-      "pageSpeed": "",
-      "appTab": "",
-      "updatesTab": "",
-      "backupNoTimeout": "",
-      "vmDiskUsage": "",
-      "pwaInstall": ""
+      "pageSpeed": "Snabbare sidladdningar och smidigare navigering över instrumentpanelen.Översikten öppnas omedelbart och sidan för virtuella datorer och LXC:er blinkar aldrig \"Laddar...\" mellan gästmodalerna igen.",
+      "appTab": "Ny appflik i VM- och LXC-modalerna — speciellt för LXC.Registrera apparna installerade i en behållare, fånga deras webblänkar och få meddelanden när en ny uppströmsversion skickas.",
+      "updatesTab": "Fliken Omarbetade uppdateringar för LXC:er: applicera OS-paket och uppdateringar av registrerade appar från en enda knapp och schemalägg ett återkommande automatiskt uppdateringsjobb som kontrollerar containerns OS och dess spårade app vid varje körning.",
+      "backupNoTimeout": "Långa backupjobb tar inte längre timeout.VM- och LXC-säkerhetskopior som startas från Monitor körs nu i bakgrunden tills de naturligt slutar, så en 30-minuters PBS-säkerhetskopiering slutför samma sak som en 10-sekunders lokal.",
+      "vmDiskUsage": "virtuella datorer som kör QEMU Guest Agent (qemu-guest-agent) rapporterar nu verkligt använda / totala disksiffror på instrumentpanelen, istället för \"0 GB\" som PVE returnerar för gästhanterade filsystem.",
+      "pwaInstall": "Förstagångsbesökare på Android och iOS Safari ser nu en installationsuppmaning i appen med tydliga steg för att lägga till monitorn på sin startskärm som en PWA."
     }
   },
   "network": {
