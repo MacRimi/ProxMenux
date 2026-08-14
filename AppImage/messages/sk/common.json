@@ -1263,7 +1263,12 @@
       "ociBody": "Tento kontajner bol vytvorený z OCI (Docker) obrazu. Pripravovaná podpora aktualizácií OCI kontajnerov vytvorí kontajner znova z novšieho tagu obrazu namiesto aktualizácie balíkov vo vnútri.",
       "helperNotUpdateable": "Register community-scripts označuje túto aplikáciu ako neaktualizovateľnú.",
       "helperDetectedTitle": "Našiel sa aktualizačný skript z helper-scripts",
-      "helperDetectedBody": "Najbezpečnejšie je spustiť aktualizáciu ručne."
+      "helperDetectedBody": "Najbezpečnejšie je spustiť aktualizáciu ručne.",
+      "postApplyChecking": "",
+      "postApplyAllOk": "",
+      "postApplyNothingPending": "",
+      "postApplyPartial": "",
+      "postApplyPartialSubline": ""
     },
     "appEditor": {
       "closePanel": "Zavrieť panel",
@@ -1408,7 +1413,14 @@
       "alsoDetectedContainer": "Ďalšie aplikácie nájdené v kontajneri",
       "addAnotherApplication": "Pridať ďalšiu aplikáciu",
       "doneButton": "Hotovo",
-      "editButton": "Upraviť"
+      "editButton": "Upraviť",
+      "upstreamErrorTimeout": "",
+      "upstreamErrorNetwork": "",
+      "upstreamErrorGeneric": "",
+      "notificationsEnabled": "",
+      "notificationsMuted": "",
+      "notifyUpstreamLabel": "",
+      "notifyUpstreamHelp": ""
     }
   },
   "settings": {
@@ -1678,7 +1690,8 @@
         "post_install_update": "Dostupné aktualizácie optimalizácií ProxMenux",
         "secure_gateway_update_available": "K dispozícii je aktualizácia Secure Gateway",
         "nvidia_driver_update_available": "Dostupná aktualizácia ovládača NVIDIA",
-        "coral_driver_update_available": "Dostupná aktualizácia ovládača Coral TPU"
+        "coral_driver_update_available": "Dostupná aktualizácia ovládača Coral TPU",
+        "app_update_available": ""
       },
       "ui": {
         "quietHours": "Tiché hodiny",

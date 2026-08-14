@@ -1264,7 +1264,12 @@
       "ociBody": "Den här behållaren skapades från en OCI-bild (Docker). Uppdateringshantering för OCI-behållare kommer med den kommande OCI-installationsfunktionen - uppdateringar kommer att bygga om behållaren från en nyare bildtagg snarare än att patcha paket inuti.",
       "helperNotUpdateable": "Community-scripts-registret markerar denna app som inte uppdateringsbar.",
       "helperDetectedTitle": "Upptäckte en hjälparskriptuppdatering",
-      "helperDetectedBody": "Att applicera manuellt är säkrast."
+      "helperDetectedBody": "Att applicera manuellt är säkrast.",
+      "postApplyChecking": "",
+      "postApplyAllOk": "",
+      "postApplyNothingPending": "",
+      "postApplyPartial": "",
+      "postApplyPartialSubline": ""
     },
     "appEditor": {
       "closePanel": "Stäng panelen",
@@ -1409,7 +1414,14 @@
       "alsoDetectedContainer": "Detekteras även på denna behållare",
       "addAnotherApplication": "Lägg till ytterligare ett program",
       "doneButton": "Gjort",
-      "editButton": "Redigera"
+      "editButton": "Redigera",
+      "upstreamErrorTimeout": "",
+      "upstreamErrorNetwork": "",
+      "upstreamErrorGeneric": "",
+      "notificationsEnabled": "",
+      "notificationsMuted": "",
+      "notifyUpstreamLabel": "",
+      "notifyUpstreamHelp": ""
     }
   },
   "settings": {
@@ -1679,7 +1691,8 @@
         "post_install_update": "ProxMenux optimeringsuppdateringar tillgängliga",
         "secure_gateway_update_available": "Secure Gateway uppdatering tillgänglig",
         "nvidia_driver_update_available": "NVIDIA drivrutinsuppdatering tillgänglig",
-        "coral_driver_update_available": "Coral TPU drivrutinsuppdatering tillgänglig"
+        "coral_driver_update_available": "Coral TPU drivrutinsuppdatering tillgänglig",
+        "app_update_available": ""
       },
       "ui": {
         "quietHours": "Tysta timmar",

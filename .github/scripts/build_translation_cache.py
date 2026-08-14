@@ -163,8 +163,23 @@ def translate_appimage(
 
 def clean_translation(value: str) -> str:
     separator = r"[\s\u00a0]*[:：]"
-    translate_labels = "Translate|Traducir|Traduire|Übersetzen|Tradurre|Traduci|Traduzir"
-    context_labels = "Context|Contexto|Contexte|Kontext|Contesto"
+    # `Translate` pivot in every locale currently supported. Without
+    # the target-language variant here, the cleaner can't locate the
+    # boundary between the context prompt and the real translation,
+    # and the whole payload leaks through as the translated context.
+    # Caught on the 2026-08-14 workflow run — every sk / sv key ended
+    # up as "Technický text používateľského rozhrania…" or
+    # "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Övers"
+    # because Preložiť / Översätt / Översätta were missing.
+    translate_labels = (
+        "Translate|Traducir|Traduire|Übersetzen|Tradurre|Traduci|Traduzir"
+        "|Preložiť|Prelož|Preloz"          # sk
+        "|Översätta|Översätt"              # sv
+    )
+    context_labels = (
+        "Context|Contexto|Contexte|Kontext|Contesto"
+        "|Sammanhang"                      # sv alternate
+    )
     value = re.sub(
         rf"^.*?({translate_labels}){separator}",
         "",
