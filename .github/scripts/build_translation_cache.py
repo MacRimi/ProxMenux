@@ -388,12 +388,20 @@ def main() -> int:
         write_language_cache(output_dir / f"{lang}.json", cache)
 
     if failures:
-        print(f"Completed with {len(failures)} translation failures.", file=sys.stderr, flush=True)
+        print(
+            f"Completed with {len(failures)} translation failures "
+            f"(partial progress persisted, next run will retry).",
+            file=sys.stderr, flush=True,
+        )
         for text, lang, error in failures[:20]:
             print(f"- {lang}: {text[:80]} -> {error}", file=sys.stderr, flush=True)
         if len(failures) > 20:
             print(f"... and {len(failures) - 20} more.", file=sys.stderr, flush=True)
-        return 2
+        # Exit 0 on partial failure so the workflow's Commit + push
+        # step still runs. Otherwise a couple of transient googletrans
+        # timeouts would fail the whole workflow and discard every
+        # successful translation from the same batch.
+        return 0
 
     print("Translation cache generated successfully.", flush=True)
     return 0

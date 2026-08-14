@@ -24,11 +24,15 @@ on:
   push:
     branches: [develop]
     paths:
-      # `**/common.json` catches every locale, not just en/. Needed
-      # because manual edits to sk/sv (or any curated locale) that
-      # empty a key so the workflow refills it wouldn't otherwise
-      # trigger the job when en/ hasn't changed.
-      - 'AppImage/messages/**/common.json'
+      # Only en/ triggers the run — it's the source of truth. Other
+      # locales are destinations, and the bot auto-commits them at
+      # the end of every run; if they were in the trigger too, each
+      # auto-commit would fire another (empty) run.
+      # Manual edits to a curated locale that empty a key for the
+      # workflow to refill are the exception — dispatch this
+      # workflow manually from Actions in that case, or piggy-back
+      # a trivial en/ change onto the commit.
+      - 'AppImage/messages/en/common.json'
       - '.github/scripts/build_i18n_messages.py'
       - '.github/workflows/build-i18n-messages.yml'
   workflow_dispatch:

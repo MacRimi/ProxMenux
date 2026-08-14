@@ -316,7 +316,8 @@ def main() -> int:
 
     if total_failures:
         print(
-            f"\nCompleted with {len(total_failures)} translation failures.",
+            f"\nCompleted with {len(total_failures)} translation failures "
+            f"(partial progress persisted, next run will retry).",
             file=sys.stderr,
             flush=True,
         )
@@ -324,7 +325,14 @@ def main() -> int:
             print(f"  - {lang}: {key} → {error}", file=sys.stderr, flush=True)
         if len(total_failures) > 20:
             print(f"  ... and {len(total_failures) - 20} more.", file=sys.stderr, flush=True)
-        return 2
+        # Exit 0 on partial failure so the workflow's Commit + push
+        # step still runs and the keys that DID translate reach
+        # develop. The un-translated keys stay empty and the next
+        # workflow tick (or a manual dispatch) retries them.
+        # Previously we returned 2, which failed the whole run and
+        # discarded 36 out of 38 successful translations because
+        # 2 googletrans timeouts hit sv at the start of the burst.
+        return 0
 
     print("\ni18n messages generated successfully.", flush=True)
     return 0
