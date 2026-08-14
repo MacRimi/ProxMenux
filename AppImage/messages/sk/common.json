@@ -1263,7 +1263,12 @@
       "ociBody": "Tento kontajner bol vytvorený z OCI (Docker) obrazu. Pripravovaná podpora aktualizácií OCI kontajnerov vytvorí kontajner znova z novšieho tagu obrazu namiesto aktualizácie balíkov vo vnútri.",
       "helperNotUpdateable": "Register community-scripts označuje túto aplikáciu ako neaktualizovateľnú.",
       "helperDetectedTitle": "Našiel sa aktualizačný skript z helper-scripts",
-      "helperDetectedBody": "Najbezpečnejšie je spustiť aktualizáciu ručne."
+      "helperDetectedBody": "Najbezpečnejšie je spustiť aktualizáciu ručne.",
+      "postApplyChecking": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Overuje sa výsledok aktualizácie…",
+      "postApplyAllOk": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: {count} balíkov bolo úspešne použitých – nič sa nečaká.",
+      "postApplyNothingPending": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Nič sa nečaká – všetko je aktuálne.",
+      "postApplyPartial": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: {pending} balíkov, ktoré po spustení stále čakajú.",
+      "postApplyPartialSubline": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Použilo sa {applied}.Niektoré aktualizácie sa nedokončili – skontrolujte výstup terminálu vyššie."
     },
     "appEditor": {
       "closePanel": "Zavrieť panel",
@@ -1408,7 +1413,14 @@
       "alsoDetectedContainer": "Ďalšie aplikácie nájdené v kontajneri",
       "addAnotherApplication": "Pridať ďalšiu aplikáciu",
       "doneButton": "Hotovo",
-      "editButton": "Upraviť"
+      "editButton": "Upraviť",
+      "upstreamErrorTimeout": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Časový limit siete pri kontaktovaní upstream",
+      "upstreamErrorNetwork": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Chyba siete: {detail}",
+      "upstreamErrorGeneric": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Kontrola proti prúdu zlyhala: {detail}",
+      "notificationsEnabled": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Upozornenia na upstream aktualizácie sú ZAPNUTÉ – kliknutím ich stlmíte",
+      "notificationsMuted": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Upstream upozornenia na aktualizácie MUTED – kliknutím aktivujete",
+      "notifyUpstreamLabel": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Upozorniť ma, keď bude k dispozícii nová upstream verzia",
+      "notifyUpstreamHelp": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Odošle `app_update_available` do kanálov povolených v Nastaveniach → Upozornenia.Vypnite, ak túto aplikáciu nie je možné aktualizovať na vašom boxe."
     }
   },
   "settings": {
@@ -1678,7 +1690,8 @@
         "post_install_update": "Dostupné aktualizácie optimalizácií ProxMenux",
         "secure_gateway_update_available": "K dispozícii je aktualizácia Secure Gateway",
         "nvidia_driver_update_available": "Dostupná aktualizácia ovládača NVIDIA",
-        "coral_driver_update_available": "Dostupná aktualizácia ovládača Coral TPU"
+        "coral_driver_update_available": "Dostupná aktualizácia ovládača Coral TPU",
+        "app_update_available": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: K dispozícii je aktualizácia aplikácie"
       },
       "ui": {
         "quietHours": "Tiché hodiny",
@@ -2987,12 +3000,12 @@
     "currentFeatures": {
       "hostUpdate": "Aktualizácia hosta jedným kliknutím z kontroly stavu. Nové tlačidlo Aktualizovať teraz v časti systémových aktualizácií spustí aktualizáciu Proxmoxu priamo v termináli dashboardu, bez odchodu z prehliadača.",
       "mobileInstall": "Výzva na inštaláciu aplikácie v mobile. Prví návštevníci v Androide a iOS Safari uvidia jednoduchý spodný panel s krokmi na pridanie Monitoru na domovskú obrazovku.",
-      "pageSpeed": "",
-      "appTab": "",
-      "updatesTab": "",
-      "backupNoTimeout": "",
-      "vmDiskUsage": "",
-      "pwaInstall": ""
+      "pageSpeed": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Rýchlejšie načítanie stránok a plynulejšia navigácia na informačnom paneli.Prehľad sa otvorí okamžite a stránka VMs & LXCs už nikdy medzi hosťovskými modálmi nebliká „Načítava sa...“.",
+      "appTab": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Nová karta aplikácie vo vnútri modálu VM a LXC – najmä pre LXC.Zaregistrujte aplikácie nainštalované v kontajneri, zaznamenajte ich webové odkazy a získajte upozornenia, keď sa odošle nová upstream verzia.",
+      "updatesTab": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Karta Prepracované aktualizácie pre LXC: použite balíky OS a aktualizácie registrovaných aplikácií jediným tlačidlom a naplánujte si opakujúcu sa úlohu automatickej aktualizácie, ktorá skontroluje OS kontajnera a jeho sledovanú aplikáciu pri každom spustení.",
+      "backupNoTimeout": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Dlhé úlohy zálohovania už nekončia.Zálohy VM a LXC spustené z monitora teraz bežia na pozadí, kým sa prirodzene neskončia, takže 30-minútová záloha PBS dokončí to isté ako 10-sekundová lokálna záloha.",
+      "vmDiskUsage": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Virtuálne počítače so systémom QEMU Guest Agent (qemu-hosť-agent) teraz hlásia skutočne využité/celkové údaje o disku na dashboarde namiesto '0 GB', ktoré PVE vracia pre hosťom spravované súborové systémy.",
+      "pwaInstall": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Prvým návštevníkom v prehliadači Safari pre Android a iOS sa teraz zobrazí výzva na inštaláciu v aplikácii s jasnými krokmi na pridanie monitora na svoju domovskú obrazovku ako PWA."
     }
   },
   "network": {
