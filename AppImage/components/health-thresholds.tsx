@@ -741,6 +741,13 @@ export function HealthThresholds() {
           {t("settings.healthThresholds.description")}
         </CardDescription>
       </CardHeader>
+      {/* Intentional exception to the global "edit mode contrast"
+          rule: the numeric inputs already carry semantic colored
+          backgrounds (red critical, amber warning, blue customised)
+          which are meaningful and more graphical than a plain form.
+          A sunken selector would either erase those tints or force
+          us to `!important` every one — cleaner to keep this card
+          untouched in edit mode. */}
       <CardContent>
         {loading ? (
           <div className="flex items-center justify-center py-8">

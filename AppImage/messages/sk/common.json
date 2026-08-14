@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "ProxMenux Monitor",
-    "description": "Systémový prehľad Proxmoxu",
+    "description": "Proxmox System Dashboard",
     "loading": "Načítava sa...",
     "connecting": "Pripájam sa k ProxMenux Monitoru",
     "unknown": "Neznáme",
@@ -143,7 +143,7 @@
       "year": "1 rok"
     },
     "stats": {
-      "avg": "priemer",
+      "avg": "avg",
       "max": "max",
       "min": "min"
     },
@@ -839,7 +839,7 @@
       "topCount": "Prvých {shown} z {total} procesov",
       "loadFailed": "Nepodarilo sa načítať procesy",
       "lifetimeAverageTitle": "Priemerné CPU % za celý život procesu - užitočné pri hľadaní procesov, ktoré dlho bežia potichu na pozadí",
-      "averageShort": "priem."
+      "averageShort": "avg"
     },
     "processInfo": {
       "titleFallback": "Proces",
@@ -1193,8 +1193,8 @@
       "applyOsUpdate": "Aktualizovať systém",
       "osUpToDate": "Systém je aktuálny",
       "installedByHelperPrefix": "Nainštalované cez",
-      "helperScriptsName": "Proxmox Helper-Scripts",
-      "helperUpdatesRun": "— aktualizácie spustia pomocný skript z community-scripts.",
+      "helperScriptsName": "Proxmox VE Helper-Scripts",
+      "helperUpdatesRun": "Inštalované pomocou Proxmox Helper-Scripts.",
       "installedPrefix": "nainštalovaná verzia",
       "upstreamAvailable": "dostupná verzia {version}",
       "upToDateAt": "Aktuálna verzia",
@@ -1408,14 +1408,7 @@
       "alsoDetectedContainer": "Ďalšie aplikácie nájdené v kontajneri",
       "addAnotherApplication": "Pridať ďalšiu aplikáciu",
       "doneButton": "Hotovo",
-      "editButton": "Upraviť",
-      "upstreamErrorTimeout": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Časový limit siete pri kontaktovaní upstream",
-      "upstreamErrorNetwork": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Chyba siete: {detail}",
-      "upstreamErrorGeneric": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Kontrola proti prúdu zlyhala: {detail}",
-      "notificationsEnabled": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Upozornenia na upstream aktualizácie sú ZAPNUTÉ – kliknutím ich stlmíte",
-      "notificationsMuted": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Upstream upozornenia na aktualizácie MUTED – kliknutím povolíte",
-      "notifyUpstreamLabel": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Upozorniť ma, keď bude k dispozícii nová upstream verzia",
-      "notifyUpstreamHelp": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: Odošle `app_update_available` do kanálov povolených v Nastaveniach → Upozornenia.Vypnite, ak túto aplikáciu nie je možné aktualizovať na vašom boxe."
+      "editButton": "Upraviť"
     }
   },
   "settings": {
@@ -1427,9 +1420,9 @@
     },
     "interfaceLanguage": {
       "title": "Jazyk rozhrania",
-      "description": "Vyberte jazyk, ktorý bude používať Monitor dashboard. Texty bez prekladu sa zobrazia po anglicky.",
+      "description": "Vyberte jazyk používaný v paneli Monitor.",
       "label": "Jazyk dashboardu",
-      "fallbackNote": "Nepreložené texty zostanú po anglicky, kým ich komunita nedoplní.",
+      "fallbackNote": "",
       "statusComplete": "hotové",
       "statusPartial": "čiastočne preložené",
       "statusNeedsTranslation": "čaká na komunitný preklad"
@@ -1685,8 +1678,7 @@
         "post_install_update": "Dostupné aktualizácie optimalizácií ProxMenux",
         "secure_gateway_update_available": "K dispozícii je aktualizácia Secure Gateway",
         "nvidia_driver_update_available": "Dostupná aktualizácia ovládača NVIDIA",
-        "coral_driver_update_available": "Dostupná aktualizácia ovládača Coral TPU",
-        "app_update_available": "Technický text používateľského rozhrania pre riadiaci panel Proxmox.Preložiť: K dispozícii je aktualizácia aplikácie"
+        "coral_driver_update_available": "Dostupná aktualizácia ovládača Coral TPU"
       },
       "ui": {
         "quietHours": "Tiché hodiny",
@@ -2994,7 +2986,13 @@
     "dontShowAgain": "Túto verziu už nezobrazovať",
     "currentFeatures": {
       "hostUpdate": "Aktualizácia hosta jedným kliknutím z kontroly stavu. Nové tlačidlo Aktualizovať teraz v časti systémových aktualizácií spustí aktualizáciu Proxmoxu priamo v termináli dashboardu, bez odchodu z prehliadača.",
-      "mobileInstall": "Výzva na inštaláciu aplikácie v mobile. Prví návštevníci v Androide a iOS Safari uvidia jednoduchý spodný panel s krokmi na pridanie Monitoru na domovskú obrazovku."
+      "mobileInstall": "Výzva na inštaláciu aplikácie v mobile. Prví návštevníci v Androide a iOS Safari uvidia jednoduchý spodný panel s krokmi na pridanie Monitoru na domovskú obrazovku.",
+      "pageSpeed": "",
+      "appTab": "",
+      "updatesTab": "",
+      "backupNoTimeout": "",
+      "vmDiskUsage": "",
+      "pwaInstall": ""
     }
   },
   "network": {
@@ -4216,7 +4214,7 @@
     "title": "Stav systému",
     "description": "Podrobná kontrola všetkých častí systému",
     "status": {
-      "ok": "V poriadku",
+      "ok": "OK",
       "info": "Info",
       "warning": "Upozornenie",
       "critical": "Problém",
@@ -4226,7 +4224,7 @@
       "total": "Spolu",
       "healthy": "V poriadku",
       "info": "Info",
-      "warning": "Upozornenia",
+      "warning": "Upozornenie",
       "critical": "Problémy",
       "unknown": "Neznáme"
     },

@@ -42,7 +42,17 @@ _APPS_DIR = "/etc/proxmenux/apps"
 _PCT_BIN = "/usr/sbin/pct"
 _PROBE_TIMEOUT_SEC = 15
 _GITHUB_TIMEOUT_SEC = 15
-_UPSTREAM_CACHE_TTL_SEC = 6 * 3600  # 6 h — GitHub is polite this way
+# Aligned with the master LXC update cycle in
+# notification_events.PollingCollector (UPDATE_CHECK_INTERVAL = 24 h).
+# Previously this was 6 h — half a day out of sync with the apt/apk
+# scan — so `refresh_all_apps` inside the 24 h collector would still
+# hit GitHub for apps whose upstream TTL had elapsed, doubling
+# checks. Unifying both to 24 h means one poll per day drives every
+# update flavour (OS packages + community-scripts app upstream).
+# Manual "Check" button + post-apply hook still pass force=True and
+# ignore this TTL, so the user never has to wait for the timer to
+# see a fresh result they explicitly asked for.
+_UPSTREAM_CACHE_TTL_SEC = 24 * 3600
 
 _VALID_METHODS = ("dpkg", "apk", "file", "binary",
                   "python_dist", "docker_label", "docker_exec",

@@ -795,7 +795,7 @@ function KeyfileActionsBar({
 
       {/* Current status — icon + colour by state, no truncated fp. */}
       {escrowMode !== undefined && (
-        <div className="flex items-center gap-2 text-xs bg-background/40 border border-white/10 rounded px-2.5 py-1.5">
+        <div className="flex items-center gap-2 text-xs bg-card border border-white/10 rounded px-2.5 py-1.5">
           <span className="font-medium text-foreground">{t("backup.keyfileManagement.uploadToPbs")}</span>
           {currentIsFull ? (
             <span className="inline-flex items-center gap-1 text-emerald-400 font-medium">
@@ -1122,7 +1122,7 @@ export function HostBackup() {
                           className={`text-[10px] uppercase tracking-wide ${
                             j.profile_mode === "custom"
                               ? "border-cyan-500/40 text-cyan-400 bg-cyan-500/5"
-                              : "border-border text-muted-foreground bg-background/40"
+                              : "border-border text-muted-foreground bg-card"
                           }`}
                           title={
                             j.profile_mode === "custom"
@@ -1322,7 +1322,7 @@ export function HostBackup() {
                     key={`${u.source}:${u.display_id}`}
                     type="button"
                     onClick={() => setInspectingArchive(u)}
-                    className="w-full text-left flex items-center justify-between gap-3 p-3 rounded-md border border-border bg-background/40 hover:bg-white/5 hover:border-blue-500/40 transition-colors group"
+                    className="w-full text-left flex items-center justify-between gap-3 p-3 rounded-md border border-border bg-card hover:bg-white/5 hover:border-blue-500/40 transition-colors group"
                     title={t("backup.archives.inspectTitle")}
                   >
                     <div className="min-w-0 flex-1">
@@ -1986,7 +1986,7 @@ function InspectModal({
                 rows mixed in only when they carry data. Backend +
                 encryption badges live here (instead of the header,
                 where they used to overlap the close button). */}
-            <section className="rounded-md border border-border bg-background/40 p-3 space-y-1 text-xs">
+            <section className="rounded-md border border-border bg-card p-3 space-y-1 text-xs">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("backup.archives.backup")}</div>
                 <div className="flex items-center gap-1.5">
@@ -2081,7 +2081,7 @@ function InspectModal({
 
             {/* In-flight export task feedback (Download for PBS/Borg). */}
             {exportTask && (
-              <div className="text-[11px] space-y-1 px-3 py-2 rounded-md border border-border bg-background/40">
+              <div className="text-[11px] space-y-1 px-3 py-2 rounded-md border border-border bg-card">
                 <div className="flex items-center gap-2">
                   <Loader2 className={`h-3.5 w-3.5 ${exportTask.state === "completed" || exportTask.state === "failed" ? "" : "animate-spin"}`} />
                   <span className="font-medium">{t(`backup.taskStates.${exportTask.state}`)}</span>
@@ -2404,7 +2404,7 @@ function InspectModal({
               : t("backup.archives.deleteBorgDescription", { repo: remoteArc?.repo_name ?? "" })}
           </DialogDescription>
         </DialogHeader>
-        <div className="text-sm font-mono px-3 py-2 rounded-md border border-border bg-background/40 break-all">
+        <div className="text-sm font-mono px-3 py-2 rounded-md border border-border bg-card break-all">
           {archive?.source === "local" ? localArc?.id : remoteArc?.snapshot}
         </div>
         <div className="flex justify-end gap-2">
@@ -3318,7 +3318,7 @@ function CreateJobDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col bg-accent [&_input]:bg-background [&_textarea]:bg-background [&_[role=combobox]]:bg-background">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isEdit ? (
@@ -3388,7 +3388,7 @@ function CreateJobDialog({
                         type="button"
                         onClick={() => setBackend(b)}
                         className={`text-left p-3 rounded-md border transition-colors ${
-                          backend === b ? "border-blue-500 bg-blue-500/5" : "border-border bg-background/40"
+                          backend === b ? "border-blue-500 bg-blue-500/5" : "border-border bg-card"
                         } hover:bg-white/5`}
                       >
                         <div className="flex items-center gap-2 font-medium text-sm">
@@ -3419,7 +3419,7 @@ function CreateJobDialog({
                 <button
                   type="button"
                   onClick={() => setMode("new")}
-                  className={`w-full text-left p-3 rounded-md border transition-colors ${mode === "new" ? "border-blue-500 bg-blue-500/5" : "border-border bg-background/40"} hover:bg-white/5`}
+                  className={`w-full text-left p-3 rounded-md border transition-colors ${mode === "new" ? "border-blue-500 bg-blue-500/5" : "border-border bg-card"} hover:bg-white/5`}
                 >
                   <div className="text-sm font-medium flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
@@ -3436,7 +3436,7 @@ function CreateJobDialog({
                   className={`w-full text-left p-3 rounded-md border transition-colors ${
                     mode === "attach" && backend !== "borg"
                       ? "border-blue-500 bg-blue-500/5"
-                      : "border-border bg-background/40"
+                      : "border-border bg-card"
                   } ${backend === "borg" ? "opacity-60 cursor-not-allowed" : "hover:bg-white/5"}`}
                 >
                   <div className="text-sm font-medium flex items-center gap-2">
@@ -3482,7 +3482,7 @@ function CreateJobDialog({
                       key={j.id}
                       type="button"
                       onClick={() => setPveJobId(j.id)}
-                      className={`w-full text-left p-3 rounded-md border ${pveJobId === j.id ? "border-blue-500 bg-blue-500/5" : "border-border bg-background/40"} hover:bg-white/5 transition-colors`}
+                      className={`w-full text-left p-3 rounded-md border ${pveJobId === j.id ? "border-blue-500 bg-blue-500/5" : "border-border bg-card"} hover:bg-white/5 transition-colors`}
                     >
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <span className="font-mono text-xs">{j.id}</span>
@@ -3581,7 +3581,7 @@ function CreateJobDialog({
                             className={`px-3 py-1.5 rounded-md text-xs font-mono border transition-colors ${
                               active
                                 ? "border-blue-500 bg-blue-500/10 text-blue-400"
-                                : "border-border bg-background/40 text-muted-foreground hover:bg-white/5"
+                                : "border-border bg-card text-muted-foreground hover:bg-white/5"
                             }`}
                           >
                             {t(`backup.weekdays.short.${d.toLowerCase()}`)}
@@ -3653,7 +3653,7 @@ function CreateJobDialog({
               )}
 
               {/* Live preview from the backend */}
-              <div className="rounded-md border border-border bg-background/40 p-3 space-y-1 text-xs">
+              <div className="rounded-md border border-border bg-card p-3 space-y-1 text-xs">
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("backup.schedule.preview")}</div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-muted-foreground">{t("backup.fields.expressionLabel")}</span>
@@ -3726,7 +3726,7 @@ function CreateJobDialog({
                   <button
                     type="button"
                     onClick={() => setProfileMode("default")}
-                    className={`text-left p-3 rounded-md border ${profileMode === "default" ? "border-blue-500 bg-blue-500/5" : "border-border bg-background/40"} hover:bg-white/5 transition-colors`}
+                    className={`text-left p-3 rounded-md border ${profileMode === "default" ? "border-blue-500 bg-blue-500/5" : "border-border bg-card"} hover:bg-white/5 transition-colors`}
                   >
                     <div className="text-sm font-medium">{t("backup.profile.default")}</div>
                     <div className="text-xs text-muted-foreground mt-1">
@@ -3736,7 +3736,7 @@ function CreateJobDialog({
                   <button
                     type="button"
                     onClick={() => setProfileMode("custom")}
-                    className={`text-left p-3 rounded-md border ${profileMode === "custom" ? "border-blue-500 bg-blue-500/5" : "border-border bg-background/40"} hover:bg-white/5 transition-colors`}
+                    className={`text-left p-3 rounded-md border ${profileMode === "custom" ? "border-blue-500 bg-blue-500/5" : "border-border bg-card"} hover:bg-white/5 transition-colors`}
                   >
                     <div className="text-sm font-medium">{t("backup.profile.custom")}</div>
                     <div className="text-xs text-muted-foreground mt-1">
@@ -4223,7 +4223,7 @@ function CreateJobDialog({
                   [t("backup.retention.yearly"), String(keepYearly || "")],
                 ].filter(([, v]) => Number(v) > 0) as Array<[string, string]>
                 return (
-                  <div className="rounded-md border border-border bg-background/40 p-3 space-y-2 text-xs">
+                  <div className="rounded-md border border-border bg-card p-3 space-y-2 text-xs">
                     <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("backup.jobs.summary")}</div>
                     <div><span className="text-muted-foreground">{t("backup.fields.nameLabel")}</span> <span className="font-mono text-foreground">{jobId}</span></div>
                     <div className="flex items-center gap-2 flex-wrap">
@@ -4655,7 +4655,7 @@ function ManualBackupDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col bg-accent [&_input]:bg-background [&_textarea]:bg-background [&_[role=combobox]]:bg-background">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <PlayCircle className="h-5 w-5 text-blue-500" />
@@ -4693,7 +4693,7 @@ function ManualBackupDialog({
                         key={b}
                         type="button"
                         onClick={() => setBackend(b)}
-                        className={`text-left p-3 rounded-md border ${backend === b ? "border-blue-500 bg-blue-500/5" : "border-border bg-background/40"} hover:bg-white/5 transition-colors`}
+                        className={`text-left p-3 rounded-md border ${backend === b ? "border-blue-500 bg-blue-500/5" : "border-border bg-card"} hover:bg-white/5 transition-colors`}
                       >
                         <div className="flex items-center gap-2 font-medium text-sm">
                           <Icon className="h-4 w-4" />
@@ -4712,7 +4712,7 @@ function ManualBackupDialog({
                   <button
                     type="button"
                     onClick={() => setProfileMode("default")}
-                    className={`text-left p-3 rounded-md border ${profileMode === "default" ? "border-blue-500 bg-blue-500/5" : "border-border bg-background/40"} hover:bg-white/5 transition-colors`}
+                    className={`text-left p-3 rounded-md border ${profileMode === "default" ? "border-blue-500 bg-blue-500/5" : "border-border bg-card"} hover:bg-white/5 transition-colors`}
                   >
                     <div className="text-sm font-medium">{t("backup.profile.default")}</div>
                     <div className="text-xs text-muted-foreground mt-1">
@@ -4722,7 +4722,7 @@ function ManualBackupDialog({
                   <button
                     type="button"
                     onClick={() => setProfileMode("custom")}
-                    className={`text-left p-3 rounded-md border ${profileMode === "custom" ? "border-blue-500 bg-blue-500/5" : "border-border bg-background/40"} hover:bg-white/5 transition-colors`}
+                    className={`text-left p-3 rounded-md border ${profileMode === "custom" ? "border-blue-500 bg-blue-500/5" : "border-border bg-card"} hover:bg-white/5 transition-colors`}
                   >
                     <div className="text-sm font-medium">{t("backup.profile.custom")}</div>
                     <div className="text-xs text-muted-foreground mt-1">
@@ -5166,7 +5166,7 @@ function ManualBackupDialog({
               )}
 
               {/* Summary — mirrors the styling of the JobDetailModal. */}
-              <div className="rounded-md border border-border bg-background/40 p-3 space-y-2 text-xs">
+              <div className="rounded-md border border-border bg-card p-3 space-y-2 text-xs">
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("backup.jobs.summary")}</div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-muted-foreground">{t("backup.fields.backendLabel")}</span>
@@ -5683,7 +5683,7 @@ function DestinationsSection({
                     : t("backup.destinations.removeDescriptionWithData")}
                 </DialogDescription>
               </DialogHeader>
-              <div className="text-sm font-mono px-3 py-2 rounded-md border border-border bg-background/40 break-all">
+              <div className="text-sm font-mono px-3 py-2 rounded-md border border-border bg-card break-all">
                 {headline}
               </div>
               {(jobs.length > 0 || backups > 0) && (
@@ -6021,7 +6021,7 @@ function ConfigureDestinationWizard({
               key={opt.type}
               type="button"
               onClick={() => setPicked(opt.type)}
-              className={`text-left rounded-lg border-2 p-4 transition-colors bg-background/40 hover:bg-white/5 ${opt.accent}`}
+              className={`text-left rounded-lg border-2 p-4 transition-colors bg-card hover:bg-white/5 ${opt.accent}`}
             >
               <div className="flex items-center gap-2 mb-1">
                 {opt.type === "pbs" ? <Server className="h-4 w-4" /> :
@@ -6302,7 +6302,7 @@ function AddDestinationDialog({
 
   return (
     <Dialog open={type !== null} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col bg-accent [&_input]:bg-background [&_textarea]:bg-background [&_[role=combobox]]:bg-background">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isEditing ? (
@@ -6373,7 +6373,7 @@ function AddDestinationDialog({
                   <button
                     type="button"
                     onClick={() => setBorgMode("local")}
-                    className={`text-left p-2.5 rounded-md border text-sm ${borgMode === "local" ? "border-blue-500 bg-blue-500/5" : "border-border bg-background/40"} hover:bg-white/5 transition-colors`}
+                    className={`text-left p-2.5 rounded-md border text-sm ${borgMode === "local" ? "border-blue-500 bg-blue-500/5" : "border-border bg-card"} hover:bg-white/5 transition-colors`}
                   >
                     <div className="font-medium flex items-center gap-1"><HardDrive className="h-3.5 w-3.5" /> {t("backup.destinations.localUsb")}</div>
                     <div className="text-[11px] text-muted-foreground mt-0.5">{t("backup.destinations.localUsbDescription")}</div>
@@ -6381,7 +6381,7 @@ function AddDestinationDialog({
                   <button
                     type="button"
                     onClick={() => setBorgMode("ssh")}
-                    className={`text-left p-2.5 rounded-md border text-sm ${borgMode === "ssh" ? "border-blue-500 bg-blue-500/5" : "border-border bg-background/40"} hover:bg-white/5 transition-colors`}
+                    className={`text-left p-2.5 rounded-md border text-sm ${borgMode === "ssh" ? "border-blue-500 bg-blue-500/5" : "border-border bg-card"} hover:bg-white/5 transition-colors`}
                   >
                     <div className="font-medium flex items-center gap-1"><Server className="h-3.5 w-3.5" /> {t("backup.destinations.remoteSsh")}</div>
                     <div className="text-[11px] text-muted-foreground mt-0.5">{t("backup.destinations.remoteSshDescription")}</div>
@@ -6426,7 +6426,7 @@ function AddDestinationDialog({
                     </p>
                   </div>
 
-                  <div className="rounded-md border border-border bg-background/40 p-3 space-y-2">
+                  <div className="rounded-md border border-border bg-card p-3 space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-medium">{t("backup.destinations.generateNewSshKey")}</span>
                       <Button
@@ -6474,7 +6474,7 @@ function AddDestinationDialog({
                   <button
                     type="button"
                     onClick={() => setBorgEncryptionEnabled(true)}
-                    className={`text-left p-2.5 rounded-md border text-sm transition-colors ${borgEncryptionEnabled ? "border-fuchsia-500 bg-fuchsia-500/5" : "border-border bg-background/40 hover:bg-white/5"}`}
+                    className={`text-left p-2.5 rounded-md border text-sm transition-colors ${borgEncryptionEnabled ? "border-fuchsia-500 bg-fuchsia-500/5" : "border-border bg-card hover:bg-white/5"}`}
                   >
                     <div className="font-medium">{t("backup.encryption.encryptedRepokey")}</div>
                     <div className="text-[11px] text-muted-foreground">{t("backup.encryption.encryptedRepokeyDescription")}</div>
@@ -6482,7 +6482,7 @@ function AddDestinationDialog({
                   <button
                     type="button"
                     onClick={() => setBorgEncryptionEnabled(false)}
-                    className={`text-left p-2.5 rounded-md border text-sm transition-colors ${!borgEncryptionEnabled ? "border-amber-500 bg-amber-500/5" : "border-border bg-background/40 hover:bg-white/5"}`}
+                    className={`text-left p-2.5 rounded-md border text-sm transition-colors ${!borgEncryptionEnabled ? "border-amber-500 bg-amber-500/5" : "border-border bg-card hover:bg-white/5"}`}
                   >
                     <div className="font-medium">{t("backup.encryption.noEncryption")}</div>
                     <div className="text-[11px] text-muted-foreground">{t("backup.encryption.noEncryptionDescription")}</div>
@@ -6664,7 +6664,7 @@ function UsbPicker({
 
   return (
     <>
-      <div className="rounded-md border border-border bg-background/40 p-3 space-y-2">
+      <div className="rounded-md border border-border bg-card p-3 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs font-medium">
             <HardDrive className="h-3.5 w-3.5 text-orange-400" />
@@ -6789,7 +6789,7 @@ function UsbPicker({
           </DialogHeader>
           {formatTarget && (
             <div className="space-y-2">
-              <div className="text-xs font-mono px-3 py-2 rounded-md border border-border bg-background/40 break-all">
+              <div className="text-xs font-mono px-3 py-2 rounded-md border border-border bg-card break-all">
                 {formatTarget.path_or_device}
                 {formatTarget.size && <span className="text-muted-foreground"> · {formatTarget.size}</span>}
               </div>
@@ -6934,7 +6934,7 @@ function ExtraPathsSection() {
             {paths.map((p) => (
               <div
                 key={p.path}
-                className="flex items-center justify-between gap-3 p-2 rounded-md border border-border bg-background/40"
+                className="flex items-center justify-between gap-3 p-2 rounded-md border border-border bg-card"
               >
                 <div className="min-w-0 flex-1 flex items-center gap-2">
                   <span className="font-mono text-xs truncate" title={p.path}>{p.path}</span>
@@ -7134,7 +7134,7 @@ function UsbDrivesSection() {
             return (
               <div
                 key={`${d.state}-${d.path_or_device}-${d.uuid}`}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-md border border-border bg-background/40"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-md border border-border bg-card"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -7447,7 +7447,7 @@ function JobDetailModal({
                   )}
                   {!detail.enabled && (
                     <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/40 bg-amber-500/5">
-                      {t("backup.status.disabled")}
+                      {t("status.disabled")}
                     </Badge>
                   )}
                 </>
@@ -7570,13 +7570,31 @@ function JobDetailModal({
                       <h4 className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5 text-green-500">
                         <FileSearch className="h-3.5 w-3.5" /> {t("backup.profile.title")}
                       </h4>
-                      <Field
-                        icon={<Server className="h-3 w-3 text-green-500/80" />}
-                        label={t("backup.fields.mode")}
-                        value={detail.profile_mode || "—"}
-                        mono
-                        labelClassName="text-green-500/90"
-                      />
+                      {/* Profile mode rendered as a Badge to match the
+                          jobs list card. Same color scheme: cyan for
+                          `custom`, muted for `default`. */}
+                      <div className="flex items-center gap-2 flex-wrap text-xs">
+                        <span className="text-[10px] uppercase tracking-wider text-green-500/90 inline-flex items-center gap-1">
+                          <Server className="h-3 w-3 text-green-500/80" />
+                          {t("backup.fields.mode")}
+                        </span>
+                        {detail.profile_mode ? (
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] uppercase tracking-wide ${
+                              detail.profile_mode === "custom"
+                                ? "border-cyan-500/40 text-cyan-400 bg-cyan-500/5"
+                                : "border-border text-muted-foreground bg-card"
+                            }`}
+                          >
+                            {detail.profile_mode === "custom"
+                              ? t("backup.profile.custom")
+                              : t("backup.profile.default")}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground font-mono">—</span>
+                        )}
+                      </div>
                       {detail.paths && detail.paths.length > 0 && (
                         <PathsDisplay paths={detail.paths} />
                       )}
@@ -7704,7 +7722,7 @@ function JobDetailModal({
               {t("backup.jobs.disableJobDescription")}
             </DialogDescription>
           </DialogHeader>
-          <div className="text-sm font-mono px-3 py-2 rounded-md border border-border bg-background/40 break-all">
+          <div className="text-sm font-mono px-3 py-2 rounded-md border border-border bg-card break-all">
             {detail?.id}
           </div>
           <div className="flex justify-end gap-2">
@@ -8056,7 +8074,7 @@ function PbsKeyfileRecoveryDialog({
         )}
 
         {selected && (
-          <div className="text-xs space-y-1 px-3 py-2 rounded-md border border-border bg-background/40">
+          <div className="text-xs space-y-1 px-3 py-2 rounded-md border border-border bg-card">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">{t("backup.fields.sourceHost")}:</span>
               <span className="font-mono">{selected.source_host}</span>
@@ -8313,7 +8331,7 @@ function ArchiveContentsModal({
                     {Object.entries(data.metadata_files).map(([fname, content]) => (
                       <div key={fname}>
                         <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-mono">{fname}</div>
-                        <pre className="text-[11px] font-mono whitespace-pre-wrap break-all max-h-40 overflow-auto rounded border border-border bg-background/40 p-2 text-foreground/80">
+                        <pre className="text-[11px] font-mono whitespace-pre-wrap break-all max-h-40 overflow-auto rounded border border-border bg-card p-2 text-foreground/80">
                           {content}
                         </pre>
                       </div>
@@ -8347,7 +8365,7 @@ function ContentsSection({
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-md border border-border bg-background/40 p-3 space-y-2">
+    <section className="rounded-md border border-border bg-card p-3 space-y-2">
       <h3 className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
         <Icon className={`h-3.5 w-3.5 ${iconColor || "text-muted-foreground"}`} />
         {title}
@@ -8534,7 +8552,7 @@ function FilesTree({ files, truncated }: { files: Array<{ path: string; size: nu
         placeholder={t("backup.placeholders.filterPaths")}
         className="h-8 text-xs"
       />
-      <div className="max-h-72 overflow-auto rounded border border-border bg-background/40">
+      <div className="max-h-72 overflow-auto rounded border border-border bg-card">
         <ul className="text-[11px] font-mono divide-y divide-border/30">
           {filtered.slice(0, 2000).map((f) => (
             <li key={f.path} className="flex items-center justify-between gap-3 px-2 py-1 hover:bg-white/5">
@@ -8917,7 +8935,7 @@ function RestoreOptionsModal({
                 {t("backup.restore.blockedPathsHint")}
               </div>
             )}
-            <div className="rounded-md border border-border bg-background/40 p-1 max-h-72 overflow-auto">
+            <div className="rounded-md border border-border bg-card p-1 max-h-72 overflow-auto">
               <ul className="divide-y divide-border/40">
                 {filteredPaths.map((p) => {
                   const blocked = isPathBlocked(p)

@@ -1194,8 +1194,8 @@
       "applyOsUpdate": "Applica l'aggiornamento del sistema operativo",
       "osUpToDate": "Sistema operativo aggiornato",
       "installedByHelperPrefix": "Installato da",
-      "helperScriptsName": "Proxmox Helper-Scripts",
-      "helperUpdatesRun": "- gli aggiornamenti eseguono l'helper degli script della comunità.",
+      "helperScriptsName": "Proxmox VE Helper-Scripts",
+      "helperUpdatesRun": "Installato da Proxmox Helper-Scripts.",
       "installedPrefix": "installato",
       "upstreamAvailable": "versione {version} disponibile",
       "upToDateAt": "Aggiornato a",
@@ -1409,14 +1409,7 @@
       "alsoDetectedContainer": "Rilevato anche su questo contenitore",
       "addAnotherApplication": "Aggiungi un'altra applicazione",
       "doneButton": "Fatto",
-      "editButton": "Modificare",
-      "upstreamErrorTimeout": "timeout della rete durante il contatto a monte",
-      "upstreamErrorNetwork": "errore di rete: {detail}",
-      "upstreamErrorGeneric": "controllo upstream non riuscito: {detail}",
-      "notificationsEnabled": "notifiche di aggiornamento upstream attivate: fai clic per disattivare l'audio",
-      "notificationsMuted": "notifiche di aggiornamento upstream MUTED: fare clic per abilitare",
-      "notifyUpstreamLabel": "avvisami quando è disponibile una nuova versione upstream",
-      "notifyUpstreamHelp": "invia `app_update_available` ai canali abilitati in Impostazioni → Notifiche.Disattiva se questa app non può essere aggiornata sul tuo box."
+      "editButton": "Modificare"
     }
   },
   "settings": {
@@ -1428,9 +1421,9 @@
     },
     "interfaceLanguage": {
       "title": "Linguaggio dell'interfaccia",
-      "description": "Scegli la lingua utilizzata dalla dashboard Monitor. Le traduzioni mancanti ricadono in inglese.",
+      "description": "Scegli la lingua utilizzata dal pannello del Monitor.",
       "label": "Lingua del dashboard",
-      "fallbackNote": "Il testo non tradotto viene mostrato in inglese finché la community non lo completa.",
+      "fallbackNote": "Traduzione automatica con Google Translate. Segnala eventuali errori nelle issues del progetto o invia una PR con la correzione.",
       "statusComplete": "completare",
       "statusPartial": "parziale",
       "statusNeedsTranslation": "è necessaria la traduzione della comunità"
@@ -1686,8 +1679,7 @@
         "post_install_update": "Aggiornamenti di ottimizzazione ProxMenux disponibili",
         "secure_gateway_update_available": "Aggiornamento Secure Gateway disponibile",
         "nvidia_driver_update_available": "Aggiornamento del driver NVIDIA disponibile",
-        "coral_driver_update_available": "Disponibile l'aggiornamento del driver Coral TPU",
-        "app_update_available": "aggiornamento dell'app disponibile"
+        "coral_driver_update_available": "Disponibile l'aggiornamento del driver Coral TPU"
       },
       "ui": {
         "quietHours": "Ore tranquille",
@@ -2995,7 +2987,13 @@
     "dontShowAgain": "Non mostrare più per questa versione",
     "currentFeatures": {
       "hostUpdate": "Aggiornamento host con un clic da Health Monitor. Il nuovo pulsante Aggiorna ora in Aggiornamenti di sistema esegue il flusso di aggiornamento di Proxmox all'interno di un terminale dashboard, senza uscire dal browser.",
-      "mobileInstall": "Richiesta di installazione in-app per dispositivi mobili. Chi visita per la prima volta Android e iOS Safari ora vede semplici passaggi per aggiungere il monitor alla propria schermata iniziale come PWA."
+      "mobileInstall": "Richiesta di installazione in-app per dispositivi mobili. Chi visita per la prima volta Android e iOS Safari ora vede semplici passaggi per aggiungere il monitor alla propria schermata iniziale come PWA.",
+      "pageSpeed": "",
+      "appTab": "",
+      "updatesTab": "",
+      "backupNoTimeout": "",
+      "vmDiskUsage": "",
+      "pwaInstall": ""
     }
   },
   "network": {
@@ -3530,7 +3528,6 @@
       "deletePbsDescription": "Ciò rimuove lo snapshot PBS dall'archivio dati.",
       "deletePbsTitle": "Elimina istantanea PBS",
       "companionFile": "file compagno",
-      "descriptionAfter": "",
       "descriptionBefore": "Sfoglia e ripristina i backup trovati in",
       "downloadTitle": "Scarica questo backup",
       "emptyAfter": "backup ancora.",

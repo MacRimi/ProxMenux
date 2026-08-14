@@ -1194,8 +1194,8 @@
       "applyOsUpdate": "Aplicar atualização do sistema operacional",
       "osUpToDate": "SO atualizado",
       "installedByHelperPrefix": "Instalado por",
-      "helperScriptsName": "Proxmox Helper-Scripts",
-      "helperUpdatesRun": "— as atualizações executam o auxiliar de scripts da comunidade.",
+      "helperScriptsName": "Proxmox VE Helper-Scripts",
+      "helperUpdatesRun": "Instalado pelo Proxmox Helper-Scripts.",
       "installedPrefix": "instalado",
       "upstreamAvailable": "versão {version} disponível",
       "upToDateAt": "Atualizado em",
@@ -1409,14 +1409,7 @@
       "alsoDetectedContainer": "Também detectado neste contêiner",
       "addAnotherApplication": "Adicione outro aplicativo",
       "doneButton": "Feito",
-      "editButton": "Editar",
-      "upstreamErrorTimeout": "Tempo limite da rede ao entrar em contato com o upstream",
-      "upstreamErrorNetwork": "Erro de rede: {detail}",
-      "upstreamErrorGeneric": "falha na verificação upstream: {detail}",
-      "notificationsEnabled": "Notificações de atualização upstream ATIVADAS – clique para silenciar",
-      "notificationsMuted": "notificações de atualização upstream silenciadas – clique para ativar",
-      "notifyUpstreamLabel": "Notifique-me quando uma nova versão upstream estiver disponível",
-      "notifyUpstreamHelp": "Envia `app_update_available` para os canais habilitados em Configurações → Notificações.Desligue se este aplicativo não puder ser atualizado em sua caixa."
+      "editButton": "Editar"
     }
   },
   "settings": {
@@ -1428,9 +1421,9 @@
     },
     "interfaceLanguage": {
       "title": "Idioma da interface",
-      "description": "Escolha o idioma usado pelo painel do Monitor. As traduções ausentes voltam para o inglês.",
+      "description": "Escolha o idioma utilizado pelo painel do Monitor.",
       "label": "Idioma do painel",
-      "fallbackNote": "O texto não traduzido é mostrado em inglês até que a comunidade o preencha.",
+      "fallbackNote": "Tradução automática com Google Translate. Reporte erros nas issues do projeto ou envie um PR com a correção.",
       "statusComplete": "completo",
       "statusPartial": "parcial",
       "statusNeedsTranslation": "tradução comunitária necessária"
@@ -1686,8 +1679,7 @@
         "post_install_update": "Atualizações de otimização ProxMenux disponíveis",
         "secure_gateway_update_available": "Atualização do Secure Gateway disponível",
         "nvidia_driver_update_available": "Atualização de driver NVIDIA disponível",
-        "coral_driver_update_available": "Atualização do driver Coral TPU disponível",
-        "app_update_available": "atualização de aplicativo disponível"
+        "coral_driver_update_available": "Atualização do driver Coral TPU disponível"
       },
       "ui": {
         "quietHours": "Horas tranquilas",
@@ -2995,7 +2987,13 @@
     "dontShowAgain": "Não mostrar novamente para esta versão",
     "currentFeatures": {
       "hostUpdate": "Atualização do host com um clique no Health Monitor. O novo botão Atualizar agora em Atualizações do sistema executa o fluxo de atualização do Proxmox dentro de um terminal de painel, sem sair do navegador.",
-      "mobileInstall": "Prompt de instalação no aplicativo para celular. Visitantes iniciantes no Android e iOS Safari agora veem etapas simples para adicionar o Monitor à tela inicial como um PWA."
+      "mobileInstall": "Prompt de instalação no aplicativo para celular. Visitantes iniciantes no Android e iOS Safari agora veem etapas simples para adicionar o Monitor à tela inicial como um PWA.",
+      "pageSpeed": "",
+      "appTab": "",
+      "updatesTab": "",
+      "backupNoTimeout": "",
+      "vmDiskUsage": "",
+      "pwaInstall": ""
     }
   },
   "network": {
@@ -3530,7 +3528,6 @@
       "deletePbsDescription": "Isso remove o instantâneo do PBS do armazenamento de dados.",
       "deletePbsTitle": "Excluir instantâneo do PBS",
       "companionFile": "arquivo complementar",
-      "descriptionAfter": "",
       "descriptionBefore": "Procure e restaure backups encontrados em",
       "downloadTitle": "Baixe este backup",
       "emptyAfter": "backups ainda.",

@@ -1194,8 +1194,8 @@
       "applyOsUpdate": "Appliquer la mise à jour du système d'exploitation",
       "osUpToDate": "OS à jour",
       "installedByHelperPrefix": "Installé par",
-      "helperScriptsName": "Proxmox Helper-Scripts",
-      "helperUpdatesRun": "- les mises à jour exécutent l'assistant de scripts de communauté.",
+      "helperScriptsName": "Proxmox VE Helper-Scripts",
+      "helperUpdatesRun": "Installé par Proxmox Helper-Scripts.",
       "installedPrefix": "installé",
       "upstreamAvailable": "version {version} disponible",
       "upToDateAt": "À jour à",
@@ -1409,14 +1409,7 @@
       "alsoDetectedContainer": "Également détecté sur ce conteneur",
       "addAnotherApplication": "Ajouter une autre application",
       "doneButton": "Fait",
-      "editButton": "Modifier",
-      "upstreamErrorTimeout": "expiration du délai d'attente du réseau lors du contact en amont",
-      "upstreamErrorNetwork": "Erreur réseau : {detail}",
-      "upstreamErrorGeneric": "Échec de la vérification en amont : {detail}",
-      "notificationsEnabled": "Notifications de mise à jour en amont activées – cliquez pour désactiver le son",
-      "notificationsMuted": "Notifications de mise à jour en amont MUTED – cliquez pour activer",
-      "notifyUpstreamLabel": "Me prévenir lorsqu'une nouvelle version en amont est disponible",
-      "notifyUpstreamHelp": "envoie `app_update_available` aux canaux activés dans Paramètres → Notifications.Désactivez-la si cette application ne peut pas être mise à jour sur votre box."
+      "editButton": "Modifier"
     }
   },
   "settings": {
@@ -1428,9 +1421,9 @@
     },
     "interfaceLanguage": {
       "title": "Langue de l'interface",
-      "description": "Choisissez la langue utilisée par le tableau de bord Monitor. Les traductions manquantes reviennent à l'anglais.",
+      "description": "Choisissez la langue utilisée par le tableau de bord du Monitor.",
       "label": "Langue du tableau de bord",
-      "fallbackNote": "Le texte non traduit est affiché en anglais jusqu'à ce que la communauté le remplisse.",
+      "fallbackNote": "Traduction automatique via Google Translate. Signalez les erreurs dans les issues du projet ou envoyez une PR avec la correction.",
       "statusComplete": "complet",
       "statusPartial": "partiel",
       "statusNeedsTranslation": "traduction communautaire nécessaire"
@@ -1686,8 +1679,7 @@
         "post_install_update": "Mises à jour d'optimisation de ProxMenux disponibles",
         "secure_gateway_update_available": "Mise à jour de Secure Gateway disponible",
         "nvidia_driver_update_available": "Mise à jour du pilote NVIDIA disponible",
-        "coral_driver_update_available": "Mise à jour du pilote Coral TPU disponible",
-        "app_update_available": "mise à jour de l'application disponible"
+        "coral_driver_update_available": "Mise à jour du pilote Coral TPU disponible"
       },
       "ui": {
         "quietHours": "Heures calmes",
@@ -2995,7 +2987,13 @@
     "dontShowAgain": "Ne plus afficher pour cette version",
     "currentFeatures": {
       "hostUpdate": "Mise à jour de l'hôte en un clic depuis Health Monitor. Le nouveau bouton Mettre à jour maintenant dans les mises à jour système exécute le flux de mise à jour Proxmox dans un terminal de tableau de bord, sans quitter le navigateur.",
-      "mobileInstall": "Invite d'installation dans l'application pour mobile. Les nouveaux visiteurs sur Android et iOS Safari voient désormais des étapes simples pour ajouter le moniteur à leur écran d'accueil en tant que PWA."
+      "mobileInstall": "Invite d'installation dans l'application pour mobile. Les nouveaux visiteurs sur Android et iOS Safari voient désormais des étapes simples pour ajouter le moniteur à leur écran d'accueil en tant que PWA.",
+      "pageSpeed": "",
+      "appTab": "",
+      "updatesTab": "",
+      "backupNoTimeout": "",
+      "vmDiskUsage": "",
+      "pwaInstall": ""
     }
   },
   "network": {
@@ -3530,7 +3528,6 @@
       "deletePbsDescription": "Cela supprime l'instantané PBS de la banque de données.",
       "deletePbsTitle": "Supprimer l'instantané PBS",
       "companionFile": "fichier compagnon",
-      "descriptionAfter": "",
       "descriptionBefore": "Parcourez et restaurez les sauvegardes trouvées dans",
       "downloadTitle": "Téléchargez cette sauvegarde",
       "emptyAfter": "sauvegardes encore.",

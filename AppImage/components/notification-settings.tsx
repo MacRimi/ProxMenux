@@ -1359,7 +1359,13 @@ export function NotificationSettings() {
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-5">
+      <CardContent
+        className={`space-y-5${
+          editMode
+            ? " bg-accent [&_input]:bg-background [&_textarea]:bg-background [&_[role=combobox]]:bg-background"
+            : ""
+        }`}
+      >
         {/* ── Service Status ── */}
         {status && (
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border">

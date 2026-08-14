@@ -497,7 +497,7 @@ force_apt_ipv4() {
 # ==========================================================
 
 apply_network_optimizations() {
-  local FUNC_VERSION="1.2"
+  local FUNC_VERSION="1.1"
   # description: Tune TCP buffers, somaxconn, IPv4 hardening and disable rp_filter on fw bridges (PVE 9 compatible).
   msg_info "$(translate "Optimizing network settings...")"
   NECESSARY_REBOOT=1
@@ -594,16 +594,14 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 EOF
 
-  rm -f /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
-
-  cat > /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules <<'EOF'
+  cat > /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules <<'EOF'
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwbr*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwln*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwpr*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="tap*",  RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 EOF
-  chmod 0644 /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules
-  chown root:root /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules
+  chmod 0644 /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
+  chown root:root /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
 
   systemctl daemon-reload >/dev/null 2>&1 || true
   udevadm control --reload-rules >/dev/null 2>&1 || true
@@ -682,7 +680,7 @@ EOF
 
 
 install_log2ram_auto() {
-    local FUNC_VERSION="1.3"
+    local FUNC_VERSION="1.4"
 
     # description: Install Log2RAM with size auto-tuned to host RAM (128M/256M/512M); SSD/M.2 detection skips on rotational disks.
 
@@ -887,9 +885,13 @@ if (( USED_BYTES > EMERGENCY_BYTES )); then
     if [[ -x /usr/sbin/logrotate && -f /etc/logrotate.d/proxmox-backup-api ]]; then
         /usr/sbin/logrotate -f /etc/logrotate.d/proxmox-backup-api >/dev/null 2>&1 || true
     fi
-    : > /var/log/pveproxy/access.log 2>/dev/null || true
-    : > /var/log/pveproxy/error.log 2>/dev/null || true
-    : > /var/log/pveam.log 2>/dev/null || true
+    # Only truncate if the file already exists. Creating one from
+    # this cron path (running as root, default umask) would leave
+    # it as root:root 644 — pveproxy runs as www-data and would then
+    # fail to reopen it on the next restart, taking :8006 down.
+    [ -e /var/log/pveproxy/access.log ] && : > /var/log/pveproxy/access.log 2>/dev/null || true
+    [ -e /var/log/pveproxy/error.log ]  && : > /var/log/pveproxy/error.log  2>/dev/null || true
+    [ -e /var/log/pveam.log ]           && : > /var/log/pveam.log           2>/dev/null || true
     "$L2R_BIN" write 2>/dev/null || true
 elif (( USED_BYTES > WARN_BYTES )); then
     SOFT_JOURNAL_MB=$(( SIZE_MiB * 30 / 100 ))

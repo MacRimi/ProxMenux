@@ -176,7 +176,13 @@ export function LxcUpdateDetection() {
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-5">
+      <CardContent
+        className={`space-y-5${
+          editMode
+            ? " bg-accent [&_input]:bg-background [&_textarea]:bg-background [&_[role=combobox]]:bg-background"
+            : ""
+        }`}
+      >
         {/* ── Enable/Disable ── single-line label + toggle. The description
             paragraph was removed because the CardDescription above already
             covers the behaviour; on mobile that second paragraph forced

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
-import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup } from "lucide-react"
+import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup, Smartphone } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 import { useT } from "../lib/i18n/provider"
 
@@ -231,14 +231,41 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
   },
 }
 
+// Each feature carries an i18n key so translations live in the
+// common.json catalogs and the modal renders in the user's chosen
+// locale. `text` is the English source of truth — it's what the
+// build-i18n-messages workflow feeds to Google Translate for locales
+// that haven't been curated by hand.
 const CURRENT_VERSION_FEATURES = [
   {
-    icon: <RefreshCw className="h-5 w-5" />,
-    text: "One-click host update from the Health Monitor — new Update Now button in the System Updates section runs the Proxmox update flow in an in-dashboard terminal, without leaving the browser.",
+    icon: <Zap className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.pageSpeed",
+    text: "Faster page loads and smoother navigation across the dashboard. Overview opens instantly and the VMs & LXCs page never flashes 'Loading…' between guest modals again.",
   },
   {
     icon: <Sparkles className="h-5 w-5" />,
-    text: "In-app Install prompt for mobile — first-time visitors on Android and iOS Safari now see a bottom-sheet with clear steps for adding the Monitor to their home screen as a PWA.",
+    key: "releaseNotes.currentFeatures.appTab",
+    text: "New App tab inside the VM & LXC modal — especially for LXCs. Register the apps installed in a container, capture their weblinks, and get notifications when a new upstream version ships.",
+  },
+  {
+    icon: <RefreshCw className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.updatesTab",
+    text: "Reworked Updates tab for LXCs: apply OS packages and registered-app updates from a single button, and schedule a recurring auto-update job that checks the container's OS and its tracked app on every run.",
+  },
+  {
+    icon: <DatabaseBackup className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.backupNoTimeout",
+    text: "Long backup jobs no longer time out. VM and LXC backups launched from the Monitor now run in the background until they naturally finish, so a 30-minute PBS backup completes the same as a 10-second local one.",
+  },
+  {
+    icon: <HardDrive className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.vmDiskUsage",
+    text: "VMs running the QEMU Guest Agent (qemu-guest-agent) now report real used / total disk figures on the dashboard, instead of the '0 GB' that PVE returns for guest-managed filesystems.",
+  },
+  {
+    icon: <Smartphone className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.pwaInstall",
+    text: "First-time visitors on Android and iOS Safari now see an in-app install prompt with clear steps for adding the Monitor to their home screen as a PWA.",
   },
 ]
 
@@ -302,7 +329,7 @@ export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
                 >
                   <div className="text-orange-500 mt-0.5 flex-shrink-0">{feature.icon}</div>
                   <p className="text-xs md:text-sm text-foreground leading-relaxed">
-                    {t(index === 0 ? "releaseNotes.currentFeatures.hostUpdate" : "releaseNotes.currentFeatures.mobileInstall")}
+                    {t(feature.key)}
                   </p>
                 </div>
               ))}

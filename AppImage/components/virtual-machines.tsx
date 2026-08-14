@@ -9,7 +9,7 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Pencil, Trash2, Check, AlertTriangle } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Pencil, Trash2, Check, AlertTriangle, AlertCircle } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
 import { Switch } from "./ui/switch"
@@ -684,11 +684,30 @@ export function VirtualMachines() {
   // revalidation cheap.
   const vmModalCacheRef = useRef({
     details: new Map<number, any>(),
-    backups: new Map<number, VMBackup[]>(),
+    // Backups carry a `fetchedAt` millisecond timestamp alongside the
+    // payload so `fetchVmBackups` can decide whether to add `?fresh=1`
+    // on the wire. The backend cache is indefinite; the 6-hour gate
+    // lives here on the client, matching the operator-facing rule
+    // ("scheduled/cron backups can appear anywhere in the day, but a
+    // 6-hour visibility lag is acceptable"). If a modal reopens
+    // within 6 h of the last fetch, no re-scan on the server.
+    backups: new Map<number, { backups: VMBackup[]; fetchedAt: number }>(),
     // NOTE: apps payload lives in the shared module `lxc-apps-cache`
     // (dedup between this parent and LxcAppPanel — see fetchLxcApps).
     schedule: new Map<number, any>(),
-    mountPoints: new Map<number, { mount_points: LxcMountPoint[]; ad_hoc: LxcMountPoint[] }>(),
+    // Only the static half of mount-points goes here. Runtime
+    // (capacity/health/ad-hoc) is intentionally NOT cached — see
+    // `mountPointsRuntime` state + `fetchMountPoints` for the
+    // always-fresh side.
+    mountPoints: new Map<number, { mount_points: LxcMountPoint[] }>(),
+    // Firewall log is on-demand ONLY — do NOT seed it from the bulk
+    // modal-cache endpoint or from any prewarmer. The log is a live
+    // stream (new entries flow with every packet the firewall drops)
+    // so cached data has no value beyond the current session; most
+    // users never open the Firewall tab, so pre-scanning would waste
+    // pvesh cycles for nothing. This Map fills only when
+    // `fetchFirewallLog` runs (tab click or Refresh button) and
+    // survives modal reopens within the same page load.
     firewall: new Map<number, any>(),
   })
   const [controlLoading, setControlLoading] = useState(false)
@@ -702,6 +721,21 @@ export function VirtualMachines() {
   } | null>(null)
   const [confirmDestructiveTyped, setConfirmDestructiveTyped] = useState("")
   const [detailsLoading, setDetailsLoading] = useState(false)
+  // Post-apply state for the Updates tab. When the script terminal
+  // closes, the tab enters a "Comprobando resultado…" state until
+  // a fresh /api/vms poll delivers the new update_check counts;
+  // then it flashes a short success/warning banner. Prevents the
+  // confusing window where stale "40 pending" numbers are still on
+  // screen right after the user just ran the updater.
+  //   updatesRefreshing → shows a discreet spinner in the tab
+  //   updatesResult    → { count, applied } drives the banner
+  //   updatesBaselineCount → snapshot of `count` at the moment the
+  //     apply started; the useEffect below considers the SWR poll
+  //     "settled" when the observed count differs from this baseline
+  //     (or after a 15 s safety timeout).
+  const [updatesRefreshing, setUpdatesRefreshing] = useState(false)
+  const [updatesResult, setUpdatesResult] = useState<{ pendingAfter: number; appliedCount: number } | null>(null)
+  const [updatesBaselineCount, setUpdatesBaselineCount] = useState<number | null>(null)
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [terminalVmid, setTerminalVmid] = useState<number | null>(null)
   const [terminalVmName, setTerminalVmName] = useState<string>("")
@@ -750,6 +784,13 @@ export function VirtualMachines() {
   const [mountPoints, setMountPoints] = useState<LxcMountPoint[]>([])
   const [adHocMounts, setAdHocMounts] = useState<LxcMountPoint[]>([])
   const [loadingMounts, setLoadingMounts] = useState(false)
+  // Runtime enrichment keyed by target — fetched fresh every open
+  // (never cached). `mountPoints` cards read this to fill in usage
+  // bars, reachability and runtime fstype without blocking their
+  // initial render. Null while the runtime fetch is in flight; the
+  // static cards still render (paths, types, storage origin) and
+  // reveal usage/health when the fetch resolves.
+  const [mountPointsRuntime, setMountPointsRuntime] = useState<Record<string, Partial<LxcMountPoint>> | null>(null)
   
   // Detect standalone mode (webapp vs browser)
   const [isStandalone, setIsStandalone] = useState(false)
@@ -858,6 +899,48 @@ export function VirtualMachines() {
     setSelectedVM(updated)
   }, [vmData])
 
+  // Settle the Updates-tab "Comprobando resultado…" state as soon as
+  // the /api/vms poll delivers a post-apply count that differs from
+  // the baseline captured when the terminal closed. Also drops the
+  // spinner after 15 s of no observed change (backend hook already
+  // force-refreshed managed_installs, so a still-equal count at that
+  // point means either everything was a no-op or the scan hasn't
+  // finished — either way the user shouldn't keep staring at a
+  // loader). Sets `updatesResult` for the transient banner: green if
+  // count is now 0, amber if some packages remain.
+  useEffect(() => {
+    if (!updatesRefreshing) return
+    if (!selectedVM) return
+    const currentCount = selectedVM.update_check?.count ?? 0
+    // A change from baseline (or landing at 0) means the fresh
+    // post-apply snapshot is in.
+    if (updatesBaselineCount !== null && currentCount !== updatesBaselineCount) {
+      const applied = Math.max(0, updatesBaselineCount - currentCount)
+      setUpdatesResult({ pendingAfter: currentCount, appliedCount: applied })
+      setUpdatesRefreshing(false)
+      setUpdatesBaselineCount(null)
+      return
+    }
+    // Safety timeout — never leave the spinner spinning forever.
+    const safety = setTimeout(() => {
+      setUpdatesResult({
+        pendingAfter: currentCount,
+        appliedCount: Math.max(0, (updatesBaselineCount ?? 0) - currentCount),
+      })
+      setUpdatesRefreshing(false)
+      setUpdatesBaselineCount(null)
+    }, 15000)
+    return () => clearTimeout(safety)
+  }, [selectedVM, updatesRefreshing, updatesBaselineCount])
+
+  // Auto-dismiss the post-apply banner after 6 s so it doesn't
+  // clutter the tab forever.
+  useEffect(() => {
+    if (!updatesResult) return
+    const t = setTimeout(() => setUpdatesResult(null), 6000)
+    return () => clearTimeout(t)
+  }, [updatesResult])
+
   const handleVMClick = async (vm: VMData) => {
     setSelectedVM(vm)
     setCurrentView("main")
@@ -880,9 +963,16 @@ export function VirtualMachines() {
     const seedBackups = cache.backups.get(vm.vmid)
     const seedMounts = cache.mountPoints.get(vm.vmid)
     setVMDetails(seedDetails ?? null)
-    setVmBackups(seedBackups ?? [])
+    setVmBackups(seedBackups?.backups ?? [])
     setMountPoints(seedMounts?.mount_points ?? [])
-    setAdHocMounts(seedMounts?.ad_hoc ?? [])
+    // Ad-hoc mounts only come from the runtime fetch — never seeded.
+    // Reset to empty on each modal open; if the CT has any, they
+    // appear as soon as the runtime response arrives.
+    setAdHocMounts([])
+    // Runtime enrichment resets too — we never carry it across opens
+    // because usage/reachability go stale within seconds. Fills in
+    // when `fetchMountPoints` runtime response resolves.
+    setMountPointsRuntime(null)
     setDetailsLoading(!seedDetails)
     setLoadingBackups(!seedBackups)
     if (vm.type === "lxc") setLoadingMounts(!seedMounts)
@@ -977,7 +1067,9 @@ export function VirtualMachines() {
         const cache = vmModalCacheRef.current
         for (const g of payload.guests) {
           if (g.details) cache.details.set(g.vmid, g.details)
-          if (g.backups?.backups) cache.backups.set(g.vmid, g.backups.backups)
+          if (g.backups?.backups) {
+            cache.backups.set(g.vmid, { backups: g.backups.backups, fetchedAt: Date.now() })
+          }
           if (g.type === "lxc") {
             if (g.apps) {
               // Route lxc apps through the shared module so
@@ -988,9 +1080,11 @@ export function VirtualMachines() {
               cache.schedule.set(g.vmid, g.schedule)
             }
             if (g.mount_points?.ok) {
+              // Only the static half now — ad_hoc + runtime come
+              // from the always-fresh /mount-points/runtime endpoint
+              // and are not seeded from the bulk payload.
               cache.mountPoints.set(g.vmid, {
                 mount_points: g.mount_points.mount_points || [],
-                ad_hoc: g.mount_points.ad_hoc || [],
               })
             }
           }
@@ -1005,27 +1099,54 @@ export function VirtualMachines() {
   }, [vmidsKey])
 
   const fetchMountPoints = async (vmid: number) => {
-    setLoadingMounts(true)
+    // Two fetches in parallel:
+    //   1) STATIC — configured mp entries + PVE classification. Backed
+    //      by the indefinite backend cache; cache-hit returns in ~5 ms
+    //      after the first load. Seeds the cards' identity + paths.
+    //   2) RUNTIME — `df` capacity, `stat` reachability, ad-hoc
+    //      NFS/CIFS mounts done inside the CT. Never cached — always
+    //      hits `df`/`stat` fresh so the operator sees the live state
+    //      at click time. Takes 1-3s on a CT with many binds, but the
+    //      cards are already visible from the static payload so the
+    //      user perceives no lag.
+    const hasSeed = mountPoints.length > 0
+    if (!hasSeed) setLoadingMounts(true)
     try {
-      const response = await fetchApi<{
-        ok: boolean
-        running: boolean
-        mount_points: LxcMountPoint[]
-        ad_hoc: LxcMountPoint[]
-      }>(`/api/lxc/${vmid}/mount-points`)
-      if (response?.ok) {
-        const mp = response.mount_points || []
-        const adhoc = response.ad_hoc || []
+      const [staticResp, runtimeResp] = await Promise.all([
+        fetchApi<{
+          ok: boolean
+          mount_points: LxcMountPoint[]
+        }>(`/api/lxc/${vmid}/mount-points`).catch((e) => {
+          console.error("Error fetching static mount points:", e)
+          return null
+        }),
+        fetchApi<{
+          ok: boolean
+          running: boolean
+          runtime: Record<string, Partial<LxcMountPoint>>
+          ad_hoc: LxcMountPoint[]
+        }>(`/api/lxc/${vmid}/mount-points/runtime`).catch((e) => {
+          console.error("Error fetching runtime mount points:", e)
+          return null
+        }),
+      ])
+      if (staticResp?.ok) {
+        const mp = staticResp.mount_points || []
         setMountPoints(mp)
-        setAdHocMounts(adhoc)
-        vmModalCacheRef.current.mountPoints.set(vmid, { mount_points: mp, ad_hoc: adhoc })
-      } else {
+        vmModalCacheRef.current.mountPoints.set(vmid, { mount_points: mp })
+      } else if (!hasSeed) {
         setMountPoints([])
+      }
+      if (runtimeResp?.ok) {
+        setMountPointsRuntime(runtimeResp.runtime || {})
+        setAdHocMounts(runtimeResp.ad_hoc || [])
+      } else {
+        setMountPointsRuntime({})
         setAdHocMounts([])
       }
     } catch (error) {
       console.error("Error fetching LXC mount points:", error)
-      setMountPoints([])
+      if (!hasSeed) setMountPoints([])
       setAdHocMounts([])
     } finally {
       setLoadingMounts(false)
@@ -1056,18 +1177,41 @@ export function VirtualMachines() {
   }
 
   const fetchVmBackups = async (vmid: number) => {
-    setLoadingBackups(true)
+    // Stale-while-revalidate with a 6-hour freshness gate.
+    //
+    // 1. If we already have backups (bulk hydration or a previous
+    //    open), show them IMMEDIATELY — no spinner. React diffs by
+    //    volid so the list never blanks; new backups slide in at
+    //    the top when the fresh payload arrives (sorted newest-first
+    //    server-side).
+    // 2. If the local cache is older than 6 h, add `?fresh=1` on
+    //    the wire so the server bypasses its indefinite cache and
+    //    re-scans every storage. Otherwise the server hands back
+    //    the cached snapshot instantly. This is the operator's
+    //    accepted lag for out-of-band backups (cron / scheduled /
+    //    PBS retention) that don't invalidate our cache.
+    // 3. Loading spinner only on the true first load.
+    const GATE_MS = 6 * 60 * 60 * 1000
+    const seed = vmModalCacheRef.current.backups.get(vmid)
+    const isStale = !seed || (Date.now() - seed.fetchedAt) > GATE_MS
+    if (!seed) setLoadingBackups(true)
     try {
-      const response = await fetchApi<{ backups?: VMBackup[] }>(`/api/vms/${vmid}/backups`)
+      const url = isStale
+        ? `/api/vms/${vmid}/backups?fresh=1`
+        : `/api/vms/${vmid}/backups`
+      const response = await fetchApi<{ backups?: VMBackup[] }>(url)
       if (response.backups) {
         setVmBackups(response.backups)
-        vmModalCacheRef.current.backups.set(vmid, response.backups)
+        vmModalCacheRef.current.backups.set(vmid, { backups: response.backups, fetchedAt: Date.now() })
       }
     } catch (error) {
       console.error("Error fetching VM backups:", error)
-      setVmBackups([])
+      // Only clear the visible list if we had nothing to show
+      // in the first place — a transient network hiccup must not
+      // wipe the stale-but-useful view the user is looking at.
+      if (!seed) setVmBackups([])
     } finally {
-      setLoadingBackups(false)
+      if (!seed) setLoadingBackups(false)
     }
   }
 
@@ -1321,7 +1465,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const [applyOpen, setApplyOpen] = useState(false)
   const [applyVmid, setApplyVmid] = useState<number | null>(null)
   const [applyTarget, setApplyTarget] = useState<"os" | "app" | "both">("os")
-  const [applyBackup, setApplyBackup] = useState(true)
+  // Opt-in, not opt-out. Snapshot backups take time and disk, and
+  // for most routine apt updates the user doesn't want to trigger
+  // a vzdump — should be a deliberate choice. If a persisted schedule
+  // has `backup: true` (Options card), that value overrides this
+  // default when the modal opens.
+  const [applyBackup, setApplyBackup] = useState(false)
   const [applyBackupStorage, setApplyBackupStorage] = useState<string>("")
   const [applyRestart, setApplyRestart] = useState(false)
   const [applyStartedAt, setApplyStartedAt] = useState<number>(0)
@@ -1665,12 +1814,23 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     c.details.delete(applyVmid)
     c.schedule.delete(applyVmid)
     invalidateLxcApps(applyVmid)
-    // Backend's POST /applied handler already force-refreshes the
-    // managed_installs snapshot, so the next natural /api/vms poll
-    // (every 2.5s via SWR refreshInterval) picks up the post-update
-    // counts on its own. We deliberately avoid mutate() or explicit
-    // fetch here — those trigger re-render cascades that can close
-    // the parent modal.
+    // Enter the "Comprobando resultado…" state on the Updates tab.
+    // Baseline snapshot lets a downstream useEffect detect when the
+    // SWR poll actually delivers the post-apply counts (as opposed
+    // to seeing the same stale count still in flight). Was safe
+    // before to skip this because the parent modal closed with the
+    // terminal; now that we keep it open on purpose, the user would
+    // otherwise be staring at "40 pending" right after applying.
+    setUpdatesBaselineCount(selectedVM?.update_check?.count ?? 0)
+    setUpdatesResult(null)
+    setUpdatesRefreshing(true)
+    // Force an immediate SWR revalidation instead of waiting up to
+    // 2.5 s for the natural poll — the sooner the new counts land,
+    // the sooner the banner appears. mutate() is safe now: the
+    // parent Dialog's onOpenChange guard swallows any spurious close
+    // events triggered by re-render cascades (see the Dialog guard
+    // in the JSX below).
+    void mutate()
   }
 
   // Render the "📦 N updates / 🛡 N security" badge next to an LXC in
@@ -2014,13 +2174,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     <span className="text-lg font-medium ml-1 text-muted-foreground">/ {total}</span>
                   </div>
                   <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                    {running} {t("vmLxc.running")}
+                    {t("overview.runningCount", { count: running })}
                   </Badge>
                 </div>
                 <div className="mt-3 flex gap-1 flex-wrap">
                   {vms > 0 && (
                     <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                      {vms} {t("vmLxc.vms")}
+                      {t("overview.vmsCount", { count: vms })}
                     </Badge>
                   )}
                   {lxc > 0 && (
@@ -2028,7 +2188,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   )}
                   {stopped > 0 && (
                     <Badge variant="outline" className="bg-muted text-muted-foreground border-border">
-                      {stopped} {t("vmLxc.stopped")}
+                      {t("overview.stoppedCount", { count: stopped })}
                     </Badge>
                   )}
                 </div>
@@ -2498,7 +2658,18 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
       <Dialog
         open={!!selectedVM}
-        onOpenChange={() => {
+        onOpenChange={(open) => {
+          // Radix fires `onOpenChange(false)` for backdrop clicks,
+          // ESC keys AND — critically on mobile — pointer events
+          // that bubbled from a nested Dialog (script terminal,
+          // LXC terminal). When any of those children is on top
+          // we swallow the parent-close request; closing the child
+          // must not chain-close the LXC/VM modal underneath.
+          // Reported after applying an update from a phone: the
+          // user tapped the terminal's Close button and got kicked
+          // all the way back to the guest list.
+          if (open) return
+          if (applyOpen || terminalOpen) return
           setSelectedVM(null)
           setVMDetails(null)
           setCurrentView("main")
@@ -2512,11 +2683,23 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       >
         <DialogContent
           className={`max-w-4xl flex flex-col p-0 overflow-hidden ${
-            isStandalone 
-              ? "h-[95vh] sm:h-[90vh]" 
+            isStandalone
+              ? "h-[95vh] sm:h-[90vh]"
               : "h-[85vh] sm:h-[85vh] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)]"
           }`}
           key={selectedVM?.vmid || "no-vm"}
+          // Belt and braces: while a nested terminal Dialog is on
+          // top, ignore backdrop clicks and ESC entirely on THIS
+          // parent Dialog. onOpenChange above already guards against
+          // the child-bubble path; these two guards close the
+          // remaining vectors (mobile tap slop reaching the parent's
+          // scrim, ESC not consumed by the child) at the DOM level.
+          onInteractOutside={(e) => {
+            if (applyOpen || terminalOpen) e.preventDefault()
+          }}
+          onEscapeKeyDown={(e) => {
+            if (applyOpen || terminalOpen) e.preventDefault()
+          }}
         >
           {currentView === "main" ? (
             <>
@@ -3696,6 +3879,54 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
                 {activeModalTab === "updates" && selectedVM?.type === "lxc" && (
                   <div className="space-y-4" key={`updates-${selectedVM.vmid}`}>
+                    {/* Post-apply feedback strip.
+                          Refreshing: transient loader while the /api/vms
+                            poll delivers the new update_check counts.
+                          Result: green banner if 0 pending, amber if any
+                            packages didn't apply. Auto-dismisses after 6s
+                            so the tab returns to its normal look.
+                        The rest of the tab (branches 0/1/2 below) still
+                        renders during both states so the user retains the
+                        context — the strip sits on top as a header, it
+                        doesn't replace the content. */}
+                    {updatesRefreshing && (
+                      <Card className="border-blue-500/30 bg-blue-500/5">
+                        <CardContent className="p-3 flex items-center gap-2 text-sm">
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
+                          <span className="text-blue-300">{t("vmLxc.updates.postApplyChecking")}</span>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {!updatesRefreshing && updatesResult && updatesResult.pendingAfter === 0 && (
+                      <Card className="border-emerald-500/30 bg-emerald-500/5">
+                        <CardContent className="p-3 flex items-center gap-2 text-sm">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                          <span className="text-emerald-300">
+                            {updatesResult.appliedCount > 0
+                              ? t("vmLxc.updates.postApplyAllOk", { count: updatesResult.appliedCount })
+                              : t("vmLxc.updates.postApplyNothingPending")}
+                          </span>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {!updatesRefreshing && updatesResult && updatesResult.pendingAfter > 0 && (
+                      <Card className="border-amber-500/30 bg-amber-500/5">
+                        <CardContent className="p-3 flex items-start gap-2 text-sm">
+                          <AlertCircle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+                          <div className="space-y-0.5">
+                            <div className="text-amber-300 font-medium">
+                              {t("vmLxc.updates.postApplyPartial", { pending: updatesResult.pendingAfter })}
+                            </div>
+                            {updatesResult.appliedCount > 0 && (
+                              <div className="text-amber-300/80 text-xs">
+                                {t("vmLxc.updates.postApplyPartialSubline", { applied: updatesResult.appliedCount })}
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
                     {/* Branch 0 — ProxMenux-managed OCI app (Secure Gateway).
                         Same state + Update button as the App tab so
                         the two panels never disagree, and either
@@ -4024,7 +4255,6 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           />
                                           <span className="text-xs text-muted-foreground leading-relaxed">
                                             {t("vmLxc.updates.installedByHelperPrefix")} <span className="text-foreground/80">{t("vmLxc.updates.helperScriptsName")}</span>
-                                            {" "}{t("vmLxc.updates.helperUpdatesRun")}
                                           </span>
                                         </div>
                                       )}
@@ -4708,9 +4938,18 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                       </div>
                     ) : (
                       <>
-                        {mountPoints.map((mp) => (
-                          <MountPointCard key={mp.mp_index || mp.target} mp={mp} />
-                        ))}
+                        {/* Merge the fresh runtime enrichment onto
+                            each static card. If runtime isn't in yet
+                            (fetch still in flight), the card renders
+                            with paths/type/classification only and
+                            the usage/health fields appear when the
+                            runtime response resolves — no flash, no
+                            re-mount because the key is stable. */}
+                        {mountPoints.map((mp) => {
+                          const rt = mountPointsRuntime?.[mp.target] as Partial<LxcMountPoint> | undefined
+                          const merged = rt ? { ...mp, ...rt } : mp
+                          return <MountPointCard key={mp.mp_index || mp.target} mp={merged} />
+                        })}
                         {adHocMounts.length > 0 && (
                           <>
                             <div className="text-sm font-semibold text-muted-foreground pt-2 border-t border-border">

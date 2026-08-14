@@ -333,6 +333,13 @@ export function Settings() {
   } | null>(null)
   const [networkUnitSettings, setNetworkUnitSettings] = useState<"Bytes" | "Bits">("Bytes")
   const [loadingUnitSettings, setLoadingUnitSettings] = useState(true)
+  // Edit-mode gating for Network Units. Matches the pattern used
+  // by Health Monitor / Notifications / LxcUpdateDetection so every
+  // settings card behaves the same way: view by default, edit only
+  // after the user explicitly opens the pencil.
+  const [unitsEditMode, setUnitsEditMode] = useState(false)
+  const [pendingUnit, setPendingUnit] = useState<"Bytes" | "Bits" | null>(null)
+  const [savedUnit, setSavedUnit] = useState(false)
   // Code viewer modal state. `version` is the version the user has
   // installed (read from installed_tools.json); `availableVersion` is
   // what the on-disk script declares — they differ when an update is
@@ -363,11 +370,23 @@ export function Settings() {
   
   // Remote Storage Exclusions
   const [remoteStorages, setRemoteStorages] = useState<RemoteStorage[]>([])
+  const [storagesEditMode, setStoragesEditMode] = useState(false)
+  // Pending toggle values keyed by storage.name. A row is only in
+  // the map if the user flipped it while in edit mode; on Save we
+  // walk the map and push each change to the backend, on Cancel we
+  // drop it.
+  const [pendingStorages, setPendingStorages] = useState<Map<string, { exclude_health: boolean; exclude_notifications: boolean }>>(new Map())
+  const [savingStorages, setSavingStorages] = useState(false)
+  const [savedStorages, setSavedStorages] = useState(false)
   const [loadingStorages, setLoadingStorages] = useState(true)
   const [savingStorage, setSavingStorage] = useState<string | null>(null)
   
   // Network Interface Exclusions
   const [networkInterfaces, setNetworkInterfaces] = useState<NetworkInterface[]>([])
+  const [interfacesEditMode, setInterfacesEditMode] = useState(false)
+  const [pendingInterfaces, setPendingInterfaces] = useState<Map<string, { exclude_health: boolean; exclude_notifications: boolean }>>(new Map())
+  const [savingInterfaces, setSavingInterfaces] = useState(false)
+  const [savedInterfaces, setSavedInterfaces] = useState(false)
   const [loadingInterfaces, setLoadingInterfaces] = useState(true)
   const [savingInterface, setSavingInterface] = useState<string | null>(null)
 
@@ -648,6 +667,21 @@ export function Settings() {
     }))
   }
 
+  const handleCancelUnitsEdit = () => {
+    setPendingUnit(null)
+    setUnitsEditMode(false)
+  }
+
+  const handleSaveUnits = () => {
+    if (pendingUnit && pendingUnit !== networkUnitSettings) {
+      changeNetworkUnit(pendingUnit)
+    }
+    setPendingUnit(null)
+    setUnitsEditMode(false)
+    setSavedUnit(true)
+    setTimeout(() => setSavedUnit(false), 2000)
+  }
+
   const getUnitsSettings = () => {
     const networkUnit = getNetworkUnit()
     setNetworkUnitSettings(networkUnit)
@@ -790,7 +824,62 @@ export function Settings() {
   setSavingInterface(null)
   }
   }
-  
+
+  const handleCancelStoragesEdit = () => {
+    setPendingStorages(new Map())
+    setStoragesEditMode(false)
+  }
+
+  const handleSaveStorages = async () => {
+    if (pendingStorages.size === 0) {
+      setStoragesEditMode(false)
+      return
+    }
+    setSavingStorages(true)
+    try {
+      // Sequential to keep the UI's per-row spinner meaningful and
+      // avoid hammering the backend with a burst on cards with many
+      // exclusions.
+      for (const [name, value] of pendingStorages.entries()) {
+        const s = remoteStorages.find(x => x.name === name)
+        if (!s) continue
+        await handleStorageExclusionChange(name, s.type, value.exclude_health, value.exclude_notifications)
+      }
+      setPendingStorages(new Map())
+      setStoragesEditMode(false)
+      setSavedStorages(true)
+      setTimeout(() => setSavedStorages(false), 2000)
+    } finally {
+      setSavingStorages(false)
+    }
+  }
+
+  const handleCancelInterfacesEdit = () => {
+    setPendingInterfaces(new Map())
+    setInterfacesEditMode(false)
+  }
+
+  const handleSaveInterfaces = async () => {
+    if (pendingInterfaces.size === 0) {
+      setInterfacesEditMode(false)
+      return
+    }
+    setSavingInterfaces(true)
+    try {
+      for (const [name, value] of pendingInterfaces.entries()) {
+        const iface = networkInterfaces.find(x => x.name === name)
+        if (!iface) continue
+        await handleInterfaceExclusionChange(name, iface.type, value.exclude_health, value.exclude_notifications)
+      }
+      setPendingInterfaces(new Map())
+      setInterfacesEditMode(false)
+      setSavedInterfaces(true)
+      setTimeout(() => setSavedInterfaces(false), 2000)
+    } finally {
+      setSavingInterfaces(false)
+    }
+  }
+
   const getSelectValue = (hours: number, key: string): string => {
     if (hours === -1) return "-1"
     const preset = SUPPRESSION_OPTIONS.find(o => o.value === String(hours))
@@ -937,7 +1026,14 @@ export function Settings() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="text-sm font-medium text-foreground">{t("settings.interfaceLanguage.label")}</div>
-              <p className="text-xs text-muted-foreground mt-1">{t("settings.interfaceLanguage.fallbackNote")}</p>
+              {/* Only render the note when the current locale actually has
+                  one. Human-curated locales (en/es/sv/sk) leave the value
+                  empty, so the visible line disappears entirely; the
+                  auto-translated locales (de/fr/it/pt) surface the
+                  Google Translate disclaimer. */}
+              {t("settings.interfaceLanguage.fallbackNote") && (
+                <p className="text-xs text-muted-foreground mt-1">{t("settings.interfaceLanguage.fallbackNote")}</p>
+              )}
             </div>
             <Select value={language} onValueChange={(value) => setLanguage(value as LanguageCode)}>
               <SelectTrigger className="w-full sm:w-64">
@@ -958,13 +1054,57 @@ export function Settings() {
       {/* Network Units Settings */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <Ruler className="h-5 w-5 text-green-500" />
-            <CardTitle>{t("settings.networkUnits.title")}</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Ruler className="h-5 w-5 text-green-500" />
+              <CardTitle>{t("settings.networkUnits.title")}</CardTitle>
+            </div>
+            {!loadingUnitSettings && (
+              <div className="flex items-center gap-2">
+                {savedUnit && (
+                  <span className="flex items-center gap-1 text-xs text-green-500">
+                    <Check className="h-3.5 w-3.5" />
+                    {t("status.saved")}
+                  </span>
+                )}
+                {unitsEditMode ? (
+                  <>
+                    <button
+                      className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors text-muted-foreground"
+                      onClick={handleCancelUnitsEdit}
+                    >
+                      {t("actions.cancel")}
+                    </button>
+                    <button
+                      className="h-7 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                      onClick={handleSaveUnits}
+                      disabled={pendingUnit === null || pendingUnit === networkUnitSettings}
+                    >
+                      <Check className="h-3 w-3" />
+                      {t("actions.save")}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5"
+                    onClick={() => setUnitsEditMode(true)}
+                  >
+                    <Settings2 className="h-3 w-3" />
+                    {t("actions.edit")}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           <CardDescription>{t("settings.networkUnits.description")}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent
+          className={
+            unitsEditMode
+              ? "bg-accent [&_input]:bg-background [&_textarea]:bg-background [&_[role=combobox]]:bg-background"
+              : undefined
+          }
+        >
           {loadingUnitSettings ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin h-8 w-8 border-4 border-green-500 border-t-transparent rounded-full" />
@@ -972,8 +1112,12 @@ export function Settings() {
           ) : (
             <div className="text-foreground flex items-center justify-between">
               <div className="flex items-center">{t("settings.networkUnits.label")}</div>
-              <Select value={networkUnitSettings} onValueChange={changeNetworkUnit}>
-                <SelectTrigger className="w-28 h-8 text-xs">
+              <Select
+                value={pendingUnit ?? networkUnitSettings}
+                onValueChange={(v) => setPendingUnit(v as "Bytes" | "Bits")}
+                disabled={!unitsEditMode}
+              >
+                <SelectTrigger className={`w-28 h-8 text-xs ${!unitsEditMode ? "opacity-60" : ""}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1040,7 +1184,13 @@ export function Settings() {
             {t("settings.healthMonitor.description")}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent
+          className={
+            healthEditMode
+              ? "bg-accent [&_input]:bg-background [&_textarea]:bg-background [&_[role=combobox]]:bg-background"
+              : undefined
+          }
+        >
           {loadingHealth ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin h-8 w-8 border-4 border-red-500 border-t-transparent rounded-full" />
@@ -1274,15 +1424,64 @@ export function Settings() {
       {/* Remote Storage Exclusions */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <Database className="h-5 w-5 text-purple-500" />
-            <CardTitle>{t("settings.remoteStorage.title")}</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Database className="h-5 w-5 text-purple-500" />
+              <CardTitle>{t("settings.remoteStorage.title")}</CardTitle>
+            </div>
+            {!loadingStorages && remoteStorages.length > 0 && (
+              <div className="flex items-center gap-2">
+                {savedStorages && (
+                  <span className="flex items-center gap-1 text-xs text-green-500">
+                    <Check className="h-3.5 w-3.5" />
+                    {t("status.saved")}
+                  </span>
+                )}
+                {storagesEditMode ? (
+                  <>
+                    <button
+                      className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors text-muted-foreground"
+                      onClick={handleCancelStoragesEdit}
+                      disabled={savingStorages}
+                    >
+                      {t("actions.cancel")}
+                    </button>
+                    <button
+                      className="h-7 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                      onClick={handleSaveStorages}
+                      disabled={savingStorages || pendingStorages.size === 0}
+                    >
+                      {savingStorages ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Check className="h-3 w-3" />
+                      )}
+                      {t("actions.save")}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5"
+                    onClick={() => setStoragesEditMode(true)}
+                  >
+                    <Settings2 className="h-3 w-3" />
+                    {t("actions.edit")}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           <CardDescription>
             {t("settings.remoteStorage.description")}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent
+          className={
+            storagesEditMode
+              ? "bg-accent [&_input]:bg-background [&_textarea]:bg-background [&_[role=combobox]]:bg-background"
+              : undefined
+          }
+        >
           {loadingStorages ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin h-8 w-8 border-4 border-purple-500 border-t-transparent rounded-full" />
@@ -1334,43 +1533,54 @@ export function Settings() {
                         </div>
                       </div>
                       
-                      <div className="flex items-center justify-center w-20">
-                        {isSaving ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        ) : (
-                          <Switch
-                            checked={!storage.exclude_health}
-                            onCheckedChange={(checked) => {
-                              handleStorageExclusionChange(
-                                storage.name,
-                                storage.type,
-                                !checked,
-                                storage.exclude_notifications
-                              )
-                            }}
-                            className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-input border border-border"
-                          />
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center justify-center w-20">
-                        {isSaving ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        ) : (
-                          <Switch
-                            checked={!storage.exclude_notifications}
-                            onCheckedChange={(checked) => {
-                              handleStorageExclusionChange(
-                                storage.name,
-                                storage.type,
-                                storage.exclude_health,
-                                !checked
-                              )
-                            }}
-                            className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-input border border-border"
-                          />
-                        )}
-                      </div>
+                      {(() => {
+                        // Resolve the visible checked state from the pending
+                        // map first (unsaved local change) or fall back to
+                        // the storage's persisted value.
+                        const p = pendingStorages.get(storage.name)
+                        const excludeHealth = p ? p.exclude_health : storage.exclude_health
+                        const excludeNotif  = p ? p.exclude_notifications : storage.exclude_notifications
+                        return (
+                          <>
+                            <div className="flex items-center justify-center w-20">
+                              {isSaving ? (
+                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                              ) : (
+                                <Switch
+                                  checked={!excludeHealth}
+                                  disabled={!storagesEditMode}
+                                  onCheckedChange={(checked) => {
+                                    setPendingStorages(m => {
+                                      const next = new Map(m)
+                                      next.set(storage.name, { exclude_health: !checked, exclude_notifications: excludeNotif })
+                                      return next
+                                    })
+                                  }}
+                                  className={`data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-input border border-border ${!storagesEditMode ? "opacity-60" : ""}`}
+                                />
+                              )}
+                            </div>
+                            <div className="flex items-center justify-center w-20">
+                              {isSaving ? (
+                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                              ) : (
+                                <Switch
+                                  checked={!excludeNotif}
+                                  disabled={!storagesEditMode}
+                                  onCheckedChange={(checked) => {
+                                    setPendingStorages(m => {
+                                      const next = new Map(m)
+                                      next.set(storage.name, { exclude_health: excludeHealth, exclude_notifications: !checked })
+                                      return next
+                                    })
+                                  }}
+                                  className={`data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-input border border-border ${!storagesEditMode ? "opacity-60" : ""}`}
+                                />
+                              )}
+                            </div>
+                          </>
+                        )
+                      })()}
                     </div>
                   )
                 })}
@@ -1393,15 +1603,64 @@ export function Settings() {
       {/* Network Interface Exclusions */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <Network className="h-5 w-5 text-blue-500" />
-            <CardTitle>{t("settings.networkInterfaces.title")}</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Network className="h-5 w-5 text-blue-500" />
+              <CardTitle>{t("settings.networkInterfaces.title")}</CardTitle>
+            </div>
+            {!loadingInterfaces && networkInterfaces.length > 0 && (
+              <div className="flex items-center gap-2">
+                {savedInterfaces && (
+                  <span className="flex items-center gap-1 text-xs text-green-500">
+                    <Check className="h-3.5 w-3.5" />
+                    {t("status.saved")}
+                  </span>
+                )}
+                {interfacesEditMode ? (
+                  <>
+                    <button
+                      className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors text-muted-foreground"
+                      onClick={handleCancelInterfacesEdit}
+                      disabled={savingInterfaces}
+                    >
+                      {t("actions.cancel")}
+                    </button>
+                    <button
+                      className="h-7 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                      onClick={handleSaveInterfaces}
+                      disabled={savingInterfaces || pendingInterfaces.size === 0}
+                    >
+                      {savingInterfaces ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Check className="h-3 w-3" />
+                      )}
+                      {t("actions.save")}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5"
+                    onClick={() => setInterfacesEditMode(true)}
+                  >
+                    <Settings2 className="h-3 w-3" />
+                    {t("actions.edit")}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           <CardDescription>
             {t("settings.networkInterfaces.description")}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent
+          className={
+            interfacesEditMode
+              ? "bg-accent [&_input]:bg-background [&_textarea]:bg-background [&_[role=combobox]]:bg-background"
+              : undefined
+          }
+        >
           {loadingInterfaces ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full" />
@@ -1458,45 +1717,54 @@ export function Settings() {
                         </div>
                       </div>
                       
-                      {/* Health toggle */}
-                      <div className="flex justify-center w-20">
-                        {isSaving ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        ) : (
-                          <Switch
-                            checked={!iface.exclude_health}
-                            onCheckedChange={(checked) => {
-                              handleInterfaceExclusionChange(
-                                iface.name,
-                                iface.type,
-                                !checked,
-                                iface.exclude_notifications
-                              )
-                            }}
-                            className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-input border border-border"
-                          />
-                        )}
-                      </div>
-                      
-                      {/* Notifications toggle */}
-                      <div className="flex justify-center w-20">
-                        {isSaving ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        ) : (
-                          <Switch
-                            checked={!iface.exclude_notifications}
-                            onCheckedChange={(checked) => {
-                              handleInterfaceExclusionChange(
-                                iface.name,
-                                iface.type,
-                                iface.exclude_health,
-                                !checked
-                              )
-                            }}
-                            className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-input border border-border"
-                          />
-                        )}
-                      </div>
+                      {(() => {
+                        const p = pendingInterfaces.get(iface.name)
+                        const excludeHealth = p ? p.exclude_health : iface.exclude_health
+                        const excludeNotif  = p ? p.exclude_notifications : iface.exclude_notifications
+                        return (
+                          <>
+                            {/* Health toggle */}
+                            <div className="flex justify-center w-20">
+                              {isSaving ? (
+                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                              ) : (
+                                <Switch
+                                  checked={!excludeHealth}
+                                  disabled={!interfacesEditMode}
+                                  onCheckedChange={(checked) => {
+                                    setPendingInterfaces(m => {
+                                      const next = new Map(m)
+                                      next.set(iface.name, { exclude_health: !checked, exclude_notifications: excludeNotif })
+                                      return next
+                                    })
+                                  }}
+                                  className={`data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-input border border-border ${!interfacesEditMode ? "opacity-60" : ""}`}
+                                />
+                              )}
+                            </div>
+
+                            {/* Notifications toggle */}
+                            <div className="flex justify-center w-20">
+                              {isSaving ? (
+                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                              ) : (
+                                <Switch
+                                  checked={!excludeNotif}
+                                  disabled={!interfacesEditMode}
+                                  onCheckedChange={(checked) => {
+                                    setPendingInterfaces(m => {
+                                      const next = new Map(m)
+                                      next.set(iface.name, { exclude_health: excludeHealth, exclude_notifications: !checked })
+                                      return next
+                                    })
+                                  }}
+                                  className={`data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-input border border-border ${!interfacesEditMode ? "opacity-60" : ""}`}
+                                />
+                              )}
+                            </div>
+                          </>
+                        )
+                      })()}
                     </div>
                   )
                 })}

@@ -1194,8 +1194,8 @@
       "applyOsUpdate": "Använd OS-uppdatering",
       "osUpToDate": "OS uppdaterat",
       "installedByHelperPrefix": "Installerad av",
-      "helperScriptsName": "Proxmox Helper-Scripts",
-      "helperUpdatesRun": "— uppdateringar kör community-scripts helper.",
+      "helperScriptsName": "Proxmox VE Helper-Scripts",
+      "helperUpdatesRun": "Installerad av Proxmox Helper-Scripts.",
       "installedPrefix": "installerat",
       "upstreamAvailable": "version {version} tillgänglig",
       "upToDateAt": "Uppdaterad kl",
@@ -1409,14 +1409,7 @@
       "alsoDetectedContainer": "Detekteras även på denna behållare",
       "addAnotherApplication": "Lägg till ytterligare ett program",
       "doneButton": "Gjort",
-      "editButton": "Redigera",
-      "upstreamErrorTimeout": "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Översätt: Nätverkstimeout vid kontakt uppströms",
-      "upstreamErrorNetwork": "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Översätt: Nätverksfel: {detail}",
-      "upstreamErrorGeneric": "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Översätt: Uppströmskontroll misslyckades: {detail}",
-      "notificationsEnabled": "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Översätt: Uppströmsuppdateringsmeddelanden PÅ – klicka för att stänga av ljudet",
-      "notificationsMuted": "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Översätt: Uppströmsuppdateringsmeddelanden AVSTÄLLD – klicka för att aktivera",
-      "notifyUpstreamLabel": "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Översätt: Meddela mig när en ny uppströmsversion är tillgänglig",
-      "notifyUpstreamHelp": "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Översätt: Skickar `app_update_available` till de kanaler som är aktiverade i Inställningar → Aviseringar.Stäng av om den här appen inte kan uppdateras på din box."
+      "editButton": "Redigera"
     }
   },
   "settings": {
@@ -1428,9 +1421,9 @@
     },
     "interfaceLanguage": {
       "title": "Gränssnittsspråk",
-      "description": "Välj det språk som används av Monitor-instrumentpanelen. Saknade översättningar faller tillbaka till engelska.",
+      "description": "Välj språket som används av Monitor-panelen.",
       "label": "Språk på instrumentpanelen",
-      "fallbackNote": "Oöversatt text visas på engelska tills communityn fyller i den.",
+      "fallbackNote": "",
       "statusComplete": "komplett",
       "statusPartial": "partiell",
       "statusNeedsTranslation": "gemenskapsöversättning behövs"
@@ -1686,8 +1679,7 @@
         "post_install_update": "ProxMenux optimeringsuppdateringar tillgängliga",
         "secure_gateway_update_available": "Secure Gateway uppdatering tillgänglig",
         "nvidia_driver_update_available": "NVIDIA drivrutinsuppdatering tillgänglig",
-        "coral_driver_update_available": "Coral TPU drivrutinsuppdatering tillgänglig",
-        "app_update_available": "Teknisk gränssnittstext för en Proxmox-hanteringspanel.Översätt: Appuppdatering tillgänglig"
+        "coral_driver_update_available": "Coral TPU drivrutinsuppdatering tillgänglig"
       },
       "ui": {
         "quietHours": "Tysta timmar",
@@ -2995,7 +2987,13 @@
     "dontShowAgain": "Visa inte igen för den här versionen",
     "currentFeatures": {
       "hostUpdate": "Värduppdatering med ett klick från Health Monitor. Den nya knappen Uppdatera nu i Systemuppdateringar kör Proxmox-uppdateringsflödet i en instrumentpanelsterminal utan att lämna webbläsaren.",
-      "mobileInstall": "Uppmaning om installation i appen för mobil. Förstagångsbesökare på Android och iOS Safari ser nu enkla steg för att lägga till monitorn på sin startskärm som en PWA."
+      "mobileInstall": "Uppmaning om installation i appen för mobil. Förstagångsbesökare på Android och iOS Safari ser nu enkla steg för att lägga till monitorn på sin startskärm som en PWA.",
+      "pageSpeed": "",
+      "appTab": "",
+      "updatesTab": "",
+      "backupNoTimeout": "",
+      "vmDiskUsage": "",
+      "pwaInstall": ""
     }
   },
   "network": {

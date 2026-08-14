@@ -1616,11 +1616,30 @@ _vm_backups_cache: dict = {}      # vmid -> (ts, payload)
 _vm_apps_cache: dict = {}         # vmid -> (ts, payload)
 _vm_schedule_cache: dict = {}     # vmid -> (ts, payload)
 _vm_mounts_cache: dict = {}       # vmid -> (ts, payload) — LXC only
-_VM_DETAILS_TTL = 300             # config rarely changes without a user action
-_VM_BACKUPS_TTL = 120             # storage scans — a new backup is an event
-_VM_APPS_TTL = 600                # LXC apps register/unregister is rare
-_VM_SCHEDULE_TTL = 900            # persisted schedule almost never changes
-_VM_MOUNTS_TTL = 600              # mpX entries only change on manual edit
+# Effective TTL is "indefinite": these caches are refreshed only
+# by explicit event-based invalidation (`_vm_cache_invalidate` calls
+# on start/stop/reboot, add/edit/delete app, apply update, edit
+# schedule, create backup). No periodic poll — the prewarmer runs
+# once at startup and then stays quiet. The rationale is that all
+# of these payloads are backed by files (.conf / sidecar JSON /
+# storage inventory) that only change through actions the Monitor
+# either performs itself (invalidates in-line) or that require a
+# guest restart (start/stop invalidates too). Runtime data that DOES
+# change without an invalidation event lives in a different path:
+#   - Live CPU/mem/disk/network per guest → served by /api/vms (SWR
+#     poll every 2.5 s from the client, no cache here).
+#   - Firewall log → served on-demand, no cache at all.
+#   - Mount points runtime (df/stat/ad-hoc) → to be split into a
+#     separate always-fresh endpoint (Fase 5).
+#   - Backups appearing outside Monitor (cron/scheduled/retention)
+#     → client passes ?fresh=1 when its own cache is older than 6 h
+#     (Fase 4).
+_VM_CACHE_INDEFINITE = 315_360_000   # 10 years — effectively infinite
+_VM_DETAILS_TTL   = _VM_CACHE_INDEFINITE
+_VM_BACKUPS_TTL   = _VM_CACHE_INDEFINITE
+_VM_APPS_TTL      = _VM_CACHE_INDEFINITE
+_VM_SCHEDULE_TTL  = _VM_CACHE_INDEFINITE
+_VM_MOUNTS_TTL    = _VM_CACHE_INDEFINITE
 _vm_modal_cache_lock = threading.Lock()
 
 def _vm_cache_get(cache: dict, vmid: int, ttl: int):
@@ -11506,7 +11525,14 @@ def _node_metrics_prewarmer_loop():
 def _vm_modal_prewarmer_pass():
     """One full sweep of every guest's modal caches. Called both
     from the startup warm-up and from the recurring loop. Returns
-    the number of guests successfully touched."""
+    the number of guests successfully touched.
+
+    The recurring loop is deliberately cheap: for each guest and
+    each cache we check the TTL FIRST and only invoke the handler
+    when the entry is actually stale. On steady state (all caches
+    fresh) a pass is O(guests) dict reads with no request contexts
+    created, no handlers entered, no pvesh spawned — the CPU cost
+    disappears until something genuinely expires."""
     from flask import g as _flask_g
     warmed = 0
     resources = get_cached_pvesh_cluster_resources_vm() or []
@@ -11515,83 +11541,74 @@ def _vm_modal_prewarmer_pass():
         vm_type = r.get('type')  # 'qemu' or 'lxc'
         if vmid is None:
             continue
-        try:
-            with app.test_request_context(f'/api/vms/{vmid}'):
-                _flask_g._internal_call = True
-                get_vm_config(vmid)
-        except Exception as e:
-            print(f"[ProxMenux] vm-modal prewarmer details {vmid}: {e}",
-                  file=sys.stderr, flush=True)
-        try:
-            with app.test_request_context(f'/api/vms/{vmid}/backups'):
-                _flask_g._internal_call = True
-                api_vm_backups(vmid)
-        except Exception as e:
-            print(f"[ProxMenux] vm-modal prewarmer backups {vmid}: {e}",
-                  file=sys.stderr, flush=True)
+
+        endpoints = [
+            (_vm_details_cache, _VM_DETAILS_TTL, get_vm_config,
+             f'/api/vms/{vmid}', 'details'),
+            (_vm_backups_cache, _VM_BACKUPS_TTL, api_vm_backups,
+             f'/api/vms/{vmid}/backups', 'backups'),
+        ]
         if vm_type == 'lxc':
+            endpoints.extend([
+                (_vm_apps_cache, _VM_APPS_TTL, api_vm_apps_get,
+                 f'/api/vms/{vmid}/apps', 'apps'),
+                (_vm_schedule_cache, _VM_SCHEDULE_TTL, api_vm_apps_schedule,
+                 f'/api/vms/{vmid}/schedule', 'schedule'),
+                (_vm_mounts_cache, _VM_MOUNTS_TTL, api_lxc_mount_points,
+                 f'/api/lxc/{vmid}/mount-points', 'mounts'),
+            ])
+
+        did_work = False
+        for cache, ttl, handler, route, label in endpoints:
+            if _vm_cache_get(cache, vmid, ttl) is not None:
+                continue  # still fresh — skip the request-context overhead
             try:
-                with app.test_request_context(f'/api/vms/{vmid}/apps'):
+                with app.test_request_context(route):
                     _flask_g._internal_call = True
-                    api_vm_apps_get(vmid)
+                    handler(vmid)
+                did_work = True
             except Exception as e:
-                print(f"[ProxMenux] vm-modal prewarmer apps {vmid}: {e}",
-                      file=sys.stderr, flush=True)
-            try:
-                with app.test_request_context(f'/api/vms/{vmid}/schedule'):
-                    _flask_g._internal_call = True
-                    api_vm_apps_schedule(vmid)
-            except Exception as e:
-                print(f"[ProxMenux] vm-modal prewarmer schedule {vmid}: {e}",
-                      file=sys.stderr, flush=True)
-            try:
-                with app.test_request_context(f'/api/lxc/{vmid}/mount-points'):
-                    _flask_g._internal_call = True
-                    api_lxc_mount_points(vmid)
-            except Exception as e:
-                print(f"[ProxMenux] vm-modal prewarmer mounts {vmid}: {e}",
+                print(f"[ProxMenux] vm-modal prewarmer {label} {vmid}: {e}",
                       file=sys.stderr, flush=True)
         warmed += 1
-        time.sleep(0.2)  # brief breath so pvesh isn't hammered
+        if did_work:
+            time.sleep(0.2)  # breath only when we actually ran a handler
     return warmed
 
 
 def _vm_modal_prewarmer_loop():
-    """Keep the per-VM modal caches (details / backups / apps /
-    schedule) hot from the backend, so modals always open instantly
-    — even after the browser tab has been closed for a long time.
-    The old React prefetcher only ran while the page was open.
+    """One-shot warmup at service startup. Populates every per-VM
+    modal cache (details / backups / apps / schedule / mount points)
+    exactly once, then exits — no periodic refresh loop.
 
-    Design (matches user's expectation of "heavy at startup, near-
-    zero during runtime"):
-      * One full warm-up pass right after startup so every cache is
-        primed before the user opens the UI.
-      * After that, a slow refresh loop at 180 s intervals. Since
-        the underlying TTLs are 5-15 min, the vast majority of
-        these calls are cache-hits (essentially free); real work
-        only happens when a cache is about to expire.
-      * Write actions (start/stop/reboot, apply update, edit
-        schedule) call `_vm_cache_invalidate(vmid, ...)` — the
-        loop then refreshes just that guest on its next tick, and
-        an on-demand user open refreshes it immediately.
+    Rationale: every cache in this family is refreshed by explicit
+    event invalidation (see `_vm_cache_invalidate` calls scattered
+    across write endpoints). A periodic loop was double work and
+    lit up the CPU on hosts with many guests. The previous 5 min
+    tick meant ~500-1000 background subprocess/pvesh calls per hour
+    on a 25-guest host, entirely for data that hadn't changed.
 
-    LXC-only endpoints (apps, schedule) are skipped for qemu VMs."""
+    Trade-offs handled elsewhere:
+      * Backups added out-of-band (cron / scheduled / retention)
+        → client passes `?fresh=1` on modal open when its local
+        cache is older than 6 h; server ignores the indefinite TTL
+        for that call and re-scans (Fase 4).
+      * Mount points runtime state (df/stat/ad-hoc) that changes
+        continuously → served by a separate always-fresh endpoint
+        the client fetches on modal open (Fase 5).
+
+    Called once from the startup section. Thread exits after the
+    initial pass — no `while True` loop."""
     time.sleep(3)  # let Flask finish binding before we invoke handlers
     try:
         t0 = time.time()
         n = _vm_modal_prewarmer_pass()
-        print(f"[ProxMenux] VM-modal prewarmer: initial warm-up complete "
-              f"({n} guests in {time.time()-t0:.1f}s)", flush=True)
+        print(f"[ProxMenux] VM-modal prewarmer: warm-up complete "
+              f"({n} guests in {time.time()-t0:.1f}s) — no periodic refresh, "
+              f"caches held by event invalidation only", flush=True)
     except Exception as e:
         print(f"[ProxMenux] VM-modal prewarmer initial pass failed: {e}",
               file=sys.stderr, flush=True)
-    while True:
-        time.sleep(180)  # 3 min — most passes are cache-hits, near-zero cost
-        try:
-            _vm_modal_prewarmer_pass()
-        except Exception as e:
-            print(f"[ProxMenux] VM-modal prewarmer refresh error: {e}",
-                  file=sys.stderr, flush=True)
 
 
 @app.route('/api/node/metrics', methods=['GET'])
@@ -12569,11 +12586,26 @@ def api_create_backup(vmid):
 @app.route('/api/vms/<int:vmid>/backups', methods=['GET'])
 @require_auth
 def api_vm_backups(vmid):
-    """Get list of backups for a specific VM/LXC"""
+    """Get list of backups for a specific VM/LXC.
+
+    The backend cache is indefinite (event-invalidated only). Out-of-
+    band backups — cron jobs, scheduled vzdump, PBS retention pruning
+    — never call `_vm_cache_invalidate`, so a naked GET would keep
+    serving the last snapshot for hours after a new file appeared.
+
+    To reconcile that without a background poll, the client tracks
+    the age of its own copy and, when older than its 6-hour gate,
+    calls this endpoint with `?fresh=1`. Server ignores the cached
+    entry for that call, re-scans every storage, writes the result
+    back into the cache and returns it. Subsequent openings within
+    the next 6 hours hit the freshened cache instantly.
+    """
     try:
-        cached = _vm_cache_get(_vm_backups_cache, vmid, _VM_BACKUPS_TTL)
-        if cached is not None:
-            return jsonify(cached)
+        force_fresh = request.args.get('fresh') in ('1', 'true', 'yes')
+        if not force_fresh:
+            cached = _vm_cache_get(_vm_backups_cache, vmid, _VM_BACKUPS_TTL)
+            if cached is not None:
+                return jsonify(cached)
 
         backups = []
 
@@ -13928,15 +13960,17 @@ def get_vm_config(vmid):
 @app.route('/api/lxc/<int:vmid>/mount-points', methods=['GET'])
 @require_auth
 def api_lxc_mount_points(vmid):
-    """Sprint 13.29: per-LXC mount points enumeration.
+    """Static half of the per-LXC mount-points payload — parsed mp
+    entries, source/target, PVE storage classification, host source
+    existence flags. Runtime state (`df` capacity, `stat` health,
+    ad-hoc NFS/CIFS discovery, runtime_mounted flag) lives in the
+    sibling `/api/lxc/<vmid>/mount-points/runtime` endpoint that
+    the client fetches on demand every time the tab opens.
 
-    Returns the parsed ``mpX:`` entries from the container config plus,
-    when the container is running, runtime status (mounted/not, real
-    fstype, options, stale detection) and any ad-hoc NFS/CIFS/SMB the
-    user mounted from inside the CT. Capacity is always populated from
-    the host-side source (PVE storage or `df` of the host path) so the
-    info is meaningful even on stopped containers.
-    """
+    Backed by the indefinite `_vm_mounts_cache` (invalidated on
+    start/stop of the guest, since config-visible fields normally
+    only change through a guest reboot). The runtime endpoint is
+    NEVER cached — it must reflect the live state at click time."""
     cached = _vm_cache_get(_vm_mounts_cache, vmid, _VM_MOUNTS_TTL)
     if cached is not None:
         return jsonify(cached)
@@ -13945,10 +13979,35 @@ def api_lxc_mount_points(vmid):
     except ImportError as e:
         return jsonify({"ok": False, "error": f"helper unavailable: {e}"}), 503
     try:
-        result = lxc_mount_points.get_lxc_mount_points(str(vmid))
+        result = lxc_mount_points.get_lxc_mount_points_static(str(vmid))
         if not result.get("ok"):
             return jsonify(result), 400
         _vm_cache_put(_vm_mounts_cache, vmid, result)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route('/api/lxc/<int:vmid>/mount-points/runtime', methods=['GET'])
+@require_auth
+def api_lxc_mount_points_runtime(vmid):
+    """Runtime half — always fresh, no cache. Returns per-target
+    runtime state + capacity, plus ad-hoc NFS/CIFS mounts detected
+    inside the running CT. Called by the client on every open of
+    the Mount Points tab so `df` usage and `stat` reachability are
+    real at click time; skips the whole prewarmer loop entirely.
+
+    Ad-hoc mounts and capacity are what the operator actually
+    watches (a stale NFS export shows here as `runtime_reachable
+    = false`), so caching them would defeat the point."""
+    try:
+        import lxc_mount_points
+    except ImportError as e:
+        return jsonify({"ok": False, "error": f"helper unavailable: {e}"}), 503
+    try:
+        result = lxc_mount_points.get_lxc_mount_points_runtime(str(vmid))
+        if not result.get("ok"):
+            return jsonify(result), 400
         return jsonify(result)
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -20595,7 +20654,7 @@ if __name__ == '__main__':
     try:
         vm_modal_thread = threading.Thread(target=_vm_modal_prewarmer_loop, daemon=True, name='vm-modal-prewarmer')
         vm_modal_thread.start()
-        print("[ProxMenux] VM-modal prewarmer started (initial warm-up + 180s refresh)")
+        print("[ProxMenux] VM-modal prewarmer started (one-shot warm-up; caches refreshed by event invalidation only)")
     except Exception as e:
         print(f"[ProxMenux] VM-modal prewarmer failed to start: {e}")
 

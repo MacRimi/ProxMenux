@@ -1193,8 +1193,8 @@
       "applyOsUpdate": "Apply OS update",
       "osUpToDate": "OS up to date",
       "installedByHelperPrefix": "Installed by",
-      "helperScriptsName": "Proxmox Helper-Scripts",
-      "helperUpdatesRun": "— updates run the community-scripts helper.",
+      "helperScriptsName": "Proxmox VE Helper-Scripts",
+      "helperUpdatesRun": "Installed by Proxmox Helper-Scripts.",
       "installedPrefix": "installed",
       "upstreamAvailable": "upstream {version} available",
       "upToDateAt": "Up to date at",
@@ -1263,7 +1263,12 @@
       "ociBody": "This container was created from an OCI (Docker) image. Update management for OCI containers is coming with the upcoming OCI install feature — updates will rebuild the container from a newer image tag rather than patching packages inside.",
       "helperNotUpdateable": "The community-scripts registry marks this app as not updateable.",
       "helperDetectedTitle": "Detected a helper-scripts updater",
-      "helperDetectedBody": "Applying manually is safest."
+      "helperDetectedBody": "Applying manually is safest.",
+      "postApplyChecking": "Verifying update result…",
+      "postApplyAllOk": "{count} package(s) applied successfully — nothing pending.",
+      "postApplyNothingPending": "Nothing pending — everything is up to date.",
+      "postApplyPartial": "{pending} package(s) still pending after the run.",
+      "postApplyPartialSubline": "{applied} applied. Some updates did not complete — review the terminal output above."
     },
     "appEditor": {
       "closePanel": "Close panel",
@@ -1427,9 +1432,9 @@
     },
     "interfaceLanguage": {
       "title": "Interface language",
-      "description": "Choose the language used by the Monitor dashboard. Missing translations fall back to English.",
+      "description": "Choose the language used by the Monitor dashboard.",
       "label": "Dashboard language",
-      "fallbackNote": "Untranslated text is shown in English until the community fills it in.",
+      "fallbackNote": "",
       "statusComplete": "complete",
       "statusPartial": "partial",
       "statusNeedsTranslation": "community translation needed"
@@ -2994,7 +2999,13 @@
     "dontShowAgain": "Don't show again for this version",
     "currentFeatures": {
       "hostUpdate": "One-click host update from the Health Monitor. The new Update Now button in System Updates runs the Proxmox update flow inside a dashboard terminal, without leaving the browser.",
-      "mobileInstall": "In-app install prompt for mobile. First-time visitors on Android and iOS Safari now see simple steps for adding the Monitor to their home screen as a PWA."
+      "mobileInstall": "In-app install prompt for mobile. First-time visitors on Android and iOS Safari now see simple steps for adding the Monitor to their home screen as a PWA.",
+      "pageSpeed": "Faster page loads and smoother navigation across the dashboard. Overview opens instantly and the VMs & LXCs page never flashes 'Loading…' between guest modals again.",
+      "appTab": "New App tab inside the VM & LXC modal — especially for LXCs. Register the apps installed in a container, capture their weblinks, and get notifications when a new upstream version ships.",
+      "updatesTab": "Reworked Updates tab for LXCs: apply OS packages and registered-app updates from a single button, and schedule a recurring auto-update job that checks the container's OS and its tracked app on every run.",
+      "backupNoTimeout": "Long backup jobs no longer time out. VM and LXC backups launched from the Monitor now run in the background until they naturally finish, so a 30-minute PBS backup completes the same as a 10-second local one.",
+      "vmDiskUsage": "VMs running the QEMU Guest Agent (qemu-guest-agent) now report real used / total disk figures on the dashboard, instead of the '0 GB' that PVE returns for guest-managed filesystems.",
+      "pwaInstall": "First-time visitors on Android and iOS Safari now see an in-app install prompt with clear steps for adding the Monitor to their home screen as a PWA."
     }
   },
   "network": {

@@ -1194,8 +1194,8 @@
       "applyOsUpdate": "Betriebssystem-Update anwenden",
       "osUpToDate": "Betriebssystem auf dem neuesten Stand",
       "installedByHelperPrefix": "Installiert von",
-      "helperScriptsName": "Proxmox Helper-Scripts",
-      "helperUpdatesRun": "– Updates führen den Community-Scripts-Helfer aus.",
+      "helperScriptsName": "Proxmox VE Helper-Scripts",
+      "helperUpdatesRun": "Installiert von Proxmox Helper-Scripts.",
       "installedPrefix": "installiert",
       "upstreamAvailable": "Version {version} verfügbar",
       "upToDateAt": "Aktuell unter",
@@ -1409,14 +1409,7 @@
       "alsoDetectedContainer": "Auch auf diesem Container erkannt",
       "addAnotherApplication": "Fügen Sie eine weitere Anwendung hinzu",
       "doneButton": "Erledigt",
-      "editButton": "Bearbeiten",
-      "upstreamErrorTimeout": "Netzwerk-Timeout beim Kontaktieren des Upstreams",
-      "upstreamErrorNetwork": "Netzwerkfehler: {detail}",
-      "upstreamErrorGeneric": "Upstream-Prüfung fehlgeschlagen: {detail}",
-      "notificationsEnabled": "Upstream-Update-Benachrichtigungen EIN – zum Stummschalten klicken",
-      "notificationsMuted": "Upstream-Update-Benachrichtigungen stummgeschaltet – zum Aktivieren klicken",
-      "notifyUpstreamLabel": "Benachrichtigen Sie mich, wenn eine neue Upstream-Version verfügbar ist",
-      "notifyUpstreamHelp": "Sendet „app_update_available“ an die Kanäle, die in Einstellungen → Benachrichtigungen aktiviert sind.Deaktivieren Sie diese Option, wenn diese App auf Ihrer Box nicht aktualisiert werden kann."
+      "editButton": "Bearbeiten"
     }
   },
   "settings": {
@@ -1428,9 +1421,9 @@
     },
     "interfaceLanguage": {
       "title": "Schnittstellensprache",
-      "description": "Wählen Sie die vom Monitor-Dashboard verwendete Sprache. Fehlende Übersetzungen fallen auf Englisch zurück.",
+      "description": "Wählen Sie die Sprache für das Monitor-Dashboard.",
       "label": "Dashboard-Sprache",
-      "fallbackNote": "Nicht übersetzter Text wird auf Englisch angezeigt, bis die Community ihn ausfüllt.",
+      "fallbackNote": "Automatische Übersetzung mit Google Translate. Melde Fehler in den Issues des Projekts oder schicke einen PR mit der Korrektur.",
       "statusComplete": "vollständig",
       "statusPartial": "teilweise",
       "statusNeedsTranslation": "Community-Übersetzung erforderlich"
@@ -1686,8 +1679,7 @@
         "post_install_update": "ProxMenux-Optimierungsupdates verfügbar",
         "secure_gateway_update_available": "Secure Gateway-Update verfügbar",
         "nvidia_driver_update_available": "NVIDIA-Treiberupdate verfügbar",
-        "coral_driver_update_available": "Update des Coral TPU-Treibers verfügbar",
-        "app_update_available": "App-Update verfügbar"
+        "coral_driver_update_available": "Update des Coral TPU-Treibers verfügbar"
       },
       "ui": {
         "quietHours": "Ruhige Stunden",
@@ -2995,7 +2987,13 @@
     "dontShowAgain": "Für diese Version nicht mehr anzeigen",
     "currentFeatures": {
       "hostUpdate": "Host-Update mit einem Klick über den Health Monitor. Die neue Schaltfläche „Jetzt aktualisieren“ in System Updates führt den Proxmox-Update-Flow in einem Dashboard-Terminal aus, ohne den Browser zu verlassen.",
-      "mobileInstall": "In-App-Installationsaufforderung für Mobilgeräte. Erstbesucher von Android und iOS Safari sehen jetzt einfache Schritte zum Hinzufügen des Monitors als PWA zu ihrem Startbildschirm."
+      "mobileInstall": "In-App-Installationsaufforderung für Mobilgeräte. Erstbesucher von Android und iOS Safari sehen jetzt einfache Schritte zum Hinzufügen des Monitors als PWA zu ihrem Startbildschirm.",
+      "pageSpeed": "",
+      "appTab": "",
+      "updatesTab": "",
+      "backupNoTimeout": "",
+      "vmDiskUsage": "",
+      "pwaInstall": ""
     }
   },
   "network": {
@@ -3530,7 +3528,6 @@
       "deletePbsDescription": "Dadurch wird der PBS-Snapshot aus dem Datenspeicher entfernt.",
       "deletePbsTitle": "PBS-Snapshot löschen",
       "companionFile": "Begleitdatei",
-      "descriptionAfter": "",
       "descriptionBefore": "Durchsuchen Sie die gefundenen Backups und stellen Sie sie wieder her",
       "downloadTitle": "Laden Sie dieses Backup herunter",
       "emptyAfter": "Backups noch nicht.",
