@@ -24,7 +24,11 @@ on:
   push:
     branches: [develop]
     paths:
-      - 'AppImage/messages/en/common.json'
+      # `**/common.json` catches every locale, not just en/. Needed
+      # because manual edits to sk/sv (or any curated locale) that
+      # empty a key so the workflow refills it wouldn't otherwise
+      # trigger the job when en/ hasn't changed.
+      - 'AppImage/messages/**/common.json'
       - '.github/scripts/build_i18n_messages.py'
       - '.github/workflows/build-i18n-messages.yml'
   workflow_dispatch:
