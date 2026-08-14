@@ -1264,7 +1264,12 @@
       "ociBody": "Dieser Container wurde aus einem OCI-Image (Docker) erstellt. Die Updateverwaltung für OCI-Container wird mit der kommenden OCI-Installationsfunktion geliefert – Updates erstellen den Container anhand eines neueren Image-Tags neu, anstatt Pakete darin zu patchen.",
       "helperNotUpdateable": "Die Community-Scripts-Registrierung markiert diese App als nicht aktualisierbar.",
       "helperDetectedTitle": "Es wurde ein Hilfsskript-Updater erkannt",
-      "helperDetectedBody": "Die manuelle Anwendung ist am sichersten."
+      "helperDetectedBody": "Die manuelle Anwendung ist am sichersten.",
+      "postApplyChecking": "Aktualisierungsergebnis wird überprüft…",
+      "postApplyAllOk": "{count} Paket(e) erfolgreich angewendet – nichts ausstehend.",
+      "postApplyNothingPending": "Nichts ausstehend – alles ist auf dem neuesten Stand.",
+      "postApplyPartial": "{pending} Paket(e) stehen nach der Ausführung noch aus.",
+      "postApplyPartialSubline": "{applied} angewendet.Einige Aktualisierungen wurden nicht abgeschlossen – sehen Sie sich die Terminalausgabe oben an."
     },
     "appEditor": {
       "closePanel": "Panel schließen",
@@ -1409,7 +1414,14 @@
       "alsoDetectedContainer": "Auch auf diesem Container erkannt",
       "addAnotherApplication": "Fügen Sie eine weitere Anwendung hinzu",
       "doneButton": "Erledigt",
-      "editButton": "Bearbeiten"
+      "editButton": "Bearbeiten",
+      "upstreamErrorTimeout": "Netzwerk-Timeout beim Kontaktieren des Upstreams",
+      "upstreamErrorNetwork": "Netzwerkfehler: {detail}",
+      "upstreamErrorGeneric": "Upstream-Prüfung fehlgeschlagen: {detail}",
+      "notificationsEnabled": "Upstream-Update-Benachrichtigungen EIN – zum Stummschalten klicken",
+      "notificationsMuted": "Upstream-Update-Benachrichtigungen stummgeschaltet – zum Aktivieren klicken",
+      "notifyUpstreamLabel": "Benachrichtigen Sie mich, wenn eine neue Upstream-Version verfügbar ist",
+      "notifyUpstreamHelp": "Sendet „app_update_available“ an die Kanäle, die in Einstellungen → Benachrichtigungen aktiviert sind.Deaktivieren Sie diese Option, wenn diese App auf Ihrer Box nicht aktualisiert werden kann."
     }
   },
   "settings": {
@@ -1679,7 +1691,8 @@
         "post_install_update": "ProxMenux-Optimierungsupdates verfügbar",
         "secure_gateway_update_available": "Secure Gateway-Update verfügbar",
         "nvidia_driver_update_available": "NVIDIA-Treiberupdate verfügbar",
-        "coral_driver_update_available": "Update des Coral TPU-Treibers verfügbar"
+        "coral_driver_update_available": "Update des Coral TPU-Treibers verfügbar",
+        "app_update_available": "App-Update verfügbar"
       },
       "ui": {
         "quietHours": "Ruhige Stunden",
@@ -2988,12 +3001,12 @@
     "currentFeatures": {
       "hostUpdate": "Host-Update mit einem Klick über den Health Monitor. Die neue Schaltfläche „Jetzt aktualisieren“ in System Updates führt den Proxmox-Update-Flow in einem Dashboard-Terminal aus, ohne den Browser zu verlassen.",
       "mobileInstall": "In-App-Installationsaufforderung für Mobilgeräte. Erstbesucher von Android und iOS Safari sehen jetzt einfache Schritte zum Hinzufügen des Monitors als PWA zu ihrem Startbildschirm.",
-      "pageSpeed": "",
-      "appTab": "",
-      "updatesTab": "",
-      "backupNoTimeout": "",
-      "vmDiskUsage": "",
-      "pwaInstall": ""
+      "pageSpeed": "Schnellere Seitenladevorgänge und reibungslosere Navigation im Dashboard.Die Übersicht wird sofort geöffnet und auf der Seite „VMs und LXCs“ blinkt nie wieder „Laden…“ zwischen den Gastmodalitäten.",
+      "appTab": "Neuer App-Tab im VM- und LXC-Modal – insbesondere für LXCs.Registrieren Sie die in einem Container installierten Apps, erfassen Sie ihre Weblinks und erhalten Sie Benachrichtigungen, wenn eine neue Upstream-Version ausgeliefert wird.",
+      "updatesTab": "Überarbeitete Registerkarte „Updates“ für LXCs: Wenden Sie Betriebssystempakete und Updates für registrierte Apps über eine einzige Schaltfläche an und planen Sie einen wiederkehrenden automatischen Update-Job, der das Betriebssystem des Containers und seine verfolgte App bei jeder Ausführung überprüft.",
+      "backupNoTimeout": "Bei langen Backup-Jobs tritt keine Zeitüberschreitung mehr auf.Vom Monitor gestartete VM- und LXC-Backups werden jetzt im Hintergrund ausgeführt, bis sie auf natürliche Weise abgeschlossen werden. Daher wird ein 30-minütiges PBS-Backup genauso durchgeführt wie ein 10-sekündiges lokales Backup.",
+      "vmDiskUsage": "VMs, auf denen der QEMU-Gastagent (qemu-guest-agent) ausgeführt wird, melden jetzt tatsächlich genutzte Daten/Gesamtdatenträgerzahlen auf dem Dashboard, anstelle der „0 GB“, die PVE für vom Gast verwaltete Dateisysteme zurückgibt.",
+      "pwaInstall": "Erstbesucher von Android und iOS Safari sehen jetzt eine In-App-Installationsaufforderung mit klaren Schritten zum Hinzufügen des Monitors als PWA zu ihrem Startbildschirm."
     }
   },
   "network": {

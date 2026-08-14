@@ -1264,7 +1264,12 @@
       "ociBody": "Questo contenitore è stato creato da un'immagine OCI (Docker). La gestione degli aggiornamenti per i contenitori OCI arriverà con la prossima funzionalità di installazione OCI: gli aggiornamenti ricostruiranno il contenitore da un tag immagine più recente anziché applicare patch ai pacchetti all'interno.",
       "helperNotUpdateable": "Il registro degli script della community contrassegna questa app come non aggiornabile.",
       "helperDetectedTitle": "Rilevato un aggiornamento degli script helper",
-      "helperDetectedBody": "L'applicazione manuale è più sicura."
+      "helperDetectedBody": "L'applicazione manuale è più sicura.",
+      "postApplyChecking": "Verifica del risultato dell'aggiornamento…",
+      "postApplyAllOk": "pacchetto/i {count} applicato correttamente: nulla in sospeso.",
+      "postApplyNothingPending": "nulla in sospeso: tutto è aggiornato.",
+      "postApplyPartial": "{pending} pacchetto/i ancora in sospeso dopo l'esecuzione.",
+      "postApplyPartialSubline": "{applied} applicato.Alcuni aggiornamenti non sono stati completati: esamina l'output del terminale sopra."
     },
     "appEditor": {
       "closePanel": "Chiudi pannello",
@@ -1409,7 +1414,14 @@
       "alsoDetectedContainer": "Rilevato anche su questo contenitore",
       "addAnotherApplication": "Aggiungi un'altra applicazione",
       "doneButton": "Fatto",
-      "editButton": "Modificare"
+      "editButton": "Modificare",
+      "upstreamErrorTimeout": "timeout della rete durante il contatto a monte",
+      "upstreamErrorNetwork": "errore di rete: {detail}",
+      "upstreamErrorGeneric": "controllo upstream non riuscito: {detail}",
+      "notificationsEnabled": "notifiche di aggiornamento upstream attivate: fai clic per disattivare l'audio",
+      "notificationsMuted": "notifiche di aggiornamento upstream MUTED: fare clic per abilitare",
+      "notifyUpstreamLabel": "avvisami quando è disponibile una nuova versione upstream",
+      "notifyUpstreamHelp": "invia `app_update_available` ai canali abilitati in Impostazioni → Notifiche.Disattiva se questa app non può essere aggiornata sul tuo box."
     }
   },
   "settings": {
@@ -1679,7 +1691,8 @@
         "post_install_update": "Aggiornamenti di ottimizzazione ProxMenux disponibili",
         "secure_gateway_update_available": "Aggiornamento Secure Gateway disponibile",
         "nvidia_driver_update_available": "Aggiornamento del driver NVIDIA disponibile",
-        "coral_driver_update_available": "Disponibile l'aggiornamento del driver Coral TPU"
+        "coral_driver_update_available": "Disponibile l'aggiornamento del driver Coral TPU",
+        "app_update_available": "aggiornamento dell'app disponibile"
       },
       "ui": {
         "quietHours": "Ore tranquille",
@@ -2988,12 +3001,12 @@
     "currentFeatures": {
       "hostUpdate": "Aggiornamento host con un clic da Health Monitor. Il nuovo pulsante Aggiorna ora in Aggiornamenti di sistema esegue il flusso di aggiornamento di Proxmox all'interno di un terminale dashboard, senza uscire dal browser.",
       "mobileInstall": "Richiesta di installazione in-app per dispositivi mobili. Chi visita per la prima volta Android e iOS Safari ora vede semplici passaggi per aggiungere il monitor alla propria schermata iniziale come PWA.",
-      "pageSpeed": "",
-      "appTab": "",
-      "updatesTab": "",
-      "backupNoTimeout": "",
-      "vmDiskUsage": "",
-      "pwaInstall": ""
+      "pageSpeed": "caricamenti delle pagine più rapidi e navigazione più fluida nella dashboard.La panoramica si apre immediatamente e la pagina VM e LXC non lampeggia mai più con la dicitura \"Caricamento in corso...\" tra le modalità guest.",
+      "appTab": "nuova scheda App all'interno della modalità VM e LXC, in particolare per LXC.Registra le app installate in un contenitore, acquisisci i relativi collegamenti web e ricevi notifiche quando viene fornita una nuova versione upstream.",
+      "updatesTab": "scheda Aggiornamenti rielaborati per LXC: applica pacchetti del sistema operativo e aggiornamenti delle app registrate da un singolo pulsante e pianifica un processo di aggiornamento automatico ricorrente che controlla il sistema operativo del contenitore e la relativa app monitorata a ogni esecuzione.",
+      "backupNoTimeout": "i processi di backup lunghi non vanno più in timeout.I backup VM e LXC avviati dal Monitor ora vengono eseguiti in background fino al completamento naturale, quindi un backup PBS di 30 minuti viene completato come un backup locale di 10 secondi.",
+      "vmDiskUsage": "le VM che eseguono QEMU Guest Agent (qemu-guest-agent) ora riportano i dati sul disco effettivamente utilizzato/totale sul dashboard, invece degli \"0 GB\" restituiti da PVE per i file system gestiti dal guest.",
+      "pwaInstall": "i visitatori che visitano per la prima volta Android e iOS Safari ora vedono una richiesta di installazione in-app con passaggi chiari per aggiungere il monitor alla schermata iniziale come PWA."
     }
   },
   "network": {
