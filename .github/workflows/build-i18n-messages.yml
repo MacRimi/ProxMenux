@@ -115,4 +115,24 @@ jobs:
 
           Source: ${GITHUB_SHA::7}
           Triggered by: ${{ github.event_name }}"
-          git push origin develop
+          # Rebase-and-retry against develop: between the initial
+          # checkout and this push another workflow (e.g.
+          # build-translation-cache auto-commit) or a manual push can
+          # land on develop first, and a naked push fails with
+          # non-fast-forward — losing the freshly generated translation
+          # commit. Rebasing the local i18n commit on top of the newer
+          # HEAD is safe: paths don't overlap with cache/script
+          # workflows, and the same-branch collisions between two i18n
+          # runs are already blocked by the concurrency group above.
+          for attempt in 1 2 3 4 5; do
+            git fetch origin develop
+            if git rebase origin/develop && git push origin develop; then
+              echo "push succeeded on attempt ${attempt}"
+              exit 0
+            fi
+            echo "push attempt ${attempt} failed, retrying..."
+            git rebase --abort 2>/dev/null || true
+            sleep $(( attempt * 3 ))
+          done
+          echo "push failed after 5 attempts"
+          exit 1
