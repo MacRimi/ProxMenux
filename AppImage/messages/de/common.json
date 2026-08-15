@@ -21,7 +21,7 @@
     "cancel": "Stornieren",
     "save": "Speichern",
     "edit": "Bearbeiten",
-    "remove": "",
+    "remove": "Entfernen",
     "close": "Schließen",
     "resetAll": "Alles zurücksetzen",
     "undo": "Rückgängig machen",
@@ -301,7 +301,7 @@
       "shortTest": "Kurztest",
       "longTest": "Langer Test (1-4 Stunden)",
       "extendedTest": "Erweiterter Test",
-      "testHelp": "",
+      "testHelp": "Ein kurzer Test dauert etwa 2 Minuten.Der erweiterte Test läuft im Hintergrund und kann auf großen Datenträgern mehrere Stunden dauern.Das Ergebnis wird nach Abschluss auf der Registerkarte „Verlauf“ angezeigt.",
       "startFailed": "Der Test konnte nicht gestartet werden",
       "short": "Kurz",
       "extended": "Erweitert",
@@ -1022,10 +1022,10 @@
         "stopped": "gestoppt",
         "mounted": "montiert"
       },
-      "startOnBoot": "",
-      "tags": "",
-      "tagsPlaceholder": "",
-      "tagsNone": ""
+      "startOnBoot": "Beim Booten beginnen",
+      "tags": "Tags",
+      "tagsPlaceholder": "Tag hinzufügen…",
+      "tagsNone": "Keine Tags"
     },
     "logs": {
       "header": "Protokolle für {name} (VMID: {vmid})",
@@ -1426,8 +1426,8 @@
       "notificationsMuted": "Upstream-Update-Benachrichtigungen stummgeschaltet – zum Aktivieren klicken",
       "notifyUpstreamLabel": "Benachrichtigen Sie mich, wenn eine neue Upstream-Version verfügbar ist",
       "notifyUpstreamHelp": "Sendet „app_update_available“ an die Kanäle, die in Einstellungen → Benachrichtigungen aktiviert sind.Deaktivieren Sie diese Option, wenn diese App auf Ihrer Box nicht aktualisiert werden kann.",
-      "excludeFromBadgeLabel": "",
-      "excludeFromBadgeHelp": ""
+      "excludeFromBadgeLabel": "Vom LXC-Aktualisierungszähler ausschließen",
+      "excludeFromBadgeHelp": "Zählen Sie diese App nicht im Abzeichen „Aggregate Updates“ auf der LXC-Listenkarte.Nützlich, wenn Sie absichtlich an eine bestimmte Version gebunden sind (Tracker-Anforderung, Kompatibilitätsstopp).Hat keinen Einfluss auf den eigenen Status der App-Registerkarte oder die ausgehende Benachrichtigung."
     }
   },
   "settings": {
@@ -3007,7 +3007,7 @@
     "currentFeatures": {
       "hostUpdate": "Host-Update mit einem Klick über den Health Monitor. Die neue Schaltfläche „Jetzt aktualisieren“ in System Updates führt den Proxmox-Update-Flow in einem Dashboard-Terminal aus, ohne den Browser zu verlassen.",
       "mobileInstall": "In-App-Installationsaufforderung für Mobilgeräte. Erstbesucher von Android und iOS Safari sehen jetzt einfache Schritte zum Hinzufügen des Monitors als PWA zu ihrem Startbildschirm.",
-      "i18n": "",
+      "i18n": "Der Monitor spricht jetzt 8 Sprachen: Englisch, Spanisch, Deutsch, Französisch, Italienisch, Portugiesisch, Schwedisch und Slowakisch.Vielen Dank an @vaso73 für den Bau des i18n-Gerüsts, das dies ermöglicht hat.",
       "pageSpeed": "Schnellere Seitenladevorgänge und reibungslosere Navigation im Dashboard.Die Übersicht wird sofort geöffnet und auf der Seite „VMs und LXCs“ blinkt nie wieder „Laden…“ zwischen den Gastmodalitäten.",
       "appTab": "Neuer App-Tab im VM- und LXC-Modal – insbesondere für LXCs.Registrieren Sie die in einem Container installierten Apps, erfassen Sie ihre Weblinks und erhalten Sie Benachrichtigungen, wenn eine neue Upstream-Version ausgeliefert wird.",
       "updatesTab": "Überarbeitete Registerkarte „Updates“ für LXCs: Wenden Sie Betriebssystempakete und Updates für registrierte Apps über eine einzige Schaltfläche an und planen Sie einen wiederkehrenden automatischen Update-Job, der das Betriebssystem des Containers und seine verfolgte App bei jeder Ausführung überprüft.",

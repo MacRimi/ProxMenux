@@ -21,7 +21,7 @@
     "cancel": "Avbryt",
     "save": "Spara",
     "edit": "Redigera",
-    "remove": "",
+    "remove": "Ta bort",
     "close": "Stäng",
     "resetAll": "Återställ alla",
     "undo": "Ångra",
@@ -301,7 +301,7 @@
       "shortTest": "Kort test",
       "longTest": "Långt test (1-4 timmar)",
       "extendedTest": "Utökat test",
-      "testHelp": "",
+      "testHelp": "Ett kort test tar cirka 2 minuter.Det utökade testet körs i bakgrunden och kan ta flera timmar på stora diskar.Resultatet kommer att dyka upp på fliken Historik när det är klart.",
       "startFailed": "Det gick inte att starta testet",
       "short": "Kort",
       "extended": "Förlängd",
@@ -1022,10 +1022,10 @@
         "stopped": "stannade",
         "mounted": "monterad"
       },
-      "startOnBoot": "",
-      "tags": "",
-      "tagsPlaceholder": "",
-      "tagsNone": ""
+      "startOnBoot": "Börja vid start",
+      "tags": "Taggar",
+      "tagsPlaceholder": "Lägg till tagg...",
+      "tagsNone": "Inga taggar"
     },
     "logs": {
       "header": "Loggar för {name} (VMID: {vmid})",
@@ -1426,8 +1426,8 @@
       "notificationsMuted": "Uppströmsuppdateringsmeddelanden AVSTÄLLD – klicka för att aktivera",
       "notifyUpstreamLabel": "Meddela mig när en ny uppströmsversion är tillgänglig",
       "notifyUpstreamHelp": "Skickar `app_update_available` till de kanaler som är aktiverade i Inställningar → Aviseringar.Stäng av om den här appen inte kan uppdateras på din box.",
-      "excludeFromBadgeLabel": "",
-      "excludeFromBadgeHelp": ""
+      "excludeFromBadgeLabel": "Uteslut från LXC-uppdateringsräknaren",
+      "excludeFromBadgeHelp": "Räkna inte den här appen i det samlade uppdateringsmärket på LXC-listkortet.Användbart när du är fäst till en specifik version med avsikt (spårningskrav, frysning av kompatibilitet).Påverkar inte appflikens eget tillstånd eller det utgående meddelandet."
     }
   },
   "settings": {
@@ -3007,7 +3007,7 @@
     "currentFeatures": {
       "hostUpdate": "Värduppdatering med ett klick från Health Monitor. Den nya knappen Uppdatera nu i Systemuppdateringar kör Proxmox-uppdateringsflödet i en instrumentpanelsterminal utan att lämna webbläsaren.",
       "mobileInstall": "Uppmaning om installation i appen för mobil. Förstagångsbesökare på Android och iOS Safari ser nu enkla steg för att lägga till monitorn på sin startskärm som en PWA.",
-      "i18n": "",
+      "i18n": "Monitorn talar nu 8 språk: engelska, spanska, tyska, franska, italienska, portugisiska, svenska och slovakiska.Stort tack till @vaso73 för att bygga i18n-ställningen som gjorde detta möjligt.",
       "pageSpeed": "Snabbare sidladdningar och smidigare navigering över instrumentpanelen.Översikten öppnas omedelbart och sidan för virtuella datorer och LXC:er blinkar aldrig \"Laddar...\" mellan gästmodalerna igen.",
       "appTab": "Ny appflik i VM- och LXC-modalerna — speciellt för LXC.Registrera apparna installerade i en behållare, fånga deras webblänkar och få meddelanden när en ny uppströmsversion skickas.",
       "updatesTab": "Fliken Omarbetade uppdateringar för LXC:er: applicera OS-paket och uppdateringar av registrerade appar från en enda knapp och schemalägg ett återkommande automatiskt uppdateringsjobb som kontrollerar containerns OS och dess spårade app vid varje körning.",

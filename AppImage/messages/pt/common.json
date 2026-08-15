@@ -21,7 +21,7 @@
     "cancel": "Cancelar",
     "save": "Salvar",
     "edit": "Editar",
-    "remove": "",
+    "remove": "Remover",
     "close": "Fechar",
     "resetAll": "Redefinir tudo",
     "undo": "Desfazer",
@@ -301,7 +301,7 @@
       "shortTest": "Teste curto",
       "longTest": "Teste longo (1-4 horas)",
       "extendedTest": "Teste estendido",
-      "testHelp": "",
+      "testHelp": "Um pequeno teste leva cerca de 2 minutos.O teste estendido é executado em segundo plano e pode levar várias horas em discos grandes.O resultado aparecerá na aba Histórico quando terminar.",
       "startFailed": "Falha ao iniciar o teste",
       "short": "Curto",
       "extended": "Estendido",
@@ -1022,10 +1022,10 @@
         "stopped": "parou",
         "mounted": "montado"
       },
-      "startOnBoot": "",
-      "tags": "",
-      "tagsPlaceholder": "",
-      "tagsNone": ""
+      "startOnBoot": "Iniciar na inicialização",
+      "tags": "Etiquetas",
+      "tagsPlaceholder": "Adicionar tag…",
+      "tagsNone": "sem tags"
     },
     "logs": {
       "header": "Registros para {name} (VMID: {vmid})",
@@ -1426,8 +1426,8 @@
       "notificationsMuted": "notificações de atualização upstream silenciadas – clique para ativar",
       "notifyUpstreamLabel": "Notifique-me quando uma nova versão upstream estiver disponível",
       "notifyUpstreamHelp": "Envia `app_update_available` para os canais habilitados em Configurações → Notificações.Desligue se este aplicativo não puder ser atualizado em sua caixa.",
-      "excludeFromBadgeLabel": "",
-      "excludeFromBadgeHelp": ""
+      "excludeFromBadgeLabel": "Excluir do contador de atualizações LXC",
+      "excludeFromBadgeHelp": "não conte este aplicativo no selo de atualizações agregadas no cartão de lista LXC.Útil quando você está fixado em uma versão específica propositalmente (requisito do rastreador, congelamento de compatibilidade).Não afeta o próprio estado da guia Aplicativo ou a notificação de saída."
     }
   },
   "settings": {
@@ -3007,7 +3007,7 @@
     "currentFeatures": {
       "hostUpdate": "Atualização do host com um clique no Health Monitor. O novo botão Atualizar agora em Atualizações do sistema executa o fluxo de atualização do Proxmox dentro de um terminal de painel, sem sair do navegador.",
       "mobileInstall": "Prompt de instalação no aplicativo para celular. Visitantes iniciantes no Android e iOS Safari agora veem etapas simples para adicionar o Monitor à tela inicial como um PWA.",
-      "i18n": "",
+      "i18n": "O Monitor agora fala 8 idiomas: inglês, espanhol, alemão, francês, italiano, português, sueco e eslovaco.Muito obrigado a @vaso73 por construir o andaime i18n que tornou isso possível.",
       "pageSpeed": "carregamentos de página mais rápidos e navegação mais suave no painel.A visão geral abre instantaneamente e a página VMs e LXCs nunca mais exibe 'Carregando…' entre os modais convidados.",
       "appTab": "Nova guia de aplicativo dentro do modal VM e LXC - especialmente para LXCs.Registre os aplicativos instalados em um contêiner, capture seus links da web e receba notificações quando uma nova versão upstream for enviada.",
       "updatesTab": "guia Atualizações reformuladas para LXCs: aplique pacotes de sistema operacional e atualizações de aplicativos registrados a partir de um único botão e agende um trabalho de atualização automática recorrente que verifica o sistema operacional do contêiner e seu aplicativo rastreado em cada execução.",

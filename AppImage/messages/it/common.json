@@ -21,7 +21,7 @@
     "cancel": "Cancellare",
     "save": "Salva",
     "edit": "Modificare",
-    "remove": "",
+    "remove": "rimuovere",
     "close": "Vicino",
     "resetAll": "Reimposta tutto",
     "undo": "Disfare",
@@ -301,7 +301,7 @@
       "shortTest": "Test breve",
       "longTest": "Test lungo (1-4 ore)",
       "extendedTest": "Test esteso",
-      "testHelp": "",
+      "testHelp": "un breve test dura circa 2 minuti.Il test esteso viene eseguito in background e può richiedere diverse ore su dischi di grandi dimensioni.Il risultato verrà visualizzato nella scheda Cronologia al termine.",
       "startFailed": "Impossibile avviare il test",
       "short": "Corto",
       "extended": "Esteso",
@@ -1022,10 +1022,10 @@
         "stopped": "fermato",
         "mounted": "montato"
       },
-      "startOnBoot": "",
-      "tags": "",
-      "tagsPlaceholder": "",
-      "tagsNone": ""
+      "startOnBoot": "inizia all'avvio",
+      "tags": "tag",
+      "tagsPlaceholder": "aggiungi tag…",
+      "tagsNone": "nessun tag"
     },
     "logs": {
       "header": "Registri per {name} (VMID: {vmid})",
@@ -1426,8 +1426,8 @@
       "notificationsMuted": "notifiche di aggiornamento upstream MUTED: fare clic per abilitare",
       "notifyUpstreamLabel": "avvisami quando è disponibile una nuova versione upstream",
       "notifyUpstreamHelp": "invia `app_update_available` ai canali abilitati in Impostazioni → Notifiche.Disattiva se questa app non può essere aggiornata sul tuo box.",
-      "excludeFromBadgeLabel": "",
-      "excludeFromBadgeHelp": ""
+      "excludeFromBadgeLabel": "esclusione dal contatore degli aggiornamenti LXC",
+      "excludeFromBadgeHelp": "non contare questa app nel badge degli aggiornamenti aggregati sulla scheda dell'elenco LXC.Utile quando sei bloccato di proposito su una versione specifica (requisito del tracker, blocco della compatibilità).Non influisce sullo stato della scheda App o sulla notifica in uscita."
     }
   },
   "settings": {
@@ -3007,7 +3007,7 @@
     "currentFeatures": {
       "hostUpdate": "Aggiornamento host con un clic da Health Monitor. Il nuovo pulsante Aggiorna ora in Aggiornamenti di sistema esegue il flusso di aggiornamento di Proxmox all'interno di un terminale dashboard, senza uscire dal browser.",
       "mobileInstall": "Richiesta di installazione in-app per dispositivi mobili. Chi visita per la prima volta Android e iOS Safari ora vede semplici passaggi per aggiungere il monitor alla propria schermata iniziale come PWA.",
-      "i18n": "",
+      "i18n": "Il Monitor ora parla 8 lingue: inglese, spagnolo, tedesco, francese, italiano, portoghese, svedese e slovacco.Un enorme ringraziamento a @vaso73 per aver costruito l'impalcatura i18n che ha reso tutto ciò possibile.",
       "pageSpeed": "caricamenti delle pagine più rapidi e navigazione più fluida nella dashboard.La panoramica si apre immediatamente e la pagina VM e LXC non lampeggia mai più con la dicitura \"Caricamento in corso...\" tra le modalità guest.",
       "appTab": "nuova scheda App all'interno della modalità VM e LXC, in particolare per LXC.Registra le app installate in un contenitore, acquisisci i relativi collegamenti web e ricevi notifiche quando viene fornita una nuova versione upstream.",
       "updatesTab": "scheda Aggiornamenti rielaborati per LXC: applica pacchetti del sistema operativo e aggiornamenti delle app registrate da un singolo pulsante e pianifica un processo di aggiornamento automatico ricorrente che controlla il sistema operativo del contenitore e la relativa app monitorata a ogni esecuzione.",

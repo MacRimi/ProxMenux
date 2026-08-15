@@ -20,7 +20,7 @@
     "cancel": "Zrušiť",
     "save": "Uložiť",
     "edit": "Upraviť",
-    "remove": "",
+    "remove": "Odstrániť",
     "close": "Zavrieť",
     "resetAll": "Obnoviť všetko",
     "undo": "Vrátiť späť",
@@ -300,7 +300,7 @@
       "shortTest": "Krátky test",
       "longTest": "Dlhý test (1-4 hodiny)",
       "extendedTest": "Rozšírený test",
-      "testHelp": "",
+      "testHelp": "Krátky test trvá asi 2 minúty.Rozšírený test prebieha na pozadí a na veľkých diskoch môže trvať niekoľko hodín.Po dokončení sa výsledok zobrazí na karte História.",
       "startFailed": "Test sa nepodarilo spustiť",
       "short": "Krátky",
       "extended": "Rozšírený",
@@ -1021,10 +1021,10 @@
         "stopped": "vypnuté",
         "mounted": "pripojené"
       },
-      "startOnBoot": "",
-      "tags": "",
-      "tagsPlaceholder": "",
-      "tagsNone": ""
+      "startOnBoot": "Začnite pri štarte",
+      "tags": "Značky",
+      "tagsPlaceholder": "Pridať značku…",
+      "tagsNone": "Žiadne značky"
     },
     "logs": {
       "header": "Logy pre {name} (VMID: {vmid})",
@@ -1425,8 +1425,8 @@
       "notificationsMuted": "Upstream upozornenia na aktualizácie MUTED – kliknutím aktivujete",
       "notifyUpstreamLabel": "Upozorniť ma, keď bude k dispozícii nová upstream verzia",
       "notifyUpstreamHelp": "Odošle `app_update_available` do kanálov povolených v Nastaveniach → Upozornenia.Vypnite, ak túto aplikáciu nie je možné aktualizovať na vašom boxe.",
-      "excludeFromBadgeLabel": "",
-      "excludeFromBadgeHelp": ""
+      "excludeFromBadgeLabel": "Vylúčiť z počítadla aktualizácií LXC",
+      "excludeFromBadgeHelp": "Nezapočítajte túto aplikáciu do odznaku súhrnných aktualizácií na karte zoznamu LXC.Užitočné, keď ste úmyselne pripnutý ku konkrétnej verzii (požiadavka na sledovanie, zmrazenie kompatibility).Nemá vplyv na vlastný stav karty Aplikácia ani na odchádzajúce upozornenie."
     }
   },
   "settings": {
@@ -3006,7 +3006,7 @@
     "currentFeatures": {
       "hostUpdate": "Aktualizácia hosta jedným kliknutím z kontroly stavu. Nové tlačidlo Aktualizovať teraz v časti systémových aktualizácií spustí aktualizáciu Proxmoxu priamo v termináli dashboardu, bez odchodu z prehliadača.",
       "mobileInstall": "Výzva na inštaláciu aplikácie v mobile. Prví návštevníci v Androide a iOS Safari uvidia jednoduchý spodný panel s krokmi na pridanie Monitoru na domovskú obrazovku.",
-      "i18n": "",
+      "i18n": "Monitor teraz hovorí 8 jazykmi: anglicky, španielsky, nemecky, francúzsky, taliansky, portugalsky, švédsky a slovensky.Veľká vďaka @vaso73 za stavbu lešenia i18n, ktoré to umožnilo.",
       "pageSpeed": "Rýchlejšie načítanie stránok a plynulejšia navigácia na informačnom paneli.Prehľad sa otvorí okamžite a stránka VMs & LXCs už nikdy medzi hosťovskými modálmi nebliká „Načítava sa...“.",
       "appTab": "Nová karta aplikácie vo vnútri modálu VM a LXC – najmä pre LXC.Zaregistrujte aplikácie nainštalované v kontajneri, zaznamenajte ich webové odkazy a získajte upozornenia, keď sa odošle nová upstream verzia.",
       "updatesTab": "Karta Prepracované aktualizácie pre LXC: použite balíky OS a aktualizácie registrovaných aplikácií jediným tlačidlom a naplánujte si opakujúcu sa úlohu automatickej aktualizácie, ktorá skontroluje OS kontajnera a jeho sledovanú aplikáciu pri každom spustení.",
