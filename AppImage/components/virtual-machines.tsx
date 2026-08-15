@@ -107,6 +107,11 @@ interface LxcAppWatch {
   // Updates tab helper-scripts section find its matching registered
   // app to pull installed/upstream version data from.
   helper_slug?: string
+  // Per-app opt-out of the CT's aggregate updates badge (default:
+  // included). Independent from the app's notification toggle.
+  exclude_from_badge?: boolean
+  // Per-app opt-out for the `app_update_available` notification.
+  notifications_enabled?: boolean
 }
 
 interface VMData {
@@ -1960,6 +1965,31 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   // (mirrors the Secure Gateway visual treatment). Security count
   // stays red because it's still an urgency cue independent of the
   // update theme.
+  // Aggregate updates counter (OS packages + registered apps that
+  // aren't opted out of the badge). Returns an update_check-shaped
+  // object so `renderLxcUpdateBadge` and the tab count can consume it
+  // without knowing about app entries. The underlying `update_check`
+  // stays strictly OS-only on the backend — the Updates tab's "OS
+  // packages" section needs a clean `available`/`count` to avoid a
+  // false "N package pending" every time a registered app has an
+  // upstream bump.
+  const getAggregateUpdateCheck = (vm: VMData): LxcUpdateCheck | undefined => {
+    const uc = vm.update_check
+    const appCount = (vm.app_watches || []).filter(
+      (a) => a.update_available === true && !a.exclude_from_badge,
+    ).length
+    const osCount = uc?.count ?? 0
+    const total = osCount + appCount
+    if (!uc && appCount === 0) return undefined
+    if (total === 0) return uc
+    return {
+      ...(uc || {}),
+      count: total,
+      available: true,
+      last_check: uc?.last_check ?? new Date().toISOString(),
+    } as LxcUpdateCheck
+  }
+
   const renderLxcUpdateBadge = (
     uc?: LxcUpdateCheck,
     compact = false,
@@ -2587,7 +2617,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         })}
                         {vm.type === "lxc" && (
                           <div className="ml-auto flex-shrink-0">
-                            {renderLxcUpdateBadge(vm.update_check)}
+                            {renderLxcUpdateBadge(getAggregateUpdateCheck(vm))}
                           </div>
                         )}
                       </div>
@@ -2751,9 +2781,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 />
                               )
                             })}
-                            {vm.type === "lxc" && vm.update_check?.available && (vm.update_check?.count ?? 0) > 0 && (
-                              <ArrowUpCircle className="h-3 w-3 text-violet-400 flex-shrink-0" />
-                            )}
+                            {vm.type === "lxc" && (() => {
+                              const agg = getAggregateUpdateCheck(vm)
+                              return agg?.available && (agg.count ?? 0) > 0 ? (
+                                <ArrowUpCircle className="h-3 w-3 text-violet-400 flex-shrink-0" />
+                              ) : null
+                            })()}
                           </div>
                         </div>
 
@@ -2884,7 +2917,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               Uptime / Type / Status chips. */}
                           {selectedVM.type === "lxc" &&
                             renderLxcUpdateBadge(
-                              selectedVM.update_check,
+                              getAggregateUpdateCheck(selectedVM),
                               false,
                               () => setActiveModalTab("updates"),
                             )}
@@ -2931,7 +2964,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         )}
                         {selectedVM.type === "lxc" &&
                           renderLxcUpdateBadge(
-                            selectedVM.update_check,
+                            getAggregateUpdateCheck(selectedVM),
                             false,
                             () => setActiveModalTab("updates"),
                           )}
@@ -3011,11 +3044,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     <span className={activeModalTab === "updates" ? "" : "hidden sm:inline"}>
                       {t("vmLxc.tabs.updates")}
                     </span>
-                    {typeof selectedVM.update_check?.count === "number" && selectedVM.update_check.count > 0 && (
-                      <Badge variant="secondary" className="text-xs h-5 ml-0.5 sm:ml-1">
-                        {selectedVM.update_check.count}
-                      </Badge>
-                    )}
+                    {(() => {
+                      const agg = getAggregateUpdateCheck(selectedVM)
+                      return typeof agg?.count === "number" && agg.count > 0 ? (
+                        <Badge variant="secondary" className="text-xs h-5 ml-0.5 sm:ml-1">
+                          {agg.count}
+                        </Badge>
+                      ) : null
+                    })()}
                   </button>
                 )}
                 {/* Mount Points tab — LXC only, and only when at least

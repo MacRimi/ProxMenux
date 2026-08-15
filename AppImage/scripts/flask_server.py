@@ -6215,35 +6215,19 @@ def get_proxmox_vms():
                         # apps per CT (0..N). Populates header badge,
                         # Updates modal connected row, and the App
                         # tab. Absent key = no apps registered.
+                        # The list-card aggregate badge folds app
+                        # updates on the frontend side so the
+                        # OS-only `update_check.available` / `.count`
+                        # stay clean — the Updates tab reads them to
+                        # decide whether "OS packages pending" +
+                        # "Apply OS update" should show, and
+                        # inflating them with app pending was
+                        # producing a false "1 package pending"
+                        # every time a registered app had a newer
+                        # upstream version.
                         app_list = lxc_app_map.get(str(resource.get('vmid')))
                         if app_list:
                             vm_data['app_watches'] = app_list
-
-                        # Fold registered-app updates into the CT's
-                        # aggregate updates badge so the list card
-                        # counter reflects OS + apps in one number.
-                        # Apps flagged `exclude_from_badge` are
-                        # omitted from the count (pinned versions,
-                        # tracker-locked apps, etc.) — see the
-                        # validator in lxc_apps.py for the full
-                        # rationale. Independent from
-                        # `notifications_enabled`.
-                        if app_list:
-                            app_upd_count = sum(
-                                1 for a in app_list
-                                if a.get('update_available') is True
-                                and not a.get('exclude_from_badge')
-                            )
-                            if app_upd_count:
-                                uc = vm_data.get('update_check') or {}
-                                # Synthesize a minimal update_check
-                                # entry when the CT has no apt/apk
-                                # data (OCI, non-Debian, checker off)
-                                # but at least one counted app.
-                                uc = dict(uc) if uc else {}
-                                uc['count'] = int(uc.get('count') or 0) + app_upd_count
-                                uc['available'] = True
-                                vm_data['update_check'] = uc
 
                     # PVE's cluster resources API reports disk=0 for most
                     # QEMU VMs — it can't see inside the guest filesystem
@@ -7015,12 +6999,16 @@ def get_detailed_gpu_info(gpu):
                 # print(f"[v0] Process started with PID: {process.pid}", flush=True)
                 pass
                 
-                # print(f"[v0] Waiting 1 second for intel_gpu_top to initialize and detect processes...", flush=True)
-                pass
-                time.sleep(1)
-                
+                # intel_gpu_top needs a small warmup for the first JSON
+                # object to hit stdout. 300 ms is enough on every host
+                # tested — the previous 1 s was tuned when the tool was
+                # slower to boot and doubled the modal open latency for
+                # no gain. Combined with the shorter read timeout below
+                # this halves the worst-case blocking time.
+                time.sleep(0.3)
+
                 start_time = time.time()
-                timeout = 3
+                timeout = 1.5
                 json_objects = []
                 buffer = ""
                 brace_count = 0
@@ -13773,30 +13761,40 @@ def api_hardware_live():
         return jsonify({'error': str(e)}), 500
 
 
+_gpu_realtime_cache: dict[str, tuple[float, dict]] = {}
+_gpu_realtime_cache_lock = threading.Lock()
+# Frontend polls this endpoint every 3 s per open GPU modal. For
+# Intel and AMD the underlying tool call (intel_gpu_top / rocm-smi)
+# blocks ~2 s per invocation, so a naked request-per-poll makes the
+# modal feel sluggish and stacks CPU. A 4 s TTL means the second and
+# third poll of any 4 s window serve straight from memory while the
+# first still pays the tool cost; NVIDIA (nvidia-smi ~200 ms) also
+# benefits by dropping the second nvidia-smi spawn.
+_GPU_REALTIME_TTL = 4.0
+
 @app.route('/api/gpu/<slot>/realtime', methods=['GET'])
 @require_auth
 def api_gpu_realtime(slot):
     """Get real-time GPU monitoring data for a specific GPU"""
     try:
-        # print(f"[v0] /api/gpu/{slot}/realtime - Getting GPU info...")
-        pass
-        
+        now = time.time()
+        with _gpu_realtime_cache_lock:
+            hit = _gpu_realtime_cache.get(slot)
+        if hit and (now - hit[0]) < _GPU_REALTIME_TTL:
+            return jsonify(hit[1])
+
         gpus = get_gpu_info()
-        
+
         gpu = None
         for g in gpus:
             # Match by slot or if the slot is a substring of the GPU's slot (e.g., '00:01.0' matching '00:01')
             if g.get('slot') == slot or slot in g.get('slot', ''):
                 gpu = g
                 break
-        
+
         if not gpu:
-            # print(f"[v0] GPU with slot matching '{slot}' not found")
-            pass
             return jsonify({'error': 'GPU not found'}), 404
-        
-        # print(f"[v0] Getting detailed monitoring data for GPU at slot {gpu.get('slot')}...")
-        pass
+
         detailed_info = get_detailed_gpu_info(gpu)
         gpu.update(detailed_info)
 
@@ -13840,10 +13838,11 @@ def api_gpu_realtime(slot):
             'sriov_consumer': gpu.get('sriov_consumer'),
         }
 
+        with _gpu_realtime_cache_lock:
+            _gpu_realtime_cache[slot] = (time.time(), realtime_data)
+
         return jsonify(realtime_data)
     except Exception as e:
-        # print(f"[v0] Error getting real-time GPU data: {e}")
-        pass
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
