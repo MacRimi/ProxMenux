@@ -4,12 +4,13 @@ import type React from "react"
 
 import { useState, useMemo, useEffect, useRef } from "react"
 import { fetchLxcApps, getLxcAppsCached, invalidateLxcApps, seedLxcAppsCache } from "../lib/lxc-apps-cache"
+import { parseTags, stringifyTags, tagToColor } from "../lib/pve-tag-color"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Pencil, Trash2, Check, AlertTriangle, AlertCircle } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Pencil, Trash2, Check, X, AlertTriangle, AlertCircle, Tag as TagIcon } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
 import { Switch } from "./ui/switch"
@@ -126,6 +127,11 @@ interface VMData {
   diskwrite?: number
   ip?: string
   update_check?: LxcUpdateCheck
+  // Proxmox tags as a raw string ("prod;web;monitoring" — PVE
+  // separator is ';' but ',' is also accepted). Rendered as
+  // coloured dots next to the ID in the list cards and as full
+  // pills inside the modal.
+  tags?: string
   // List of registered apps (0..N). Managed entries (Secure Gateway)
   // always come first when present.
   app_watches?: LxcAppWatch[]
@@ -436,7 +442,7 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
       ? "border-amber-500/40 bg-amber-500/5"
       : isReadonly
         ? "border-amber-500/30 bg-amber-500/5"
-        : "border border-white/10 sm:border-border bg-white/5 sm:bg-card"
+        : "border border-border bg-card"
 
   const typeBadgeClass: Record<LxcMountPoint["type"], string> = {
     pve_volume: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
@@ -698,8 +704,11 @@ export function VirtualMachines() {
     // Only the static half of mount-points goes here. Runtime
     // (capacity/health/ad-hoc) is intentionally NOT cached — see
     // `mountPointsRuntime` state + `fetchMountPoints` for the
-    // always-fresh side.
-    mountPoints: new Map<number, { mount_points: LxcMountPoint[] }>(),
+    // always-fresh side. `ad_hoc_hint_count` is the cheap remote-fs
+    // count from /proc/<pid>/mounts (server-side, no subprocess)
+    // that lets us render the Mount Points tab header at open time
+    // for CTs that only have NFS/CIFS mounted from inside.
+    mountPoints: new Map<number, { mount_points: LxcMountPoint[]; ad_hoc_hint_count?: number }>(),
     // Firewall log is on-demand ONLY — do NOT seed it from the bulk
     // modal-cache endpoint or from any prewarmer. The log is a live
     // stream (new entries flow with every packet the firewall drops)
@@ -721,6 +730,26 @@ export function VirtualMachines() {
   } | null>(null)
   const [confirmDestructiveTyped, setConfirmDestructiveTyped] = useState("")
   const [detailsLoading, setDetailsLoading] = useState(false)
+  // Status tab: inline editor for the "start on boot" toggle.
+  //   resourcesEditMode → true when the pencil is open, gates the
+  //                       toggle so accidental clicks don't fire.
+  //   pendingOnboot     → local edit value; null means "no pending
+  //                       change, use whatever vmDetails.config
+  //                       says". `qm/pct set --onboot` is hot, so
+  //                       the change lands without a reboot.
+  //   savingOnboot      → spinner state on Save.
+  //   savedOnboot       → 2 s ack pill after successful save.
+  const [resourcesEditMode, setResourcesEditMode] = useState(false)
+  const [pendingOnboot, setPendingOnboot] = useState<boolean | null>(null)
+  const [pendingTags, setPendingTags] = useState<string[] | null>(null)
+  const [newTagDraft, setNewTagDraft] = useState<string>("")
+  // When set (in edit mode), the pill at this index renders as an
+  // inline text input pre-filled with its current text. Enter/blur
+  // commits the change; Escape reverts; empty commits removes the tag.
+  const [editingTagIndex, setEditingTagIndex] = useState<number | null>(null)
+  const [editingTagDraft, setEditingTagDraft] = useState<string>("")
+  const [savingOnboot, setSavingOnboot] = useState(false)
+  const [savedOnboot, setSavedOnboot] = useState(false)
   // Post-apply state for the Updates tab. When the script terminal
   // closes, the tab enters a "Comprobando resultado…" state until
   // a fresh /api/vms poll delivers the new update_check counts;
@@ -791,6 +820,13 @@ export function VirtualMachines() {
   // static cards still render (paths, types, storage origin) and
   // reveal usage/health when the fetch resolves.
   const [mountPointsRuntime, setMountPointsRuntime] = useState<Record<string, Partial<LxcMountPoint>> | null>(null)
+  // Cheap count of remote-fs (nfs/cifs/smb) entries in the CT's
+  // /proc/<pid>/mounts, delivered by the static endpoint so the
+  // Mount Points tab can render its header IMMEDIATELY for CTs that
+  // only have ad-hoc mounts inside the container. The full ad-hoc
+  // list still arrives via the runtime fetch (with capacity/health);
+  // this is just enough to know "should the tab show at all?".
+  const [mountsAdHocHint, setMountsAdHocHint] = useState<number>(0)
   
   // Detect standalone mode (webapp vs browser)
   const [isStandalone, setIsStandalone] = useState(false)
@@ -948,6 +984,15 @@ export function VirtualMachines() {
     setShowNotes(false)
     setIsEditingNotes(false)
     setEditedNotes("")
+    // Resources edit mode never carries across guests — always
+    // start in view mode with no pending change.
+    setResourcesEditMode(false)
+    setPendingOnboot(null)
+    setPendingTags(null)
+    setNewTagDraft("")
+    setEditingTagIndex(null)
+    setEditingTagDraft("")
+    setSavedOnboot(false)
     setActiveModalTab("status")
     // Reset firewall log state — fetched lazily when the user opens
     // that tab, since most operators won't visit it on every modal open.
@@ -965,6 +1010,11 @@ export function VirtualMachines() {
     setVMDetails(seedDetails ?? null)
     setVmBackups(seedBackups?.backups ?? [])
     setMountPoints(seedMounts?.mount_points ?? [])
+    // Seed the ad-hoc hint from the static payload so the Mount
+    // Points tab header renders instantly even when the CT only
+    // has NFS/CIFS mounts done from inside (nothing in .conf).
+    // The full list arrives via the runtime fetch a moment later.
+    setMountsAdHocHint(seedMounts?.ad_hoc_hint_count ?? 0)
     // Ad-hoc mounts only come from the runtime fetch — never seeded.
     // Reset to empty on each modal open; if the CT has any, they
     // appear as soon as the runtime response arrives.
@@ -1059,7 +1109,7 @@ export function VirtualMachines() {
         backups: { backups?: VMBackup[] } | null
         apps?: { apps?: any[] } | null
         schedule?: any | null
-        mount_points?: { ok?: boolean; mount_points?: LxcMountPoint[]; ad_hoc?: LxcMountPoint[] } | null
+        mount_points?: { ok?: boolean; mount_points?: LxcMountPoint[]; ad_hoc_hint_count?: number } | null
       }>
     }>(`/api/vms/modal-cache-all`)
       .then((payload) => {
@@ -1082,9 +1132,13 @@ export function VirtualMachines() {
             if (g.mount_points?.ok) {
               // Only the static half now — ad_hoc + runtime come
               // from the always-fresh /mount-points/runtime endpoint
-              // and are not seeded from the bulk payload.
+              // and are not seeded from the bulk payload. The
+              // ad_hoc_hint_count travels along so the tab header
+              // can render at open time even when the CT only has
+              // NFS/CIFS mounted from inside.
               cache.mountPoints.set(g.vmid, {
                 mount_points: g.mount_points.mount_points || [],
+                ad_hoc_hint_count: (g.mount_points as any).ad_hoc_hint_count ?? 0,
               })
             }
           }
@@ -1116,6 +1170,7 @@ export function VirtualMachines() {
         fetchApi<{
           ok: boolean
           mount_points: LxcMountPoint[]
+          ad_hoc_hint_count?: number
         }>(`/api/lxc/${vmid}/mount-points`).catch((e) => {
           console.error("Error fetching static mount points:", e)
           return null
@@ -1132,8 +1187,10 @@ export function VirtualMachines() {
       ])
       if (staticResp?.ok) {
         const mp = staticResp.mount_points || []
+        const hint = staticResp.ad_hoc_hint_count ?? 0
         setMountPoints(mp)
-        vmModalCacheRef.current.mountPoints.set(vmid, { mount_points: mp })
+        setMountsAdHocHint(hint)
+        vmModalCacheRef.current.mountPoints.set(vmid, { mount_points: mp, ad_hoc_hint_count: hint })
       } else if (!hasSeed) {
         setMountPoints([])
       }
@@ -1303,6 +1360,65 @@ export function VirtualMachines() {
       alert(t("vmLxc.errors.backupStartFailed", { message: msg }))
     } finally {
       setCreatingBackup(false)
+    }
+  }
+
+  const handleCancelResourcesEdit = () => {
+    setPendingOnboot(null)
+    setPendingTags(null)
+    setNewTagDraft("")
+    setEditingTagIndex(null)
+    setEditingTagDraft("")
+    setResourcesEditMode(false)
+  }
+
+  const handleSaveResources = async () => {
+    if (!selectedVM) return
+    const currentOnboot = !!vmDetails?.config?.onboot
+    const currentTags = parseTags(selectedVM.tags)
+    // Build the smallest payload that reflects real changes — the
+    // backend allow-list accepts onboot + tags together in one call.
+    const payload: Record<string, unknown> = {}
+    if (pendingOnboot !== null && pendingOnboot !== currentOnboot) {
+      payload.onboot = pendingOnboot ? 1 : 0
+    }
+    if (pendingTags !== null && stringifyTags(pendingTags) !== stringifyTags(currentTags)) {
+      payload.tags = pendingTags
+    }
+    if (Object.keys(payload).length === 0) {
+      handleCancelResourcesEdit()
+      return
+    }
+    setSavingOnboot(true)
+    try {
+      await fetchApi(`/api/vms/${selectedVM.vmid}/config`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      })
+      // Optimistic local reflect so the UI doesn't wait a poll cycle.
+      if (payload.onboot !== undefined) {
+        setVMDetails((prev) => (prev ? { ...prev, config: { ...prev.config, onboot: payload.onboot as number } } : prev))
+      }
+      if (payload.tags !== undefined) {
+        const nextTagsStr = stringifyTags(payload.tags as string[])
+        setSelectedVM((prev) => (prev ? { ...prev, tags: nextTagsStr } : prev))
+      }
+      vmModalCacheRef.current.details.delete(selectedVM.vmid)
+      // Trigger a natural /api/vms revalidation so tags flow into the
+      // list card too without waiting up to 2.5 s.
+      void mutate()
+      setPendingOnboot(null)
+      setPendingTags(null)
+      setNewTagDraft("")
+      setEditingTagIndex(null)
+      setEditingTagDraft("")
+      setResourcesEditMode(false)
+      setSavedOnboot(true)
+      setTimeout(() => setSavedOnboot(false), 2000)
+    } catch (err) {
+      console.error("Failed to update resources:", err)
+    } finally {
+      setSavingOnboot(false)
     }
   }
 
@@ -2453,6 +2569,22 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         </Badge>
                         <span className="font-semibold text-foreground truncate min-w-0">{vm.name}</span>
                         <span className="text-sm text-muted-foreground whitespace-nowrap flex-shrink-0">ID: {vm.vmid}</span>
+                        {/* PVE tag dots — hash-derived colour so the same
+                            tag renders identically across the app and
+                            matches PVE's own tag palette. Full pills
+                            live inside the modal; here only the dot
+                            reads at a glance in a dense card. */}
+                        {parseTags(vm.tags).map((tag) => {
+                          const { bg } = tagToColor(tag)
+                          return (
+                            <span
+                              key={`tag-dot-${vm.vmid}-${tag}`}
+                              title={tag}
+                              className="inline-block h-3 w-3 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: bg }}
+                            />
+                          )
+                        })}
                         {vm.type === "lxc" && (
                           <div className="ml-auto flex-shrink-0">
                             {renderLxcUpdateBadge(vm.update_check)}
@@ -2467,8 +2599,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           grid. Below `lg` the left slot is hidden
                           and the grid spans the full card width. */}
                       <div className="flex flex-row gap-3 lg:gap-4">
-                        {vm.status === "running" && (
-                          <div className="hidden lg:block lg:min-w-[180px] lg:flex-shrink-0">
+                        {/* Left slot is ALWAYS mounted on lg+ so the
+                            metrics grid keeps the same column widths
+                            whether the guest is running or stopped —
+                            otherwise stopped rows shifted their CPU /
+                            RAM / Disk columns leftward and broke the
+                            vertical alignment across cards. Content
+                            inside is still gated on `running`. */}
+                        <div className="hidden lg:block lg:min-w-[180px] lg:flex-shrink-0">
+                          {vm.status === "running" && (
                             <div className="flex flex-col gap-1">
                               <span className="text-sm text-muted-foreground whitespace-nowrap">
                                 {t("vmLxc.uptime", { uptime: formatUptime(vm.uptime, t) })}
@@ -2480,8 +2619,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 </span>
                               )}
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                         <div className="flex-1 grid grid-cols-5 gap-2 lg:gap-3 min-w-0">
                           <div>
                             <div className="text-xs text-muted-foreground mb-1">{t("vmLxc.cpuUsage")}</div>
@@ -2601,6 +2740,17 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           <div className="font-semibold text-foreground truncate">{vm.name}</div>
                           <div className="text-[10px] text-muted-foreground flex items-center gap-1">
                             <span>ID: {vm.vmid}</span>
+                            {parseTags(vm.tags).map((tag) => {
+                              const { bg } = tagToColor(tag)
+                              return (
+                                <span
+                                  key={`tag-dot-m-${vm.vmid}-${tag}`}
+                                  title={tag}
+                                  className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: bg }}
+                                />
+                              )
+                            })}
                             {vm.type === "lxc" && vm.update_check?.available && (vm.update_check?.count ?? 0) > 0 && (
                               <ArrowUpCircle className="h-3 w-3 text-violet-400 flex-shrink-0" />
                             )}
@@ -2868,9 +3018,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     )}
                   </button>
                 )}
-                {/* Sprint 13.29: Mount Points tab — LXC only, and only
-                    when at least one mp / ad-hoc remote mount exists. */}
-                {selectedVM?.type === "lxc" && (mountPoints.length > 0 || adHocMounts.length > 0) && (
+                {/* Mount Points tab — LXC only, and only when at least
+                    one mp / ad-hoc remote mount exists. The ad-hoc
+                    hint (from the static endpoint, counts remote-fs
+                    entries in /proc/<pid>/mounts) lets the tab render
+                    at open time even before the runtime fetch has
+                    delivered the real ad_hoc list. Badge count adds
+                    that hint so it never reads "0" while data is on
+                    the wire. */}
+                {selectedVM?.type === "lxc" && (mountPoints.length > 0 || adHocMounts.length > 0 || mountsAdHocHint > 0) && (
                   <button
                     onClick={() => setActiveModalTab("mounts")}
                     className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
@@ -2884,7 +3040,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                       {t("vmLxc.tabs.mounts")}
                     </span>
                     <Badge variant="secondary" className="text-xs h-5 ml-0.5 sm:ml-1">
-                      {mountPoints.length + adHocMounts.length}
+                      {mountPoints.length + Math.max(adHocMounts.length, mountsAdHocHint)}
                     </Badge>
                   </button>
                 )}
@@ -3061,6 +3217,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   </div>
                                   <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.resources")}</h3>
                                 </div>
+                                {/* Editar / Guardar / Cancelar collapse to
+                                    icon-only squares on mobile so 3 of them
+                                    plus Notas don't overflow the row. Notas
+                                    keeps its label because "Notes" is
+                                    non-obvious as an icon. Pattern is
+                                    consistent with tab strips elsewhere. */}
                                 <div className="flex gap-2">
                                   <Button
                                     variant="outline"
@@ -3080,24 +3242,70 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       </>
                                     )}
                                   </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setShowAdditionalInfo(!showAdditionalInfo)}
-                                    className="text-xs max-sm:bg-black/5 max-sm:dark:bg-white/5 sm:bg-transparent sm:hover:bg-black/5 sm:dark:hover:bg-white/5"
-                                  >
-                                    {showAdditionalInfo ? (
-                                      <>
-                                        <ChevronUp className="h-3 w-3 mr-1" />
-                                        {t("vmLxc.lessInfo")}
-                                      </>
-                                    ) : (
-                                      <>
-                                        <ChevronDown className="h-3 w-3 mr-1" />
-                                        + {t("vmLxc.info")}
-                                      </>
-                                    )}
-                                  </Button>
+                                  {/* Editar — reveals the autostart toggle
+                                      as editable. Only one field for now
+                                      (`onboot`); the endpoint accepts a
+                                      whitelist so growing this to boot
+                                      order, protection etc. is additive.
+                                      Feedback pattern mirrors the Settings
+                                      cards: Saved pill for 2s, Cancel/Save
+                                      pair while editing. */}
+                                  {savedOnboot && (
+                                    <span className="flex items-center gap-1 text-xs text-green-500 mr-1">
+                                      <Check className="h-3.5 w-3.5" />
+                                      {t("status.saved")}
+                                    </span>
+                                  )}
+                                  {resourcesEditMode ? (
+                                    <>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleCancelResourcesEdit}
+                                        disabled={savingOnboot}
+                                        aria-label={t("actions.cancel")}
+                                        className="text-xs h-9 w-9 sm:w-auto sm:px-3 p-0 sm:p-2"
+                                      >
+                                        <X className="h-3.5 w-3.5 sm:mr-1" />
+                                        <span className="hidden sm:inline">{t("actions.cancel")}</span>
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={handleSaveResources}
+                                        disabled={
+                                          savingOnboot ||
+                                          (
+                                            (pendingOnboot === null || pendingOnboot === !!vmDetails.config.onboot) &&
+                                            (pendingTags === null || stringifyTags(pendingTags) === stringifyTags(parseTags(selectedVM?.tags)))
+                                          )
+                                        }
+                                        aria-label={t("actions.save")}
+                                        className="text-xs h-9 w-9 sm:w-auto sm:px-3 p-0 sm:p-2 bg-blue-600 hover:bg-blue-700 text-white"
+                                      >
+                                        {savingOnboot ? (
+                                          <Loader2 className="h-3 w-3 animate-spin sm:mr-1" />
+                                        ) : (
+                                          <Check className="h-3.5 w-3.5 sm:mr-1" />
+                                        )}
+                                        <span className="hidden sm:inline">{t("actions.save")}</span>
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setPendingOnboot(!!vmDetails.config.onboot)
+                                        setPendingTags(parseTags(selectedVM?.tags))
+                                        setResourcesEditMode(true)
+                                      }}
+                                      aria-label={t("actions.edit")}
+                                      className="text-xs h-9 w-9 sm:w-auto sm:px-3 p-0 sm:p-2 max-sm:bg-black/5 max-sm:dark:bg-white/5 sm:bg-transparent sm:hover:bg-black/5 sm:dark:hover:bg-white/5"
+                                    >
+                                      <Settings2 className="h-3.5 w-3.5 sm:mr-1" />
+                                      <span className="hidden sm:inline">{t("actions.edit")}</span>
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
 
@@ -3131,11 +3339,180 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 )}
                               </div>
 
+                              {/* PVE tags block. Same edit-gate as the
+                                  autostart toggle below — the Editar
+                                  button on this card unlocks both. In
+                                  view mode we render each tag as a
+                                  sharp pill (colors from the 1:1 port
+                                  of PVE's stringToRGB + SAPC text
+                                  picker, so the palette matches the
+                                  PVE UI exactly). In edit mode:
+                                  clicking a pill turns it into an
+                                  inline input for renaming; the ×
+                                  removes it; an input at the tail
+                                  adds new tags (Enter/,/; commits).
+                                  Validation mirrors the Flask
+                                  allow-list regex. */}
+                              {(() => {
+                                const viewTags = parseTags(selectedVM?.tags)
+                                const editTags = pendingTags ?? viewTags
+                                const shownTags = resourcesEditMode ? editTags : viewTags
+                                if (!resourcesEditMode && shownTags.length === 0) return null
+                                const commitEdit = (index: number) => {
+                                  const raw = editingTagDraft.trim()
+                                  const next = [...editTags]
+                                  if (!raw) {
+                                    next.splice(index, 1)
+                                  } else if (!/^[a-zA-Z0-9._\-+]+$/.test(raw)) {
+                                    setEditingTagIndex(null)
+                                    setEditingTagDraft("")
+                                    return
+                                  } else if (next.includes(raw) && next[index] !== raw) {
+                                    setEditingTagIndex(null)
+                                    setEditingTagDraft("")
+                                    return
+                                  } else {
+                                    next[index] = raw
+                                  }
+                                  setPendingTags(next)
+                                  setEditingTagIndex(null)
+                                  setEditingTagDraft("")
+                                }
+                                return (
+                                  <div
+                                    className={`mt-4 rounded-md p-3 ${
+                                      resourcesEditMode ? "bg-accent" : ""
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <TagIcon className="h-4 w-4 text-blue-500 shrink-0" />
+                                      <div className="text-sm font-medium text-foreground">
+                                        {t("vmLxc.details.tags")}
+                                      </div>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      {shownTags.map((tag, index) => {
+                                        const { bg, fg } = tagToColor(tag)
+                                        const isEditingThis = resourcesEditMode && editingTagIndex === index
+                                        if (isEditingThis) {
+                                          return (
+                                            <input
+                                              key={`vm-tag-edit-${selectedVM?.vmid}-${index}`}
+                                              type="text"
+                                              autoFocus
+                                              value={editingTagDraft}
+                                              onChange={(e) => setEditingTagDraft(e.target.value)}
+                                              onKeyDown={(e) => {
+                                                if (e.key === "Enter" || e.key === "," || e.key === ";") {
+                                                  e.preventDefault()
+                                                  commitEdit(index)
+                                                } else if (e.key === "Escape") {
+                                                  e.preventDefault()
+                                                  setEditingTagIndex(null)
+                                                  setEditingTagDraft("")
+                                                }
+                                              }}
+                                              onBlur={() => commitEdit(index)}
+                                              className="h-7 text-sm px-2 rounded-sm bg-background border border-border focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-[80px]"
+                                              style={{ width: `${Math.max(8, editingTagDraft.length + 2)}ch` }}
+                                            />
+                                          )
+                                        }
+                                        return (
+                                          <span
+                                            key={`vm-tag-${selectedVM?.vmid}-${tag}-${index}`}
+                                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-sm font-medium leading-none ${
+                                              resourcesEditMode ? "cursor-text" : ""
+                                            }`}
+                                            style={{ backgroundColor: bg, color: fg }}
+                                            onClick={() => {
+                                              if (!resourcesEditMode) return
+                                              setEditingTagIndex(index)
+                                              setEditingTagDraft(tag)
+                                            }}
+                                          >
+                                            <span>{tag}</span>
+                                            {resourcesEditMode && (
+                                              <button
+                                                type="button"
+                                                aria-label={`${t("actions.remove")} ${tag}`}
+                                                onClick={(e) => {
+                                                  e.stopPropagation()
+                                                  const next = editTags.filter((_, i) => i !== index)
+                                                  setPendingTags(next)
+                                                }}
+                                                className="inline-flex items-center justify-center h-4 w-4 rounded-sm hover:bg-black/20"
+                                              >
+                                                <X className="h-3.5 w-3.5" />
+                                              </button>
+                                            )}
+                                          </span>
+                                        )
+                                      })}
+                                      {resourcesEditMode && (
+                                        <input
+                                          type="text"
+                                          value={newTagDraft}
+                                          onChange={(e) => setNewTagDraft(e.target.value)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Enter" || e.key === "," || e.key === ";") {
+                                              e.preventDefault()
+                                              const raw = newTagDraft.trim()
+                                              if (!raw) return
+                                              if (!/^[a-zA-Z0-9._\-+]+$/.test(raw)) return
+                                              if (editTags.includes(raw)) {
+                                                setNewTagDraft("")
+                                                return
+                                              }
+                                              setPendingTags([...editTags, raw])
+                                              setNewTagDraft("")
+                                            }
+                                          }}
+                                          placeholder={t("vmLxc.details.tagsPlaceholder")}
+                                          className="h-7 text-sm px-2 rounded-sm bg-background border border-border focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-[100px] flex-1"
+                                        />
+                                      )}
+                                      {!resourcesEditMode && shownTags.length === 0 && (
+                                        <span className="text-xs text-muted-foreground italic">
+                                          {t("vmLxc.details.tagsNone")}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              })()}
+
+                              {/* Start-on-host toggle. Tight `mt-1` because
+                                  the tags block above is a companion of
+                                  this row — same edit-gate, both flip
+                                  together when Editar is pressed. Big
+                                  margin here made the whole guest
+                                  detail scroll further down for no
+                                  reason. */}
+                              <div
+                                className={`mt-1 rounded-md p-3 flex items-center justify-between gap-3 ${
+                                  resourcesEditMode ? "bg-accent" : ""
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Power className="h-4 w-4 text-blue-500 shrink-0" />
+                                  <div className="text-sm font-medium text-foreground">
+                                    {t("vmLxc.details.startOnBoot")}
+                                  </div>
+                                </div>
+                                <Switch
+                                  checked={pendingOnboot ?? !!vmDetails.config.onboot}
+                                  disabled={!resourcesEditMode || savingOnboot}
+                                  onCheckedChange={(v) => setPendingOnboot(v)}
+                                  className={`data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-input border border-border ${!resourcesEditMode ? "opacity-60" : ""}`}
+                                />
+                              </div>
+
                               {/* IP Addresses with proper keys */}
                               {selectedVM?.type === "lxc" && vmDetails?.lxc_ip_info && (
-                                <div className="mt-4 lg:mt-6 pt-4 lg:pt-6 border-t border-border">
-                                  <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                                    <Network className="h-4 w-4" />
+                                <div className="mt-4 lg:mt-6">
+                                  <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wide">
+                                    <Network className="h-4 w-4 text-blue-500" />
                                     {t("vmLxc.ipAddresses")}
                                   </h4>
                                   <div className="flex flex-wrap gap-2">
@@ -3172,9 +3549,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         variant="outline"
                                         size="sm"
                                         onClick={handleEditNotes}
-                                        className="text-xs bg-transparent"
+                                        className="text-xs h-9 w-9 sm:w-auto sm:px-3 p-0 sm:p-2 bg-transparent"
+                                        aria-label={t("vmLxc.editNotes")}
                                       >
-                                        {t("vmLxc.editNotes")}
+                                        <Settings2 className="h-3.5 w-3.5 sm:mr-1" />
+                                        <span className="hidden sm:inline">{t("vmLxc.editNotes")}</span>
                                       </Button>
                                     )}
                                   </div>
@@ -3193,16 +3572,27 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             size="sm"
                                             onClick={handleCancelEditNotes}
                                             disabled={savingNotes}
+                                            className="h-9 w-9 sm:w-auto sm:px-3 p-0 sm:p-2"
+                                            aria-label={t("actions.cancel")}
                                           >
-                                            {t("actions.cancel")}
+                                            <X className="h-3.5 w-3.5 sm:mr-1" />
+                                            <span className="hidden sm:inline">{t("actions.cancel")}</span>
                                           </Button>
                                           <Button
                                             size="sm"
                                             onClick={handleSaveNotes}
                                             disabled={savingNotes}
-                                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                                            className="h-9 w-9 sm:w-auto sm:px-3 p-0 sm:p-2 bg-blue-600 hover:bg-blue-700 text-white"
+                                            aria-label={savingNotes ? t("vmLxc.savingNotes") : t("actions.save")}
                                           >
-                                            {savingNotes ? t("vmLxc.savingNotes") : t("actions.save")}
+                                            {savingNotes ? (
+                                              <Loader2 className="h-3.5 w-3.5 sm:mr-1 animate-spin" />
+                                            ) : (
+                                              <Check className="h-3.5 w-3.5 sm:mr-1" />
+                                            )}
+                                            <span className="hidden sm:inline">
+                                              {savingNotes ? t("vmLxc.savingNotes") : t("actions.save")}
+                                            </span>
                                           </Button>
                                         </div>
                                       </div>
@@ -3310,12 +3700,19 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 </div>
                               )}
 
-                              {showAdditionalInfo && (
-                                <div className="mt-6 pt-6 border-t border-border space-y-6">
+                              {/* Extended info — always shown now. Used to be
+                                  gated behind a "+ Info" button; the button
+                                  was removed and this block is fully expanded
+                                  so the user sees hardware/storage/network
+                                  without extra clicks. The former border-t
+                                  divider that separated the collapsed block
+                                  from the resources grid was dropped too;
+                                  the plain `mt-6` gives enough visual air. */}
+                              <div className="mt-6 space-y-6">
                                   {selectedVM?.type === "lxc" && vmDetails?.hardware_info && (
                                     <div>
-                                      <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                                        <Container className="h-4 w-4" />
+                                      <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wide">
+                                        <Container className="h-4 w-4 text-blue-500" />
                                         {t("vmLxc.containerConfiguration")}
                                       </h4>
                                       <div className="space-y-4">
@@ -3393,8 +3790,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
                                   {/* Hardware Section */}
                                   <div>
-                                    <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                                      <Settings2 className="h-4 w-4" />
+                                    <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wide">
+                                      <Settings2 className="h-4 w-4 text-blue-500" />
                                       {t("vmLxc.details.hardware")}
                                     </h4>
                                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
@@ -3597,8 +3994,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     }
                                     return (
                                       <div>
-                                        <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                                          <HardDrive className="h-4 w-4" />
+                                        <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wide">
+                                          <HardDrive className="h-4 w-4 text-blue-500" />
                                           {t("vmLxc.details.storage")}
                                         </h4>
                                         <div className="space-y-3">
@@ -3634,8 +4031,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
                                   {/* Network Section */}
                                   <div>
-                                    <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                                      <Network className="h-4 w-4" />
+                                    <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wide">
+                                      <Network className="h-4 w-4 text-blue-500" />
                                       {t("vmLxc.details.network")}
                                     </h4>
                                     <div className="space-y-3">
@@ -3751,8 +4148,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   {/* PCI Devices with proper keys */}
                                   {Object.keys(vmDetails.config).some((key) => key.match(/^hostpci\d+$/)) && (
                                     <div>
-                                      <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                                        <Cpu className="h-4 w-4" />
+                                      <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wide">
+                                        <Cpu className="h-4 w-4 text-blue-500" />
                                         {t("vmLxc.details.pciPassthrough")}
                                       </h4>
                                       <div className="space-y-3">
@@ -3775,8 +4172,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   {/* USB Devices with proper keys */}
                                   {Object.keys(vmDetails.config).some((key) => key.match(/^usb\d+$/)) && (
                                     <div>
-                                      <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                                        <Server className="h-4 w-4" />
+                                      <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wide">
+                                        <Server className="h-4 w-4 text-blue-500" />
                                         {t("vmLxc.details.usbDevices")}
                                       </h4>
                                       <div className="space-y-3">
@@ -3799,8 +4196,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   {/* Serial Ports with proper keys */}
                                   {Object.keys(vmDetails.config).some((key) => key.match(/^serial\d+$/)) && (
                                     <div>
-                                      <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                                        <Terminal className="h-4 w-4" />
+                                      <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wide">
+                                        <Terminal className="h-4 w-4 text-blue-500" />
                                         {t("vmLxc.details.serialPorts")}
                                       </h4>
                                       <div className="space-y-3">
@@ -3819,8 +4216,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       </div>
                                     </div>
                                   )}
-                                </div>
-                              )}
+                              </div>
                             </CardContent>
                           </Card>
                         </>
@@ -4950,16 +5346,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           const merged = rt ? { ...mp, ...rt } : mp
                           return <MountPointCard key={mp.mp_index || mp.target} mp={merged} />
                         })}
-                        {adHocMounts.length > 0 && (
-                          <>
-                            <div className="text-sm font-semibold text-muted-foreground pt-2 border-t border-border">
-                              {t("vmLxc.mountedFromContainer")}
-                            </div>
-                            {adHocMounts.map((mp) => (
-                              <MountPointCard key={`adhoc-${mp.target}`} mp={mp} />
-                            ))}
-                          </>
-                        )}
+                        {adHocMounts.length > 0 && adHocMounts.map((mp) => (
+                          // No divider heading here — each MountPointCard
+                          // already carries a coloured "ad-hoc inside CT"
+                          // badge next to its target, so a separate row
+                          // saying the same thing was pure vertical noise.
+                          <MountPointCard key={`adhoc-${mp.target}`} mp={mp} />
+                        ))}
                       </>
                     )}
                   </div>
@@ -4967,17 +5360,23 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
                 {/* Backups Tab */}
                 {activeModalTab === "backups" && (
-                  <div className="space-y-4">
-                    <Card className="border border-border bg-card/50">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-4">
+                  /* Backups tab layout: the Card fills the whole tab
+                     body so the backup list can scroll inside its
+                     bordered card instead of leaving empty space
+                     under a short list. Same pattern as the disk
+                     modal tabs: header + summary pinned, list grows
+                     and scrolls in the middle. */
+                  <div className="h-full flex flex-col min-h-0">
+                    <Card className="border border-border bg-card/50 flex flex-col flex-1 min-h-0">
+                      <CardContent className="p-4 flex flex-col flex-1 min-h-0">
+                        <div className="flex items-center justify-between mb-4 shrink-0">
                           <div className="flex items-center gap-2">
                             <div className="p-1.5 rounded-md bg-amber-500/10">
                               <Archive className="h-4 w-4 text-amber-500" />
                             </div>
                             <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.backups.title")}</h3>
                           </div>
-                          <Button 
+                          <Button
                             size="sm"
                             className="h-7 text-xs bg-amber-600/20 border border-amber-600/50 text-amber-400 hover:bg-amber-600/30 gap-1"
                             onClick={openBackupModal}
@@ -4991,29 +5390,29 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             <span>{t("vmLxc.backups.create")}</span>
                           </Button>
                         </div>
-                        
+
                         {/* Divider */}
-                        <div className="border-t border-border/50 mb-4" />
-                        
+                        <div className="border-t border-border/50 mb-4 shrink-0" />
+
                         {/* Backup List */}
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center justify-between mb-3 shrink-0">
                           <span className="text-xs text-muted-foreground">{t("vmLxc.backups.available")}</span>
                           <Badge variant="secondary" className="text-xs h-5">{vmBackups.length}</Badge>
                         </div>
-                        
+
                         {loadingBackups ? (
-                          <div className="flex items-center justify-center py-6 text-muted-foreground">
+                          <div className="flex-1 flex items-center justify-center text-muted-foreground min-h-0">
                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
                             <span className="text-sm">{t("vmLxc.backups.loading")}</span>
                           </div>
                         ) : vmBackups.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground min-h-0">
                             <Archive className="h-12 w-12 mb-3 opacity-30" />
                             <span className="text-sm">{t("vmLxc.backups.empty")}</span>
                             <span className="text-xs mt-1">{t("vmLxc.backups.emptyHint")}</span>
                           </div>
                         ) : (
-                          <div className="space-y-2">
+                          <div className="space-y-2 flex-1 overflow-y-auto min-h-0 pr-1 -mr-1">
                             {vmBackups.map((backup, index) => (
                               <div 
                                 key={`backup-${backup.volid}-${index}`}
@@ -5047,10 +5446,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     grep). Loading is lazy and triggered by the tab
                     button's onClick. */}
                 {activeModalTab === "firewall" && (
-                  <div className="space-y-4">
-                    <Card className="border border-border bg-card/50">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+                  /* Firewall tab: Card fills the whole tab body so
+                     the log pre-block can grow with the modal
+                     instead of being capped at 480 px. Header stays
+                     pinned, log block scrolls in the middle. */
+                  <div className="h-full flex flex-col min-h-0">
+                    <Card className="border border-border bg-card/50 flex flex-col flex-1 min-h-0">
+                      <CardContent className="p-4 flex flex-col flex-1 min-h-0">
+                        <div className="flex items-center justify-between mb-4 gap-2 flex-wrap shrink-0">
                           <div className="flex items-center gap-2">
                             <div className="p-1.5 rounded-md bg-orange-500/10">
                               <Shield className="h-4 w-4 text-orange-500" />
@@ -5078,15 +5481,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           </Button>
                         </div>
 
-                        <div className="border-t border-border/50 mb-4" />
+                        <div className="border-t border-border/50 mb-4 shrink-0" />
 
                         {loadingFirewallLog ? (
-                          <div className="flex items-center justify-center py-6 text-muted-foreground">
+                          <div className="flex-1 flex items-center justify-center text-muted-foreground min-h-0">
                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
                             <span className="text-sm">{t("vmLxc.firewall.loading")}</span>
                           </div>
                         ) : !firewallEnabled ? (
-                          <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
+                          <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4 text-sm shrink-0">
                             <div className="flex items-start gap-2">
                               <Shield className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                               <div className="space-y-2">
@@ -5104,7 +5507,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             </div>
                           </div>
                         ) : firewallLogError ? (
-                          <div className="rounded-md border border-red-500/30 bg-red-500/5 p-4 text-sm">
+                          <div className="rounded-md border border-red-500/30 bg-red-500/5 p-4 text-sm shrink-0">
                             <div className="flex items-start gap-2">
                               <Shield className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
                               <div>
@@ -5114,14 +5517,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             </div>
                           </div>
                         ) : displayedFirewallLogs.length === 0 ? (
-                          <div className="text-center py-6 text-sm text-muted-foreground">
+                          <div className="flex-1 flex flex-col items-center justify-center text-sm text-muted-foreground min-h-0">
                             {t("vmLxc.firewall.empty")}
                             <div className="text-xs mt-1">
                               {t("vmLxc.firewall.emptyHint")}
                             </div>
                           </div>
                         ) : (
-                          <div className="rounded-md border border-border bg-background/50 max-h-[480px] overflow-y-auto">
+                          <div className="rounded-md border border-border bg-background/50 flex-1 overflow-y-auto min-h-0">
                             <pre className="text-[11px] font-mono leading-snug whitespace-pre-wrap break-all p-3">
                               {displayedFirewallLogs.map((entry, idx) => {
                                 const text = entry.t || ""

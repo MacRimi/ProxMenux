@@ -1221,13 +1221,11 @@ const handleClose = () => {
               ) : null}
             </div>
 
-            <div className="pt-2 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
-              <div className="flex items-center gap-2">
-                <Lightbulb className="w-3 h-3" />
-                <span>{t("terminal.searchTip")}</span>
+            {useOnline && searchResults.length > 0 && (
+              <div className="pt-2 border-t border-zinc-800 text-xs text-zinc-500 text-right">
+                <span className="text-zinc-600">{t("terminal.poweredByCheatSh")}</span>
               </div>
-              {useOnline && searchResults.length > 0 && <span className="text-zinc-600">{t("terminal.poweredByCheatSh")}</span>}
-            </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

@@ -60,21 +60,38 @@ initialize_cache
 # ==========================================================
 # GPU detection and current status
 # ==========================================================
+# Populated by detect_nvidia_gpus. Holds every video-controller PCI
+# Device ID (lowercase, 4-hex) so the version filter can drop branches
+# whose supportedchips.html doesn't list every card on this host.
+NVIDIA_HOST_GPU_IDS=()
+
 detect_nvidia_gpus() {
-  # Only video controllers (not audio)
+  # Video controllers only — the paired HDA audio functions (10de:xxxx
+  # under class 0403) are not what the display driver ships support for.
   local lspci_output
-  lspci_output=$(lspci | grep -i "NVIDIA" \
+  lspci_output=$(lspci -nn | grep -i "NVIDIA" \
     | grep -Ei "VGA compatible controller|3D controller|Display controller" || true)
 
   if [[ -z "$lspci_output" ]]; then
     NVIDIA_GPU_PRESENT=false
     DETECTED_GPUS_TEXT="$(translate 'No NVIDIA GPU detected on this system.')"
+    NVIDIA_HOST_GPU_IDS=()
   else
     NVIDIA_GPU_PRESENT=true
     DETECTED_GPUS_TEXT=""
+    NVIDIA_HOST_GPU_IDS=()
     local i=1
     while IFS= read -r line; do
       DETECTED_GPUS_TEXT+="  ${i}. ${line}\n"
+      # Extract [10de:XXXX] — Vendor:Device pair. We keep only the
+      # Device half (4-hex) lowercased, which is what NVIDIA lists in
+      # each version's README/supportedchips.html.
+      local dev_id
+      dev_id=$(echo "$line" | grep -oiE '\[10de:[0-9a-f]{4}\]' | head -1 \
+        | sed -E 's/^\[10de:([0-9a-f]{4})\]$/\1/i' | tr 'A-F' 'a-f')
+      if [[ -n "$dev_id" ]]; then
+        NVIDIA_HOST_GPU_IDS+=("$dev_id")
+      fi
       ((i++))
     done <<< "$lspci_output"
   fi
@@ -759,6 +776,196 @@ KEYLASE_PATCH_CACHE="/var/cache/proxmenux/keylase_patch_versions.txt"
 KEYLASE_PATCH_TTL_SECONDS=$((7 * 86400))
 KEYLASE_PATCH_URL="https://raw.githubusercontent.com/keylase/nvidia-patch/master/patch.sh"
 
+# NVIDIA branch classification comes from the vendor's own Unix drivers
+# page, not the CDN — the CDN publishes every branch (production, new
+# feature, vulkan-beta, developer) in the same flat directory, whereas
+# the vendor page carries the current heads clearly labelled "Production
+# Branch", "New Feature Branch" and "Legacy GPU version". Extracting the
+# majors from those three lines gives us the set of branches NVIDIA
+# currently endorses for end users, with zero manual maintenance on our
+# side — when NVIDIA promotes a new rama the cache picks it up on the
+# next 24 h refresh. Cache is fail-open: if the fetch is blocked or the
+# page layout changes, we skip the branch filter rather than emptying
+# the picker.
+NVIDIA_BRANCHES_CACHE="/var/cache/proxmenux/nvidia_stable_branches.txt"
+NVIDIA_PRODUCTION_HEAD_CACHE="/var/cache/proxmenux/nvidia_production_head.txt"
+NVIDIA_BRANCH_HEADS_CACHE="/var/cache/proxmenux/nvidia_branch_heads.txt"
+NVIDIA_GPU_SUPPORT_CACHE_PREFIX="/var/cache/proxmenux/nvidia_gpu_support_"
+NVIDIA_BRANCHES_TTL_SECONDS=$((24 * 3600))
+NVIDIA_BRANCHES_URL="https://www.nvidia.com/en-us/drivers/unix/"
+
+refresh_nvidia_branches_cache() {
+  local now ts age
+  now=$(date +%s)
+  if [[ -f "$NVIDIA_BRANCHES_CACHE" ]]; then
+    ts=$(stat -c '%Y' "$NVIDIA_BRANCHES_CACHE" 2>/dev/null || echo 0)
+    age=$(( now - ts ))
+    if (( age < NVIDIA_BRANCHES_TTL_SECONDS )) && [[ -s "$NVIDIA_BRANCHES_CACHE" ]]; then
+      return 0
+    fi
+  fi
+  mkdir -p "$(dirname "$NVIDIA_BRANCHES_CACHE")" 2>/dev/null || return 1
+  local html tmp
+  html=$(curl -fsSL -A "Mozilla/5.0" --max-time 15 "$NVIDIA_BRANCHES_URL" 2>/dev/null) || return 1
+  [[ -z "$html" ]] && return 1
+  local clean tmp_full
+  clean=$(echo "$html" | perl -0777 -pe 's/<!--.*?-->//gs' 2>/dev/null)
+  tmp=$(mktemp)
+  tmp_full=$(mktemp)
+  # Two label shapes on the page:
+  #   • Production / New Feature → "… Branch Version:" then <a>full</a>.
+  #   • Legacy                   → "Legacy GPU version (NNN.xx series):"
+  #                                then <a>full</a> — the word "Version"
+  #                                lives inside the parenthesised label
+  #                                so the Production/Feature regex misses
+  #                                it (separate alternative below).
+  # HTML comments are stripped first so vestigial `<!-- Beta Version …
+  # 387.34 -->` blocks in older ia32 rows don't leak stale majors.
+  echo "$clean" \
+    | grep -oiE '(Production Branch Version|New Feature Branch Version|Legacy GPU version \([0-9]+\.xx series\)):[^<]*(</span>)?\s*<a[^>]*>[0-9]+\.[0-9]+(\.[0-9]+)?' \
+    | grep -oE '>[0-9]+\.[0-9]+(\.[0-9]+)?' \
+    | tr -d '>' \
+    | awk -F. '{ printf "%s|%s\n", $1, $0 }' \
+    | sort -u -t'|' -k1,1 > "$tmp_full"
+  if [[ ! -s "$tmp_full" ]]; then
+    rm -f "$tmp" "$tmp_full"
+    return 1
+  fi
+  # Derive the majors-only file from the same source so both caches
+  # never disagree.
+  cut -d'|' -f1 "$tmp_full" | sort -un > "$tmp"
+  if [[ ! -s "$tmp" ]]; then
+    rm -f "$tmp" "$tmp_full"
+    return 1
+  fi
+  mv "$tmp" "$NVIDIA_BRANCHES_CACHE"
+  mv "$tmp_full" "$NVIDIA_BRANCH_HEADS_CACHE"
+
+  # Extra pass: capture the full Production Branch head so the picker
+  # can default to it instead of the highest numeric available (which
+  # could be a New Feature Branch head — NVIDIA doesn't recommend those
+  # as the general-purpose default). Best-effort.
+  local prod_head
+  prod_head=$(echo "$clean" \
+    | grep -oiE 'Production Branch Version:[^<]*(</span>)?\s*<a[^>]*>[0-9]+\.[0-9]+(\.[0-9]+)?' \
+    | grep -oE '>[0-9]+\.[0-9]+(\.[0-9]+)?' \
+    | tr -d '>' \
+    | head -n1)
+  if [[ -n "$prod_head" ]]; then
+    echo "$prod_head" > "$NVIDIA_PRODUCTION_HEAD_CACHE"
+  else
+    rm -f "$NVIDIA_PRODUCTION_HEAD_CACHE" 2>/dev/null || true
+  fi
+  return 0
+}
+
+# Return the full head version associated with a major from the
+# branch-heads cache (e.g. `get_nvidia_branch_head 595` → 595.91.07).
+# Used to know which release inside a branch to hit for the PCI-ID
+# supported-GPUs list.
+get_nvidia_branch_head() {
+  local major="$1"
+  [[ -f "$NVIDIA_BRANCH_HEADS_CACHE" && -s "$NVIDIA_BRANCH_HEADS_CACHE" ]] || return 1
+  awk -F'|' -v m="$major" '$1 == m { print $2; exit }' "$NVIDIA_BRANCH_HEADS_CACHE"
+}
+
+# Refresh the per-branch supported-GPU cache. Uses the branch head as
+# the "sample release" for the whole branch — NVIDIA rarely drops chip
+# support inside a live branch, so this is a solid proxy that also
+# minimises fetch count (~3 heads total instead of one per release).
+# Written to nvidia_gpu_support_MAJOR.txt with one lowercase hex device
+# id per line. Same 24h TTL as the branches cache.
+refresh_nvidia_gpu_support_for_major() {
+  local major="$1"
+  [[ -z "$major" ]] && return 1
+  local cache="${NVIDIA_GPU_SUPPORT_CACHE_PREFIX}${major}.txt"
+  local now ts age
+  now=$(date +%s)
+  if [[ -f "$cache" ]]; then
+    ts=$(stat -c '%Y' "$cache" 2>/dev/null || echo 0)
+    age=$(( now - ts ))
+    if (( age < NVIDIA_BRANCHES_TTL_SECONDS )) && [[ -s "$cache" ]]; then
+      return 0
+    fi
+  fi
+  local head_ver
+  head_ver=$(get_nvidia_branch_head "$major") || return 1
+  [[ -z "$head_ver" ]] && return 1
+  local url="https://download.nvidia.com/XFree86/Linux-x86_64/${head_ver}/README/supportedchips.html"
+  local html tmp
+  html=$(curl -fsSL -A "Mozilla/5.0" --max-time 20 "$url" 2>/dev/null) || return 1
+  [[ -z "$html" ]] && return 1
+  mkdir -p "$(dirname "$cache")" 2>/dev/null || return 1
+  tmp=$(mktemp)
+  # NVIDIA's supportedchips.html lays out each GPU row as a <td> with
+  # the PCI Device ID in 4-char hex. Anchor on the surrounding tag so
+  # we don't sweep up unrelated 4-hex strings elsewhere in the page.
+  echo "$html" \
+    | grep -oiE '<td>[0-9A-F]{4}</td>' \
+    | grep -oiE '[0-9A-F]{4}' \
+    | tr 'A-F' 'a-f' \
+    | sort -u > "$tmp"
+  if [[ -s "$tmp" ]]; then
+    mv "$tmp" "$cache"
+    return 0
+  fi
+  rm -f "$tmp"
+  return 1
+}
+
+# True if every detected NVIDIA GPU on this host has its device id in
+# the branch's supported list. Fail-open when the cache is missing so
+# a network hiccup never locks the picker out.
+is_branch_compatible_with_host_gpus() {
+  local major="$1"
+  local cache="${NVIDIA_GPU_SUPPORT_CACHE_PREFIX}${major}.txt"
+  [[ -f "$cache" && -s "$cache" ]] || return 0
+  [[ ${#NVIDIA_HOST_GPU_IDS[@]} -eq 0 ]] && return 0
+  local id
+  for id in "${NVIDIA_HOST_GPU_IDS[@]}"; do
+    grep -qFx "$id" "$cache" || return 1
+  done
+  return 0
+}
+
+# Reject Vulkan-beta / short-lived / developer branches by counting
+# how many releases NVIDIA actually shipped inside that major on the
+# CDN. Production and long-lived New Feature branches accumulate many
+# release rows (470=17, 535=20, 550=14, 570=12, 580=14 …); Vulkan-beta
+# and developer branches only ever get 1-4 releases before being
+# superseded (590=2, 565=2, 530=2, 555=4 …). Threshold 5 separates the
+# two groups cleanly at time of writing.
+# Fail-open: if the release-count map hasn't been built for whatever
+# reason, the branch passes (kernel + GPU-compat + curated whitelist
+# are still enforced upstream). The map is populated once per
+# `filter_option_c_branch` invocation, so no repeated CDN scraping.
+NVIDIA_BRANCH_MIN_RELEASES=5
+declare -A NVIDIA_BRANCH_RELEASE_COUNT=()
+
+is_branch_release_count_sufficient() {
+  local major="$1"
+  [[ -z "$major" ]] && return 1
+  [[ ${#NVIDIA_BRANCH_RELEASE_COUNT[@]} -eq 0 ]] && return 0
+  local n="${NVIDIA_BRANCH_RELEASE_COUNT[$major]:-0}"
+  (( n >= NVIDIA_BRANCH_MIN_RELEASES ))
+}
+
+get_nvidia_production_head() {
+  [[ -f "$NVIDIA_PRODUCTION_HEAD_CACHE" && -s "$NVIDIA_PRODUCTION_HEAD_CACHE" ]] || return 1
+  local v
+  v=$(head -n1 "$NVIDIA_PRODUCTION_HEAD_CACHE" | tr -d '[:space:]')
+  [[ -z "$v" ]] && return 1
+  printf '%s\n' "$v"
+}
+
+is_nvidia_stable_branch() {
+  local major="$1"
+  [[ -z "$major" ]] && return 1
+  # Fail-open: no cache → don't filter (upstream behaviour preserved).
+  [[ -f "$NVIDIA_BRANCHES_CACHE" && -s "$NVIDIA_BRANCHES_CACHE" ]] || return 0
+  grep -qFx "$major" "$NVIDIA_BRANCHES_CACHE"
+}
+
 refresh_keylase_patch_cache() {
   local now ts age
   now=$(date +%s)
@@ -822,20 +1029,86 @@ filter_option_c_branch() {
     return 0
   fi
 
-  # Accept the target branch AND any newer branch (major ≥ target).
-  # Historical behaviour was an exact-major match, which locked kernel
-  # 7.x users to 580.x only. When a 580.x build happens to fail to
-  # compile on a very recent kernel + toolchain combo (reproduced on
-  # kernel 7.0.14-4-pve — see issue #248), the operator had no
-  # in-menu escape. `MIN_DRIVER_VERSION` from get_kernel_compatibility_info
-  # still gates the floor, so this only opens the ceiling: newer stable
-  # branches like 590 / 595 / 600 that satisfy the min version become
-  # selectable, while ancient branches remain filtered out.
+  # Four-way gate for every candidate version:
+  #   1. `major >= target_branch` — kernel floor.
+  #   2. Branch is currently endorsed on NVIDIA's Unix drivers page
+  #      (Production / New Feature / Legacy heads) OR was substantial
+  #      enough to accumulate ≥ NVIDIA_BRANCH_MIN_RELEASES releases on
+  #      the CDN. The endorsement path always passes; the release-count
+  #      path lets superseded production branches (580, 570, 550, 535 …
+  #      still maintained via bugfix releases) stay selectable while
+  #      Vulkan-beta / developer branches with 1-4 releases (590, 565,
+  #      530 …) get dropped.
+  #   3. `is_branch_compatible_with_host_gpus` — every detected NVIDIA
+  #      GPU on this host must appear in that branch's supportedchips
+  #      list. A host with a Kepler card ends up with 470.x only.
+  # All three fail open when their caches / lookups miss, so the picker
+  # never empties on a network glitch.
+  refresh_nvidia_branches_cache 2>/dev/null || true
+  # Build a majors→count map from the incoming version list. This is
+  # what backs `is_branch_release_count_sufficient` — done once per
+  # call so the tight loop below stays local-arithmetic only.
+  NVIDIA_BRANCH_RELEASE_COUNT=()
+  while IFS= read -r _v; do
+    [[ -z "$_v" ]] && continue
+    local _m="${_v%%.*}"
+    NVIDIA_BRANCH_RELEASE_COUNT[$_m]=$(( ${NVIDIA_BRANCH_RELEASE_COUNT[$_m]:-0} + 1 ))
+  done <<< "$versions_in"
+  # Grab the head (highest version) of every major so we know which
+  # release to sample for supportedchips.html. We use the CDN listing
+  # directly for this — the branch-heads cache only carries the
+  # endorsed heads, not the superseded ones.
+  declare -A _major_head=()
+  while IFS= read -r _v; do
+    [[ -z "$_v" ]] && continue
+    local _m="${_v%%.*}"
+    [[ -z "${_major_head[$_m]:-}" ]] && _major_head[$_m]="$_v"
+  done < <(printf '%s\n' "$versions_in")
+  # Warm the supported-GPU cache for every stable major (whitelist
+  # heads: head already known → normal path; superseded heads: seed the
+  # cache-file's head-version by directly writing a lightweight lookup).
+  # For endorsed majors we can use refresh_nvidia_gpu_support_for_major
+  # as-is (it looks up NVIDIA_BRANCH_HEADS_CACHE). For non-endorsed
+  # majors we need to fetch supportedchips.html against the highest
+  # release we saw in the CDN listing.
+  local _m _head _cache _now _ts _age _html _tmp
+  _now=$(date +%s)
+  for _m in "${!_major_head[@]}"; do
+    _head="${_major_head[$_m]}"
+    _cache="${NVIDIA_GPU_SUPPORT_CACHE_PREFIX}${_m}.txt"
+    if [[ -f "$_cache" ]]; then
+      _ts=$(stat -c '%Y' "$_cache" 2>/dev/null || echo 0)
+      _age=$(( _now - _ts ))
+      if (( _age < NVIDIA_BRANCHES_TTL_SECONDS )) && [[ -s "$_cache" ]]; then
+        continue
+      fi
+    fi
+    _html=$(curl -fsSL -A "Mozilla/5.0" --max-time 20 \
+      "https://download.nvidia.com/XFree86/Linux-x86_64/${_head}/README/supportedchips.html" \
+      2>/dev/null) || continue
+    [[ -z "$_html" ]] && continue
+    mkdir -p "$(dirname "$_cache")" 2>/dev/null || continue
+    _tmp=$(mktemp)
+    echo "$_html" \
+      | grep -oiE '<td>[0-9A-F]{4}</td>' \
+      | grep -oiE '[0-9A-F]{4}' \
+      | tr 'A-F' 'a-f' \
+      | sort -u > "$_tmp"
+    if [[ -s "$_tmp" ]]; then
+      mv "$_tmp" "$_cache"
+    else
+      rm -f "$_tmp"
+    fi
+  done
   while IFS= read -r ver; do
     [[ -z "$ver" ]] && continue
     local ver_major="${ver%%.*}"
     if (( 10#$ver_major >= 10#$target_branch )); then
-      printf '%s\n' "$ver"
+      if is_nvidia_stable_branch "$ver_major" || is_branch_release_count_sufficient "$ver_major"; then
+        if is_branch_compatible_with_host_gpus "$ver_major"; then
+          printf '%s\n' "$ver"
+        fi
+      fi
     fi
   done <<< "$versions_in"
 }
@@ -1359,16 +1632,16 @@ show_version_menu() {
     current_list=$(filter_option_c_branch "$current_list" "$CURRENT_DRIVER_VERSION" "$RECOMMENDED_BRANCH")
   fi
 
-  if [[ -n "$latest" ]]; then
-    local filtered_max_list=""
-    while IFS= read -r ver; do
-      [[ -z "$ver" ]] && continue
-      if version_le "$ver" "$latest"; then
-        filtered_max_list+="$ver"$'\n'
-      fi
-    done <<< "$current_list"
-    current_list="$filtered_max_list"
-  fi
+  # Historically the picker capped candidates at `latest` (from the
+  # CDN's `latest.txt`) so users never saw versions newer than the
+  # global "latest". But latest.txt lags the Production Branch head
+  # (595.91.07 today vs 595.84 in latest.txt) and also hides the New
+  # Feature Branch head (610.x) that is a legitimate option once
+  # kernel + GPU compat pass. Kernel floor, endorsement whitelist,
+  # release-count heuristic and GPU-compat filter already narrow the
+  # list to safe candidates; the Production head still stands out in
+  # the "Latest available" recommendation, so an artificial ceiling
+  # only masked valid options.
 
   # If the user has the keylase NVENC patch applied, only offer versions
   # that the patch supports — picking an unsupported version reinstalls
@@ -1391,16 +1664,50 @@ show_version_menu() {
     fi
   fi
 
-  # Recompute "latest" as the highest version still in the filtered list
-  # so the menu's "Latest available" label matches what we actually offer
-  # rather than the global upstream latest (which may have been filtered
-  # out by Option C / kernel-compat / patch awareness).
-  if [[ -n "$current_list" ]]; then
+  # Pick the default "Recommended" version. Three-tier priority so the
+  # picker stays consistent with what the Monitor's driver-update
+  # notification promised the user:
+  #   1. If a driver is already installed AND its branch is still
+  #      offered in the filtered list, recommend the highest release
+  #      of that same branch (bugfix upgrade in place). Matches the
+  #      Monitor's Hardware card, which surfaces "v580.178.04
+  #      available" for a 580.x install — the user hitting Actualizar
+  #      then expects to land on 580.178.04, not a cross-branch jump
+  #      to Production. Cross-branch is still one row away in the
+  #      list.
+  #   2. Fresh install (no current driver) → Production Branch head
+  #      from NVIDIA's Unix drivers page, when present in the list.
+  #   3. Fallback → highest numeric in the list (Production may have
+  #      been filtered out by kernel-compat / GPU-compat / patch
+  #      awareness).
+  latest=""
+  if [[ -n "$CURRENT_DRIVER_VERSION" && -n "$current_list" ]]; then
+    local _cur_branch="${CURRENT_DRIVER_VERSION%%.*}"
+    if [[ -n "$_cur_branch" ]]; then
+      local _same_branch_head
+      _same_branch_head=$(printf '%s\n' "$current_list" \
+        | awk -F. -v b="$_cur_branch" '$1 == b { print; exit }' \
+        | tr -d '[:space:]')
+      if [[ -n "$_same_branch_head" ]]; then
+        latest="$_same_branch_head"
+      fi
+    fi
+  fi
+  if [[ -z "$latest" ]]; then
+    local prod_head=""
+    prod_head=$(get_nvidia_production_head 2>/dev/null) || prod_head=""
+    if [[ -n "$prod_head" && -n "$current_list" ]]; then
+      if printf '%s\n' "$current_list" | grep -qFx "$prod_head"; then
+        latest="$prod_head"
+      fi
+    fi
+  fi
+  if [[ -z "$latest" && -n "$current_list" ]]; then
     latest=$(printf '%s\n' "$current_list" | head -n1 | tr -d '[:space:]')
   fi
 
   local menu_text="$(translate 'Select the NVIDIA driver version to install:')\n\n"
-  menu_text+="$(translate 'Versions shown are compatible with your kernel. Latest available is recommended in most cases.')"
+  menu_text+="$(translate 'Versions shown are compatible with your kernel and your GPU. The recommended version keeps you on your current driver branch, or defaults to the NVIDIA Production Branch head on a fresh install.')"
   if $patch_filtered; then
     menu_text+="\n\n$(translate 'NVENC patch detected — list narrowed to versions supported by keylase/nvidia-patch.')"
   elif [[ -n "$patch_filter_note" ]]; then
@@ -1408,7 +1715,7 @@ show_version_menu() {
   fi
 
   local choices=()
-  choices+=("latest" "$(translate 'Latest available') (${latest:-unknown})")
+  choices+=("latest" "$(translate 'Recommended') (${latest:-unknown})")
   choices+=("" "")
 
   if [[ -n "$current_list" ]]; then

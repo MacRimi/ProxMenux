@@ -1048,7 +1048,8 @@ return (
                         {nvidiaInstall.update_check.available ? (
                           <>
                             <div className="text-xs text-muted-foreground">
-                              {t("hardware.labels.lastChecked")}: {formatLastChecked(nvidiaInstall.update_check.last_check)} ·{" "}
+                              {t("hardware.labels.lastChecked")}: {formatLastChecked(nvidiaInstall.update_check.last_check)}
+                              {` · NVIDIA driver v${nvidiaInstall.current_version} · `}
                               <span className="text-purple-400 font-medium">
                                 {t("hardware.values.nvidiaDriverAvailable", { version: nvidiaInstall.update_check.latest || "" })}
                               </span>

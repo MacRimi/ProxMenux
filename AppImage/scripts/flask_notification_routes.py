@@ -808,12 +808,21 @@ def send_notification():
         if not _validate_severity(severity):
             return _bad_request('Invalid severity')
 
+        # Accept `title`/`message` either at the root of the payload
+        # or nested under `data` — the public docs show the nested
+        # form (`data.message`) as the primary example, so falling
+        # back to it prevents "empty title/message" custom events
+        # (issue #297).
+        payload_body = data.get('data') if isinstance(data.get('data'), dict) else {}
+        title = data.get('title') or payload_body.get('title') or ''
+        message = data.get('message') or payload_body.get('message') or ''
+
         result = notification_manager.send_notification(
             event_type=event_type,
             severity=severity,
-            title=data.get('title', ''),
-            message=data.get('message', ''),
-            data=data.get('data', {}),
+            title=title,
+            message=message,
+            data=payload_body,
             source='api'
         )
         return jsonify(result)

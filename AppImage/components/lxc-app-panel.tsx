@@ -88,6 +88,9 @@ interface AppConfig {
   // Absent / true = notify; false = silenced. Set from the bell
   // toggle on each app card and/or the Edit form's checkbox.
   notifications_enabled?: boolean
+  // Per-app opt-out for the CT's aggregate updates badge (default
+  // false = counted). Independent from `notifications_enabled`.
+  exclude_from_badge?: boolean
 }
 
 interface DetectedApp {
@@ -434,6 +437,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         health_path: existing.health_path || "",
         logo_url: existing.logo_url || "",
         helper_slug: existing.helper_slug || "",
+        notifications_enabled: existing.notifications_enabled !== false,
+        exclude_from_badge: existing.exclude_from_badge === true,
       }
       // Editing an existing app: expand Advanced when tracking is on
       setShowAdvanced(!!seed.installed_via)
@@ -1502,9 +1507,13 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                 apps with tracking configured — without an upstream
                 source there's no `app_update_available` event to
                 mute. Default is ON (checkbox checked); the bell
-                toggle on each card is a shortcut to the same field. */}
+                toggle on each card is a shortcut to the same field.
+                The second checkbox below controls the CT's aggregate
+                updates badge independently — a user may want the
+                outbound notification but hide the counter (or
+                the reverse). */}
             {method && (
-              <div className="pt-2 border-t border-border/50">
+              <div className="pt-2 border-t border-border/50 space-y-3">
                 <label className="flex items-start gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -1515,6 +1524,18 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                   <div className="text-sm">
                     <div className="text-foreground">{t("vmLxc.appEditor.notifyUpstreamLabel")}</div>
                     <div className="text-xs text-muted-foreground mt-1">{t("vmLxc.appEditor.notifyUpstreamHelp")}</div>
+                  </div>
+                </label>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={draft.exclude_from_badge === true}
+                    onChange={(e) => setField({ exclude_from_badge: e.target.checked })}
+                    className="mt-0.5 h-4 w-4 rounded border-border accent-blue-500"
+                  />
+                  <div className="text-sm">
+                    <div className="text-foreground">{t("vmLxc.appEditor.excludeFromBadgeLabel")}</div>
+                    <div className="text-xs text-muted-foreground mt-1">{t("vmLxc.appEditor.excludeFromBadgeHelp")}</div>
                   </div>
                 </label>
               </div>

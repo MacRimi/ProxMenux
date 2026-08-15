@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
-import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup, Smartphone } from "lucide-react"
+import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup, Smartphone, Languages } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 import { useT } from "../lib/i18n/provider"
 
@@ -238,6 +238,11 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 // that haven't been curated by hand.
 const CURRENT_VERSION_FEATURES = [
   {
+    icon: <Languages className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.i18n",
+    text: "The Monitor now speaks 8 languages: English, Spanish, German, French, Italian, Portuguese, Swedish and Slovak. Huge thanks to @vaso73 for building the i18n scaffolding that made this possible.",
+  },
+  {
     icon: <Zap className="h-5 w-5" />,
     key: "releaseNotes.currentFeatures.pageSpeed",
     text: "Faster page loads and smoother navigation across the dashboard. Overview opens instantly and the VMs & LXCs page never flashes 'Loading…' between guest modals again.",
@@ -268,6 +273,38 @@ const CURRENT_VERSION_FEATURES = [
     text: "First-time visitors on Android and iOS Safari now see an in-app install prompt with clear steps for adding the Monitor to their home screen as a PWA.",
   },
 ]
+
+// Turn any "@handle" mention inside a release-notes string into a
+// link to that GitHub profile. Applied to every feature bullet so a
+// contributor shout-out reads as a real link without needing rich
+// i18n formatting. Only matches `@` followed by a valid GitHub
+// username (letters/digits/hyphen, no consecutive hyphens, 1-39
+// chars) so unrelated punctuation stays untouched.
+function linkifyGithubMentions(text: string): (string | JSX.Element)[] {
+  const parts: (string | JSX.Element)[] = []
+  const re = /@([A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?)/g
+  let cursor = 0
+  let m: RegExpExecArray | null
+  let idx = 0
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > cursor) parts.push(text.slice(cursor, m.index))
+    const handle = m[1]
+    parts.push(
+      <a
+        key={`gh-${idx++}`}
+        href={`https://github.com/${handle}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-orange-500 hover:text-orange-400 underline underline-offset-2"
+      >
+        @{handle}
+      </a>,
+    )
+    cursor = m.index + m[0].length
+  }
+  if (cursor < text.length) parts.push(text.slice(cursor))
+  return parts
+}
 
 interface ReleaseNotesModalProps {
   open: boolean
@@ -329,7 +366,7 @@ export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
                 >
                   <div className="text-orange-500 mt-0.5 flex-shrink-0">{feature.icon}</div>
                   <p className="text-xs md:text-sm text-foreground leading-relaxed">
-                    {t(feature.key)}
+                    {linkifyGithubMentions(t(feature.key))}
                   </p>
                 </div>
               ))}

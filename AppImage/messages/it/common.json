@@ -21,6 +21,7 @@
     "cancel": "Cancellare",
     "save": "Salva",
     "edit": "Modificare",
+    "remove": "",
     "close": "Vicino",
     "resetAll": "Reimposta tutto",
     "undo": "Disfare",
@@ -297,10 +298,10 @@
       "installFailedManual": "Installazione non riuscita. Prova manualmente: apt-get install smartmontools nvme-cli",
       "installToolsManual": "Impossibile installare gli strumenti. Prova manualmente: apt-get install smartmontools nvme-cli",
       "runTest": "Esegui il test SMART",
-      "shortTest": "Test breve (~2 minuti)",
+      "shortTest": "Test breve",
       "longTest": "Test lungo (1-4 ore)",
-      "extendedTest": "Test esteso (contesto)",
-      "testHelp": "Un breve test dura circa 2 minuti. Il test esteso viene eseguito in background e può richiedere diverse ore su dischi di grandi dimensioni. Riceverai una notifica al termine.",
+      "extendedTest": "Test esteso",
+      "testHelp": "",
       "startFailed": "Impossibile avviare il test",
       "short": "Corto",
       "extended": "Esteso",
@@ -316,7 +317,6 @@
       "worst": "Peggio",
       "status": "Stato",
       "viewFullReport": "Visualizza il rapporto SMART completo",
-      "reportHelp": "Genera un report SMART dettagliato con analisi e raccomandazioni.",
       "loadingReport": "Caricamento rapporto...",
       "reportLoadFailed": "Impossibile caricare i dati del rapporto.",
       "statusValues": {
@@ -1021,7 +1021,11 @@
         "readOnly": "sola lettura",
         "stopped": "fermato",
         "mounted": "montato"
-      }
+      },
+      "startOnBoot": "",
+      "tags": "",
+      "tagsPlaceholder": "",
+      "tagsNone": ""
     },
     "logs": {
       "header": "Registri per {name} (VMID: {vmid})",
@@ -1421,7 +1425,9 @@
       "notificationsEnabled": "notifiche di aggiornamento upstream attivate: fai clic per disattivare l'audio",
       "notificationsMuted": "notifiche di aggiornamento upstream MUTED: fare clic per abilitare",
       "notifyUpstreamLabel": "avvisami quando è disponibile una nuova versione upstream",
-      "notifyUpstreamHelp": "invia `app_update_available` ai canali abilitati in Impostazioni → Notifiche.Disattiva se questa app non può essere aggiornata sul tuo box."
+      "notifyUpstreamHelp": "invia `app_update_available` ai canali abilitati in Impostazioni → Notifiche.Disattiva se questa app non può essere aggiornata sul tuo box.",
+      "excludeFromBadgeLabel": "",
+      "excludeFromBadgeHelp": ""
     }
   },
   "settings": {
@@ -3001,6 +3007,7 @@
     "currentFeatures": {
       "hostUpdate": "Aggiornamento host con un clic da Health Monitor. Il nuovo pulsante Aggiorna ora in Aggiornamenti di sistema esegue il flusso di aggiornamento di Proxmox all'interno di un terminale dashboard, senza uscire dal browser.",
       "mobileInstall": "Richiesta di installazione in-app per dispositivi mobili. Chi visita per la prima volta Android e iOS Safari ora vede semplici passaggi per aggiungere il monitor alla propria schermata iniziale come PWA.",
+      "i18n": "",
       "pageSpeed": "caricamenti delle pagine più rapidi e navigazione più fluida nella dashboard.La panoramica si apre immediatamente e la pagina VM e LXC non lampeggia mai più con la dicitura \"Caricamento in corso...\" tra le modalità guest.",
       "appTab": "nuova scheda App all'interno della modalità VM e LXC, in particolare per LXC.Registra le app installate in un contenitore, acquisisci i relativi collegamenti web e ricevi notifiche quando viene fornita una nuova versione upstream.",
       "updatesTab": "scheda Aggiornamenti rielaborati per LXC: applica pacchetti del sistema operativo e aggiornamenti delle app registrate da un singolo pulsante e pianifica un processo di aggiornamento automatico ricorrente che controlla il sistema operativo del contenitore e la relativa app monitorata a ogni esecuzione.",
@@ -4579,7 +4586,6 @@
     "tryDifferentSearch": "Prova un altro comando o controlla l'ortografia.",
     "searchAnyCommand": "Cerca qualsiasi comando",
     "trySearchingFor": "Prova a cercare:",
-    "searchTip": "Suggerimento: cerca qualsiasi comando Linux o Proxmox (qm, pct, zpool).",
     "noExamplesFound": "Nessun esempio trovato",
     "reconnecting": "Riconnessione…",
     "reconnected": "Ricollegato con successo",

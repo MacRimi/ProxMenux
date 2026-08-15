@@ -816,6 +816,19 @@ def validate_config(payload: dict) -> tuple[bool, Any]:
     if ne is not None:
         conf["notifications_enabled"] = bool(ne)
 
+    # Optional per-app switch for the CT's aggregate updates badge.
+    # Default is False (include). Set to True when the user knowingly
+    # keeps a specific version (e.g. qBittorrent pinned to the version
+    # their private tracker requires) and doesn't want the LXC list
+    # badge blinking about an "available" update that doesn't apply to
+    # them. Independent from `notifications_enabled` on purpose — a
+    # user may still want the outbound notification and just hide the
+    # counter, or the reverse. The App tab itself always shows the
+    # real state (purple update signal, editor version fields).
+    efb = payload.get("exclude_from_badge")
+    if efb is not None:
+        conf["exclude_from_badge"] = bool(efb)
+
     return True, conf
 
 
@@ -1872,6 +1885,10 @@ def _summarise_app(app: dict) -> dict:
         # this app.
         "update_command": app.get("update_command") or "",
         "hide_no_updater_notice": bool(app.get("hide_no_updater_notice")),
+        # Whether this app should be counted in the CT's aggregate
+        # updates badge (default: yes). See validator for full context.
+        "exclude_from_badge": bool(app.get("exclude_from_badge")),
+        "notifications_enabled": app.get("notifications_enabled", True) is not False,
         # Community-scripts slug that the Register-chip flow attaches
         # to the app. Surfaced so the Updates tab helper section can
         # match this registered app against the CT's helper_slug and
@@ -2366,6 +2383,18 @@ def get_suggestions(vmid) -> dict:
             break
     meta = _helper_slug_meta(vmid) or {}
     slug = meta.get("slug")
+    # Suppress base-OS helper slugs from the suggestion pipeline.
+    # community-scripts publishes bare-OS templates (alpine, debian,
+    # ubuntu, fedora, archlinux, gentoo, opensuse) under the same
+    # helpers_cache the App tab uses to seed detection, so a CT that
+    # only has the OS installed was showing up as "detected app:
+    # Alpine Linux" and inviting the user to register the OS as if
+    # it were an application. These are not trackable apps — treat
+    # the slug as absent for suggestion purposes so the panel goes
+    # straight to the empty state instead.
+    if slug in {"alpine", "archlinux", "archlinux-vm", "debian", "fedora", "gentoo", "opensuse", "ubuntu"}:
+        slug = None
+        meta = {}
     # Tracking hint pipeline: catalog + curated hints merged.
     #   • catalog (community-scripts helpers_cache.json) covers ~430
     #     apps with name+repo+port+upstream_version, zero curation

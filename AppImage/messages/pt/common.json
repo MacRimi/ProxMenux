@@ -21,6 +21,7 @@
     "cancel": "Cancelar",
     "save": "Salvar",
     "edit": "Editar",
+    "remove": "",
     "close": "Fechar",
     "resetAll": "Redefinir tudo",
     "undo": "Desfazer",
@@ -297,10 +298,10 @@
       "installFailedManual": "A instalação falhou. Tente manualmente: apt-get install smartmontools nvme-cli",
       "installToolsManual": "Falha ao instalar ferramentas. Tente manualmente: apt-get install smartmontools nvme-cli",
       "runTest": "Execute o teste SMART",
-      "shortTest": "Teste curto (~2 min)",
+      "shortTest": "Teste curto",
       "longTest": "Teste longo (1-4 horas)",
-      "extendedTest": "Teste estendido (fundo)",
-      "testHelp": "Um pequeno teste leva cerca de 2 minutos. O teste estendido é executado em segundo plano e pode levar várias horas em discos grandes. Você receberá uma notificação quando terminar.",
+      "extendedTest": "Teste estendido",
+      "testHelp": "",
       "startFailed": "Falha ao iniciar o teste",
       "short": "Curto",
       "extended": "Estendido",
@@ -316,7 +317,6 @@
       "worst": "Pior",
       "status": "Status",
       "viewFullReport": "Veja o relatório SMART completo",
-      "reportHelp": "Gere um relatório SMART detalhado com análises e recomendações.",
       "loadingReport": "Carregando relatório...",
       "reportLoadFailed": "Falha ao carregar dados do relatório.",
       "statusValues": {
@@ -1021,7 +1021,11 @@
         "readOnly": "somente leitura",
         "stopped": "parou",
         "mounted": "montado"
-      }
+      },
+      "startOnBoot": "",
+      "tags": "",
+      "tagsPlaceholder": "",
+      "tagsNone": ""
     },
     "logs": {
       "header": "Registros para {name} (VMID: {vmid})",
@@ -1421,7 +1425,9 @@
       "notificationsEnabled": "Notificações de atualização upstream ATIVADAS – clique para silenciar",
       "notificationsMuted": "notificações de atualização upstream silenciadas – clique para ativar",
       "notifyUpstreamLabel": "Notifique-me quando uma nova versão upstream estiver disponível",
-      "notifyUpstreamHelp": "Envia `app_update_available` para os canais habilitados em Configurações → Notificações.Desligue se este aplicativo não puder ser atualizado em sua caixa."
+      "notifyUpstreamHelp": "Envia `app_update_available` para os canais habilitados em Configurações → Notificações.Desligue se este aplicativo não puder ser atualizado em sua caixa.",
+      "excludeFromBadgeLabel": "",
+      "excludeFromBadgeHelp": ""
     }
   },
   "settings": {
@@ -3001,6 +3007,7 @@
     "currentFeatures": {
       "hostUpdate": "Atualização do host com um clique no Health Monitor. O novo botão Atualizar agora em Atualizações do sistema executa o fluxo de atualização do Proxmox dentro de um terminal de painel, sem sair do navegador.",
       "mobileInstall": "Prompt de instalação no aplicativo para celular. Visitantes iniciantes no Android e iOS Safari agora veem etapas simples para adicionar o Monitor à tela inicial como um PWA.",
+      "i18n": "",
       "pageSpeed": "carregamentos de página mais rápidos e navegação mais suave no painel.A visão geral abre instantaneamente e a página VMs e LXCs nunca mais exibe 'Carregando…' entre os modais convidados.",
       "appTab": "Nova guia de aplicativo dentro do modal VM e LXC - especialmente para LXCs.Registre os aplicativos instalados em um contêiner, capture seus links da web e receba notificações quando uma nova versão upstream for enviada.",
       "updatesTab": "guia Atualizações reformuladas para LXCs: aplique pacotes de sistema operacional e atualizações de aplicativos registrados a partir de um único botão e agende um trabalho de atualização automática recorrente que verifica o sistema operacional do contêiner e seu aplicativo rastreado em cada execução.",
@@ -4579,7 +4586,6 @@
     "tryDifferentSearch": "Tente outro comando ou verifique a ortografia.",
     "searchAnyCommand": "Procure qualquer comando",
     "trySearchingFor": "Tente pesquisar por:",
-    "searchTip": "Dica: Procure qualquer comando Linux ou Proxmox (qm, pct, zpool).",
     "noExamplesFound": "Nenhum exemplo encontrado",
     "reconnecting": "Reconectando…",
     "reconnected": "Reconectado com sucesso",

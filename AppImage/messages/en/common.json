@@ -20,6 +20,7 @@
     "cancel": "Cancel",
     "save": "Save",
     "edit": "Edit",
+    "remove": "Remove",
     "close": "Close",
     "resetAll": "Reset all",
     "undo": "Undo",
@@ -296,10 +297,10 @@
       "installFailedManual": "Installation failed. Try manually: apt-get install smartmontools nvme-cli",
       "installToolsManual": "Failed to install tools. Try manually: apt-get install smartmontools nvme-cli",
       "runTest": "Run SMART test",
-      "shortTest": "Short test (~2 min)",
+      "shortTest": "Short test",
       "longTest": "Long test (1-4 hours)",
-      "extendedTest": "Extended test (background)",
-      "testHelp": "A short test takes about 2 minutes. The extended test runs in the background and can take several hours on large disks. You will receive a notification when it finishes.",
+      "extendedTest": "Extended test",
+      "testHelp": "A short test takes about 2 minutes. The extended test runs in the background and can take several hours on large disks. The result will show up in the History tab when it finishes.",
       "startFailed": "Failed to start test",
       "short": "Short",
       "extended": "Extended",
@@ -315,7 +316,6 @@
       "worst": "Worst",
       "status": "Status",
       "viewFullReport": "View full SMART report",
-      "reportHelp": "Generate a detailed SMART report with analysis and recommendations.",
       "loadingReport": "Loading report...",
       "reportLoadFailed": "Failed to load report data.",
       "statusValues": {
@@ -1020,7 +1020,11 @@
         "readOnly": "read-only",
         "stopped": "stopped",
         "mounted": "mounted"
-      }
+      },
+      "startOnBoot": "Start at boot",
+      "tags": "Tags",
+      "tagsPlaceholder": "Add tag…",
+      "tagsNone": "No tags"
     },
     "logs": {
       "header": "Logs for {name} (VMID: {vmid})",
@@ -1420,7 +1424,9 @@
       "notificationsEnabled": "Upstream update notifications ON — click to mute",
       "notificationsMuted": "Upstream update notifications MUTED — click to enable",
       "notifyUpstreamLabel": "Notify me when a new upstream version is available",
-      "notifyUpstreamHelp": "Sends `app_update_available` to the channels enabled in Settings → Notifications. Turn off if this app can't be updated on your box."
+      "notifyUpstreamHelp": "Sends `app_update_available` to the channels enabled in Settings → Notifications. Turn off if this app can't be updated on your box.",
+      "excludeFromBadgeLabel": "Exclude from the LXC updates counter",
+      "excludeFromBadgeHelp": "Don't count this app in the aggregate updates badge on the LXC list card. Useful when you're pinned to a specific version on purpose (tracker requirement, compatibility freeze). Doesn't affect the App tab's own state or the outbound notification."
     }
   },
   "settings": {
@@ -3000,6 +3006,7 @@
     "currentFeatures": {
       "hostUpdate": "One-click host update from the Health Monitor. The new Update Now button in System Updates runs the Proxmox update flow inside a dashboard terminal, without leaving the browser.",
       "mobileInstall": "In-app install prompt for mobile. First-time visitors on Android and iOS Safari now see simple steps for adding the Monitor to their home screen as a PWA.",
+      "i18n": "The Monitor now speaks 8 languages: English, Spanish, German, French, Italian, Portuguese, Swedish and Slovak. Huge thanks to @vaso73 for building the i18n scaffolding that made this possible.",
       "pageSpeed": "Faster page loads and smoother navigation across the dashboard. Overview opens instantly and the VMs & LXCs page never flashes 'Loading…' between guest modals again.",
       "appTab": "New App tab inside the VM & LXC modal — especially for LXCs. Register the apps installed in a container, capture their weblinks, and get notifications when a new upstream version ships.",
       "updatesTab": "Reworked Updates tab for LXCs: apply OS packages and registered-app updates from a single button, and schedule a recurring auto-update job that checks the container's OS and its tracked app on every run.",
@@ -4579,7 +4586,6 @@
     "tryDifferentSearch": "Try another command or check the spelling.",
     "searchAnyCommand": "Search for any command",
     "trySearchingFor": "Try searching for:",
-    "searchTip": "Tip: Search for any Linux or Proxmox command (qm, pct, zpool).",
     "noExamplesFound": "No examples found",
     "reconnecting": "Reconnecting…",
     "reconnected": "Reconnected successfully",

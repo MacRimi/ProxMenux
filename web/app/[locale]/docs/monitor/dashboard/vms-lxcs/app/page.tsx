@@ -63,6 +63,7 @@ export default async function AppTabPage({
       }
       state: { items: string[] }
       manage: { items: string[] }
+      options: { items: string[] }
       notDetected: { steps: string[] }
     } } } }
   }
@@ -82,6 +83,7 @@ export default async function AppTabPage({
   const step6CorrectItems = v.tracking.step6CorrectItems
   const stateItems = v.state.items
   const manageItems = v.manage.items
+  const optionsItems = v.options.items
   const notDetectedSteps = v.notDetected.steps
 
   // Rich-text tag handlers
@@ -373,6 +375,15 @@ export default async function AppTabPage({
         ))}
       </ul>
       <p className="text-gray-800 mt-4">{t.rich("manage.trailing", { strong, em, code })}</p>
+
+      <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("options.heading")}</h2>
+      <p className="text-gray-800">{t("options.lead")}</p>
+      <ul className="list-disc pl-6 mt-2 space-y-1 text-gray-800">
+        {optionsItems.map((_, idx) => (
+          <li key={idx}>{t.rich(`options.items.${idx}`, { strong, em, code })}</li>
+        ))}
+      </ul>
+      <p className="text-gray-800 mt-4">{t.rich("options.trailing", { strong, em, code })}</p>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("notDetected.heading")}</h2>
       <p className="text-gray-800">{t("notDetected.intro")}</p>

@@ -257,6 +257,15 @@
     ],
     "trailing": "Eliminar el registro no desinstala ni detiene la aplicación. Solo borra la información que ProxMenux utiliza para mostrarla y supervisar su versión."
   },
+  "options": {
+    "heading": "Opciones adicionales",
+    "lead": "Debajo de las opciones de seguimiento de versión hay dos casillas independientes:",
+    "items": [
+      "<strong>Notificarme cuando haya una nueva versión disponible</strong> — envía el evento <code>app_update_available</code> a los canales activos en <strong>Ajustes → Notificaciones</strong>.",
+      "<strong>Excluir del contador de actualizaciones del LXC</strong> — no suma esta aplicación al badge agregado de actualizaciones del card del LXC."
+    ],
+    "trailing": "Ambas casillas se marcan por separado. La pestaña App sigue mostrando el estado real de cada aplicación registrada al margen de esta elección."
+  },
   "notDetected": {
     "heading": "Si la aplicación no se detecta",
     "intro": "La detección automática no es necesaria para utilizar esta función. Si no aparece ninguna sugerencia:",

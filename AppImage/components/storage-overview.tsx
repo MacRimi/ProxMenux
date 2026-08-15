@@ -250,6 +250,23 @@ export function StorageOverview() {
   const [diskObservations, setDiskObservations] = useState<DiskObservation[]>([])
   const [loadingObservations, setLoadingObservations] = useState(false)
   const [activeModalTab, setActiveModalTab] = useState<"overview" | "smart" | "history" | "schedule">("overview")
+  // Detect PWA / standalone display so the disk modal gets the same
+  // adaptive height the VM/LXC modal uses (95/90 vh in standalone,
+  // 85 vh capped by the visual viewport otherwise). Keeps every
+  // detail modal at a matching size across the app.
+  const [isStandalone, setIsStandalone] = useState(false)
+
+  useEffect(() => {
+    const checkStandalone = () => {
+      const standalone = window.matchMedia("(display-mode: standalone)").matches ||
+        (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+      setIsStandalone(standalone)
+    }
+    checkStandalone()
+    const mediaQuery = window.matchMedia("(display-mode: standalone)")
+    mediaQuery.addEventListener("change", checkStandalone)
+    return () => mediaQuery.removeEventListener("change", checkStandalone)
+  }, [])
   const [smartJsonData, setSmartJsonData] = useState<{
     has_data: boolean
     data?: Record<string, unknown>
@@ -1792,7 +1809,13 @@ export function StorageOverview() {
           setSmartJsonData(null)
         }
       }}>
-        <DialogContent className="max-w-4xl max-h-[80vh] sm:max-h-[85vh] overflow-hidden flex flex-col p-0">
+        <DialogContent
+          className={`max-w-4xl flex flex-col p-0 overflow-hidden ${
+            isStandalone
+              ? "h-[95vh] sm:h-[90vh]"
+              : "h-[85vh] sm:h-[85vh] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)]"
+          }`}
+        >
           <DialogHeader className="px-6 pt-6 pb-0">
             <DialogTitle className="flex items-center gap-2">
               {selectedDisk?.connection_type === 'usb' ? (
@@ -1816,58 +1839,74 @@ export function StorageOverview() {
             </DialogDescription>
           </DialogHeader>
           
-          {/* Tab Navigation */}
-          <div className="flex border-b border-border px-6 overflow-x-auto">
+          {/* Tab Navigation.
+              Mobile pattern (same as the VM/LXC modal): each tab
+              shows only its icon; the active tab additionally
+              reveals its label. That keeps all four tabs on-screen
+              on narrow viewports without horizontal scroll. */}
+          <div className="flex border-b border-border px-3 sm:px-6 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <button
               onClick={() => setActiveModalTab("overview")}
-              className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
                 activeModalTab === "overview"
                   ? "border-blue-500 text-blue-500"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               <Info className="h-4 w-4" />
-              {t("storage.overview")}
+              <span className={activeModalTab === "overview" ? "" : "hidden sm:inline"}>
+                {t("storage.overview")}
+              </span>
             </button>
             <button
               onClick={() => setActiveModalTab("smart")}
-              className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
                 activeModalTab === "smart"
                   ? "border-green-500 text-green-500"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               <Activity className="h-4 w-4" />
-              {t("storage.smart")}
+              <span className={activeModalTab === "smart" ? "" : "hidden sm:inline"}>
+                {t("storage.smart")}
+              </span>
             </button>
             <button
               onClick={() => setActiveModalTab("history")}
-              className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
                 activeModalTab === "history"
                   ? "border-orange-500 text-orange-500"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               <Archive className="h-4 w-4" />
-              {t("storage.history")}
+              <span className={activeModalTab === "history" ? "" : "hidden sm:inline"}>
+                {t("storage.history")}
+              </span>
             </button>
             <button
               onClick={() => setActiveModalTab("schedule")}
-              className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
                 activeModalTab === "schedule"
                   ? "border-purple-500 text-purple-500"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               <Clock className="h-4 w-4" />
-              {t("storage.schedule")}
+              <span className={activeModalTab === "schedule" ? "" : "hidden sm:inline"}>
+                {t("storage.schedule")}
+              </span>
             </button>
           </div>
           
-          {/* Tab Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
+          {/* Tab Content — the wrapper is a flex-col so each tab
+              can either scroll its own content (Overview) or keep
+              a sticky footer while an inner area grows/scrolls
+              (SMART, History, Schedule). Removing the wrapper's
+              own `overflow-y-auto` is what makes that possible. */}
+          <div className="flex-1 flex flex-col min-h-0 px-6 py-4">
           {selectedDisk && activeModalTab === "overview" && (
-            <div className="space-y-4">
+            <div className="space-y-4 flex-1 overflow-y-auto min-h-0 pr-1 -mr-1">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">{t("storage.model")}</p>
@@ -3082,10 +3121,12 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
   .top-bar-title { font-weight: 600; }
   .top-bar-subtitle { font-size: 11px; color: #94a3b8; }
   .top-bar button {
-    background: #06b6d4; color: #fff; border: none; padding: 10px 20px; border-radius: 6px;
-    font-size: 14px; font-weight: 600; cursor: pointer;
+    background: #06b6d4; color: #fff; border: none; padding: 8px 12px; border-radius: 6px;
+    font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
   }
   .top-bar button:hover { background: #0891b2; }
+  .top-bar .btn-group { display: flex; gap: 8px; }
+  .top-bar button svg { width: 18px; height: 18px; display: block; }
 
   /* Header */
   .rpt-header {
@@ -3184,13 +3225,25 @@ function pmxPrint(){
 }
 </script>
 
-<!-- Top bar (screen only) -->
+<!-- Top bar (screen only).
+     Print / Save as PDF actions replaced by icon-only buttons —
+     both call the same window.print() dialog (the browser's print
+     dialog exposes 'Save as PDF' as a destination), so labels
+     don't need to be translated. aria-label carries the intent
+     for screen readers. -->
 <div class="top-bar no-print">
   <div style="display:flex;align-items:center;gap:12px;">
     <strong>${t("storage.smartReport.title")}</strong>
     <span id="pmx-print-hint" style="font-size:11px;opacity:0.7;">/dev/${disk.name}</span>
   </div>
-  <button onclick="pmxPrint()">${t("storage.smartReport.printPdf")}</button>
+  <div class="btn-group">
+    <button onclick="pmxPrint()" title="Print" aria-label="Print">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    </button>
+    <button onclick="pmxPrint()" title="Save as PDF" aria-label="Save as PDF">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+    </button>
+  </div>
 </div>
 
 <!-- Header -->
@@ -4026,7 +4079,12 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
   }
   
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col h-full min-h-0">
+      {/* Scrollable body — Run test controls, progress, last test,
+          and the SMART Attributes summary. When the attributes list
+          is long, THIS is what scrolls; the "View full SMART report"
+          footer stays pinned at the bottom of the tab. */}
+      <div className="flex-1 overflow-y-auto min-h-0 pr-1 -mr-1 space-y-6">
       {/* Quick Actions */}
       <div className="space-y-3">
         <h4 className="font-semibold flex items-center gap-2">
@@ -4152,8 +4210,8 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
               {!isNvme && !testStatus.smart_data?.is_sas && <div className="col-span-2 text-center">{t("storage.smartTest.worst")}</div>}
               <div className="col-span-2 text-center">{t("storage.smartTest.status")}</div>
             </div>
-            <div className="divide-y divide-border max-h-[200px] overflow-y-auto">
-              {testStatus.smart_data.attributes.slice(0, 15).map((attr) => (
+            <div className="divide-y divide-border">
+              {testStatus.smart_data.attributes.map((attr) => (
                 <div key={attr.id} className={`grid ${(isNvme || testStatus.smart_data?.is_sas) ? 'grid-cols-10' : 'grid-cols-12'} gap-2 p-3 text-sm items-center`}>
                   {!isNvme && !testStatus.smart_data?.is_sas && <div className="col-span-1 text-muted-foreground">{attr.id}</div>}
                   <div className={`${(isNvme || testStatus.smart_data?.is_sas) ? 'col-span-5' : 'col-span-5'} truncate`} title={smartAttributeLabel(attr.name)}>{smartAttributeLabel(attr.name)}</div>
@@ -4175,8 +4233,14 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
         </div>
       )}
       
-      {/* View Full Report Button */}
-      <div className="pt-4 border-t">
+      </div>
+      {/* View Full Report Button — sticky footer of the tab.
+          Sits outside the scrollable body so it's always reachable
+          without hunting for it at the end of a long attribute
+          list. The helper subtitle was dropped — the button label
+          already explains the action, and the extra sentence was
+          eating vertical space we now give back to attributes. */}
+      <div className="pt-4 mt-4 border-t shrink-0">
         <Button
           variant="outline"
           className="w-full gap-2 bg-blue-500/10 border-blue-500/30 text-blue-500 hover:bg-blue-500/20 hover:text-blue-400"
@@ -4201,12 +4265,7 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
           <FileText className="h-4 w-4" />
           {t("storage.smartTest.viewFullReport")}
         </Button>
-        <p className="text-xs text-muted-foreground text-center mt-2">
-          {t("storage.smartTest.reportHelp")}
-        </p>
       </div>
-      
-
     </div>
   )
 }
@@ -4308,7 +4367,7 @@ function HistoryTab({ disk }: { disk: DiskInfo }) {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 gap-3">
+      <div className="flex flex-col items-center justify-center h-full min-h-0 gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         <p className="text-sm text-muted-foreground">{t("storage.historyTab.loading")}</p>
       </div>
@@ -4317,7 +4376,7 @@ function HistoryTab({ disk }: { disk: DiskInfo }) {
 
   if (history.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+      <div className="flex flex-col items-center justify-center h-full min-h-0 text-muted-foreground">
         <Archive className="h-12 w-12 mb-3 opacity-30" />
         <span className="text-sm">{t("storage.historyTab.empty")}</span>
         <span className="text-xs mt-1">{t("storage.historyTab.emptyHint")}</span>
@@ -4326,8 +4385,12 @@ function HistoryTab({ disk }: { disk: DiskInfo }) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-full min-h-0">
+      {/* Header stays pinned; the list scrolls; the retention note
+          sits pinned at the bottom. Same "sticky footer / growing
+          middle" layout as the other tabs so the modal never wastes
+          space no matter how many history entries the disk has. */}
+      <div className="flex items-center justify-between shrink-0 pb-3">
         <h4 className="font-semibold flex items-center gap-2">
           <Archive className="h-4 w-4" />
           {t("storage.historyTab.title")}
@@ -4337,7 +4400,7 @@ function HistoryTab({ disk }: { disk: DiskInfo }) {
         </h4>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 flex-1 overflow-y-auto min-h-0 pr-1 -mr-1">
         {history.map((entry, i) => {
           const isLatest = i === 0
           const testDate = new Date(entry.timestamp)
@@ -4399,7 +4462,7 @@ function HistoryTab({ disk }: { disk: DiskInfo }) {
         })}
       </div>
 
-      <p className="text-xs text-muted-foreground text-center pt-2">
+      <p className="text-xs text-muted-foreground text-center pt-3 mt-2 border-t shrink-0">
         {t("storage.historyTab.note")}
       </p>
     </div>
@@ -4569,7 +4632,7 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
+      <div className="flex items-center justify-center h-full min-h-0">
         <div className="h-6 w-6 rounded-full border-2 border-transparent border-t-purple-400 animate-spin" />
         <span className="ml-2 text-muted-foreground">{t("storage.scheduleTab.loading")}</span>
       </div>
@@ -4577,7 +4640,7 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 h-full min-h-0 overflow-y-auto pr-1 -mr-1">
       {/* Global Toggle */}
       <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
         <div>

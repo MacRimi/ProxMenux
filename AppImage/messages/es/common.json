@@ -21,6 +21,7 @@
     "cancel": "Cancelar",
     "save": "Guardar",
     "edit": "Editar",
+    "remove": "Eliminar",
     "close": "Cerrar",
     "resetAll": "Restablecer todo",
     "undo": "Deshacer",
@@ -216,7 +217,7 @@
     "physicalDisk": "Disco físico",
     "overview": "General",
     "smart": "SMART",
-    "history": "Historia",
+    "history": "Historial",
     "schedule": "Programación",
     "serialNumber": "Número de serie",
     "healthStatus": "Estado de salud",
@@ -245,10 +246,10 @@
       "estimatedYears": "~{value} años",
       "estimatedMonths": "~{value} meses"
     },
-    "availableSpare": "Aprovechar. Repuesto",
+    "availableSpare": "Repuesto disp.",
     "smartAttributes": "Atributos SMART",
     "powerOnHours": "Horas de encendido",
-    "rotationRate": "Tasa de rotación",
+    "rotationRate": "Velocidad de rotación",
     "smartStatus": "Estado SMART",
     "reallocatedSectors": "Sectores reasignados",
     "pendingSectors": "Sectores Pendientes",
@@ -297,10 +298,10 @@
       "installFailedManual": "La instalación falló. Pruebe manualmente: apt-get install smartmontools nvme-cli",
       "installToolsManual": "No se pudieron instalar las herramientas. Pruebe manualmente: apt-get install smartmontools nvme-cli",
       "runTest": "Ejecutar prueba SMART",
-      "shortTest": "Prueba corta (~2 min)",
+      "shortTest": "Prueba corta",
       "longTest": "Prueba larga (1-4 horas)",
-      "extendedTest": "Prueba extendida (antecedentes)",
-      "testHelp": "Una prueba corta dura unos 2 minutos. La prueba extendida se ejecuta en segundo plano y puede tardar varias horas en discos grandes. Recibirás una notificación cuando finalice.",
+      "extendedTest": "Prueba extendida",
+      "testHelp": "Una prueba corta dura unos 2 minutos. La prueba extendida se ejecuta en segundo plano y puede tardar varias horas en discos grandes. El resultado aparecerá en la pestaña Historial cuando finalice.",
       "startFailed": "No se pudo iniciar la prueba",
       "short": "Corto",
       "extended": "Extendido",
@@ -316,7 +317,6 @@
       "worst": "El peor",
       "status": "Estado",
       "viewFullReport": "Ver informe SMART completo",
-      "reportHelp": "Genere un informe SMART detallado con análisis y recomendaciones.",
       "loadingReport": "Cargando informe...",
       "reportLoadFailed": "No se pudieron cargar los datos del informe.",
       "statusValues": {
@@ -337,7 +337,7 @@
       "yesterday": "Ayer",
       "daysAgo": "Hace {count} días",
       "downloadJson": "Descargar JSON",
-      "delete": "Borrar",
+      "delete": "Eliminar",
       "confirmDelete": "¿Eliminar este registro de prueba?",
       "note": "Los resultados de las pruebas se almacenan localmente y se utilizan para generar informes SMART detallados."
     },
@@ -945,7 +945,7 @@
       "dhm": "{days}d {hours}h {minutes}m"
     },
     "details": {
-      "sourceHost": "Fuente (anfitrión)",
+      "sourceHost": "Origen (host)",
       "mountedAtCt": "Montado en (CT)",
       "total": "Total",
       "used": "Usado",
@@ -968,7 +968,7 @@
       "dnsNameserver": "Servidor de nombres DNS",
       "searchDomain": "Dominio de búsqueda",
       "hostname": "Nombre de host",
-      "storageType": "{type} almacenamiento",
+      "storageType": "Almacenamiento {type}",
       "mountAttributes": "Atributos de montaje (configuración LXC)",
       "runtimeMountOptions": "Opciones de montaje en tiempo de ejecución",
       "privileged": "Privilegiado",
@@ -1009,10 +1009,10 @@
       "preEnrolledKeys": "Claves preinscritas",
       "serial": "De serie",
       "mountTypes": {
-        "pveVolume": "volumen PVE",
-        "pveStorageBind": "unirse desde el almacenamiento PVE",
-        "hostBind": "enlazar desde el host",
-        "adHoc": "ad-hoc dentro de CT"
+        "pveVolume": "Volumen PVE",
+        "pveStorageBind": "Montado desde almacenamiento PVE",
+        "hostBind": "Montado desde el host",
+        "adHoc": "Ad-hoc dentro del CT"
       },
       "mountStatus": {
         "stale": "duro",
@@ -1021,7 +1021,11 @@
         "readOnly": "solo lectura",
         "stopped": "Detenido",
         "mounted": "montado"
-      }
+      },
+      "startOnBoot": "Iniciar al arrancar",
+      "tags": "Etiquetas",
+      "tagsPlaceholder": "Añadir etiqueta…",
+      "tagsNone": "Sin etiquetas"
     },
     "logs": {
       "header": "Registros para {name} (VMID: {vmid})",
@@ -1275,7 +1279,7 @@
       "closePanel": "Cerrar panel",
       "cancelButton": "Cancelar",
       "saveButton": "Guardar",
-      "hideButton": "Esconder",
+      "hideButton": "Ocultar",
       "hidePermanentlyTooltip": "Ocultar esta detección permanentemente",
       "hiddenBadge": "Actualmente oculto: volverá a aparecer en la lista de detección",
       "registerDifferent": "Registrar una aplicación diferente",
@@ -1410,7 +1414,7 @@
       "httpJsonHelp": "Punto final JSON público que devuelve una versión en algún lugar de la carga útil.",
       "jsonPathHelp": "Ruta de puntos con índices de matriz [N] opcionales.",
       "restoreButton": "Restaurar",
-      "registerButton": "Registro",
+      "registerButton": "Registrar",
       "removeButton": "Eliminar",
       "checkButton": "Controlar",
       "editFieldsButton": "Editar campos",
@@ -1421,7 +1425,9 @@
       "notificationsEnabled": "Notificaciones de actualización activas — clic para silenciar",
       "notificationsMuted": "Notificaciones de actualización silenciadas — clic para activar",
       "notifyUpstreamLabel": "Notificarme cuando haya una nueva versión disponible",
-      "notifyUpstreamHelp": "Envía `app_update_available` a los canales activos en Ajustes → Notificaciones. Desactívalo si esta app no se puede actualizar en tu instalación."
+      "notifyUpstreamHelp": "Envía `app_update_available` a los canales activos en Ajustes → Notificaciones. Desactívalo si esta app no se puede actualizar en tu instalación.",
+      "excludeFromBadgeLabel": "Excluir del contador de actualizaciones del LXC",
+      "excludeFromBadgeHelp": "No sumar esta app al contador agregado de actualizaciones del card del LXC. Útil cuando mantienes una versión concreta a propósito (requisito de tracker, compatibilidad). No afecta al estado que se muestra en la pestaña App ni al envío de la notificación."
     }
   },
   "settings": {
@@ -2006,7 +2012,7 @@
       "perm": "permanente",
       "enabled": "Activado",
       "disabled": "Desactivado",
-      "enable": "Permitir",
+      "enable": "Activar",
       "disable": "Desactivar",
       "enabledLower": "activado",
       "disabledLower": "desactivado",
@@ -2014,7 +2020,7 @@
       "hostLower": "anfitrión",
       "remove": "Eliminar",
       "allow": "Permitir",
-      "delete": "Borrar",
+      "delete": "Eliminar",
       "uninstall": "Desinstalar",
       "uninstalling": "Desinstalando...",
       "serviceRunning": "Servicio en ejecución",
@@ -2124,7 +2130,7 @@
       "confirmPassword": "Confirmar Contraseña",
       "confirmPasswordPlaceholder": "Ingrese la contraseña nuevamente",
       "enabling": "Habilitando...",
-      "enableShort": "Permitir",
+      "enableShort": "Activar",
       "changePassword": "Cambiar la contraseña",
       "currentPassword": "Contraseña actual",
       "currentPasswordPlaceholder": "Ingrese la contraseña actual",
@@ -2388,7 +2394,7 @@
         "singleIp": "dirección IP",
         "network": "Red",
         "edit": "Editar",
-        "delete": "Borrar",
+        "delete": "Eliminar",
         "save": "Guardar cambios",
         "trusted": "Confiable",
         "system": "Sistema",
@@ -3001,6 +3007,7 @@
     "currentFeatures": {
       "hostUpdate": "Actualización del host con un solo clic desde Health Monitor. El nuevo botón Actualizar ahora en Actualizaciones del sistema ejecuta el flujo de actualización de Proxmox dentro de una terminal del tablero, sin salir del navegador.",
       "mobileInstall": "Aviso de instalación en la aplicación para dispositivos móviles. Quienes visitan Safari por primera vez en Android e iOS ahora ven pasos sencillos para agregar el monitor a su pantalla de inicio como PWA.",
+      "i18n": "El Monitor ahora está traducido a 8 idiomas: inglés, español, alemán, francés, italiano, portugués, sueco y eslovaco. Muchas gracias a @vaso73 por crear la estructura de i18n que hizo esto posible.",
       "pageSpeed": "Carga de páginas más rápida y navegación más fluida en todo el panel. La página de Inicio abre al instante y la página de VMs y LXC ya no muestra 'Cargando…' al abrir los modales de cada máquina.",
       "appTab": "Nueva pestaña App dentro del modal de VM y LXC — especialmente para los LXC. Registra las aplicaciones instaladas en un contenedor, guarda sus enlaces web y recibe notificaciones cuando aparece una nueva versión.",
       "updatesTab": "Pestaña Updates rediseñada para LXC: aplica las actualizaciones del SO y de las apps registradas desde un mismo botón, y programa una tarea de auto-actualización recurrente que revisa el SO del contenedor y la app registrada en cada ejecución.",
@@ -3327,7 +3334,7 @@
       "edgeTpuRuntime": "Tiempo de ejecución de Edge TPU",
       "thresholds": "Umbrales",
       "hardwareWarnings": "Advertencias de hardware",
-      "currentDraw": "Sorteo actual",
+      "currentDraw": "Consumo actual",
       "currentOutput": "Salida actual",
       "remote": "Remoto",
       "batteryCharge": "Carga de la batería",
@@ -3361,7 +3368,7 @@
       "linkSpeed": "Velocidad de enlace",
       "family": "Familia",
       "interface": "Interfaz",
-      "rotationRate": "Tasa de rotación",
+      "rotationRate": "Velocidad de rotación",
       "classCode": "Código de clase",
       "serial": "De serie"
     },
@@ -3506,11 +3513,11 @@
       "back": "Atrás",
       "change": "Cambiar",
       "clear": "Limpiar",
-      "delete": "Borrar",
+      "delete": "Eliminar",
       "disable": "Desactivar",
       "download": "Descargar",
       "edit": "Editar",
-      "enable": "Permitir",
+      "enable": "Activar",
       "format": "Formato",
       "generateKey": "Generar clave",
       "import": "Importar",
@@ -3521,12 +3528,12 @@
       "regenerate": "Regenerado",
       "restore": "Restaurar",
       "restoreSelected": "Restaurar seleccionado",
-      "runNow": "Corre ahora",
+      "runNow": "Ejecutar",
       "saveChanges": "Guardar cambios",
       "unmount": "Desmontar",
       "upload": "Subir",
       "use": "Usar",
-      "viewContents": "Ver contenidos"
+      "viewContents": "Ver contenido"
     },
     "archives": {
       "archive": "Archivo",
@@ -4548,8 +4555,8 @@
     },
     "actions": {
       "details": "Detalles",
-      "history": "Historia",
-      "dismiss": "Despedir"
+      "history": "Historial",
+      "dismiss": "Descartar"
     },
     "summary": {
       "guests": "Huéspedes",
@@ -4579,7 +4586,6 @@
     "tryDifferentSearch": "Pruebe con otro comando o revise la ortografía.",
     "searchAnyCommand": "Buscar cualquier comando",
     "trySearchingFor": "Intente buscar:",
-    "searchTip": "Consejo: busque cualquier comando de Linux o Proxmox (qm, pct, zpool).",
     "noExamplesFound": "No se encontraron ejemplos",
     "reconnecting": "Reconectando…",
     "reconnected": "Reconectado exitosamente",

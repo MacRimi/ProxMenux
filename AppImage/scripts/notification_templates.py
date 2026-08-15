@@ -2409,7 +2409,20 @@ class AIEnhancer:
         if title_match and body_match:
             title_content = title_match.group(1).strip()
             body_content = body_match.group(1).strip()
-            
+
+            # Strip stray `[TITLE]` / `[BODY]` markers the AI may
+            # have echoed back inside the content itself (issue #297
+            # "additional note": PVE events arriving in Telegram
+            # with a literal `[TITLE]` in the title). The parser
+            # regex above splits on the FIRST occurrence, so any
+            # extra marker the model dropped into its title/body
+            # ends up inside the extracted string. Users see the
+            # markers verbatim in Telegram because they are only
+            # supposed to be structural separators, never content.
+            marker_re = re.compile(r'\[\s*(?:TITLE|BODY)\s*\]', re.IGNORECASE)
+            title_content = marker_re.sub('', title_content).strip()
+            body_content = marker_re.sub('', body_content).strip()
+
             # Remove any "Original message/text" sections the AI might have added.
             # Anchored at start-of-line (`(?:^|\n)\s*`) so legitimate prose
             # like "we received the original message earlier" mid-paragraph

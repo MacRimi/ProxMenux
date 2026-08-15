@@ -257,6 +257,15 @@
     ],
     "trailing": "Deleting a record does not uninstall or stop the app. It only removes the information ProxMenux uses to display it and monitor its version."
   },
+  "options": {
+    "heading": "Optional toggles",
+    "lead": "Two independent switches sit under the version tracking options:",
+    "items": [
+      "<strong>Notify me when a new upstream version is available</strong> — sends the <code>app_update_available</code> event to the channels enabled in <strong>Settings → Notifications</strong>.",
+      "<strong>Exclude from the LXC updates counter</strong> — leaves this app out of the aggregate updates badge shown on the LXC list card."
+    ],
+    "trailing": "Both toggles can be set independently. The App tab still shows the real state of each registered app regardless of these choices."
+  },
   "notDetected": {
     "heading": "If the app is not detected",
     "intro": "Automatic detection is not required to use this feature. If no suggestion appears:",

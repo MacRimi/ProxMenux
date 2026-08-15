@@ -6196,7 +6196,12 @@ def get_proxmox_vms():
                         'netout': resource.get('netout', 0),
                         'diskread': resource.get('diskread', 0),
                         'diskwrite': resource.get('diskwrite', 0),
-                        'maxcpu': resource.get('maxcpu', 0)
+                        'maxcpu': resource.get('maxcpu', 0),
+                        # PVE tags carried straight through — the string
+                        # comes back from `pvesh get /cluster/resources`
+                        # already in PVE's own canonical `tag1;tag2`
+                        # format; the client splits + colours them.
+                        'tags': resource.get('tags', ''),
                     }
                     # Decorate LXC rows with the apt update status if the
                     # managed_installs registry has it. Absent key means
@@ -6213,6 +6218,32 @@ def get_proxmox_vms():
                         app_list = lxc_app_map.get(str(resource.get('vmid')))
                         if app_list:
                             vm_data['app_watches'] = app_list
+
+                        # Fold registered-app updates into the CT's
+                        # aggregate updates badge so the list card
+                        # counter reflects OS + apps in one number.
+                        # Apps flagged `exclude_from_badge` are
+                        # omitted from the count (pinned versions,
+                        # tracker-locked apps, etc.) — see the
+                        # validator in lxc_apps.py for the full
+                        # rationale. Independent from
+                        # `notifications_enabled`.
+                        if app_list:
+                            app_upd_count = sum(
+                                1 for a in app_list
+                                if a.get('update_available') is True
+                                and not a.get('exclude_from_badge')
+                            )
+                            if app_upd_count:
+                                uc = vm_data.get('update_check') or {}
+                                # Synthesize a minimal update_check
+                                # entry when the CT has no apt/apk
+                                # data (OCI, non-Debian, checker off)
+                                # but at least one counted app.
+                                uc = dict(uc) if uc else {}
+                                uc['count'] = int(uc.get('count') or 0) + app_upd_count
+                                uc['available'] = True
+                                vm_data['update_check'] = uc
 
                     # PVE's cluster resources API reports disk=0 for most
                     # QEMU VMs — it can't see inside the guest filesystem
@@ -14156,6 +14187,109 @@ def api_vm_firewall_log(vmid):
         })
     except subprocess.TimeoutExpired:
         return jsonify({'error': 'pvesh timed out reading firewall log'}), 504
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/config', methods=['POST'])
+@require_auth
+def api_vm_config_set(vmid):
+    """Update a small allow-list of `.conf` fields on a VM or LXC.
+
+    Distinct from `api_vm_config_update` (PUT on the same path plus
+    /description) which is the legacy notes editor. Flask keys
+    endpoints by function name, so this one has its own.
+
+    Currently only `onboot` (start-with-host). Kept intentionally
+    narrow — the Status tab exposes one toggle for it and this
+    endpoint is what backs it. Adding a new field is one line in
+    ALLOWED + one line in the payload handler; every field must
+    map to a `qm set` / `pct set` --option that PVE applies
+    without a reboot.
+
+    Body: {"onboot": 0|1}   (bool accepted too, coerced)
+
+    Returns 200 with the applied value on success; the modal cache
+    is invalidated so the next open renders the fresh state.
+    """
+    ALLOWED = {'onboot', 'tags'}
+    try:
+        data = request.get_json(silent=True) or {}
+        updates = {k: v for k, v in data.items() if k in ALLOWED}
+        if not updates:
+            return jsonify({'error': f'No allowed fields in body. Allowed: {sorted(ALLOWED)}'}), 400
+
+        # Coerce onboot to strict 0/1
+        if 'onboot' in updates:
+            v = updates['onboot']
+            if isinstance(v, bool):
+                v = 1 if v else 0
+            try:
+                v = int(v)
+            except (TypeError, ValueError):
+                return jsonify({'error': 'onboot must be 0 or 1'}), 400
+            if v not in (0, 1):
+                return jsonify({'error': 'onboot must be 0 or 1'}), 400
+            updates['onboot'] = v
+
+        # tags: canonicalise to PVE's `tag1;tag2;tag3` form.
+        # Accepts either a list (client-friendly) or an already-joined
+        # string. Reject anything with characters PVE would refuse
+        # (whitespace, backslash) — spaces inside a tag are the
+        # commonest slip and PVE just drops them silently, so we
+        # fail loud instead. Empty string clears all tags.
+        if 'tags' in updates:
+            v = updates['tags']
+            if isinstance(v, list):
+                parts = [str(t).strip() for t in v]
+            elif isinstance(v, str):
+                # Accept both ';' and ',' as separators, same as PVE
+                parts = [t.strip() for t in re.split(r'[;,]', v)]
+            else:
+                return jsonify({'error': 'tags must be a list or a string'}), 400
+            parts = [p for p in parts if p]
+            for p in parts:
+                if not re.match(r'^[a-zA-Z0-9._\-+]+$', p):
+                    return jsonify({
+                        'error': f'Invalid tag "{p}": use letters, digits, and . _ - + only',
+                    }), 400
+            updates['tags'] = ';'.join(parts)
+
+        # Resolve VM type + node from cluster resources cache
+        resources = get_cached_pvesh_cluster_resources_vm()
+        if not resources:
+            return jsonify({'error': 'Failed to enumerate cluster VMs'}), 500
+        vm_info = next((r for r in resources if r.get('vmid') == vmid), None)
+        if not vm_info:
+            return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
+        vm_type = 'lxc' if vm_info.get('type') == 'lxc' else 'qemu'
+        node = vm_info.get('node', 'pve')
+
+        # `qm set` / `pct set` — hot-applied for onboot, no reboot
+        # needed. Build the argv from the ALLOWED map so a future
+        # extension of the payload naturally lands here.
+        binary = '/usr/sbin/pct' if vm_type == 'lxc' else '/usr/sbin/qm'
+        argv = [binary, 'set', str(vmid)]
+        for k, v in updates.items():
+            argv.extend([f'--{k}', str(v)])
+
+        result = subprocess.run(argv, capture_output=True, text=True, timeout=15)
+        if result.returncode != 0:
+            stderr = (result.stderr or result.stdout or '').strip()
+            return jsonify({
+                'error': stderr[:500] or f'{binary} set failed with exit {result.returncode}',
+            }), 500
+
+        # Reflect the change in the modal cache immediately so the
+        # next open of the guest shows the new value without waiting
+        # for a natural refresh.
+        _vm_cache_invalidate(vmid, _vm_details_cache)
+
+        return jsonify({
+            'success': True,
+            'vmid': vmid,
+            'applied': updates,
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

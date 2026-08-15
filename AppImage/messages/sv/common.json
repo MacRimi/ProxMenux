@@ -21,6 +21,7 @@
     "cancel": "Avbryt",
     "save": "Spara",
     "edit": "Redigera",
+    "remove": "",
     "close": "Stäng",
     "resetAll": "Återställ alla",
     "undo": "Ångra",
@@ -297,10 +298,10 @@
       "installFailedManual": "Installationen misslyckades. Försök manuellt: apt-get install smartmontools nvme-cli",
       "installToolsManual": "Det gick inte att installera verktyg. Försök manuellt: apt-get install smartmontools nvme-cli",
       "runTest": "Kör SMART-test",
-      "shortTest": "Kort test (~2 min)",
+      "shortTest": "Kort test",
       "longTest": "Långt test (1-4 timmar)",
-      "extendedTest": "Utökat test (bakgrund)",
-      "testHelp": "Ett kort test tar cirka 2 minuter. Det utökade testet körs i bakgrunden och kan ta flera timmar på stora diskar. Du kommer att få ett meddelande när det är klart.",
+      "extendedTest": "Utökat test",
+      "testHelp": "",
       "startFailed": "Det gick inte att starta testet",
       "short": "Kort",
       "extended": "Förlängd",
@@ -316,7 +317,6 @@
       "worst": "Värst",
       "status": "Status",
       "viewFullReport": "Se hela SMART-rapporten",
-      "reportHelp": "Skapa en detaljerad SMART-rapport med analyser och rekommendationer.",
       "loadingReport": "Laddar rapport...",
       "reportLoadFailed": "Det gick inte att läsa in rapportdata.",
       "statusValues": {
@@ -1021,7 +1021,11 @@
         "readOnly": "skrivskyddad",
         "stopped": "stannade",
         "mounted": "monterad"
-      }
+      },
+      "startOnBoot": "",
+      "tags": "",
+      "tagsPlaceholder": "",
+      "tagsNone": ""
     },
     "logs": {
       "header": "Loggar för {name} (VMID: {vmid})",
@@ -1421,7 +1425,9 @@
       "notificationsEnabled": "Uppströmsuppdateringsmeddelanden PÅ – klicka för att stänga av ljudet",
       "notificationsMuted": "Uppströmsuppdateringsmeddelanden AVSTÄLLD – klicka för att aktivera",
       "notifyUpstreamLabel": "Meddela mig när en ny uppströmsversion är tillgänglig",
-      "notifyUpstreamHelp": "Skickar `app_update_available` till de kanaler som är aktiverade i Inställningar → Aviseringar.Stäng av om den här appen inte kan uppdateras på din box."
+      "notifyUpstreamHelp": "Skickar `app_update_available` till de kanaler som är aktiverade i Inställningar → Aviseringar.Stäng av om den här appen inte kan uppdateras på din box.",
+      "excludeFromBadgeLabel": "",
+      "excludeFromBadgeHelp": ""
     }
   },
   "settings": {
@@ -3001,6 +3007,7 @@
     "currentFeatures": {
       "hostUpdate": "Värduppdatering med ett klick från Health Monitor. Den nya knappen Uppdatera nu i Systemuppdateringar kör Proxmox-uppdateringsflödet i en instrumentpanelsterminal utan att lämna webbläsaren.",
       "mobileInstall": "Uppmaning om installation i appen för mobil. Förstagångsbesökare på Android och iOS Safari ser nu enkla steg för att lägga till monitorn på sin startskärm som en PWA.",
+      "i18n": "",
       "pageSpeed": "Snabbare sidladdningar och smidigare navigering över instrumentpanelen.Översikten öppnas omedelbart och sidan för virtuella datorer och LXC:er blinkar aldrig \"Laddar...\" mellan gästmodalerna igen.",
       "appTab": "Ny appflik i VM- och LXC-modalerna — speciellt för LXC.Registrera apparna installerade i en behållare, fånga deras webblänkar och få meddelanden när en ny uppströmsversion skickas.",
       "updatesTab": "Fliken Omarbetade uppdateringar för LXC:er: applicera OS-paket och uppdateringar av registrerade appar från en enda knapp och schemalägg ett återkommande automatiskt uppdateringsjobb som kontrollerar containerns OS och dess spårade app vid varje körning.",
@@ -4580,7 +4587,6 @@
     "tryDifferentSearch": "Prova ett annat kommando eller kontrollera stavningen.",
     "searchAnyCommand": "Sök efter valfritt kommando",
     "trySearchingFor": "Prova att söka efter:",
-    "searchTip": "Tips: Sök efter valfritt Linux- eller Proxmox-kommando (qm, pct, zpool).",
     "noExamplesFound": "Inga exempel hittades",
     "reconnecting": "Återansluter...",
     "reconnected": "Återansluten framgångsrikt",

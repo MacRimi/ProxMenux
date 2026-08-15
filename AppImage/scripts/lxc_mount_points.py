@@ -583,10 +583,46 @@ def get_lxc_mount_points_static(vmid: str) -> dict[str, Any]:
             "host_source_is_mountpoint": host_src["is_mountpoint"],
         })
 
+    # Cheap hint so the client can render the Mount Points tab
+    # immediately for CTs that ONLY have ad-hoc NFS/CIFS mounts done
+    # from inside the container (nothing in .conf, so `out` is
+    # empty). Without this hint the tab appears only after the
+    # runtime endpoint returns 200-500 ms later, pushing the other
+    # tabs sideways. Reading /proc/<pid>/mounts is a pure file read
+    # (~1 ms, no subprocess), filter by remote fs family so only
+    # storage counts — plain bind mounts of /dev/* passthrough
+    # devices don't inflate the count.
+    #
+    # IMPORTANT: exclude runtime targets that match a declared mp.
+    # When a host mp source is itself a remote share (e.g. mp0 binds
+    # /mnt/pve/Piblic which is a CIFS mount on the host), the same
+    # mount surfaces in /proc/<pid>/mounts with an `nfs`/`cifs`
+    # fstype from the CT's perspective. Without the filter the hint
+    # double-counted it, so the badge showed mp+1 when the tab really
+    # only had `mp` cards to render.
+    ad_hoc_hint_count = 0
+    running, host_pid = _ct_status(vmid)
+    if running and host_pid:
+        try:
+            config_targets = {
+                entry.get("target", "")
+                for entry in config_entries
+                if entry.get("target")
+            }
+            for rt in _read_ct_proc_mounts(host_pid):
+                if not _REMOTE_FS_RE.match(rt.get("rt_fstype", "")):
+                    continue
+                if rt.get("rt_target") in config_targets:
+                    continue
+                ad_hoc_hint_count += 1
+        except Exception:
+            pass
+
     return {
         "ok": True,
         "vmid": vmid,
         "mount_points": out,
+        "ad_hoc_hint_count": ad_hoc_hint_count,
     }
 
 
