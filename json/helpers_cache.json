@@ -2893,7 +2893,7 @@
       "Change the default password after first login!"
     ],
     "port": 8090,
-    "website": "https://certimate.me/",
+    "website": "https://docs.certimate.me/en-US/",
     "documentation": "https://docs.certimate.me/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/certimate.webp",
     "updateable": true,
@@ -6663,7 +6663,7 @@
       "lxc"
     ],
     "config_path": "",
-    "os": "debian"
+    "os": "ubuntu"
   },
   {
     "name": "FlowiseAI",
