@@ -1045,47 +1045,13 @@ _NVIDIA_CACHE_TTL = 7 * 86400
 _nvidia_cache: dict[str, Any] = {"versions": [], "fetched_at": 0}
 
 
-def _nvidia_kernel_compat() -> dict:
-    """Python port of `get_kernel_compatibility_info` in the bash
-    installer. Returns ``{kernel, min_version, recommended_branch,
-    note}``. Kept identical to the bash matrix so the recommendation
-    here matches what the installer would do."""
+def _kernel_string() -> str:
     try:
-        kernel = subprocess.run(
+        return subprocess.run(
             ["uname", "-r"], capture_output=True, text=True, timeout=2,
         ).stdout.strip()
     except (OSError, subprocess.TimeoutExpired):
-        kernel = ""
-    parts = kernel.split(".") if kernel else []
-    try:
-        major = int(parts[0]) if len(parts) >= 1 else 0
-        minor = int(parts[1]) if len(parts) >= 2 else 0
-    except (ValueError, TypeError):
-        major, minor = 0, 0
-
-    if major >= 7 or (major == 6 and minor >= 17):
-        return {
-            "kernel": kernel,
-            "min_version": "580.105.08",
-            "recommended_branch": "580",
-            "note": (f"Kernel {kernel} requires NVIDIA driver 580.105.08 or "
-                     f"newer (older 580.x builds fail to compile)"),
-        }
-    if major >= 6 and minor >= 8:
-        return {"kernel": kernel, "min_version": "550",
-                "recommended_branch": "580",
-                "note": f"Kernel {kernel} works with NVIDIA driver 550.x or newer"}
-    if major >= 6:
-        return {"kernel": kernel, "min_version": "535",
-                "recommended_branch": "550",
-                "note": f"Kernel {kernel} works with NVIDIA driver 535.x or newer"}
-    if major == 5 and minor >= 15:
-        return {"kernel": kernel, "min_version": "470",
-                "recommended_branch": "535",
-                "note": f"Kernel {kernel} works with NVIDIA driver 470.x or newer"}
-    return {"kernel": kernel, "min_version": "450",
-            "recommended_branch": "470",
-            "note": "For older kernels, compatibility may vary"}
+        return ""
 
 
 def _version_tuple(v: str) -> tuple:
@@ -1130,30 +1096,8 @@ def _fetch_nvidia_versions(force: bool = False) -> list[str]:
     return versions
 
 
-def _is_compat_with_kernel(version: str, kernel_compat: dict) -> bool:
-    """Compare ``version`` (e.g. ``580.105.08``) against the kernel
-    compatibility floor. Mirrors the bash ``is_version_compatible``
-    helper (full-triple compare when min is dotted, major-only otherwise)."""
-    min_str = kernel_compat.get("min_version", "0")
-    if "." in min_str and re.match(r"^\d+\.\d+\.\d+$", min_str):
-        return _version_tuple(version) >= _version_tuple(min_str)
-    # Single-major threshold like "535" or "550"
-    try:
-        ver_major = int(version.split(".")[0])
-        min_major = int(min_str)
-    except (ValueError, TypeError):
-        return True
-    return ver_major >= min_major
-
-
 def _check_nvidia_xfree86(entry: dict) -> dict:
-    """Compute the update state for a host NVIDIA driver entry.
-
-    Policy (Option C from the design discussion):
-      1. Same-branch newer version available → notify.
-      2. Current branch no longer compatible with current kernel →
-         notify a branch upgrade with explicit messaging.
-    """
+    """Report same-branch bugfix upgrades for the installed driver."""
     current = entry.get("current_version")
     if not current or not re.match(r"^\d+\.\d+(\.\d+)?$", current):
         return {"available": False, "latest": None,
@@ -1165,48 +1109,24 @@ def _check_nvidia_xfree86(entry: dict) -> dict:
                 "last_check": _now_iso(),
                 "error": "could not parse upstream version listing"}
 
-    kernel_compat = _nvidia_kernel_compat()
     current_branch = current.split(".")[0]
-
-    same_branch = [v for v in versions if v.split(".")[0] == current_branch
-                   and _is_compat_with_kernel(v, kernel_compat)]
+    same_branch = [v for v in versions if v.split(".")[0] == current_branch]
     same_branch_latest = same_branch[0] if same_branch else None
-
-    notify_branch_upgrade = False
-    branch_upgrade_target: Optional[str] = None
-    if not _is_compat_with_kernel(current, kernel_compat):
-        # Current branch / version no longer works with current kernel.
-        # Recommend the kernel-recommended branch's latest.
-        rec_branch = kernel_compat["recommended_branch"]
-        rec_branch_versions = [v for v in versions
-                                if v.split(".")[0] == rec_branch
-                                and _is_compat_with_kernel(v, kernel_compat)]
-        if rec_branch_versions:
-            branch_upgrade_target = rec_branch_versions[0]
-            notify_branch_upgrade = True
 
     available = False
     latest: Optional[str] = None
-    upgrade_kind = None  # "patch" | "branch_upgrade" | None
-
-    if notify_branch_upgrade and branch_upgrade_target:
-        latest = branch_upgrade_target
-        available = True
-        upgrade_kind = "branch_upgrade"
-    elif same_branch_latest and \
-         _version_tuple(same_branch_latest) > _version_tuple(current):
+    if same_branch_latest and \
+            _version_tuple(same_branch_latest) > _version_tuple(current):
         latest = same_branch_latest
         available = True
-        upgrade_kind = "patch"
 
     return {
         "available": available,
         "latest": latest,
         "last_check": _now_iso(),
         "error": None,
-        "_upgrade_kind": upgrade_kind,
-        "_kernel": kernel_compat.get("kernel"),
-        "_kernel_note": kernel_compat.get("note"),
+        "_upgrade_kind": "patch" if available else None,
+        "_kernel": _kernel_string(),
     }
 
 

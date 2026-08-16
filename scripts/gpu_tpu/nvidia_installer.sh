@@ -660,106 +660,28 @@ ensure_workdir() {
 }
 
 # ==========================================================
-# Kernel compatibility detection
+# Kernel + system detection
 # ==========================================================
 get_kernel_compatibility_info() {
   local kernel_version
   kernel_version=$(uname -r)
-  
-  # Determine Proxmox and kernel version
+
   if [[ -f /etc/pve/.version ]]; then
     PVE_VERSION=$(cat /etc/pve/.version)
   else
     PVE_VERSION="unknown"
   fi
-  
-  # Extract kernel major version (6.x, 5.x, etc)
+
   KERNEL_MAJOR=$(echo "$kernel_version" | cut -d. -f1)
   KERNEL_MINOR=$(echo "$kernel_version" | cut -d. -f2)
-  
-  # Define minimum compatible versions based on kernel.
-  # Floor bumped from 580.82.07 → 580.105.08 for kernel 6.17+ after a
-  # user report (issue tracked as Sprint 11.4) that 580.82-580.95 builds
-  # fail on kernel 6.17.13 (DKMS module compile errors with the newer
-  # toolchain shipped with PVE 9.1). 580.105.08 is verified working on
-  # the test host. Future kernel 7.x falls into the same bucket — the
-  # `KERNEL_MAJOR -ge 7` branch was previously missing and routed 7.x
-  # kernels to MIN=535 incorrectly.
-  if { [[ "$KERNEL_MAJOR" -ge 7 ]]; } || \
-     { [[ "$KERNEL_MAJOR" -eq 6 ]] && [[ "$KERNEL_MINOR" -ge 17 ]]; }; then
-    # Kernel 6.17+ / 7.x (Proxmox 9.x +) - Requires 580.105.08 or higher
-    MIN_DRIVER_VERSION="580.105.08"
-    RECOMMENDED_BRANCH="580"
-    COMPATIBILITY_NOTE="Kernel $kernel_version requires NVIDIA driver 580.105.08 or newer (older 580.x builds fail to compile)"
-  elif [[ "$KERNEL_MAJOR" -ge 6 ]] && [[ "$KERNEL_MINOR" -ge 8 ]]; then
-    # Kernel 6.8-6.16 (Proxmox 8.2+) - Works with 550.x or higher
-    MIN_DRIVER_VERSION="550"
-    RECOMMENDED_BRANCH="580"
-    COMPATIBILITY_NOTE="Kernel $kernel_version works best with NVIDIA driver 550.x or newer"
-  elif [[ "$KERNEL_MAJOR" -ge 6 ]]; then
-    # Kernel 6.2-6.7 (Proxmox 8.x initial) - Works with 535.x or higher
-    MIN_DRIVER_VERSION="535"
-    RECOMMENDED_BRANCH="550"
-    COMPATIBILITY_NOTE="Kernel $kernel_version works with NVIDIA driver 535.x or newer"
-  elif [[ "$KERNEL_MAJOR" -eq 5 ]] && [[ "$KERNEL_MINOR" -ge 15 ]]; then
-    # Kernel 5.15+ (Proxmox 7.x, 8.x legacy) - Works with 470.x or higher
-    MIN_DRIVER_VERSION="470"
-    RECOMMENDED_BRANCH="535"
-    COMPATIBILITY_NOTE="Kernel $kernel_version works with NVIDIA driver 470.x or newer"
-  else
-    # Old kernels
-    MIN_DRIVER_VERSION="450"
-    RECOMMENDED_BRANCH="470"
-    COMPATIBILITY_NOTE="For older kernels, compatibility may vary"
-  fi
+
+  MIN_DRIVER_VERSION=""
+  RECOMMENDED_BRANCH=""
+  COMPATIBILITY_NOTE=""
 }
 
 is_version_compatible() {
-  local version="$1"
-  local ver_major ver_minor ver_patch
-  
-  # Extract version components (major.minor.patch)
-  ver_major=$(echo "$version" | cut -d. -f1)
-  ver_minor=$(echo "$version" | cut -d. -f2)
-  ver_patch=$(echo "$version" | cut -d. -f3)
-  
-  # Full-version comparison when MIN is dotted (e.g. "580.105.08").
-  # Strips the dotted threshold from MIN_DRIVER_VERSION and reuses the
-  # existing `version_le` helper. The previous code had a hardcoded
-  # branch only for "580.82.07" — bumping the floor required editing two
-  # places. Sprint 11.4.
-  case "$MIN_DRIVER_VERSION" in
-    *.*.*)
-      # Dotted threshold: compare full triple.
-      local _min_major _min_minor _min_patch
-      IFS='.' read -r _min_major _min_minor _min_patch <<<"$MIN_DRIVER_VERSION"
-      _min_major=${_min_major:-0}
-      _min_minor=${_min_minor:-0}
-      _min_patch=${_min_patch:-0}
-      ver_minor=${ver_minor:-0}
-      ver_patch=${ver_patch:-0}
-      if (( 10#$ver_major > 10#$_min_major )); then
-        return 0
-      elif (( 10#$ver_major == 10#$_min_major )); then
-        if (( 10#$ver_minor > 10#$_min_minor )); then
-          return 0
-        elif (( 10#$ver_minor == 10#$_min_minor )); then
-          if (( 10#${ver_patch:-0} >= 10#$_min_patch )); then
-            return 0
-          fi
-        fi
-      fi
-      return 1
-      ;;
-    *)
-      # Single-major threshold (e.g. "550", "535"): compare major only.
-      if [[ ${ver_major} -ge ${MIN_DRIVER_VERSION} ]]; then
-        return 0
-      else
-        return 1
-      fi
-      ;;
-  esac
+  return 0
 }
 
 
@@ -821,19 +743,35 @@ refresh_nvidia_branches_cache() {
   #                                it (separate alternative below).
   # HTML comments are stripped first so vestigial `<!-- Beta Version …
   # 387.34 -->` blocks in older ia32 rows don't leak stale majors.
+  # Perl one-liner because we want to keep the label text next to the
+  # version — shell greps can only give us one or the other, and we
+  # need the label to tag each head as production / feature / legacy.
   echo "$clean" \
-    | grep -oiE '(Production Branch Version|New Feature Branch Version|Legacy GPU version \([0-9]+\.xx series\)):[^<]*(</span>)?\s*<a[^>]*>[0-9]+\.[0-9]+(\.[0-9]+)?' \
-    | grep -oE '>[0-9]+\.[0-9]+(\.[0-9]+)?' \
-    | tr -d '>' \
-    | awk -F. '{ printf "%s|%s\n", $1, $0 }' \
-    | sort -u -t'|' -k1,1 > "$tmp_full"
+    | perl -ne '
+        while (/(Production Branch Version|New Feature Branch Version|Legacy GPU version \(([0-9]+)\.xx series\)):[^<]*(?:<\/span>)?\s*<a[^>]*>([0-9]+\.[0-9]+(?:\.[0-9]+)?)/gi) {
+          my $label = lc($1);
+          my $ver   = $3;
+          my ($maj) = split(/\./, $ver);
+          my $type  = "unknown";
+          if    ($label =~ /production branch/)  { $type = "production" }
+          elsif ($label =~ /new feature branch/) { $type = "feature" }
+          elsif ($label =~ /legacy gpu version/) { $type = "legacy" }
+          print "$type|$maj|$ver\n";
+        }' \
+    | sort -u -t'|' -k1,1 -k2,2n > "$tmp_full"
   if [[ ! -s "$tmp_full" ]]; then
     rm -f "$tmp" "$tmp_full"
     return 1
   fi
-  # Derive the majors-only file from the same source so both caches
-  # never disagree.
-  cut -d'|' -f1 "$tmp_full" | sort -un > "$tmp"
+  # Derive the majors-only file from the same source, but ONLY for
+  # production + legacy — New Feature Branch heads (610.x today) are
+  # intentionally NOT in the endorsed whitelist because they carry
+  # kernel/driver features still under stabilisation. Superseded
+  # production branches still qualify via the release-count heuristic
+  # in filter_option_c_branch, so operators on 580 / 570 / 550 / 535
+  # keep bugfix upgrade options.
+  awk -F'|' '$1 == "production" || $1 == "legacy" { print $2 }' \
+    "$tmp_full" | sort -un > "$tmp"
   if [[ ! -s "$tmp" ]]; then
     rm -f "$tmp" "$tmp_full"
     return 1
@@ -861,12 +799,13 @@ refresh_nvidia_branches_cache() {
 
 # Return the full head version associated with a major from the
 # branch-heads cache (e.g. `get_nvidia_branch_head 595` → 595.91.07).
-# Used to know which release inside a branch to hit for the PCI-ID
-# supported-GPUs list.
+# Cache lines are `type|major|version` — filter by major, print
+# version. Used to know which release inside a branch to hit for the
+# PCI-ID supported-GPUs list.
 get_nvidia_branch_head() {
   local major="$1"
   [[ -f "$NVIDIA_BRANCH_HEADS_CACHE" && -s "$NVIDIA_BRANCH_HEADS_CACHE" ]] || return 1
-  awk -F'|' -v m="$major" '$1 == m { print $2; exit }' "$NVIDIA_BRANCH_HEADS_CACHE"
+  awk -F'|' -v m="$major" '$2 == m { print $3; exit }' "$NVIDIA_BRANCH_HEADS_CACHE"
 }
 
 # Refresh the per-branch supported-GPU cache. Uses the branch head as
@@ -1010,41 +949,14 @@ filter_keylase_supported() {
 filter_option_c_branch() {
   local versions_in="$1"
   local current="$2"
-  local recommended_branch="$3"
-  local target_branch=""
+  local _unused_recommended_branch="$3"
 
-  if [[ -n "$current" && "$current" =~ ^([0-9]+)\. ]]; then
-    local current_branch="${BASH_REMATCH[1]}"
-    if is_version_compatible "$current"; then
-      target_branch="$current_branch"
-    fi
-  fi
-
-  if [[ -z "$target_branch" ]]; then
-    target_branch="$recommended_branch"
-  fi
-
-  if [[ -z "$target_branch" ]]; then
-    printf '%s\n' "$versions_in"
-    return 0
-  fi
-
-  # Four-way gate for every candidate version:
-  #   1. `major >= target_branch` — kernel floor.
-  #   2. Branch is currently endorsed on NVIDIA's Unix drivers page
-  #      (Production / New Feature / Legacy heads) OR was substantial
-  #      enough to accumulate ≥ NVIDIA_BRANCH_MIN_RELEASES releases on
-  #      the CDN. The endorsement path always passes; the release-count
-  #      path lets superseded production branches (580, 570, 550, 535 …
-  #      still maintained via bugfix releases) stay selectable while
-  #      Vulkan-beta / developer branches with 1-4 releases (590, 565,
-  #      530 …) get dropped.
-  #   3. `is_branch_compatible_with_host_gpus` — every detected NVIDIA
-  #      GPU on this host must appear in that branch's supportedchips
-  #      list. A host with a Kepler card ends up with 470.x only.
-  # All three fail open when their caches / lookups miss, so the picker
-  # never empties on a network glitch.
   refresh_nvidia_branches_cache 2>/dev/null || true
+
+  local target_branch=""
+  if [[ -f "$NVIDIA_BRANCHES_CACHE" && -s "$NVIDIA_BRANCHES_CACHE" ]]; then
+    target_branch=$(head -n1 "$NVIDIA_BRANCHES_CACHE")
+  fi
   # Build a majors→count map from the incoming version list. This is
   # what backs `is_branch_release_count_sufficient` — done once per
   # call so the tight loop below stays local-arithmetic only.
@@ -1103,11 +1015,12 @@ filter_option_c_branch() {
   while IFS= read -r ver; do
     [[ -z "$ver" ]] && continue
     local ver_major="${ver%%.*}"
-    if (( 10#$ver_major >= 10#$target_branch )); then
-      if is_nvidia_stable_branch "$ver_major" || is_branch_release_count_sufficient "$ver_major"; then
-        if is_branch_compatible_with_host_gpus "$ver_major"; then
-          printf '%s\n' "$ver"
-        fi
+    if [[ -n "$target_branch" ]] && (( 10#$ver_major < 10#$target_branch )); then
+      continue
+    fi
+    if is_nvidia_stable_branch "$ver_major" || is_branch_release_count_sufficient "$ver_major"; then
+      if is_branch_compatible_with_host_gpus "$ver_major"; then
+        printf '%s\n' "$ver"
       fi
     fi
   done <<< "$versions_in"
@@ -1540,7 +1453,7 @@ show_action_menu_if_installed() {
     "remove"  "$(translate 'Uninstall NVIDIA drivers and configuration')"
   )
 
-  ACTION=$(hybrid_menu "ProxMenux" "$(translate 'NVIDIA Actions')\n\n$(translate 'Choose an action:')" 14 80 8 "${menu_choices[@]}") || ACTION="cancel"
+  ACTION=$(hybrid_menu "ProxMenux" "$(translate 'NVIDIA Actions')\n\n$(translate 'Choose an action:')" 26 80 16 "${menu_choices[@]}") || ACTION="cancel"
 }
 
 show_install_overview() {
@@ -1581,15 +1494,16 @@ show_version_menu() {
   local latest versions_list
   local kernel_version
   kernel_version=$(uname -r)
-  
+
+  show_proxmenux_logo
+  msg_title "$(translate 'NVIDIA GPU Driver Installation')"
+  msg_info "$(translate 'Fetching compatible driver versions for your kernel and GPU...')"
 
   latest=$(download_latest_version 2>/dev/null)
-  
-
   versions_list=$(list_available_versions 2>/dev/null)
-  
 
   if [[ -z "$latest" ]] && [[ -z "$versions_list" ]]; then
+    stop_spinner
     hybrid_msgbox "$(translate 'Error')" \
       "$(translate 'Could not retrieve versions list from NVIDIA. Please check your internet connection.')\n\nURL: ${NVIDIA_BASE_URL}" 10 80
     DRIVER_VERSION="cancel"
@@ -1623,13 +1537,8 @@ show_version_menu() {
     current_list="$filtered_list"
   fi
 
-  # Option C: kernel-compat alone is too permissive (e.g. kernel 6.14
-  # accepts ≥ 550 so 595.x shows up — but 595.x has historically broken
-  # builds on this kernel). Restrict the offered list to the user's
-  # current branch when their installed driver still works, otherwise
-  # fall back to the recommended branch for the kernel.
   if [[ -n "$current_list" ]]; then
-    current_list=$(filter_option_c_branch "$current_list" "$CURRENT_DRIVER_VERSION" "$RECOMMENDED_BRANCH")
+    current_list=$(filter_option_c_branch "$current_list" "$CURRENT_DRIVER_VERSION" "")
   fi
 
   # Historically the picker capped candidates at `latest` (from the
@@ -1715,7 +1624,11 @@ show_version_menu() {
   fi
 
   local choices=()
-  choices+=("latest" "$(translate 'Recommended') (${latest:-unknown})")
+  if [[ -n "$latest" ]]; then
+    choices+=("$latest" "$latest — $(translate 'Recommended')")
+  else
+    choices+=("" "$(translate 'Recommended')")
+  fi
   choices+=("" "")
 
   if [[ -n "$current_list" ]]; then
@@ -1730,6 +1643,7 @@ show_version_menu() {
     choices+=("" "$(translate 'No compatible versions found for your kernel')")
   fi
 
+  stop_spinner
   local selection=$(hybrid_menu "$(translate 'NVIDIA Driver Version')" "$menu_text" 26 90 16 "${choices[@]}") || { DRIVER_VERSION="cancel"; return 1; }
 
   case "$selection" in
@@ -1737,14 +1651,8 @@ show_version_menu() {
       DRIVER_VERSION="cancel"
       return 1
       ;;
-    latest)
-      DRIVER_VERSION="$latest"
-      DRIVER_VERSION=$(echo "$DRIVER_VERSION" | tr -d '[:space:]')
-      return 0
-      ;;
     *)
-      DRIVER_VERSION="$selection"
-      DRIVER_VERSION=$(echo "$DRIVER_VERSION" | tr -d '[:space:]')
+      DRIVER_VERSION=$(echo "$selection" | tr -d '[:space:]')
       return 0
       ;;
   esac
