@@ -1067,6 +1067,43 @@
     "os": "debian"
   },
   {
+    "name": "AnythingLLM",
+    "slug": "anythingllm",
+    "desc": "AnythingLLM is an all-in-one AI application: turn documents, websites and other content into a chat-ready knowledge base with RAG, agents and multi-user workspaces. It connects to local model runners such as Ollama and LM Studio as well as OpenAI, Anthropic and other hosted providers.",
+    "script": "ct/anythingllm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/anythingllm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/anythingllm.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "Open http://<IP>:3001 and complete the onboarding: pick an LLM provider (for example an existing Ollama container) and an embedding model. Nothing works until a provider is configured.",
+      "Documents, the LanceDB vector store and the SQLite database live in /opt/anythingllm_data/storage, outside the app directory, so they survive updates. Back up that directory.",
+      "Two services run here: anythingllm (server and web UI on 3001) and anythingllm-collector (document processing). No models run in this container - point it at a separate Ollama or a hosted API."
+    ],
+    "warnings": [
+      "Upstream does not support bare-metal deployments - BARE_METAL.md is explicitly a reference only and issues from non-Docker installs are not answered. This script follows that documented procedure."
+    ],
+    "port": 3001,
+    "website": "https://anythingllm.com/",
+    "documentation": "https://docs.anythingllm.com/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/anythingllm.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Anytype Server",
     "slug": "anytype-server",
     "desc": "Anytype is a local-first, privacy-focused alternative to Notion. This script deploys the any-sync-bundle which provides a self-hosted sync server for Anytype clients with external MongoDB and Redis Stack.",
@@ -14387,7 +14424,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -19550,7 +19587,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
