@@ -279,21 +279,14 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
   }
 
   const getStatusBadge = (status: string) => {
-    const statusUpper = status?.toUpperCase()
-    switch (statusUpper) {
-      case "OK":
-        return <Badge className="bg-green-500 text-white hover:bg-green-500">{t("healthStatus.status.ok")}</Badge>
-      case "INFO":
-        return <Badge className="bg-blue-500 text-white hover:bg-blue-500">{t("healthStatus.status.info")}</Badge>
-      case "WARNING":
-        return <Badge className="bg-yellow-500 text-white hover:bg-yellow-500">{t("healthStatus.status.warning")}</Badge>
-      case "CRITICAL":
-        return <Badge className="bg-red-500 text-white hover:bg-red-500">{t("healthStatus.status.critical")}</Badge>
-      case "UNKNOWN":
-        return <Badge className="bg-amber-500 text-white hover:bg-amber-500">{t("healthStatus.status.unknown")}</Badge>
-      default:
-        return <Badge>{t("healthStatus.status.unknown")}</Badge>
-    }
+    const s = status?.toUpperCase()
+    const label =
+      s === "OK" ? t("healthStatus.status.ok") :
+      s === "INFO" ? t("healthStatus.status.info") :
+      s === "WARNING" ? t("healthStatus.status.warning") :
+      s === "CRITICAL" ? t("healthStatus.status.critical") :
+      t("healthStatus.status.unknown")
+    return <Badge variant="outline" className={getOutlineBadgeStyle(status)}>{label}</Badge>
   }
 
   const formatStatus = (status: string) => {
