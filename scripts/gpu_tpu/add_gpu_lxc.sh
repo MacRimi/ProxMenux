@@ -930,20 +930,83 @@ _remove_vfio_modules() {
   sed -i '/^vfio_virqfd$/d'      "$modules_file"
 }
 
-# Detects if any selected GPU is currently in GPU → VM mode (VFIO binding).
-# If so, delegates switch handling to switch_gpu_mode.sh and exits.
+# Return the kernel driver bound to a PCI slot, or empty if none.
+_pci_driver_of() {
+  local pci="$1"
+  [[ -z "$pci" ]] && return
+  local pci_full="$pci"
+  [[ "$pci_full" != 0000:* ]] && pci_full="0000:${pci_full}"
+  local link="/sys/bus/pci/devices/${pci_full}/driver"
+  [[ -L "$link" ]] && basename "$(readlink "$link")"
+}
+
+# Remove one or more `vid:did` tokens from the `ids=` list in
+# /etc/modprobe.d/vfio.conf. Preserves any remaining tokens and any
+# trailing options on the line. Returns 0 when the file changes.
+_clean_vfio_conf_ids() {
+  local vfio_conf="/etc/modprobe.d/vfio.conf"
+  [[ ! -f "$vfio_conf" ]] && return 1
+  local -a targets=("$@")
+  [[ ${#targets[@]} -eq 0 ]] && return 1
+  local before after tmp
+  before=$(cat "$vfio_conf")
+  tmp=$(mktemp)
+  awk -v targets="${targets[*]}" '
+    BEGIN {
+      n = split(targets, a, " ")
+      for (i = 1; i <= n; i++) drop[a[i]] = 1
+    }
+    /^options vfio-pci ids=/ {
+      # Split "options vfio-pci ids=A,B,C key=val …" preserving order.
+      pre = ""; ids = ""; post = ""
+      match($0, /ids=[^ \t]+/)
+      pre  = substr($0, 1, RSTART - 1)
+      idsp = substr($0, RSTART, RLENGTH)
+      post = substr($0, RSTART + RLENGTH)
+      sub(/^ids=/, "", idsp)
+      m = split(idsp, tok, ",")
+      out = ""
+      for (i = 1; i <= m; i++) {
+        t = tok[i]
+        if (!(t in drop)) {
+          out = (out == "" ? t : out "," t)
+        }
+      }
+      if (out == "") next  # drop the whole line if no ids left
+      print pre "ids=" out post
+      next
+    }
+    { print }
+  ' "$vfio_conf" > "$tmp"
+  after=$(cat "$tmp")
+  if [[ "$before" == "$after" ]]; then
+    rm -f "$tmp"
+    return 1
+  fi
+  mv "$tmp" "$vfio_conf"
+  return 0
+}
+
+# Return live VFIO state for each selected GPU:
+#   sets ACTIVE_VFIO_* arrays for GPUs whose PCI slot is currently
+#   bound to vfio-pci (real VFIO passthrough right now).
+#   sets LEGACY_VFIO_* arrays for GPUs whose PCI is bound to a
+#   different driver but whose vid:did still lives in vfio.conf
+#   (stale config that will rebind vfio-pci on the next reboot).
 check_vfio_switch_mode() {
   local vfio_conf="/etc/modprobe.d/vfio.conf"
-  [[ ! -f "$vfio_conf" ]] && return 0
+  local ids_part=""
+  if [[ -f "$vfio_conf" ]]; then
+    local ids_line
+    ids_line=$(grep "^options vfio-pci ids=" "$vfio_conf" 2>/dev/null | head -1)
+    if [[ -n "$ids_line" ]]; then
+      ids_part=$(echo "$ids_line" | grep -oE 'ids=[^[:space:]]+' | sed 's/ids=//')
+    fi
+  fi
 
-  local ids_line ids_part
-  ids_line=$(grep "^options vfio-pci ids=" "$vfio_conf" 2>/dev/null | head -1)
-  [[ -z "$ids_line" ]] && return 0
-  ids_part=$(echo "$ids_line" | grep -oE 'ids=[^[:space:]]+' | sed 's/ids=//')
-  [[ -z "$ids_part" ]] && return 0
+  local -a active_types=() active_pcis=() active_names=()
+  local -a legacy_types=() legacy_pcis=() legacy_names=() legacy_ids=()
 
-  # Detect which selected GPUs are in VFIO mode
-  local -a vfio_types=() vfio_pcis=() vfio_names=()
   for gpu_type in "${SELECTED_GPUS[@]}"; do
     local pci="" vid_did="" gpu_name=""
     case "$gpu_type" in
@@ -951,50 +1014,93 @@ check_vfio_switch_mode() {
       amd)    pci="$AMD_PCI";    vid_did="$AMD_VID_DID";    gpu_name="$AMD_NAME"    ;;
       nvidia) pci="$NVIDIA_PCI"; vid_did="$NVIDIA_VID_DID"; gpu_name="$NVIDIA_NAME" ;;
     esac
-    [[ -z "$vid_did" ]] && continue
-    if echo "$ids_part" | grep -q "$vid_did"; then
-      vfio_types+=("$gpu_type")
-      vfio_pcis+=("$pci")
-      vfio_names+=("$gpu_name")
+    [[ -z "$pci" ]] && continue
+
+    local driver
+    driver=$(_pci_driver_of "$pci")
+
+    if [[ "$driver" == "vfio-pci" ]]; then
+      active_types+=("$gpu_type")
+      active_pcis+=("$pci")
+      active_names+=("$gpu_name")
+      continue
+    fi
+
+    if [[ -n "$vid_did" && -n "$ids_part" ]] \
+      && echo "$ids_part" | grep -q -w "$vid_did"; then
+      legacy_types+=("$gpu_type")
+      legacy_pcis+=("$pci")
+      legacy_names+=("$gpu_name")
+      legacy_ids+=("$vid_did")
     fi
   done
 
-  [[ ${#vfio_types[@]} -eq 0 ]] && return 0
+  if [[ ${#active_types[@]} -gt 0 ]]; then
+    local msg i
+    msg="\n$(translate 'The following selected GPU(s) are currently in GPU -> VM mode (vfio-pci):')\n\n"
+    for i in "${!active_types[@]}"; do
+      msg+="  •  ${active_names[$i]}  (${active_pcis[$i]})\n"
+    done
+    msg+="\n\Z1\Zb$(translate 'To continue with Add GPU to LXC, first switch the host to GPU -> LXC mode and reboot.')\Zn\n"
+    msg+="\Z1\Zb$(translate 'Do you want to open Switch GPU Mode now?')\Zn"
 
-  local msg
-  msg="\n$(translate 'The following selected GPU(s) are currently in GPU -> VM mode (vfio-pci):')\n\n"
-  for i in "${!vfio_types[@]}"; do
-    msg+="  •  ${vfio_names[$i]}  (${vfio_pcis[$i]})\n"
-  done
-  msg+="\n\Z1\Zb$(translate 'To continue with Add GPU to LXC, first switch the host to GPU -> LXC mode and reboot.')\Zn\n"
-  msg+="\Z1\Zb$(translate 'Do you want to open Switch GPU Mode now?')\Zn"
+    dialog --backtitle "ProxMenux" --colors \
+      --title "$(translate 'GPU -> VM Mode Detected')" \
+      --yesno "$msg" 18 84
+    [[ $? -ne 0 ]] && exit 0
 
-  dialog --backtitle "ProxMenux" --colors \
-    --title "$(translate 'GPU -> VM Mode Detected')" \
-    --yesno "$msg" 18 84
-  [[ $? -ne 0 ]] && exit 0
+    local switch_script="$LOCAL_SCRIPTS/gpu_tpu/switch_gpu_mode.sh"
+    local local_switch_script
+    local_switch_script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/switch_gpu_mode.sh"
+    if [[ ! -f "$switch_script" && -f "$local_switch_script" ]]; then
+      switch_script="$local_switch_script"
+    fi
 
-  local switch_script="$LOCAL_SCRIPTS/gpu_tpu/switch_gpu_mode.sh"
-  local local_switch_script
-  local_switch_script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/switch_gpu_mode.sh"
-  if [[ ! -f "$switch_script" && -f "$local_switch_script" ]]; then
-    switch_script="$local_switch_script"
-  fi
+    if [[ ! -f "$switch_script" ]]; then
+      dialog --backtitle "ProxMenux" \
+        --title "$(translate 'Switch Script Not Found')" \
+        --msgbox "\n$(translate 'switch_gpu_mode.sh was not found.')\n\n$(translate 'Expected path:')\n${LOCAL_SCRIPTS}/gpu_tpu/switch_gpu_mode.sh" 10 84
+      exit 0
+    fi
 
-  if [[ ! -f "$switch_script" ]]; then
-    dialog --backtitle "ProxMenux" \
-      --title "$(translate 'Switch Script Not Found')" \
-      --msgbox "\n$(translate 'switch_gpu_mode.sh was not found.')\n\n$(translate 'Expected path:')\n${LOCAL_SCRIPTS}/gpu_tpu/switch_gpu_mode.sh" 10 84
+    bash "$switch_script"
+
+    dialog --backtitle "ProxMenux" --colors \
+      --title "$(translate 'Next Step Required')" \
+      --msgbox "\n\Z1\Zb$(translate 'After switching mode, reboot the host if requested.')\Zn\n\n$(translate 'Then run this option again:')\n\n  \Z1\ZbAdd GPU to LXC\Zn\n\n$(translate 'This guarantees that device nodes are available before applying LXC GPU config.')" \
+      12 84
     exit 0
   fi
 
-  bash "$switch_script"
+  if [[ ${#legacy_types[@]} -gt 0 ]]; then
+    local msg i
+    msg="\n$(translate 'The following selected GPU(s) still have a VFIO passthrough entry in') /etc/modprobe.d/vfio.conf:\n\n"
+    for i in "${!legacy_types[@]}"; do
+      msg+="  •  ${legacy_names[$i]}  (${legacy_pcis[$i]})  [${legacy_ids[$i]}]\n"
+    done
+    msg+="\n$(translate 'The active kernel driver is not vfio-pci, but the entry will rebind the GPU to vfio-pci on the next reboot, breaking the LXC passthrough about to be configured.')\n\n"
+    msg+="\Z1\Zb$(translate 'Do you want to remove the stale entry from vfio.conf and continue?')\Zn"
 
-  dialog --backtitle "ProxMenux" --colors \
-    --title "$(translate 'Next Step Required')" \
-    --msgbox "\n\Z1\Zb$(translate 'After switching mode, reboot the host if requested.')\Zn\n\n$(translate 'Then run this option again:')\n\n  \Z1\ZbAdd GPU to LXC\Zn\n\n$(translate 'This guarantees that device nodes are available before applying LXC GPU config.')" \
-    12 84
-  exit 0
+    dialog --backtitle "ProxMenux" --colors \
+      --title "$(translate 'Stale VFIO Config Detected')" \
+      --yesno "$msg" 18 84
+    [[ $? -ne 0 ]] && exit 0
+
+    if _clean_vfio_conf_ids "${legacy_ids[@]}"; then
+      update-initramfs -u >/dev/null 2>&1 || true
+      dialog --backtitle "ProxMenux" --colors \
+        --title "$(translate 'Stale VFIO Config Cleaned')" \
+        --msgbox "\n$(translate 'The vfio.conf entries have been removed and initramfs rebuilt.')\n\n$(translate 'A reboot is recommended before the GPU is guaranteed to stay on the native driver.')" \
+        12 84
+    else
+      dialog --backtitle "ProxMenux" \
+        --title "$(translate 'Nothing to Clean')" \
+        --msgbox "\n$(translate 'No changes were needed in vfio.conf.')" 8 60
+    fi
+    return 0
+  fi
+
+  return 0
 }
 
 
