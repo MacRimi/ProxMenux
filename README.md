@@ -200,10 +200,10 @@ If you want to go a step further, a coffee on Ko-fi keeps development going:
 
 <p align="center">
   <a href="https://github.com/MacRimi/repo-growth">
-    <img src="images/project-growth.svg" alt="ProxMenux project growth" width="900">
+    <img src="images/project-growth.svg?v=20260817-git-clones" alt="ProxMenux project growth" width="900">
   </a>
 </p>
 
 <p align="center">
-  <sub>Stars and forks tracked with <a href="https://github.com/MacRimi/repo-growth">Repo Growth</a>.</sub>
+  <sub>Stars, forks, and Git clones tracked with <a href="https://github.com/MacRimi/repo-growth">Repo Growth</a>.</sub>
 </p>
