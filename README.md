@@ -199,7 +199,7 @@ If you want to go a step further, a coffee on Ko-fi keeps development going:
 
 <p align="center">
   <a href="https://github.com/MacRimi/repo-growth">
-    <img src="images/project-growth.svg" alt="ProxMenux project growth" width="900">
+    <img src="images/project-growth.svg?v=20260817-git-clones" alt="ProxMenux project growth" width="900">
   </a>
 </p>
 
