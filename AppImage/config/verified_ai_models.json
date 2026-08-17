@@ -67,10 +67,17 @@
       "google/gemini-2.5-flash-lite",
       "google/gemini-2.5-flash",
       "openai/gpt-4o-mini",
-      "mistralai/mistral-small-3.2-24b-instruct"
+      "mistralai/mistral-small-3.2-24b-instruct",
+      "nvidia/nemotron-3-super-120b-a12b:free",
+      "google/gemma-4-26b-a4b-it:free",
+      "nvidia/nemotron-nano-12b-v2-vl:free",
+      "nvidia/nemotron-3-nano-30b-a3b:free",
+      "poolside/laguna-s-2.1:free",
+      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "openai/gpt-oss-20b:free"
     ],
     "recommended": "meta-llama/llama-3.3-70b-instruct",
-    "_note": "Verified functionally 2026-07-14 with the OpenRouter API — all 10 curated candidates pass the Spanish-translation notification test. Fastest: llama-4-scout (0.51s), gemini-2.5-flash-lite (1.14s), gemini-2.5-flash (1.94s), llama-3.3-70b-instruct (2.29s), claude-haiku-4.5 (2.71s). Legacy anthropic/claude-3.5-* / google/gemini-flash-1.5 / mistralai/mistral-7b-instruct / mixtral-8x7b-instruct removed (GONE from catalog). Modern replacements added: llama-4-scout (Meta's current gen — dramatically fastest), claude-haiku-4.5 / claude-sonnet-4.6, gemini-2.5-flash / flash-lite, mistral-small-3.2-24b. recommended kept as llama-3.3-70b for capability/latency balance; llama-4-scout is a faster alternative worth considering as recommended after a broader release."
+    "_note": "Paid tier verified functionally 2026-07-14 with the OpenRouter API — all 10 curated candidates pass the Spanish-translation notification test. Fastest: llama-4-scout (0.51s), gemini-2.5-flash-lite (1.14s), gemini-2.5-flash (1.94s), llama-3.3-70b-instruct (2.29s), claude-haiku-4.5 (2.71s). Free tier verified 2026-08-17 — 7 :free models pass and are appended, ordered by latency: nemotron-3-super-120b-a12b (3.5s), gemma-4-26b-a4b-it (4.1s), nemotron-nano-12b-v2-vl (5.3s), nemotron-3-nano-30b-a3b (5.8s), laguna-s-2.1 (8.3s), nemotron-3-nano-omni-30b-a3b-reasoning (10.7s), gpt-oss-20b (12.2s). Free-tier rate limits (~20 req/min shared across all OpenRouter free users on that model) may cause 429 in high-traffic windows — usable for occasional notification translation, not for high-volume automation. recommended kept as llama-3.3-70b for capability/latency balance; llama-4-scout is a faster alternative worth considering as recommended after a broader release."
   },
 
   "ollama": {
