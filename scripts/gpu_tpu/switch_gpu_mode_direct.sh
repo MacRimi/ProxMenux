@@ -1257,6 +1257,39 @@ parse_arguments() {
 # ==========================================================
 # Main Entry Point
 # ==========================================================
+check_stale_vfio_config_switch_mode_direct() {
+  local vfio_conf="/etc/modprobe.d/vfio.conf"
+  [[ ! -f "$vfio_conf" ]] && return 0
+
+  local ids_line ids_part
+  ids_line=$(grep "^options vfio-pci ids=" "$vfio_conf" 2>/dev/null | head -1)
+  [[ -z "$ids_line" ]] && return 0
+  ids_part=$(echo "$ids_line" | grep -oE 'ids=[^[:space:]]+' | sed 's/ids=//')
+  [[ -z "$ids_part" ]] && return 0
+
+  local -a legacy_ids=()
+  local idx viddid drv
+  for idx in "${SELECTED_GPU_IDX[@]}"; do
+    viddid="${ALL_GPU_VIDDID[$idx]}"
+    drv="${ALL_GPU_DRIVERS[$idx]}"
+    [[ -z "$viddid" ]] && continue
+    [[ "$drv" == "vfio-pci" ]] && continue
+    if echo ",${ids_part}," | grep -q ",${viddid},"; then
+      legacy_ids+=("$viddid")
+    fi
+  done
+
+  [[ ${#legacy_ids[@]} -eq 0 ]] && return 0
+
+  msg_info "$(translate 'Removing stale VFIO entries from vfio.conf...')"
+  if declare -F _clean_vfio_conf_ids >/dev/null 2>&1 \
+     && _clean_vfio_conf_ids "${legacy_ids[@]}"; then
+    update-initramfs -u >/dev/null 2>&1 || true
+    HOST_CONFIG_CHANGED=true
+    msg_ok "$(translate 'Stale VFIO entries removed and initramfs rebuilt.')" | tee -a "$screen_capture"
+  fi
+}
+
 main() {
   : >"$LOG_FILE"
   : >"$screen_capture"
@@ -1322,6 +1355,10 @@ main() {
   local gpu_idx="${SELECTED_GPU_IDX[0]}"
   local gpu_name="${ALL_GPU_NAMES[$gpu_idx]}"
   local gpu_pci="${ALL_GPU_PCIS[$gpu_idx]}"
+
+  if [[ "$TARGET_MODE" == "lxc" ]]; then
+    check_stale_vfio_config_switch_mode_direct
+  fi
 
   # Execute the switch
   if [[ "$TARGET_MODE" == "vm" ]]; then

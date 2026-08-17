@@ -669,3 +669,59 @@ _proxmenux_nvidia_migrate_legacy_blacklist() {
         fi
     fi
 }
+
+# Return the kernel driver bound to a PCI slot, or empty if none.
+_pci_driver_of() {
+  local pci="$1"
+  [[ -z "$pci" ]] && return
+  local pci_full="$pci"
+  [[ "$pci_full" != 0000:* ]] && pci_full="0000:${pci_full}"
+  local link="/sys/bus/pci/devices/${pci_full}/driver"
+  [[ -L "$link" ]] && basename "$(readlink "$link")"
+}
+
+# Remove one or more `vid:did` tokens from the `ids=` list in
+# /etc/modprobe.d/vfio.conf. Preserves any remaining tokens and any
+# trailing options on the line. Returns 0 when the file changes.
+_clean_vfio_conf_ids() {
+  local vfio_conf="/etc/modprobe.d/vfio.conf"
+  [[ ! -f "$vfio_conf" ]] && return 1
+  local -a targets=("$@")
+  [[ ${#targets[@]} -eq 0 ]] && return 1
+  local before after tmp
+  before=$(cat "$vfio_conf")
+  tmp=$(mktemp)
+  awk -v targets="${targets[*]}" '
+    BEGIN {
+      n = split(targets, a, " ")
+      for (i = 1; i <= n; i++) drop[a[i]] = 1
+    }
+    /^options vfio-pci ids=/ {
+      pre = ""; ids = ""; post = ""
+      match($0, /ids=[^ \t]+/)
+      pre  = substr($0, 1, RSTART - 1)
+      idsp = substr($0, RSTART, RLENGTH)
+      post = substr($0, RSTART + RLENGTH)
+      sub(/^ids=/, "", idsp)
+      m = split(idsp, tok, ",")
+      out = ""
+      for (i = 1; i <= m; i++) {
+        t = tok[i]
+        if (!(t in drop)) {
+          out = (out == "" ? t : out "," t)
+        }
+      }
+      if (out == "") next
+      print pre "ids=" out post
+      next
+    }
+    { print }
+  ' "$vfio_conf" > "$tmp"
+  after=$(cat "$tmp")
+  if [[ "$before" == "$after" ]]; then
+    rm -f "$tmp"
+    return 1
+  fi
+  mv "$tmp" "$vfio_conf"
+  return 0
+}

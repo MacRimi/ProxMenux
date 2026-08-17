@@ -49,6 +49,11 @@ export COMPONENTS_STATUS_FILE
 if [[ -f "$UTILS_FILE" ]]; then
   source "$UTILS_FILE"
 fi
+if [[ -f "$LOCAL_SCRIPTS/global/pci_passthrough_helpers.sh" ]]; then
+  source "$LOCAL_SCRIPTS/global/pci_passthrough_helpers.sh"
+elif [[ -f "$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)/global/pci_passthrough_helpers.sh" ]]; then
+  source "$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)/global/pci_passthrough_helpers.sh"
+fi
 
 if [[ ! -f "$COMPONENTS_STATUS_FILE" ]]; then
   echo "{}" > "$COMPONENTS_STATUS_FILE"
@@ -122,6 +127,54 @@ check_gpu_not_in_vm_passthrough() {
     --title "$(translate "GPU in VM Passthrough Mode")" \
     --msgbox "$msg" 16 78
   exit 0
+}
+
+check_stale_vfio_config_for_nvidia() {
+  local vfio_conf="/etc/modprobe.d/vfio.conf"
+  [[ ! -f "$vfio_conf" ]] && return 0
+
+  local ids_line ids_part
+  ids_line=$(grep "^options vfio-pci ids=" "$vfio_conf" 2>/dev/null | head -1)
+  [[ -z "$ids_line" ]] && return 0
+  ids_part=$(echo "$ids_line" | grep -oE 'ids=[^[:space:]]+' | sed 's/ids=//')
+  [[ -z "$ids_part" ]] && return 0
+
+  local dev vendor did vid_did
+  local -a legacy_ids=()
+  local legacy_list=""
+
+  for dev in /sys/bus/pci/devices/*; do
+    vendor=$(cat "$dev/vendor" 2>/dev/null)
+    [[ "$vendor" != "0x10de" ]] && continue
+    did=$(cat "$dev/device" 2>/dev/null)
+    [[ -z "$did" ]] && continue
+    vid_did="10de:${did#0x}"
+    if echo ",${ids_part}," | grep -q ",${vid_did},"; then
+      legacy_ids+=("$vid_did")
+      legacy_list+="  • $(basename "$dev")  [${vid_did}]\n"
+    fi
+  done
+
+  [[ ${#legacy_ids[@]} -eq 0 ]] && return 0
+
+  local msg
+  msg="\n$(translate 'A previous VFIO passthrough configuration was detected for the following NVIDIA GPU(s):')\n\n"
+  msg+="${legacy_list}\n"
+  msg+="$(translate 'The active kernel driver is not vfio-pci, but the entry in') /etc/modprobe.d/vfio.conf $(translate 'will rebind the GPU to vfio-pci on the next reboot, breaking the driver that is about to be installed.')\n\n"
+  msg+="\Z1\Zb$(translate 'Do you want to remove the stale entry from vfio.conf and continue?')\Zn"
+
+  dialog --colors --backtitle "ProxMenux" \
+    --title "$(translate 'Stale VFIO Config Detected')" \
+    --yesno "$msg" 18 78 || exit 0
+
+  if declare -F _clean_vfio_conf_ids >/dev/null 2>&1 \
+     && _clean_vfio_conf_ids "${legacy_ids[@]}"; then
+    msg_info "$(translate 'Rebuilding initramfs after vfio.conf cleanup...')"
+    update-initramfs -u >/dev/null 2>&1 || true
+    msg_ok "$(translate 'Stale VFIO entries removed and initramfs rebuilt.')" | tee -a "$screen_capture"
+  else
+    msg_ok "$(translate 'No changes were needed in vfio.conf.')" | tee -a "$screen_capture"
+  fi
 }
 
 detect_driver_status() {
@@ -531,12 +584,8 @@ EOF
 }
 
 ensure_modules_config() {
-  msg_info "$(translate 'Configuring NVIDIA and VFIO modules...')"
+  msg_info "$(translate 'Configuring NVIDIA modules...')"
   cat > /etc/modules-load.d/nvidia-vfio.conf <<'EOF'
-vfio
-vfio_iommu_type1
-vfio_pci
-vfio_virqfd
 nvidia
 nvidia_uvm
 EOF
@@ -1676,6 +1725,7 @@ main() {
   detect_nvidia_gpus
   detect_driver_status
   check_gpu_not_in_vm_passthrough
+  check_stale_vfio_config_for_nvidia
 
   if ! $NVIDIA_GPU_PRESENT; then
     dialog --backtitle "ProxMenux" --title "$(translate 'NVIDIA GPU Driver Installation')" --msgbox \

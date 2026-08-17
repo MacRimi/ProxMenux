@@ -563,8 +563,59 @@ _selected_gpu_current_mode() {
   echo "$mode"
 }
 
+check_stale_vfio_config_switch_mode() {
+  local vfio_conf="/etc/modprobe.d/vfio.conf"
+  [[ ! -f "$vfio_conf" ]] && return 0
+
+  local ids_line ids_part
+  ids_line=$(grep "^options vfio-pci ids=" "$vfio_conf" 2>/dev/null | head -1)
+  [[ -z "$ids_line" ]] && return 0
+  ids_part=$(echo "$ids_line" | grep -oE 'ids=[^[:space:]]+' | sed 's/ids=//')
+  [[ -z "$ids_part" ]] && return 0
+
+  local -a legacy_ids=()
+  local legacy_list=""
+  local idx viddid drv pci name
+  for idx in "${SELECTED_GPU_IDX[@]}"; do
+    viddid="${ALL_GPU_VIDDID[$idx]}"
+    drv="${ALL_GPU_DRIVERS[$idx]}"
+    pci="${ALL_GPU_PCIS[$idx]}"
+    name="${ALL_GPU_NAMES[$idx]}"
+    [[ -z "$viddid" ]] && continue
+    [[ "$drv" == "vfio-pci" ]] && continue
+    if echo ",${ids_part}," | grep -q ",${viddid},"; then
+      legacy_ids+=("$viddid")
+      legacy_list+="  •  ${name} (${pci}) [${viddid}]\n"
+    fi
+  done
+
+  [[ ${#legacy_ids[@]} -eq 0 ]] && return 0
+
+  local msg
+  msg="\n$(translate 'The following selected GPU(s) still have a VFIO passthrough entry in') /etc/modprobe.d/vfio.conf:\n\n"
+  msg+="${legacy_list}\n"
+  msg+="$(translate 'The active kernel driver is not vfio-pci, but the entry will rebind the GPU to vfio-pci on the next reboot.')\n\n"
+  msg+="\Z1\Zb$(translate 'Do you want to remove the stale entry from vfio.conf?')\Zn"
+
+  dialog --colors --backtitle "ProxMenux" \
+    --title "$(translate 'Stale VFIO Config Detected')" \
+    --yesno "$msg" 18 80 || return 0
+
+  if declare -F _clean_vfio_conf_ids >/dev/null 2>&1 \
+     && _clean_vfio_conf_ids "${legacy_ids[@]}"; then
+    msg_info "$(translate 'Rebuilding initramfs after vfio.conf cleanup...')"
+    update-initramfs -u >/dev/null 2>&1 || true
+    dialog --backtitle "ProxMenux" \
+      --title "$(translate 'Stale VFIO Config Cleaned')" \
+      --msgbox "\n$(translate 'The vfio.conf entries have been removed and initramfs rebuilt.')\n\n$(translate 'A reboot is recommended before the GPU is guaranteed to stay on the native driver.')" \
+      12 78
+    exit 0
+  fi
+}
+
 select_target_mode() {
   CURRENT_MODE=$(_selected_gpu_current_mode)
+  check_stale_vfio_config_switch_mode
 
   if [[ "$CURRENT_MODE" == "mixed" ]]; then
     local msg idx mode_label
