@@ -204,5 +204,5 @@ If you want to go a step further, a coffee on Ko-fi keeps development going:
 </p>
 
 <p align="center">
-  <sub>Stars and forks tracked with <a href="https://github.com/MacRimi/repo-growth">Repo Growth</a>.</sub>
+  <sub>Stars, forks, and Git clones tracked with <a href="https://github.com/MacRimi/repo-growth">Repo Growth</a>.</sub>
 </p>

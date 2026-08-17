@@ -22,5 +22,6 @@ jobs:
           title: ProxMenux growth
           output: images/project-growth.svg
           history: .github/repo-growth/history.json
-          metrics: stars,forks
+          metrics: stars,forks,clones
+          traffic-token: ${{ secrets.REPO_GROWTH_TRAFFIC_TOKEN }}
           layout: dashboard
