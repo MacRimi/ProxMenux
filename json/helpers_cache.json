@@ -19618,7 +19618,7 @@
       "Passkey/WebAuthn registration does not work against a bare IP address (WebAuthn requires a real domain). Use email/password login on the IP, or put Securo behind a real domain with valid TLS to enable passkeys."
     ],
     "port": 443,
-    "website": "https://github.com/securo-finance/securo",
+    "website": "https://www.usesecuro.com",
     "documentation": "https://github.com/securo-finance/securo",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/securo.webp",
     "updateable": true,
