@@ -104,8 +104,8 @@ if [[ "$TARGET" == "os" || "$TARGET" == "both" ]]; then
       # conflicts (dpkg keeps the local version by default with
       # --force-confold).
       if ! pct exec "$VMID" -- env DEBIAN_FRONTEND=noninteractive \
-            apt-get -y -o Dpkg::Options::="--force-confold" upgrade; then
-        echo "ERROR: apt-get upgrade failed inside CT $VMID." >&2
+            apt-get -y -o Dpkg::Options::="--force-confold" dist-upgrade; then
+        echo "ERROR: apt-get dist-upgrade failed inside CT $VMID." >&2
         OS_FAILED=1
       fi
       ;;
