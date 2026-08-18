@@ -20372,7 +20372,27 @@ def api_system_pve_update_cancel():
 # Runs inside a systemd unit so it survives the proxmenux-monitor
 # service restart the installer performs mid-way.
 
-_PROXMENUX_INSTALLER_URL = 'https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh'
+_PROXMENUX_STABLE_INSTALLER_URL = 'https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh'
+_PROXMENUX_BETA_INSTALLER_URL = 'https://raw.githubusercontent.com/MacRimi/ProxMenux/develop/install_proxmenux_beta.sh'
+_PROXMENUX_CONFIG_FILE = '/usr/local/share/proxmenux/config.json'
+
+
+def _proxmenux_self_update_installer_url():
+    """Pick stable vs beta installer based on the host's release channel.
+
+    A host with `beta_program.status == active` in config.json must be
+    updated with the beta installer so it stays on the beta channel.
+    Falling back to the stable installer would clone main, wipe
+    beta_version.txt, and silently drop the user off the beta program.
+    """
+    try:
+        with open(_PROXMENUX_CONFIG_FILE, 'r') as f:
+            cfg = json.load(f)
+        if (cfg.get('beta_program') or {}).get('status') == 'active':
+            return _PROXMENUX_BETA_INSTALLER_URL
+    except (OSError, ValueError, TypeError):
+        pass
+    return _PROXMENUX_STABLE_INSTALLER_URL
 
 
 @app.route('/api/proxmenux/self-update/run', methods=['POST'])
@@ -20386,9 +20406,10 @@ def api_proxmenux_self_update_run():
     process that accepted the call dies during the restart. Clients
     can poll `.../status` to observe completion.
     """
+    installer_url = _proxmenux_self_update_installer_url()
     ok, err = _action_run(
         'proxmenux-action-self-update',
-        ['/bin/bash', '-c', f'wget -qLO - {_PROXMENUX_INSTALLER_URL} | bash'],
+        ['/bin/bash', '-c', f'wget -qLO - {installer_url} | bash'],
         description='ProxMenux action: self-update',
     )
     if not ok:
