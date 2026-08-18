@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "ProxMenux Monitor",
-    "description": "Proxmox System Dashboard",
+    "description": "Prehľad systému Proxmox",
     "loading": "Načítava sa...",
     "connecting": "Pripájam sa k ProxMenux Monitoru",
     "unknown": "Neznáme",
@@ -1021,7 +1021,7 @@
         "stopped": "vypnuté",
         "mounted": "pripojené"
       },
-      "startOnBoot": "Začnite pri štarte",
+      "startOnBoot": "Spúšťať pri štarte",
       "tags": "Značky",
       "tagsPlaceholder": "Pridať značku…",
       "tagsNone": "Žiadne značky"
@@ -1272,7 +1272,7 @@
       "postApplyAllOk": "{count} balíkov bolo úspešne použitých – nič sa nečaká.",
       "postApplyNothingPending": "Nič sa nečaká – všetko je aktuálne.",
       "postApplyPartial": "{pending} balíkov, ktoré po spustení stále čakajú.",
-      "postApplyPartialSubline": "Použilo sa {applied}.Niektoré aktualizácie sa nedokončili – skontrolujte výstup terminálu vyššie."
+      "postApplyPartialSubline": "Použilo sa {applied}. Niektoré aktualizácie sa nedokončili – skontrolujte výstup terminálu vyššie."
     },
     "appEditor": {
       "closePanel": "Zavrieť panel",
@@ -1862,9 +1862,9 @@
       }
     },
     "optimizations": {
-      "title": "ProxMenux Optimizations",
+      "title": "Systémové optimalizácie",
       "description": "Systémové optimalizácie a nástroje nainštalované cez ProxMenux",
-      "emptyTitle": "Zatiaľ nie sú nainštalované žiadne optimalizácie ProxMenux",
+      "emptyTitle": "Zatiaľ nie sú nainštalované žiadne systémové optimalizácie",
       "emptyDescription": "Spustite ProxMenux a nastavte systémové optimalizácie",
       "installedTools": "Nainštalované nástroje",
       "activeCount": "{count} aktívne",
