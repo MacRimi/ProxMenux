@@ -685,7 +685,7 @@
       "pve"
     ],
     "config_path": "",
-    "os": "debian"
+    "os": "alpine"
   },
   {
     "name": "Alpine-Cinny",
@@ -789,39 +789,6 @@
     "os": "alpine"
   },
   {
-    "name": "Alpine-ntfy",
-    "slug": "alpine-ntfy",
-    "desc": "ntfy is a simple HTTP-based pub-sub notification service that lets you send push notifications to your phone or desktop via scripts, without signup or cost.",
-    "script": "ct/alpine-ntfy.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/alpine-ntfy.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/alpine-ntfy.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00018"
-    ],
-    "category_names": [
-      "MQTT & Messaging"
-    ],
-    "notes": [
-      "Alpine-based LXC using apk package manager."
-    ],
-    "warnings": [],
-    "port": 80,
-    "website": "https://ntfy.sh/",
-    "documentation": "https://docs.ntfy.sh/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ntfy.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": true,
-    "is_dev": true,
-    "execute_in": [
-      "lxc"
-    ],
-    "config_path": "",
-    "os": "alpine"
-  },
-  {
     "name": "Redlib",
     "slug": "alpine-redlib",
     "desc": "An alternative private front-end to Reddit. Redlib hopes to provide an easier way to browse Reddit, without the ads, trackers, and bloat.",
@@ -850,40 +817,6 @@
       "pve"
     ],
     "config_path": "/opt/redlib/redlib.conf",
-    "os": "debian"
-  },
-  {
-    "name": "Valkey",
-    "slug": "alpine-valkey",
-    "desc": "Valkey is an open source (BSD) high-performance key/value datastore that supports a variety of workloads such as caching, message queues, and can act as a primary database. The project is backed by the Linux Foundation, ensuring it will remain open source forever.",
-    "script": "ct/alpine-valkey.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/alpine-valkey.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/alpine-valkey.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00008"
-    ],
-    "category_names": [
-      "Databases"
-    ],
-    "notes": [
-      "Show Login Credentials, type `cat ~/valkey.creds` in the LXC console",
-      "Alpines Valkey package is compiled without TLS support. For TLS, use the Debian-based valkey script instead."
-    ],
-    "warnings": [],
-    "port": 6379,
-    "website": "https://valkey.io/",
-    "documentation": "https://valkey.io/docs/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/valkey.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": true,
-    "is_dev": false,
-    "execute_in": [
-      "pve"
-    ],
-    "config_path": "/etc/valkey/valkey.conf",
     "os": "alpine"
   },
   {
