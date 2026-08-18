@@ -22799,7 +22799,7 @@
     "documentation": "https://help.ubuntu.com/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ubuntu.webp",
     "updateable": true,
-    "privileged": true,
+    "privileged": false,
     "has_arm": true,
     "is_dev": false,
     "execute_in": [
