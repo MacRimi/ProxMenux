@@ -1765,7 +1765,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                     )}
                     {tracking && st?.checked_at && (
                       <div className="text-[10px] text-muted-foreground/80 mt-0.5">
-                        Checked {new Date(st.checked_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
+                        {t("vmLxc.appEditor.checkedAt", { date: new Date(st.checked_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) })}
                       </div>
                     )}
                     {/* Mobile-only repo link: falls into the metadata
