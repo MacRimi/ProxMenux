@@ -2368,7 +2368,7 @@
     "warnings": [],
     "port": 3000,
     "website": "https://bookorbit.app/",
-    "documentation": "https://bookorbit.app/installation.html",
+    "documentation": "https://bookorbit.app/installation",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bookorbit.webp",
     "updateable": true,
     "privileged": false,
