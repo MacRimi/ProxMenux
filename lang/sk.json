@@ -454,7 +454,7 @@
   "Cannot proceed with invalid export path.": "Nedá sa pokračovať s neplatnou cestou exportu.",
   "Cannot proceed with invalid share name.": "Nedá sa pokračovať s neplatným názvom zdieľania.",
   "Cannot reach Proxmox repositories": "Repozitáre Proxmoxu nie sú dostupné",
-  "Cannot reach https://download.proxmox.com (HTTPS 443). Check network, proxy or DNS.": "Technická správa pre Proxmox a IT.Preložiť: Nedá sa dostať na https://download.proxmox.com (HTTPS 443).Skontrolujte sieť, proxy alebo DNS.",
+  "Cannot reach download.proxmox.com. Check network, proxy or DNS.": "Nedá sa dosiahnuť download.proxmox.com.Skontrolujte sieť, proxy alebo DNS.",
   "Cannot reach portal:": "Portál nie je dostupný:",
   "Cannot reach server": "Server nie je dostupný",
   "Cannot validate credentials - no shares available for testing.": "Prihlasovacie údaje sa nedajú overiť - nie sú dostupné žiadne zdieľania na test.",

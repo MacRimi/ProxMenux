@@ -454,7 +454,7 @@
   "Cannot proceed with invalid export path.": "Kan inte fortsätta med ogiltig exportsökväg.",
   "Cannot proceed with invalid share name.": "Kan inte fortsätta med ogiltigt delningsnamn.",
   "Cannot reach Proxmox repositories": "Kan inte nå Proxmox-förråd",
-  "Cannot reach https://download.proxmox.com (HTTPS 443). Check network, proxy or DNS.": "Kan inte nå https://download.proxmox.com (HTTPS 443). Kontrollera nätverk, proxy eller DNS.",
+  "Cannot reach download.proxmox.com. Check network, proxy or DNS.": "Kan inte nå download.proxmox.com.Kontrollera nätverk, proxy eller DNS.",
   "Cannot reach portal:": "Kan inte nå portalen:",
   "Cannot reach server": "Kan inte nå servern",
   "Cannot validate credentials - no shares available for testing.": "Kan inte validera autentiseringsuppgifter - inga delningar tillgängliga för testning.",

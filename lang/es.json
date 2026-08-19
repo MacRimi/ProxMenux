@@ -454,7 +454,7 @@
   "Cannot proceed with invalid export path.": "No se puede continuar con una ruta de exportación no válida.",
   "Cannot proceed with invalid share name.": "No se puede continuar con un nombre compartido no válido.",
   "Cannot reach Proxmox repositories": "No se puede acceder a los repositorios de Proxmox",
-  "Cannot reach https://download.proxmox.com (HTTPS 443). Check network, proxy or DNS.": "No se puede acceder a https://download.proxmox.com (HTTPS 443).Verifique la red, proxy o DNS.",
+  "Cannot reach download.proxmox.com. Check network, proxy or DNS.": "No se puede acceder a download.proxmox.com.Verifique la red, proxy o DNS.",
   "Cannot reach portal:": "No se puede acceder al portal:",
   "Cannot reach server": "No puede alcanzar el servidor",
   "Cannot validate credentials - no shares available for testing.": "No se pueden validar las credenciales: no hay recursos compartidos disponibles para realizar pruebas.",
