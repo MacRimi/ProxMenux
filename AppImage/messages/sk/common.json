@@ -3992,7 +3992,7 @@
       "runAttachedTitle": "Spustiť jednorazovú zálohu teraz (časovač PVE má vlastný plán)",
       "runNowTitle": "Spustiť túto úlohu teraz",
       "running": "Beží...",
-      "scheduledTitle": "Plánované",
+      "scheduledTitle": "Naplánované zálohy",
       "standaloneScheduledJob": "Samostatná plánovaná úloha",
       "starting": "štartuje...",
       "stepOf": "Krok {step} z {total}",
