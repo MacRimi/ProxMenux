@@ -104,26 +104,26 @@ update_pve_safe() {
         return 1
     fi
 
-    # Reachability check: HEAD https://download.proxmox.com over the same
-    # transport apt-get update will use (HTTPS 443). Previously a single
-    # ICMP ping — hosts behind firewalls that filter ICMP but allow 443
-    # (typical corporate / cloud-provider setups) hit a false negative
-    # and the update aborted even though the repository was reachable.
-    # Two attempts with a short pause absorb transient network glitches
-    # without adding perceptible latency when the network is healthy.
+    # Reachability check: probe the public Proxmox repository over the
+    # transport apt is most likely to use. Many PVE installs use the
+    # official HTTP apt URI, while HTTPS may fail before apt ever runs
+    # if the CDN presents a certificate for another Proxmox hostname.
+    # Accept either transport and let apt-get update report repo-specific
+    # errors in the next step.
     _repo_reachable() {
-        local url="https://download.proxmox.com/"
-        local attempt
-        for attempt in 1 2; do
-            if curl -sfI --connect-timeout 5 --max-time 10 -o /dev/null "$url"; then
-                return 0
-            fi
-            [[ $attempt -eq 1 ]] && sleep 1
+        local url attempt
+        for url in "http://download.proxmox.com/" "https://download.proxmox.com/"; do
+            for attempt in 1 2; do
+                if curl -sfI --connect-timeout 5 --max-time 10 -o /dev/null "$url"; then
+                    return 0
+                fi
+                [[ $attempt -eq 1 ]] && sleep 1
+            done
         done
         return 1
     }
     if ! _repo_reachable; then
-        msg_error "$(translate "Cannot reach https://download.proxmox.com (HTTPS 443). Check network, proxy or DNS.")"
+        msg_error "$(translate "Cannot reach download.proxmox.com. Check network, proxy or DNS.")"
         echo -e
         msg_success "$(translate "Press Enter to return to menu...")"
         read -r
