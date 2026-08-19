@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
@@ -26,6 +26,7 @@ export function Login({ onLogin }: LoginProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const lastAutoSubmittedTotp = useRef("")
 
   useEffect(() => {
     // The Login screen is, by construction, the recovery path from any
@@ -53,16 +54,17 @@ export function Login({ onLogin }: LoginProps) {
     }
   }, [])
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const submitLogin = async (totpOverride?: string) => {
     setError("")
+
+    const token = totpOverride ?? totpCode
 
     if (!username || !password) {
       setError(t("login.missingCredentials"))
       return
     }
 
-    if (requiresTotp && !totpCode) {
+    if (requiresTotp && !token) {
       setError(t("login.missingTotp"))
       return
     }
@@ -76,7 +78,7 @@ export function Login({ onLogin }: LoginProps) {
         body: JSON.stringify({
           username,
           password,
-          totp_token: totpCode || undefined, // Include 2FA code if provided
+          totp_token: token || undefined, // Include 2FA code if provided
         }),
       })
 
@@ -120,6 +122,22 @@ export function Login({ onLogin }: LoginProps) {
       setLoading(false)
     }
   }
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await submitLogin()
+  }
+
+  useEffect(() => {
+    if (!requiresTotp || loading || !/^\d{6}$/.test(totpCode)) {
+      return
+    }
+    if (lastAutoSubmittedTotp.current === totpCode) {
+      return
+    }
+    lastAutoSubmittedTotp.current = totpCode
+    void submitLogin(totpCode)
+  }, [requiresTotp, totpCode, loading])
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -245,9 +263,9 @@ export function Login({ onLogin }: LoginProps) {
                     type="text"
                     placeholder="000000"
                     value={totpCode}
-                    onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    onChange={(e) => setTotpCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 9))}
                     className="text-center text-lg tracking-widest font-mono text-base"
-                    maxLength={6}
+                    maxLength={9}
                     disabled={loading}
                     autoComplete="one-time-code"
                     autoFocus
