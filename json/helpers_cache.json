@@ -18084,7 +18084,7 @@
     "port": 8080,
     "website": "https://github.com/ffind-dev/pve-ups",
     "documentation": "https://github.com/ffind-dev/pve-ups/blob/main/README.md",
-    "logo": "https://github.com/ffind-dev/pve-ups/raw/refs/heads/main/Screenshots/logo/favicon.svg",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pve-ups.webp",
     "updateable": true,
     "privileged": false,
     "has_arm": false,
@@ -23010,7 +23010,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
