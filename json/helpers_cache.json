@@ -443,7 +443,7 @@
       "pve"
     ],
     "config_path": "/opt/agentdvr/agent/Media/XML/config.json",
-    "os": "debian"
+    "os": "ubuntu"
   },
   {
     "name": "Apache Airflow",
@@ -4915,7 +4915,8 @@
     ],
     "notes": [
       "After the script completes, click on the VM, then on the Summary or Console tab to find the VM IP.",
-      "This Script works on amd64 and arm64 Architecture."
+      "This Script works on amd64 and arm64 Architecture.",
+      "If you dont use Cloud-Init please track this Link `https://github.com/community-scripts/ProxmoxVE/discussions/836` for Resize and other useful commands."
     ],
     "warnings": [
       "If you use Cloud-Init please track the console for login data! You get the Login-Data after finished the VM-Build"
@@ -5647,7 +5648,7 @@
     ],
     "warnings": [],
     "port": 8080,
-    "website": "https://codeberg.org/endurain- project/endurain",
+    "website": "https://codeberg.org/endurain-project/endurain",
     "documentation": "https://docs.endurain.com/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/endurain.webp",
     "updateable": true,
@@ -9174,7 +9175,7 @@
       "username": "admin",
       "password": "`cat /etc/inventree/admin_password.txt`"
     },
-    "os": "debian"
+    "os": "ubuntu"
   },
   {
     "name": "Investbrain",
@@ -9897,7 +9898,7 @@
       "pve"
     ],
     "config_path": "",
-    "os": "debian"
+    "os": "ubuntu"
   },
   {
     "name": "Kan",
@@ -11154,7 +11155,7 @@
       "pve"
     ],
     "config_path": "/opt/linkwarden/.env",
-    "os": "debian"
+    "os": "ubuntu"
   },
   {
     "name": "listmonk",
@@ -12257,7 +12258,7 @@
       "pve"
     ],
     "config_path": "/opt/mattermost/config/config.json",
-    "os": "debian"
+    "os": "ubuntu"
   },
   {
     "name": "Mealie",
@@ -14357,7 +14358,7 @@
       "pve"
     ],
     "config_path": "",
-    "os": "debian"
+    "os": "ubuntu"
   },
   {
     "name": "NZBGet",
@@ -19724,7 +19725,7 @@
       "username": "admin@shinobi.video",
       "password": "admin"
     },
-    "os": "debian"
+    "os": "ubuntu"
   },
   {
     "name": "Shiori",
@@ -22547,7 +22548,8 @@
     ],
     "notes": [
       "ElasticSearch is configured with 1GB heap. Adjust `/etc/elasticsearch/jvm.options.d/heap.options` for larger collections.",
-      "Admin password is stored in `/opt/tubearchivist/.env`."
+      "Admin password is stored in `/opt/tubearchivist/.env`.",
+      "To enable the built in POT Provider, go to Settings>Application>Cookie and set PO Token Provider URL to http://127.0.0.1:4416"
     ],
     "warnings": [
       "Requires `vm.max_map_count=262144` on the Proxmox host. Run `sysctl -w vm.max_map_count=262144` on the host and add it to `/etc/sysctl.conf` for persistence.",
@@ -23404,7 +23406,7 @@
       "Network & Firewall"
     ],
     "notes": [
-      "The first user to register becomes the admin (visit `http://IP:8090/_/`)."
+      "First run: get the one-time superuser setup URL via `journalctl -u upsnap --no-pager`, Or set a superuser directly: `systemctl stop upsnap; cd /opt/upsnap; ./upsnap superuser upsert EMAIL 'PASSWORD'; systemctl start upsnap`"
     ],
     "warnings": [
       "Do not expose UpSnap to the internet — shutdown commands can execute shell commands. Use a VPN for remote access."
