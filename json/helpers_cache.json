@@ -11275,7 +11275,7 @@
     ],
     "notes": [
       "On first start llama-server downloads the model set in LLAMA_ARG_HF_REPO (default: ggml-org/gemma-3-1b-it-GGUF, roughly 800 MB) into /opt/llama-cpp_data/models, so the container is usable straight away. Swap it for any GGUF repo, or point LLAMA_ARG_MODEL at a local file, then restart.",
-      "The build variant is chosen at install time: cpu, vulkan or rocm, or auto to follow the passed-through GPU. Upstream publishes no Linux CUDA build, so an NVIDIA card is served by the vulkan build and needs NVIDIA's Vulkan driver in the container. The choice is remembered in /opt/llama-cpp_data/.backend so updates keep it.",
+      "The build variant is chosen at install time: cpu or vulkan, or auto to follow the passed-through GPU. Upstream publishes no Linux CUDA or ROCm build, so every GPU is served by the vulkan build - AMD through RADV, NVIDIA through the driver's Vulkan ICD, which has to be present in the container. The choice is remembered in /opt/llama-cpp_data/.backend so updates keep it.",
       "RAM is the limiting factor: the model must fit alongside the KV cache. 8 GB comfortably runs models up to roughly 7B at Q4. Raise LLAMA_ARG_CTX_SIZE only if you have headroom."
     ],
     "warnings": [
@@ -18113,10 +18113,12 @@
     "notes": [
       "pyLoad binds its web interface to localhost by default. The installer rewrites the webui host in /opt/pyload_data/userdir/settings/pyload.cfg to 0.0.0.0 so the container is reachable by IP - do not set it back to localhost unless you only access it through a reverse proxy on the same host.",
       "Downloads go to /opt/pyload_data/downloads and the configuration lives in /opt/pyload_data/userdir. Both are outside the app directory so they survive updates.",
-      "pyLoad is still in pre-release; the installer uses the pyload-ng pre-release channel because no stable release exists yet."
+      "pyLoad is still in pre-release; the installer uses the pyload-ng pre-release channel because no stable release exists yet.",
+      "The download folder defaults to /opt/pyload_data/downloads and can be changed in the web UI; the setting is stored in /opt/pyload_data/userdir/settings/pyload.cfg and survives updates."
     ],
     "warnings": [
-      "Log in at http://<IP>:8000 with pyload/pyload and change the password immediately."
+      "Log in at http://<IP>:8000 with pyload/pyload and change the password immediately.",
+      "Do not set 'Change user of running process' in the web UI. pyLoad keeps its Jinja cache in /tmp/pyload, which the new user cannot write, and the web UI then answers with error 500. Set file ownership on downloads instead and leave the process as root."
     ],
     "port": 8000,
     "website": "https://pyload.net/",
@@ -23231,11 +23233,13 @@
       "AI / Coding & Dev-Tools"
     ],
     "notes": [
+      "The generated web UI password is saved to /root/unsloth.creds inside the container (user: unsloth). Run 'unsloth studio reset-password' to issue a new one.",
+      "Log in as the user 'unsloth'; the generated password is in ~/unsloth.creds inside the container. Rotate it with 'unsloth studio reset-password', which prints a new one and needs no restart.",
+      "Web search only works with an external provider (OpenAI, Anthropic, OpenRouter, Gemini or Kimi) configured in the settings, because the search runs server-side at the provider. Local GGUF models do not offer it and the search button stays hidden for them.",
       "Models and Hugging Face caches land in /opt/unsloth_data, which fills up quickly - a single 7B model at Q4 is roughly 4 GB. Give the container more disk if you plan to keep several, and back that directory up rather than /opt/unsloth.",
       "PyTorch is installed with uv's --torch-backend=auto, so a CPU-only container gets the CPU wheels and a GPU container the matching CUDA build. Re-run the update after adding a GPU so the right backend is pulled."
     ],
     "warnings": [
-      "The generated UI password is stored as UNSLOTH_STUDIO_PASSWORD in /opt/unsloth.env. Without it Unsloth Studio would prompt for one on the terminal, which a systemd service cannot answer.",
       "Fine-tuning requires an NVIDIA GPU. Without one, inference, model management, export and the OpenAI-compatible API work, but training does not. Pass a card through and install the NVIDIA driver in the container to enable it."
     ],
     "port": 8888,
@@ -24708,7 +24712,7 @@
     ],
     "warnings": [
       "Spotify only accepts https redirect URIs (loopback excepted), so the Spotify login cannot be completed on the container's plain IP - it fails with 'redirect_uri: Insecure'. A TLS reverse proxy with a real domain is required for normal use.",
-      "Create an app at https://developer.spotify.com/dashboard, put its client ID and secret into SPOTIFY_PUBLIC and SPOTIFY_SECRET in /opt/your-spotify.env, set API_ENDPOINT and CLIENT_ENDPOINT to your https URLs, and register <API_ENDPOINT>/oauth/spotify/callback in the dashboard. The API endpoint is baked into the built frontend, so run the update after changing it."
+      "Create an app at https://developer.spotify.com/dashboard, put its client ID and secret into SPOTIFY_PUBLIC and SPOTIFY_SECRET in /opt/your-spotify.env, set API_ENDPOINT and CLIENT_ENDPOINT to your https URLs, and register <API_ENDPOINT>/oauth/spotify/callback in the dashboard. The API endpoint is baked into the built frontend; set both endpoints at install time, or change them in /opt/your-spotify.env and run 'update' inside the container, which re-applies them."
     ],
     "port": 3000,
     "website": "https://github.com/Yooooomi/your_spotify",
