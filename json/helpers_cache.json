@@ -13248,11 +13248,11 @@
     "name": "nebula-sync",
     "slug": "nebula-sync",
     "desc": "nebula-sync keeps multiple Pi-hole v6 instances in sync by replicating the configuration of a primary Pi-hole to one or more replicas over the Pi-hole API. It can run a full Teleporter import/export or sync only selected features, on a cron schedule.",
-    "script": "ct/nebula-sync.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/nebula-sync.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/nebula-sync.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
+    "script": "tools/addon/nebula-sync.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/nebula-sync.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/addon/nebula-sync.sh",
+    "type": "addon",
+    "type_id": "88xtxy57q80v38v",
     "categories": [
       "scriptcat00005"
     ],
@@ -13275,7 +13275,8 @@
     "has_arm": true,
     "is_dev": true,
     "execute_in": [
-      "lxc"
+      "lxc",
+      "vm"
     ],
     "config_path": "",
     "os": "debian"
@@ -18084,7 +18085,7 @@
     "port": 8080,
     "website": "https://github.com/ffind-dev/pve-ups",
     "documentation": "https://github.com/ffind-dev/pve-ups/blob/main/README.md",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pve-ups.webp",
+    "logo": "https://github.com/ffind-dev/pve-ups/raw/refs/heads/main/Screenshots/logo/favicon.svg",
     "updateable": true,
     "privileged": false,
     "has_arm": false,
