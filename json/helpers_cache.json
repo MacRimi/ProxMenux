@@ -5533,10 +5533,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00004"
+      "scriptcat00022"
     ],
     "category_names": [
-      "Network & Firewall"
+      "Bots & ChatOps"
     ],
     "notes": [
       "Type `cat ~/matrix.creds` to see admin username/password.",
