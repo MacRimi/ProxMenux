@@ -167,6 +167,26 @@ def _detect_nvidia_xfree86() -> Optional[dict]:
 # libedgetpu1-std from Google's apt repo).
 
 
+def _coral_pcie_hardware_present() -> bool:
+    """True when a Coral PCIe/M.2 device (vendor 0x1ac1, Global Unichip
+    Corp.) is visible on the PCI bus. Used together with the gasket-dkms
+    package state to detect orphan installs left behind by the legacy
+    installer (`scripts/install_coral_pve.sh` before 2026-04) that
+    installed the DKMS driver unconditionally on USB-only hosts."""
+    try:
+        for entry in os.listdir("/sys/bus/pci/devices"):
+            try:
+                with open(f"/sys/bus/pci/devices/{entry}/vendor",
+                          "r", encoding="utf-8") as fh:
+                    if fh.read().strip() == "0x1ac1":
+                        return True
+            except OSError:
+                continue
+    except OSError:
+        pass
+    return False
+
+
 def _detect_coral_host() -> list[dict]:
     out: list[dict] = []
 
@@ -180,61 +200,105 @@ def _detect_coral_host() -> list[dict]:
     #      knows the fork's patch level.
     #   2. `dpkg-query gasket-dkms` — the Debian package version, only
     #      present when the user installed via .deb rather than the
-    #      ProxMenux script.
+    #      ProxMenux script. Package state matters: only `ok installed`
+    #      is trusted as a real version; broken states surface as
+    #      "package present but not usable" so the UI can offer cleanup
+    #      instead of a spurious "update available".
     #   3. `dkms status` — the upstream module version registered with
     #      DKMS, which is always the bare `1.0`. Useful as a "modules
     #      are present" indicator but doesn't reveal the fork patch
     #      level, so the update-availability check would always fire a
-    #      false positive against feranick's `1.0-N` tags. Reported on
-    #      .50 after a successful re-install kept showing the update
-    #      notification.
-    pcie_version: Optional[str] = None
+    #      false positive against feranick's `1.0-N` tags.
+    #
+    # Orphan detection: gasket-dkms package present + no PCIe/M.2
+    # hardware = residue from the legacy installer. `_gasket_orphan`
+    # is exposed so `install_coral.sh` and the notification pipeline
+    # can offer cleanup without ever calling it "an update".
+    pcie_hw_present = _coral_pcie_hardware_present()
+
+    marker_version: Optional[str] = None
     try:
         with open("/var/lib/proxmenux/coral_gasket_version",
                   "r", encoding="utf-8", errors="replace") as fh:
             marker = fh.read().strip()
-            # Sanity check: the file should hold something that looks
-            # like a version tag, not an error message or empty line.
             if marker and re.match(r"^[A-Za-z0-9._+-]+$", marker):
-                pcie_version = marker
+                marker_version = marker
     except OSError:
         pass
 
-    if not pcie_version:
-        try:
-            r = subprocess.run(
-                ["dpkg-query", "-W", "-f=${Status}|${Version}", "gasket-dkms"],
-                capture_output=True, text=True, timeout=3,
-            )
-            if r.returncode == 0 and "ok installed" in r.stdout:
-                pcie_version = r.stdout.split("|", 1)[1].strip()
-        except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
-            pass
-    if not pcie_version:
-        try:
-            r = subprocess.run(
-                ["dkms", "status"], capture_output=True, text=True, timeout=3,
-            )
-            if r.returncode == 0:
-                for line in r.stdout.splitlines():
-                    if line.startswith("gasket"):
-                        # "gasket, 1.0, ..." or "gasket/1.0, ..."
-                        m = re.match(r"^gasket[, /]([^,\s]+)", line)
-                        if m:
-                            pcie_version = m.group(1)
-                            break
-        except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
-            pass
-    if pcie_version:
-        out.append({
+    # gasket-dkms package inspection: state + version, kept separate.
+    dpkg_state: str = "absent"       # "healthy" | "broken" | "absent"
+    dpkg_version: Optional[str] = None
+    try:
+        r = subprocess.run(
+            ["dpkg-query", "-W", "-f=${Status}|${Version}", "gasket-dkms"],
+            capture_output=True, text=True, timeout=3,
+        )
+        if r.returncode == 0 and "|" in r.stdout:
+            status_part, _, version_part = r.stdout.partition("|")
+            if "ok installed" in status_part:
+                dpkg_state = "healthy"
+                dpkg_version = version_part.strip() or None
+            elif any(tok in status_part for tok in (
+                "half-configured", "half-installed", "unpacked",
+                "failed-config", "reinst-required", "trigger",
+            )):
+                dpkg_state = "broken"
+                dpkg_version = version_part.strip() or None
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+        pass
+
+    # Version resolution: emit only when we can actually trust it, i.e.
+    # the hardware is present AND either we have a marker file or the
+    # package is healthy. On broken or orphan states we intentionally
+    # omit `current_version` so the update comparator never fires a
+    # false "update available" against feranick's tags.
+    pcie_version: Optional[str] = None
+    if pcie_hw_present:
+        if marker_version:
+            pcie_version = marker_version
+        elif dpkg_state == "healthy" and dpkg_version:
+            pcie_version = dpkg_version
+        else:
+            # Fallback to dkms status ONLY when hardware is present and
+            # no better source exists. Kept for backwards compatibility
+            # with hosts that lost the marker file after a manual dkms
+            # rebuild but still have working hardware + working modules.
+            try:
+                r = subprocess.run(
+                    ["dkms", "status"], capture_output=True, text=True, timeout=3,
+                )
+                if r.returncode == 0:
+                    for line in r.stdout.splitlines():
+                        if line.startswith("gasket"):
+                            m = re.match(r"^gasket[, /]([^,\s]+)", line)
+                            if m:
+                                pcie_version = m.group(1)
+                                break
+            except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+                pass
+
+    is_orphan = (dpkg_state != "absent") and not pcie_hw_present
+
+    # Emit the entry whenever we have a trustworthy version OR whenever
+    # there is package state to surface (broken / orphan). This lets the
+    # frontend and the notification pipeline see both healthy installs
+    # and the two remediation cases in the same registry shape.
+    if pcie_version or dpkg_state != "absent":
+        entry = {
             "id": "coral-host-pcie",
             "type": "coral_host",
             "name": "Coral TPU Driver (gasket-dkms)",
-            "current_version": pcie_version,
             "menu_label": "GPU & TPU → Coral TPU",
             "menu_script": "scripts/gpu_tpu/install_coral.sh",
             "_coral_variant": "pcie",
-        })
+            "_gasket_pkg_state": dpkg_state,
+            "_gasket_orphan": is_orphan,
+            "_gasket_pcie_hardware_present": pcie_hw_present,
+        }
+        if pcie_version:
+            entry["current_version"] = pcie_version
+        out.append(entry)
 
     # USB — libedgetpu1-std (default) or libedgetpu1-max if the user
     # opted into the overclocked runtime. Either one means the USB
@@ -551,7 +615,11 @@ _helpers_cache_lock = threading.RLock()
 _helpers_cache: Optional[dict] = None
 _helpers_cache_ts: float = 0.0
 
-_UPDATE_SLUG_RE = re.compile(r"ct/([a-z0-9_-]+)\.sh")
+_UPDATE_SLUG_RE = re.compile(r"ct/([a-z0-9._-]+)\.sh")
+_BASE_OS_HELPER_SLUGS = frozenset({
+    "alpine", "archlinux", "archlinux-vm", "debian", "fedora",
+    "gentoo", "opensuse", "ubuntu",
+})
 
 
 def _fetch_helpers_cache() -> dict:
@@ -714,22 +782,30 @@ def _guess_helper_slug_from_hostname(hostname: str) -> Optional[str]:
     return None
 
 
-def _infer_helper_slug(vmid: str, hostname: str) -> Optional[str]:
-    """Best-effort identification of the community-scripts slug for a CT.
+def _identify_helper_slug(vmid: str, hostname: str) -> tuple[Optional[str], Optional[str]]:
+    """Return ``(slug, evidence_source)`` for a community-scripts CT.
 
-    Primary: extract from /usr/bin/update (present on installs from a
-    reasonably modern community-scripts installer). Fallback: if the
-    CT carries a helper-scripts tag but /usr/bin/update is missing
-    (very old installs, or the file was removed), guess by
-    fuzzy-matching the hostname against the helpers_cache slug list.
+    ``update_wrapper`` is executable evidence: the slug was extracted
+    from /usr/bin/update. ``tag_hostname`` is only an identity hint for
+    old installs and must never enable an update action by itself.
     """
     slug = _probe_helper_scripts_slug(vmid)
     if slug:
-        return slug
+        return slug, "update_wrapper"
     tags = _probe_lxc_tags(vmid)
     if not (tags & _HELPER_SCRIPTS_TAGS):
-        return None
-    return _guess_helper_slug_from_hostname(hostname)
+        return None, None
+    slug = _guess_helper_slug_from_hostname(hostname)
+    return (slug, "tag_hostname") if slug else (None, None)
+
+
+def _infer_helper_slug(vmid: str, hostname: str) -> Optional[str]:
+    """Backward-compatible identity-only wrapper.
+
+    Callers deciding whether an updater may run must use
+    :func:`_identify_helper_slug` and require ``update_wrapper``.
+    """
+    return _identify_helper_slug(vmid, hostname)[0]
 
 
 def _probe_lxc_os(vmid: str) -> Optional[str]:
@@ -766,7 +842,7 @@ def _probe_lxc_os(vmid: str) -> Optional[str]:
     return None
 
 
-def _detect_lxc_containers() -> list[dict]:
+def _detect_lxc_containers(only_vmid: Optional[int] = None) -> list[dict]:
     """Enumerate running Debian/Ubuntu CTs as registry entries.
 
     OS detection is cached in the registry entry (`_os_family`), so the
@@ -809,6 +885,8 @@ def _detect_lxc_containers() -> list[dict]:
 
     out: list[dict] = []
     for ct in cts:
+        if only_vmid is not None and str(ct.get("vmid")) != str(int(only_vmid)):
+            continue
         if ct["status"] != "running":
             continue
         vmid = ct["vmid"]
@@ -853,16 +931,23 @@ def _detect_lxc_containers() -> list[dict]:
         # Jellyfin" rather than a generic "Update").
         has_app_updater = False
         helper_slug: Optional[str] = None
+        helper_slug_source: Optional[str] = None
         helper_app_name: Optional[str] = None
         helper_updateable_known = False  # True when we found the slug in the cache
         if not is_oci and not managed_oci_app:
-            helper_slug = _infer_helper_slug(vmid, ct.get("name") or "")
+            helper_slug, helper_slug_source = _identify_helper_slug(
+                vmid, ct.get("name") or ""
+            )
             if helper_slug:
                 entry = _fetch_helpers_cache().get(helper_slug)
                 if entry:
                     helper_updateable_known = True
                     helper_app_name = entry.get("name") or helper_slug
-                    has_app_updater = bool(entry.get("updateable"))
+                    has_app_updater = bool(
+                        helper_slug_source == "update_wrapper"
+                        and helper_slug not in _BASE_OS_HELPER_SLUGS
+                        and entry.get("updateable")
+                    )
 
         out.append({
             "id": cid,
@@ -877,6 +962,7 @@ def _detect_lxc_containers() -> list[dict]:
             "_managed_oci_app": managed_oci_app,
             "_has_app_updater": has_app_updater,
             "_helper_slug": helper_slug,
+            "_helper_slug_source": helper_slug_source,
             "_helper_app_name": helper_app_name,
             "_helper_updateable_known": helper_updateable_known,
         })
@@ -902,6 +988,45 @@ def _normalise_detector_result(result: Any) -> list[dict]:
     if isinstance(result, list):
         return [r for r in result if isinstance(r, dict)]
     return []
+
+
+def _merge_detected_entry(existing: dict, entry: dict, now: str) -> dict:
+    """Refresh one registry row from detector evidence without touching peers."""
+    if existing.get("removed_at"):
+        existing.pop("removed_at", None)
+        existing["reactivated_at"] = now
+    for key in ("name", "current_version", "menu_label", "menu_script"):
+        if key in entry and entry[key] is not None:
+            existing[key] = entry[key]
+    for key, value in entry.items():
+        if key.startswith("_"):
+            existing[key] = value
+    existing["last_seen"] = now
+    return existing
+
+
+def _new_detected_entry(entry: dict, now: str) -> dict:
+    new_entry = {
+        "id": entry["id"],
+        "type": entry.get("type", "unknown"),
+        "name": entry.get("name", entry["id"]),
+        "current_version": entry.get("current_version"),
+        "menu_label": entry.get("menu_label"),
+        "menu_script": entry.get("menu_script"),
+        "installed_by": "detected",
+        "first_seen": now,
+        "last_seen": now,
+        "update_check": {
+            "last_check": None,
+            "available": False,
+            "latest": None,
+            "error": None,
+        },
+    }
+    for key, value in entry.items():
+        if key.startswith("_"):
+            new_entry[key] = value
+    return new_entry
 
 
 def detect_and_register() -> dict:
@@ -938,44 +1063,9 @@ def detect_and_register() -> dict:
         # 1. Add new + reactivate / refresh existing.
         for item_id, entry in discovered.items():
             if item_id in index:
-                existing = items[index[item_id]]
-                # Reactivate if it was previously removed
-                if existing.get("removed_at"):
-                    existing.pop("removed_at", None)
-                    existing["reactivated_at"] = now
-                # Refresh metadata fields that may have evolved
-                for k in ("name", "current_version", "menu_label", "menu_script"):
-                    if k in entry and entry[k] is not None:
-                        existing[k] = entry[k]
-                # Preserve internal helpers like `_oci_app_id`
-                for k, v in entry.items():
-                    if k.startswith("_"):
-                        existing[k] = v
-                existing["last_seen"] = now
+                _merge_detected_entry(items[index[item_id]], entry, now)
             else:
-                # Brand new entry
-                new_entry = {
-                    "id": entry["id"],
-                    "type": entry.get("type", "unknown"),
-                    "name": entry.get("name", entry["id"]),
-                    "current_version": entry.get("current_version"),
-                    "menu_label": entry.get("menu_label"),
-                    "menu_script": entry.get("menu_script"),
-                    "installed_by": "detected",
-                    "first_seen": now,
-                    "last_seen": now,
-                    "update_check": {
-                        "last_check": None,
-                        "available": False,
-                        "latest": None,
-                        "error": None,
-                    },
-                }
-                # Carry over internals (`_oci_app_id` etc.)
-                for k, v in entry.items():
-                    if k.startswith("_"):
-                        new_entry[k] = v
-                items.append(new_entry)
+                items.append(_new_detected_entry(entry, now))
 
         # 2. Mark missing items as removed (don't delete — preserve
         #    history so a reinstall doesn't lose the audit trail).
@@ -1588,6 +1678,23 @@ _CHECKERS: dict[str, Callable[[dict], dict]] = {
 }
 
 
+def _store_update_result(item: dict, result: dict) -> None:
+    """Apply one checker result using the registry's canonical shape."""
+    item["update_check"] = {
+        "available": bool(result.get("available")),
+        "latest": result.get("latest"),
+        "last_check": result.get("last_check") or _now_iso(),
+        "error": result.get("error"),
+    }
+    if result.get("current") and not item.get("current_version"):
+        item["current_version"] = result["current"]
+    for extra_key in ("_packages", "_upgrade_kind", "_kernel",
+                      "_kernel_note", "_count", "_security_count",
+                      "_coral_variant", "_coral_pkg"):
+        if extra_key in result:
+            item["update_check"][extra_key] = result[extra_key]
+
+
 def check_for_updates(force: bool = False) -> list[dict]:
     """Run every type-specific checker over active items, persist
     the updated state, return the list of items that have an update
@@ -1622,25 +1729,7 @@ def check_for_updates(force: bool = False) -> list[dict]:
                 result = {"available": False, "latest": None,
                           "last_check": _now_iso(), "error": str(e)}
 
-            it["update_check"] = {
-                "available": bool(result.get("available")),
-                "latest": result.get("latest"),
-                "last_check": result.get("last_check") or _now_iso(),
-                "error": result.get("error"),
-            }
-            if result.get("current") and not it.get("current_version"):
-                it["current_version"] = result["current"]
-            # Per-checker extras carried through into the persisted
-            # `update_check` blob. Add new keys here when a future
-            # checker needs to surface fields beyond available/latest.
-            # `_count` + `_security_count` were missing originally, so
-            # the LXC checker's counts dropped on the floor and the
-            # frontend badge couldn't render.
-            for extra_key in ("_packages", "_upgrade_kind", "_kernel",
-                              "_kernel_note", "_count", "_security_count",
-                              "_coral_variant", "_coral_pkg"):
-                if extra_key in result:
-                    it["update_check"][extra_key] = result[extra_key]
+            _store_update_result(it, result)
 
             if it["update_check"]["available"]:
                 updates_available.append(it)
@@ -1650,3 +1739,49 @@ def check_for_updates(force: bool = False) -> list[dict]:
         _write_registry(reg)
 
     return updates_available
+
+
+def refresh_lxc(vmid: int) -> Optional[dict]:
+    """Detect and refresh exactly one running LXC.
+
+    This is the lifecycle counterpart of the daily collector. It is called
+    after a stopped container starts and deliberately leaves every other
+    guest's registry row untouched.
+    """
+    try:
+        target_vmid = int(vmid)
+    except (TypeError, ValueError):
+        return None
+
+    detected = _detect_lxc_containers(only_vmid=target_vmid)
+    if not detected:
+        return None
+    entry = detected[0]
+    item_id = entry["id"]
+    now = _now_iso()
+
+    with _lock:
+        reg = _read_registry()
+        items: list[dict] = list(reg.get("items", []))
+        target = next((item for item in items if item.get("id") == item_id), None)
+        if target is None:
+            target = _new_detected_entry(entry, now)
+            items.append(target)
+        else:
+            _merge_detected_entry(target, entry, now)
+
+        try:
+            result = _check_lxc_updates(target)
+        except Exception as exc:
+            result = {
+                "available": False,
+                "latest": None,
+                "last_check": _now_iso(),
+                "error": str(exc),
+            }
+        _store_update_result(target, result)
+        reg["items"] = items
+        reg["version"] = _SCHEMA_VERSION
+        reg["last_targeted_refresh"] = now
+        _write_registry(reg)
+        return dict(target)

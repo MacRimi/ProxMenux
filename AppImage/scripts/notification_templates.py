@@ -512,10 +512,7 @@ TEMPLATES = {
     },
     'lxc_update_applied': {
         'title': '{hostname}: LXC {ct_name} ({vmid}) update {result}',
-        'body': (
-            'Container {ct_name} (CT {vmid}) — update {result}.\n'
-            'Target: {target}    Duration: {duration}'
-        ),
+        'body': '{details}',
         'label': 'LXC update applied',
         'group': 'vm_ct',
         'default_enabled': True,
@@ -538,6 +535,16 @@ TEMPLATES = {
         # Every other update template ships enabled by default; leaving
         # this one off meant users who registered apps in the App tab
         # never received the notification they explicitly asked for.
+        'default_enabled': True,
+    },
+    'docker_stack_update_available': {
+        'title': '{hostname}: Docker updates available on CT {vmid}',
+        'body': (
+            'Container {ct_name} (CT {vmid}) has {count} Docker update(s):\n'
+            '{details}'
+        ),
+        'label': 'Docker updates available',
+        'group': 'updates',
         'default_enabled': True,
     },
     'vm_start': {
@@ -1728,6 +1735,7 @@ EVENT_EMOJI = {
     'lxc_updates_available': '\U0001F4E6',     # \uD83D\uDCE6 package \u2014 pending CT updates
     'lxc_update_applied':   '\u2705',           # \u2705 check \u2014 update applied
     'app_update_available': '\U0001F195',  # \ud83c\udd95 NEW \u2014 upstream app release
+    'docker_stack_update_available': '\U0001F433',
     'vm_start':             '\u25B6\uFE0F',    # play button
     'vm_start_warning':     '\u26A0\uFE0F',     # warning sign - started with warnings
     'vm_stop':              '\u23F9\uFE0F',     # stop button

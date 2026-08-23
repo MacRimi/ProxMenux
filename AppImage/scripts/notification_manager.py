@@ -520,6 +520,8 @@ _AGGREGATION_EXEMPT_EVENTS = frozenset({
     # at once, so without this exemption only the first 1-2 land and
     # the rest get buffered into a useless summary.
     'app_update_available',
+    'docker_stack_update_available',
+    'lxc_update_applied',
 })
 
 
@@ -791,6 +793,7 @@ class NotificationManager:
         self._task_watcher: Optional[TaskWatcher] = None
         self._polling_collector: Optional[PollingCollector] = None
         self._dispatch_thread: Optional[threading.Thread] = None
+        self._guest_lifecycle_callback = None
         
         # Webhook receiver (no thread, passive)
         self._hook_watcher: Optional[ProxmoxHookWatcher] = None
@@ -981,6 +984,17 @@ class NotificationManager:
         with self._lock:
             self._load_config()
         return {'success': True, 'channels': list(self._channels.keys())}
+
+    def set_guest_lifecycle_callback(self, callback) -> None:
+        """Attach a consumer to the existing PVE task lifecycle watcher.
+
+        Detection stays in TaskWatcher—the same source that emits VM/CT
+        start/stop notifications. This setter only lets Flask invalidate and
+        rebuild its guest caches when that already-detected event completes.
+        """
+        self._guest_lifecycle_callback = callback
+        if self._task_watcher is not None:
+            self._task_watcher._guest_lifecycle_callback = callback
     
     # ─── Server Mode (Background) ──────────────────────────────
     
@@ -1017,7 +1031,10 @@ class NotificationManager:
         # polling collector keep the managed_installs registry, the
         # error history, and the task state up to date.
         self._journal_watcher = JournalWatcher(self._event_queue)
-        self._task_watcher = TaskWatcher(self._event_queue)
+        self._task_watcher = TaskWatcher(
+            self._event_queue,
+            guest_lifecycle_callback=self._guest_lifecycle_callback,
+        )
         self._polling_collector = PollingCollector(self._event_queue)
 
         self._journal_watcher.start()
@@ -1966,6 +1983,7 @@ class NotificationManager:
         'coral_driver_update_available',
         'secure_gateway_update_available',
         'app_update_available',
+        'docker_stack_update_available',
         # Security events that must not be silenced by stale cooldowns
         # following a Monitor reinstall (Pedro Rico, 19/05).
         'auth_fail',

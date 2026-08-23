@@ -49,12 +49,15 @@ jobs:
         # `--runtime-overrides` folds real-CT evidence into the
         # operational hints (canonical paths, cross-method fallbacks
         # per app) so the runtime doesn't get fed helper-marker
-        # false-positives.
+        # false-positives. Modern helper markers are included as their
+        # official version contract; runtime keeps them distinguishable from
+        # canonical package/binary/manual detectors for legacy compatibility.
         run: |
           python .github/scripts/generate_app_tracking_catalog.py \
             --helpers-cache json/helpers_cache.json \
             --existing json/app_tracking_hints.json \
             --runtime-overrides json/runtime_verified_overrides.json \
+            --include-helper-markers \
             --output json/app_tracking_hints.generated.json \
             --v2-output /tmp/app_tracking_catalog.v2.json \
             --audit-output /tmp/app_tracking_hints.audit.json
@@ -96,8 +99,9 @@ jobs:
           # governs generator-covered slugs.
           GENERATOR_FIELDS = {
               "installed_via", "package", "file_path", "file_regex",
-              "binary_path", "repo", "github_source", "tag_regex",
-              "installed_regex",
+              "binary_path", "binary_args", "python_path", "distribution",
+              "container_name", "label", "command_argv", "installed_version",
+              "repo", "github_source", "tag_regex", "installed_regex",
               # Upstream source discriminator + per-type fields
               # (http_json + docker_hub). Kept in the whitelist so a
               # curated entry in runtime_verified_overrides.json can

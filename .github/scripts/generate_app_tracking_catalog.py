@@ -655,6 +655,23 @@ def build_catalog(
         release, release_candidates, release_error = select_release_candidate(
             slug, app_name, launcher, installer
         )
+        # Some current helpers do not install through
+        # fetch_and_deploy_gh_release, but explicitly write the release to
+        # the same marker used by check_for_gh_release. Actual Budget is a
+        # representative example (npm install + ~/.actualbudget). Recover
+        # the repository from the release check only when that marker maps
+        # to one unique candidate; never guess it from a generic header.
+        marker_release_repo: str | None = None
+        if len(relevant_markers) == 1:
+            marker_path = f"/root/{relevant_markers[0]}".lower()
+            marker_repos = {
+                str(candidate.get("repo") or "")
+                for candidate in release_candidates
+                if str(candidate.get("cache_file") or "").lower() == marker_path
+                and candidate.get("repo")
+            }
+            if len(marker_repos) == 1:
+                marker_release_repo = marker_repos.pop()
         install_only_release = select_install_only_release(
             slug, app_name, installer, header_repos
         ) if release is None else None
@@ -708,13 +725,13 @@ def build_catalog(
             }
             continue
 
-        if len(relevant_markers) == 1 and helper_repo and helper_version:
+        if len(relevant_markers) == 1 and marker_release_repo:
             marker = relevant_markers[0]
             hint = {
                 "installed_via": "file",
                 "file_path": f"/root/{marker}",
                 "file_regex": version_regex,
-                "repo": helper_repo,
+                "repo": marker_release_repo,
                 "github_source": "releases",
                 "tag_regex": version_regex,
             }
@@ -745,7 +762,7 @@ def build_catalog(
             records.append(record)
             v2_apps[slug] = {
                 "name": app_name,
-                "repo": helper_repo,
+                "repo": marker_release_repo,
                 "official_sources": official_sources,
                 "detectors": v2_detectors,
             }
@@ -905,13 +922,14 @@ def demote_generic_helper_markers(
     v2: dict[str, Any],
     audit: dict[str, Any],
 ) -> list[str]:
-    """Remove generic /root/.app caches from the operational catalog.
+    """Remove modern helper markers when compatibility-only output is wanted.
 
-    Even when install and update scripts both write the marker, it records
-    helper/update state rather than interrogating the installed application.
-    Runtime checks also found these files absent on legacy and manually
-    updated LXC. They remain useful candidates/fallbacks in v2, not verified
-    primary detectors.
+    Current community-scripts installers maintain ``/root/.<app>`` as their
+    version contract, so these are valid detectors for modern helper-owned
+    containers. They are not universal: legacy helpers and official/manual
+    installs may not have them. The default conservative mode therefore keeps
+    them in v2; production generation can opt in with
+    ``--include-helper-markers`` and the runtime reports their distinct source.
     """
     demoted: list[str] = []
     apps = v2.get("apps", {})
@@ -927,12 +945,12 @@ def demote_generic_helper_markers(
             continue
         catalog.pop(slug, None)
         record["status"] = "candidate"
-        record["reason"] = "generic helper marker is not guaranteed on legacy/manual installations"
+        record["reason"] = "modern helper marker is not guaranteed on legacy/manual installations"
         for detector in (apps.get(slug) or {}).get("detectors", []):
             if detector.get("installed_via") == "file" and detector.get("file_path") == path:
                 detector["verification"] = "candidate-helper-marker"
                 detector["limitation"] = (
-                    "Observed absent on legacy/manual LXC; use only as fallback or after runtime probe"
+                    "Valid for modern helper installs; absent on legacy/manual LXC"
                 )
         demoted.append(slug)
     return sorted(demoted)
@@ -1147,14 +1165,16 @@ def apply_runtime_overrides(
     """Apply detectors proven against real containers.
 
     The generated/static catalog is intentionally conservative. This optional
-    overlay promotes only detectors carrying runtime evidence. Unsupported
-    future methods (for example ``python_dist`` or ``docker_label``) are kept
-    in v2 but are not written to the current-compatible v1 catalog.
+    overlay promotes only detectors carrying runtime evidence. The compatible
+    catalog now supports every detector implemented by ``lxc_apps.py``;
+    retaining an older dpkg/file/binary-only allow-list silently discarded
+    proven Python and Docker detectors.
     """
     result: dict[str, Any] = {
         "file": str(overrides_path) if overrides_path else None,
         "promoted_to_v1": [],
         "v2_only": [],
+        "runtime_only": [],
         "invalid": [],
     }
     if overrides_path is None or not overrides_path.is_file():
@@ -1164,13 +1184,17 @@ def apply_runtime_overrides(
     if not isinstance(apps_raw, dict):
         raise CatalogError("runtime overrides must contain an 'apps' object")
 
-    supported_v1 = {"dpkg", "apk", "file", "binary"}
+    supported_v1 = {
+        "dpkg", "apk", "file", "binary", "python_dist",
+        "docker_label", "docker_exec", "command", "manual",
+    }
     v2_apps = v2.get("apps", {})
     detector_keys = {
         "installed_via", "package", "file_path", "file_regex",
         "binary_path", "binary_args", "python_path", "distribution",
-        "container_name", "label", "repo", "github_source", "tag_regex",
-        "installed_regex",
+        "container_name", "label", "command_argv", "installed_version",
+        "repo", "github_source", "tag_regex", "installed_regex",
+        "upstream_type", "upstream_url", "upstream_json_path", "docker_image",
     }
     passthrough_keys = {
         "file_fallbacks", "alt_detectors", "default_ports", "logo", "website",
@@ -1193,8 +1217,43 @@ def apply_runtime_overrides(
         }
         app = v2_apps.get(slug)
         if not isinstance(app, dict):
-            result["invalid"].append(slug)
-            continue
+            # Official/manual and nested Docker applications do not
+            # necessarily have a community-scripts ct/<slug>.sh launcher.
+            # A runtime-proven override is sufficient to create their v2
+            # entry; rejecting it here silently reintroduced the old
+            # helper-only limitation.
+            display_name = str(spec.get("name") or "").strip()
+            if not display_name:
+                display_name = slug.replace("-", " ").replace("_", " ").title()
+            app = {
+                "name": display_name,
+                "repo": detector.get("repo"),
+                "official_sources": [],
+                "detectors": [],
+            }
+            v2_apps[slug] = app
+            result["runtime_only"].append(slug)
+
+        # Preserve every statically-proven modern community-scripts marker
+        # when a stronger runtime detector becomes primary. This gives new
+        # helper installs their official /root/.<app> checker while keeping
+        # package/binary/python detectors first for legacy/manual installs.
+        helper_markers: list[dict[str, str]] = []
+        for candidate in app.get("detectors", []):
+            marker_path = candidate.get("file_path")
+            marker_regex = candidate.get("file_regex")
+            if (
+                candidate.get("installed_via") == "file"
+                and isinstance(marker_path, str)
+                and re.fullmatch(r"/root/\.[A-Za-z0-9_.-]+", marker_path)
+                and isinstance(marker_regex, str)
+                and marker_regex
+            ):
+                helper_markers.append({
+                    "path": marker_path,
+                    "regex": marker_regex,
+                    "source": "helper_marker",
+                })
         app.setdefault("detectors", []).insert(0, v2_detector)
         app["runtime_evidence"] = evidence
 
@@ -1211,20 +1270,35 @@ def apply_runtime_overrides(
                 for key, value in presentation_source.items()
                 if key in {"default_ports", "logo", "website"}
             }
-            hint = {k: v for k, v in detector.items() if k not in {
-                "binary_args", "python_path", "distribution", "container_name",
-                "label", "installed_regex",
-            }}
+            # Every method-specific field is required at runtime.  The old
+            # compatibility filter removed python_path/distribution,
+            # binary_args and container fields, producing catalog entries
+            # that validated statically but could never execute.
+            hint = dict(detector)
             for key in passthrough_keys:
                 if key in spec:
                     hint[key] = spec[key]
+            fallbacks = [
+                dict(item) for item in hint.get("file_fallbacks", [])
+                if isinstance(item, dict)
+            ]
+            known_paths = {
+                item.get("path") for item in fallbacks if isinstance(item.get("path"), str)
+            }
+            primary_path = hint.get("file_path") if hint.get("installed_via") == "file" else None
+            for marker in helper_markers:
+                if marker["path"] != primary_path and marker["path"] not in known_paths:
+                    fallbacks.append(marker)
+                    known_paths.add(marker["path"])
+            if fallbacks:
+                hint["file_fallbacks"] = fallbacks
             hint.update(presentation)
             catalog[slug] = hint
             result["promoted_to_v1"].append(slug)
         else:
             result["v2_only"].append(slug)
 
-    for key in ("promoted_to_v1", "v2_only", "invalid"):
+    for key in ("promoted_to_v1", "v2_only", "runtime_only", "invalid"):
         result[key].sort()
     return result
 

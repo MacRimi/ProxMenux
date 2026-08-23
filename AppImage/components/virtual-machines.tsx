@@ -3,14 +3,14 @@
 import type React from "react"
 
 import { useState, useMemo, useEffect, useRef } from "react"
-import { fetchLxcApps, getLxcAppsCached, invalidateLxcApps, seedLxcAppsCache } from "../lib/lxc-apps-cache"
+import { fetchLxcApps, getLxcAppsCached, invalidateLxcApps, seedLxcAppsCache, setLxcAppsCached } from "../lib/lxc-apps-cache"
 import { parseTags, stringifyTags, tagToColor } from "../lib/pve-tag-color"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Pencil, Trash2, Check, X, AlertTriangle, AlertCircle, Tag as TagIcon } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, ExternalLink, Tag as TagIcon } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
 import { Switch } from "./ui/switch"
@@ -21,7 +21,7 @@ import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
 import { ScriptTerminalModal } from "./script-terminal-modal"
-import { LxcAppPanel } from "./lxc-app-panel"
+import { LxcAppPanel, ThemeAwareLogo } from "./lxc-app-panel"
 import { formatStorage } from "../lib/utils"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
@@ -64,6 +64,7 @@ interface LxcUpdateCheck {
   //   • helper_updateable_known=true + app_updater_present=false → "not updateable" note
   //   • helper_updateable_known=false → neutral hint (unknown/unlisted app)
   helper_slug?: string | null
+  helper_slug_source?: "update_wrapper" | "tag_hostname" | null
   helper_app_name?: string | null
   helper_updateable_known?: boolean
   os_family?: string | null
@@ -77,12 +78,14 @@ interface LxcAppPort {
   description?: string
   scheme?: "http" | "https"
   web_path?: string
+  logo_url?: string | null
 }
 interface LxcAppWatch {
   id: string
   name: string | null
   installed_via?: string | null
   ports?: LxcAppPort[]
+  logo_url?: string | null
   health_path?: string | null
   installed_version: string | null
   latest_version: string | null
@@ -114,6 +117,62 @@ interface LxcAppWatch {
   notifications_enabled?: boolean
 }
 
+interface LxcDockerComposeTarget {
+  kind: "compose"
+  project: string
+  services: string[]
+  working_dir: string
+  config_files: string[]
+  update_command: string
+  dependencies?: Record<string, string[]>
+}
+
+interface LxcDockerUpdateUnit {
+  id: string
+  kind: "compose" | "standalone"
+  project?: string | null
+  primary_service?: string | null
+  services: string[]
+  dependent_services?: string[]
+  references: string[]
+  primary_reference?: string | null
+  display_name?: string | null
+  logo_url?: string | null
+  working_dir?: string | null
+  config_files?: string[]
+  update_command?: string
+  standalone_containers?: string[]
+  update_available?: boolean | null
+}
+
+interface LxcDockerImageUpdate {
+  reference: string
+  tag: string
+  display_name?: string | null
+  logo_url?: string | null
+  installed_version?: string | null
+  available_version?: string | null
+  local_digest: string | null
+  remote_digest: string | null
+  used_by: string[]
+  update_targets?: LxcDockerComposeTarget[]
+  standalone_containers?: string[]
+  update_available: boolean | null
+  error: string | null
+}
+
+interface LxcDockerInventory {
+  available: boolean
+  refreshing?: boolean
+  engine_version: string | null
+  images: LxcDockerImageUpdate[]
+  compose_projects?: LxcDockerComposeTarget[]
+  update_units?: LxcDockerUpdateUnit[]
+  update_count: number
+  checked_at: string | null
+  error: string | null
+}
+
 interface VMData {
   vmid: number
   name: string
@@ -140,6 +199,21 @@ interface VMData {
   // List of registered apps (0..N). Managed entries (Secure Gateway)
   // always come first when present.
   app_watches?: LxcAppWatch[]
+  // Read-only Docker image digest inventory. Separate from app_watches
+  // because engine updates and image updates are independent lifecycles.
+  docker_inventory?: LxcDockerInventory
+  // Incremented by the server after it has rebuilt this guest's complete
+  // modal/app/Docker snapshot following a start, reboot or restore.
+  modal_cache_revision?: number
+}
+
+function buildRegisteredAppUrl(vm: VMData, port?: LxcAppPort): string | null {
+  const rawIp = (vm.ip || "").trim().split("/")[0]
+  if (!rawIp || rawIp === "DHCP" || !port?.port) return null
+  const host = rawIp.includes(":") && !rawIp.startsWith("[") ? `[${rawIp}]` : rawIp
+  const scheme = port.scheme || ([443, 8443, 9443].includes(port.port) ? "https" : "http")
+  const path = port.web_path ? `/${port.web_path.replace(/^\/+/, "")}` : ""
+  return `${scheme}://${host}:${port.port}${path}`
 }
 
 interface VMConfig {
@@ -724,6 +798,9 @@ export function VirtualMachines() {
     // survives modal reopens within the same page load.
     firewall: new Map<number, any>(),
   })
+  const dockerInventoryRequestedRef = useRef(new Map<number, number>())
+  const lifecycleCacheRevisionsRef = useRef(new Map<number, number>())
+  const [dockerInventoryRefreshingVmid, setDockerInventoryRefreshingVmid] = useState<number | null>(null)
   const [controlLoading, setControlLoading] = useState(false)
   // Destructive control confirmation. `Force Stop` and `Reboot` skip the OS
   // shutdown sequence and can corrupt running guests; gate them behind a
@@ -940,6 +1017,37 @@ export function VirtualMachines() {
     setSelectedVM(updated)
   }, [vmData])
 
+  // Backend lifecycle refreshes are asynchronous: a start response returns
+  // immediately, then the server waits for the guest (and Docker, for LXCs)
+  // before publishing a complete new snapshot. When its revision changes,
+  // discard only this guest's browser-side data. The following SWR poll and
+  // modal open then consume the warmed server cache without a stale flash.
+  useEffect(() => {
+    if (!vmData) return
+    const revisions = lifecycleCacheRevisionsRef.current
+    for (const vm of vmData) {
+      const current = vm.modal_cache_revision ?? 0
+      const previous = revisions.get(vm.vmid)
+      revisions.set(vm.vmid, current)
+      if (previous === undefined || previous === current) continue
+
+      const cache = vmModalCacheRef.current
+      cache.details.delete(vm.vmid)
+      cache.backups.delete(vm.vmid)
+      cache.mountPoints.delete(vm.vmid)
+      cache.schedule.delete(vm.vmid)
+      cache.firewall.delete(vm.vmid)
+      dockerInventoryRequestedRef.current.delete(vm.vmid)
+      invalidateLxcApps(vm.vmid)
+      setVmConfigs((existing) => {
+        if (!(vm.vmid in existing)) return existing
+        const next = { ...existing }
+        delete next[vm.vmid]
+        return next
+      })
+    }
+  }, [vmData])
+
   // Settle the Updates-tab "Comprobando resultado…" state as soon as
   // the /api/vms poll delivers a post-apply count that differs from
   // the baseline captured when the terminal closed. Also drops the
@@ -984,6 +1092,12 @@ export function VirtualMachines() {
 
   const handleVMClick = async (vm: VMData) => {
     setSelectedVM(vm)
+    setBulkLoaded(null)
+    setBulkConfigured(false)
+    setBulkTargets(["os"])
+    setBulkPersistedTargets(["os"])
+    setBulkEditMode(false)
+    setBulkError(null)
     setCurrentView("main")
     setShowAdditionalInfo(false)
     setShowNotes(false)
@@ -1113,6 +1227,7 @@ export function VirtualMachines() {
         details: any | null
         backups: { backups?: VMBackup[] } | null
         apps?: { apps?: any[] } | null
+        suggestions?: any | null
         schedule?: any | null
         mount_points?: { ok?: boolean; mount_points?: LxcMountPoint[]; ad_hoc_hint_count?: number } | null
       }>
@@ -1129,7 +1244,7 @@ export function VirtualMachines() {
             if (g.apps) {
               // Route lxc apps through the shared module so
               // LxcAppPanel and this component read the same object.
-              seedLxcAppsCache(g.vmid, g.apps)
+              seedLxcAppsCache(g.vmid, g.apps, g.suggestions)
             }
             if (g.schedule && typeof g.schedule === "object") {
               cache.schedule.set(g.vmid, g.schedule)
@@ -1581,8 +1696,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   // ── LXC update apply flow (Phase 2a/b) ────────────────────────────
   // Users pick a target (OS, App, both) + backup / restart options,
   // click Apply, and the ScriptTerminalModal streams the apply run.
-  // On successful close, POST /api/lxc-updates/<vmid>/applied fires
-  // the notification and forces a badge recheck.
+  // The backend owns finalization from the real process exit; the browser
+  // callback below is an idempotent compatibility signal and immediate UI
+  // revalidation, not the source of truth for notifications.
   const [applyOpen, setApplyOpen] = useState(false)
   const [applyVmid, setApplyVmid] = useState<number | null>(null)
   const [applyTarget, setApplyTarget] = useState<"os" | "app" | "both">("os")
@@ -1595,13 +1711,21 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const [applyBackupStorage, setApplyBackupStorage] = useState<string>("")
   const [applyRestart, setApplyRestart] = useState(false)
   const [applyStartedAt, setApplyStartedAt] = useState<number>(0)
+  const [applyRunId, setApplyRunId] = useState<string>("")
+  const [applyTargetIds, setApplyTargetIds] = useState<string[]>([])
+  const [applyTargetLabels, setApplyTargetLabels] = useState<string[]>([])
   // Extra state carried alongside applyTarget when the App branch is
   // driven by a user-defined `update_command` on a specific registered
   // app (not the CT-wide /usr/bin/update). Passed to the terminal
-  // script as UPDATE_COMMAND env var; the script uses it in preference
-  // to /usr/bin/update when present.
+  // script as UPDATE_COMMAND. A custom command always replaces the
+  // Helper-Scripts updater for that application.
   const [applyUpdateCommand, setApplyUpdateCommand] = useState<string>("")
   const [applyAppName, setApplyAppName] = useState<string>("")
+  const [applyRunHelper, setApplyRunHelper] = useState(false)
+  const [applyAllowHelperWithCustom, setApplyAllowHelperWithCustom] = useState(false)
+  const [applyDockerStandaloneTargets, setApplyDockerStandaloneTargets] = useState<string>("")
+  const [applyDockerEngine, setApplyDockerEngine] = useState(false)
+  const [applyDockerRefresh, setApplyDockerRefresh] = useState(false)
 
   // Updates tab — inline custom-command editor state. Keyed on app.id
   // so the user can open one editor at a time; opening a second closes
@@ -1613,9 +1737,21 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const [customCmdSaving, setCustomCmdSaving] = useState(false)
   const [showHiddenNotices, setShowHiddenNotices] = useState(false)
 
-  const openCustomCmdEditor = (app: LxcAppWatch) => {
+  const canonicalHelperUpdateCommand = (slug?: string | null) => {
+    const cleanSlug = (slug || "").trim()
+    if (!/^[A-Za-z0-9._-]+$/.test(cleanSlug)) return ""
+    return `PHS_SILENT=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/${cleanSlug}.sh)"`
+  }
+
+  // Docker Engine is updated by a protected host-side runner rather
+  // than by an arbitrary command inside the CT. Surface the exact
+  // command in the same editor used by every other app, but recognise
+  // this canonical value as the integrated method if it is saved.
+  const canonicalDockerEngineUpdateCommand = 'python3 /usr/local/share/proxmenux/monitor-app/usr/bin/update_docker_engine.py --vmid "$VMID"'
+
+  const openCustomCmdEditor = (app: LxcAppWatch, initialCommand = "") => {
     setCustomCmdEditingApp(app.id)
-    setCustomCmdDraft(app.update_command || "")
+    setCustomCmdDraft(app.update_command || initialCommand)
   }
 
   // ── Options card unified state ──────────────────────────────────
@@ -1630,8 +1766,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const [scheduleCron, setScheduleCron] = useState("0 3 * * *")
   const [schedulePreset, setSchedulePreset] = useState<string>("daily-3am")
   const [scheduleTarget, setScheduleTarget] = useState<"os" | "app" | "both">("both")
+  const [scheduleTargets, setScheduleTargets] = useState<string[]>(["os", "apps"])
+  const [scheduleReleaseDelayDays, setScheduleReleaseDelayDays] = useState(0)
   const [scheduleLastRunAt, setScheduleLastRunAt] = useState<string | null>(null)
   const [scheduleLastRunStatus, setScheduleLastRunStatus] = useState<string | null>(null)
+  const [scheduleLastRunReason, setScheduleLastRunReason] = useState<string | null>(null)
   const [scheduleSaving, setScheduleSaving] = useState(false)
   const [scheduleError, setScheduleError] = useState<string | null>(null)
   const [externalCron, setExternalCron] = useState<{
@@ -1655,6 +1794,18 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   // fully restore. Save wipes it after PUTting.
   const [optionsSnapshot, setOptionsSnapshot] = useState<any>(null)
 
+  // Reusable manual bulk update. This intentionally does not share state
+  // with scheduled updates: changing a one-click manual selection must never
+  // rewrite the cron automation configured in Options.
+  const [bulkLoaded, setBulkLoaded] = useState<number | null>(null)
+  const [bulkConfigured, setBulkConfigured] = useState(false)
+  const [bulkTargets, setBulkTargets] = useState<string[]>(["os"])
+  const [bulkPersistedTargets, setBulkPersistedTargets] = useState<string[]>(["os"])
+  const [bulkEditMode, setBulkEditMode] = useState(false)
+  const [bulkSaving, setBulkSaving] = useState(false)
+  const [bulkApplying, setBulkApplying] = useState(false)
+  const [bulkError, setBulkError] = useState<string | null>(null)
+
   // Cron presets — every entry maps a friendly label to a real
   // 5-field cron expression the backend parser accepts. Order + slugs
   // stable so the Select value round-trips a saved schedule.
@@ -1675,12 +1826,18 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     setScheduleCron(cron)
     const matched = CRON_PRESETS.find((p) => p.value !== "custom" && p.cron === cron)
     setSchedulePreset(matched ? matched.value : "custom")
-    setScheduleTarget(s.target || "both")
+    const legacyTarget = (s.target || "both") as "os" | "app" | "both"
+    setScheduleTarget(legacyTarget)
+    setScheduleTargets(Array.isArray(s.targets) && s.targets.length
+      ? s.targets.map((value: any) => String(value))
+      : ([...(legacyTarget !== "app" ? ["os"] : []), ...(legacyTarget !== "os" ? ["apps"] : [])]))
+    setScheduleReleaseDelayDays(Number.isInteger(Number(s.release_delay_days)) ? Number(s.release_delay_days) : 0)
     if (s.backup !== undefined) setApplyBackup(!!s.backup)
     if (s.backup_storage) setApplyBackupStorage(s.backup_storage)
     if (s.restart !== undefined) setApplyRestart(!!s.restart)
     setScheduleLastRunAt(s.last_run_at || null)
     setScheduleLastRunStatus(s.last_run_status || null)
+    setScheduleLastRunReason(s.last_run_reason || null)
     setExternalCron(s.external_cron || null)
   }
 
@@ -1703,6 +1860,99 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     }
   }
 
+  const loadBulkUpdate = async (vmid: number) => {
+    setBulkError(null)
+    setBulkLoaded(null)
+    setBulkEditMode(false)
+    try {
+      const config: any = await fetchApi(`/api/vms/${vmid}/bulk-update`)
+      const targets = Array.isArray(config?.targets)
+        ? Array.from(new Set(config.targets.map((value: any) => String(value)))) as string[]
+        : []
+      const configured = targets.includes("os") && targets.some((value) => value !== "os")
+      const next = configured ? targets : ["os"]
+      setBulkConfigured(configured)
+      setBulkTargets(next)
+      setBulkPersistedTargets(next)
+    } catch (e: any) {
+      setBulkConfigured(false)
+      setBulkTargets(["os"])
+      setBulkPersistedTargets(["os"])
+      setBulkError(e?.message || "Could not load bulk update")
+    } finally {
+      setBulkLoaded(vmid)
+    }
+  }
+
+  const saveBulkUpdate = async (vmid: number) => {
+    setBulkSaving(true)
+    setBulkError(null)
+    try {
+      const config: any = await fetchApi(`/api/vms/${vmid}/bulk-update`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targets: bulkTargets }),
+      })
+      const targets = Array.isArray(config?.targets)
+        ? config.targets.map((value: any) => String(value))
+        : bulkTargets
+      setBulkTargets(targets)
+      setBulkPersistedTargets(targets)
+      setBulkConfigured(true)
+      setBulkEditMode(false)
+    } catch (e: any) {
+      setBulkError(e?.message || t("vmLxc.bulkUpdate.saveFailed"))
+    } finally {
+      setBulkSaving(false)
+    }
+  }
+
+  const deleteBulkUpdate = async (vmid: number) => {
+    if (!confirm(t("vmLxc.bulkUpdate.deleteConfirm"))) return
+    setBulkSaving(true)
+    setBulkError(null)
+    try {
+      await fetchApi(`/api/vms/${vmid}/bulk-update`, { method: "DELETE" })
+      setBulkTargets(["os"])
+      setBulkPersistedTargets(["os"])
+      setBulkConfigured(false)
+      setBulkEditMode(false)
+    } catch (e: any) {
+      setBulkError(e?.message || t("vmLxc.bulkUpdate.deleteFailed"))
+    } finally {
+      setBulkSaving(false)
+    }
+  }
+
+  const applyBulkUpdate = async (vmid: number) => {
+    setBulkApplying(true)
+    setBulkError(null)
+    try {
+      const plan: any = await fetchApi(`/api/vms/${vmid}/bulk-update/plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      })
+      openApplyTerminal(vmid, "both", {
+        updateCommand: plan.update_command || "",
+        appName: plan.app_name || "",
+        runHelper: plan.run_helper === true,
+        allowHelperWithCustom: plan.allow_helper_with_custom === true,
+        dockerStandaloneTargets: Array.isArray(plan.docker_standalone_targets)
+          ? plan.docker_standalone_targets
+          : [],
+        dockerEngine: plan.update_docker_engine === true,
+        dockerRefresh: plan.refresh_docker_inventory === true,
+        targetIds: Array.isArray(plan.targets) ? plan.targets : [],
+        targetLabels: Array.isArray(plan.labels) ? plan.labels : [],
+      })
+    } catch (e: any) {
+      setBulkError(e?.message || t("vmLxc.bulkUpdate.planFailed"))
+    } finally {
+      setBulkApplying(false)
+    }
+  }
+
   const saveSchedule = async (vmid: number) => {
     setScheduleSaving(true)
     setScheduleError(null)
@@ -1711,6 +1961,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     // leave scheduleConfigured=false and Save PUTs cron="" so the
     // backend doesn't resurrect the schedule.
     const cronToSave = scheduleEnabled || scheduleConfigured ? scheduleCron : ""
+    const hasOsTarget = scheduleTargets.includes("os")
+    const hasAppTarget = scheduleTargets.some((value) => value !== "os")
+    const derivedTarget: "os" | "app" | "both" = hasOsTarget && hasAppTarget ? "both" : hasOsTarget ? "os" : "app"
     try {
       await fetchApi(`/api/vms/${vmid}/schedule`, {
         method: "PUT",
@@ -1718,7 +1971,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
         body: JSON.stringify({
           enabled: scheduleEnabled,
           cron: cronToSave,
-          target: scheduleTarget,
+          target: derivedTarget,
+          targets: scheduleTargets,
+          release_delay_days: scheduleReleaseDelayDays,
           backup: applyBackup,
           backup_storage: applyBackupStorage || selectedBackupStorage || "",
           restart: applyRestart,
@@ -1741,6 +1996,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       scheduleCron: scheduleCron,
       schedulePreset: schedulePreset,
       scheduleTarget: scheduleTarget,
+      scheduleTargets: [...scheduleTargets],
+      scheduleReleaseDelayDays: scheduleReleaseDelayDays,
     })
     setOptionsEditMode(true)
   }
@@ -1753,6 +2010,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       setScheduleCron(optionsSnapshot.scheduleCron)
       setSchedulePreset(optionsSnapshot.schedulePreset)
       setScheduleTarget(optionsSnapshot.scheduleTarget)
+      setScheduleTargets(optionsSnapshot.scheduleTargets || ["os", "apps"])
+      setScheduleReleaseDelayDays(optionsSnapshot.scheduleReleaseDelayDays)
     }
     setOptionsSnapshot(null)
     setOptionsEditMode(false)
@@ -1775,6 +2034,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       setSchedulePreset("daily-3am")
       setScheduleLastRunAt(null)
       setScheduleLastRunStatus(null)
+      setScheduleLastRunReason(null)
+      setScheduleReleaseDelayDays(0)
     } catch (e: any) {
       setScheduleError(e?.message || "Delete failed")
     } finally {
@@ -1813,10 +2074,56 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   useEffect(() => {
     if (activeModalTab !== "updates") return
     if (!selectedVM || selectedVM.type !== "lxc") return
-    if (scheduleLoaded === selectedVM.vmid) return
-    loadSchedule(selectedVM.vmid)
+    if (scheduleLoaded !== selectedVM.vmid) loadSchedule(selectedVM.vmid)
+    if (bulkLoaded !== selectedVM.vmid) loadBulkUpdate(selectedVM.vmid)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeModalTab, selectedVM?.vmid])
+
+  // Docker drift is opt-in: read it only after Docker has been registered and
+  // only when the user opens Updates. This request deliberately DOES NOT use
+  // force=1: the process-memory inventory belongs to the startup/lifecycle and
+  // daily rolling collectors. A normal open consumes that value; if a backend
+  // restart briefly leaves the browser ahead of the new process cache, allow a
+  // bounded retry instead of permanently marking this CT as already requested.
+  useEffect(() => {
+    if (activeModalTab !== "updates" || !selectedVM || selectedVM.type !== "lxc") return
+    const registered = (selectedVM.app_watches || []).some((app) => app.helper_slug === "docker")
+    if (!registered || selectedVM.docker_inventory?.available) return
+    const lastRequest = dockerInventoryRequestedRef.current.get(selectedVM.vmid) || 0
+    if (Date.now() - lastRequest < 30_000) return
+    dockerInventoryRequestedRef.current.set(selectedVM.vmid, Date.now())
+    fetchApi(`/api/vms/${selectedVM.vmid}/docker/inventory`)
+      .then(() => mutate())
+      .catch(() => dockerInventoryRequestedRef.current.delete(selectedVM.vmid))
+  }, [activeModalTab, selectedVM?.vmid, selectedVM?.app_watches, selectedVM?.docker_inventory, mutate])
+  const refreshDockerInventory = async (vmid: number) => {
+    setDockerInventoryRefreshingVmid(vmid)
+    try {
+      const inventory = await fetchApi<LxcDockerInventory>(
+        `/api/vms/${vmid}/docker/inventory?force=1`,
+      )
+      // The force endpoint already returns the complete authoritative Docker
+      // snapshot. Publish it directly into SWR and the open modal instead of
+      // waiting for an unrelated full /api/vms revalidation. Lifecycle app
+      // discovery can still be running after a restore; it must never keep
+      // this button spinning once the Docker comparison itself has finished.
+      await mutate(
+        (current) => Array.isArray(current)
+          ? current.map((vm) => vm.vmid === vmid
+            ? { ...vm, docker_inventory: inventory }
+            : vm)
+          : current,
+        { revalidate: false },
+      )
+      setSelectedVM((current) => current?.vmid === vmid
+        ? { ...current, docker_inventory: inventory }
+        : current)
+    } catch (error) {
+      console.error(`Failed to refresh Docker inventory for CT ${vmid}:`, error)
+    } finally {
+      setDockerInventoryRefreshingVmid(null)
+    }
+  }
   const closeCustomCmdEditor = () => {
     setCustomCmdEditingApp(null)
     setCustomCmdDraft("")
@@ -1838,14 +2145,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     if (!current) throw new Error("app not found in sidecar")
     const { id: _id, state: _state, created_at: _created, ...rest } = current
     const payload = { ...rest, ...patch }
-    await fetchApi(`/api/vms/${vmid}/apps/${app.id}`, {
+    const updated: any = await fetchApi(`/api/vms/${vmid}/apps/${app.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
-    // Drop the shared apps cache so the next open/refresh pulls fresh
-    // data. The panel's own load() picks it up on the next tick.
-    invalidateLxcApps(vmid)
+    // The PUT response is the complete sidecar.  Publish it directly
+    // instead of evicting newer data and forcing the App tab through a
+    // cold-loading state when the user switches tabs.
+    setLxcAppsCached(vmid, updated)
     mutate()
   }
   const saveCustomCommand = async (vmid: number, app: LxcAppWatch) => {
@@ -1887,12 +2195,39 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const openApplyTerminal = (
     vmid: number,
     target: "os" | "app" | "both",
-    opts?: { updateCommand?: string; appName?: string },
+    opts?: { updateCommand?: string; appName?: string; runHelper?: boolean; allowHelperWithCustom?: boolean; dockerStandaloneTargets?: string[]; dockerEngine?: boolean; dockerRefresh?: boolean; targetIds?: string[]; targetLabels?: string[] },
   ) => {
+    const fallbackTargets = target === "os"
+      ? ["os"]
+      : target === "both"
+        ? ["os", "apps"]
+        : opts?.dockerEngine
+          ? ["docker-engine"]
+          : opts?.dockerStandaloneTargets?.length
+            ? opts.dockerStandaloneTargets.map((name) => `docker-container:${name}`)
+            : opts?.dockerRefresh
+              ? ["docker-images"]
+              : ["apps"]
+    const fallbackLabels = target === "os"
+      ? ["OS"]
+      : target === "both"
+        ? ["OS", "Applications"]
+        : [opts?.appName || (opts?.dockerEngine ? "Docker Engine" : "Application")]
+    const runId = typeof window !== "undefined" && typeof window.crypto?.randomUUID === "function"
+      ? window.crypto.randomUUID()
+      : `manual-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
     setApplyVmid(vmid)
     setApplyTarget(target)
+    setApplyRunId(runId)
+    setApplyTargetIds(opts?.targetIds?.length ? opts.targetIds : fallbackTargets)
+    setApplyTargetLabels(opts?.targetLabels?.length ? opts.targetLabels : fallbackLabels)
     setApplyUpdateCommand(opts?.updateCommand || "")
     setApplyAppName(opts?.appName || "")
+    setApplyRunHelper(opts?.runHelper === true)
+    setApplyAllowHelperWithCustom(opts?.allowHelperWithCustom === true)
+    setApplyDockerStandaloneTargets((opts?.dockerStandaloneTargets || []).join(","))
+    setApplyDockerEngine(opts?.dockerEngine === true)
+    setApplyDockerRefresh(opts?.dockerRefresh === true || opts?.dockerEngine === true || !!opts?.dockerStandaloneTargets?.length)
     // Default storage to the same one the manual backup modal picked
     // (already resolved to the first vzdump-capable storage).
     if (!applyBackupStorage && selectedBackupStorage) {
@@ -1906,35 +2241,41 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const handleApplyComplete = async (exitCode = 0) => {
     if (applyVmid == null) return
     const duration = Math.max(0, Math.round((Date.now() - applyStartedAt) / 1000))
-    // The modal fires onComplete on any WS close (success or user cancel);
-    // we always report the attempt so the notification records it and
-    // the badge is force-refreshed. success=true is optimistic — the
-    // script's own exit code is the ground truth surfaced in the log
-    // the user just watched.
+    // The modal fires onComplete on any WS close (success or user cancel).
+    // Report the same run ID so the backend can collapse this compatibility
+    // callback with its authoritative process-completion hook.
     try {
       await fetchApi(`/api/lxc-updates/${applyVmid}/applied`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           success: exitCode === 0,
+          run_id: applyRunId,
           target: applyTarget,
+          requested_targets: applyTargetIds,
+          target_labels: applyTargetLabels,
           duration_seconds: duration,
           ct_name: selectedVM?.name || `CT-${applyVmid}`,
+          refresh_docker_inventory: applyDockerRefresh,
         }),
       })
     } catch {
-      // Non-fatal — the notification is a nice-to-have.
+      // Non-fatal — the backend process hook owns finalization.
     }
     // The apply ran an updater inside the CT which likely changed the
     // installed_version of tracked apps AND the OS-package snapshot.
-    // Drop this vmid from every cache so the next open re-scans and
-    // the "Update available" badge doesn't linger with stale data.
+    // Drop the host-derived caches so the next poll re-scans and the
+    // "Update available" badge doesn't linger with stale data.
     // Without this, users had to close and reopen the whole Monitor
     // for the modal to reflect the post-update state.
     const c = vmModalCacheRef.current
     c.details.delete(applyVmid)
     c.schedule.delete(applyVmid)
-    invalidateLxcApps(applyVmid)
+    // Keep the last complete App bundle visible while a forced network
+    // revalidation replaces it in the shared cache.  fetchLxcApps always
+    // performs the requests (the data map is only a render seed), so no
+    // invalidation is needed and there is no "Loading applications" flash.
+    void fetchLxcApps(applyVmid)
     // Enter the "Comprobando resultado…" state on the Updates tab.
     // Baseline snapshot lets a downstream useEffect detect when the
     // SWR poll actually delivers the post-apply counts (as opposed
@@ -1978,9 +2319,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     const appCount = (vm.app_watches || []).filter(
       (a) => a.update_available === true && !a.exclude_from_badge,
     ).length
+    const dockerRegistered = (vm.app_watches || []).some((a) => a.helper_slug === "docker")
+    const dockerCount = dockerRegistered ? (vm.docker_inventory?.update_count ?? 0) : 0
     const osCount = uc?.count ?? 0
-    const total = osCount + appCount
-    if (!uc && appCount === 0) return undefined
+    const total = osCount + appCount + dockerCount
+    if (!uc && appCount === 0 && dockerCount === 0) return undefined
     if (total === 0) return uc
     return {
       ...(uc || {}),
@@ -3020,11 +3363,6 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     <span className={activeModalTab === "app" ? "" : "hidden sm:inline"}>
                       {t("vmLxc.tabs.app")}
                     </span>
-                    {(selectedVM.app_watches || []).some(
-                      (a) => a.update_available && !a.managed_oci_app_id,
-                    ) && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ml-0.5" title={t("vmLxc.appEditor.updateAvailableBadge")} />
-                    )}
                   </button>
                 )}
                 {/* Updates tab — LXC only, always visible so users can
@@ -4288,6 +4626,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     null
                   return (
                     <LxcAppPanel
+                      key={`${selectedVM.vmid}-${selectedVM.modal_cache_revision ?? 0}`}
                       vmid={selectedVM.vmid}
                       ctIp={ctIp}
                       onChange={() => mutate()}
@@ -4479,81 +4818,252 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         Button state → color:
                           • Purple  = updates pending  (Apply X, arrow icon)
                           • Green   = up to date       (X, no icon, no "Apply")
-                        Combined button surfaces only when exactly ONE
-                        app method (helper /usr/bin/update OR a single
-                        registered app with `update_command`) is present.
-                        With zero the button makes no sense; with N > 1
-                        we can't know which app to invoke, so the user
-                        picks individually via section-level buttons. */}
+                        Individual actions stay with their section. The
+                        optional reusable bulk action is configured in its
+                        own card immediately before Options. */}
                     {!selectedVM.update_check?.managed_oci_app &&
                       !selectedVM.update_check?.is_oci_lxc && (() => {
                         const uc = selectedVM.update_check
                         const hasOsUpdates = !!uc?.available
-                        const helperExists = !!uc?.app_updater_present
+                        const dockerAppWatch = (selectedVM.app_watches || []).find((a) => a.helper_slug === "docker")
+                        const dockerRegistered = !!dockerAppWatch
+                        const dockerEngineInstalledVersion = selectedVM.docker_inventory?.engine_version
+                          || dockerAppWatch?.installed_version
+                          || ""
+                        const dockerEngineHasUpdate = dockerAppWatch?.update_available === true
+                        const dockerEngineUpToDate = dockerAppWatch?.update_available === false
+                          && !!dockerEngineInstalledVersion
+                        const dockerEditing = !!dockerAppWatch && customCmdEditingApp === dockerAppWatch.id
+                        const dockerSavedUpdateCommand = dockerAppWatch?.update_command?.trim() || ""
+                        const dockerHasSavedCommand = !!dockerSavedUpdateCommand
+                        const dockerUsesIntegratedUpdater = !dockerSavedUpdateCommand
+                          || dockerSavedUpdateCommand === canonicalDockerEngineUpdateCommand
+                        const dockerHasCustomCommand = !dockerUsesIntegratedUpdater
+                        const dockerEffectiveUpdateCommand = dockerSavedUpdateCommand
+                          || canonicalDockerEngineUpdateCommand
+                        const dockerInventoryRefreshing = selectedVM.docker_inventory?.refreshing === true
+                        const dockerInventoryAvailable = selectedVM.docker_inventory?.available === true
+                        const dockerImages = dockerRegistered ? (selectedVM.docker_inventory?.images || []) : []
+                        const dockerPending = dockerImages.filter((image) => image.update_available === true)
+                        const helperExists = !!uc?.app_updater_present && uc?.helper_slug_source === "update_wrapper"
                         const helperName = uc?.helper_app_name || null
-                        const helperKnownNotUpdateable = !helperExists && !!uc?.helper_slug && !!uc?.helper_updateable_known
-                        const helperUnlisted = !helperExists && !!uc?.helper_slug && !uc?.helper_updateable_known
-                        const trackedApps = (selectedVM.app_watches || []).filter(
-                          (a) => !a.managed_oci_app_id && !!a.installed_via,
+                        const helperUsesWebUpdater = uc?.helper_slug === "adguard"
+                        const helperInferred = !helperExists && !!uc?.helper_slug && uc?.helper_slug !== "docker" && uc?.helper_slug_source === "tag_hostname"
+                        const helperKnownNotUpdateable = !helperExists && !!uc?.helper_slug && uc?.helper_slug_source === "update_wrapper" && !!uc?.helper_updateable_known
+                        const helperUnlisted = !helperExists && !!uc?.helper_slug && uc?.helper_slug_source === "update_wrapper" && !uc?.helper_updateable_known
+                        // Registration, version tracking and update execution
+                        // are independent capabilities. Every saved app belongs
+                        // in Updates; installed_via only controls whether a
+                        // version state can be shown.
+                        const registeredApps = (selectedVM.app_watches || []).filter(
+                          (a) => !a.managed_oci_app_id,
                         )
-                        const customCmdApps = trackedApps.filter(
-                          (a) => !!(a.update_command && a.update_command.trim()),
+                        const helperSectionDetected = uc?.helper_slug !== "docker"
+                          && (helperExists || helperKnownNotUpdateable || helperUnlisted || helperInferred)
+                        const helperMatchingApps = registeredApps.filter(
+                          (a) => !!a.helper_slug && a.helper_slug === uc?.helper_slug,
                         )
-                        // Apps eligible for a section in the unified
-                        // card. Rules:
-                        //  • Any app with a `update_command` gets its
-                        //    own section (always).
-                        //  • Any other app gets its own section UNLESS:
-                        //    - it is the specific app the CT-wide
-                        //      helper section is already covering
-                        //      (matched by helper_slug), OR
-                        //    - its install method is dpkg/apk — those
-                        //      packages are already updated as part
-                        //      of the OS section's `apt/apk upgrade`
-                        //      run, so a dedicated "no method" notice
-                        //      is misleading (Redis, PostgreSQL, etc).
-                        //      The App-tab purple ⬆ still surfaces the
-                        //      version delta; user just clicks Apply
-                        //      OS update to pick it up.
-                        const appSections = trackedApps.filter((a) => {
+                        const helperOnlyApps = helperMatchingApps.filter(
+                          (a) => !a.update_command,
+                        )
+                        // Every registered app gets exactly one Updates
+                        // section. Docker and the CT-wide helper identity use
+                        // their specialised sections; all other registrations
+                        // use the generic section even when installed_via is
+                        // empty (Web Link only) or dpkg/apk is OS-managed.
+                        const appSections = registeredApps.filter((a) => {
+                          // Docker owns a dedicated section containing
+                          // Engine and image lifecycles. Its command editor
+                          // is rendered there so Docker never appears twice.
+                          if (a.helper_slug === "docker") return false
                           const hasCmd = !!(a.update_command && a.update_command.trim())
-                          if (hasCmd) return true
-                          const isHelperOwnedApp = helperExists && !!a.helper_slug && a.helper_slug === uc?.helper_slug
+                          const isEditing = customCmdEditingApp === a.id
+                          if (hasCmd || isEditing) return true
+                          const isHelperOwnedApp = helperSectionDetected
+                            && !!a.helper_slug
+                            && a.helper_slug === uc?.helper_slug
                           if (isHelperOwnedApp) return false
-                          if (a.installed_via === "dpkg" || a.installed_via === "apk") return false
                           return true
                         })
-                        const anyAppPending =
-                          (helperExists && trackedApps.some((a) => a.update_available === true))
-                          || customCmdApps.some((a) => a.update_available === true)
-                        // The combined "Apply OS + <app>" button requires
-                        // the app to be REGISTERED by the user AND actually
-                        // tracked. Two independent gates:
-                        //   1. helper_slug must match the CT's helper — a
-                        //      detected-but-not-registered app (e.g. AdGuard
-                        //      shown as "Detected" in the App tab) has no
-                        //      entry here and never triggers the button.
-                        //   2. The registered entry must show evidence of
-                        //      tracking — installed_version present, or
-                        //      update_available defined either way. This
-                        //      guards against the catalog picker auto-filling
-                        //      helper_slug when the user picked the app only
-                        //      for its weblink and never configured updates;
-                        //      until a check has run, no combined button.
-                        const helperRegistered = helperExists && trackedApps.some(
-                          (a) =>
-                            !!a.helper_slug
-                            && a.helper_slug === uc?.helper_slug
-                            && (!!a.installed_version || a.update_available !== undefined),
+                        const scheduledAppChoices = registeredApps.filter((app) => {
+                          if (app.helper_slug === "docker" || app.helper_slug === "adguard") return false
+                          if (app.update_command?.trim()) return true
+                          return helperExists && app.helper_slug === uc?.helper_slug
+                        }).map((app) => ({ id: `app:${app.id}`, label: app.name }))
+                        const versionTrackedScheduleAppIds = new Set(
+                          registeredApps
+                            .filter((app) => !!app.installed_via && app.helper_slug !== "docker")
+                            .map((app) => `app:${app.id}`),
                         )
-                        const singleAppMethod = (helperRegistered ? 1 : 0) + customCmdApps.length === 1
-                        const combinedApp: { name: string; cmd: string; isHelper: boolean } | null = helperRegistered
-                          ? { name: helperName || "application", cmd: "", isHelper: true }
-                          : customCmdApps.length === 1
-                            ? { name: customCmdApps[0].name || "application", cmd: customCmdApps[0].update_command!, isHelper: false }
-                            : null
+                        const scheduleHasVersionTrackedApps = scheduleTargets.includes("apps")
+                          ? versionTrackedScheduleAppIds.size > 0
+                          : scheduleTargets.some((target) => versionTrackedScheduleAppIds.has(target))
+                        const composeProjects = new Map<string, LxcDockerComposeTarget>()
+                        for (const target of selectedVM.docker_inventory?.compose_projects || []) {
+                          composeProjects.set(`docker-compose:${target.project}`, target)
+                        }
+                        const standaloneContainers = new Set<string>()
+                        for (const image of dockerImages) {
+                          for (const target of image.update_targets || []) {
+                            const id = `docker-compose:${target.project}`
+                            if (!composeProjects.has(id)) composeProjects.set(id, target)
+                          }
+                          for (const container of image.standalone_containers || []) {
+                            standaloneContainers.add(container)
+                          }
+                        }
+                        const scheduleChoices = [
+                          { id: "os", label: t("vmLxc.scheduled.targetOptionOs") },
+                          ...scheduledAppChoices,
+                          ...(dockerRegistered && selectedVM.docker_inventory?.available
+                            ? [{ id: "docker-engine", label: t("vmLxc.scheduled.dockerEngineTarget") }]
+                            : []),
+                          ...Array.from(composeProjects, ([id, target]) => ({
+                            id,
+                            label: t("vmLxc.scheduled.dockerComposeTarget", { project: target.project }),
+                          })),
+                          ...Array.from(standaloneContainers, (container) => ({
+                            id: `docker-container:${container}`,
+                            label: t("vmLxc.scheduled.dockerContainerTarget", { container }),
+                          })),
+                        ]
+                        const scheduleChoiceChecked = (id: string) =>
+                          scheduleTargets.includes(id) || (id.startsWith("app:") && scheduleTargets.includes("apps"))
+                        const toggleScheduleChoice = (id: string, checked: boolean) => {
+                          let next = scheduleTargets.includes("apps")
+                            ? [
+                                ...scheduleTargets.filter((value) => value !== "apps"),
+                                ...scheduledAppChoices.map((choice) => choice.id),
+                              ]
+                            : [...scheduleTargets]
+                          next = checked
+                            ? Array.from(new Set([...next, id]))
+                            : next.filter((value) => value !== id)
+                          setScheduleTargets(next)
+                          const hasOs = next.includes("os")
+                          const hasApp = next.some((value) => value !== "os")
+                          setScheduleTarget(hasOs && hasApp ? "both" : hasOs ? "os" : "app")
+                        }
+                        const selectedScheduleLabels = scheduleChoices
+                          .filter((choice) => scheduleChoiceChecked(choice.id))
+                          .map((choice) => choice.label)
+                        const bulkAppChoices = registeredApps.filter((app) => {
+                          if (app.helper_slug === "docker") return false
+                          if (app.update_command?.trim()) return true
+                          return helperExists
+                            && app.helper_slug === uc?.helper_slug
+                            && app.helper_slug !== "adguard"
+                        }).map((app) => {
+                          const webLinkLogo = (app.ports || [])
+                            .find((port) => Boolean(port.logo_url?.trim()))
+                            ?.logo_url?.trim()
+                          return {
+                            id: `app:${app.id}`,
+                            label: app.name || t("vmLxc.updates.applicationDefaultName"),
+                            detail: "",
+                            logoUrl: webLinkLogo || app.logo_url?.trim() || "",
+                          }
+                        })
+                        const dockerUpdateUnits = dockerRegistered
+                          ? (selectedVM.docker_inventory?.update_units || [])
+                          : []
+                        const bulkActionChoices = [
+                          ...bulkAppChoices,
+                          ...(dockerRegistered
+                            ? [{
+                                id: "docker-engine",
+                                label: "Docker Engine",
+                                detail: "",
+                                logoUrl: "",
+                              }]
+                            : []),
+                          ...dockerUpdateUnits.map((unit) => ({
+                            id: unit.id,
+                            label: unit.display_name || unit.primary_reference || unit.primary_service || unit.id,
+                            detail: (unit.dependent_services || []).length
+                              ? t("vmLxc.bulkUpdate.includesDependencies", {
+                                  names: (unit.dependent_services || []).join(", "),
+                                })
+                              : "",
+                            logoUrl: unit.logo_url || "",
+                          })),
+                        ]
+                        const bulkChoices = [{
+                          id: "os",
+                          label: t("vmLxc.bulkUpdate.osTarget"),
+                          detail: t("vmLxc.bulkUpdate.osRequired"),
+                          logoUrl: "",
+                        }, ...bulkActionChoices]
+                        const bulkChoiceIds = new Set(bulkChoices.map((choice) => choice.id))
+                        const bulkActionAppIds = new Set(bulkAppChoices.map((choice) => choice.id))
+                        const bulkUnavailableApps = registeredApps.filter((app) => (
+                          app.helper_slug !== "docker"
+                          && !bulkActionAppIds.has(`app:${app.id}`)
+                        ))
+                        const pendingDockerBulkTargets = bulkTargets.filter((target) => (
+                          target.startsWith("docker-unit:")
+                          && !bulkChoiceIds.has(target)
+                          && !dockerInventoryAvailable
+                        ))
+                        const staleBulkTargets = bulkTargets.filter((target) => (
+                          target !== "os"
+                          && !bulkChoiceIds.has(target)
+                          && !pendingDockerBulkTargets.includes(target)
+                        ))
+                        const selectedBulkLabels = Array.from(new Set([
+                          ...bulkChoices
+                            .filter((choice) => bulkTargets.includes(choice.id))
+                            .map((choice) => choice.label),
+                          ...(pendingDockerBulkTargets.length
+                            ? [t("vmLxc.bulkUpdate.dockerInventoryPending")]
+                            : []),
+                          ...staleBulkTargets.map((target) => target.startsWith("docker-unit:")
+                            ? t("vmLxc.bulkUpdate.missingDockerTarget")
+                            : target),
+                        ]))
+                        // A configured bulk action inherits the same
+                        // three-state contract as each individual updater:
+                        // pending when at least one selected target has a
+                        // confirmed update, up to date only when every target
+                        // has been checked and is current, otherwise unknown.
+                        const selectedBulkUpdateStates = bulkTargets.map((target) => {
+                          if (target === "os") {
+                            if (!uc || uc.error) return null
+                            return hasOsUpdates
+                          }
+                          if (target === "docker-engine") {
+                            if (dockerEngineHasUpdate) return true
+                            if (dockerEngineUpToDate) return false
+                            return null
+                          }
+                          if (target.startsWith("app:")) {
+                            const app = registeredApps.find((entry) => `app:${entry.id}` === target)
+                            if (!app || !app.installed_via) return null
+                            if (app.update_available === true) return true
+                            if (app.update_available === false && app.installed_version) return false
+                            return null
+                          }
+                          if (target.startsWith("docker-unit:")) {
+                            if (dockerInventoryRefreshing || !dockerInventoryAvailable) return null
+                            const unit = dockerUpdateUnits.find((entry) => entry.id === target)
+                            if (unit?.update_available === true) return true
+                            if (unit?.update_available === false) return false
+                            return null
+                          }
+                          return null
+                        })
+                        const bulkHasPendingUpdates = selectedBulkUpdateStates.some((state) => state === true)
+                        const bulkAllTargetsUpToDate = selectedBulkUpdateStates.length > 0
+                          && selectedBulkUpdateStates.every((state) => state === false)
+                        const toggleBulkChoice = (id: string, checked: boolean) => {
+                          if (id === "os") return
+                          setBulkTargets((current) => checked
+                            ? Array.from(new Set(["os", ...current.filter((value) => value !== "os"), id]))
+                            : current.filter((value) => value !== id))
+                        }
                         const pendingBtnCls = "bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 hover:text-purple-200"
                         const upToDateBtnCls = "bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 text-green-400 hover:text-green-300"
+                        const neutralBtnCls = "border border-input bg-background text-foreground/80 hover:bg-accent hover:text-accent-foreground"
                         return (
                           <>
                             <Card className="border border-border bg-card/50">
@@ -4629,6 +5139,293 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   </div>
                                 </div>
 
+                                {/* Docker has three independent lifecycles:
+                                    Engine packages, Compose services and
+                                    standalone containers. Keep all three in
+                                    one registered-app section while exposing
+                                    a concrete action for each target. */}
+                                {dockerRegistered && dockerAppWatch && (
+                                  <div className={dockerEditing ? "py-4 -mx-4 px-4 bg-accent [&_textarea]:bg-background" : "py-4"}>
+                                    <div className="flex items-center justify-between gap-3 mb-3 min-w-0">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <Container className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                        <h3 className="text-sm font-semibold text-foreground truncate">
+                                          {t("vmLxc.updates.dockerAppTitle")}
+                                        </h3>
+                                      </div>
+                                      {!dockerEditing && (
+                                        <button
+                                          type="button"
+                                          onClick={() => openCustomCmdEditor(
+                                            dockerAppWatch,
+                                            canonicalDockerEngineUpdateCommand,
+                                          )}
+                                          className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 flex-shrink-0"
+                                        >
+                                          <Settings2 className="h-3.5 w-3.5" />
+                                          {t("vmLxc.updates.editApp")}
+                                        </button>
+                                      )}
+                                    </div>
+                                    {dockerAppWatch.checked_at && !dockerEditing && (
+                                      <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                                        {t("vmLxc.updates.lastCheckedPrefix")} {new Date(dockerAppWatch.checked_at).toLocaleString()}
+                                      </div>
+                                    )}
+                                    {dockerEditing ? (
+                                      <div className="space-y-3 mb-4">
+                                        <div>
+                                          <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                                            {t("vmLxc.updates.customCommandLabel")}
+                                          </Label>
+                                          <Textarea
+                                            value={customCmdDraft}
+                                            onChange={(e) => setCustomCmdDraft(e.target.value)}
+                                            placeholder={t("vmLxc.updates.customCommandPlaceholder")}
+                                            className="font-mono text-xs mt-2 min-h-[100px]"
+                                            maxLength={4096}
+                                          />
+                                        </div>
+                                        <div className="flex items-center justify-between gap-2">
+                                          <div>
+                                            {dockerHasSavedCommand && (
+                                              <button
+                                                type="button"
+                                                onClick={() => removeCustomCommand(selectedVM.vmid, dockerAppWatch)}
+                                                disabled={customCmdSaving}
+                                                className="h-8 px-3 text-xs rounded-md border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
+                                              >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                                {t("vmLxc.updates.removeButton")}
+                                              </button>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <button
+                                              type="button"
+                                              onClick={closeCustomCmdEditor}
+                                              disabled={customCmdSaving}
+                                              className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
+                                            >
+                                              {t("vmLxc.updates.cancelButton")}
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => saveCustomCommand(selectedVM.vmid, dockerAppWatch)}
+                                              disabled={customCmdSaving || !customCmdDraft.trim() || (
+                                                customCmdDraft.trim() === dockerEffectiveUpdateCommand
+                                              )}
+                                              className="h-8 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+                                            >
+                                              {customCmdSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                                              {t("vmLxc.updates.saveButton")}
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : dockerEngineInstalledVersion && (
+                                      <div className="mb-4">
+                                        <div className="space-y-2 text-sm">
+                                          {dockerEngineUpToDate ? (
+                                            <div className="text-muted-foreground flex items-center gap-2">
+                                              <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                              <span>{t("vmLxc.updates.versionLabel", { version: dockerEngineInstalledVersion })}</span>
+                                            </div>
+                                          ) : (
+                                            <div className="text-foreground flex items-center gap-2">
+                                              <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                              <span>
+                                                {t("vmLxc.updates.installedLabel")}{" "}
+                                                <code className="text-foreground/80">{dockerEngineInstalledVersion}</code>
+                                              </span>
+                                            </div>
+                                          )}
+                                          {dockerEngineHasUpdate && dockerAppWatch.latest_version && (
+                                            <div className="flex items-center gap-2">
+                                              <ArrowUpCircle className="h-4 w-4 text-purple-400 flex-shrink-0" />
+                                              <span>{t("vmLxc.updates.upstreamAvailable", { version: dockerAppWatch.latest_version })}</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div className="mt-3 flex justify-end">
+                                          <Button
+                                            size="sm"
+                                            onClick={() => openApplyTerminal(
+                                              selectedVM.vmid,
+                                              "app",
+                                              dockerHasCustomCommand
+                                                ? {
+                                                    updateCommand: dockerAppWatch.update_command!,
+                                                    appName: "Docker Engine",
+                                                    dockerRefresh: true,
+                                                  }
+                                                : {
+                                                    appName: "Docker Engine",
+                                                    dockerEngine: true,
+                                                    dockerRefresh: true,
+                                                  },
+                                            )}
+                                            className={`${dockerEngineHasUpdate
+                                              ? pendingBtnCls
+                                              : dockerEngineUpToDate
+                                                ? upToDateBtnCls
+                                                : neutralBtnCls} flex-shrink-0`}
+                                          >
+                                            {dockerEngineHasUpdate && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
+                                            {!dockerEngineHasUpdate && !dockerEngineUpToDate && <RefreshCw className="h-4 w-4 mr-1.5" />}
+                                            {dockerEngineUpToDate
+                                              ? t("vmLxc.updates.upToDate")
+                                              : t("vmLxc.updates.updateDockerEngineOnly")}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                    {selectedVM.docker_inventory && (<>
+                                    <div className="border-t border-border/50 pt-4 mb-1 flex items-center justify-between gap-3">
+                                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                        {t("vmLxc.updates.dockerImagesSubheading")}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => refreshDockerInventory(selectedVM.vmid)}
+                                        disabled={dockerInventoryRefreshingVmid === selectedVM.vmid}
+                                        className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 flex-shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                                      >
+                                        <RefreshCw className={`h-3.5 w-3.5 ${dockerInventoryRefreshingVmid === selectedVM.vmid ? "animate-spin" : ""}`} />
+                                        {t("vmLxc.appEditor.refreshDockerImages")}
+                                      </button>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                                      {t("vmLxc.updates.dockerImagesReadOnly")}
+                                      {selectedVM.docker_inventory.checked_at
+                                        ? ` · ${t("vmLxc.updates.lastCheckedPrefix")} ${new Date(selectedVM.docker_inventory.checked_at).toLocaleString()}`
+                                        : ""}
+                                    </div>
+                                    {dockerInventoryRefreshing ? (
+                                      <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                        <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+                                        {t("vmLxc.updates.dockerInventoryStarting")}
+                                      </div>
+                                    ) : !dockerInventoryAvailable ? (
+                                      <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                        <AlertTriangle className="h-4 w-4 text-amber-400 flex-shrink-0" />
+                                        {t("vmLxc.updates.dockerInventoryUnavailable")}
+                                      </div>
+                                    ) : dockerImages.length === 0 ? (
+                                      <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                        <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                        {t("vmLxc.updates.noDockerImages")}
+                                      </div>
+                                    ) : (
+                                      <div className="divide-y divide-border/50">
+                                        {dockerImages.map((image) => (
+                                          <div key={image.reference} className="py-3 text-sm">
+                                            <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center gap-2 sm:gap-4">
+                                              <div className="flex items-start gap-3 min-w-0">
+                                                <div className="relative h-9 w-9 flex-shrink-0 rounded-md bg-muted/40 flex items-center justify-center overflow-hidden">
+                                                  <Container className="h-5 w-5 text-muted-foreground" />
+                                                  {image.logo_url && (
+                                                    <ThemeAwareLogo
+                                                      src={image.logo_url}
+                                                      className="absolute inset-0 h-9 w-9 rounded-md object-contain bg-card"
+                                                    />
+                                                  )}
+                                                </div>
+                                                <div className="min-w-0">
+                                                  <span className="font-mono text-foreground/90 block truncate" title={image.reference}>
+                                                    {image.reference}
+                                                  </span>
+                                                  <div className="mt-1 text-xs text-muted-foreground flex items-center gap-1.5">
+                                                    <Package className="h-3.5 w-3.5 flex-shrink-0" />
+                                                    {image.installed_version ? (
+                                                      <span>
+                                                        {t("vmLxc.updates.installedLabel")} {" "}
+                                                        <code className="text-foreground/80">{image.installed_version}</code>
+                                                      </span>
+                                                    ) : (
+                                                      <span>
+                                                        {t("vmLxc.updates.imageInstalledTag")} {" "}
+                                                        <code className="text-foreground/80">{image.tag}</code>
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                  {image.update_available === true && (
+                                                    <div className="mt-1 text-purple-400 inline-flex items-center gap-1.5">
+                                                      <ArrowUpCircle className="h-4 w-4 flex-shrink-0" />
+                                                      {image.available_version
+                                                        ? t("vmLxc.updates.upstreamAvailable", { version: image.available_version })
+                                                        : t("vmLxc.updates.imageUpdateAvailable")}
+                                                    </div>
+                                                  )}
+                                                  {image.update_available === false && (
+                                                    <span className="sm:hidden mt-1 text-green-500 inline-flex items-center gap-1.5">
+                                                      <CheckCircle2 className="h-4 w-4" />
+                                                      {t("vmLxc.updates.imageUpToDate")}
+                                                    </span>
+                                                  )}
+                                                  {image.update_available === null && (
+                                                    <span className="sm:hidden mt-1 text-xs text-muted-foreground inline-flex" title={image.error || undefined}>
+                                                      {t("vmLxc.updates.imageDigestUnknown")}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              </div>
+                                              <div className="flex flex-wrap items-center justify-end gap-2">
+                                                {image.update_available === false && (
+                                                  <span className="hidden sm:inline-flex text-green-500 items-center gap-1.5 flex-shrink-0">
+                                                    <CheckCircle2 className="h-4 w-4" />
+                                                    {t("vmLxc.updates.imageUpToDate")}
+                                                  </span>
+                                                )}
+                                                {image.update_available === null && (
+                                                  <span className="hidden sm:inline-flex text-xs text-muted-foreground flex-shrink-0" title={image.error || undefined}>
+                                                    {t("vmLxc.updates.imageDigestUnknown")}
+                                                  </span>
+                                                )}
+                                                {image.update_available === true && (image.update_targets || []).map((target) => (
+                                                  <Button
+                                                    key={`${image.reference}-${target.project}`}
+                                                    size="sm"
+                                                    onClick={() => openApplyTerminal(selectedVM.vmid, "app", {
+                                                      updateCommand: target.update_command,
+                                                      appName: target.project,
+                                                      dockerRefresh: true,
+                                                    })}
+                                                    className={pendingBtnCls}
+                                                  >
+                                                    <ArrowUpCircle className="h-4 w-4 mr-1.5" />
+                                                    {t("vmLxc.updates.updateDockerImage")}
+                                                  </Button>
+                                                ))}
+                                                {image.update_available === true && (image.standalone_containers || []).map((container) => (
+                                                  <Button
+                                                    key={`${image.reference}-${container}`}
+                                                    size="sm"
+                                                    onClick={() => openApplyTerminal(selectedVM.vmid, "app", {
+                                                      appName: container,
+                                                      dockerStandaloneTargets: [container],
+                                                    })}
+                                                    className={pendingBtnCls}
+                                                  >
+                                                    <ArrowUpCircle className="h-4 w-4 mr-1.5" />
+                                                    {t("vmLxc.updates.recreateStandaloneContainer", { container })}
+                                                  </Button>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {dockerPending.length > 0 && (
+                                      <div className="mt-3 text-xs text-purple-300">
+                                        {t("vmLxc.updates.dockerPendingSummary", { count: dockerPending.length })}
+                                      </div>
+                                    )}
+                                    </>)}
+                                  </div>
+                                )}
+
                                 {/* Helper-scripts section — reuses the
                                     same header + body pattern as the
                                     custom-command app sections below so
@@ -4646,22 +5443,42 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     unlisted variants are also gated on
                                     registration so they don't nag about
                                     apps the user chose not to manage. */}
-                                {(helperExists || helperKnownNotUpdateable || helperUnlisted) && (() => {
-                                  const matchApp = trackedApps.find(
-                                    (a) => a.helper_slug === uc?.helper_slug && !a.update_command
-                                  ) || null
-                                  if (!matchApp) return null
-                                  const hasUpd = helperExists && matchApp.update_available === true
-                                  const upToD = helperExists && matchApp.update_available === false && !!matchApp.installed_version
+                                {helperSectionDetected && (() => {
+                                  const matchApp = helperOnlyApps[0] || null
+                                  if (!matchApp || customCmdEditingApp === matchApp.id) return null
+                                  const helperEditorCommand = helperExists && !helperUsesWebUpdater
+                                    ? canonicalHelperUpdateCommand(uc?.helper_slug)
+                                    : ""
+                                  const appWebUrl = helperUsesWebUpdater
+                                    ? buildRegisteredAppUrl(selectedVM, matchApp.ports?.[0])
+                                    : null
+                                  const helperTracksVersion = !!matchApp.installed_via
+                                  const hasUpd = helperTracksVersion && matchApp.update_available === true
+                                  const upToD = helperTracksVersion && matchApp.update_available === false && !!matchApp.installed_version
                                   return (
                                     <div className="py-4">
-                                      <div className="flex items-center gap-2 mb-3 min-w-0">
-                                        <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                        <h3 className="text-sm font-semibold text-foreground truncate">
-                                          {helperName || t("vmLxc.updates.applicationDefaultName")}
-                                        </h3>
+                                      <div className="flex items-center justify-between gap-3 mb-3 min-w-0">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                          <h3 className="text-sm font-semibold text-foreground truncate">
+                                            {helperName || t("vmLxc.updates.applicationDefaultName")}
+                                          </h3>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => openCustomCmdEditor(
+                                            matchApp,
+                                            helperEditorCommand,
+                                          )}
+                                          className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 flex-shrink-0"
+                                        >
+                                          <Settings2 className="h-3.5 w-3.5" />
+                                          {helperEditorCommand
+                                            ? t("vmLxc.updates.editApp")
+                                            : t("vmLxc.updates.configureUpdater")}
+                                        </button>
                                       </div>
-                                      {matchApp?.checked_at && (
+                                      {helperTracksVersion && matchApp.checked_at && (
                                         <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
                                           {t("vmLxc.updates.lastCheckedPrefix")} {new Date(matchApp.checked_at).toLocaleString()}
                                         </div>
@@ -4706,12 +5523,16 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                                           <span>{t("vmLxc.updates.upToDateAtLabel")} <code className="text-foreground/80">{matchApp!.installed_version}</code></span>
                                         </div>
-                                      ) : helperExists ? (
+                                      ) : helperTracksVersion ? (
                                         <p className="text-xs text-muted-foreground leading-relaxed">
                                           {t("vmLxc.updates.versionTrackingPending")}
                                         </p>
+                                      ) : helperExists ? (
+                                        <p className="text-xs text-muted-foreground leading-relaxed">
+                                          {t("vmLxc.updates.versionTrackingNotConfigured")}
+                                        </p>
                                       ) : null}
-                                      {helperExists && (() => {
+                                      {helperExists && !helperUsesWebUpdater && (() => {
                                         // Button state uses the matched
                                         // App Watch entry when present.
                                         // Without it we DON'T know the
@@ -4724,12 +5545,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         // still force the helper's own
                                         // update script.
                                         const noState = !hasUpd && !upToD
-                                        const neutralBtnCls = "bg-muted/40 hover:bg-muted/60 border border-border text-foreground/80 hover:text-foreground"
                                         const cls = hasUpd ? pendingBtnCls : upToD ? upToDateBtnCls : neutralBtnCls
                                         const label = hasUpd ? t("vmLxc.updates.applyUpdate") : upToD ? t("vmLxc.updates.upToDate") : t("vmLxc.updates.runUpdater")
                                         return (
                                           <div className="mt-3 flex justify-end">
-                                            <Button size="sm" onClick={() => openApplyTerminal(selectedVM.vmid, "app")} className={cls}>
+                                            <Button size="sm" onClick={() => openApplyTerminal(selectedVM.vmid, "app", { runHelper: true, appName: helperName || "" })} className={cls}>
                                               {hasUpd && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
                                               {noState && <RefreshCw className="h-4 w-4 mr-1.5" />}
                                               {label}
@@ -4737,49 +5557,66 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           </div>
                                         )
                                       })()}
-                                      {!helperExists && (
-                                        helperKnownNotUpdateable ? (
-                                          <p className="text-xs text-amber-400/90 leading-relaxed">
-                                            {t("vmLxc.updates.helperNotUpdateable")}
-                                            in place. Apply updates manually or reinstall with a newer
-                                            helper-script.
-                                          </p>
-                                        ) : (
+                                      {helperUsesWebUpdater && (
+                                        <div className="mt-3 space-y-3">
                                           <p className="text-xs text-muted-foreground leading-relaxed">
-                                            {t("vmLxc.updates.helperDetectedTitle")}
-                                            (<code className="text-foreground/80">{uc?.helper_slug}</code>)
-                                            but it isn't listed in the ProxMenux helpers catalogue.
-                                            {t("vmLxc.updates.helperDetectedBody")}
+                                            {t("vmLxc.updates.adguardWebUpdateOnly")}
                                           </p>
-                                        )
+                                          {appWebUrl && (
+                                            <div className="flex justify-end">
+                                              <Button size="sm" variant="outline" asChild>
+                                                <a href={appWebUrl} target="_blank" rel="noopener noreferrer">
+                                                  <ExternalLink className="h-4 w-4 mr-1.5" />
+                                                  {t("vmLxc.updates.openAdguard")}
+                                                </a>
+                                              </Button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                      {!helperExists && !helperUsesWebUpdater && (
+                                        <p className="text-xs text-muted-foreground leading-relaxed">
+                                          {t("vmLxc.updates.noUpdateMethodBody")}
+                                        </p>
                                       )}
                                     </div>
                                   )
                                 })()}
 
-                                {/* Registered-app sections — one per app
-                                    that either has a custom_command wired
-                                    up (Case 3b) or has no update method at
-                                    all when the CT lacks a helper updater
-                                    (Case 3a). Same header pattern; the
-                                    body swaps between an info line + Edit
-                                    link, a "no method + Add" prompt, or an
-                                    inline editor form when adding /
-                                    editing. */}
+                                {/* Generic registered-app sections. Version
+                                    tracking and update execution are rendered
+                                    independently so Web-Link-only apps can add
+                                    an updater without configuring a detector. */}
                                 {appSections.map((aw) => {
                                   const hasCmd = !!(aw.update_command && aw.update_command.trim())
                                   const editing = customCmdEditingApp === aw.id
-                                  const hasUpdate = aw.update_available === true
-                                  const upToDate = aw.update_available === false && !!aw.installed_version
+                                  const tracksVersion = !!aw.installed_via
+                                  const hasUpdate = tracksVersion && aw.update_available === true
+                                  const upToDate = tracksVersion && aw.update_available === false && !!aw.installed_version
+                                  const managedByOs = !hasCmd && (aw.installed_via === "dpkg" || aw.installed_via === "apk")
                                   return (
                                     <div key={`app-${aw.id}`} className={editing ? "py-4 -mx-4 px-4 bg-accent [&_input]:bg-background [&_textarea]:bg-background [&_[role=combobox]]:bg-background" : "py-4"}>
-                                      <div className="flex items-center gap-2 mb-3 min-w-0">
-                                        <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                        <h3 className="text-sm font-semibold text-foreground truncate">
-                                          {aw.name}
-                                        </h3>
+                                      <div className="flex items-center justify-between gap-3 mb-3 min-w-0">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                          <h3 className="text-sm font-semibold text-foreground truncate">
+                                            {aw.name}
+                                          </h3>
+                                        </div>
+                                        {!editing && (
+                                          <button
+                                            type="button"
+                                            onClick={() => openCustomCmdEditor(aw)}
+                                            className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 flex-shrink-0"
+                                          >
+                                            <Settings2 className="h-3.5 w-3.5" />
+                                            {hasCmd
+                                              ? t("vmLxc.updates.editApp")
+                                              : t("vmLxc.updates.configureUpdater")}
+                                          </button>
+                                        )}
                                       </div>
-                                      {aw.checked_at && !editing && (
+                                      {tracksVersion && aw.checked_at && !editing && (
                                         <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
                                           {t("vmLxc.updates.lastCheckedPrefix")} {new Date(aw.checked_at).toLocaleString()}
                                         </div>
@@ -4824,7 +5661,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                               <button
                                                 type="button"
                                                 onClick={() => saveCustomCommand(selectedVM.vmid, aw)}
-                                                disabled={customCmdSaving || !customCmdDraft.trim() || customCmdDraft.trim() === (aw.update_command || "").trim()}
+                                                disabled={customCmdSaving || !customCmdDraft.trim() || (
+                                                  customCmdDraft.trim() === (aw.update_command || "").trim()
+                                                )}
                                                 className="h-8 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
                                               >
                                                 {customCmdSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
@@ -4833,7 +5672,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             </div>
                                           </div>
                                         </div>
-                                      ) : hasCmd ? (
+                                      ) : (
                                         <>
                                           {hasUpdate ? (
                                             <div className="space-y-2 text-sm">
@@ -4851,152 +5690,277 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                               <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                                               <span>{t("vmLxc.updates.upToDateAtLabel")} <code className="text-foreground/80">{aw.installed_version}</code></span>
                                             </div>
-                                          ) : (
+                                          ) : tracksVersion && aw.installed_version ? (
+                                            <div className="space-y-2 text-sm text-muted-foreground">
+                                              <div className="flex items-center gap-2">
+                                                <Package className="h-4 w-4 flex-shrink-0" />
+                                                <span>{t("vmLxc.updates.installedLabel")} <code className="text-foreground/80">{aw.installed_version}</code></span>
+                                              </div>
+                                              <div>{t("vmLxc.updates.versionTrackingPendingShort")}</div>
+                                            </div>
+                                          ) : tracksVersion ? (
                                             <div className="text-sm text-muted-foreground">
                                               {t("vmLxc.updates.versionTrackingPendingShort")}
                                             </div>
+                                          ) : hasCmd ? (
+                                            <div className="text-sm text-muted-foreground">
+                                              {t("vmLxc.updates.versionTrackingNotConfigured")}
+                                            </div>
+                                          ) : null}
+
+                                          {hasCmd ? (
+                                            <div className="mt-3 flex justify-end">
+                                              <Button
+                                                size="sm"
+                                                onClick={() => openApplyTerminal(
+                                                  selectedVM.vmid,
+                                                  "app",
+                                                  {
+                                                    updateCommand: aw.update_command!,
+                                                    appName: aw.name || "",
+                                                  },
+                                                )}
+                                                className={hasUpdate ? pendingBtnCls : upToDate ? upToDateBtnCls : neutralBtnCls}
+                                              >
+                                                {hasUpdate && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
+                                                {!hasUpdate && !upToDate && <RefreshCw className="h-4 w-4 mr-1.5" />}
+                                                {hasUpdate
+                                                  ? t("vmLxc.updates.applyUpdate")
+                                                  : upToDate
+                                                    ? t("vmLxc.updates.upToDate")
+                                                    : t("vmLxc.updates.runUpdater")}
+                                              </Button>
+                                            </div>
+                                          ) : (
+                                            <p className={`text-xs text-muted-foreground leading-relaxed min-w-0 ${tracksVersion ? "mt-3" : ""}`}>
+                                              {managedByOs
+                                                ? t("vmLxc.updates.managedByOsPackages")
+                                                : t("vmLxc.updates.noUpdateMethodBody")}
+                                            </p>
                                           )}
-                                          {/* Buttons stacked bottom-right:
-                                              primary Apply on top, secondary
-                                              Edit below. Keeps Apply position
-                                              consistent with the helper and
-                                              OS sections (also right-aligned
-                                              inline buttons) and never wraps
-                                              awkwardly with the info block. */}
-                                          <div className="mt-3 flex flex-col items-end gap-2">
-                                            <Button
-                                              size="sm"
-                                              onClick={() => openApplyTerminal(
-                                                selectedVM.vmid,
-                                                "app",
-                                                { updateCommand: aw.update_command!, appName: aw.name || "" },
-                                              )}
-                                              className={hasUpdate ? pendingBtnCls : upToDateBtnCls}
-                                            >
-                                              {hasUpdate && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
-                                              {hasUpdate ? t("vmLxc.updates.applyUpdate") : t("vmLxc.updates.upToDate")}
-                                            </Button>
-                                            <button
-                                              type="button"
-                                              onClick={() => openCustomCmdEditor(aw)}
-                                              className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5"
-                                            >
-                                              <Pencil className="h-3.5 w-3.5" />
-                                              {t("vmLxc.updates.editCommandButton")}
-                                            </button>
-                                          </div>
                                         </>
-                                      ) : (
-                                        <div className="flex items-center justify-between flex-wrap gap-2">
-                                          <p className="text-xs text-muted-foreground leading-relaxed min-w-0">
-                                            {t("vmLxc.updates.noMethodBody")}
-                                          </p>
-                                          <button
-                                            type="button"
-                                            onClick={() => openCustomCmdEditor(aw)}
-                                            className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 flex-shrink-0"
-                                          >
-                                            <Plus className="h-3.5 w-3.5" />
-                                            {t("vmLxc.updates.wireUpCommandButton")}
-                                          </button>
-                                        </div>
                                       )}
                                     </div>
                                   )
                                 })}
 
-                                {/* Footer actions — up to 3 buttons: OS,
-                                    Combined only. Individual Apply buttons
-                                    live inside each section above (Option
-                                    A pattern): OS section owns its OS
-                                    button, each app section owns its own
-                                    Apply. Footer's sole role is the "run
-                                    everything in one shot" convenience:
-                                      • Single method  → "OS + {name}"
-                                      • Multi custom-only → "OS + Apps"
-                                        (concatenate customs via `;`, run
-                                        as one sh -c invocation)
-                                      • Mixed helper + custom → hidden
-                                        for now (needs backend chain, M5).
-                                    Purple when any part pending; green
-                                    when everything up to date. */}
-                                {(() => {
-                                  // Same gate as `helperRegistered` above —
-                                  // a detected-but-not-registered helper
-                                  // must NOT surface any combined-apply
-                                  // button, single or multi. Without this
-                                  // the multi-app branch below still fired
-                                  // "Apply OS + Apps updates" for CTs whose
-                                  // only "app method" was an unregistered
-                                  // helper.sh on disk.
-                                  const hasAnyAppMethod = helperRegistered || customCmdApps.length > 0
-                                  if (!hasAnyAppMethod) return null
-                                  // Single method — reuse the existing
-                                  // TARGET=both path so the script picks
-                                  // the right updater. Helper case has
-                                  // NO UPDATE_COMMAND (script falls
-                                  // through to /usr/bin/update); custom
-                                  // case passes its command directly.
-                                  if (singleAppMethod && combinedApp) {
-                                    return (
-                                      <div className="pt-4 flex justify-end">
-                                        <Button
-                                          size="sm"
-                                          onClick={() => openApplyTerminal(
-                                            selectedVM.vmid,
-                                            "both",
-                                            combinedApp.isHelper ? undefined : { updateCommand: combinedApp.cmd, appName: combinedApp.name },
-                                          )}
-                                          className={(hasOsUpdates || anyAppPending) ? pendingBtnCls : upToDateBtnCls}
-                                        >
-                                          {(hasOsUpdates || anyAppPending) && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
-                                          {(hasOsUpdates || anyAppPending) ? t("vmLxc.updates.applyOsAppsFooter", { appName: combinedApp.name }) : t("vmLxc.updates.osAppsFooter", { appName: combinedApp.name })}
-                                        </Button>
-                                      </div>
-                                    )
-                                  }
-                                  // Multi-app case — build a single
-                                  // UPDATE_COMMAND that chains every app
-                                  // method with `;`. Helper only chains
-                                  // when the user has REGISTERED the app
-                                  // it manages (same rule as the single
-                                  // case), so an unregistered helper.sh
-                                  // on disk never gets executed via the
-                                  // combined button.
-                                  const parts: string[] = []
-                                  if (helperRegistered) {
-                                    parts.push("PHS_SILENT=1 bash /usr/bin/update")
-                                  }
-                                  for (const a of customCmdApps) {
-                                    parts.push(a.update_command!.trim())
-                                  }
-                                  // Join with `&&` (fail-fast) so a mid-chain
-                                  // command failure aborts the rest and the
-                                  // final exit code reflects the failure.
-                                  // With `;`, `sh -c` returned only the last
-                                  // command's exit code and a broken update
-                                  // could look successful because a trailing
-                                  // no-op finished cleanly.
-                                  const chained = parts.join(" && ")
-                                  return (
-                                    <div className="pt-4 flex justify-end">
-                                      <Button
-                                        size="sm"
-                                        onClick={() => openApplyTerminal(
-                                          selectedVM.vmid,
-                                          "both",
-                                          { updateCommand: chained, appName: "Apps" },
-                                        )}
-                                        className={(hasOsUpdates || anyAppPending) ? pendingBtnCls : upToDateBtnCls}
-                                      >
-                                        {(hasOsUpdates || anyAppPending) && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
-                                        {(hasOsUpdates || anyAppPending) ? t("vmLxc.updates.applyOsAppsFooterPlural") : t("vmLxc.updates.osAppsFooterPlural")}
-                                      </Button>
-                                    </div>
-                                  )
-                                })()}
                               </CardContent>
                             </Card>
+
+                            {/* Manual bulk update — deliberately separate from
+                                both the per-method buttons above and the cron
+                                automation in Options below. */}
+                            {(bulkActionChoices.length > 0 || bulkConfigured) && (
+                              <Card className={bulkEditMode ? "border border-border bg-card" : "border border-border bg-card/50"}>
+                                <CardContent className="p-4 space-y-4">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <RefreshCw className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                        <h3 className="text-sm font-semibold text-foreground">
+                                          {t("vmLxc.bulkUpdate.title")}
+                                        </h3>
+                                      </div>
+                                      <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                                        {t("vmLxc.bulkUpdate.description")}
+                                      </p>
+                                    </div>
+                                    {!bulkEditMode && bulkConfigured && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setBulkEditMode(true)}
+                                        className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 flex-shrink-0"
+                                      >
+                                        <Settings2 className="h-3.5 w-3.5" />
+                                        {t("vmLxc.bulkUpdate.edit")}
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {bulkLoaded !== selectedVM.vmid ? (
+                                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                      {t("vmLxc.bulkUpdate.loading")}
+                                    </div>
+                                  ) : bulkEditMode ? (
+                                    <div className="space-y-3">
+                                      <div className="rounded-md border border-border bg-background/50 divide-y divide-border/60 max-w-xl">
+                                        {bulkChoices.map((choice) => (
+                                          <label
+                                            key={choice.id}
+                                            className={`flex items-start gap-3 px-3 py-2.5 text-sm ${choice.id === "os" ? "cursor-default" : "cursor-pointer hover:bg-muted/30"}`}
+                                          >
+                                            <Checkbox
+                                              checked={bulkTargets.includes(choice.id)}
+                                              onCheckedChange={(value) => toggleBulkChoice(choice.id, value === true)}
+                                              disabled={choice.id === "os" || bulkSaving}
+                                            />
+                                            {choice.logoUrl ? (
+                                              <ThemeAwareLogo
+                                                src={choice.logoUrl}
+                                                className="h-6 w-6 rounded object-contain flex-shrink-0"
+                                              />
+                                            ) : choice.id === "os" ? (
+                                              <Package className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                            ) : choice.id === "docker-engine" ? (
+                                              <Container className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                            ) : null}
+                                            <span className="min-w-0">
+                                              <span className="block text-foreground truncate">{choice.label}</span>
+                                              {choice.detail && (
+                                                <span className="block text-xs text-muted-foreground mt-0.5">
+                                                  {choice.detail}
+                                                </span>
+                                              )}
+                                            </span>
+                                          </label>
+                                        ))}
+                                        {bulkUnavailableApps.map((app) => (
+                                          <div key={`unavailable-${app.id}`} className="flex items-start gap-3 px-3 py-2.5 text-sm opacity-60">
+                                            <Checkbox checked={false} disabled />
+                                            <span className="min-w-0">
+                                              <span className="block text-foreground truncate">
+                                                {app.name || t("vmLxc.updates.applicationDefaultName")}
+                                              </span>
+                                              <span className="block text-xs text-muted-foreground mt-0.5">
+                                                {t("vmLxc.bulkUpdate.noMethod")}
+                                              </span>
+                                            </span>
+                                          </div>
+                                        ))}
+                                        {staleBulkTargets.map((target) => (
+                                          <label key={`stale-${target}`} className="flex items-start gap-3 px-3 py-2.5 text-sm text-amber-400/80 cursor-pointer hover:bg-muted/30">
+                                            <Checkbox
+                                              checked
+                                              onCheckedChange={(value) => toggleBulkChoice(target, value === true)}
+                                              disabled={bulkSaving}
+                                            />
+                                            <span className="min-w-0 break-all">
+                                              {target.startsWith("docker-unit:")
+                                                ? t("vmLxc.bulkUpdate.missingDockerTarget")
+                                                : target}
+                                              <span className="block text-xs text-muted-foreground mt-0.5">
+                                                {t("vmLxc.bulkUpdate.staleTarget")}
+                                              </span>
+                                            </span>
+                                          </label>
+                                        ))}
+                                        {pendingDockerBulkTargets.length > 0 && (
+                                          <div className="flex items-start gap-3 px-3 py-2.5 text-sm opacity-70">
+                                            <Loader2 className="h-4 w-4 animate-spin flex-shrink-0 mt-0.5" />
+                                            <span className="min-w-0 text-muted-foreground">
+                                              {t("vmLxc.bulkUpdate.dockerInventoryPending")}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      {bulkTargets.length < 2 && (
+                                        <div className="text-xs text-red-400">
+                                          {t("vmLxc.bulkUpdate.selectAtLeastOne")}
+                                        </div>
+                                      )}
+                                      <div className="flex items-center justify-between gap-2 pt-1">
+                                        <div>
+                                          {bulkConfigured && (
+                                            <button
+                                              type="button"
+                                              onClick={() => deleteBulkUpdate(selectedVM.vmid)}
+                                              disabled={bulkSaving}
+                                              className="h-8 px-3 text-xs rounded-md border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5" />
+                                              {t("vmLxc.bulkUpdate.delete")}
+                                            </button>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setBulkTargets(bulkPersistedTargets)
+                                              setBulkEditMode(false)
+                                              setBulkError(null)
+                                            }}
+                                            disabled={bulkSaving}
+                                            className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
+                                          >
+                                            {t("vmLxc.bulkUpdate.cancel")}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => saveBulkUpdate(selectedVM.vmid)}
+                                            disabled={bulkSaving || bulkTargets.length < 2 || staleBulkTargets.length > 0 || pendingDockerBulkTargets.length > 0}
+                                            className="h-8 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-40 inline-flex items-center gap-1.5"
+                                          >
+                                            {bulkSaving
+                                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                              : <Check className="h-3.5 w-3.5" />}
+                                            {t("vmLxc.bulkUpdate.save")}
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : bulkConfigured ? (
+                                    <div className="space-y-3">
+                                      <div className="text-sm text-muted-foreground break-words">
+                                        {selectedBulkLabels.join(" · ")}
+                                      </div>
+                                      <div className="flex justify-end">
+                                        <Button
+                                          size="sm"
+                                          onClick={() => applyBulkUpdate(selectedVM.vmid)}
+                                          disabled={bulkApplying || (
+                                            bulkTargets.some((target) => target.startsWith("docker-unit:"))
+                                            && (dockerInventoryRefreshing || !dockerInventoryAvailable)
+                                          )}
+                                          className={bulkHasPendingUpdates
+                                            ? pendingBtnCls
+                                            : bulkAllTargetsUpToDate
+                                              ? upToDateBtnCls
+                                              : neutralBtnCls}
+                                        >
+                                          {bulkApplying
+                                            ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                                            : bulkHasPendingUpdates
+                                              ? <ArrowUpCircle className="h-4 w-4 mr-1.5" />
+                                              : !bulkAllTargetsUpToDate
+                                                ? <RefreshCw className="h-4 w-4 mr-1.5" />
+                                                : null}
+                                          {bulkAllTargetsUpToDate
+                                            ? t("vmLxc.updates.upToDate")
+                                            : t("vmLxc.bulkUpdate.apply")}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                      <div className="text-sm text-muted-foreground">
+                                        {t("vmLxc.bulkUpdate.notConfigured")}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setBulkTargets(["os"])
+                                          setBulkEditMode(true)
+                                          setBulkError(null)
+                                        }}
+                                        className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center justify-center gap-1.5 flex-shrink-0"
+                                      >
+                                        <Settings2 className="h-3.5 w-3.5" />
+                                        {t("vmLxc.bulkUpdate.configure")}
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  {bulkError && (
+                                    <div className="text-xs text-red-400 flex items-start gap-1.5">
+                                      <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                                      <span>{bulkError}</span>
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            )}
 
                             {/* Options card — unified apply preferences
                                 + scheduled updates. Backup/restart live
@@ -5161,16 +6125,32 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         </span>
                                       </div>
                                       <div className="text-xs text-muted-foreground pl-4">
-                                        {t("vmLxc.scheduled.whatLabel")} {scheduleTarget === "os" ? t("vmLxc.scheduled.targetOs") : scheduleTarget === "app" ? t("vmLxc.scheduled.targetApp") : t("vmLxc.scheduled.targetBoth")}
+                                        {t("vmLxc.scheduled.whatLabel")} {selectedScheduleLabels.join(", ") || t("vmLxc.scheduled.noTargets")}
+                                        {scheduleReleaseDelayDays > 0 && scheduleHasVersionTrackedApps && (
+                                          <> · {t("vmLxc.scheduled.releaseDelaySummary", { days: scheduleReleaseDelayDays })}</>
+                                        )}
                                       </div>
                                       {scheduleLastRunAt && (
                                         <div className="text-xs text-muted-foreground pl-4">
                                           {t("vmLxc.scheduled.lastRun", { date: new Date(scheduleLastRunAt).toLocaleString() })}
                                           {scheduleLastRunStatus && (
-                                            <> · <span className={scheduleLastRunStatus === "success" ? "text-green-400" : "text-red-400"}>
-                                              {scheduleLastRunStatus === "success" ? t("vmLxc.scheduled.runSuccess") : t("vmLxc.scheduled.runFailed")}
+                                            <> · <span className={scheduleLastRunStatus === "success" ? "text-green-400" : scheduleLastRunStatus === "partial" || scheduleLastRunStatus === "deferred" || scheduleLastRunStatus === "skipped" ? "text-amber-400" : "text-red-400"}>
+                                              {scheduleLastRunStatus === "success"
+                                                ? t("vmLxc.scheduled.runSuccess")
+                                                : scheduleLastRunStatus === "partial"
+                                                  ? t("vmLxc.scheduled.runPartial")
+                                                  : scheduleLastRunStatus === "deferred"
+                                                    ? t("vmLxc.scheduled.runDeferred")
+                                                    : scheduleLastRunStatus === "skipped"
+                                                      ? t("vmLxc.scheduled.runSkipped")
+                                                      : t("vmLxc.scheduled.runFailed")}
                                             </span></>
                                           )}
+                                        </div>
+                                      )}
+                                      {scheduleLastRunReason && (
+                                        <div className="text-xs text-muted-foreground pl-4 break-words">
+                                          {scheduleLastRunReason}
                                         </div>
                                       )}
                                     </div>
@@ -5262,29 +6242,64 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       </div>
                                       <div>
                                         <Label className="text-xs text-muted-foreground">{t("vmLxc.scheduled.whatToUpdate")}</Label>
-                                        <Select
-                                          value={scheduleTarget}
-                                          onValueChange={(v) => setScheduleTarget(v as any)}
-                                          disabled={!optionsEditMode}
-                                        >
-                                          <SelectTrigger className="h-8 text-sm mt-1 max-w-xs">
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="os">{t("vmLxc.scheduled.targetOptionOs")}</SelectItem>
-                                            <SelectItem value="app">{t("vmLxc.scheduled.targetOptionApp")}</SelectItem>
-                                            <SelectItem value="both">{t("vmLxc.scheduled.targetOptionBoth")}</SelectItem>
-                                          </SelectContent>
-                                        </Select>
+                                        <div className="mt-2 rounded-md border border-border bg-background/50 divide-y divide-border/60 max-w-xl">
+                                          {scheduleChoices.map((choice) => (
+                                            <label key={choice.id} className="flex items-center gap-3 px-3 py-2.5 text-sm cursor-pointer hover:bg-muted/30">
+                                              <Checkbox
+                                                checked={scheduleChoiceChecked(choice.id)}
+                                                onCheckedChange={(value) => toggleScheduleChoice(choice.id, value === true)}
+                                                disabled={!optionsEditMode}
+                                              />
+                                              <span className="min-w-0 truncate">{choice.label}</span>
+                                            </label>
+                                          ))}
+                                        </div>
+                                        {scheduleTargets.length === 0 && (
+                                          <div className="text-xs text-red-400 mt-1">{t("vmLxc.scheduled.selectAtLeastOne")}</div>
+                                        )}
                                       </div>
+                                      {scheduleHasVersionTrackedApps && (
+                                        <div>
+                                          <Label className="text-xs text-muted-foreground">{t("vmLxc.scheduled.releaseDelayLabel")}</Label>
+                                          <Select
+                                            value={String(scheduleReleaseDelayDays)}
+                                            onValueChange={(v) => setScheduleReleaseDelayDays(Number(v))}
+                                            disabled={!optionsEditMode}
+                                          >
+                                            <SelectTrigger className="h-8 text-sm mt-1 max-w-xs">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="0">{t("vmLxc.scheduled.releaseDelayNone")}</SelectItem>
+                                              {[1, 3, 7, 14].map((days) => (
+                                                <SelectItem key={days} value={String(days)}>
+                                                  {t("vmLxc.scheduled.releaseDelayDays", { days })}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                          <div className="text-[10px] text-muted-foreground mt-1 max-w-xl">
+                                            {t("vmLxc.scheduled.releaseDelayHelp")}
+                                          </div>
+                                        </div>
+                                      )}
                                       {scheduleLastRunAt && (
                                         <div className="text-xs text-muted-foreground">
-                                          Last run: {new Date(scheduleLastRunAt).toLocaleString()}
+                                          {t("vmLxc.scheduled.lastRun", { date: new Date(scheduleLastRunAt).toLocaleString() })}
                                           {scheduleLastRunStatus && (
-                                            <> · <span className={scheduleLastRunStatus === "success" ? "text-green-400" : "text-red-400"}>
-                                              {scheduleLastRunStatus === "success" ? "✓ success" : "✗ failed"}
+                                            <> · <span className={scheduleLastRunStatus === "success" ? "text-green-400" : scheduleLastRunStatus === "partial" || scheduleLastRunStatus === "deferred" || scheduleLastRunStatus === "skipped" ? "text-amber-400" : "text-red-400"}>
+                                              {scheduleLastRunStatus === "success"
+                                                ? t("vmLxc.scheduled.runSuccess")
+                                                : scheduleLastRunStatus === "partial"
+                                                  ? t("vmLxc.scheduled.runPartial")
+                                                  : scheduleLastRunStatus === "deferred"
+                                                    ? t("vmLxc.scheduled.runDeferred")
+                                                    : scheduleLastRunStatus === "skipped"
+                                                      ? t("vmLxc.scheduled.runSkipped")
+                                                      : t("vmLxc.scheduled.runFailed")}
                                             </span></>
                                           )}
+                                          {scheduleLastRunReason && <div className="mt-1 break-words">{scheduleLastRunReason}</div>}
                                         </div>
                                       )}
                                     </div>
@@ -5336,7 +6351,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       <button
                                         type="button"
                                         onClick={saveOptionsEdit}
-                                        disabled={scheduleSaving}
+                                        disabled={scheduleSaving || (scheduleEnabled && scheduleTargets.length === 0)}
                                         className="h-8 px-3 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-40 inline-flex items-center gap-1.5"
                                       >
                                         {scheduleSaving
@@ -5929,8 +6944,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
       {/* LXC Update Apply Terminal — streams the apply_updates.sh
           script over WS/PTY (same wiring as the hardware installers).
-          On modal close we POST /applied so the notification fires
-          and the badge is force-refreshed without waiting 24 h. */}
+          The backend finalizes on process exit; the close callback only
+          accelerates the already-idempotent UI revalidation. */}
       {applyVmid !== null && (
         <ScriptTerminalModal
           open={applyOpen}
@@ -5955,13 +6970,21 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           }
           params={{
             VMID: String(applyVmid),
+            RUN_ID: applyRunId,
+            CT_NAME: selectedVM?.name || `CT-${applyVmid}`,
             TARGET: applyTarget,
+            REQUESTED_TARGETS_JSON: JSON.stringify(applyTargetIds),
+            TARGET_LABELS_JSON: JSON.stringify(applyTargetLabels),
             BACKUP: applyBackup ? "1" : "0",
             BACKUP_STORAGE: applyBackupStorage || selectedBackupStorage || "",
             RESTART: applyRestart ? "1" : "0",
             UPDATE_COMMAND: applyUpdateCommand || "",
             APP_NAME: applyAppName || "",
-            HELPER_SLUG: selectedVM?.update_check?.helper_slug || "",
+            RUN_HELPER: applyRunHelper ? "1" : "0",
+            ALLOW_HELPER_WITH_CUSTOM: applyAllowHelperWithCustom ? "1" : "0",
+            DOCKER_STANDALONE_TARGETS: applyDockerStandaloneTargets,
+            UPDATE_DOCKER_ENGINE: applyDockerEngine ? "1" : "0",
+            REFRESH_DOCKER_INVENTORY: applyDockerRefresh ? "1" : "0",
           }}
         />
       )}

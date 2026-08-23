@@ -1,8 +1,121 @@
 {
   "schema_version": 1,
-  "observed_at": "2026-08-06",
-  "notes": "Runtime-verified detectors for the LXC app catalog. Every entry is a detector proven to work on a real container. Contribution rules \u2014 accept ONLY: `detector` (required, with installed_via + method-specific fields + repo/tag_regex), optional `alt_detectors` (cross-method fallbacks), optional `file_fallbacks` (same-method secondary paths). REJECT anything that identifies a host: no IP addresses, no VMIDs, no hostnames, no `evidence` blocks with those fields. Report reproduction context in the PR description instead \u2014 the committed JSON must stay generic.",
+  "observed_at": "2026-08-21",
+  "notes": "Runtime-verified detectors for the LXC app catalog. Every entry is a detector proven to work on a real container, either in maintainer testing or a reviewed community confirmation. Contribution rules \u2014 accept ONLY: `detector` (required, with installed_via + method-specific fields + repo/tag_regex), optional `alt_detectors` (cross-method fallbacks), optional `file_fallbacks` (same-method secondary paths). REJECT anything that identifies a host: no IP addresses, no VMIDs, no hostnames, no `evidence` blocks with those fields. Report reproduction context in the PR description instead \u2014 the committed JSON must stay generic.",
   "apps": {
+    "docker": {
+      "operational": true,
+      "install_scope": [
+        "community-script",
+        "manual"
+      ],
+      "detector": {
+        "installed_via": "binary",
+        "binary_path": "/usr/bin/docker",
+        "binary_args": [
+          "--version"
+        ],
+        "repo": "moby/moby",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "portainer": {
+      "operational": true,
+      "name": "Portainer",
+      "install_scope": [
+        "docker"
+      ],
+      "detector": {
+        "installed_via": "docker_exec",
+        "container_name": "portainer",
+        "binary_path": "/portainer",
+        "binary_args": [
+          "--version"
+        ],
+        "repo": "portainer/portainer",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      },
+      "default_ports": [
+        9000,
+        9443
+      ],
+      "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/portainer.webp",
+      "website": "https://www.portainer.io/"
+    },
+    "audiobookshelf": {
+      "operational": true,
+      "name": "Audiobookshelf",
+      "install_scope": [
+        "community-script",
+        "manual-if-same-package"
+      ],
+      "evidence": [
+        "community-confirmed:github-discussion-306"
+      ],
+      "detector": {
+        "installed_via": "dpkg",
+        "package": "audiobookshelf",
+        "repo": "advplyr/audiobookshelf",
+        "github_source": "releases",
+        "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)"
+      }
+    },
+    "gitea": {
+      "operational": true,
+      "name": "Gitea",
+      "install_scope": [
+        "community-script",
+        "manual-if-same-package"
+      ],
+      "evidence": [
+        "community-confirmed:github-discussion-306"
+      ],
+      "detector": {
+        "installed_via": "apk",
+        "package": "gitea",
+        "repo": "go-gitea/gitea",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "dispatcharr": {
+      "operational": true,
+      "name": "Dispatcharr",
+      "install_scope": [
+        "community-script"
+      ],
+      "evidence": [
+        "community-confirmed:github-discussion-306"
+      ],
+      "detector": {
+        "installed_via": "file",
+        "file_path": "/root/.dispatcharr",
+        "file_regex": "(\\d+\\.\\d+\\.\\d+)",
+        "repo": "Dispatcharr/Dispatcharr",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "kavita": {
+      "operational": true,
+      "name": "Kavita",
+      "install_scope": [
+        "community-script"
+      ],
+      "evidence": [
+        "community-confirmed:github-discussion-306"
+      ],
+      "detector": {
+        "installed_via": "file",
+        "file_path": "/root/.kavita",
+        "file_regex": "(\\d+\\.\\d+\\.\\d+)",
+        "repo": "Kareadita/Kavita",
+        "github_source": "releases",
+        "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
     "qbittorrent": {
       "detector": {
         "installed_via": "binary",
@@ -29,8 +142,7 @@
       ]
     },
     "openwebui": {
-      "operational": false,
-      "remove_from_v1": true,
+      "operational": true,
       "detector": {
         "installed_via": "python_dist",
         "python_path": "/root/.local/share/uv/tools/open-webui/bin/python",
@@ -45,6 +157,15 @@
         "installed_via": "dpkg",
         "package": "proxmox-backup-server",
         "tag_regex": "(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "jellyfin": {
+      "detector": {
+        "installed_via": "dpkg",
+        "package": "jellyfin",
+        "repo": "jellyfin/jellyfin",
+        "github_source": "releases",
+        "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)"
       }
     },
     "adguard": {
@@ -204,6 +325,19 @@
         "repo": "grafana/grafana",
         "github_source": "releases",
         "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)"
+      }
+    },
+    "searxng": {
+      "operational": true,
+      "install_scope": [
+        "community-script",
+        "manual-if-same-venv"
+      ],
+      "detector": {
+        "installed_via": "python_dist",
+        "python_path": "/usr/local/searxng/searx-pyenv/bin/python",
+        "distribution": "searxng",
+        "installed_regex": "(\\d+\\.\\d+\\.\\d+\\+[0-9a-f]+)"
       }
     }
   }

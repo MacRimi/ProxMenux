@@ -108,6 +108,32 @@ sock = Sock()
 # Active terminal sessions
 active_sessions = {}
 
+_script_completion_hook = None
+_script_completion_hook_lock = threading.Lock()
+
+
+def set_script_completion_hook(callback):
+    """Register the backend hook invoked after a streamed script exits."""
+    global _script_completion_hook
+    with _script_completion_hook_lock:
+        _script_completion_hook = callback
+
+
+def _run_script_completion_hook(script_path, params, exit_code, duration_seconds):
+    with _script_completion_hook_lock:
+        callback = _script_completion_hook
+    if callback is None:
+        return
+    try:
+        callback(
+            script_path=script_path,
+            params=dict(params or {}),
+            exit_code=int(exit_code),
+            duration_seconds=max(0, int(duration_seconds)),
+        )
+    except Exception as exc:
+        print(f"[ProxMenux] script completion hook failed: {exc}", flush=True)
+
 @terminal_bp.route('/api/terminal/health', methods=['GET'])
 def terminal_health():
     """Health check for terminal service"""
@@ -470,6 +496,7 @@ def script_websocket(ws, session_id):
     env['PYTHONUNBUFFERED'] = '1'
     env['TERM'] = 'xterm-256color'
     
+    script_started_at = time.monotonic()
     script_process = subprocess.Popen(
         ['/bin/bash', script_path],
         stdin=slave_fd,
@@ -579,6 +606,18 @@ def script_websocket(ws, session_id):
         
         script_process.wait()
         exit_code = script_process.returncode if script_process.returncode is not None else 0
+
+        threading.Thread(
+            target=_run_script_completion_hook,
+            args=(
+                script_path,
+                params,
+                exit_code,
+                time.monotonic() - script_started_at,
+            ),
+            daemon=True,
+            name=f'script-complete-{session_id}',
+        ).start()
         
         try:
             ws.send(f'\r\n[Script exited with code {exit_code}]\r\n')

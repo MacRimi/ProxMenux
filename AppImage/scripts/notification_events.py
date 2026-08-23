@@ -22,7 +22,7 @@ import sqlite3
 import subprocess
 import threading
 from queue import Queue
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Any, Tuple, Callable
 from pathlib import Path
 
 
@@ -1939,8 +1939,16 @@ class TaskWatcher:
         'vzmigrate':  ('migration_start', 'INFO'),
     }
     
-    def __init__(self, event_queue: Queue):
+    def __init__(
+        self,
+        event_queue: Queue,
+        guest_lifecycle_callback: Optional[Callable[[str, str, str], None]] = None,
+    ):
         self._queue = event_queue
+        # Reuse the exact PVE task transition already responsible for
+        # VM/CT lifecycle notifications. Consumers such as the modal cache
+        # can subscribe without introducing a second status poller.
+        self._guest_lifecycle_callback = guest_lifecycle_callback
         self._running = False
         self._thread: Optional[threading.Thread] = None
         # `_hostname` is exposed as a @property below so every read returns
@@ -2250,6 +2258,31 @@ class TaskWatcher:
         
         # Determine entity type from task type
         entity = 'ct' if task_type.startswith('vz') else 'vm'
+
+        # A completed PVE lifecycle task is the existing source of truth for
+        # start/stop/restart notifications. Publish the same transition to
+        # the optional cache listener before notification-only suppression
+        # (backup/startup aggregation, disabled channels, cooldowns) so cache
+        # correctness never depends on whether a message is delivered.
+        lifecycle_actions = {
+            'qmstart': ('qemu', 'start'),
+            'qmstop': ('qemu', 'stop'),
+            'qmshutdown': ('qemu', 'stop'),
+            'qmreboot': ('qemu', 'reboot'),
+            'qmreset': ('qemu', 'reboot'),
+            'vzstart': ('lxc', 'start'),
+            'vzstop': ('lxc', 'stop'),
+            'vzshutdown': ('lxc', 'stop'),
+            'vzreboot': ('lxc', 'reboot'),
+        }
+        lifecycle = lifecycle_actions.get(task_type)
+        if (lifecycle and self._guest_lifecycle_callback
+                and not is_error and (status == 'OK' or is_warning)):
+            try:
+                self._guest_lifecycle_callback(vmid, lifecycle[0], lifecycle[1])
+            except Exception as exc:
+                print(f'[TaskWatcher] guest lifecycle callback failed for '
+                      f'{lifecycle[0]} {vmid}: {exc}', flush=True)
         
         # Backup completion/failure and replication events are handled
         # EXCLUSIVELY by the PVE webhook, which delivers richer data (full
@@ -3516,6 +3549,15 @@ class PollingCollector:
         try:
             import lxc_apps
             lxc_apps.refresh_all_apps(force=False)
+            # Docker images have an independent lifecycle from both the OS
+            # packages and the Docker engine.  Refresh their read-only
+            # registry digest inventory on the same daily cadence; this never
+            # pulls or recreates containers.
+            # This is the single automatic Docker registry comparison. Force
+            # the rolling pass itself so a user-triggered check shortly after
+            # yesterday's cycle cannot postpone the next automatic scan by an
+            # additional day. Normal UI reads remain cache-only for 24 hours.
+            lxc_apps.refresh_docker_inventories(force=True)
             # After the refresh, emit `app_update_available` for every
             # sidecar entry currently flagged with a pending upstream
             # release. `check_app(force=False)` short-circuits on a
@@ -3526,6 +3568,7 @@ class PollingCollector:
             # moment. `notification_manager` dedups by entity_id
             # (vmid + app_id + latest_version) so repeated calls only
             # deliver one notification per release.
+            lxc_apps.emit_all_pending_docker_stacks()
             lxc_apps.emit_all_pending_updates()
         except Exception as e:
             print(f"[PollingCollector] lxc_apps refresh failed: {e}")

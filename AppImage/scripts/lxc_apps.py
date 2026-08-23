@@ -26,9 +26,14 @@
 from __future__ import annotations
 
 import datetime
+import concurrent.futures
+import hashlib
 import json
 import os
 import re
+import signal
+import shlex
+import socket
 import subprocess
 import threading
 import time
@@ -57,6 +62,11 @@ _UPSTREAM_CACHE_TTL_SEC = 24 * 3600
 _VALID_METHODS = ("dpkg", "apk", "file", "binary",
                   "python_dist", "docker_label", "docker_exec",
                   "command", "manual")
+_DETECTOR_FIELDS = (
+    "package", "file_path", "file_regex", "binary_path", "binary_args",
+    "python_path", "distribution", "container_name", "label",
+    "command_argv", "installed_version",
+)
 _VALID_SOURCES = ("releases", "tags")
 
 # Max args for binary / docker_exec / command — bounded so a malformed
@@ -81,6 +91,12 @@ _VALID_UPSTREAM_TYPES = ("github", "http_json", "docker_hub")
 # `*/N` step, and comma lists — that covers every preset the UI
 # exposes and the freeform "custom" text field.
 _VALID_SCHEDULE_TARGETS = ("os", "app", "both")
+_SCHEDULE_TARGET_ID_RE = re.compile(
+    r"^(?:os|apps|app:[A-Za-z0-9_-]{1,64}|docker-engine|docker-(?:compose|container):[A-Za-z0-9][A-Za-z0-9_.-]{0,127}|docker-unit:[a-f0-9]{20})$"
+)
+_BULK_TARGET_ID_RE = re.compile(
+    r"^(?:os|app:[A-Za-z0-9_-]{1,64}|docker-engine|docker-unit:[a-f0-9]{20})$"
+)
 _MAX_CRON_FIELD_LEN = 64
 # JSONPath (simplified): letters/digits/dots/underscores/hyphens + [N]
 # array indices. Rejects wildcards, filters, .. recursion — we don't
@@ -91,6 +107,7 @@ _JSON_PATH_RE = re.compile(r"^[A-Za-z0-9._\-\[\]]+$")
 _DOCKER_IMAGE_RE = re.compile(
     r"^[a-z0-9]+(?:[._-][a-z0-9]+)*(?:/[a-z0-9]+(?:[._-][a-z0-9]+)*)?$"
 )
+_DOCKER_COMPOSE_PROJECT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 
 # Curated tracking hints, keyed by the slug we can recognise for the
 # CT (typically the community-scripts slug extracted from
@@ -123,6 +140,45 @@ _tracking_hints_lock = threading.RLock()
 _tracking_hints_cache: Optional[dict] = None
 _tracking_hints_ts: float = 0.0
 
+# Docker Hub tag previews are requested while the user edits a form.
+# Cache the raw repository tag list (not the regex result) so changing
+# filters does not create another external request.  Sixty seconds is
+# enough to absorb typing bursts while still feeling live.
+_DOCKER_HUB_TAG_CACHE_TTL_SEC = 60
+_DOCKER_HUB_TAG_PREVIEW_LIMIT = 5
+_DEFAULT_DOCKER_HUB_TAG_REGEX = (
+    r"(?i)^v?(\d+\.\d+\.\d+(?:[-+._][0-9A-Za-z.-]+)?)$"
+)
+_MOVING_DOCKER_TAGS = {
+    "latest", "main", "master", "edge", "stable", "nightly",
+    "develop", "dev", "rolling", "lts",
+}
+_docker_hub_tag_cache_lock = threading.RLock()
+_docker_hub_tag_cache: dict[str, dict[str, Any]] = {}
+
+# Docker image inventory is deliberately separate from App Watch.  The
+# Docker engine version and the applications delivered by its images have
+# different lifecycles: updating docker-ce does not update a Portainer or
+# LinuxServer image.  Inventory checks are read-only (docker image ls +
+# registry manifest HEAD), cached only in process memory, and never
+# pull/recreate anything. Do not create runtime files outside ProxMenux's
+# owned application directory just to preserve this derived inventory.
+# Docker registry drift follows the same daily rolling check as registered
+# application releases.  Opening the Updates tab reads this in-memory value;
+# only the daily collector, an explicit user check or a completed update forces
+# a new registry comparison.
+_DOCKER_INVENTORY_TTL_SEC = 24 * 3600
+_DOCKER_REGISTRY_TIMEOUT_SEC = 8
+_DOCKER_MAX_IMAGES = 50
+_DOCKER_MANIFEST_ACCEPT = ", ".join((
+    "application/vnd.oci.image.index.v1+json",
+    "application/vnd.oci.image.manifest.v1+json",
+    "application/vnd.docker.distribution.manifest.list.v2+json",
+    "application/vnd.docker.distribution.manifest.v2+json",
+))
+_docker_inventory_lock = threading.RLock()
+_docker_inventory_cache: dict[str, dict] = {}
+
 
 def _load_bundled_hints() -> dict:
     try:
@@ -136,17 +192,20 @@ def _load_bundled_hints() -> dict:
 def _fetch_tracking_hints() -> dict:
     """Return the curated tracking-hint map (slug → hint dict).
 
-    Fetch order: memory cache (fresh) → GitHub raw → on-disk cache
-    from a prior fetch → bundled JSON shipped inside the AppImage.
-    Never raises — a total failure returns an empty dict so callers
-    can just ``.get(slug)``. Same shape and TTL discipline as
-    managed_installs._fetch_helpers_cache.
+    Fetch order: memory cache (fresh) → GitHub raw merged with the bundled
+    catalog → on-disk cache → bundled JSON. A newly built AppImage can contain
+    a larger catalog than ``main`` while a phase is being validated; in that
+    case the smaller remote file must not erase bundled detectors. When the
+    remote catalog has equal or greater coverage it wins per entry, preserving
+    the no-rebuild update path. Never raises — a total failure returns an empty
+    dict so callers can just ``.get(slug)``.
     """
     global _tracking_hints_cache, _tracking_hints_ts
     with _tracking_hints_lock:
         now = time.time()
         if _tracking_hints_cache is not None and (now - _tracking_hints_ts) < _TRACKING_HINTS_TTL:
             return _tracking_hints_cache
+        bundled = _load_bundled_hints()
         try:
             req = urllib.request.Request(
                 _TRACKING_HINTS_URL,
@@ -154,7 +213,13 @@ def _fetch_tracking_hints() -> dict:
             )
             with urllib.request.urlopen(req, timeout=_TRACKING_HINTS_HTTP_TIMEOUT) as r:
                 raw = json.loads(r.read().decode("utf-8"))
-            hints = raw if isinstance(raw, dict) else {}
+            remote = raw if isinstance(raw, dict) else {}
+            if len(remote) >= len(bundled):
+                hints = dict(bundled)
+                hints.update(remote)
+            else:
+                hints = dict(remote)
+                hints.update(bundled)
             _tracking_hints_cache = hints
             _tracking_hints_ts = now
             try:
@@ -176,7 +241,6 @@ def _fetch_tracking_hints() -> dict:
                 _tracking_hints_ts = float(disk.get("ts") or 0)
                 return _tracking_hints_cache
             except (OSError, json.JSONDecodeError):
-                bundled = _load_bundled_hints()
                 _tracking_hints_cache = bundled
                 _tracking_hints_ts = now  # avoid re-hammering
                 return _tracking_hints_cache
@@ -502,8 +566,36 @@ def validate_schedule(payload: Any) -> tuple[bool, Any]:
     target = (payload.get("target") or "both").strip().lower()
     if target not in _VALID_SCHEDULE_TARGETS:
         return _err(f"target must be one of: {', '.join(_VALID_SCHEDULE_TARGETS)}")
+    targets_raw = payload.get("targets")
+    if targets_raw is None:
+        # Backward-compatible migration for schedules saved before the
+        # per-app selector existed. `apps` means every eligible registered
+        # app and is expanded by the runner at execution time.
+        targets = (["os"] if target in ("os", "both") else []) + (["apps"] if target in ("app", "both") else [])
+    else:
+        if not isinstance(targets_raw, list):
+            return _err("targets must be a JSON array")
+        targets = []
+        for value in targets_raw:
+            item = str(value or "").strip()
+            if not _SCHEDULE_TARGET_ID_RE.match(item):
+                return _err(f"invalid schedule target: {item[:80]}")
+            if item not in targets:
+                targets.append(item)
+        if len(targets) > 128:
+            return _err("targets may contain at most 128 items")
+    if enabled and not targets:
+        return _err("at least one schedule target is required when enabled")
+    target = "both" if "os" in targets and any(item != "os" for item in targets) else ("os" if targets == ["os"] else "app")
     backup = bool(payload.get("backup"))
     restart = bool(payload.get("restart"))
+    release_delay_raw = payload.get("release_delay_days", 0)
+    try:
+        release_delay_days = int(release_delay_raw)
+    except (TypeError, ValueError):
+        return _err("release_delay_days must be an integer from 0 to 365")
+    if release_delay_days < 0 or release_delay_days > 365:
+        return _err("release_delay_days must be an integer from 0 to 365")
     backup_storage = (payload.get("backup_storage") or "").strip()
     if backup and not backup_storage:
         # Not fatal — the runner falls back to the first vzdump-capable
@@ -516,18 +608,49 @@ def validate_schedule(payload: Any) -> tuple[bool, Any]:
         "enabled": enabled,
         "cron": cron,
         "target": target,
+        "targets": targets,
         "backup": backup,
         "backup_storage": backup_storage,
         "restart": restart,
+        "release_delay_days": release_delay_days,
     }
     # Preserve `last_run_at` / `last_run_status` when the caller sent
     # them (typical when the scheduler writes back after firing);
     # otherwise leave the field unset so persisted values survive.
-    for k in ("last_run_at", "last_run_status", "last_run_target"):
+    for k in ("last_run_at", "last_run_status", "last_run_target", "last_run_reason"):
         v = payload.get(k)
         if v is not None:
             out[k] = v
     return True, out
+
+
+def validate_bulk_update(payload: Any) -> tuple[bool, Any]:
+    """Validate the reusable manual bulk-update selection.
+
+    This configuration is deliberately independent from ``schedule``:
+    changing what a manual bulk run does must never rewrite the operator's
+    cron automation.  ``os`` is mandatory and at least one additional,
+    explicit update method must be selected.
+    """
+    if not isinstance(payload, dict):
+        return _err("bulk_update must be a JSON object")
+    raw_targets = payload.get("targets")
+    if not isinstance(raw_targets, list):
+        return _err("targets must be a JSON array")
+    targets: list[str] = []
+    for value in raw_targets:
+        item = str(value or "").strip()
+        if not _BULK_TARGET_ID_RE.match(item):
+            return _err(f"invalid bulk update target: {item[:80]}")
+        if item not in targets:
+            targets.append(item)
+    if len(targets) > 128:
+        return _err("targets may contain at most 128 items")
+    if "os" not in targets:
+        return _err("the OS target is required for a bulk update")
+    if not any(item != "os" for item in targets):
+        return _err("at least one application target is required for a bulk update")
+    return True, {"targets": ["os", *sorted(item for item in targets if item != "os")]}
 
 
 def validate_config(payload: dict) -> tuple[bool, Any]:
@@ -798,6 +921,10 @@ def validate_config(payload: dict) -> tuple[bool, Any]:
             if "\x00" in uc:
                 return _err("update_command contains a null byte")
             conf["update_command"] = uc
+            # A custom command is the application updater. It always
+            # replaces /usr/bin/update for that same app. Ignore legacy
+            # two-step strategy payloads and normalize them on write.
+            conf["update_strategy"] = "custom_override"
 
     # Optional per-app dismiss flag for the "no update method defined"
     # notice shown in the Updates tab. Only affects the notice card;
@@ -835,12 +962,42 @@ def validate_config(payload: dict) -> tuple[bool, Any]:
 # ── Version detection: installed side ──────────────────────────────
 
 def _pct_exec(vmid, argv: list[str], timeout: int = _PROBE_TIMEOUT_SEC) -> tuple[int, str, str]:
-    """Wrapper around ``pct exec`` argv-style — NEVER through sh -c."""
+    """Wrapper around ``pct exec`` argv-style — NEVER through sh -c.
+
+    ``subprocess.run(timeout=...)`` only kills the immediate ``pct`` process.
+    A command inside the CT can retain the captured stdout/stderr pipes, which
+    makes Python wait for that command long after the advertised timeout. This
+    is especially visible while a restored CT is waiting for
+    ``network-online.target``: ``docker version`` used to keep a request open
+    for five minutes despite an eight-second timeout. Run ``pct`` in its own
+    process group and terminate the complete local execution tree so the
+    deadline is real.
+    """
     cmd = [_PCT_BIN, "exec", str(vmid), "--"] + argv
+    process: Optional[subprocess.Popen[str]] = None
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-        return r.returncode, r.stdout or "", r.stderr or ""
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=True,
+        )
+        stdout, stderr = process.communicate(timeout=timeout)
+        return process.returncode, stdout or "", stderr or ""
     except subprocess.TimeoutExpired:
+        if process is not None:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except (ProcessLookupError, PermissionError, OSError):
+                try:
+                    process.kill()
+                except (ProcessLookupError, OSError):
+                    pass
+            try:
+                process.communicate(timeout=2)
+            except (subprocess.TimeoutExpired, OSError):
+                pass
         return 124, "", f"timed out after {timeout}s"
     except (FileNotFoundError, OSError) as e:
         return 127, "", str(e)
@@ -872,8 +1029,10 @@ def _extract_version(text: str, pattern: str) -> Optional[str]:
 def detect_installed_version(vmid, config: dict) -> tuple[Optional[str], Optional[str]]:
     """Run the configured install-check inside the CT and return
     (version, error). Version None + error set on failure.
-    Version None + error None means "check ran but produced no
-    parseable version"."""
+    Version None + error None is reserved for configurations without
+    an installed-version method.  A configured probe that runs but
+    does not match its regex returns an explicit error; otherwise the
+    editor cannot distinguish a bad regex from an unconfigured app."""
     method = config.get("installed_via")
     # installed_regex is applied to the LOCAL command output; tag_regex
     # is for the upstream tag string. When installed_regex isn't set,
@@ -887,19 +1046,28 @@ def detect_installed_version(vmid, config: dict) -> tuple[Optional[str], Optiona
             if "no packages found" in low or "not installed" in low:
                 return None, f"{config['package']} is not installed via dpkg"
             return None, (err or out).strip()[:200] or "dpkg-query failed"
-        return _extract_version(out, pattern), None
+        version = _extract_version(out, pattern)
+        if not version:
+            return None, "no version matched in dpkg output"
+        return version, None
 
     if method == "apk":
         rc, out, err = _pct_exec(vmid, ["apk", "info", "-v", config["package"]])
         if rc != 0:
             return None, (err or out).strip()[:200] or "apk info failed"
-        return _extract_version(out, pattern), None
+        version = _extract_version(out, pattern)
+        if not version:
+            return None, "no version matched in apk output"
+        return version, None
 
     if method == "file":
         rc, out, err = _pct_exec(vmid, ["cat", config["file_path"]])
         if rc != 0:
             return None, (err or "").strip()[:200] or f"could not read {config['file_path']}"
-        return _extract_version(out, config["file_regex"]), None
+        version = _extract_version(out, config["file_regex"])
+        if not version:
+            return None, f"file_regex did not match {config['file_path']}"
+        return version, None
 
     if method == "binary":
         # binary_args defaults to ["--version"] but can be overridden
@@ -928,7 +1096,10 @@ def detect_installed_version(vmid, config: dict) -> tuple[Optional[str], Optiona
         rc, out, err = _pct_exec(vmid, [config["python_path"], "-c", snippet])
         if rc != 0:
             return None, (err or out).strip()[:200] or "python -c importlib.metadata failed"
-        return _extract_version(out, pattern), None
+        version = _extract_version(out, pattern)
+        if not version:
+            return None, "no version matched in Python distribution output"
+        return version, None
 
     if method == "docker_label":
         # docker inspect --format '{{index .Config.Labels "<label>"}}' <container>
@@ -942,7 +1113,10 @@ def detect_installed_version(vmid, config: dict) -> tuple[Optional[str], Optiona
         # Reject mutable tags disguised as versions.
         if text.lower() in ("latest", "stable", "main", "master", "edge"):
             return None, f"docker label reports {text!r} (mutable tag, not a version)"
-        return _extract_version(text, pattern), None
+        version = _extract_version(text, pattern)
+        if not version:
+            return None, "no version matched in docker label output"
+        return version, None
 
     if method == "docker_exec":
         # docker exec <container> <binary> [args…]
@@ -987,6 +1161,102 @@ def detect_installed_version(vmid, config: dict) -> tuple[Optional[str], Optiona
     return None, f"unsupported method: {method}"
 
 
+def _detector_probe_config(hint: dict, detector: dict) -> dict:
+    """Build a complete probe from one detector in a catalog hint.
+
+    Alternative detectors intentionally contain only method-specific fields.
+    Local/upstream regexes and upstream metadata live on the primary hint, so
+    they must be inherited before calling ``detect_installed_version``.
+    """
+    probe = {"installed_via": detector.get("installed_via")}
+    for key in _DETECTOR_FIELDS:
+        if key in detector:
+            probe[key] = detector[key]
+    for key in ("installed_regex", "tag_regex"):
+        if key in detector:
+            probe[key] = detector[key]
+        elif key in hint:
+            probe[key] = hint[key]
+    return probe
+
+
+def _ordered_hint_detectors(hint: dict):
+    """Yield primary, cross-method alternatives and file fallbacks.
+
+    ``/root/.<slug>`` is the maintained version contract for modern
+    community-scripts installs. It is reported as ``helper_marker`` so the UI
+    can distinguish it from canonical application/package probes; legacy and
+    manual installs continue through the other detectors.
+    """
+    if not isinstance(hint, dict):
+        return
+    primary = {"installed_via": hint.get("installed_via")}
+    for key in _DETECTOR_FIELDS:
+        if key in hint:
+            primary[key] = hint[key]
+    if primary.get("installed_via"):
+        primary_source = (
+            "helper_marker"
+            if primary.get("installed_via") == "file"
+            and re.fullmatch(r"/root/\.[A-Za-z0-9_.-]+", str(primary.get("file_path") or ""))
+            else "primary"
+        )
+        yield primary, primary_source
+    for alt in hint.get("alt_detectors") or []:
+        if isinstance(alt, dict) and alt.get("installed_via"):
+            yield alt, "alternative"
+    for fallback in hint.get("file_fallbacks") or []:
+        if not isinstance(fallback, dict) or not fallback.get("path"):
+            continue
+        detector = {
+            "installed_via": "file",
+            "file_path": fallback["path"],
+            "file_regex": fallback.get("regex") or hint.get("file_regex", ""),
+        }
+        fallback_source = (
+            "helper_marker"
+            if fallback.get("source") == "helper_marker"
+            or re.fullmatch(r"/root/\.[A-Za-z0-9_.-]+", str(fallback.get("path") or ""))
+            else "legacy_fallback"
+        )
+        yield detector, fallback_source
+
+
+def _select_working_hint_detector(vmid, hint: dict) -> tuple[dict, Optional[str], str, Optional[str]]:
+    """Return the first detector that produces a parseable real version.
+
+    Presence alone is insufficient: a stale file, similarly named package or
+    helper marker can exist without representing the running app.  The return
+    tuple is ``(tracking_config, version, source, last_error)``.  If no probe
+    succeeds the unchanged primary hint is returned as a catalog candidate,
+    with source ``candidate`` so the UI can stay transparent.
+    """
+    original = dict(hint) if isinstance(hint, dict) else {}
+    last_error: Optional[str] = None
+    for detector, source in _ordered_hint_detectors(original):
+        probe = _detector_probe_config(original, detector)
+        try:
+            version, error = detect_installed_version(vmid, probe)
+        except (KeyError, TypeError, ValueError) as exc:
+            version, error = None, str(exc)
+        if version:
+            selected = dict(original)
+            for key in _DETECTOR_FIELDS + ("installed_via",):
+                selected.pop(key, None)
+            selected.update(detector)
+            selected["detected_version"] = version
+            selected["detector_source"] = source
+            selected["detector_verified"] = True
+            return selected, version, source, None
+        if error:
+            last_error = error
+    original["detector_source"] = "candidate"
+    original["detector_verified"] = False
+    if last_error:
+        original["detector_error"] = last_error[:200]
+    return original, None, "candidate", last_error
+
+
 # ── Version detection: upstream side ───────────────────────────────
 
 def _github_pat() -> Optional[str]:
@@ -1011,25 +1281,43 @@ def fetch_latest_upstream(config: dict) -> tuple[Optional[str], Optional[str]]:
     ``upstream_type``. Falls back to github for legacy sidecars that
     only set ``repo``. Returns (version, error) — version None + error
     None means the app has no upstream configured (skip the check)."""
+    version, error, _published_at = fetch_latest_upstream_details(config)
+    return version, error
+
+
+def fetch_latest_upstream_details(config: dict) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    """Like :func:`fetch_latest_upstream`, plus the upstream publish date.
+
+    The date is intentionally optional.  GitHub releases expose a reliable
+    ``published_at`` value; tag lists and arbitrary JSON endpoints often do
+    not.  Scheduled release holds treat an unavailable date conservatively.
+    """
     upstream_type = config.get("upstream_type")
     # Legacy sidecars: repo set, upstream_type not.
     if not upstream_type and config.get("repo"):
         upstream_type = "github"
     if not upstream_type:
-        return None, None
+        return None, None, None
     if upstream_type == "github":
-        return _fetch_github_latest(config)
+        return _fetch_github_latest_details(config)
     if upstream_type == "http_json":
-        return _fetch_http_json_latest(config)
+        version, error = _fetch_http_json_latest(config)
+        return version, error, None
     if upstream_type == "docker_hub":
-        return _fetch_docker_hub_latest(config)
-    return None, f"unknown upstream_type: {upstream_type}"
+        version, error = _fetch_docker_hub_latest(config)
+        return version, error, None
+    return None, f"unknown upstream_type: {upstream_type}", None
 
 
 def _fetch_github_latest(config: dict) -> tuple[Optional[str], Optional[str]]:
+    version, error, _published_at = _fetch_github_latest_details(config)
+    return version, error
+
+
+def _fetch_github_latest_details(config: dict) -> tuple[Optional[str], Optional[str], Optional[str]]:
     repo = config.get("repo")
     if not repo:
-        return None, None
+        return None, None, None
     source = config.get("github_source") or "releases"
     if source == "releases":
         url = f"https://api.github.com/repos/{urllib.parse.quote(repo, safe='/')}/releases/latest"
@@ -1050,20 +1338,22 @@ def _fetch_github_latest(config: dict) -> tuple[Optional[str], Optional[str]]:
             payload = json.loads(r.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            return None, f"{repo}: not found"
+            return None, f"{repo}: not found", None
         if e.code == 403:
             remaining = e.headers.get("X-RateLimit-Remaining", "1")
             if remaining == "0":
-                return None, "github rate limited — configure a PAT in Settings"
-            return None, "github rejected the request (403)"
-        return None, f"github error {e.code}"
+                return None, "github rate limited — configure a PAT in Settings", None
+            return None, "github rejected the request (403)", None
+        return None, f"github error {e.code}", None
     except (urllib.error.URLError, TimeoutError, OSError) as e:
-        return None, f"network error: {e}"
+        return None, f"network error: {e}", None
 
     pattern = config.get("tag_regex") or r"v?(\d+\.\d+\.\d+)"
     tag = None
+    published_at = None
     if source == "releases" and isinstance(payload, dict):
         tag = payload.get("tag_name") or payload.get("name")
+        published_at = payload.get("published_at") or payload.get("created_at")
     elif source == "tags" and isinstance(payload, list):
         for entry in payload:
             candidate = entry.get("name") if isinstance(entry, dict) else None
@@ -1074,11 +1364,11 @@ def _fetch_github_latest(config: dict) -> tuple[Optional[str], Optional[str]]:
                     break
 
     if not tag:
-        return None, "no tag / release name in response"
+        return None, "no tag / release name in response", None
     v = _extract_version(tag, pattern)
     if not v:
-        return None, f"tag_regex did not match '{tag}'"
-    return v, None
+        return None, f"tag_regex did not match '{tag}'", None
+    return v, None, published_at if isinstance(published_at, str) else None
 
 
 def _resolve_json_path(data: Any, path: str) -> Any:
@@ -1150,15 +1440,28 @@ def _fetch_http_json_latest(config: dict) -> tuple[Optional[str], Optional[str]]
     return val_str, None
 
 
-def _fetch_docker_hub_latest(config: dict) -> tuple[Optional[str], Optional[str]]:
-    image = config.get("docker_image")
-    if not image:
-        return None, None
+def _docker_hub_tag_records(image: str) -> tuple[list[dict], Optional[str]]:
+    """Fetch recent Docker Hub tag names and their immutable digests.
+
+    Keeping the digest lets the Docker inventory resolve a moving tag such as
+    ``latest`` to a real version tag only when both point at the exact same
+    manifest. This is deliberately stricter than selecting the numerically
+    greatest tag, which could silently cross release channels or variants.
+    """
     if "/" not in image:
         image = f"library/{image}"
+    now = time.time()
+    with _docker_hub_tag_cache_lock:
+        cached = _docker_hub_tag_cache.get(image)
+        if (
+            cached
+            and now - float(cached.get("ts") or 0) < _DOCKER_HUB_TAG_CACHE_TTL_SEC
+            and isinstance(cached.get("records"), list)
+        ):
+            return [dict(item) for item in cached["records"] if isinstance(item, dict)], None
     url = (
         f"https://hub.docker.com/v2/repositories/{urllib.parse.quote(image, safe='/')}"
-        "/tags/?page_size=50&ordering=last_updated"
+        "/tags/?page_size=100&ordering=last_updated"
     )
     req = urllib.request.Request(url, headers={"User-Agent": "ProxMenux-Monitor", "Accept": "application/json"})
     try:
@@ -1166,46 +1469,181 @@ def _fetch_docker_hub_latest(config: dict) -> tuple[Optional[str], Optional[str]
             payload = json.loads(r.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            return None, f"docker image '{image}' not found"
-        return None, f"docker hub error {e.code}"
+            return [], f"docker image '{image}' not found"
+        if e.code == 429:
+            return [], "docker hub rate limited the request"
+        return [], f"docker hub error {e.code}"
     except (urllib.error.URLError, TimeoutError, OSError) as e:
-        return None, f"network error: {e}"
+        return [], f"network error: {e}"
     except json.JSONDecodeError as e:
-        return None, f"invalid docker hub JSON: {e}"
+        return [], f"invalid docker hub JSON: {e}"
 
     results = payload.get("results") if isinstance(payload, dict) else None
     if not isinstance(results, list) or not results:
-        return None, "no tags returned by docker hub"
+        return [], "no tags returned by docker hub"
 
-    tag_names = [t.get("name") for t in results if isinstance(t, dict) and t.get("name")]
-    # Optional filter by user tag_regex; if omitted, apply a default
-    # that keeps semver-shaped tags and drops moving/floating ones.
-    pattern = config.get("tag_regex")
-    if pattern:
-        try:
-            rx = re.compile(pattern)
-        except re.error as e:
-            return None, f"tag_regex is not a valid regex: {e}"
-        tag_names = [t for t in tag_names if rx.search(t)]
-    else:
-        # Drop obvious moving tags — user always overrides with an
-        # explicit tag_regex.
-        moving = {"latest", "main", "master", "edge", "stable",
-                  "nightly", "develop", "dev", "rolling"}
-        tag_names = [t for t in tag_names if t.lower() not in moving]
+    records = [
+        {
+            "name": str(item.get("name")),
+            "digest": str(item.get("digest")) if item.get("digest") else None,
+        }
+        for item in results
+        if isinstance(item, dict) and item.get("name")
+    ]
+    with _docker_hub_tag_cache_lock:
+        _docker_hub_tag_cache[image] = {"ts": now, "records": records}
+    return records, None
+
+
+def _docker_hub_tag_names(image: str) -> tuple[list[str], Optional[str]]:
+    """Fetch at most 100 recent Docker Hub tag names, cached per repository."""
+    records, error = _docker_hub_tag_records(image)
+    if error:
+        return [], error
+    return [str(item["name"]) for item in records if item.get("name")], None
+
+
+def _docker_tag_semver_key(tag: str) -> tuple:
+    match = re.search(r"(\d+)\.(\d+)\.(\d+)", tag)
+    if match:
+        return (1, int(match.group(1)), int(match.group(2)), int(match.group(3)), tag)
+    return (0, 0, 0, 0, tag)
+
+
+_DOCKER_DISPLAY_VERSION_RE = re.compile(
+    r"(?i)^v?((?:\d+\.){1,3}\d+(?:[-+._][0-9A-Za-z.-]+)?)$"
+)
+
+
+def _normalise_docker_display_version(value: Any) -> Optional[str]:
+    """Return a display-safe version only when the whole value is versioned."""
+    if not isinstance(value, (str, int, float)):
+        return None
+    candidate = str(value).strip()
+    if not candidate or len(candidate) > 128 or candidate.lower() in _MOVING_DOCKER_TAGS:
+        return None
+    match = _DOCKER_DISPLAY_VERSION_RE.fullmatch(candidate)
+    return match.group(1) if match else None
+
+
+def _docker_version_from_image_inspect(parsed: dict, inspected: dict) -> tuple[Optional[str], Optional[str]]:
+    """Resolve an installed image version from local, immutable evidence."""
+    direct_tag = _normalise_docker_display_version(parsed.get("tag"))
+    if direct_tag:
+        return direct_tag, "reference_tag"
+
+    labels = ((inspected.get("Config") or {}).get("Labels") or {})
+    # Application-specific labels take precedence over OCI labels because a
+    # few publishers put the base distribution version in the latter.
+    for key in ("Version", "version"):
+        version = _normalise_docker_display_version(labels.get(key))
+        if version:
+            return version, f"image_label:{key}"
+
+    # A moving tag often shares an image ID with an explicit release tag
+    # already present locally (for example frigate:stable + frigate:0.17.2).
+    alternate_versions: list[str] = []
+    for repo_tag in inspected.get("RepoTags") or []:
+        if not isinstance(repo_tag, str) or ":" not in repo_tag:
+            continue
+        alt_repo, alt_tag = repo_tag.rsplit(":", 1)
+        alt = _parse_docker_reference(alt_repo, alt_tag)
+        if not alt:
+            continue
+        if alt.get("registry") != parsed.get("registry") or alt.get("repository") != parsed.get("repository"):
+            continue
+        version = _normalise_docker_display_version(alt_tag)
+        if version:
+            alternate_versions.append(version)
+    if alternate_versions:
+        alternate_versions.sort(key=_docker_tag_semver_key, reverse=True)
+        return alternate_versions[0], "local_equivalent_tag"
+
+    version = _normalise_docker_display_version(labels.get("org.opencontainers.image.version"))
+    if version:
+        return version, "image_label:org.opencontainers.image.version"
+    return None, None
+
+
+def _docker_hub_version_for_digest(records: list[dict], digest: Optional[str]) -> Optional[str]:
+    """Find a version tag whose Docker Hub digest exactly matches ``digest``."""
+    if not digest:
+        return None
+    versions = []
+    for item in records:
+        if item.get("digest") != digest:
+            continue
+        version = _normalise_docker_display_version(item.get("name"))
+        if version:
+            versions.append(version)
+    if not versions:
+        return None
+    versions.sort(key=_docker_tag_semver_key, reverse=True)
+    return versions[0]
+
+
+def preview_docker_hub_tags(image: str, pattern: str | None, limit: int = _DOCKER_HUB_TAG_PREVIEW_LIMIT) -> tuple[bool, Any]:
+    """Return real tags matching an editor draft without tracking a CT.
+
+    Moving tags remain visible in the preview but are flagged because their
+    update state must be determined by image digest, not version comparison.
+    """
+    image = (image or "").strip().lower()
+    if not image or len(image) > _MAX_DOCKER_IMAGE_LEN or not _DOCKER_IMAGE_RE.match(image):
+        return False, "docker_image must match Docker Hub naming (owner/name or name)"
+    pattern = (pattern or "").strip() or _DEFAULT_DOCKER_HUB_TAG_REGEX
+    if len(pattern) > 512:
+        return False, "tag_regex exceeds 512 chars"
+    try:
+        regex = re.compile(pattern)
+    except re.error as exc:
+        return False, f"tag_regex is not a valid regex: {exc}"
+
+    tag_names, error = _docker_hub_tag_names(image)
+    if error:
+        return False, error
+    matched = [tag for tag in tag_names if regex.search(tag)]
+    matched.sort(key=_docker_tag_semver_key, reverse=True)
+    entries = []
+    for tag in matched[:max(1, min(int(limit), 10))]:
+        entries.append({
+            "tag": tag,
+            "version": _extract_version(tag, pattern),
+            "moving": tag.lower() in _MOVING_DOCKER_TAGS,
+        })
+    return True, {
+        "image": image if "/" in image else f"library/{image}",
+        "regex": pattern,
+        "tags": entries,
+        "matched_count": len(matched),
+        "scanned_count": len(tag_names),
+        "cached_for_seconds": _DOCKER_HUB_TAG_CACHE_TTL_SEC,
+    }
+
+
+def _fetch_docker_hub_latest(config: dict) -> tuple[Optional[str], Optional[str]]:
+    image = config.get("docker_image")
+    if not image:
+        return None, None
+    tag_names, error = _docker_hub_tag_names(image)
+    if error:
+        return None, error
+
+    pattern = config.get("tag_regex") or _DEFAULT_DOCKER_HUB_TAG_REGEX
+    try:
+        rx = re.compile(pattern)
+    except re.error as e:
+        return None, f"tag_regex is not a valid regex: {e}"
+    tag_names = [tag for tag in tag_names if rx.search(tag)]
     if not tag_names:
         return None, "no tags matched (docker_hub)"
 
-    # Semver-desc sort: parse each tag's three-part version tuple; tags
-    # without a parseable semver land last so a numeric release always
-    # wins over a random label.
-    def _semver_key(t: str) -> tuple:
-        m = re.search(r"(\d+)\.(\d+)\.(\d+)", t)
-        if m:
-            return (1, int(m.group(1)), int(m.group(2)), int(m.group(3)))
-        return (0, 0, 0, 0)
-    tag_names.sort(key=_semver_key, reverse=True)
-    winner = tag_names[0]
+    versioned_tags = [tag for tag in tag_names if tag.lower() not in _MOVING_DOCKER_TAGS]
+    if not versioned_tags:
+        return None, "tag_regex matched only moving tags; use Docker image digest tracking"
+
+    versioned_tags.sort(key=_docker_tag_semver_key, reverse=True)
+    winner = versioned_tags[0]
     # If user set a tag_regex with capture groups, run the extraction to
     # normalise "v1.2.3" → "1.2.3" and similar.
     if pattern:
@@ -1213,6 +1651,737 @@ def _fetch_docker_hub_latest(config: dict) -> tuple[Optional[str], Optional[str]
         if extracted:
             return extracted, None
     return winner, None
+
+
+# ── Docker image inventory ────────────────────────────────────────
+
+def _parse_docker_reference(repository: str, tag: str) -> Optional[dict]:
+    """Normalise a Docker CLI repository/tag into registry API parts."""
+    repository = (repository or "").strip()
+    tag = (tag or "").strip()
+    if not repository or repository == "<none>" or not tag or tag == "<none>":
+        return None
+    first, sep, rest = repository.partition("/")
+    if sep and ("." in first or ":" in first or first == "localhost"):
+        registry, path = first.lower(), rest
+    else:
+        registry = "docker.io"
+        path = repository
+    if registry in ("docker.io", "index.docker.io", "registry-1.docker.io"):
+        registry = "docker.io"
+        if "/" not in path:
+            path = f"library/{path}"
+        api_host = "registry-1.docker.io"
+    else:
+        api_host = registry
+    if not path or any(ch in path for ch in "\x00\r\n"):
+        return None
+    return {
+        "registry": registry,
+        "api_host": api_host,
+        "repository": path,
+        "tag": tag,
+        "reference": f"{repository}:{tag}",
+    }
+
+
+def _normalise_docker_container_reference(reference: str) -> str:
+    """Match Docker's implicit ``latest`` tag to ``docker image ls`` rows."""
+    reference = str(reference or "").strip()
+    if not reference or "@" in reference:
+        return reference
+    final_component = reference.rsplit("/", 1)[-1]
+    if ":" not in final_component:
+        return f"{reference}:latest"
+    return reference
+
+
+def _parse_bearer_challenge(value: str) -> Optional[dict]:
+    if not isinstance(value, str) or not value.lower().startswith("bearer "):
+        return None
+    params = {}
+    for key, quoted, bare in re.findall(r'(\w+)=(?:"([^"]*)"|([^,\s]+))', value[7:]):
+        params[key.lower()] = quoted or bare
+    realm = params.get("realm")
+    if not realm or not realm.startswith("https://"):
+        return None
+    return params
+
+
+def _registry_digest_request(url: str, headers: dict) -> tuple[Optional[str], Optional[str]]:
+    req = urllib.request.Request(url, headers=headers, method="HEAD")
+    try:
+        with urllib.request.urlopen(req, timeout=_DOCKER_REGISTRY_TIMEOUT_SEC) as response:
+            return response.headers.get("Docker-Content-Digest"), None
+    except urllib.error.HTTPError as exc:
+        if exc.code != 401:
+            return None, f"registry HTTP {exc.code}"
+        challenge = _parse_bearer_challenge(exc.headers.get("WWW-Authenticate", ""))
+        if not challenge:
+            return None, "registry authentication required"
+        query = {
+            key: challenge[key]
+            for key in ("service", "scope") if challenge.get(key)
+        }
+        token_url = challenge["realm"]
+        if query:
+            token_url += ("&" if "?" in token_url else "?") + urllib.parse.urlencode(query)
+        token_req = urllib.request.Request(
+            token_url,
+            headers={"User-Agent": "ProxMenux-Monitor", "Accept": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(token_req, timeout=_DOCKER_REGISTRY_TIMEOUT_SEC) as response:
+                token_payload = json.loads(response.read().decode("utf-8"))
+            token = token_payload.get("token") or token_payload.get("access_token")
+            if not token:
+                return None, "registry token response was empty"
+            auth_headers = dict(headers)
+            auth_headers["Authorization"] = f"Bearer {token}"
+            auth_req = urllib.request.Request(url, headers=auth_headers, method="HEAD")
+            with urllib.request.urlopen(auth_req, timeout=_DOCKER_REGISTRY_TIMEOUT_SEC) as response:
+                return response.headers.get("Docker-Content-Digest"), None
+        except urllib.error.HTTPError as auth_exc:
+            return None, f"registry HTTP {auth_exc.code}"
+        except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as auth_exc:
+            return None, f"registry network error: {auth_exc}"
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        return None, f"registry network error: {exc}"
+
+
+def _fetch_registry_manifest_digest(parsed: dict) -> tuple[Optional[str], Optional[str]]:
+    repo = urllib.parse.quote(parsed["repository"], safe="/")
+    tag = urllib.parse.quote(parsed["tag"], safe="._-")
+    url = f"https://{parsed['api_host']}/v2/{repo}/manifests/{tag}"
+    return _registry_digest_request(url, {
+        "User-Agent": "ProxMenux-Monitor",
+        "Accept": _DOCKER_MANIFEST_ACCEPT,
+    })
+
+
+def _parse_compose_depends_on(value: Any) -> list[str]:
+    """Return service names from Compose's ``depends_on`` label.
+
+    Compose serialises entries as comma-separated
+    ``service:condition:restart`` tuples.  Older releases may emit just the
+    service name.  Invalid names are ignored because they must never reach a
+    generated shell command.
+    """
+    dependencies: list[str] = []
+    for raw in str(value or "").split(","):
+        service = raw.strip().split(":", 1)[0].strip()
+        if not service or not _DOCKER_COMPOSE_PROJECT_RE.match(service):
+            continue
+        if service not in dependencies:
+            dependencies.append(service)
+    return sorted(dependencies)
+
+
+def _docker_compose_update_command(
+    working_dir: str,
+    config_files: list[str],
+    services: list[str],
+) -> str:
+    prefix = ["docker", "compose", "--project-directory", working_dir]
+    for config_file in config_files:
+        prefix.extend(["-f", config_file])
+    pull = " ".join(shlex.quote(arg) for arg in [*prefix, "pull", *services])
+    recreate = " ".join(shlex.quote(arg) for arg in [
+        *prefix, "up", "-d", "--no-deps", *services,
+    ])
+    return f"{pull} && {recreate}"
+
+
+def _docker_update_unit_id(kind: str, *parts: str) -> str:
+    identity = "\0".join([kind, *parts]).encode("utf-8")
+    return f"docker-unit:{hashlib.sha256(identity).hexdigest()[:20]}"
+
+
+def _build_docker_update_units(images: list[dict]) -> list[dict]:
+    """Build reusable Docker selections for manual bulk updates.
+
+    Independent services remain independent even when they share a Compose
+    project.  A root service includes only the transitive services named by
+    its real ``depends_on`` labels.  This mirrors the user's mental model of
+    selecting an app while still recreating its declared database/cache
+    dependencies exactly once.
+    """
+    projects: dict[str, dict] = {}
+    for image in images:
+        for target in image.get("update_targets") or []:
+            project = str(target.get("project") or "").strip()
+            working_dir = str(target.get("working_dir") or "").strip()
+            config_files = [str(value) for value in target.get("config_files") or []]
+            if not project or not working_dir or not config_files:
+                continue
+            project_entry = projects.get(project)
+            if project_entry and (
+                project_entry["working_dir"] != working_dir
+                or project_entry["config_files"] != config_files
+            ):
+                continue
+            project_entry = projects.setdefault(project, {
+                "working_dir": working_dir,
+                "config_files": config_files,
+                "services": {},
+            })
+            dependencies = target.get("dependencies") or {}
+            for service in target.get("services") or []:
+                service = str(service or "").strip()
+                if not _DOCKER_COMPOSE_PROJECT_RE.match(service):
+                    continue
+                project_entry["services"].setdefault(service, {
+                    "reference": image.get("reference"),
+                    "display_name": image.get("display_name"),
+                    "logo_url": image.get("logo_url"),
+                    "update_available": image.get("update_available"),
+                    "depends_on": [],
+                })
+                service_entry = project_entry["services"][service]
+                service_entry["depends_on"] = sorted(set(
+                    service_entry.get("depends_on") or []
+                ) | {
+                    str(dep) for dep in dependencies.get(service) or []
+                    if _DOCKER_COMPOSE_PROJECT_RE.match(str(dep))
+                })
+
+    units: list[dict] = []
+    for project in sorted(projects):
+        project_entry = projects[project]
+        service_map: dict[str, dict] = project_entry["services"]
+        if not service_map:
+            continue
+        known_services = set(service_map)
+        for info in service_map.values():
+            info["depends_on"] = [
+                dep for dep in info.get("depends_on") or [] if dep in known_services
+            ]
+        depended_on = {
+            dep for info in service_map.values() for dep in info.get("depends_on") or []
+        }
+        roots = sorted(known_services - depended_on)
+
+        def closure(root: str) -> list[str]:
+            found: set[str] = set()
+            pending = [root]
+            while pending:
+                service = pending.pop()
+                if service in found or service not in service_map:
+                    continue
+                found.add(service)
+                pending.extend(service_map[service].get("depends_on") or [])
+            return sorted(found)
+
+        # A cycle has no root.  Represent each disconnected cyclic component
+        # once instead of silently dropping it or emitting duplicate units.
+        if not roots:
+            roots = [min(known_services)]
+        covered: set[str] = set()
+        root_closures: list[tuple[str, list[str]]] = []
+        for root in roots:
+            services = closure(root)
+            root_closures.append((root, services))
+            covered.update(services)
+        for service in sorted(known_services - covered):
+            services = closure(service)
+            root_closures.append((service, services))
+            covered.update(services)
+
+        for root, services in root_closures:
+            primary = service_map[root]
+            references = sorted({
+                str(service_map[service].get("reference") or "")
+                for service in services if service_map[service].get("reference")
+            })
+            states = [service_map[service].get("update_available") for service in services]
+            update_available: Optional[bool]
+            if any(state is True for state in states):
+                update_available = True
+            elif states and all(state is False for state in states):
+                update_available = False
+            else:
+                update_available = None
+            units.append({
+                "id": _docker_update_unit_id("compose", project, root),
+                "kind": "compose",
+                "project": project,
+                "primary_service": root,
+                "services": services,
+                "dependent_services": [service for service in services if service != root],
+                "references": references,
+                "primary_reference": primary.get("reference"),
+                "display_name": primary.get("display_name") or root,
+                "logo_url": primary.get("logo_url"),
+                "working_dir": project_entry["working_dir"],
+                "config_files": project_entry["config_files"],
+                "update_command": _docker_compose_update_command(
+                    project_entry["working_dir"], project_entry["config_files"], services,
+                ),
+                "standalone_containers": [],
+                "update_available": update_available,
+            })
+
+    for image in images:
+        containers = sorted(set(image.get("standalone_containers") or []))
+        reference = str(image.get("reference") or "").strip()
+        if not containers or not reference:
+            continue
+        units.append({
+            "id": _docker_update_unit_id("standalone", reference),
+            "kind": "standalone",
+            "project": None,
+            "primary_service": containers[0],
+            "services": [],
+            "dependent_services": [],
+            "references": [reference],
+            "primary_reference": reference,
+            "display_name": image.get("display_name") or reference,
+            "logo_url": image.get("logo_url"),
+            "working_dir": None,
+            "config_files": [],
+            "update_command": "",
+            "standalone_containers": containers,
+            "update_available": image.get("update_available"),
+        })
+    return sorted(units, key=lambda unit: (
+        str(unit.get("display_name") or "").lower(), unit["id"],
+    ))
+
+
+def _aggregate_docker_compose_projects(images: list[dict]) -> list[dict]:
+    """Merge per-image Compose targets into one safe action per project.
+
+    One Compose project can contain several services whose images all moved.
+    The image rows intentionally retain their narrow, service-specific action;
+    scheduled and bulk updates use this aggregate so the project is pulled and
+    recreated once with the union of affected services.
+    """
+    projects: dict[str, dict] = {}
+    for image in images:
+        for target in image.get("update_targets") or []:
+            project = str(target.get("project") or "").strip()
+            working_dir = str(target.get("working_dir") or "").strip()
+            config_files = [str(value) for value in target.get("config_files") or []]
+            if not project or not working_dir or not config_files:
+                continue
+            existing = projects.get(project)
+            if existing and (
+                existing["working_dir"] != working_dir
+                or existing["config_files"] != config_files
+            ):
+                # Compose project names should be unique on one engine. If
+                # provenance conflicts, keep the first verified project rather
+                # than combining commands from unrelated working directories.
+                continue
+            entry = projects.setdefault(project, {
+                "kind": "compose",
+                "project": project,
+                "working_dir": working_dir,
+                "config_files": config_files,
+                "services": [],
+            })
+            entry["services"] = sorted(set(entry["services"]) | {
+                str(service) for service in target.get("services") or [] if service
+            })
+    result = []
+    for project in sorted(projects):
+        target = projects[project]
+        if not target["services"]:
+            continue
+        target["update_command"] = _docker_compose_update_command(
+            target["working_dir"], target["config_files"], target["services"],
+        )
+        result.append(target)
+    return result
+
+
+def _docker_inventory_from_ct(vmid) -> dict:
+    checked_at = _now_iso()
+    rc, out, err = _pct_exec(
+        vmid, ["docker", "version", "--format", "{{.Server.Version}}"], timeout=10
+    )
+    if rc != 0:
+        return {
+            "vmid": int(vmid), "available": False, "engine_version": None,
+            "images": [], "update_count": 0, "checked_at": checked_at,
+            "error": (err or out).strip()[:200] or "Docker is not available",
+        }
+    engine_version = out.strip()
+    rc_cont, containers_out, _ = _pct_exec(
+        vmid,
+        ["docker", "ps", "-a", "--no-trunc", "--format",
+         "{{.Names}}\t{{.Image}}\t{{.Status}}"],
+        timeout=10,
+    )
+    if rc_cont != 0:
+        return {
+            "vmid": int(vmid), "available": False,
+            "refreshing": False, "engine_version": engine_version,
+            "images": [], "update_count": 0, "checked_at": checked_at,
+            "error": "docker container inventory is not ready",
+        }
+    containers: list[dict] = []
+    for line in containers_out.splitlines():
+        parts = line.split("\t", 2)
+        if len(parts) == 3:
+            containers.append({"name": parts[0], "image": parts[1], "status": parts[2]})
+
+    # Compose provenance is the safe bridge from read-only detection to
+    # reproducible updates. Docker Compose writes these labels on every
+    # service container; unlike guessing a docker-run command, they point
+    # back to the declarative project, service and config file(s).
+    if containers:
+        inspect_argv = [
+            "docker", "inspect", "--format", "{{json .}}",
+            *[item["name"] for item in containers],
+        ]
+        rc_inspect, inspect_out, _ = _pct_exec(vmid, inspect_argv, timeout=20)
+        inspected: dict[str, dict] = {}
+        if rc_inspect == 0:
+            for raw in inspect_out.splitlines():
+                try:
+                    obj = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                name = str(obj.get("Name") or "").lstrip("/")
+                if name:
+                    inspected[name] = obj
+        for item in containers:
+            obj = inspected.get(item["name"]) or {}
+            config = obj.get("Config") or {}
+            labels = config.get("Labels") or {}
+            item["image_reference"] = _normalise_docker_container_reference(
+                str(config.get("Image") or item.get("image") or "")
+            )
+            item["image_id"] = str(obj.get("Image") or "").strip()
+            project = str(labels.get("com.docker.compose.project") or "").strip()
+            service = str(labels.get("com.docker.compose.service") or "").strip()
+            working_dir = str(labels.get("com.docker.compose.project.working_dir") or "").strip()
+            raw_files = str(labels.get("com.docker.compose.project.config_files") or "").strip()
+            config_files = [p.strip() for p in raw_files.split(",") if p.strip()]
+            depends_on = _parse_compose_depends_on(
+                labels.get("com.docker.compose.depends_on")
+            )
+            compose_valid = (
+                bool(project and service and working_dir and config_files)
+                and bool(_DOCKER_COMPOSE_PROJECT_RE.match(project))
+                and bool(_DOCKER_COMPOSE_PROJECT_RE.match(service))
+                and working_dir.startswith("/")
+                and all(path.startswith("/") for path in config_files)
+                and all("\x00" not in value and "\n" not in value for value in [working_dir, *config_files])
+            )
+            item["compose"] = ({
+                "project": project,
+                "service": service,
+                "working_dir": working_dir,
+                "config_files": config_files,
+                "depends_on": depends_on,
+            } if compose_valid else None)
+
+    rc_img, images_out, images_err = _pct_exec(
+        vmid,
+        ["docker", "image", "ls", "--no-trunc", "--digests", "--format",
+         "{{.Repository}}\t{{.Tag}}\t{{.Digest}}\t{{.ID}}"],
+        timeout=15,
+    )
+    if rc_img != 0:
+        return {
+            "vmid": int(vmid), "available": False,
+            "refreshing": False, "engine_version": engine_version,
+            "images": [], "update_count": 0, "checked_at": checked_at,
+            "error": (images_err or images_out).strip()[:200] or "docker image ls failed",
+        }
+
+    raw_image_rows: list[tuple[str, str, str, str]] = []
+    for line in images_out.splitlines():
+        parts = line.split("\t", 3)
+        if len(parts) == 4:
+            raw_image_rows.append(tuple(part.strip() for part in parts))
+
+    inspected_images: dict[str, dict] = {}
+    unique_image_ids = list(dict.fromkeys(row[3] for row in raw_image_rows if row[3]))
+    if unique_image_ids:
+        rc_image_inspect, image_inspect_out, _ = _pct_exec(
+            vmid,
+            ["docker", "image", "inspect", "--format", "{{json .}}", *unique_image_ids],
+            timeout=30,
+        )
+        if rc_image_inspect == 0:
+            for raw in image_inspect_out.splitlines():
+                try:
+                    obj = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                image_key = str(obj.get("Id") or "").strip()
+                if image_key:
+                    inspected_images[image_key] = obj
+                    inspected_images[image_key.removeprefix("sha256:")] = obj
+
+    images: list[dict] = []
+    seen: set[str] = set()
+    for repository, tag, digest, image_id in raw_image_rows:
+        parsed = _parse_docker_reference(repository, tag)
+        if not parsed or parsed["reference"] in seen:
+            continue
+        seen.add(parsed["reference"])
+        used_by = sorted({
+            item["name"] for item in containers
+            if (
+                _normalise_docker_container_reference(str(item.get("image_reference") or item.get("image") or ""))
+                == parsed["reference"]
+                or str(item.get("image_id") or item.get("image") or "")
+                in (image_id, image_id.removeprefix("sha256:"))
+                or str(item.get("image_id") or "").removeprefix("sha256:")
+                == image_id.removeprefix("sha256:")
+            )
+        })
+        used_containers = [item for item in containers if item.get("name") in used_by]
+        compose_targets: dict[str, dict] = {}
+        standalone_containers: list[str] = []
+        for container in used_containers:
+            compose = container.get("compose")
+            if not compose:
+                standalone_containers.append(container["name"])
+                continue
+            project = compose["project"]
+            target = compose_targets.setdefault(project, {
+                "kind": "compose",
+                "project": project,
+                "working_dir": compose["working_dir"],
+                "config_files": compose["config_files"],
+                "services": [],
+                "dependencies": {},
+            })
+            if compose["service"] not in target["services"]:
+                target["services"].append(compose["service"])
+            target["dependencies"][compose["service"]] = compose.get("depends_on") or []
+        for target in compose_targets.values():
+            target["services"].sort()
+            target["update_command"] = _docker_compose_update_command(
+                target["working_dir"], target["config_files"], target["services"],
+            )
+        inspected_image = (
+            inspected_images.get(image_id)
+            or inspected_images.get(image_id.removeprefix("sha256:"))
+            or {}
+        )
+        installed_version, installed_version_source = _docker_version_from_image_inspect(
+            parsed, inspected_image,
+        )
+        primary_container = used_containers[0] if used_containers else {}
+        primary_compose = primary_container.get("compose") or {}
+        display_meta = _docker_service_catalog_meta(
+            str(primary_compose.get("service") or ""),
+            str(primary_container.get("name") or ""),
+            parsed["reference"],
+        )
+        images.append({
+            **parsed,
+            "local_digest": digest if digest.startswith("sha256:") else None,
+            "remote_digest": None,
+            "image_id": image_id,
+            "used_by": used_by,
+            "update_targets": sorted(compose_targets.values(), key=lambda target: target["project"]),
+            "standalone_containers": sorted(standalone_containers),
+            "display_name": display_meta.get("name"),
+            "logo_url": display_meta.get("logo_url"),
+            "installed_version": installed_version,
+            "installed_version_source": installed_version_source,
+            "available_version": None,
+            "update_available": None,
+            "error": None,
+        })
+        if len(images) >= _DOCKER_MAX_IMAGES:
+            break
+
+    def _check(item: dict) -> tuple[str, Optional[str], Optional[str]]:
+        remote, error = _fetch_registry_manifest_digest(item)
+        return item["reference"], remote, error
+
+    if images:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, len(images))) as pool:
+            results = list(pool.map(_check, images))
+        by_ref = {ref: (digest, error) for ref, digest, error in results}
+        for item in images:
+            remote, remote_error = by_ref.get(item["reference"], (None, None))
+            item["remote_digest"] = remote
+            item["error"] = remote_error
+            if item["local_digest"] and remote:
+                item["update_available"] = item["local_digest"] != remote
+
+        # Docker Hub exposes the digest for each tag. Resolve versions only
+        # when an explicit version tag has the exact local/remote digest;
+        # otherwise leave the value empty and let the UI report a new image
+        # without claiming a version number.
+        hub_repositories = sorted({
+            item["repository"]
+            for item in images
+            if item.get("registry") == "docker.io"
+            and (not item.get("installed_version") or item.get("update_available") is True)
+        })
+        hub_records: dict[str, list[dict]] = {}
+        if hub_repositories:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, len(hub_repositories))) as pool:
+                fetched = list(pool.map(_docker_hub_tag_records, hub_repositories))
+            for repository, (records, _error) in zip(hub_repositories, fetched):
+                hub_records[repository] = records
+        for item in images:
+            records = hub_records.get(item.get("repository")) or []
+            if not records:
+                continue
+            if not item.get("installed_version"):
+                local_version = _docker_hub_version_for_digest(records, item.get("local_digest"))
+                if local_version:
+                    item["installed_version"] = local_version
+                    item["installed_version_source"] = "docker_hub_digest_tag"
+            if item.get("update_available") is True:
+                available_version = _docker_hub_version_for_digest(records, item.get("remote_digest"))
+                if available_version and available_version != item.get("installed_version"):
+                    item["available_version"] = available_version
+
+    return {
+        "vmid": int(vmid),
+        "available": True,
+        "refreshing": False,
+        "engine_version": engine_version,
+        "containers": containers,
+        "images": images,
+        "compose_projects": _aggregate_docker_compose_projects(images),
+        "update_units": _build_docker_update_units(images),
+        "update_count": sum(1 for item in images if item.get("update_available") is True),
+        "checked_at": checked_at,
+        "truncated": len(seen) >= _DOCKER_MAX_IMAGES,
+        "error": None,
+    }
+
+
+def get_docker_inventory(vmid, force: bool = False) -> dict:
+    """Return cached/read-only Docker image update state for one CT."""
+    key = str(int(vmid))
+    with _docker_inventory_lock:
+        cached = _docker_inventory_cache.get(key)
+        if cached and not force:
+            age = time.time() - float(cached.get("checked_at_unix") or 0)
+            # Retry unavailable/stopped CTs quickly.  A full 24-hour
+            # negative cache made Docker stay unavailable after the user
+            # started the container from the VM page.
+            cache_ttl = _DOCKER_INVENTORY_TTL_SEC if cached.get("available") else 30
+            if age < cache_ttl:
+                return dict(cached)
+    result = _docker_inventory_from_ct(vmid)
+    result["checked_at_unix"] = time.time()
+    # A restored CT can expose the Docker binary and socket before the daemon
+    # has finished waiting for network-online.target and loading its image
+    # store. Never replace a useful inventory (and the stable docker-unit IDs
+    # referenced by bulk updates) with that transient failure. The snapshot is
+    # marked as refreshing and uses the short negative TTL, so the next normal
+    # request retries instead of keeping stale data for 24 hours.
+    if (
+        not result.get("available")
+        and cached
+        and (
+            cached.get("refreshing")
+            or cached.get("images")
+            or cached.get("update_units")
+        )
+    ):
+        pending = dict(cached)
+        pending.update({
+            "available": False,
+            "refreshing": True,
+            "error": result.get("error") or "Docker is not ready",
+            "checked_at_unix": result["checked_at_unix"],
+        })
+        result = pending
+    with _docker_inventory_lock:
+        _docker_inventory_cache[key] = result
+    return dict(result)
+
+
+def mark_docker_inventory_refreshing(vmid) -> dict:
+    """Publish a non-destructive lifecycle transition for one Docker CT.
+
+    Restores and starts invalidate the meaning of the previous digest result,
+    but its update-unit IDs are still required to render the user's saved bulk
+    selection. Keep that structural metadata while explicitly marking every
+    update state as pending until the daemon becomes usable.
+    """
+    key = str(int(vmid))
+    now = time.time()
+    with _docker_inventory_lock:
+        previous = dict(_docker_inventory_cache.get(key) or {})
+        previous_images = [
+            {**item, "update_available": None}
+            for item in (previous.get("images") or [])
+            if isinstance(item, dict)
+        ]
+        previous_units = [
+            {**item, "update_available": None}
+            for item in (previous.get("update_units") or [])
+            if isinstance(item, dict)
+        ]
+        pending = {
+            "vmid": int(vmid),
+            "available": False,
+            "refreshing": True,
+            "engine_version": previous.get("engine_version"),
+            "containers": previous.get("containers") or [],
+            "images": previous_images,
+            "compose_projects": previous.get("compose_projects") or [],
+            "update_units": previous_units,
+            "update_count": 0,
+            "checked_at": previous.get("checked_at"),
+            "checked_at_unix": now,
+            "truncated": bool(previous.get("truncated")),
+            "error": None,
+        }
+        _docker_inventory_cache[key] = pending
+    return dict(pending)
+
+
+def get_cached_docker_inventories() -> dict:
+    """Return in-memory inventories without probing CTs or registries."""
+    with _docker_inventory_lock:
+        return {key: dict(value) for key, value in _docker_inventory_cache.items()}
+
+
+def invalidate_docker_inventory(vmid) -> None:
+    """Drop one CT's Docker snapshot before a lifecycle refresh.
+
+    Restoring a container backup can roll Docker Engine, images and Compose
+    state backwards. Keeping the pre-restore digest snapshot visible while
+    that CT boots would falsely report the restored workloads as current.
+    """
+    key = str(int(vmid))
+    with _docker_inventory_lock:
+        _docker_inventory_cache.pop(key, None)
+
+
+def refresh_docker_inventories(force: bool = False) -> int:
+    """Daily best-effort scan of running LXC containers that host Docker."""
+    try:
+        import managed_installs
+        items = managed_installs.get_active_items() or []
+    except Exception:
+        items = []
+    vmids: set[int] = set()
+    for item in items:
+        if item.get("type") != "lxc" or item.get("_vmid") is None:
+            continue
+        vmid = int(item["_vmid"])
+        # Cheap local signature also covers manual Docker installs whose CT
+        # has no community-scripts slug.
+        rc, _, _ = _pct_exec(vmid, ["test", "-x", "/usr/bin/docker"], timeout=5)
+        if rc == 0:
+            vmids.add(vmid)
+    count = 0
+    for vmid in sorted(vmids):
+        try:
+            get_docker_inventory(vmid, force=force)
+            count += 1
+        except Exception as exc:
+            print(f"[ProxMenux] Docker inventory CT {vmid} failed: {exc}")
+    return count
 
 
 # ── Version comparison ────────────────────────────────────────────
@@ -1236,9 +2405,60 @@ def _empty_state() -> dict:
     return {
         "installed_version": None,
         "latest_version": None,
+        "latest_published_at": None,
         "update_available": None,
         "error": None,
         "checked_at": None,
+    }
+
+
+def test_config(vmid, payload: dict) -> tuple[bool, Any]:
+    """Validate and execute an app-tracking draft without persisting it.
+
+    This is the editor's diagnostic contract.  It deliberately returns
+    the installed and upstream outcomes separately so a user can tell a
+    bad local detector from a bad repository/tag filter.  Probe output is
+    never returned: a user-selected file or command could contain secrets.
+    """
+    ok, config = validate_config(payload)
+    if not ok:
+        return False, config
+
+    method = config.get("installed_via")
+    upstream_type = config.get("upstream_type")
+    if not upstream_type and config.get("repo"):
+        upstream_type = "github"
+
+    installed_version, installed_error = detect_installed_version(vmid, config)
+    latest_version, upstream_error, latest_published_at = fetch_latest_upstream_details(config)
+    effective_regex = None
+    if method:
+        effective_regex = (
+            config.get("file_regex") if method == "file"
+            else config.get("installed_regex")
+            or config.get("tag_regex")
+            or r"(\d+[.\d]+)"
+        )
+
+    return True, {
+        "valid": True,
+        "persisted": False,
+        "checked_at": _now_iso(),
+        "installed": {
+            "configured": bool(method),
+            "method": method,
+            "effective_regex": effective_regex,
+            "version": installed_version,
+            "error": installed_error,
+        },
+        "upstream": {
+            "configured": bool(upstream_type),
+            "type": upstream_type,
+            "version": latest_version,
+            "published_at": latest_published_at,
+            "error": upstream_error,
+        },
+        "update_available": compare(installed_version, latest_version),
     }
 
 
@@ -1564,6 +2784,52 @@ def delete_schedule(vmid) -> bool:
         return _write_sidecar(vmid, sidecar)
 
 
+# ── Manual bulk updates CRUD ───────────────────────────────────────
+
+def get_bulk_update(vmid) -> Optional[dict]:
+    """Return the persisted manual bulk selection, if configured."""
+    sidecar = _read_sidecar(vmid)
+    if not sidecar:
+        return None
+    bulk = sidecar.get("bulk_update")
+    return bulk if isinstance(bulk, dict) else None
+
+
+def update_bulk_update(vmid, payload: dict) -> tuple[bool, Any]:
+    """Persist a reusable bulk selection independently from cron options."""
+    ok, bulk = validate_bulk_update(payload)
+    if not ok:
+        return False, bulk
+    with _cache_lock:
+        sidecar = _read_sidecar(vmid)
+        if not sidecar:
+            sidecar = {
+                "vmid": vmid,
+                "apps": [],
+                "created_at": _now_iso(),
+                "updated_at": _now_iso(),
+            }
+        previous = sidecar.get("bulk_update") or {}
+        now = _now_iso()
+        bulk["configured_at"] = previous.get("configured_at") or now
+        bulk["updated_at"] = now
+        sidecar["bulk_update"] = bulk
+        sidecar["updated_at"] = now
+        if not _write_sidecar(vmid, sidecar):
+            return False, "could not persist sidecar"
+    return True, sidecar
+
+
+def delete_bulk_update(vmid) -> bool:
+    with _cache_lock:
+        sidecar = _read_sidecar(vmid)
+        if not sidecar or "bulk_update" not in sidecar:
+            return True
+        sidecar.pop("bulk_update", None)
+        sidecar["updated_at"] = _now_iso()
+        return _write_sidecar(vmid, sidecar)
+
+
 def get_all_schedules() -> list:
     """Enumerate every sidecar with a schedule set. Used by the
     scheduler thread every minute to know which CTs to check.
@@ -1591,11 +2857,145 @@ def get_all_schedules() -> list:
     return out
 
 
-def record_schedule_run(vmid, status: str, target: str) -> bool:
+def partition_scheduled_release_targets(
+    targets: list[str],
+    apps: list[dict],
+) -> tuple[set[str], list[str]]:
+    """Split scheduled targets by whether the release-age hold applies.
+
+    Only registered applications with an installed-version detector are
+    release-gated.  Web-Link-only apps with a custom updater, Docker targets
+    and OS packages remain executable on every scheduled occurrence.  The
+    second return value is the target list to use when the gated applications
+    must be deferred.  Legacy ``apps`` wildcards are expanded to explicit
+    untracked registrations so those commands are not accidentally blocked.
+    """
+    raw_targets = [str(value) for value in (targets or [])]
+    select_all_apps = "apps" in raw_targets
+    selected_app_ids = {
+        value.split(":", 1)[1]
+        for value in raw_targets
+        if value.startswith("app:")
+    }
+    gated_ids: set[str] = set()
+    eligible_apps: list[dict] = []
+    for app in apps or []:
+        app_id = str(app.get("id") or "").strip()
+        if not app_id or app.get("managed_oci_app_id") or app.get("helper_slug") == "docker":
+            continue
+        if not select_all_apps and app_id not in selected_app_ids:
+            continue
+        eligible_apps.append(app)
+        if app.get("installed_via"):
+            gated_ids.add(app_id)
+
+    remaining: list[str] = []
+
+    def add(target_id: str) -> None:
+        if target_id and target_id not in remaining:
+            remaining.append(target_id)
+
+    for target_id in raw_targets:
+        if target_id == "apps":
+            for app in eligible_apps:
+                app_id = str(app.get("id") or "").strip()
+                if app_id and app_id not in gated_ids:
+                    add(f"app:{app_id}")
+            continue
+        if target_id.startswith("app:") and target_id.split(":", 1)[1] in gated_ids:
+            continue
+        add(target_id)
+    return gated_ids, remaining
+
+
+def scheduled_app_release_gate(
+    vmid,
+    delay_days: int,
+    now: Optional[datetime.datetime] = None,
+    app_ids: Optional[set[str]] = None,
+) -> dict:
+    """Decide whether a scheduled app updater may run after a release hold.
+
+    Manual updates never call this function.  A non-zero hold first refreshes
+    every registered detector, then permits automation only when at least one
+    update is known and every pending release has a trustworthy publish date
+    old enough for the configured delay.  This is deliberately conservative:
+    a CT-wide helper updater cannot skip one young application safely.
+    """
+    try:
+        days = int(delay_days)
+    except (TypeError, ValueError):
+        days = 0
+    if days <= 0:
+        return {"allowed": True, "status": "ready", "reason": None}
+
+    try:
+        check_all(vmid, force=True)
+    except Exception as exc:
+        return {"allowed": False, "status": "deferred", "reason": f"version refresh failed: {exc}"}
+    sidecar = _read_sidecar(vmid) or {}
+    tracked = [
+        app for app in (sidecar.get("apps") or [])
+        if app.get("installed_via") and not app.get("managed_oci_app_id")
+        and (app_ids is None or app.get("id") in app_ids)
+    ]
+    if not tracked:
+        return {
+            "allowed": False,
+            "status": "deferred",
+            "reason": "release hold requires at least one version-tracked app",
+        }
+
+    unknown = [app for app in tracked if (app.get("state") or {}).get("update_available") is None]
+    if unknown:
+        names = ", ".join(str(app.get("name") or "app") for app in unknown[:3])
+        return {
+            "allowed": False,
+            "status": "deferred",
+            "reason": f"release date/update state unavailable for: {names}",
+        }
+
+    pending = [app for app in tracked if (app.get("state") or {}).get("update_available") is True]
+    if not pending:
+        return {"allowed": False, "status": "skipped", "reason": "no pending app updates"}
+
+    current = now or datetime.datetime.now(datetime.timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=datetime.timezone.utc)
+    for app in pending:
+        state = app.get("state") or {}
+        raw_date = state.get("latest_published_at")
+        if not isinstance(raw_date, str) or not raw_date.strip():
+            return {
+                "allowed": False,
+                "status": "deferred",
+                "reason": f"upstream publish date unavailable for {app.get('name') or 'app'}",
+            }
+        try:
+            published = datetime.datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
+            if published.tzinfo is None:
+                published = published.replace(tzinfo=datetime.timezone.utc)
+        except ValueError:
+            return {
+                "allowed": False,
+                "status": "deferred",
+                "reason": f"invalid upstream publish date for {app.get('name') or 'app'}",
+            }
+        eligible_at = published + datetime.timedelta(days=days)
+        if current < eligible_at:
+            return {
+                "allowed": False,
+                "status": "deferred",
+                "reason": f"release hold active until {eligible_at.isoformat()}",
+            }
+    return {"allowed": True, "status": "ready", "reason": None}
+
+
+def record_schedule_run(vmid, status: str, target: str, reason: Optional[str] = None) -> bool:
     """Called by the scheduler after a fired run completes. Updates
     the schedule with last_run_at + last_run_status so the UI can show
     the outcome. `status` is one of "success" | "failure" |
-    "skipped"."""
+    "partial" | "deferred" | "skipped"."""
     with _cache_lock:
         sidecar = _read_sidecar(vmid)
         if not sidecar or not isinstance(sidecar.get("schedule"), dict):
@@ -1603,6 +3003,10 @@ def record_schedule_run(vmid, status: str, target: str) -> bool:
         sidecar["schedule"]["last_run_at"] = _now_iso()
         sidecar["schedule"]["last_run_status"] = status
         sidecar["schedule"]["last_run_target"] = target
+        if reason:
+            sidecar["schedule"]["last_run_reason"] = str(reason)[:300]
+        else:
+            sidecar["schedule"].pop("last_run_reason", None)
         sidecar["updated_at"] = _now_iso()
         return _write_sidecar(vmid, sidecar)
 
@@ -1613,6 +3017,8 @@ def _fire_update_notification(vmid, app: dict) -> None:
     # just don't care). Field defaults to True — an app registered
     # before this feature landed keeps receiving notifications.
     if app.get("notifications_enabled", True) is False:
+        return
+    if app.get("helper_slug") == "docker":
         return
     try:
         from notification_manager import notification_manager
@@ -1637,6 +3043,120 @@ def _fire_update_notification(vmid, app: dict) -> None:
         )
     except Exception as e:
         print(f"[ProxMenux] lxc_apps: notif emit failed for CT {vmid}: {e}")
+
+
+def _docker_stack_notification_payload(
+    vmid: int, docker_app: dict, inventory: dict, ct_name: str,
+) -> Optional[dict]:
+    state = docker_app.get('state') or {}
+    engine_pending = bool(
+        state.get('update_available')
+        and state.get('latest_version')
+    )
+    pending_images = sorted(
+        (
+            image for image in (inventory.get('images') or [])
+            if image.get('update_available') is True
+        ),
+        key=lambda image: str(image.get('reference') or ''),
+    )
+    if not engine_pending and not pending_images:
+        return None
+
+    identity = {
+        'engine': ({
+            'installed': state.get('installed_version'),
+            'latest': state.get('latest_version'),
+        } if engine_pending else None),
+        'images': [
+            {
+                'reference': image.get('reference'),
+                'remote_digest': image.get('remote_digest'),
+                'available_version': image.get('available_version'),
+            }
+            for image in pending_images
+        ],
+    }
+    signature = hashlib.sha256(
+        json.dumps(identity, sort_keys=True, separators=(',', ':')).encode('utf-8')
+    ).hexdigest()[:20]
+    lines = []
+    if engine_pending:
+        installed = state.get('installed_version') or 'unknown'
+        latest = state.get('latest_version') or 'unknown'
+        lines.append(f'• Docker Engine: {installed} → {latest}')
+    for image in pending_images[:12]:
+        reference = image.get('reference') or 'Docker image'
+        installed = image.get('installed_version')
+        available = image.get('available_version')
+        if installed and available and installed != available:
+            lines.append(f'• {reference}: {installed} → {available}')
+        else:
+            lines.append(f'• {reference}: new registry digest')
+    if len(pending_images) > 12:
+        lines.append(f'• +{len(pending_images) - 12} additional image update(s)')
+    return {
+        'hostname': socket.gethostname(),
+        'vmid': int(vmid),
+        'ct_name': ct_name or f'CT-{vmid}',
+        'count': len(pending_images) + (1 if engine_pending else 0),
+        'details': '\n'.join(lines),
+        'signature': signature,
+    }
+
+
+def emit_all_pending_docker_stacks() -> int:
+    """Emit one cached Docker update event per registered container."""
+    inventories = get_cached_docker_inventories()
+    if not inventories:
+        return 0
+    names: dict[int, str] = {}
+    try:
+        import managed_installs
+        names = {
+            int(item['_vmid']): str(item.get('name') or f"CT-{item['_vmid']}")
+            for item in (managed_installs.get_active_items() or [])
+            if item.get('type') == 'lxc' and item.get('_vmid') is not None
+        }
+    except Exception:
+        names = {}
+
+    emitted = 0
+    for raw_vmid, inventory in sorted(inventories.items(), key=lambda item: int(item[0])):
+        try:
+            vmid = int(raw_vmid)
+        except (TypeError, ValueError):
+            continue
+        sidecar = _read_sidecar(vmid) or {}
+        docker_app = next(
+            (
+                app for app in (sidecar.get('apps') or [])
+                if app.get('helper_slug') == 'docker'
+            ),
+            None,
+        )
+        if not docker_app or docker_app.get('notifications_enabled', True) is False:
+            continue
+        payload = _docker_stack_notification_payload(
+            vmid, docker_app, inventory, names.get(vmid) or f'CT-{vmid}',
+        )
+        if not payload:
+            continue
+        try:
+            from notification_manager import notification_manager
+            signature = payload.pop('signature')
+            notification_manager.emit_event(
+                event_type='docker_stack_update_available',
+                severity='INFO',
+                data=payload,
+                source='polling',
+                entity='ct',
+                entity_id=f'{vmid}:{signature}',
+            )
+            emitted += 1
+        except Exception as exc:
+            print(f'[ProxMenux] Docker update notification for CT {vmid} failed: {exc}')
+    return emitted
 
 
 def _detect_with_alt_healing(vmid, app: dict) -> tuple:
@@ -1741,9 +3261,9 @@ def check_app(vmid, app_id: str, force: bool = False) -> Optional[dict]:
         # returns (None, None) cleanly when nothing is set, so the
         # cheap gate below only skips the no-upstream case and lets
         # http_json / docker_hub (which don't set `repo`) through.
-        latest, up_err = (None, None)
+        latest, up_err, latest_published_at = (None, None, None)
         if app.get("repo") or app.get("upstream_type") in ("http_json", "docker_hub"):
-            latest, up_err = fetch_latest_upstream(app)
+            latest, up_err, latest_published_at = fetch_latest_upstream_details(app)
 
         err = inst_err or up_err
         update_available = compare(installed, latest) if (installed and latest) else None
@@ -1751,6 +3271,7 @@ def check_app(vmid, app_id: str, force: bool = False) -> Optional[dict]:
         app["state"] = {
             "installed_version": installed,
             "latest_version": latest,
+            "latest_published_at": latest_published_at,
             "update_available": update_available,
             "error": err,
             "checked_at": _now_iso(),
@@ -1872,6 +3393,11 @@ def _summarise_app(app: dict) -> dict:
         "name": app.get("name"),
         "installed_via": app.get("installed_via"),
         "ports": app.get("ports") or [],
+        # Keep the application-level logo in the compact /api/vms
+        # projection. Consumers can prefer a per-link logo and fall
+        # back to this one when the Web Link intentionally leaves its
+        # own logo empty.
+        "logo_url": app.get("logo_url") or None,
         "health_path": app.get("health_path"),
         "installed_version": state.get("installed_version"),
         "latest_version": state.get("latest_version"),
@@ -1884,6 +3410,10 @@ def _summarise_app(app: dict) -> dict:
         # it) and whether the "no method" notice is suppressed for
         # this app.
         "update_command": app.get("update_command") or "",
+        # Compatibility field for older clients. The only supported
+        # strategy is now replacement; legacy sidecars are normalized
+        # in the API even before their next write.
+        "update_strategy": "custom_override",
         "hide_no_updater_notice": bool(app.get("hide_no_updater_notice")),
         # Whether this app should be counted in the CT's aggregate
         # updates badge (default: yes). See validator for full context.
@@ -1939,7 +3469,7 @@ def get_catalog() -> list:
     return out
 
 
-def get_catalog_entry(slug: str) -> Optional[dict]:
+def get_catalog_entry(slug: str, vmid=None) -> Optional[dict]:
     """Detail for a single catalog slug, including any curated hint
     fields. Called by the frontend when the user picks an app from the
     Combobox — the response seeds the editor with detector metadata
@@ -1958,13 +3488,15 @@ def get_catalog_entry(slug: str) -> Optional[dict]:
     if not catalog and not hint:
         return None
 
-    # Build tracking_suggestion from the hint if present. Resolve
-    # file candidates lazily — the endpoint doesn't receive a vmid so
-    # we return the primary; auto-heal at check time will pick the
-    # working detector.
+    # When the caller supplies a CT, return the detector that actually
+    # extracts a version there.  This makes catalog search work for manual
+    # and legacy layouts too, not only for the helper-derived primary slug.
     tracking = None
     if hint:
-        tracking = {k: v for k, v in hint.items()
+        resolved = dict(hint)
+        if vmid is not None:
+            resolved, _version, _source, _error = _select_working_hint_detector(vmid, resolved)
+        tracking = {k: v for k, v in resolved.items()
                     if k not in ("logo", "website", "default_ports",
                                   "file_fallbacks", "alt_detectors")}
 
@@ -2040,6 +3572,14 @@ _PORT_PROBE_TTL_SEC = 60
 _port_probe_cache: dict = {}
 _port_probe_lock = threading.RLock()
 
+# Docker-published endpoints are a different concept from applications
+# installed natively in the LXC.  Keep a short-lived, read-only cache of
+# container → host-port mappings so the App editor can offer web links under
+# the Docker entry without registering every container as an independent LXC
+# application.
+_docker_web_links_cache: dict = {}
+_docker_web_links_lock = threading.RLock()
+
 # Same TTL discipline for file-existence probes used to resolve
 # legacy install layouts (see _resolve_file_candidate).
 _file_probe_cache: dict = {}
@@ -2084,13 +3624,6 @@ _detected_apps_cache: dict = {}
 _detected_apps_lock = threading.RLock()
 
 
-_DETECTOR_FIELDS = (
-    "package", "file_path", "file_regex", "binary_path", "binary_args",
-    "python_path", "distribution", "container_name", "label",
-    "command_argv", "installed_version",
-)
-
-
 def _iter_hint_detectors(h: dict):
     """Yield every detector (primary + alt_detectors) for a hint as
     ``{installed_via, ...method-specific fields}`` dicts. Used by
@@ -2132,7 +3665,7 @@ def _probe_detected_apps_map(vmid) -> dict:
     hints = _fetch_tracking_hints() or {}
     # Each mapping key is (slug, detector_dict) — same target may map
     # to multiple slugs in theory (unlikely) so we store a list.
-    binary_paths: dict = {}   # path → [(slug, det), …]
+    executable_paths: dict = {}   # path → [(slug, det), …]
     file_paths: dict = {}
     dpkg_pkgs: dict = {}
     apk_pkgs: dict = {}
@@ -2165,7 +3698,7 @@ def _probe_detected_apps_map(vmid) -> dict:
             if method == "binary":
                 bp = det.get("binary_path")
                 if isinstance(bp, str) and bp:
-                    _add(binary_paths, bp, slug, det)
+                    _add(executable_paths, bp, slug, det)
             elif method == "file":
                 fp = det.get("file_path")
                 if isinstance(fp, str) and fp:
@@ -2181,7 +3714,7 @@ def _probe_detected_apps_map(vmid) -> dict:
             elif method == "python_dist":
                 pp = det.get("python_path")
                 if isinstance(pp, str) and pp:
-                    _add(file_paths, pp, slug, det)
+                    _add(executable_paths, pp, slug, det)
             elif method in ("docker_label", "docker_exec"):
                 cn = det.get("container_name")
                 if isinstance(cn, str) and cn:
@@ -2197,7 +3730,10 @@ def _probe_detected_apps_map(vmid) -> dict:
     def _probe_paths(paths: dict) -> None:
         if not paths:
             return
-        rc, out, _ = _pct_exec(vmid, ["find"] + list(paths) + ["-maxdepth", "0", "-type", "f", "-print"])
+        # No ``-type f``: venv/bin/python and /usr/bin tools are commonly
+        # symlinks.  Actual version execution below rejects broken/wrong
+        # targets, so existence is only a cheap batching pre-filter.
+        rc, out, _ = _pct_exec(vmid, ["find"] + list(paths) + ["-maxdepth", "0", "-print"])
         if rc not in (0, 1):
             return
         for line in out.splitlines():
@@ -2206,7 +3742,7 @@ def _probe_detected_apps_map(vmid) -> dict:
                 for slug, det in paths[p]:
                     _record(slug, det)
 
-    _probe_paths(binary_paths)
+    _probe_paths(executable_paths)
     _probe_paths(file_paths)
 
     if dpkg_pkgs:
@@ -2229,18 +3765,62 @@ def _probe_detected_apps_map(vmid) -> dict:
                     for slug, det in apk_pkgs[pkg]:
                         _record(slug, det)
 
+    docker_runtime_available = False
     if docker_containers:
         rc, out, _ = _pct_exec(vmid, ["docker", "ps", "-a", "--format", "{{.Names}}"])
         if rc == 0:
+            docker_runtime_available = True
             present = {line.strip() for line in out.splitlines() if line.strip()}
             for cn, entries in docker_containers.items():
                 if cn in present:
                     for slug, det in entries:
                         _record(slug, det)
 
+    # A path/package/container-name match is only a candidate.  Prove it by
+    # extracting a real version with that detector before surfacing an app to
+    # the user.  This eliminates the generic /root/.slug false positives and
+    # stale files left behind by migrations.
+    verified: dict = {}
+    for slug, detectors in matched.items():
+        hint = hints.get(slug) or {}
+        for detector in detectors:
+            probe = _detector_probe_config(hint, detector)
+            try:
+                version, _error = detect_installed_version(vmid, probe)
+            except (KeyError, TypeError, ValueError):
+                version = None
+            if not version:
+                continue
+            enriched = dict(detector)
+            enriched["detected_version"] = version
+            enriched["detector_verified"] = True
+            verified.setdefault(slug, []).append(enriched)
+
+    # A just-started CT can answer ``docker ps`` a moment after the initial
+    # batched ``find /usr/bin/docker`` probe failed.  In that narrow window a
+    # Docker child such as Portainer used to be cached as a native LXC app for
+    # 60 seconds.  A successful Docker API call proves the parent runtime is
+    # available, so retry Docker's normal curated detector and only publish it
+    # when it also yields a real version.
+    if docker_runtime_available and "docker" not in verified:
+        docker_hint = hints.get("docker") or {}
+        for detector, _source in _ordered_hint_detectors(docker_hint):
+            probe = _detector_probe_config(docker_hint, detector)
+            try:
+                version, _error = detect_installed_version(vmid, probe)
+            except (KeyError, TypeError, ValueError):
+                version = None
+            if not version:
+                continue
+            enriched = dict(detector)
+            enriched["detected_version"] = version
+            enriched["detector_verified"] = True
+            verified["docker"] = [enriched]
+            break
+
     with _detected_apps_lock:
-        _detected_apps_cache[key] = (now, {slug: list(dets) for slug, dets in matched.items()})
-    return matched
+        _detected_apps_cache[key] = (now, {slug: list(dets) for slug, dets in verified.items()})
+    return verified
 
 
 def _probe_detected_apps(vmid) -> set:
@@ -2326,6 +3906,120 @@ def _probe_listening_ports(vmid) -> list[int]:
     return result
 
 
+def _docker_service_catalog_meta(service: str, container: str, image: str) -> dict:
+    """Best-effort display metadata for a Docker workload.
+
+    Identity remains the real container/image reported by Docker.  Catalog
+    matching is used only for a friendly label/logo; a failed match never
+    hides a published endpoint or turns the workload into an App Watch.
+    """
+    image_base = image.split("@", 1)[0].rsplit("/", 1)[-1].split(":", 1)[0]
+    raw_candidates = [service, container, image_base]
+    candidates: list[str] = []
+    for raw in raw_candidates:
+        candidate = re.sub(r"[^a-z0-9._-]+", "-", str(raw or "").strip().lower()).strip("-._")
+        if candidate and candidate not in candidates:
+            candidates.append(candidate)
+        for suffix in ("-ce", "-ee"):
+            if candidate.endswith(suffix):
+                base = candidate[:-len(suffix)]
+                if base and base not in candidates:
+                    candidates.append(base)
+
+    hints = _fetch_tracking_hints() or {}
+    for candidate in candidates:
+        hint = hints.get(candidate) or {}
+        catalog = _catalog_lookup(candidate) or {}
+        if hint or catalog:
+            logo = hint.get("logo") or catalog.get("logo")
+            return {
+                "slug": candidate,
+                "name": catalog.get("name") or hint.get("name") or service or container,
+                "logo_url": logo if isinstance(logo, str) and logo.startswith(("http://", "https://")) else None,
+            }
+    return {"slug": None, "name": service or container, "logo_url": None}
+
+
+def _probe_docker_web_links(vmid) -> list[dict]:
+    """Return running Docker workloads that publish TCP ports on the LXC.
+
+    The result is suggestion-only.  No sidecar entry is written and no port is
+    assumed to be HTTP until the user explicitly adds it in the editor.  IPv4
+    and IPv6 bindings of the same host port are deduplicated; loopback-only
+    bindings are omitted because they cannot form a usable remote LXC link.
+    """
+    key = str(vmid)
+    now = time.time()
+    with _docker_web_links_lock:
+        cached = _docker_web_links_cache.get(key)
+        if cached and (now - cached[0]) < _PORT_PROBE_TTL_SEC:
+            return [dict(item) for item in cached[1]]
+
+    rc, out, _ = _pct_exec(vmid, ["docker", "ps", "-q"], timeout=10)
+    if rc != 0:
+        result: list[dict] = []
+    else:
+        container_ids = [line.strip() for line in out.splitlines() if line.strip()][:_DOCKER_MAX_IMAGES]
+        result = []
+        if container_ids:
+            rc, inspect_out, _ = _pct_exec(
+                vmid,
+                ["docker", "inspect", "--format", "{{json .}}", *container_ids],
+                timeout=20,
+            )
+            if rc == 0:
+                for raw in inspect_out.splitlines():
+                    try:
+                        obj = json.loads(raw)
+                    except json.JSONDecodeError:
+                        continue
+                    container = str(obj.get("Name") or "").lstrip("/")
+                    config = obj.get("Config") or {}
+                    image = str(config.get("Image") or "").strip()
+                    labels = config.get("Labels") or {}
+                    service = str(labels.get("com.docker.compose.service") or container).strip()
+                    meta = _docker_service_catalog_meta(service, container, image)
+                    ports = (obj.get("NetworkSettings") or {}).get("Ports") or {}
+                    seen_host_ports: set[int] = set()
+                    for container_endpoint, bindings in ports.items():
+                        if not str(container_endpoint).endswith("/tcp") or not isinstance(bindings, list):
+                            continue
+                        try:
+                            container_port = int(str(container_endpoint).split("/", 1)[0])
+                        except (TypeError, ValueError):
+                            continue
+                        for binding in bindings:
+                            if not isinstance(binding, dict):
+                                continue
+                            host_ip = str(binding.get("HostIp") or "").strip()
+                            if host_ip in {"127.0.0.1", "::1"}:
+                                continue
+                            try:
+                                host_port = int(binding.get("HostPort"))
+                            except (TypeError, ValueError):
+                                continue
+                            if not (1 <= host_port <= 65535) or host_port in seen_host_ports:
+                                continue
+                            seen_host_ports.add(host_port)
+                            scheme = "https" if host_port in {443, 4443, 8443, 9443} or container_port in {443, 4443, 8443, 9443} else "http"
+                            result.append({
+                                "container_name": container,
+                                "service_name": meta["name"],
+                                "service_slug": meta["slug"],
+                                "image": image,
+                                "host_port": host_port,
+                                "container_port": container_port,
+                                "scheme": scheme,
+                                "web_path": "/",
+                                "logo_url": meta["logo_url"],
+                            })
+        result.sort(key=lambda item: (str(item.get("service_name") or "").lower(), int(item.get("host_port") or 0)))
+
+    with _docker_web_links_lock:
+        _docker_web_links_cache[key] = (now, result)
+    return [dict(item) for item in result]
+
+
 def _helper_slug_meta(vmid) -> Optional[dict]:
     try:
         import managed_installs
@@ -2374,7 +4068,24 @@ def _merge_tracking_hints(slug: str) -> Optional[dict]:
     return dict(hint)
 
 
-def get_suggestions(vmid) -> dict:
+def invalidate_suggestion_probes(vmid) -> None:
+    """Discard the short-lived discovery probes for one container."""
+    key = str(vmid)
+    with _detected_apps_lock:
+        _detected_apps_cache.pop(key, None)
+    with _cache_lock:
+        _port_probe_cache.pop(key, None)
+    with _docker_web_links_lock:
+        _docker_web_links_cache.pop(key, None)
+    with _file_probe_lock:
+        stale = [cache_key for cache_key in _file_probe_cache if cache_key[0] == key]
+        for cache_key in stale:
+            _file_probe_cache.pop(cache_key, None)
+
+
+def get_suggestions(vmid, force: bool = False) -> dict:
+    if force:
+        invalidate_suggestion_probes(vmid)
     ports = _probe_listening_ports(vmid)
     web_hint = None
     for p in ports:
@@ -2395,6 +4106,21 @@ def get_suggestions(vmid) -> dict:
     if slug in {"alpine", "archlinux", "archlinux-vm", "debian", "fedora", "gentoo", "opensuse", "ubuntu"}:
         slug = None
         meta = {}
+    # Resolve all verified runtime detectors before building the primary
+    # suggestion.  On a cold Docker CT, legacy helper identity can briefly
+    # name a child container (for example Portainer).  If that child is proven
+    # to be Docker-hosted and Docker Engine is also proven, Docker is the LXC
+    # application; the child remains a workload/link beneath it.
+    hints_map = _fetch_tracking_hints() or {}
+    detected_map = _probe_detected_apps_map(vmid) if hints_map else {}
+    primary_matches = detected_map.get(slug) or []
+    primary_is_docker_workload = bool(primary_matches) and all(
+        detector.get("installed_via") in ("docker_label", "docker_exec")
+        for detector in primary_matches
+    )
+    if "docker" in detected_map and primary_is_docker_workload:
+        slug = "docker"
+        meta = {"slug": "docker", "name": "Docker"}
     # Tracking hint pipeline: catalog + curated hints merged.
     #   • catalog (community-scripts helpers_cache.json) covers ~430
     #     apps with name+repo+port+upstream_version, zero curation
@@ -2413,7 +4139,13 @@ def get_suggestions(vmid) -> dict:
     # the audit assumed. Fallback list is stripped from the returned
     # suggestion so the frontend never sees candidate arrays.
     if tracking:
-        _resolve_file_candidate(vmid, tracking)
+        tracking, _detected_version, _detector_source, _detector_error = (
+            _select_working_hint_detector(vmid, tracking)
+        )
+        # Candidate arrays remain in the server-side catalog for auto-heal;
+        # the editor only needs the detector selected for this CT.
+        tracking.pop("file_fallbacks", None)
+        tracking.pop("alt_detectors", None)
 
     # Name suggestion: prefer the catalog's `name` (nicer display) but
     # keep the raw slug metadata as fallback for older entries.
@@ -2468,8 +4200,6 @@ def get_suggestions(vmid) -> dict:
     # typing name/logo/repo by hand.
     #
     # Primary slug is excluded from extras so we don't offer it twice.
-    hints_map = _fetch_tracking_hints() or {}
-    detected_map = _probe_detected_apps_map(vmid) if hints_map else {}
     # Docker-child suppression: when the user has already registered
     # Docker on this CT, they've chosen to manage every containerised
     # app under that single Docker entry (web links + notes). Any hint
@@ -2483,6 +4213,23 @@ def get_suggestions(vmid) -> dict:
         (a.get("helper_slug") == "docker") or (a.get("installed_via") == "binary" and (a.get("binary_path") or "").endswith("/docker"))
         for a in sidecar_apps
     )
+    # Docker workloads are not native LXC applications.  Once Docker is
+    # detected (or already registered), docker_label/docker_exec matches are
+    # represented as published service links under Docker rather than generic
+    # application chips.  Native matches remain visible and existing
+    # independently registered apps are never modified.
+    docker_workload_detected = any(
+        det_slug != "docker" and detectors and all(
+            detector.get("installed_via") in ("docker_label", "docker_exec")
+            for detector in detectors
+        )
+        for det_slug, detectors in detected_map.items()
+    )
+    docker_host_detected = (
+        docker_registered or slug == "docker" or "docker" in detected_map
+        or docker_workload_detected
+    )
+    docker_web_links = _probe_docker_web_links(vmid) if docker_host_detected else []
     extras: list = []
     for det_slug in sorted(detected_map):
         if slug and det_slug == slug:
@@ -2502,7 +4249,7 @@ def get_suggestions(vmid) -> dict:
         # doesn't warrant a separate registration. If ANY non-docker
         # detector also matched (native install alongside a container),
         # keep the extra so the user can register the native side.
-        if docker_registered and matched_detectors:
+        if docker_host_detected and matched_detectors:
             all_docker = all(
                 d.get("installed_via") in ("docker_label", "docker_exec")
                 for d in matched_detectors
@@ -2520,6 +4267,9 @@ def get_suggestions(vmid) -> dict:
                 det_tracking.pop(k, None)
             for k, v in working.items():
                 det_tracking[k] = v
+            det_tracking["detected_version"] = working.get("detected_version")
+            det_tracking["detector_verified"] = True
+            det_tracking["detector_source"] = "runtime_probe"
         _resolve_file_candidate(vmid, det_tracking)
         # Strip fields the frontend doesn't need in the compact chip
         det_tracking.pop("file_fallbacks", None)
@@ -2567,4 +4317,5 @@ def get_suggestions(vmid) -> dict:
         "default_ports": default_ports,
         "logo_url": logo_url or None,
         "extras": extras,
+        "docker_web_links": docker_web_links,
     }

@@ -10,14 +10,28 @@
 #   BACKUP            — "1" to snapshot with vzdump first, "0" to skip
 #   BACKUP_STORAGE    — PVE storage name for vzdump (required when BACKUP=1)
 #   RESTART           — "1" to `pct reboot` after update, "0" to skip
-#   UPDATE_COMMAND    — optional; user-defined bash string. When set
+#   RUN_HELPER        — "1" to run the verified community-scripts
+#                       updater referenced by /usr/bin/update, "0"
+#                       to leave it alone. Never inferred from names.
+#   UPDATE_COMMAND    — optional user-defined bash string. When set
 #                       and TARGET is "app" or "both", the script
-#                       runs this VIA sh -c inside the CT instead of
-#                       /usr/bin/update. This IS the one place we
+#                       runs it VIA sh -c inside the CT. A custom
+#                       command always replaces RUN_HELPER for safety.
+#                       This IS the one place we
 #                       intentionally use sh -c with a variable
 #                       payload — the threat model matches "user
 #                       typed it via pct exec themselves"; ProxMenux
 #                       does not compose or interpret the command.
+#   ALLOW_HELPER_WITH_CUSTOM — "1" only for an explicit multi-app plan
+#                       where RUN_HELPER belongs to one registered app and
+#                       UPDATE_COMMAND contains other registered apps. The
+#                       default "0" preserves the custom-replaces-helper rule
+#                       for single-app and legacy callers.
+#   DOCKER_STANDALONE_TARGETS — optional comma-separated Docker container
+#                       names. Each is recreated transactionally by the
+#                       protected host-side Docker recreation helper.
+#   UPDATE_DOCKER_ENGINE — "1" to update only the installed Docker Engine
+#                       package stack, without upgrading unrelated OS packages.
 #
 # Exit codes:
 #   0  everything requested completed OK
@@ -26,8 +40,9 @@
 #   3  pre-update backup failed (abort so the user still has a rollback)
 #   4  OS update failed OR OS family not supported for automated updates
 #   5  TARGET=app requested but no update method (neither UPDATE_COMMAND
-#      nor /usr/bin/update) available in the CT
+#      nor explicitly-enabled verified helper) available in the CT
 #   6  post-update restart failed
+#   7  another ProxMenux update is already running for this CT
 #
 # The frontend surfaces exit code + duration in a follow-up POST to
 # /api/lxc-updates/<vmid>/applied so the notification event fires with
@@ -40,6 +55,41 @@ set -o pipefail
 : "${TARGET:?TARGET is required}"
 BACKUP="${BACKUP:-0}"
 RESTART="${RESTART:-0}"
+RUN_HELPER="${RUN_HELPER:-0}"
+UPDATE_COMMAND="${UPDATE_COMMAND:-}"
+ALLOW_HELPER_WITH_CUSTOM="${ALLOW_HELPER_WITH_CUSTOM:-0}"
+DOCKER_STANDALONE_TARGETS="${DOCKER_STANDALONE_TARGETS:-}"
+UPDATE_DOCKER_ENGINE="${UPDATE_DOCKER_ENGINE:-0}"
+
+if [[ ! "$VMID" =~ ^[1-9][0-9]*$ ]]; then
+  echo "ERROR: VMID must be a positive integer." >&2
+  exit 1
+fi
+if [[ "$TARGET" != "os" && "$TARGET" != "app" && "$TARGET" != "both" ]]; then
+  echo "ERROR: TARGET must be os, app, or both." >&2
+  exit 4
+fi
+if [[ "$RUN_HELPER" != "0" && "$RUN_HELPER" != "1" ]]; then
+  echo "ERROR: RUN_HELPER must be 0 or 1." >&2
+  exit 5
+fi
+if [[ "$ALLOW_HELPER_WITH_CUSTOM" != "0" && "$ALLOW_HELPER_WITH_CUSTOM" != "1" ]]; then
+  echo "ERROR: ALLOW_HELPER_WITH_CUSTOM must be 0 or 1." >&2
+  exit 5
+fi
+if [[ "$UPDATE_DOCKER_ENGINE" != "0" && "$UPDATE_DOCKER_ENGINE" != "1" ]]; then
+  echo "ERROR: UPDATE_DOCKER_ENGINE must be 0 or 1." >&2
+  exit 5
+fi
+
+# One update per CT at a time, regardless of whether it came from the
+# UI or the scheduler. The descriptor remains open for this process.
+LOCK_DIR="${PROXMENUX_LOCK_DIR:-/run/lock}"
+exec 9>"${LOCK_DIR}/proxmenux-lxc-update-${VMID}.lock"
+if ! flock -n 9; then
+  echo "ERROR: another ProxMenux update is already running for CT $VMID." >&2
+  exit 7
+fi
 
 STARTED_AT=$(date -Iseconds)
 NODE=$(hostname)
@@ -48,6 +98,7 @@ echo "Started:  $STARTED_AT"
 echo "Target:   $TARGET"
 echo "Backup:   $BACKUP${BACKUP_STORAGE:+ (storage: $BACKUP_STORAGE)}"
 echo "Restart:  $RESTART"
+echo "Helper:   $RUN_HELPER"
 echo
 
 # 1) CT must exist on this node.
@@ -56,14 +107,35 @@ if ! pct list | awk 'NR>1 {print $1}' | grep -qE "^${VMID}$"; then
   exit 1
 fi
 
-# 2) CT must be running for pct exec. Auto-start stopped CTs.
+# 2) CT must be running for pct exec. Auto-start stopped CTs, then
+#    restore their original stopped state on every exit path.
 STATE=$(pct status "$VMID" | awk '{print $2}')
+STARTED_BY_PROXMENUX=0
+restore_original_state() {
+  local rc=$?
+  trap - EXIT INT TERM
+  if [[ "$STARTED_BY_PROXMENUX" == "1" ]]; then
+    echo
+    echo "Restoring original state: stopping CT $VMID…"
+    if ! pct shutdown "$VMID" --timeout 60; then
+      echo "ERROR: update finished but CT $VMID could not be returned to its original stopped state." >&2
+      if [[ "$rc" -eq 0 ]]; then
+        rc=6
+      fi
+    fi
+  fi
+  exit "$rc"
+}
+trap restore_original_state EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 if [[ "$STATE" != "running" ]]; then
   echo "CT is $STATE. Starting it before applying updates…"
   if ! pct start "$VMID"; then
     echo "ERROR: failed to start CT $VMID." >&2
     exit 2
   fi
+  STARTED_BY_PROXMENUX=1
   # give the CT a moment for services to come up
   sleep 3
 fi
@@ -123,41 +195,55 @@ if [[ "$TARGET" == "os" || "$TARGET" == "both" ]]; then
   echo
 fi
 
-# 6) Application update. Precedence:
-#    a) /usr/bin/update present (community-scripts convention) →
-#       runs the community-scripts helper FROM THE HOST with CTID
-#       env var. Their build.func framework requires CTID + host-only
-#       `pveversion`, so `pct exec ... /usr/bin/update` inside the CT
-#       always fails ("You need to set 'CTID' variable"). We parse
-#       the ct/<slug>.sh URL from /usr/bin/update and re-fetch it
-#       here with CTID set. PHS_SILENT=1 keeps it non-interactive.
-#    b) UPDATE_COMMAND env var set → run it verbatim via `sh -c`
+# 6) Application update. Explicit methods only:
+#    a) RUN_HELPER=1 + a valid /usr/bin/update wrapper →
+#       parses the ct/<slug>.sh URL from the wrapper, canonicalises it
+#       to the official repository, then runs the current helper
+#       inside the CT with PHS_SILENT=1.
+#    b) UPDATE_COMMAND set → run it verbatim via `sh -c`
 #       inside the CT. The one intentional shell-exec-with-variable
 #       in ProxMenux — see header comment for threat-model rationale.
-#    Both can run in the same invocation: the helper first (if
-#    present), then the per-app custom commands.
+#    UPDATE_COMMAND always wins if a legacy caller also sets RUN_HELPER.
+#    A hostname/tag/cache guess is never executable evidence.
 if [[ "$TARGET" == "app" || "$TARGET" == "both" ]]; then
   APP_METHOD_RAN=0
-  UPDATE_URL=""
-  RESOLVED_SLUG=""
-  if pct exec "$VMID" -- test -f /usr/bin/update 2>/dev/null; then
-    UPDATE_URL=$(pct exec "$VMID" -- cat /usr/bin/update 2>/dev/null | grep -oE 'https?://[^"'"'"' ]+ct/[a-zA-Z0-9._-]+\.sh' | head -1)
-    RESOLVED_SLUG=$(echo "$UPDATE_URL" | sed -nE 's|.*/ct/([a-zA-Z0-9._-]+)\.sh$|\1|p')
+  if [[ -n "$UPDATE_COMMAND" && "$RUN_HELPER" == "1" && "$ALLOW_HELPER_WITH_CUSTOM" != "1" ]]; then
+    echo "Custom update command configured; skipping Proxmox VE Helper-Scripts updater."
+    RUN_HELPER=0
   fi
-  # HELPER_SLUG env is a passthrough from the backend when the CT no
-  # longer carries /usr/bin/update (older installs where the file was
-  # removed) but the community-scripts slug is known via hostname
-  # match against the helpers_cache. Lets us run the same host-side
-  # updater without requiring the on-CT marker file.
-  if [[ -z "$RESOLVED_SLUG" && -n "$HELPER_SLUG" ]]; then
-    if [[ "$HELPER_SLUG" =~ ^[a-zA-Z0-9._-]+$ ]]; then
-      RESOLVED_SLUG="$HELPER_SLUG"
-      UPDATE_URL="https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/${RESOLVED_SLUG}.sh"
-    else
-      echo "WARN: HELPER_SLUG contains invalid characters — ignored." >&2
+  if [[ "$UPDATE_DOCKER_ENGINE" == "1" ]]; then
+    echo "--- Updating Docker Engine only ---"
+    if ! python3 /usr/local/share/proxmenux/monitor-app/usr/bin/update_docker_engine.py \
+          --vmid "$VMID"; then
+      echo "ERROR: Docker Engine update failed." >&2
+      APP_FAILED=1
     fi
+    APP_METHOD_RAN=1
+    echo
   fi
-  if [[ -n "$UPDATE_URL" && -n "$RESOLVED_SLUG" ]]; then
+  if [[ "$RUN_HELPER" == "1" ]]; then
+    UPDATE_URL=""
+    RESOLVED_SLUG=""
+    if pct exec "$VMID" -- test -f /usr/bin/update 2>/dev/null; then
+      UPDATE_URL=$(pct exec "$VMID" -- cat /usr/bin/update 2>/dev/null | grep -oE 'https?://[^"'"'"' ]+ct/[a-zA-Z0-9._-]+\.sh' | head -1)
+      RESOLVED_SLUG=$(echo "$UPDATE_URL" | sed -nE 's|.*/ct/([a-zA-Z0-9._-]+)\.sh$|\1|p')
+    fi
+    case "$RESOLVED_SLUG" in
+      alpine|archlinux|archlinux-vm|debian|fedora|gentoo|opensuse|ubuntu)
+        echo "ERROR: /usr/bin/update references the base-OS helper '$RESOLVED_SLUG', not an application updater." >&2
+        APP_FAILED=1
+        RESOLVED_SLUG=""
+        ;;
+    esac
+    if [[ -z "$RESOLVED_SLUG" ]]; then
+      if [[ "$APP_FAILED" -eq 0 ]]; then
+        echo "ERROR: RUN_HELPER=1 but /usr/bin/update contains no valid community-scripts app reference." >&2
+        APP_FAILED=1
+      fi
+    else
+      # Never execute the arbitrary URL embedded in the CT. The slug is
+      # constrained by the parser; fetch the canonical upstream path.
+      UPDATE_URL="https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/${RESOLVED_SLUG}.sh"
     echo "--- Running community-scripts helper (slug: $RESOLVED_SLUG) ---"
     # Community-scripts' build.func in start() dispatches on
     # `command -v pveversion`: present → install_script (whiptail
@@ -184,6 +270,7 @@ if [[ "$TARGET" == "app" || "$TARGET" == "both" ]]; then
     fi
     APP_METHOD_RAN=1
     echo
+    fi
   fi
   if [[ -n "$UPDATE_COMMAND" ]]; then
     echo "--- Running user-defined update command ---"
@@ -195,9 +282,27 @@ if [[ "$TARGET" == "app" || "$TARGET" == "both" ]]; then
     APP_METHOD_RAN=1
     echo
   fi
+  if [[ -n "$DOCKER_STANDALONE_TARGETS" ]]; then
+    IFS=',' read -r -a DOCKER_TARGETS <<< "$DOCKER_STANDALONE_TARGETS"
+    for DOCKER_CONTAINER in "${DOCKER_TARGETS[@]}"; do
+      if [[ ! "$DOCKER_CONTAINER" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$ ]]; then
+        echo "ERROR: invalid Docker container target '$DOCKER_CONTAINER'." >&2
+        APP_FAILED=1
+        continue
+      fi
+      echo "--- Recreating standalone Docker container: $DOCKER_CONTAINER ---"
+      if ! python3 /usr/local/share/proxmenux/monitor-app/usr/bin/recreate_docker_container.py \
+            --vmid "$VMID" --container "$DOCKER_CONTAINER"; then
+        echo "ERROR: protected Docker recreation failed for '$DOCKER_CONTAINER'." >&2
+        APP_FAILED=1
+      fi
+      APP_METHOD_RAN=1
+      echo
+    done
+  fi
   if [[ "$APP_METHOD_RAN" -eq 0 ]]; then
     if [[ "$TARGET" == "app" ]]; then
-      echo "ERROR: TARGET=app but no update method (UPDATE_COMMAND unset AND /usr/bin/update missing) in CT $VMID." >&2
+      echo "ERROR: TARGET=app but no update method was explicitly selected for CT $VMID." >&2
       exit 5
     else
       echo "No app update method available in this CT — skipping app update step."
@@ -209,7 +314,7 @@ fi
 # 7) If either branch failed, abort here BEFORE the optional reboot so
 #    the CT stays in the pre-update state and the user can inspect it.
 if (( OS_FAILED || APP_FAILED )); then
-  echo "=== Update FAILED — CT left running for inspection. ==="
+  echo "=== Update FAILED. ==="
   exit 4
 fi
 

@@ -10,10 +10,9 @@
  *   • an optional GitHub repo for upstream version tracking
  *   • a list of ports, each with a description and web path
  *
- * Docker apps are "register-only": they exist to produce clickable
- * links, ProxMenux does NOT try to track their version and NEVER
- * emits warnings for them — updates for Docker apps are handled by
- * Docker itself.
+ * Docker image updates live exclusively in the Updates tab.  The App
+ * tab only registers the Docker engine/app identity and shows installed
+ * metadata, so an unregistered detection can never create update noise.
  *
  * For ProxMenux-managed OCI CTs (Secure Gateway) the panel is
  * read-only — the actual update lifecycle lives in Security →
@@ -24,8 +23,8 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   Loader2, Save, RefreshCw, Trash2, Package, ExternalLink,
   AlertTriangle, Info, PlusCircle, Pencil, ChevronDown, ChevronRight, EyeOff,
-  ArrowUpCircle, RotateCcw, Check, Settings2, ShieldCheck, CheckCircle2,
-  Bell, BellOff,
+  ArrowUpCircle, RotateCcw, Check, Settings2, ShieldCheck,
+  Bell, BellOff, Search,
 } from "lucide-react"
 import { Card, CardContent } from "./ui/card"
 import { Button } from "./ui/button"
@@ -34,7 +33,7 @@ import { Label } from "./ui/label"
 import { Badge } from "./ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { fetchApi } from "../lib/api-config"
-import { fetchLxcApps, getLxcAppsCached, invalidateLxcApps } from "../lib/lxc-apps-cache"
+import { fetchLxcApps, getLxcAppsCached, setLxcAppsCached } from "../lib/lxc-apps-cache"
 import { useT } from "@/lib/i18n/provider"
 
 // installed_via is optional now — an empty value means "register only,
@@ -84,6 +83,11 @@ interface AppConfig {
   health_path?: string
   logo_url?: string
   helper_slug?: string
+  // Preserved here even though this editor does not execute updates.
+  // The backend uses full-record replacement, so omitting these when
+  // editing ports/tracking would silently erase the Updates-tab setup.
+  update_command?: string
+  hide_no_updater_notice?: boolean
   // Per-app opt-out for the `app_update_available` notification.
   // Absent / true = notify; false = silenced. Set from the bell
   // toggle on each app card and/or the Edit form's checkbox.
@@ -104,6 +108,7 @@ interface DetectedApp {
 interface AppState {
   installed_version: string | null
   latest_version: string | null
+  latest_published_at?: string | null
   update_available: boolean | null
   error: string | null
   checked_at: string | null
@@ -123,18 +128,77 @@ interface SidecarResponse {
   updated_at?: string
 }
 
+interface DetectorTestResult {
+  valid: boolean
+  persisted: false
+  checked_at: string
+  installed: {
+    configured: boolean
+    method: InstalledVia | null
+    effective_regex: string | null
+    version: string | null
+    error: string | null
+  }
+  upstream: {
+    configured: boolean
+    type: "github" | "http_json" | "docker_hub" | null
+    version: string | null
+    published_at?: string | null
+    error: string | null
+  }
+  update_available: boolean | null
+}
+
 interface TrackingSuggestion {
-  installed_via: "dpkg" | "apk" | "file" | "binary"
+  installed_via: Exclude<InstalledVia, "">
   package?: string
   file_path?: string
   file_regex?: string
   binary_path?: string
+  binary_args?: string[]
+  python_path?: string
+  distribution?: string
+  container_name?: string
+  label?: string
+  command_argv?: string[]
+  installed_version?: string
+  installed_regex?: string
+  upstream_type?: "github" | "http_json" | "docker_hub" | ""
+  upstream_url?: string
+  upstream_json_path?: string
+  docker_image?: string
   repo?: string
   github_source?: "releases" | "tags"
   tag_regex?: string
+  detected_version?: string
+  detector_verified?: boolean
+  detector_source?: "primary" | "alternative" | "helper_marker" | "legacy_fallback" | "runtime_probe" | "candidate"
+  detector_error?: string
+}
+
+interface DockerTagPreview {
+  image: string
+  regex: string
+  tags: Array<{ tag: string; version: string | null; moving: boolean }>
+  matched_count: number
+  scanned_count: number
+  cached_for_seconds: number
+}
+
+interface DockerWebLinkSuggestion {
+  container_name: string
+  service_name: string
+  service_slug?: string | null
+  image: string
+  host_port: number
+  container_port: number
+  scheme: "http" | "https"
+  web_path: string
+  logo_url?: string | null
 }
 
 interface Suggestions {
+  ready?: boolean
   name_suggestion: string | null
   helper_slug: string | null
   port_suggestions: number[]
@@ -143,6 +207,7 @@ interface Suggestions {
   default_ports?: number[]
   logo_url?: string | null
   extras?: DetectedApp[]
+  docker_web_links?: DockerWebLinkSuggestion[]
 }
 
 // Compact catalog entry — one row for every registerable app the
@@ -209,6 +274,44 @@ const EMPTY_APP: AppConfig = {
   logo_url: "",
 }
 
+const SELFHST_WEBP_BASE = "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp"
+const SELFHST_THEME_LOGOS: Record<string, { lightTheme: string; darkTheme: string }> = {
+  frigate: {
+    lightTheme: `${SELFHST_WEBP_BASE}/frigate-dark.webp`,
+    darkTheme: `${SELFHST_WEBP_BASE}/frigate-light.webp`,
+  },
+  portainer: {
+    lightTheme: `${SELFHST_WEBP_BASE}/portainer-dark.webp`,
+    darkTheme: `${SELFHST_WEBP_BASE}/portainer-light.webp`,
+  },
+  vaultwarden: {
+    lightTheme: `${SELFHST_WEBP_BASE}/vaultwarden.webp`,
+    darkTheme: `${SELFHST_WEBP_BASE}/vaultwarden-light.webp`,
+  },
+}
+
+function selfhstThemeLogos(src: string) {
+  if (!src.toLowerCase().includes("cdn.jsdelivr.net/gh/selfhst/icons")) return null
+  const match = src.toLowerCase().match(/\/(frigate|portainer|vaultwarden)(?:-(?:dark|light))?\.webp(?:[?#].*)?$/)
+  return match ? SELFHST_THEME_LOGOS[match[1]] : null
+}
+
+export function ThemeAwareLogo({ src, className }: { src: string; className: string }) {
+  const themed = selfhstThemeLogos(src)
+  const hideBroken = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.style.display = "none"
+  }
+  if (!themed) {
+    return <img src={src} alt="" className={className} onError={hideBroken} />
+  }
+  return (
+    <>
+      <img src={themed.lightTheme} alt="" className={`${className} block dark:hidden`} onError={hideBroken} />
+      <img src={themed.darkTheme} alt="" className={`${className} hidden dark:block`} onError={hideBroken} />
+    </>
+  )
+}
+
 // Default scheme heuristic for freshly-added ports — only used to
 // pre-select the dropdown. The user always has the final say via
 // the http/https selector next to the port input.
@@ -245,9 +348,13 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
   const [sidecar, setSidecar] = useState<SidecarResponse | null>(seed?.sidecar ?? null)
   const [suggestions, setSuggestions] = useState<Suggestions | null>(seed?.suggestions ?? null)
   const [error, setError] = useState<string | null>(null)
+  const [searchingApplications, setSearchingApplications] = useState(false)
+  const [detectionNotice, setDetectionNotice] = useState<{ found: boolean; text: string } | null>(null)
   // Editor state
   const [editing, setEditing] = useState<{ appId: string | null; draft: AppConfig } | null>(null)
   const [saving, setSaving] = useState(false)
+  const [testingDetector, setTestingDetector] = useState(false)
+  const [detectorTest, setDetectorTest] = useState<DetectorTestResult | null>(null)
   const [busyAppId, setBusyAppId] = useState<string | null>(null)
   // Advanced section (version tracking) is collapsed by default so the
   // basic Name + Ports flow stays approachable. Auto-expanded when
@@ -270,11 +377,14 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
   // restore, this panel is skipped entirely and the button opens the
   // editor directly (fast path for the common case).
   const [browseOpen, setBrowseOpen] = useState(false)
+  const [dockerTagPreview, setDockerTagPreview] = useState<DockerTagPreview | null>(null)
+  const [dockerTagPreviewLoading, setDockerTagPreviewLoading] = useState(false)
+  const [dockerTagPreviewError, setDockerTagPreviewError] = useState<string | null>(null)
 
   // Global "manage apps" mode. When ON, every app card grows a footer
   // with Remove / Check / Edit fields actions. When OFF the cards are
-  // pure info — the only surfaced action is a hover-reveal Check icon
-  // on the LATEST UPSTREAM panel. Toggled from a single button next to
+  // pure info; detector checks remain available after enabling Edit.
+  // Toggled from a single button next to
   // "Add another application".
   const [editMode, setEditMode] = useState(false)
 
@@ -309,6 +419,42 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
 
   useEffect(() => { load() }, [load])
 
+  // Live Docker Hub preview. Debounced so typing an image/regex does not
+  // issue one request per keystroke; the backend additionally caches the
+  // raw tag list for 60 seconds per image.
+  useEffect(() => {
+    const draft = editing?.draft
+    const image = (draft?.docker_image || "").trim()
+    if (draft?.upstream_type !== "docker_hub" || !image) {
+      setDockerTagPreview(null)
+      setDockerTagPreviewError(null)
+      setDockerTagPreviewLoading(false)
+      return
+    }
+    let cancelled = false
+    setDockerTagPreview(null)
+    setDockerTagPreviewError(null)
+    const timer = window.setTimeout(async () => {
+      setDockerTagPreviewLoading(true)
+      try {
+        const result: DockerTagPreview = await fetchApi("/api/lxc-apps/dockerhub-tag-preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image, regex: draft.tag_regex || "" }),
+        })
+        if (!cancelled) setDockerTagPreview(result)
+      } catch (e: any) {
+        if (!cancelled) setDockerTagPreviewError(e?.message || t("vmLxc.appEditor.dockerTagPreviewFailed"))
+      } finally {
+        if (!cancelled) setDockerTagPreviewLoading(false)
+      }
+    }, 500)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [editing?.draft.docker_image, editing?.draft.tag_regex, editing?.draft.upstream_type, t])
+
   // Turn a raw backend error string ("network error: The read operation
   // timed out", etc.) into a localized message. Upstream check errors
   // are surfaced verbatim by `lxc_apps.py:_fetch_upstream()`, and the
@@ -329,18 +475,19 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
     return msg
   }
 
-  // Fetch the picker catalog once per panel mount. Best-effort — if
-  // the API is unreachable, the picker just stays empty and users
-  // type the app name manually (same as before this feature).
+  const editorOpen = !!editing
+
+  // The picker catalog is only needed after the user opens the editor.
   useEffect(() => {
+    if (!editorOpen || catalog.length > 0) return
     let cancelled = false
-    fetchApi("/api/apps/catalog")
+    fetchApi<CatalogEntry[]>("/api/apps/catalog")
       .then((data: CatalogEntry[]) => {
         if (!cancelled && Array.isArray(data)) setCatalog(data)
       })
       .catch(() => { /* non-fatal */ })
     return () => { cancelled = true }
-  }, [])
+  }, [editorOpen, catalog.length])
 
   // Derived state — computed here BEFORE any conditional early
   // return so React sees the same hook order on every render.
@@ -396,6 +543,47 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
   // different-app panel. Not affected by registration state.
   const hiddenDetections = detectedList.filter((d) => dismissedSlugs.has(d.slug))
 
+  const searchInstalledApplications = async () => {
+    const before = new Set(visibleDetected.map((item) => item.slug))
+    setSearchingApplications(true)
+    setDetectionNotice(null)
+    setError(null)
+    try {
+      const result: Suggestions = await fetchApi(`/api/vms/${vmid}/apps/suggestions`, {
+        method: "POST",
+      })
+      setSuggestions(result)
+      if (sidecar) setLxcAppsCached(vmid, sidecar, result)
+
+      const detected = new Set<string>()
+      if (result.helper_slug) detected.add(result.helper_slug)
+      for (const item of result.extras || []) detected.add(item.slug)
+      const visible = [...detected].filter(
+        (slug) => !registeredSlugs.has(slug) && !dismissedSlugs.has(slug),
+      )
+      const newCount = visible.filter((slug) => !before.has(slug)).length
+      if (newCount === 1) {
+        setDetectionNotice({ found: true, text: t("vmLxc.appEditor.oneNewApplicationDetected") })
+      } else if (newCount > 1) {
+        setDetectionNotice({
+          found: true,
+          text: t("vmLxc.appEditor.newApplicationsDetected", { count: newCount }),
+        })
+      } else {
+        setDetectionNotice({
+          found: false,
+          text: t(visible.length === 0 && apps.length === 0
+            ? "vmLxc.appEditor.noApplicationsDetected"
+            : "vmLxc.appEditor.noNewApplicationsDetected"),
+        })
+      }
+    } catch (e: any) {
+      setError(e?.message || t("vmLxc.appEditor.detectionFailed"))
+    } finally {
+      setSearchingApplications(false)
+    }
+  }
+
   // "Register a different app" behavior: if there are hidden slugs,
   // surface them first (with Restore) so the user can bring one back
   // instead of typing everything by hand. If nothing to restore, go
@@ -437,6 +625,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         health_path: existing.health_path || "",
         logo_url: existing.logo_url || "",
         helper_slug: existing.helper_slug || "",
+        update_command: existing.update_command || "",
+        hide_no_updater_notice: existing.hide_no_updater_notice === true,
         notifications_enabled: existing.notifications_enabled !== false,
         exclude_from_badge: existing.exclude_from_badge === true,
       }
@@ -461,7 +651,10 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         seed.name = p.name
         seed.logo_url = p.logo_url || ""
         seed.helper_slug = p.slug
-        if (p.default_ports?.length) {
+        // Docker endpoints come from the real published host-port mappings
+        // listed under Web links.  Do not pre-save a catalog default such as
+        // 9000; the user explicitly chooses which workload links to add.
+        if (p.slug !== "docker" && p.default_ports?.length) {
           seed.ports = p.default_ports.map((port) => ({
             port,
             scheme: defaultSchemeFor(port),
@@ -477,6 +670,14 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
             file_path: t.file_path || "",
             file_regex: t.file_regex || "",
             binary_path: t.binary_path || "",
+            binary_args: t.binary_args ? [...t.binary_args] : [],
+            python_path: t.python_path || "",
+            distribution: t.distribution || "",
+            container_name: t.container_name || "",
+            label: t.label || "",
+            command_argv: t.command_argv ? [...t.command_argv] : [],
+            installed_version: t.installed_version || "",
+            installed_regex: t.installed_regex || "",
             upstream_type: (t as any).upstream_type || (t.repo ? "github" : ""),
             repo: t.repo || "",
             github_source: t.github_source || "releases",
@@ -497,11 +698,13 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
       }
     }
     setEditing({ appId: existing?.id || null, draft: seed })
+    setDetectorTest(null)
     setError(null)
   }, [suggestions, vmid, sidecar])
 
   const closeEditor = () => {
     setEditing(null)
+    setDetectorTest(null)
     setError(null)
   }
 
@@ -521,13 +724,32 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
       })
       if ((r as any).error) throw new Error((r as any).error)
       setSidecar(r)
-      invalidateLxcApps(vmid)
+      setLxcAppsCached(vmid, r, suggestions)
       setEditing(null)
       onChange?.()
     } catch (e: any) {
       setError(e?.message || t("vmLxc.appEditor.saveFailed"))
     } finally {
       setSaving(false)
+    }
+  }
+
+  const testDetector = async () => {
+    if (!editing?.draft.installed_via) return
+    setTestingDetector(true)
+    setDetectorTest(null)
+    setError(null)
+    try {
+      const result: DetectorTestResult = await fetchApi(`/api/vms/${vmid}/apps/test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editing.draft),
+      })
+      setDetectorTest(result)
+    } catch (e: any) {
+      setError(e?.message || t("vmLxc.appEditor.detectorTestFailed"))
+    } finally {
+      setTestingDetector(false)
     }
   }
 
@@ -539,7 +761,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         method: "POST",
       })
       setSidecar(r)
-      invalidateLxcApps(vmid)
+      setLxcAppsCached(vmid, r, suggestions)
       onChange?.()
     } catch (e: any) {
       setError(e?.message || t("vmLxc.appEditor.checkFailed"))
@@ -565,7 +787,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         body: JSON.stringify(payload),
       })
       setSidecar(r)
-      invalidateLxcApps(vmid)
+      setLxcAppsCached(vmid, r, suggestions)
       onChange?.()
     } catch (e: any) {
       setError(e?.message || t("vmLxc.appEditor.saveFailed"))
@@ -579,10 +801,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
     setBusyAppId(appId)
     setError(null)
     try {
-      await fetchApi(`/api/vms/${vmid}/apps/${appId}`, { method: "DELETE" })
-      // Reload from server so the empty state re-fetches suggestions
-      invalidateLxcApps(vmid)
-      await load()
+      const r: SidecarResponse = await fetchApi(`/api/vms/${vmid}/apps/${appId}`, { method: "DELETE" })
+      setSidecar(r)
+      setLxcAppsCached(vmid, r, suggestions)
       onChange?.()
     } catch (e: any) {
       setError(e?.message || t("vmLxc.appEditor.deleteFailed"))
@@ -608,7 +829,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         body: JSON.stringify({ slug, dismissed: true }),
       })
       setSidecar(r)
-      invalidateLxcApps(vmid)
+      setLxcAppsCached(vmid, r, suggestions)
     } catch (e: any) {
       setError(e?.message || t("vmLxc.appEditor.dismissFailed"))
       await load()  // resync on failure
@@ -631,7 +852,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         body: JSON.stringify({ slug, dismissed: false }),
       })
       setSidecar(r)
-      invalidateLxcApps(vmid)
+      setLxcAppsCached(vmid, r, suggestions)
     } catch (e: any) {
       setError(e?.message || t("vmLxc.appEditor.restoreFailed"))
       await load()
@@ -666,7 +887,6 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
     const repo = isSecureGateway ? "tailscale/tailscale" : ""
     const methodLine = isSecureGateway ? `apk · tailscale · ${t("vmLxc.appEditor.managedStatus")}` : t("vmLxc.appEditor.managedStatus")
     const hasUpdate = managed.update_available === true
-    const upToDate = managed.update_available === false && !!managed.installed_version
     const showVersions = !!(managed.installed_version || managed.latest_version || repo)
 
     return (
@@ -756,16 +976,13 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
               </div>
             )}
 
-            {showVersions && (
-              <div className={"mt-3 grid gap-3 " + (repo ? "grid-cols-2" : "grid-cols-1")}>
+            {showVersions && (managed.installed_version || repo) && (
+              <div className={"mt-3 grid gap-3 " + (managed.installed_version && repo ? "grid-cols-2" : "grid-cols-1")}>
                 {managed.installed_version && (
                   <div className="p-3 rounded-md bg-muted/40">
                     <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t("vmLxc.appEditor.installedStatus")}</div>
-                    <div className="text-lg font-semibold font-mono text-foreground flex items-center gap-2">
+                    <div className="text-lg font-semibold font-mono text-foreground">
                       {managed.installed_version}
-                      {upToDate && (
-                        <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" aria-label={t("vmLxc.appEditor.upToDateBadge")} />
-                      )}
                     </div>
                   </div>
                 )}
@@ -818,8 +1035,10 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
     const draft = editing.draft
     const method = draft.installed_via || ""
     const isPackaged = method === "dpkg" || method === "apk"
-    const setField = (patch: Partial<AppConfig>) =>
+    const setField = (patch: Partial<AppConfig>) => {
+      setDetectorTest(null)
       setEditing({ ...editing, draft: { ...draft, ...patch } })
+    }
     // Editing the Name auto-fills the Package field on packaged
     // methods when it's still empty. Rationale: 90% of the time the
     // dpkg/apk package name mirrors the friendly app name (jellyfin,
@@ -853,10 +1072,37 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         setField({ ports: [...draft.ports, { port, description: "", scheme }] })
       }
     }
+    const addDockerWebLink = (link: DockerWebLinkSuggestion) => {
+      const entry: PortEntry = {
+        port: link.host_port,
+        description: link.service_name,
+        scheme: link.scheme,
+        web_path: link.web_path || "/",
+        logo_url: link.logo_url || "",
+      }
+      const last = draft.ports[draft.ports.length - 1]
+      if (last && last.port === "" && !last.description) {
+        const ports = [...draft.ports]
+        ports[ports.length - 1] = entry
+        setField({ ports })
+      } else {
+        setField({ ports: [...draft.ports, entry] })
+      }
+    }
     const removePort = (i: number) =>
       setField({ ports: draft.ports.filter((_, idx) => idx !== i) })
     const usedPorts = new Set(draft.ports.map((p) => p.port))
-    const suggestable = (suggestions?.port_suggestions || []).filter((p) => !usedPorts.has(p))
+    const isDockerDraft = draft.helper_slug === "docker" ||
+      (draft.installed_via === "binary" && draft.binary_path?.endsWith("/docker"))
+    const suggestableDockerLinks = isDockerDraft
+      ? (suggestions?.docker_web_links || []).filter((link) => !usedPorts.has(link.host_port))
+      : []
+    // A Docker registration uses structured container → published-port
+    // suggestions below.  Suppress the generic ss/netstat chips in that case
+    // so the same endpoint is not presented twice without its workload name.
+    const suggestable = isDockerDraft
+      ? []
+      : (suggestions?.port_suggestions || []).filter((p) => !usedPorts.has(p))
 
     return (
       <div className="space-y-4">
@@ -908,13 +1154,13 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                         onClick={async () => {
                           setPickerOpen(false)
                           try {
-                            const detail: CatalogDetail = await fetchApi(`/api/apps/catalog/${c.slug}`)
+                            const detail: CatalogDetail = await fetchApi(`/api/apps/catalog/${c.slug}?vmid=${vmid}`)
                             // Seed the entire form from the picker detail.
                             const patch: Partial<AppConfig> = {
                               name: detail.name,
                               helper_slug: detail.slug,
                               logo_url: detail.logo_url || "",
-                              ports: detail.default_ports?.length
+                              ports: detail.slug !== "docker" && detail.default_ports?.length
                                 ? detail.default_ports.map((p) => ({
                                     port: p,
                                     scheme: defaultSchemeFor(p),
@@ -1002,6 +1248,53 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                 </Button>
               </div>
 
+              {suggestableDockerLinks.length > 0 && (
+                <div className="mb-3 space-y-2">
+                  <div>
+                    <div className="text-xs font-medium text-foreground">
+                      {t("vmLxc.appEditor.dockerPublishedServicesTitle")}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed max-w-2xl">
+                      {t("vmLxc.appEditor.dockerPublishedServicesHelp")}
+                    </p>
+                  </div>
+                  <div className="divide-y divide-border/50 border-y border-border/50">
+                    {suggestableDockerLinks.map((link) => (
+                      <div
+                        key={`${link.container_name}:${link.host_port}`}
+                        className="flex flex-col sm:flex-row sm:items-center gap-2 py-2"
+                      >
+                        {link.logo_url && (
+                          <ThemeAwareLogo
+                            src={link.logo_url}
+                            className="h-7 w-7 rounded object-contain flex-shrink-0"
+                          />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm text-foreground truncate">{link.service_name}</div>
+                          <div className="text-[10px] text-muted-foreground truncate" title={link.image}>
+                            {link.image} · {t("vmLxc.appEditor.dockerPublishedPort", {
+                              containerPort: link.container_port,
+                              hostPort: link.host_port,
+                            })}
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addDockerWebLink(link)}
+                          className="h-8 flex-shrink-0"
+                        >
+                          <PlusCircle className="h-3.5 w-3.5 mr-1" />
+                          {t("vmLxc.appEditor.dockerPublishedAdd")}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Detected chips FIRST — one-click add. Only shown when
                   there are chips left to suggest, so empty states stay
                   clean. Click on a chip: fills the current empty row
@@ -1024,7 +1317,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                 </div>
               )}
 
-              {draft.ports.length === 0 && suggestable.length === 0 && (
+              {draft.ports.length === 0 && suggestable.length === 0 && suggestableDockerLinks.length === 0 && (
                 <div className="text-xs text-muted-foreground italic">
                   {t("vmLxc.appEditor.noWebPorts")}
                 </div>
@@ -1470,9 +1763,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                               maxLength={255}
                             />
                             <div className="text-[10px] text-muted-foreground mt-1">
-                              <code className="text-foreground/70">owner/name</code> — or bare
-                              name for official images. ProxMenux picks the highest semver tag
-                              matching the filter below.
+                              {t("vmLxc.appEditor.dockerVersionedTagsHelp")}
                             </div>
                           </div>
                         )}
@@ -1489,11 +1780,80 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                               placeholder={t("vmLxc.appEditor.tagRegexPlaceholder")}
                               className="font-mono text-xs"
                             />
+                            {upstreamType === "docker_hub" && (
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-[10px]"
+                                  onClick={() => setField({ tag_regex: "^v?(\\d+\\.\\d+\\.\\d+)$" })}
+                                >
+                                  {t("vmLxc.appEditor.dockerPresetSemver")}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-[10px]"
+                                  onClick={() => setField({ tag_regex: "^v?(\\d+\\.\\d+\\.\\d+(?:[-+._][0-9A-Za-z.-]+)?)$" })}
+                                >
+                                  {t("vmLxc.appEditor.dockerPresetSemverSuffix")}
+                                </Button>
+                              </div>
+                            )}
                             <div className="text-[10px] text-muted-foreground mt-1">
                               {upstreamType === "github" && "Extracts the version from the release tag name."}
                               {upstreamType === "http_json" && "Optional — extract a substring from the endpoint's value."}
-                              {upstreamType === "docker_hub" && "Filter which tags qualify (e.g. only semver). Applied before picking the highest."}
+                              {upstreamType === "docker_hub" && t("vmLxc.appEditor.dockerTagFilterHelp")}
                             </div>
+                          </div>
+                        )}
+
+                        {upstreamType === "docker_hub" && draft.docker_image?.trim() && (
+                          <div className="rounded-md border border-border/70 bg-background/50 p-3">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <div className="text-xs font-medium text-foreground">
+                                {t("vmLxc.appEditor.dockerTagPreviewLabel")}
+                              </div>
+                              {dockerTagPreview && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  {t("vmLxc.appEditor.dockerTagPreviewCount", {
+                                    matched: dockerTagPreview.matched_count,
+                                    scanned: dockerTagPreview.scanned_count,
+                                  })}
+                                </span>
+                              )}
+                            </div>
+                            {dockerTagPreviewLoading ? (
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                {t("vmLxc.appEditor.dockerTagPreviewLoading")}
+                              </div>
+                            ) : dockerTagPreviewError ? (
+                              <div className="text-xs text-amber-300">{dockerTagPreviewError}</div>
+                            ) : dockerTagPreview?.tags.length ? (
+                              <div className="flex flex-wrap gap-1.5">
+                                {dockerTagPreview.tags.map((entry) => (
+                                  <Badge
+                                    key={entry.tag}
+                                    variant="outline"
+                                    className={entry.moving ? "border-amber-500/40 text-amber-300" : "font-mono"}
+                                  >
+                                    {entry.tag}{entry.moving ? ` · ${t("vmLxc.appEditor.dockerMovingTag")}` : ""}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-muted-foreground">
+                                {t("vmLxc.appEditor.dockerTagPreviewEmpty")}
+                              </div>
+                            )}
+                            {dockerTagPreview?.tags.some((entry) => entry.moving) && (
+                              <div className="mt-2 text-[10px] text-amber-300 leading-relaxed">
+                                {t("vmLxc.appEditor.dockerMovingTagHelp")}
+                              </div>
+                            )}
                           </div>
                         )}
                       </>
@@ -1541,6 +1901,47 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
               </div>
             )}
 
+            {detectorTest && (
+              <div className="rounded-md border border-border/70 bg-background/60 p-3 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-xs font-medium text-foreground">
+                    {t("vmLxc.appEditor.detectorTestTitle")}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className={"rounded-md border p-2.5 " + (detectorTest.installed.version ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5")}>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                      {t("vmLxc.appEditor.installedStatus")}
+                    </div>
+                    {detectorTest.installed.version ? (
+                      <div className="font-mono text-sm text-emerald-400">{detectorTest.installed.version}</div>
+                    ) : (
+                      <div className="text-xs text-amber-300">{detectorTest.installed.error || t("vmLxc.appEditor.detectorTestNoVersion")}</div>
+                    )}
+                    <div className="mt-1.5 text-[10px] text-muted-foreground break-all">
+                      {detectorTest.installed.method || "—"}
+                      {detectorTest.installed.effective_regex ? ` · ${detectorTest.installed.effective_regex}` : ""}
+                    </div>
+                  </div>
+                  <div className={"rounded-md border p-2.5 " + (!detectorTest.upstream.configured || detectorTest.upstream.version ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5")}>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                      {t("vmLxc.appEditor.latestUpstream")}
+                    </div>
+                    {!detectorTest.upstream.configured ? (
+                      <div className="text-xs text-muted-foreground">{t("vmLxc.appEditor.detectorTestNoUpstream")}</div>
+                    ) : detectorTest.upstream.version ? (
+                      <div className="font-mono text-sm text-emerald-400">{detectorTest.upstream.version}</div>
+                    ) : (
+                      <div className="text-xs text-amber-300">{detectorTest.upstream.error || t("vmLxc.appEditor.detectorTestNoVersion")}</div>
+                    )}
+                    {detectorTest.upstream.type && (
+                      <div className="mt-1.5 text-[10px] text-muted-foreground">{detectorTest.upstream.type}</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {error && (
               <div className="text-xs text-red-400 flex items-start gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
@@ -1549,10 +1950,22 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
             )}
 
             <div className="flex flex-wrap gap-2 justify-end pt-2">
-              <Button variant="ghost" onClick={closeEditor} disabled={saving}>{t("vmLxc.appEditor.cancelButton")}</Button>
+              {method && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={testDetector}
+                  disabled={saving || testingDetector || !draft.name.trim()}
+                  className="sm:mr-auto"
+                >
+                  {testingDetector ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-1.5" />}
+                  {testingDetector ? t("vmLxc.appEditor.testingDetectorButton") : t("vmLxc.appEditor.testDetectorButton")}
+                </Button>
+              )}
+              <Button variant="ghost" onClick={closeEditor} disabled={saving || testingDetector}>{t("vmLxc.appEditor.cancelButton")}</Button>
               <Button
                 onClick={save}
-                disabled={saving || !draft.name.trim()}
+                disabled={saving || testingDetector || !draft.name.trim()}
                 className="bg-blue-500 hover:bg-blue-600 text-white"
               >
                 {saving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
@@ -1573,11 +1986,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {d.logo_url && (
-            <img
+            <ThemeAwareLogo
               src={d.logo_url}
-              alt=""
               className="h-14 w-14 flex-shrink-0 rounded-md object-contain"
-              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
             />
           )}
           <div className="min-w-0">
@@ -1613,16 +2024,23 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {d.logo_url && (
-            <img
+            <ThemeAwareLogo
               src={d.logo_url}
-              alt=""
               className="h-14 w-14 flex-shrink-0 rounded-md object-contain"
-              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
             />
           )}
           <div className="min-w-0">
             <div className="text-sm font-semibold text-foreground truncate">{d.name}</div>
-            <div className="text-xs text-emerald-400/90">{t("vmLxc.appEditor.detectedInContainer")}</div>
+            <div className="text-xs text-emerald-400/90">
+              {d.tracking_suggestion?.detector_verified
+                ? t("vmLxc.appEditor.versionDetected", { version: d.tracking_suggestion.detected_version || "" })
+                : t("vmLxc.appEditor.detectedInContainer")}
+            </div>
+            {d.tracking_suggestion?.detector_source === "legacy_fallback" && (
+              <div className="text-[10px] text-amber-400/90 mt-0.5">
+                {t("vmLxc.appEditor.legacyDetectorUsed")}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex flex-row gap-2 flex-shrink-0 sm:justify-end w-full sm:w-auto">
@@ -1716,11 +2134,25 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                 {visibleDetected.map(renderDetectionChip)}
               </div>
             )}
-            <div className="pt-1 flex justify-center">
-              <Button onClick={openBrowseOrEditor} variant={visibleDetected.length > 0 ? "outline" : "default"}
-                      className={visibleDetected.length > 0 ? "" : "bg-blue-500 hover:bg-blue-600 text-white"}>
+            <div className="pt-1 flex flex-wrap justify-center gap-2">
+              <Button
+                onClick={searchInstalledApplications}
+                disabled={searchingApplications}
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                {searchingApplications
+                  ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  : <Search className="h-4 w-4 mr-1.5" />}
+                {searchingApplications
+                  ? t("vmLxc.appEditor.searchingApplications")
+                  : t("vmLxc.appEditor.searchApplications")}
+              </Button>
+              <Button
+                onClick={openBrowseOrEditor}
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+              >
                 <PlusCircle className="h-4 w-4 mr-1.5" />
-                {visibleDetected.length > 0 ? t("vmLxc.appEditor.registerDifferent") : t("vmLxc.appEditor.registerApplication")}
+                {t("vmLxc.appEditor.registerApplication")}
                 {hiddenDetections.length > 0 && (
                   <span className="ml-2 text-[10px] opacity-70">
                     · {t("vmLxc.appEditor.hiddenSuffix", { count: hiddenDetections.length })}
@@ -1728,6 +2160,11 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                 )}
               </Button>
             </div>
+            {detectionNotice && (
+              <p className={`text-xs text-center ${detectionNotice.found ? "text-emerald-400" : "text-muted-foreground"}`}>
+                {detectionNotice.text}
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
@@ -1738,19 +2175,15 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
         // Version tracking is on when installed_via is set. Without a
         // method the app is register-only — no cards, no warnings.
         const tracking = !!app.installed_via
-        const hasUpdate = tracking && st?.update_available === true
-        const upToDate = tracking && st?.update_available === false && !!st?.installed_version
         return (
           <Card key={app.id} className="border border-border bg-card/50">
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   {app.logo_url && (
-                    <img
+                    <ThemeAwareLogo
                       src={app.logo_url}
-                      alt=""
                       className="h-14 w-14 flex-shrink-0 rounded-md object-contain"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
                     />
                   )}
                   <div className="min-w-0 flex-1">
@@ -1801,30 +2234,17 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                 )}
               </div>
 
-              {/* Version panels — always same-line (grid-cols-2), on
-                  every viewport when ANY upstream source is configured
-                  (github repo, http_json endpoint, or docker_hub
-                  image). The signal that an update exists is the
-                  LATEST UPSTREAM number turning purple + a small
-                  ArrowUpCircle next to it, matching the project-wide
-                  update button convention. Absence of purple = up to
-                  date; no colored banners, no green/orange noise.
-                  Labels stay muted so numbers keep visual priority.
-                  When no upstream is configured, the LATEST panel is
-                  omitted entirely and INSTALLED takes the full width. */}
               {(() => {
                 const hasUpstream = !!(app.repo || app.upstream_type)
+                const hasUpdate = st?.update_available === true
                 if (!tracking || !(st?.installed_version || hasUpstream)) return null
                 return (
-                  <div className={"mb-3 grid gap-3 " + (hasUpstream ? "grid-cols-2" : "grid-cols-1")}>
+                  <div className={"mb-3 grid gap-3 " + (st?.installed_version && hasUpstream ? "grid-cols-2" : "grid-cols-1")}>
                     {st?.installed_version && (
                       <div className="p-3 rounded-md bg-muted/40">
                         <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t("vmLxc.appEditor.installedStatus")}</div>
-                        <div className="text-lg font-semibold font-mono text-foreground flex items-center gap-2">
+                        <div className="text-lg font-semibold font-mono text-foreground">
                           {st.installed_version}
-                          {upToDate && (
-                            <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" aria-label={t("vmLxc.appEditor.upToDateBadge")} />
-                          )}
                         </div>
                       </div>
                     )}
@@ -1867,11 +2287,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
                     return (
                       <div key={p.port} className="flex items-start gap-3 min-w-0">
                         {p.logo_url && (
-                          <img
+                          <ThemeAwareLogo
                             src={p.logo_url}
-                            alt=""
                             className="h-14 w-14 flex-shrink-0 rounded-md object-contain"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
                           />
                         )}
                         <div className="min-w-0 flex flex-col">
@@ -1896,8 +2314,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
               {/* Footer with per-card actions — only rendered in the
                   global edit mode (toggled from the "Edit" button next
                   to Add another application). View mode keeps cards
-                  chrome-free; Check is still reachable via the
-                  hover-reveal icon on the LATEST panel. Buttons match
+                  chrome-free; Check remains available in edit mode.
+                  Buttons match
                   the Settings-page section style (h-8, outline,
                   small icon + label) for visual consistency across
                   the app. */}
@@ -1984,7 +2402,20 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
           detections, so the user gets one-click Restore before hand-
           typing a custom app. */}
       {apps.length > 0 && (
-        <div className="flex justify-end items-center gap-2">
+        <div className="flex flex-wrap justify-end items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={searchInstalledApplications}
+            disabled={searchingApplications || editMode}
+          >
+            {searchingApplications
+              ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              : <Search className="h-4 w-4 mr-1.5" />}
+            {searchingApplications
+              ? t("vmLxc.appEditor.searchingApplications")
+              : t("vmLxc.appEditor.searchApplications")}
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -2017,6 +2448,12 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
             )}
           </button>
         </div>
+      )}
+
+      {apps.length > 0 && detectionNotice && (
+        <p className={`text-xs text-right ${detectionNotice.found ? "text-emerald-400" : "text-muted-foreground"}`}>
+          {detectionNotice.text}
+        </p>
       )}
 
       {error && (

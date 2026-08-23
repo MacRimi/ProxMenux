@@ -33,6 +33,7 @@ except ImportError:
     pass
 
 import glob
+import hashlib
 import json
 import logging
 import math
@@ -50,6 +51,7 @@ import tempfile
 import time
 import threading
 import urllib.parse
+import uuid
 import hardware_monitor
 from health_persistence import health_persistence
 import xml.etree.ElementTree as ET
@@ -70,7 +72,11 @@ if BASE_DIR not in sys.path:
 from flask_script_runner import script_runner
 import threading
 from proxmox_storage_monitor import proxmox_storage_monitor
-from flask_terminal_routes import terminal_bp, init_terminal_routes  # noqa: E402
+from flask_terminal_routes import (  # noqa: E402
+    terminal_bp,
+    init_terminal_routes,
+    set_script_completion_hook,
+)
 from flask_health_routes import health_bp  # noqa: E402
 from flask_auth_routes import auth_bp  # noqa: E402
 from flask_proxmenux_routes import proxmenux_bp  # noqa: E402
@@ -1609,11 +1615,14 @@ _VM_DISK_REFRESH_WORKERS = 6  # parallelism cap for the fsinfo pass
 # opens it (config, backups, apps, schedule). Each was recomputing on
 # every open, so reopening the same guest re-paid all the latency and
 # the tabs showed "Loading…" every time. These caches memoise the
-# per-guest payloads with short TTLs and invalidate on write actions
-# so the client never sees stale data after its own edit.
+# per-guest payloads and publish write results back into the same cache
+# so the client never sees stale data—or a cold loading state—after its
+# own edit. Guest lifecycle actions still invalidate because their new
+# state must be probed rather than inferred from an API response.
 _vm_details_cache: dict = {}      # vmid -> (ts, payload)
 _vm_backups_cache: dict = {}      # vmid -> (ts, payload)
 _vm_apps_cache: dict = {}         # vmid -> (ts, payload)
+_vm_app_suggestions_cache: dict = {}  # vmid -> (ts, payload)
 _vm_schedule_cache: dict = {}     # vmid -> (ts, payload)
 _vm_mounts_cache: dict = {}       # vmid -> (ts, payload) — LXC only
 # Effective TTL is "indefinite": these caches are refreshed only
@@ -1638,6 +1647,7 @@ _VM_CACHE_INDEFINITE = 315_360_000   # 10 years — effectively infinite
 _VM_DETAILS_TTL   = _VM_CACHE_INDEFINITE
 _VM_BACKUPS_TTL   = _VM_CACHE_INDEFINITE
 _VM_APPS_TTL      = _VM_CACHE_INDEFINITE
+_VM_APP_SUGGESTIONS_TTL = _VM_CACHE_INDEFINITE
 _VM_SCHEDULE_TTL  = _VM_CACHE_INDEFINITE
 _VM_MOUNTS_TTL    = _VM_CACHE_INDEFINITE
 _vm_modal_cache_lock = threading.Lock()
@@ -1661,11 +1671,273 @@ def _vm_cache_invalidate(vmid: int, *caches) -> None:
     lives in the details payload)."""
     targets = caches or (
         _vm_details_cache, _vm_backups_cache, _vm_apps_cache,
-        _vm_schedule_cache, _vm_mounts_cache,
+        _vm_app_suggestions_cache, _vm_schedule_cache, _vm_mounts_cache,
     )
     with _vm_modal_cache_lock:
         for c in targets:
             c.pop(vmid, None)
+
+
+# Guest lifecycle cache refresh. A restored backup can roll an LXC/VM back
+# while ProxMenux still holds the pre-restore modal, version and Docker state.
+# Track stopped -> running transitions and rebuild only that guest's snapshot.
+_guest_lifecycle_lock = threading.RLock()
+_guest_refresh_inflight: set[int] = set()
+_guest_modal_cache_revision: dict[int, int] = {}
+_guest_modal_cache_epoch = int(time.time() * 1000)
+
+
+def _publish_guest_modal_cache_revision(vmid: int) -> int:
+    """Publish one completed cache stage for a guest.
+
+    A lifecycle rebuild has two useful completion points: the operational
+    snapshot (registered apps, update state and Docker inventory), followed by
+    the much slower catalog-wide application suggestion scan. Publishing a
+    revision at each point lets the browser consume Docker immediately instead
+    of waiting several minutes for unrelated discovery probes.
+    """
+    with _guest_lifecycle_lock:
+        revision = _guest_modal_cache_revision.get(
+            int(vmid), _guest_modal_cache_epoch
+        ) + 1
+        _guest_modal_cache_revision[int(vmid)] = revision
+        return revision
+
+
+def _wait_for_started_guest(vmid: int, vm_type: str) -> bool:
+    """Wait until the guest—and for LXC, pct exec—is actually usable."""
+    for attempt in range(12):
+        if _fast_guest_status(vmid, vm_type) == 'running':
+            if vm_type != 'lxc':
+                return True
+            try:
+                probe = subprocess.run(
+                    ['/usr/sbin/pct', 'exec', str(vmid), '--', 'true'],
+                    capture_output=True, text=True, timeout=5,
+                )
+                if probe.returncode == 0:
+                    return True
+            except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+                pass
+        time.sleep(min(1 + attempt, 5))
+    return False
+
+
+def _warm_started_guest_handler(vmid: int, route: str, handler) -> None:
+    """Run one cached Flask handler internally, matching the startup warmer."""
+    from flask import g as _flask_g
+    with app.test_request_context(route):
+        _flask_g._internal_call = True
+        handler(vmid)
+
+
+def _refresh_started_guest(vmid: int, vm_type: str) -> None:
+    """Rebuild the complete cache snapshot for one newly-started guest."""
+    refreshed = False
+    core_published = False
+    docker_refresh_pending = False
+    started_at = time.monotonic()
+    try:
+        if not _wait_for_started_guest(vmid, vm_type):
+            print(f'[ProxMenux] lifecycle refresh {vm_type} {vmid}: guest not ready',
+                  flush=True)
+            return
+
+        # Remove every indefinite modal entry first. If a user opens the modal
+        # during the refresh, handlers recompute instead of serving the state
+        # captured before a backup restore.
+        _vm_cache_invalidate(vmid)
+        _vm_disk_cache.pop(vmid, None)
+
+        if vm_type == 'lxc':
+            import lxc_apps
+            import managed_installs
+
+            lxc_apps.invalidate_suggestion_probes(vmid)
+
+            managed_installs.refresh_lxc(vmid)
+
+            sidecar = lxc_apps.check_all(vmid, force=True)
+            sidecar = sidecar or {'vmid': vmid, 'apps': []}
+            _vm_cache_put(_vm_apps_cache, vmid, sidecar)
+
+            docker_registered = any(
+                isinstance(item, dict) and item.get('helper_slug') == 'docker'
+                for item in (sidecar.get('apps') or [])
+            )
+            docker_present = False
+            docker_ready = False
+            try:
+                rc, _, _ = lxc_apps._pct_exec(
+                    vmid, ['test', '-x', '/usr/bin/docker'], timeout=5,
+                )
+                docker_present = rc == 0
+            except Exception:
+                docker_present = False
+            if docker_registered:
+                # A restored CT can need several minutes to reach
+                # network-online.target before Docker starts. Publish a
+                # truthful transition immediately, keeping only the previous
+                # update-unit identities so bulk selections do not turn into
+                # raw/stale IDs while the daemon is unavailable.
+                lxc_apps.mark_docker_inventory_refreshing(vmid)
+                if docker_present:
+                    try:
+                        rc, _, _ = lxc_apps._pct_exec(
+                            vmid,
+                            ['docker', 'version', '--format', '{{.Server.Version}}'],
+                            timeout=5,
+                        )
+                        docker_ready = rc == 0
+                    except Exception:
+                        docker_ready = False
+                    if docker_ready:
+                        inventory = lxc_apps.get_docker_inventory(vmid, force=True)
+                        docker_refresh_pending = not bool(inventory.get('available'))
+                    else:
+                        docker_refresh_pending = True
+                else:
+                    # The registered Docker app genuinely disappeared in the
+                    # restored snapshot; do not keep retrying a missing binary.
+                    lxc_apps.invalidate_docker_inventory(vmid)
+                    lxc_apps.get_docker_inventory(vmid, force=True)
+
+        handlers = [
+            (f'/api/vms/{vmid}', get_vm_config),
+            (f'/api/vms/{vmid}/backups', api_vm_backups),
+        ]
+        if vm_type == 'lxc':
+            handlers.extend([
+                (f'/api/vms/{vmid}/schedule', api_vm_apps_schedule),
+                (f'/api/lxc/{vmid}/mount-points', api_lxc_mount_points),
+            ])
+        for route, handler in handlers:
+            try:
+                _warm_started_guest_handler(vmid, route, handler)
+            except Exception as exc:
+                print(f'[ProxMenux] lifecycle refresh {vm_type} {vmid} '
+                      f'{route} failed: {exc}', flush=True)
+
+        refreshed = True
+        _publish_guest_modal_cache_revision(vmid)
+        core_published = True
+        print(f'[ProxMenux] lifecycle refresh {vm_type} {vmid}: core ready '
+              f'in {time.monotonic() - started_at:.1f}s', flush=True)
+
+        if vm_type == 'lxc':
+            # Catalog-based suggestion probing is the slowest part of a full
+            # CT rebuild. It is deliberately a second published stage: the
+            # registered-app and Docker snapshot above is already visible to
+            # the UI while discovery continues. A second revision refreshes
+            # only the App suggestions when this sweep eventually finishes.
+            try:
+                suggestions = dict(lxc_apps.get_suggestions(vmid, force=True))
+                suggestions['ready'] = True
+                _vm_cache_put(_vm_app_suggestions_cache, vmid, suggestions)
+                _publish_guest_modal_cache_revision(vmid)
+                print(f'[ProxMenux] lifecycle refresh {vm_type} {vmid}: '
+                      f'suggestions ready in '
+                      f'{time.monotonic() - started_at:.1f}s', flush=True)
+            except Exception as exc:
+                print(f'[ProxMenux] lifecycle refresh {vm_type} {vmid} '
+                      f'suggestions failed: {exc}', flush=True)
+
+            if docker_refresh_pending:
+                # Continue the *existing lifecycle refresh* until Docker is
+                # usable; this is bounded work caused by the start/restore
+                # event, not a new recurring monitor. Core/app data has already
+                # been published, so the UI remains instant while old LXCs
+                # finish a slow network-online boot. A strict `_pct_exec`
+                # deadline keeps every probe short.
+                docker_deadline = time.monotonic() + 7 * 60
+                while time.monotonic() < docker_deadline:
+                    if _fast_guest_status(vmid, vm_type) != 'running':
+                        break
+                    try:
+                        rc, _, _ = lxc_apps._pct_exec(
+                            vmid,
+                            ['docker', 'version', '--format', '{{.Server.Version}}'],
+                            timeout=4,
+                        )
+                    except Exception:
+                        rc = 1
+                    if rc == 0:
+                        try:
+                            inventory = lxc_apps.get_docker_inventory(
+                                vmid, force=True,
+                            )
+                        except Exception as exc:
+                            inventory = {'available': False, 'error': str(exc)}
+                        if inventory.get('available'):
+                            _publish_guest_modal_cache_revision(vmid)
+                            print(
+                                f'[ProxMenux] lifecycle refresh {vm_type} '
+                                f'{vmid}: Docker ready in '
+                                f'{time.monotonic() - started_at:.1f}s',
+                                flush=True,
+                            )
+                            docker_refresh_pending = False
+                            break
+                    time.sleep(5)
+                if docker_refresh_pending:
+                    print(
+                        f'[ProxMenux] lifecycle refresh {vm_type} {vmid}: '
+                        'Docker did not become ready before the deadline',
+                        flush=True,
+                    )
+
+        print(f'[ProxMenux] lifecycle refresh {vm_type} {vmid}: complete',
+              flush=True)
+    except Exception as exc:
+        print(f'[ProxMenux] lifecycle refresh {vm_type} {vmid} failed: {exc}',
+              flush=True)
+    finally:
+        with _guest_lifecycle_lock:
+            if refreshed and not core_published:
+                _guest_modal_cache_revision[vmid] = (
+                    _guest_modal_cache_revision.get(
+                        vmid, _guest_modal_cache_epoch
+                    ) + 1
+                )
+            _guest_refresh_inflight.discard(vmid)
+
+
+def _schedule_started_guest_refresh(vmid: int, vm_type: str) -> bool:
+    """Start at most one targeted refresh per guest."""
+    vmid = int(vmid)
+    with _guest_lifecycle_lock:
+        if vmid in _guest_refresh_inflight:
+            return False
+        _guest_refresh_inflight.add(vmid)
+    threading.Thread(
+        target=_refresh_started_guest,
+        args=(vmid, vm_type),
+        daemon=True,
+        name=f'guest-start-refresh-{vmid}',
+    ).start()
+    return True
+
+
+def _handle_guest_lifecycle(vmid: str, vm_type: str, action: str) -> None:
+    """Consume the VM/CT lifecycle transition already found by TaskWatcher."""
+    try:
+        guest_id = int(vmid)
+    except (TypeError, ValueError):
+        return
+    guest_type = 'lxc' if vm_type == 'lxc' else 'qemu'
+
+    # Make the next resource poll observe the completed PVE task and drop all
+    # indefinite server-side modal state. Starts/reboots repopulate it only
+    # after the guest is actually usable; stops publish an empty-cache
+    # revision immediately because no in-guest refresh is possible.
+    _pvesh_cache['cluster_resources_vm_time'] = 0
+    _vm_cache_invalidate(guest_id)
+    _vm_disk_cache.pop(guest_id, None)
+    if action in ('start', 'reboot'):
+        _schedule_started_guest_refresh(guest_id, guest_type)
+        return
+    if action == 'stop':
+        _publish_guest_modal_cache_revision(guest_id)
 
 # Filesystem types that never count towards VM disk usage:
 # read-only image / CD formats, ram-backed pseudo-fs, kernel virtual
@@ -6080,6 +6352,9 @@ def _get_lxc_update_status_map() -> dict:
             # support in-place updates" note so the user isn't left
             # wondering why the button is missing.
             'helper_slug': it.get('_helper_slug'),
+            # update_wrapper is executable evidence; tag_hostname is
+            # only a compatibility suggestion for older CTs.
+            'helper_slug_source': it.get('_helper_slug_source'),
             'helper_app_name': it.get('_helper_app_name'),
             'helper_updateable_known': bool(it.get('_helper_updateable_known')),
             # ProxMenux-managed OCI apps (Secure Gateway / Tailscale etc)
@@ -6160,12 +6435,32 @@ def _get_lxc_app_watch_map() -> dict:
     return out
 
 
+def _get_lxc_docker_inventory_map() -> dict:
+    """Return the last read-only Docker image scan for each CT.
+
+    Never contacts a registry on the /api/vms request path.  On-demand and
+    daily scans populate the in-memory cache in lxc_apps; this projection
+    only lets badges and the Updates tab consume that existing state.
+    """
+    try:
+        import lxc_apps
+        cached = lxc_apps.get_cached_docker_inventories() or {}
+        return {
+            str(vmid): inventory
+            for vmid, inventory in cached.items()
+            if isinstance(inventory, dict) and inventory.get("available")
+        }
+    except Exception:
+        return {}
+
+
 def get_proxmox_vms():
     """Get Proxmox VM and LXC information (requires pvesh command) - only from local node"""
     try:
         all_vms = []
         lxc_updates_map = _get_lxc_update_status_map()
         lxc_app_map = _get_lxc_app_watch_map()
+        lxc_docker_map = _get_lxc_docker_inventory_map()
 
         try:
             # local_node = socket.gethostname()
@@ -6203,6 +6498,20 @@ def get_proxmox_vms():
                         # format; the client splits + colours them.
                         'tags': resource.get('tags', ''),
                     }
+                    # The frontend keeps its own instant modal cache. A
+                    # lifecycle rebuild increments this per-guest token so
+                    # the browser drops only the restored/restarted guest's
+                    # old payload and consumes the newly warmed snapshot.
+                    try:
+                        revision_vmid = int(resource.get('vmid'))
+                    except (TypeError, ValueError):
+                        revision_vmid = 0
+                    with _guest_lifecycle_lock:
+                        vm_data['modal_cache_revision'] = (
+                            _guest_modal_cache_revision.get(
+                                revision_vmid, _guest_modal_cache_epoch
+                            )
+                        )
                     # Decorate LXC rows with the apt update status if the
                     # managed_installs registry has it. Absent key means
                     # either the user hasn't enabled the feature or the
@@ -6228,6 +6537,18 @@ def get_proxmox_vms():
                         app_list = lxc_app_map.get(str(resource.get('vmid')))
                         if app_list:
                             vm_data['app_watches'] = app_list
+                        docker_inventory = lxc_docker_map.get(str(resource.get('vmid')))
+                        # Docker image drift is an Updates-tab feature,
+                        # not an automatic app detection.  Do not attach
+                        # it to the VM payload until the user explicitly
+                        # registers Docker for this CT.
+                        docker_registered = bool(app_list) and any(
+                            app.get('helper_slug') == 'docker'
+                            for app in app_list
+                            if isinstance(app, dict)
+                        )
+                        if docker_registered and docker_inventory:
+                            vm_data['docker_inventory'] = docker_inventory
 
                     # PVE's cluster resources API reports disk=0 for most
                     # QEMU VMs — it can't see inside the guest filesystem
@@ -11576,6 +11897,12 @@ def _vm_modal_prewarmer_pass():
                 (_vm_mounts_cache, _VM_MOUNTS_TTL, api_lxc_mount_points,
                  f'/api/lxc/{vmid}/mount-points', 'mounts'),
             ])
+            if str(r.get('status') or '').lower() == 'running':
+                endpoints.append((
+                    _vm_app_suggestions_cache, _VM_APP_SUGGESTIONS_TTL,
+                    api_vm_apps_suggestions,
+                    f'/api/vms/{vmid}/apps/suggestions', 'app suggestions',
+                ))
 
         did_work = False
         for cache, ttl, handler, route, label in endpoints:
@@ -13014,12 +13341,14 @@ def api_lxc_updates_detection_set():
 # Per-CT App Watch CRUD. Multi-app: each sidecar is a list of apps.
 #   GET    /api/vms/<vmid>/apps              → list all apps for this CT
 #   POST   /api/vms/<vmid>/apps              → add a new app (server assigns id)
+#   POST   /api/vms/<vmid>/apps/test         → test an editor draft without saving
 #   PUT    /api/vms/<vmid>/apps/<app_id>     → update an existing app
 #   DELETE /api/vms/<vmid>/apps/<app_id>     → remove one app
 #   DELETE /api/vms/<vmid>/apps              → remove all apps for this CT
 #   POST   /api/vms/<vmid>/apps/<app_id>/check → force check one app
 #   POST   /api/vms/<vmid>/apps/check        → force check every app
-#   GET    /api/vms/<vmid>/apps/suggestions  → name + listening ports hint
+#   GET    /api/vms/<vmid>/apps/suggestions  → cached discovery result
+#   POST   /api/vms/<vmid>/apps/suggestions  → run discovery for this CT
 #   POST   /api/vms/<vmid>/apps/dismiss      → hide an auto-detected chip
 
 @app.route('/api/vms/<int:vmid>/apps', methods=['GET'])
@@ -13047,7 +13376,27 @@ def api_vm_apps_add(vmid):
         ok, result = lxc_apps.add_app(vmid, payload)
         if not ok:
             return jsonify({'error': result}), 400
-        _vm_cache_invalidate(vmid, _vm_apps_cache)
+        _vm_cache_put(_vm_apps_cache, vmid, result)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps/test', methods=['POST'])
+@require_auth
+def api_vm_apps_test(vmid):
+    """Validate and run a tracking draft without writing a sidecar.
+
+    Keep this route above the dynamic ``/<app_id>`` route for clarity.
+    Flask's static-path precedence also ensures ``test`` is not treated
+    as an application id.
+    """
+    payload = request.get_json(silent=True) or {}
+    try:
+        import lxc_apps
+        ok, result = lxc_apps.test_config(vmid, payload)
+        if not ok:
+            return jsonify({'error': result}), 400
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -13063,7 +13412,7 @@ def api_vm_apps_update(vmid, app_id):
         if not ok:
             code = 404 if 'not found' in str(result).lower() else 400
             return jsonify({'error': result}), code
-        _vm_cache_invalidate(vmid, _vm_apps_cache)
+        _vm_cache_put(_vm_apps_cache, vmid, result)
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -13075,8 +13424,9 @@ def api_vm_apps_delete_one(vmid, app_id):
     try:
         import lxc_apps
         ok = lxc_apps.delete_app(vmid, app_id)
-        _vm_cache_invalidate(vmid, _vm_apps_cache)
-        return jsonify({'success': ok, 'vmid': vmid, 'app_id': app_id}), 200
+        sidecar = lxc_apps.load_sidecar(vmid) or {'vmid': vmid, 'apps': []}
+        _vm_cache_put(_vm_apps_cache, vmid, sidecar)
+        return jsonify({**sidecar, 'success': ok, 'app_id': app_id}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -13087,8 +13437,9 @@ def api_vm_apps_delete_all(vmid):
     try:
         import lxc_apps
         ok = lxc_apps.delete_all(vmid)
-        _vm_cache_invalidate(vmid, _vm_apps_cache)
-        return jsonify({'success': ok, 'vmid': vmid}), 200
+        sidecar = {'vmid': vmid, 'apps': []}
+        _vm_cache_put(_vm_apps_cache, vmid, sidecar)
+        return jsonify({**sidecar, 'success': ok}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -13101,7 +13452,7 @@ def api_vm_apps_check_one(vmid, app_id):
         sidecar = lxc_apps.check_app(vmid, app_id, force=True)
         if not sidecar:
             return jsonify({'error': 'app not found'}), 404
-        _vm_cache_invalidate(vmid, _vm_apps_cache)
+        _vm_cache_put(_vm_apps_cache, vmid, sidecar)
         return jsonify(sidecar)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -13114,8 +13465,8 @@ def api_vm_apps_check_all(vmid):
         import lxc_apps
         sidecar = lxc_apps.check_all(vmid, force=True)
         if not sidecar:
-            return jsonify({'vmid': vmid, 'apps': []}), 200
-        _vm_cache_invalidate(vmid, _vm_apps_cache)
+            sidecar = {'vmid': vmid, 'apps': []}
+        _vm_cache_put(_vm_apps_cache, vmid, sidecar)
         return jsonify(sidecar)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -13162,12 +13513,109 @@ def api_vm_apps_schedule(vmid):
     return jsonify(result)
 
 
-@app.route('/api/vms/<int:vmid>/apps/suggestions', methods=['GET'])
+@app.route('/api/vms/<int:vmid>/bulk-update', methods=['GET', 'PUT', 'DELETE'])
+@require_auth
+def api_vm_bulk_update(vmid):
+    """CRUD for the reusable manual bulk-update selection.
+
+    The PUT path resolves every requested target before persisting it.  A
+    removed app, a stale Docker unit or a detector without an executable
+    updater therefore fails closed instead of saving a configuration that
+    would silently skip work later.
+    """
+    try:
+        import lxc_apps
+    except Exception as exc:
+        return jsonify({'error': f'lxc_apps unavailable: {exc}'}), 500
+    if request.method == 'GET':
+        return jsonify(lxc_apps.get_bulk_update(vmid) or {})
+    if request.method == 'DELETE':
+        ok = lxc_apps.delete_bulk_update(vmid)
+        return jsonify({'success': bool(ok), 'vmid': vmid}), 200
+    payload = request.get_json(silent=True) or {}
+    ok, normalised = lxc_apps.validate_bulk_update(payload)
+    if not ok:
+        return jsonify({'error': normalised}), 400
+    plan = _resolve_bulk_update_plan(vmid, normalised['targets'])
+    if not plan.get('ok'):
+        return jsonify({
+            'error': plan.get('error') or 'one or more update targets are unavailable',
+            'unavailable': plan.get('unavailable') or [],
+        }), 409
+    ok, result = lxc_apps.update_bulk_update(vmid, normalised)
+    if not ok:
+        return jsonify({'error': result}), 400
+    return jsonify((result.get('bulk_update') or normalised))
+
+
+@app.route('/api/vms/<int:vmid>/bulk-update/plan', methods=['POST'])
+@require_auth
+def api_vm_bulk_update_plan(vmid):
+    """Resolve the saved selection into the exact terminal-run parameters."""
+    try:
+        import lxc_apps
+        bulk = lxc_apps.get_bulk_update(vmid)
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
+    if not bulk:
+        return jsonify({'error': 'bulk update is not configured'}), 404
+    plan = _resolve_bulk_update_plan(vmid, bulk.get('targets') or [])
+    if not plan.get('ok'):
+        return jsonify({
+            'error': plan.get('error') or 'one or more update targets are unavailable',
+            'unavailable': plan.get('unavailable') or [],
+        }), 409
+    return jsonify(plan)
+
+
+@app.route('/api/vms/<int:vmid>/apps/suggestions', methods=['GET', 'POST'])
 @require_auth
 def api_vm_apps_suggestions(vmid):
     try:
         import lxc_apps
-        return jsonify(lxc_apps.get_suggestions(vmid))
+        cached = _vm_cache_get(
+            _vm_app_suggestions_cache, vmid, _VM_APP_SUGGESTIONS_TTL,
+        )
+        if request.method == 'GET' and cached is not None:
+            return jsonify(cached)
+
+        from flask import g as _flask_g
+        internal_warmup = bool(getattr(_flask_g, '_internal_call', False))
+        if request.method == 'GET' and not internal_warmup:
+            return jsonify({
+                'ready': False,
+                'name_suggestion': None,
+                'helper_slug': None,
+                'port_suggestions': [],
+                'web_path_hint': None,
+                'tracking_suggestion': None,
+                'default_ports': [],
+                'logo_url': None,
+                'extras': [],
+                'docker_web_links': [],
+            })
+
+        payload = dict(lxc_apps.get_suggestions(vmid, force=True))
+        payload['ready'] = True
+        _vm_cache_put(_vm_app_suggestions_cache, vmid, payload)
+        return jsonify(payload)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/docker/inventory', methods=['GET'])
+@require_auth
+def api_vm_docker_inventory(vmid):
+    """Read-only Docker image inventory + remote digest comparison.
+
+    ``?force=1`` bypasses the daily cache.  The implementation never
+    pulls an image and never restarts/recreates a container.
+    """
+    try:
+        import lxc_apps
+        force = str(request.args.get('force', '')).lower() in ('1', 'true', 'yes')
+        result = lxc_apps.get_docker_inventory(vmid, force=force)
+        return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -13186,6 +13634,23 @@ def api_apps_catalog():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/lxc-apps/dockerhub-tag-preview', methods=['POST'])
+@require_auth
+def api_lxc_apps_dockerhub_tag_preview():
+    """Preview real Docker Hub tags for the App editor (no persistence)."""
+    payload = request.get_json(silent=True) or {}
+    try:
+        import lxc_apps
+        ok, result = lxc_apps.preview_docker_hub_tags(
+            payload.get('image') or '', payload.get('regex') or ''
+        )
+        if not ok:
+            return jsonify({'error': result}), 400
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/apps/catalog/<slug>', methods=['GET'])
 @require_auth
 def api_apps_catalog_slug(slug):
@@ -13194,7 +13659,9 @@ def api_apps_catalog_slug(slug):
     curated tracking_suggestion when we have one for the slug."""
     try:
         import lxc_apps
-        entry = lxc_apps.get_catalog_entry(slug)
+        vmid_raw = request.args.get('vmid')
+        vmid = int(vmid_raw) if vmid_raw and vmid_raw.isdigit() else None
+        entry = lxc_apps.get_catalog_entry(slug, vmid=vmid)
         if entry is None:
             return jsonify({'error': 'not found'}), 404
         return jsonify(entry)
@@ -13217,85 +13684,455 @@ def api_vm_apps_dismiss(vmid):
         ok, result = lxc_apps.set_dismissed_slug(vmid, slug, dismissed)
         if not ok:
             return jsonify({'error': result}), 400
-        _vm_cache_invalidate(vmid, _vm_apps_cache)
+        _vm_cache_put(_vm_apps_cache, vmid, result)
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-# ─── LXC Update — post-apply hook ───────────────────────────────────────────
-# Called by the UI right after `apply_updates.sh` exits in the
-# ScriptTerminalModal. Two responsibilities:
-#   1. Emit the `lxc_update_applied` notification event with the actual
-#      exit code + duration + target, so the user's chosen channels
-#      (Telegram/Discord/email/…) confirm completion. Firing from here
-#      keeps the shell script free of Python coupling.
-#   2. Force-refresh the affected CT's update state so the badge in
-#      the VMs & Containers list disappears immediately instead of
-#      waiting for the next 24 h polling cycle.
+# ─── LXC update finalization ────────────────────────────────────────────────
+
+_LXC_APPLY_UPDATES_SCRIPT = "/usr/local/share/proxmenux/scripts/lxc/apply_updates.sh"
+_LXC_UPDATE_RUN_ID_RE = re.compile(r'^[A-Za-z0-9._:-]{1,128}$')
+_LXC_UPDATE_TARGET_RE = re.compile(r'^[A-Za-z0-9._:-]{1,180}$')
+_lxc_update_finalization_lock = threading.RLock()
+_lxc_update_finalizations: dict[tuple[int, str], dict] = {}
+_LXC_UPDATE_FINALIZATION_TTL = 6 * 3600
+
+
+def _normalise_lxc_update_run_id(value, *, create: bool = True) -> str | None:
+    run_id = str(value or '').strip()
+    if _LXC_UPDATE_RUN_ID_RE.fullmatch(run_id):
+        return run_id
+    return uuid.uuid4().hex if create else None
+
+
+def _normalise_lxc_update_targets(values, fallback: str = 'os') -> list[str]:
+    if not isinstance(values, list):
+        values = []
+    result: list[str] = []
+    for value in values[:64]:
+        target = str(value or '').strip()
+        if _LXC_UPDATE_TARGET_RE.fullmatch(target) and target not in result:
+            result.append(target)
+    if result:
+        return result
+    coarse = str(fallback or 'os').lower()
+    if coarse == 'both':
+        return ['os', 'apps']
+    return ['apps'] if coarse == 'app' else ['os']
+
+
+def _normalise_lxc_update_labels(values) -> list[str]:
+    if not isinstance(values, list):
+        return []
+    result: list[str] = []
+    for value in values[:64]:
+        label = str(value or '').strip()
+        if not label or len(label) > 160 or re.search(r'[\x00-\x1f\x7f]', label):
+            continue
+        if label not in result:
+            result.append(label)
+    return result
+
+
+def _json_list(value) -> list:
+    if isinstance(value, list):
+        return value
+    if not isinstance(value, str) or not value.strip():
+        return []
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return []
+    return parsed if isinstance(parsed, list) else []
+
+
+def _lxc_update_snapshot(vmid: int) -> dict:
+    managed_item = None
+    sidecar: dict = {}
+    docker_inventory: dict = {}
+    try:
+        import managed_installs
+        managed_item = next(
+            (
+                item for item in (managed_installs.get_active_items() or [])
+                if item.get('type') == 'lxc'
+                and str(item.get('_vmid')) == str(vmid)
+            ),
+            None,
+        )
+    except Exception:
+        managed_item = None
+    try:
+        import lxc_apps
+        sidecar = lxc_apps._read_sidecar(vmid) or {}
+        docker_inventory = (
+            lxc_apps.get_cached_docker_inventories().get(str(vmid)) or {}
+        )
+    except Exception:
+        sidecar = {}
+        docker_inventory = {}
+
+    apps: dict[str, dict] = {}
+    for app_item in sidecar.get('apps') or []:
+        app_id = str(app_item.get('id') or '').strip()
+        if not app_id:
+            continue
+        state = app_item.get('state') or {}
+        apps[app_id] = {
+            'name': str(app_item.get('name') or app_id),
+            'helper_slug': app_item.get('helper_slug'),
+            'installed_version': state.get('installed_version'),
+            'latest_version': state.get('latest_version'),
+            'update_available': state.get('update_available'),
+        }
+
+    update_check = (managed_item or {}).get('update_check') or {}
+    os_pending = update_check.get('_count')
+    if os_pending is None and update_check.get('available') is False:
+        os_pending = 0
+    return {
+        'ct_name': (managed_item or {}).get('name'),
+        'os_pending': os_pending,
+        'apps': apps,
+        'docker_inventory': json.loads(json.dumps(docker_inventory, default=str)),
+    }
+
+
+def _lxc_update_target_labels(
+    targets: list[str], labels: list[str], snapshot: dict,
+) -> list[str]:
+    if labels:
+        return labels
+    apps = snapshot.get('apps') or {}
+    units = {
+        str(unit.get('id')): unit
+        for unit in (snapshot.get('docker_inventory') or {}).get('update_units') or []
+        if unit.get('id')
+    }
+    result: list[str] = []
+    for target in targets:
+        if target == 'os':
+            label = 'OS'
+        elif target == 'apps':
+            label = 'Applications'
+        elif target == 'docker-engine':
+            label = 'Docker Engine'
+        elif target.startswith('app:'):
+            app_item = apps.get(target.split(':', 1)[1]) or {}
+            label = str(app_item.get('name') or 'Application')
+        elif target.startswith('docker-unit:'):
+            unit = units.get(target) or {}
+            label = str(
+                unit.get('display_name')
+                or unit.get('primary_reference')
+                or 'Docker image'
+            )
+        elif target.startswith('docker-container:'):
+            label = target.split(':', 1)[1]
+        else:
+            label = target
+        if label and label not in result:
+            result.append(label)
+    return result
+
+
+def _lxc_update_details(
+    *,
+    status: str,
+    source: str,
+    targets: list[str],
+    labels: list[str],
+    deferred_targets: list[str],
+    duration: str,
+    reason: str | None,
+    before: dict,
+    after: dict,
+    verification_pending: bool,
+    verification_errors: list[str],
+) -> str:
+    lines = [
+        f"Source: {'Scheduled' if source == 'scheduled' else 'Manual'}",
+        f"Targets: {', '.join(labels) or ', '.join(targets)}",
+    ]
+    if 'os' in targets:
+        before_count = before.get('os_pending')
+        after_count = after.get('os_pending')
+        if isinstance(before_count, int) and isinstance(after_count, int):
+            lines.append(f'OS packages pending: {before_count} → {after_count}')
+        else:
+            lines.append('OS packages: update command executed; result not verified')
+
+    before_apps = before.get('apps') or {}
+    after_apps = after.get('apps') or {}
+    app_ids = {
+        target.split(':', 1)[1]
+        for target in targets if target.startswith('app:')
+    }
+    if 'apps' in targets:
+        app_ids.update(before_apps)
+        app_ids.update(after_apps)
+    app_lines = []
+    for app_id in sorted(app_ids):
+        old = before_apps.get(app_id) or {}
+        new = after_apps.get(app_id) or {}
+        old_version = old.get('installed_version')
+        new_version = new.get('installed_version')
+        if old_version and new_version and old_version != new_version:
+            app_lines.append(
+                f"{new.get('name') or old.get('name') or app_id}: "
+                f'{old_version} → {new_version}'
+            )
+    if app_lines:
+        lines.append('Applications: ' + '; '.join(app_lines[:8]))
+    elif app_ids:
+        lines.append('Applications: updater executed; no tracked version change was observed')
+
+    docker_requested = any(target.startswith('docker-') for target in targets)
+    before_docker = before.get('docker_inventory') or {}
+    after_docker = after.get('docker_inventory') or {}
+    if 'docker-engine' in targets:
+        old_engine = before_docker.get('engine_version')
+        new_engine = after_docker.get('engine_version')
+        if old_engine and new_engine and old_engine != new_engine:
+            lines.append(f'Docker Engine: {old_engine} → {new_engine}')
+        elif new_engine:
+            lines.append(f'Docker Engine: verified at {new_engine}')
+        else:
+            lines.append('Docker Engine: update command executed; version not verified')
+    if docker_requested and any(target != 'docker-engine' for target in targets):
+        before_pending = before_docker.get('update_count')
+        after_pending = after_docker.get('update_count')
+        if isinstance(before_pending, int) and isinstance(after_pending, int):
+            lines.append(f'Docker images pending: {before_pending} → {after_pending}')
+        changed_images = []
+        after_by_ref = {
+            str(item.get('reference')): item
+            for item in after_docker.get('images') or [] if item.get('reference')
+        }
+        for old_image in before_docker.get('images') or []:
+            reference = str(old_image.get('reference') or '')
+            new_image = after_by_ref.get(reference) or {}
+            if reference and old_image.get('local_digest') != new_image.get('local_digest'):
+                changed_images.append(reference)
+        if changed_images:
+            lines.append('Docker images changed: ' + ', '.join(changed_images[:8]))
+
+    if deferred_targets:
+        lines.append('Deferred targets: ' + ', '.join(deferred_targets))
+    if reason:
+        lines.append(f'Reason: {reason}')
+    if verification_pending:
+        lines.append('Verification pending until the container is running')
+    for error in verification_errors[:4]:
+        lines.append(f'Verification warning: {error}')
+    lines.append(f'Duration: {duration}')
+    return '\n'.join(lines)
+
+
+def _finalize_lxc_update(
+    vmid: int,
+    *,
+    run_id: str,
+    status: str,
+    source: str,
+    target: str,
+    duration_seconds=0,
+    ct_name: str | None = None,
+    requested_targets=None,
+    executed_targets=None,
+    deferred_targets=None,
+    target_labels=None,
+    reason: str | None = None,
+    refresh_docker_inventory: bool = False,
+    before_snapshot: dict | None = None,
+) -> dict:
+    safe_run_id = _normalise_lxc_update_run_id(run_id)
+    key = (int(vmid), safe_run_id)
+    now = time.time()
+    with _lxc_update_finalization_lock:
+        for old_key, record in list(_lxc_update_finalizations.items()):
+            if now - float(record.get('created_at') or now) > _LXC_UPDATE_FINALIZATION_TTL:
+                _lxc_update_finalizations.pop(old_key, None)
+        existing = _lxc_update_finalizations.get(key)
+        if existing:
+            if existing.get('state') == 'complete':
+                return dict(existing.get('result') or {})
+            return {'success': True, 'run_id': safe_run_id, 'finalization': 'in_progress'}
+        _lxc_update_finalizations[key] = {'state': 'running', 'created_at': now}
+
+    status = status if status in {'success', 'failure', 'partial', 'deferred', 'skipped'} else 'failure'
+    requested = _normalise_lxc_update_targets(requested_targets, target)
+    executed = _normalise_lxc_update_targets(executed_targets, target) if executed_targets else []
+    deferred = _normalise_lxc_update_targets(deferred_targets, target) if deferred_targets else []
+    labels = _normalise_lxc_update_labels(target_labels)
+    try:
+        secs = max(0, int(duration_seconds or 0))
+    except (TypeError, ValueError):
+        secs = 0
+    duration = f'{secs}s' if secs < 60 else f'{secs // 60}m {secs % 60}s'
+    verification_errors: list[str] = []
+    before = before_snapshot or _lxc_update_snapshot(vmid)
+    verification_pending = _fast_guest_status(vmid, 'lxc') != 'running'
+    docker_inventory = None
+
+    if not verification_pending:
+        try:
+            import managed_installs
+            managed_installs.refresh_lxc(vmid)
+        except Exception as exc:
+            verification_errors.append(f'OS refresh failed: {exc}')
+        try:
+            import lxc_apps
+            refreshed_sidecar = lxc_apps.check_all(vmid, force=True)
+            refreshed_sidecar = refreshed_sidecar or {'vmid': vmid, 'apps': []}
+            _vm_cache_put(_vm_apps_cache, vmid, refreshed_sidecar)
+        except Exception as exc:
+            _vm_cache_invalidate(vmid, _vm_apps_cache)
+            verification_errors.append(f'application refresh failed: {exc}')
+        docker_attempted = refresh_docker_inventory or any(
+            target_id.startswith('docker-') for target_id in requested
+        )
+        if docker_attempted:
+            try:
+                import lxc_apps
+                docker_inventory = lxc_apps.get_docker_inventory(vmid, force=True)
+            except Exception as exc:
+                verification_errors.append(f'Docker refresh failed: {exc}')
+        _publish_guest_modal_cache_revision(vmid)
+
+    after = _lxc_update_snapshot(vmid)
+    labels = _lxc_update_target_labels(requested, labels, before)
+    resolved_name = str(ct_name or before.get('ct_name') or f'CT-{vmid}').strip()
+    if not resolved_name or len(resolved_name) > 160 or re.search(r'[\x00-\x1f\x7f]', resolved_name):
+        resolved_name = f'CT-{vmid}'
+    result_words = {
+        'success': 'succeeded',
+        'failure': 'failed',
+        'partial': 'completed partially',
+        'deferred': 'deferred',
+        'skipped': 'skipped',
+    }
+    details = _lxc_update_details(
+        status=status,
+        source=source,
+        targets=executed,
+        labels=labels,
+        deferred_targets=deferred,
+        duration=duration,
+        reason=str(reason)[:500] if reason else None,
+        before=before,
+        after=after,
+        verification_pending=verification_pending,
+        verification_errors=verification_errors,
+    )
+    try:
+        notification_manager.emit_event(
+            event_type='lxc_update_applied',
+            severity='WARNING' if status in {'failure', 'partial'} else 'INFO',
+            data={
+                'hostname': get_proxmox_node_name(),
+                'vmid': vmid,
+                'ct_name': resolved_name,
+                'target': ', '.join(labels),
+                'result': result_words[status],
+                'duration': duration,
+                'details': details,
+            },
+            source=source,
+            entity='ct',
+            entity_id=f'{vmid}:{safe_run_id}',
+        )
+    except Exception as exc:
+        verification_errors.append(f'notification failed: {exc}')
+        print(f'[ProxMenux] lxc_update_applied notification failed: {exc}', flush=True)
+
+    result = {
+        'success': True,
+        'run_id': safe_run_id,
+        'status': status,
+        'finalization': 'complete',
+        'verification_pending': verification_pending,
+        'verification_errors': verification_errors,
+        'docker_inventory': docker_inventory,
+    }
+    with _lxc_update_finalization_lock:
+        _lxc_update_finalizations[key] = {
+            'state': 'complete',
+            'created_at': now,
+            'result': result,
+        }
+    return dict(result)
+
+
+def _terminal_lxc_update_completed(*, script_path, params, exit_code, duration_seconds):
+    if os.path.realpath(script_path) != os.path.realpath(_LXC_APPLY_UPDATES_SCRIPT):
+        return
+    run_id = _normalise_lxc_update_run_id(params.get('RUN_ID'), create=False)
+    if not run_id:
+        return
+    try:
+        vmid = int(params.get('VMID'))
+    except (TypeError, ValueError):
+        return
+    target = str(params.get('TARGET') or 'os').lower()
+    requested = _normalise_lxc_update_targets(
+        _json_list(params.get('REQUESTED_TARGETS_JSON')), target,
+    )
+    _finalize_lxc_update(
+        vmid,
+        run_id=run_id,
+        status='success' if int(exit_code) == 0 else 'failure',
+        source='manual',
+        target=target,
+        duration_seconds=duration_seconds,
+        ct_name=params.get('CT_NAME'),
+        requested_targets=requested,
+        executed_targets=requested,
+        target_labels=_json_list(params.get('TARGET_LABELS_JSON')),
+        reason=None if int(exit_code) == 0 else f'update runner exited with code {exit_code}',
+        refresh_docker_inventory=str(params.get('REFRESH_DOCKER_INVENTORY') or '') == '1',
+    )
+
+
+set_script_completion_hook(_terminal_lxc_update_completed)
+
+
 @app.route('/api/lxc-updates/<int:vmid>/applied', methods=['POST'])
 @require_auth
 def api_lxc_updates_applied(vmid):
     payload = request.get_json(silent=True) or {}
-    success = bool(payload.get('success'))
     target = str(payload.get('target') or 'os').lower()
-    duration_seconds = payload.get('duration_seconds')
-    ct_name = str(payload.get('ct_name') or f'CT-{vmid}')
-
-    # Duration formatting mirrors the backup runner's convention:
-    # <60s → seconds, otherwise Nm Ms.
-    try:
-        secs = int(duration_seconds) if duration_seconds is not None else 0
-    except (TypeError, ValueError):
-        secs = 0
-    duration_str = f'{secs}s' if secs < 60 else f'{secs // 60}m {secs % 60}s'
-
-    # Fire via notification_manager.emit_event — same public API the
-    # health monitor uses (see line 1328 for the reference call), so we
-    # inherit templating, per-channel fan-out and suppression logic.
-    try:
-        notification_manager.emit_event(
-            event_type='lxc_update_applied',
-            severity='INFO' if success else 'WARNING',
-            data={
-                'hostname': get_proxmox_node_name(),
-                'vmid': vmid,
-                'ct_name': ct_name,
-                'target': target,
-                'result': 'succeeded' if success else 'failed',
-                'duration': duration_str,
-            },
-            source='api',
-            entity='ct',
-            entity_id=str(vmid),
-        )
-    except Exception as e:
-        # Don't fail the whole hook on notif error — the refresh below
-        # is still valuable, and the UI already saw the exit code.
-        print(f'[ProxMenux] lxc_update_applied notif enqueue failed: {e}')
-
-    # Force-refresh the LXC update check so the badge state matches
-    # reality without the 24 h wait.
-    try:
-        import managed_installs
-        managed_installs.check_for_updates(force=True)
-    except Exception as e:
-        print(f'[ProxMenux] managed_installs.check_for_updates failed: {e}')
-
-    # Also re-scan every app watch registered on THIS CT. Without
-    # this, `installed_version` in the sidecar stayed pinned at the
-    # pre-update value and `update_available` stayed True until the
-    # next 24 h natural cycle — so the App tab and the notification
-    # both kept saying "update available" even after a successful
-    # apply. force=True bypasses the per-app `_UPSTREAM_CACHE_TTL_SEC`
-    # short-circuit in check_app().
-    try:
-        import lxc_apps
-        lxc_apps.check_all(vmid, force=True)
-    except Exception as e:
-        print(f'[ProxMenux] lxc_apps.check_all({vmid}) after apply failed: {e}')
-
-    return jsonify({'success': True})
+    requested = _normalise_lxc_update_targets(payload.get('requested_targets'), target)
+    run_id = _normalise_lxc_update_run_id(payload.get('run_id'))
+    kwargs = {
+        'run_id': run_id,
+        'status': 'success' if bool(payload.get('success')) else 'failure',
+        'source': 'manual',
+        'target': target,
+        'duration_seconds': payload.get('duration_seconds'),
+        'ct_name': payload.get('ct_name'),
+        'requested_targets': requested,
+        'executed_targets': requested,
+        'target_labels': payload.get('target_labels'),
+        'reason': None if bool(payload.get('success')) else str(payload.get('reason') or 'update runner failed'),
+        'refresh_docker_inventory': bool(payload.get('refresh_docker_inventory')),
+    }
+    if payload.get('run_id'):
+        threading.Thread(
+            target=_finalize_lxc_update,
+            args=(vmid,),
+            kwargs=kwargs,
+            daemon=True,
+            name=f'lxc-update-finalize-{vmid}',
+        ).start()
+        return jsonify({
+            'success': True,
+            'run_id': run_id,
+            'finalization': 'queued',
+        }), 202
+    return jsonify(_finalize_lxc_update(vmid, **kwargs))
 
 
 @app.route('/api/health/thresholds', methods=['GET'])
@@ -13897,6 +14734,10 @@ def api_vms_modal_cache_all():
             }
             if vm_type == 'lxc':
                 entry['apps'] = _vm_cache_get(_vm_apps_cache, vmid, _VM_APPS_TTL)
+                entry['suggestions'] = _vm_cache_get(
+                    _vm_app_suggestions_cache, vmid,
+                    _VM_APP_SUGGESTIONS_TTL,
+                )
                 entry['schedule'] = _vm_cache_get(_vm_schedule_cache, vmid, _VM_SCHEDULE_TTL)
                 entry['mount_points'] = _vm_cache_get(_vm_mounts_cache, vmid, _VM_MOUNTS_TTL)
             guests.append(entry)
@@ -14332,7 +15173,7 @@ def api_vm_control(vmid):
                 # The details payload embeds status/running-only fields
                 # (lxc_ip_info, os_info) — a start/stop flips those, so
                 # drop the modal caches for this vmid.
-                _vm_cache_invalidate(vmid, _vm_details_cache, _vm_mounts_cache)
+                _vm_cache_invalidate(vmid)
                 return jsonify({
                     'success': True,
                     'vmid': vmid,
@@ -20430,21 +21271,31 @@ def api_proxmenux_self_update_status():
 # subprocess with the schedule's env vars, then records the outcome
 # back to the sidecar via `record_schedule_run`. UPDATE_COMMAND for
 # `target in (app, both)` chains each registered app's own
-# `update_command` with `;` so a failure in one doesn't abort the
-# rest. The community-scripts helper `/usr/bin/update` is handled
-# by apply_updates.sh itself (invoked from host with CTID env).
+# `update_command` with `&&` so a failure aborts the remaining custom
+# commands. Helper execution is passed explicitly as RUN_HELPER=1.
 #
 # Runs are dedup-guarded by minute+vmid so a schedule that fires at
 # `* * * * *` doesn't ever double-fire on the same minute inside
-# one process. Nothing races against manual applies — those go
-# through the WS terminal path and the shell script itself takes
-# care of concurrent invocation (last one wins with vzdump lock).
+# one process. The shell runner also holds a non-blocking per-CT lock,
+# so scheduled and manual applies cannot overlap.
 
-_APPLY_UPDATES_SCRIPT = "/usr/local/share/proxmenux/scripts/lxc/apply_updates.sh"
+_APPLY_UPDATES_SCRIPT = _LXC_APPLY_UPDATES_SCRIPT
+_DOCKER_ENGINE_INTEGRATED_COMMAND = (
+    'python3 /usr/local/share/proxmenux/monitor-app/usr/bin/'
+    'update_docker_engine.py --vmid "$VMID"'
+)
 _scheduled_fired_this_minute: set = set()
 
 
-def _compose_scheduled_update_command(vmid: int, target: str) -> str:
+def _normalise_schedule_targets(sched: dict) -> list[str]:
+    targets = sched.get("targets")
+    if isinstance(targets, list) and targets:
+        return [str(item) for item in targets]
+    legacy = sched.get("target") or "both"
+    return (["os"] if legacy in ("os", "both") else []) + (["apps"] if legacy in ("app", "both") else [])
+
+
+def _compose_scheduled_update_command(vmid: int, target: str, targets: list[str]) -> str:
     """Chain every registered app's own `update_command` for the
     scheduled run. Returns empty string when target == "os" or when
     no custom commands are registered. The helper `/usr/bin/update`
@@ -20458,46 +21309,466 @@ def _compose_scheduled_update_command(vmid: int, target: str) -> str:
     except Exception:
         return ""
     apps = sidecar.get("apps") or []
+    select_all_apps = "apps" in targets
+    select_docker_engine = "docker-engine" in targets
+    selected_app_ids = {item.split(":", 1)[1] for item in targets if item.startswith("app:")}
     parts: list = []
     for a in apps:
         if a.get("managed_oci_app_id"):
             continue
+        selected_docker = select_docker_engine and a.get("helper_slug") == "docker"
+        if a.get("helper_slug") == "docker":
+            # Legacy "apps" schedules predate Docker lifecycle support and
+            # must not silently start updating Docker Engine. It requires its
+            # explicit target (or an explicit app:<id> retained for backwards
+            # compatibility).
+            if not selected_docker and a.get("id") not in selected_app_ids:
+                continue
+        elif not select_all_apps and a.get("id") not in selected_app_ids:
+            continue
         cmd = (a.get("update_command") or "").strip()
-        if cmd:
+        is_integrated_docker_command = (
+            a.get("helper_slug") == "docker"
+            and cmd == _DOCKER_ENGINE_INTEGRATED_COMMAND
+        )
+        if cmd and not is_integrated_docker_command:
             parts.append(cmd)
-    return "; ".join(parts)
+    selected_projects = {
+        item.split(":", 1)[1]
+        for item in targets
+        if item.startswith("docker-compose:")
+    }
+    docker_registered = any(a.get("helper_slug") == "docker" for a in apps)
+    if selected_projects and docker_registered:
+        try:
+            inventory = lxc_apps.get_docker_inventory(vmid, force=True)
+        except Exception:
+            inventory = {}
+        commands_by_project: dict[str, str] = {}
+        compose_projects = inventory.get("compose_projects") or []
+        if not compose_projects:
+            compose_projects = lxc_apps._aggregate_docker_compose_projects(
+                inventory.get("images") or []
+            )
+        for docker_target in compose_projects:
+            project = docker_target.get("project")
+            command = (docker_target.get("update_command") or "").strip()
+            if project in selected_projects and command:
+                commands_by_project[project] = command
+        parts.extend(commands_by_project[project] for project in sorted(commands_by_project))
+    return " && ".join(parts)
 
 
-def _run_scheduled_update(vmid: int, sched: dict) -> str:
-    """Fire `apply_updates.sh` headless with the schedule's env vars.
-    Returns "success" | "failure" | "skipped" — the last one when the
-    script binary isn't installed. Blocks until the run completes;
-    caller runs us in a worker thread so the 60s scheduler tick isn't
-    held up by a long-running apply."""
+def _scheduled_helper_enabled(vmid: int, target: str, targets: list[str]) -> bool:
+    """Whether this schedule explicitly includes the helper updater.
+
+    A helper is eligible only with wrapper evidence and a registered
+    matching app. A custom command on that application always replaces
+    the Proxmox VE Helper-Scripts updater.
+    """
+    if target not in ("app", "both"):
+        return False
+    try:
+        import lxc_apps
+        import managed_installs as _mi
+        sidecar = lxc_apps._read_sidecar(vmid) or {}
+        item = next(
+            (it for it in (_mi.get_active_items() or [])
+             if it.get("type") == "lxc"
+             and str(it.get("_vmid")) == str(vmid)),
+            None,
+        )
+    except Exception:
+        return False
+    if not item or not item.get("_has_app_updater"):
+        return False
+    if item.get("_helper_slug_source") != "update_wrapper":
+        return False
+    helper_slug = item.get("_helper_slug")
+    # The current community-scripts AdGuard updater explicitly delegates
+    # Debian/Ubuntu upgrades to AdGuard's web UI; on Alpine it also performs
+    # a full OS upgrade. Neither behaviour is an app-only scheduled action.
+    if helper_slug == "adguard":
+        return False
+    select_all_apps = "apps" in targets
+    selected_app_ids = {value.split(":", 1)[1] for value in targets if value.startswith("app:")}
+    matching_apps = []
+    for app in sidecar.get("apps") or []:
+        if app.get("managed_oci_app_id") or app.get("helper_slug") != helper_slug:
+            continue
+        if not select_all_apps and app.get("id") not in selected_app_ids:
+            continue
+        matching_apps.append(app)
+    if not matching_apps:
+        return False
+    # A custom command on any selected registration for this CT-wide helper
+    # replaces the helper. This also handles accidental duplicate watches
+    # conservatively instead of running both methods for the same app.
+    if any((app.get("update_command") or "").strip() for app in matching_apps):
+        return False
+    return True
+
+
+def _resolve_bulk_update_plan(vmid: int, targets: list[str]) -> dict:
+    """Resolve a saved manual selection into one safe terminal-run plan.
+
+    IDs are only selectors; every method is rebuilt from the current sidecar,
+    verified helper evidence and fresh Docker provenance.  Nothing from the
+    browser is accepted as an update command.
+    """
+    try:
+        import lxc_apps
+        ok, normalised = lxc_apps.validate_bulk_update({'targets': targets})
+        if not ok:
+            return {'ok': False, 'error': normalised, 'unavailable': []}
+        targets = normalised['targets']
+        sidecar = lxc_apps._read_sidecar(vmid) or {}
+    except Exception as exc:
+        return {'ok': False, 'error': str(exc), 'unavailable': []}
+
+    apps = [
+        app for app in sidecar.get('apps') or []
+        if not app.get('managed_oci_app_id')
+    ]
+    apps_by_id = {str(app.get('id')): app for app in apps if app.get('id')}
+    selected_app_targets = [item for item in targets if item.startswith('app:')]
+    helper_enabled = _scheduled_helper_enabled(
+        vmid, 'app', selected_app_targets,
+    ) if selected_app_targets else False
+    unavailable: list[dict] = []
+    labels = ['OS']
+    commands: list[str] = []
+    run_helper = False
+    update_docker_engine = False
+    docker_refresh = False
+    standalone_containers: set[str] = set()
+    docker_unit_ids = {
+        item for item in targets if item.startswith('docker-unit:')
+    }
+    docker_app = next((app for app in apps if app.get('helper_slug') == 'docker'), None)
+
+    def add_command(command: str) -> None:
+        command = str(command or '').strip()
+        if command and command not in commands:
+            commands.append(command)
+
+    def select_docker_engine(target_id: str) -> None:
+        nonlocal update_docker_engine, docker_refresh
+        if not docker_app:
+            unavailable.append({'target': target_id, 'reason': 'Docker is no longer registered'})
+            return
+        saved = str(docker_app.get('update_command') or '').strip()
+        if saved and saved != _DOCKER_ENGINE_INTEGRATED_COMMAND:
+            add_command(saved)
+        else:
+            update_docker_engine = True
+        docker_refresh = True
+        if 'Docker Engine' not in labels:
+            labels.append('Docker Engine')
+
+    for target_id in targets:
+        if target_id == 'os' or target_id.startswith('docker-unit:'):
+            continue
+        if target_id == 'docker-engine':
+            select_docker_engine(target_id)
+            continue
+        if not target_id.startswith('app:'):
+            unavailable.append({'target': target_id, 'reason': 'unsupported target'})
+            continue
+        app_id = target_id.split(':', 1)[1]
+        app = apps_by_id.get(app_id)
+        if not app:
+            unavailable.append({'target': target_id, 'reason': 'application is no longer registered'})
+            continue
+        if app.get('helper_slug') == 'docker':
+            select_docker_engine(target_id)
+            continue
+        command = str(app.get('update_command') or '').strip()
+        if command:
+            add_command(command)
+        elif helper_enabled and app.get('helper_slug'):
+            run_helper = True
+        else:
+            unavailable.append({'target': target_id, 'reason': 'no executable update method is available'})
+            continue
+        label = str(app.get('name') or app_id).strip()
+        if label and label not in labels:
+            labels.append(label)
+
+    if docker_unit_ids:
+        if not docker_app:
+            unavailable.extend({
+                'target': target_id,
+                'reason': 'Docker is no longer registered',
+            } for target_id in sorted(docker_unit_ids))
+        else:
+            try:
+                inventory = lxc_apps.get_docker_inventory(vmid, force=True)
+            except Exception as exc:
+                inventory = {'available': False, 'error': str(exc), 'update_units': []}
+            if not inventory.get('available'):
+                reason = inventory.get('error') or 'Docker is not available'
+                unavailable.extend({
+                    'target': target_id, 'reason': reason,
+                } for target_id in sorted(docker_unit_ids))
+            else:
+                units_by_id = {
+                    str(unit.get('id')): unit
+                    for unit in inventory.get('update_units') or []
+                    if unit.get('id')
+                }
+                selected_units: list[dict] = []
+                for target_id in sorted(docker_unit_ids):
+                    unit = units_by_id.get(target_id)
+                    if not unit:
+                        unavailable.append({
+                            'target': target_id,
+                            'reason': 'Docker selection is stale; edit the bulk configuration',
+                        })
+                        continue
+                    selected_units.append(unit)
+                    label = str(
+                        unit.get('display_name')
+                        or unit.get('primary_reference')
+                        or target_id
+                    ).strip()
+                    if label and label not in labels:
+                        labels.append(label)
+
+                # Selecting two roots that share a dependency must recreate
+                # their Compose project once with the union of exact services.
+                compose_groups: dict[str, dict] = {}
+                for unit in selected_units:
+                    if unit.get('kind') == 'standalone':
+                        standalone_containers.update(
+                            str(name) for name in unit.get('standalone_containers') or []
+                            if re.match(r'^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$', str(name))
+                        )
+                        continue
+                    if unit.get('kind') != 'compose':
+                        unavailable.append({
+                            'target': unit.get('id'), 'reason': 'unsupported Docker update unit',
+                        })
+                        continue
+                    project = str(unit.get('project') or '').strip()
+                    working_dir = str(unit.get('working_dir') or '').strip()
+                    config_files = [str(path) for path in unit.get('config_files') or []]
+                    if not project or not working_dir or not config_files:
+                        unavailable.append({
+                            'target': unit.get('id'), 'reason': 'Compose provenance is incomplete',
+                        })
+                        continue
+                    group = compose_groups.get(project)
+                    if group and (
+                        group['working_dir'] != working_dir
+                        or group['config_files'] != config_files
+                    ):
+                        unavailable.append({
+                            'target': unit.get('id'), 'reason': 'Compose provenance conflicts',
+                        })
+                        continue
+                    group = compose_groups.setdefault(project, {
+                        'working_dir': working_dir,
+                        'config_files': config_files,
+                        'services': set(),
+                    })
+                    group['services'].update(str(service) for service in unit.get('services') or [])
+                for project in sorted(compose_groups):
+                    group = compose_groups[project]
+                    services = sorted(group['services'])
+                    if services:
+                        add_command(lxc_apps._docker_compose_update_command(
+                            group['working_dir'], group['config_files'], services,
+                        ))
+                docker_refresh = bool(selected_units)
+
+    if unavailable:
+        return {
+            'ok': False,
+            'error': 'one or more configured update targets are no longer available',
+            'unavailable': unavailable,
+        }
+    update_command = ' && '.join(commands)
+    if len(update_command) > 32768:
+        return {
+            'ok': False,
+            'error': 'the combined update command is too long',
+            'unavailable': [],
+        }
+    return {
+        'ok': True,
+        'target': 'both',
+        'targets': targets,
+        'labels': labels,
+        'update_command': update_command,
+        'app_name': ' · '.join(labels[1:]),
+        'run_helper': run_helper,
+        'allow_helper_with_custom': run_helper and bool(update_command),
+        'docker_standalone_targets': sorted(standalone_containers),
+        'update_docker_engine': update_docker_engine,
+        'refresh_docker_inventory': docker_refresh,
+        'unavailable': [],
+    }
+
+
+def _run_scheduled_update(vmid: int, sched: dict) -> dict:
+    """Run one scheduled update and finalize it through the shared path."""
+    started_at = time.monotonic()
+    run_id = f'scheduled-{uuid.uuid4().hex}'
+    requested_targets = _normalise_schedule_targets(sched)
+    targets = list(requested_targets)
+    before = _lxc_update_snapshot(vmid)
+    deferred_targets: list[str] = []
+    reasons: list[str] = []
+
+    def finish(status: str, actual_target: str, executed: list[str]) -> dict:
+        reason = '; '.join(dict.fromkeys(value for value in reasons if value)) or None
+        duration_seconds = max(0, int(time.monotonic() - started_at))
+        labels = _lxc_update_target_labels(requested_targets, [], before)
+        finalization = _finalize_lxc_update(
+            vmid,
+            run_id=run_id,
+            status=status,
+            source='scheduled',
+            target=actual_target,
+            duration_seconds=duration_seconds,
+            ct_name=before.get('ct_name'),
+            requested_targets=requested_targets,
+            executed_targets=executed,
+            deferred_targets=deferred_targets,
+            target_labels=labels,
+            reason=reason,
+            refresh_docker_inventory=any(
+                value.startswith('docker-') for value in requested_targets
+            ),
+            before_snapshot=before,
+        )
+        return {
+            'status': status,
+            'target': actual_target,
+            'reason': reason,
+            'run_id': run_id,
+            'requested_targets': requested_targets,
+            'executed_targets': list(executed),
+            'deferred_targets': list(deferred_targets),
+            'duration_seconds': duration_seconds,
+            'finalization': finalization,
+        }
+
+    requested_target = sched.get("target") or "both"
     if not os.path.isfile(_APPLY_UPDATES_SCRIPT):
-        return "skipped"
-    target = sched.get("target") or "both"
+        reasons.append('update runner is not installed')
+        return finish('skipped', requested_target, [])
+    registered_apps: list[dict] = []
+    try:
+        import lxc_apps
+        registered_apps = (lxc_apps._read_sidecar(vmid) or {}).get("apps") or []
+    except Exception:
+        registered_apps = []
+    if any(value.startswith("docker-") for value in targets):
+        docker_registered = any(app.get("helper_slug") == "docker" for app in registered_apps)
+        if not docker_registered:
+            unavailable_docker = [value for value in targets if value.startswith('docker-')]
+            deferred_targets.extend(unavailable_docker)
+            targets = [value for value in targets if not value.startswith("docker-")]
+            reasons.append('Docker targets are no longer registered')
+    if not targets:
+        return finish('skipped', 'app', [])
+    has_os_target = "os" in targets
+    has_app_targets = any(item != "os" for item in targets)
+    requested_target = "both" if has_os_target and has_app_targets else ("os" if has_os_target else "app")
+    target = requested_target
+    delay_days = int(sched.get("release_delay_days") or 0)
+    selected_app_ids = {value.split(":", 1)[1] for value in targets if value.startswith("app:")}
+    release_gated_ids: set[str] = set()
+    targets_without_gated_apps = list(targets)
+    try:
+        import lxc_apps
+        release_gated_ids, targets_without_gated_apps = lxc_apps.partition_scheduled_release_targets(
+            targets,
+            registered_apps,
+        )
+    except Exception:
+        release_gated_ids = {
+            str(app.get("id"))
+            for app in registered_apps
+            if app.get("id")
+            and app.get("installed_via")
+            and app.get("helper_slug") != "docker"
+            and ("apps" in targets or str(app.get("id")) in selected_app_ids)
+        }
+    if delay_days > 0 and requested_target in ("app", "both") and release_gated_ids:
+        try:
+            import lxc_apps
+            gate = lxc_apps.scheduled_app_release_gate(
+                vmid,
+                delay_days,
+                app_ids=release_gated_ids,
+            )
+        except Exception as exc:
+            gate = {"allowed": False, "status": "deferred", "reason": str(exc)}
+        if not gate.get("allowed"):
+            reasons.append(gate.get("reason") or "release hold active")
+            deferred_targets.extend(
+                f'app:{app_id}' for app_id in sorted(release_gated_ids)
+                if f'app:{app_id}' not in deferred_targets
+            )
+            # Do not let a tracked application's release hold block an
+            # unrelated Web-Link-only custom command, Docker target or OS
+            # update selected for the same schedule.
+            targets = targets_without_gated_apps
+            if not targets:
+                return finish(gate.get("status") or "deferred", "app", [])
+            has_os_target = "os" in targets
+            has_app_targets = any(item != "os" for item in targets)
+            target = "both" if has_os_target and has_app_targets else ("os" if has_os_target else "app")
     env = dict(os.environ)
     env["VMID"] = str(vmid)
     env["TARGET"] = target
     env["BACKUP"] = "1" if sched.get("backup") else "0"
     env["BACKUP_STORAGE"] = sched.get("backup_storage") or ""
     env["RESTART"] = "1" if sched.get("restart") else "0"
-    env["UPDATE_COMMAND"] = _compose_scheduled_update_command(vmid, target)
+    update_command = _compose_scheduled_update_command(vmid, target, targets)
+    docker_app = next(
+        (app for app in registered_apps if app.get("helper_slug") == "docker"),
+        None,
+    )
+    docker_saved_command = ((docker_app or {}).get("update_command") or "").strip()
+    docker_selected = (
+        "docker-engine" in targets
+        or bool(docker_app and f"app:{docker_app.get('id')}" in targets)
+    )
+    docker_engine_uses_canonical = (
+        docker_selected
+        and docker_saved_command == _DOCKER_ENGINE_INTEGRATED_COMMAND
+    )
+    docker_engine_uses_custom = (
+        docker_selected
+        and bool(docker_saved_command)
+        and not docker_engine_uses_canonical
+    )
+    env["UPDATE_COMMAND"] = update_command
     env["APP_NAME"] = ""
-    # HELPER_SLUG lets apply_updates.sh run the community-scripts helper
-    # from host even when /usr/bin/update was removed inside the CT
-    # (older installs). Read from the same source the UI uses.
-    try:
-        import managed_installs as _mi
-        for _it in _mi.get_active_items() or []:
-            if _it.get("type") == "lxc" and str(_it.get("_vmid")) == str(vmid):
-                env["HELPER_SLUG"] = _it.get("_helper_slug") or ""
-                break
-        else:
-            env["HELPER_SLUG"] = ""
-    except Exception:
-        env["HELPER_SLUG"] = ""
+    run_helper = _scheduled_helper_enabled(vmid, target, targets)
+    env["RUN_HELPER"] = "1" if run_helper else "0"
+    env["ALLOW_HELPER_WITH_CUSTOM"] = "1" if run_helper and bool(update_command) else "0"
+    env["DOCKER_STANDALONE_TARGETS"] = ",".join(sorted(
+        value.split(":", 1)[1]
+        for value in targets
+        if value.startswith("docker-container:")
+    ))
+    env["UPDATE_DOCKER_ENGINE"] = (
+        "1" if docker_selected and not docker_engine_uses_custom else "0"
+    )
+    env["RUN_ID"] = run_id
+    env["CT_NAME"] = str(before.get('ct_name') or f'CT-{vmid}')
+    env["REQUESTED_TARGETS_JSON"] = json.dumps(requested_targets)
+    env["TARGET_LABELS_JSON"] = json.dumps(
+        _lxc_update_target_labels(requested_targets, [], before)
+    )
+    env["REFRESH_DOCKER_INVENTORY"] = (
+        "1" if any(value.startswith('docker-') for value in requested_targets) else "0"
+    )
     try:
         r = subprocess.run(
             ["bash", _APPLY_UPDATES_SCRIPT],
@@ -20507,11 +21778,18 @@ def _run_scheduled_update(vmid: int, sched: dict) -> str:
             timeout=60 * 60,  # 1h hard cap so a stuck run doesn't
                               # block the queue forever
         )
-        return "success" if r.returncode == 0 else "failure"
+        if r.returncode != 0:
+            reasons.append(f'update runner exited with code {r.returncode}')
+            return finish('failure', target, targets)
+        if deferred_targets:
+            return finish('partial', target, targets)
+        return finish('success', target, targets)
     except subprocess.TimeoutExpired:
-        return "failure"
-    except Exception:
-        return "failure"
+        reasons.append('scheduled update timed out')
+        return finish('failure', target, targets)
+    except Exception as exc:
+        reasons.append(str(exc))
+        return finish('failure', target, targets)
 
 
 def _scheduler_loop():
@@ -20555,12 +21833,16 @@ def _scheduler_loop():
                 def _worker(_vmid=vmid, _sched=dict(sched)):
                     print(f"[ProxMenux] scheduler: firing update for CT {_vmid} "
                           f"(target={_sched.get('target')}, backup={_sched.get('backup')})")
-                    status = _run_scheduled_update(_vmid, _sched)
+                    outcome = _run_scheduled_update(_vmid, _sched)
+                    status = outcome.get('status') or 'failure'
+                    actual_target = outcome.get('target') or 'both'
+                    reason = outcome.get('reason')
                     try:
-                        lxc_apps.record_schedule_run(_vmid, status, _sched.get("target") or "both")
+                        lxc_apps.record_schedule_run(_vmid, status, actual_target, reason)
                     except Exception as e:
                         print(f"[ProxMenux] scheduler: could not record run for {_vmid}: {e}")
-                    print(f"[ProxMenux] scheduler: CT {_vmid} finished with status={status}")
+                    print(f"[ProxMenux] scheduler: CT {_vmid} finished with status={status}"
+                          f" target={actual_target} reason={reason or '-'}")
                 threading.Thread(target=_worker, daemon=True).start()
         except Exception as e:
             print(f"[ProxMenux] scheduler loop error: {e}")
@@ -20666,6 +21948,19 @@ if __name__ == '__main__':
                 print("[ProxMenux] Managed-installs registry initialised")
             except Exception as e:
                 print(f"[ProxMenux] managed_installs init failed: {e}")
+            # Docker inventories are derived runtime data and intentionally
+            # live only in process memory. Rebuild them once at startup after
+            # the LXC registry exists, just like the other startup caches.
+            # Subsequent guest starts reuse TaskWatcher's existing lifecycle
+            # event and refresh only that guest; no extra polling loop exists.
+            try:
+                import lxc_apps
+                docker_count = lxc_apps.refresh_docker_inventories(force=True)
+                print(f"[ProxMenux] Docker inventory cache initialised "
+                      f"({docker_count} CTs)", flush=True)
+            except Exception as e:
+                print(f"[ProxMenux] Docker inventory startup init failed: {e}",
+                      file=sys.stderr, flush=True)
         threading.Thread(target=_deferred_startup_inits, daemon=True).start()
 
         # Self-healing maintenance run on every startup. Two passes, both
@@ -20814,6 +22109,9 @@ if __name__ == '__main__':
 
     # ── Notification Service ──
     try:
+        # Cache refresh consumes the existing TaskWatcher lifecycle signal;
+        # it does not add another status poller or notification path.
+        notification_manager.set_guest_lifecycle_callback(_handle_guest_lifecycle)
         notification_manager.start()
         if notification_manager._enabled:
             print(f"[ProxMenux] Notification service started (channels: {list(notification_manager._channels.keys())})")
