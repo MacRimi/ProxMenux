@@ -69,6 +69,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
+from smartctl_resolver import (  # noqa: E402
+    is_usb_disk as resolver_is_usb_disk,
+    probe_smartctl_json,
+    resolve_smartctl_probe,
+    smartctl_command,
+    smartctl_probe_types,
+    smartctl_type_args,
+)
 from flask_script_runner import script_runner
 import threading
 from proxmox_storage_monitor import proxmox_storage_monitor
@@ -3602,26 +3610,8 @@ def is_disk_removable(disk_name):
 
 
 def is_disk_usb(disk_name):
-    """Return True if the disk is attached via USB, using the sysfs device
-    path. Reliable for USB-attached HDDs and USB-NVMe bridges (which
-    both report `/sys/block/<disk>/removable = 0` even though they ARE
-    USB) — the previous heuristic based on the removable flag missed
-    them entirely, so snt* pass-through was never attempted and the
-    bridge's own identity + missing temperature/hours were cached.
-
-    Uses `os.path.realpath` (no subprocess) so it's cheap enough to be
-    called on every SMART probe.
-    """
-    try:
-        real = os.path.realpath(f'/sys/block/{disk_name}')
-        # sysfs path segment like `usb1`, `usb2`, ... always precedes a
-        # USB-attached block device. Match on the segment prefix rather
-        # than a substring so a directory happening to contain "usb" in
-        # its literal name can't false-positive.
-        return any(seg.startswith('usb') and (len(seg) == 3 or seg[3:].isdigit())
-                   for seg in real.split('/'))
-    except Exception:
-        return False
+    """Return True when sysfs places the disk behind a USB bus."""
+    return resolver_is_usb_disk(disk_name)
 
 
 def _is_system_mount(mountpoint):
@@ -4548,6 +4538,7 @@ def _smart_default_payload() -> dict:
         'family': None,
         'sata_version': None,
         'form_factor': None,
+        '_details_found': False,
         # Internal flag — True if smartctl confirmed the disk type
         # (HDD with RPM, or SSD via "Solid State Device" / JSON
         # rotation_rate=0). Stripped before the dict reaches the API.
@@ -4569,6 +4560,25 @@ def _smart_data_useful(d: dict) -> bool:
         or (d.get('temperature') or 0) > 0
         or d.get('smart_status', 'unknown') not in ('unknown', '')
     )
+
+
+def _smart_payload_score(data: dict) -> int:
+    return (
+        (100 if data.get('_details_found') else 0)
+        + (12 if (data.get('temperature') or 0) > 0 else 0)
+        + (8 if (data.get('power_on_hours') or 0) > 0 else 0)
+        + (5 if data.get('model', 'Unknown') != 'Unknown' else 0)
+        + (5 if data.get('serial', 'Unknown') != 'Unknown' else 0)
+        + (2 if data.get('smart_status', 'unknown') not in ('unknown', '') else 0)
+    )
+
+
+def _smart_probe_complete(disk_name: str, data: dict) -> bool:
+    if data.get('_details_found'):
+        return True
+    if is_disk_usb(disk_name):
+        return False
+    return data.get('model', 'Unknown') != 'Unknown' and data.get('serial', 'Unknown') != 'Unknown'
 
 
 _standby_cache: dict[str, tuple] = {}
@@ -4601,11 +4611,13 @@ def _hdd_in_standby(disk_name: str) -> bool:
         return False
     parked = False
     try:
-        r = subprocess.run(
-            ['smartctl', '-n', 'standby', '-i', f'/dev/{disk_name}'],
-            capture_output=True, text=True, timeout=_SMART_TIMEOUT,
+        result = probe_smartctl_json(
+            disk_name,
+            ('-n', 'standby', '-i', '-j'),
+            timeout=_SMART_TIMEOUT,
+            require_telemetry=False,
         )
-        parked = r.returncode == 2
+        parked = bool(result.get('standby'))
     except (subprocess.SubprocessError, OSError):
         parked = False
     _standby_cache[disk_name] = (now, parked)
@@ -4713,51 +4725,16 @@ def _get_smart_data_uncached(disk_name):
     `get_smart_data` for caching. Probe-cache lives inside this fn so a
     successful run also remembers which command worked."""
     smart_data = _smart_default_payload()
+    best_smart_data = dict(smart_data)
+    best_score = -1
 
 
     
     try:
-        all_commands = [
-            ['smartctl', '-a', '-j', f'/dev/{disk_name}'],  # JSON auto-detect (preferred)
-            ['smartctl', '-a', '-j', '-d', 'scsi', f'/dev/{disk_name}'],  # JSON SCSI/SAS (early for SAS disks)
-            ['smartctl', '-a', '-d', 'ata', f'/dev/{disk_name}'],  # JSON with ATA device type
-            ['smartctl', '-a', '-d', 'sat', f'/dev/{disk_name}'],  # JSON with SAT device type
-            ['smartctl', '-a', f'/dev/{disk_name}'],  # Text output (fallback)
-            ['smartctl', '-a', '-d', 'ata', f'/dev/{disk_name}'],  # Text with ATA device type
-            ['smartctl', '-a', '-d', 'sat', f'/dev/{disk_name}'],  # Text with SAT device type
-            ['smartctl', '-i', '-H', '-A', f'/dev/{disk_name}'],  # Info + Health + Attributes
-            ['smartctl', '-i', '-H', '-A', '-d', 'ata', f'/dev/{disk_name}'],  # With ATA
-            ['smartctl', '-i', '-H', '-A', '-d', 'sat', f'/dev/{disk_name}'],  # With SAT
-            ['smartctl', '-a', '-j', '-d', 'sat,12', f'/dev/{disk_name}'],  # SAT with 12-byte commands
-            ['smartctl', '-a', '-j', '-d', 'sat,16', f'/dev/{disk_name}'],  # SAT with 16-byte commands
-            ['smartctl', '-a', '-d', 'sat,12', f'/dev/{disk_name}'],  # Text SAT with 12-byte commands
-            ['smartctl', '-a', '-d', 'sat,16', f'/dev/{disk_name}'],  # Text SAT with 16-byte commands
-        ]
-
-        # USB-NVMe bridges (ASMedia ASM2362/ASM2464PD, JMicron JMS583/JMS586,
-        # Realtek RTL9210): the plain `-a` variant answers with the *bridge*
-        # identity (e.g. "ASMT 2462 NVME") and no temperature, because the
-        # bridge exposes itself as generic USB storage. Only `-d snt*`
-        # passes through to the actual NVMe controller and returns real
-        # model, serial, temperature and health.
-        #
-        # Restricted to disks whose kernel node is `nvmeXnY` — the SNT
-        # drivers are NVMe-Storage-Namespace-Transport, they only make
-        # sense on NVMe hardware. For `sdX` USB-SATA (typical setups:
-        # TerraMaster DAS with HDDs, USB-to-SATA HDD/SSD enclosures)
-        # every snt* probe returns nothing but eats a 5 s smartctl
-        # timeout each; three of them stack to ~15 s and can push the
-        # whole cascade past the failure-backoff threshold BEFORE the
-        # plain `smartctl -a -j` fallback ever runs — so temperature
-        # and POH would silently disappear from the UI (GH #293).
-        # For internal SATA/NVMe the cascade is unchanged.
-        is_nvme_class = disk_name.startswith('nvme')
-        if is_nvme_class and (is_disk_usb(disk_name) or is_disk_removable(disk_name)):
-            all_commands = [
-                ['smartctl', '-a', '-j', '-d', 'sntasmedia', f'/dev/{disk_name}'],
-                ['smartctl', '-a', '-j', '-d', 'sntjmicron', f'/dev/{disk_name}'],
-                ['smartctl', '-a', '-j', '-d', 'sntrealtek', f'/dev/{disk_name}'],
-            ] + all_commands
+        probes = smartctl_probe_types(disk_name)
+        all_commands = [smartctl_command(disk_name, ('-a', '-j'), probe) for probe in probes]
+        all_commands += [smartctl_command(disk_name, ('-a',), probe) for probe in probes]
+        all_commands += [smartctl_command(disk_name, ('-i', '-H', '-A'), probe) for probe in probes]
 
         # Probe-cache: if we already know which command works for this
         # disk, try that first. The fallback chain is still kept after
@@ -4772,6 +4749,7 @@ def _get_smart_data_uncached(disk_name):
 
         process = None # Initialize process to None
         for cmd_index, cmd in enumerate(commands_to_try):
+            smart_data = _smart_default_payload()
             # print(f"[v0] Attempt {cmd_index + 1}/{len(commands_to_try)}: Running command: {' '.join(cmd)}")
             pass
             try:
@@ -4827,10 +4805,12 @@ def _get_smart_data_uncached(disk_name):
                             # Extract temperature
                             if 'temperature' in data and 'current' in data['temperature']:
                                 smart_data['temperature'] = data['temperature']['current']
+                                smart_data['_details_found'] = True
 
                             
                             # Parse NVMe SMART data
                             if 'nvme_smart_health_information_log' in data:
+                                smart_data['_details_found'] = True
 
                                 nvme_data = data['nvme_smart_health_information_log']
                                 if 'temperature' in nvme_data:
@@ -4860,6 +4840,7 @@ def _get_smart_data_uncached(disk_name):
                             # Parse SCSI/SAS SMART data (no ATA attribute IDs)
                             device_protocol = data.get('device', {}).get('protocol', '')
                             if device_protocol == 'SCSI' or 'scsi_error_counter_log' in data:
+                                smart_data['_details_found'] = True
                                 # Temperature
                                 if 'temperature' in data and 'current' in data['temperature']:
                                     smart_data['temperature'] = data['temperature']['current']
@@ -4889,6 +4870,7 @@ def _get_smart_data_uncached(disk_name):
 
                             # Parse ATA SMART attributes
                             elif 'ata_smart_attributes' in data and 'table' in data['ata_smart_attributes']:
+                                smart_data['_details_found'] = bool(data['ata_smart_attributes']['table'])
 
                                 for attr in data['ata_smart_attributes']['table']:
                                     attr_id = attr.get('id')
@@ -4973,13 +4955,6 @@ def _get_smart_data_uncached(disk_name):
                                                 except (ValueError, TypeError):
                                                     pass
                             
-                            # If we got good data, break out of the loop and
-                            # memoise this command so subsequent calls skip
-                            # straight to it instead of re-trying the chain.
-                            if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
-                                _smart_probe_cache[disk_name] = list(cmd)
-                                break
-                                
                         except json.JSONDecodeError as e:
                             # print(f"[v0] JSON parse failed: {e}, trying text parsing...")
                             pass
@@ -5047,6 +5022,7 @@ def _get_smart_data_uncached(disk_name):
                                 try:
                                     temp_str = line.split(':')[1].strip().split()[0]
                                     smart_data['temperature'] = int(temp_str)
+                                    smart_data['_details_found'] = True
                                     # print(f"[v0] Found temperature: {smart_data['temperature']}°C")
                                     pass
                                 except (ValueError, IndexError):
@@ -5059,6 +5035,7 @@ def _get_smart_data_uncached(disk_name):
                             
                             if 'ID# ATTRIBUTE_NAME' in line or 'ID#' in line and 'ATTRIBUTE_NAME' in line:
                                 in_attributes = True
+                                smart_data['_details_found'] = True
                                 # print(f"[v0] Found SMART attributes table")
                                 pass
                                 continue
@@ -5149,14 +5126,15 @@ def _get_smart_data_uncached(disk_name):
                                         pass
                                         continue
 
-                        # If we got complete data, break and memoise the
-                        # winning command for the next call.
-                        if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
-                            _smart_probe_cache[disk_name] = list(cmd)
-                            break
-                        elif smart_data['model'] != 'Unknown' or smart_data['serial'] != 'Unknown':
-                            # print(f"[v0] Extracted partial data from text output, continuing to next attempt...")
-                            pass
+                    score = _smart_payload_score(smart_data)
+                    if score > best_score:
+                        best_score = score
+                        best_smart_data = dict(smart_data)
+
+                    if _smart_probe_complete(disk_name, smart_data):
+                        _smart_probe_cache[disk_name] = list(cmd)
+                        best_smart_data = dict(smart_data)
+                        break
                 else:
                     # print(f"[v0] No usable output (return code {result_code}), trying next command...")
                     pass
@@ -5183,7 +5161,7 @@ def _get_smart_data_uncached(disk_name):
                     except Exception as kill_err:
                         # print(f"[v0] Error killing process: {kill_err}")
                         pass
-
+        smart_data = best_smart_data
 
         if smart_data['reallocated_sectors'] > 0 or smart_data['pending_sectors'] > 0:
             if smart_data['health'] == 'healthy':
@@ -5250,9 +5228,6 @@ def _get_smart_data_uncached(disk_name):
                             smart_data['rotation_rate'] = -1  # HDD, RPM unknown
             except Exception:
                 pass
-        smart_data.pop('_rotation_known', None)
-
-            
     except FileNotFoundError:
         # print(f"[v0] ERROR: smartctl not found - install smartmontools for disk monitoring.")
         pass
@@ -5263,6 +5238,10 @@ def _get_smart_data_uncached(disk_name):
         traceback.print_exc()
     
 
+    # These fields only guide transport selection internally.  Keep them out
+    # of the public API even when smartctl is missing or a probe raises.
+    smart_data.pop('_rotation_known', None)
+    smart_data.pop('_details_found', None)
     return smart_data
 
 # ─── Proxmox storage cache (Sprint 14 perf pass) ─────────────────────────────
@@ -8941,16 +8920,18 @@ def _get_hardware_info_uncached():
                         # two separate calls that parsed the same output.
                         sata_version = None
                         form_factor = None
+                        model_family = None
                         try:
-                            result_smart = subprocess.run(
-                                ['smartctl', '-n', 'standby', '-i', f'/dev/{disk_name}'],
-                                capture_output=True, text=True, timeout=5)
-                            if result_smart.returncode == 0:
-                                for line in result_smart.stdout.split('\n'):
-                                    if 'SATA Version is:' in line:
-                                        sata_version = line.split(':', 1)[1].strip()
-                                    elif 'Form Factor:' in line:
-                                        form_factor = line.split(':', 1)[1].strip()
+                            identity_probe = probe_smartctl_json(
+                                disk_name,
+                                ('-n', 'standby', '-i', '-j'),
+                                timeout=5,
+                                require_telemetry=False,
+                            )
+                            identity_data = identity_probe.get('data', {})
+                            sata_version = identity_data.get('sata_version', {}).get('string')
+                            form_factor = identity_data.get('form_factor', {}).get('name')
+                            model_family = identity_data.get('model_family')
                         except:
                             pass
                         
@@ -8976,17 +8957,8 @@ def _get_hardware_info_uncached():
                         if pcie_info:
                             storage_device.update(pcie_info)
                         
-                        # Add family if available (from smartctl)
-                        try:
-                            result_smart = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], 
-                                                        capture_output=True, text=True, timeout=5)
-                            if result_smart.returncode == 0:
-                                for line in result_smart.stdout.split('\n'):
-                                    if 'Model Family:' in line:
-                                        storage_device['family'] = line.split(':', 1)[1].strip()
-                                        break
-                        except:
-                            pass
+                        if model_family:
+                            storage_device['family'] = model_family
                         
                         storage_devices.append(storage_device)
                 
@@ -10147,12 +10119,16 @@ def api_smart_status(disk_name):
 
         # Get device identity via smartctl (works for both NVMe and SATA)
         _sctl_identity = {}
+        _sctl_data = {}
+        _sctl_probe = {}
         try:
-            _sctl_proc = subprocess.run(
-                ['smartctl', '-a', '--json=c', device],
-                capture_output=True, text=True, timeout=15
+            _sctl_probe = probe_smartctl_json(
+                disk_name,
+                ('-a', '--json=c'),
+                timeout=15,
+                require_telemetry=not is_nvme,
             )
-            _sctl_data = json.loads(_sctl_proc.stdout)
+            _sctl_data = _sctl_probe.get('data', {})
             _sctl_identity = {
                 'model': _sctl_data.get('model_name', ''),
                 'serial': _sctl_data.get('serial_number', ''),
@@ -10366,16 +10342,17 @@ def api_smart_status(disk_name):
                 result['nvme_error'] = str(e)
         else:
             # SATA/SAS/SSD: Single JSON call gives all data at once
-            proc = subprocess.run(
-                ['smartctl', '-a', '--json=c', device],
-                capture_output=True, text=True, timeout=30
-            )
-            # Parse JSON regardless of exit code — smartctl uses bit-flags for non-fatal conditions
-            data = {}
-            try:
-                data = json.loads(proc.stdout)
-            except (json.JSONDecodeError, ValueError):
-                pass
+            data = _sctl_data
+            resolved_type_args = smartctl_type_args(_sctl_probe.get('probe'))
+            if not data:
+                smart_probe = probe_smartctl_json(
+                    disk_name,
+                    ('-a', '--json=c'),
+                    timeout=30,
+                    require_telemetry=True,
+                )
+                data = smart_probe.get('data', {})
+                resolved_type_args = smartctl_type_args(smart_probe.get('probe'))
 
             # --- Detect device protocol (ATA vs SCSI/SAS) ---
             device_protocol = data.get('device', {}).get('protocol', '')
@@ -10409,7 +10386,12 @@ def api_smart_status(disk_name):
             # Fallback text detection in case JSON misses it
             if result['status'] != 'running':
                 try:
-                    cproc = subprocess.run(['smartctl', '-c', device], capture_output=True, text=True, timeout=10)
+                    cproc = subprocess.run(
+                        ['smartctl', '-c', *resolved_type_args, device],
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
                     if 'Self-test routine in progress' in cproc.stdout or '% of test remaining' in cproc.stdout:
                         result['status'] = 'running'
                         match = re.search(r'(\d+)% of test remaining', cproc.stdout)
@@ -10777,7 +10759,12 @@ def api_smart_status(disk_name):
                 # Fallback: if JSON gave no attributes, try text parser
                 if not attrs:
                     try:
-                        aproc = subprocess.run(['smartctl', '-A', device], capture_output=True, text=True, timeout=10)
+                        aproc = subprocess.run(
+                            ['smartctl', '-A', *resolved_type_args, device],
+                            capture_output=True,
+                            text=True,
+                            timeout=10,
+                        )
                         if aproc.returncode == 0:
                             attrs = _parse_smart_attributes(aproc.stdout.split('\n'))
                     except Exception:
@@ -11046,8 +11033,10 @@ def api_smart_run_test(disk_name):
                 return jsonify({'error': 'smartmontools not installed. Please run: apt-get install smartmontools'}), 400
             
             test_flag = '-t short' if test_type == 'short' else '-t long'
+            smart_probe = resolve_smartctl_probe(disk_name, timeout=10)
+            smart_type_args = smartctl_type_args(smart_probe)
             proc = subprocess.run(
-                ['smartctl'] + test_flag.split() + [device],
+                ['smartctl'] + test_flag.split() + smart_type_args + [device],
                 capture_output=True, text=True, timeout=30
             )
             
@@ -11070,13 +11059,16 @@ def api_smart_run_test(disk_name):
             
             # Start background monitor to save JSON when test completes
             sleep_interval = 10 if test_type == 'short' else 60
+            smart_check_cmd = shlex.join(['smartctl', '-c', *smart_type_args, device])
+            smart_report_cmd = shlex.join(['smartctl', '-a', '--json=c', *smart_type_args, device])
+            json_path_quoted = shlex.quote(json_path)
             subprocess.Popen(
                 f'''
                 sleep 5
-                while smartctl -c {device} 2>/dev/null | grep -qiE 'Self-test routine in progress|[1-9][0-9]?% of test remaining'; do
+                while {smart_check_cmd} 2>/dev/null | grep -qiE 'Self-test routine in progress|[1-9][0-9]?% of test remaining'; do
                     sleep {sleep_interval}
                 done
-                smartctl -a --json=c {device} > {json_path} 2>/dev/null
+                {smart_report_cmd} > {json_path_quoted} 2>/dev/null
                 ''',
                 shell=True, start_new_session=True,
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL

@@ -12,7 +12,7 @@ don't add another background thread.
 
 Performance — three caches keep the steady-state cost flat on big JBODs:
 
-  * ``_disk_list_cache``    — lsblk + USB filter, refreshed every 5 min.
+  * ``_disk_list_cache``    — physical disk inventory, refreshed every 5 min.
   * ``_disk_probe_cache``   — remembers which ``smartctl -d <type>``
                               variant works for each disk so we skip
                               the 4-attempt fallback chain.
@@ -36,6 +36,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Optional
 
+from smartctl_resolver import smartctl_probe_types, smartctl_result_is_standby
+
 # Use the same DB the CPU temperature pipeline writes to so we share
 # the WAL file and the periodic vacuum that flask_server already runs.
 _DB_DIR = "/usr/local/share/proxmenux"
@@ -55,7 +57,7 @@ _SMARTCTL_TIMEOUT = 5
 # On a 24-disk host the naive sampler can spend several seconds per minute
 # just iterating smartctl. Three caches keep the steady-state cost flat:
 #
-#   _disk_list_cache       — the (lsblk + USB filter) result. Disks don't
+#   _disk_list_cache       — the physical disk inventory. Disks don't
 #                            appear/disappear between samples, so we only
 #                            re-enumerate every _DISK_LIST_TTL seconds.
 #
@@ -81,7 +83,7 @@ _MAX_WORKERS = 16           # cap concurrency for huge JBODs
 
 _cache_lock = threading.Lock()
 _disk_list_cache: Optional[tuple[float, list[str]]] = None
-# Maps disk_name -> probe key: 'auto' | 'nvme' | 'ata' | 'sat'.
+# Maps disk_name -> the working smartctl device type.
 # Only successful probes get cached.
 _disk_probe_cache: dict[str, str] = {}
 # Maps disk_name -> consecutive_failures count (cleared on success).
@@ -176,26 +178,8 @@ def init_disk_temperature_db() -> bool:
 # Disk enumeration + temperature read
 # ---------------------------------------------------------------------------
 
-# Match the modal's filter: USB drives are excluded. The hardware tab
-# already hides them in the per-disk list and the user's cluster
-# storage doesn't run on USB-attached disks anyway. Including them
-# would clutter the history table for thumbdrives plugged in once
-# during a recovery session.
-def _is_usb_disk(disk_name: str) -> bool:
-    """Return True for disks attached over USB. Mirrors the heuristic
-    in `get_disk_connection_type` in flask_server — checks the realpath
-    of /sys/block/<name> for `usb` in the bus chain."""
-    try:
-        link = os.path.realpath(f"/sys/block/{disk_name}")
-        return "/usb" in link
-    except OSError:
-        return False
-
-
 def _enumerate_target_disks() -> list[str]:
-    """Run ``lsblk`` + USB filter. The expensive part is the realpath
-    walks in ``_is_usb_disk``; both are short-lived but we still amortise
-    them via the disk-list cache so they only run every few minutes."""
+    """Enumerate physical disks for temperature sampling."""
     out: list[str] = []
     try:
         proc = subprocess.run(
@@ -213,8 +197,6 @@ def _enumerate_target_disks() -> list[str]:
                 continue
             # Skip virtual/loop devices that lsblk still reports as type=disk.
             if name.startswith("loop") or name.startswith("zd"):
-                continue
-            if _is_usb_disk(name):
                 continue
             out.append(name)
     except (subprocess.TimeoutExpired, OSError):
@@ -235,22 +217,6 @@ def _list_target_disks() -> list[str]:
     with _cache_lock:
         _disk_list_cache = (now + _DISK_LIST_TTL, list(fresh))
     return fresh
-
-
-def _is_disk_usb(disk_name: str) -> bool:
-    """True if the disk sits behind a USB bus, checked via the resolved
-    sysfs device path. USB-NVMe bridges (ASMedia, JMicron, Realtek) and
-    plain USB-HDDs both report `/sys/block/<disk>/removable = 0`, so the
-    older removable-flag heuristic missed them and the temperature
-    poller never tried the snt* driver variants that are the only way
-    to reach the NVMe controller behind those bridges."""
-    try:
-        base = disk_name[5:] if disk_name.startswith('/dev/') else disk_name
-        real = os.path.realpath(f'/sys/block/{base}')
-        return any(seg.startswith('usb') and (len(seg) == 3 or seg[3:].isdigit())
-                   for seg in real.split('/'))
-    except Exception:
-        return False
 
 
 def _smartctl_cmd_for(disk_name: str, probe: str) -> list[str]:
@@ -293,7 +259,7 @@ def _try_probe(disk_name: str, probe: str) -> Optional[float]:
         # the backoff and stop polling that drive forever) — surface it
         # as the dedicated _STANDBY sentinel so the caller skips the
         # update cleanly.
-        if proc.returncode == 2:
+        if smartctl_result_is_standby(proc.returncode, proc.stdout, proc.stderr):
             return _STANDBY  # type: ignore[return-value]
         # smartctl returns non-zero on warnings (bit 0x40 etc.) even when
         # JSON is fully populated. Don't gate on returncode — parse the
@@ -369,15 +335,9 @@ def _read_temperature(disk_name: str) -> Optional[float]:
             return temp
         # Cached probe stopped working — fall through and re-detect.
 
-    # Slow path: try every probe and remember the first one that works.
-    # For USB-attached disks we prepend the three snt* driver variants —
-    # USB-NVMe bridges (ASMedia / JMicron / Realtek) don't answer the
-    # plain probes with real SMART; only snt* passes through to the NVMe
-    # controller so temperature actually comes back. Non-USB disks skip
-    # them, so this adds zero overhead on internal drives.
-    probes: tuple[str, ...] = ("auto", "nvme", "ata", "sat")
-    if _is_disk_usb(disk_name):
-        probes = ("sntasmedia", "sntjmicron", "sntrealtek") + probes
+    # Slow path: try the transport-specific order and remember the first
+    # probe that returns an actual temperature.
+    probes = smartctl_probe_types(disk_name)
     for probe in probes:
         if probe == cached_probe:
             continue  # already tried above

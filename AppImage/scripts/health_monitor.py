@@ -19,6 +19,11 @@ from collections import defaultdict
 import re
 
 from health_persistence import health_persistence, disk_base_name
+from smartctl_resolver import (
+    is_usb_disk as resolver_is_usb_disk,
+    probe_smartctl_json,
+    smart_json_has_telemetry,
+)
 
 try:
     from proxmox_storage_monitor import proxmox_storage_monitor
@@ -100,14 +105,6 @@ def _fmt_entity_and_summary(items, singular: str, plural: str, limit: int = _NAM
     return title_entity, reason
 
 
-# USB-NVMe bridges (ASMedia, JMicron, Realtek) answer plain smartctl with
-# the *bridge* identity — model shows as "ASMT 2462 NVME" and there is no
-# temperature. Only `-d snt*` passes through to the actual NVMe controller
-# behind the bridge. For removable disks we try the snt* variants first
-# so both identity and health reflect the drive, not the enclosure.
-_USB_NVME_DRIVERS = ('sntasmedia', 'sntjmicron', 'sntrealtek')
-
-
 def _disk_base_for_sysfs(name: str) -> str:
     """Normalize `/dev/sda` / `sda` to just `sda` for `/sys/block/<name>` lookups."""
     if name.startswith('/dev/'):
@@ -142,10 +139,13 @@ def _hdd_in_standby(disk_name: str) -> bool:
         return False
     parked = False
     try:
-        r = subprocess.run(
-            ['smartctl', '-n', 'standby', '-i', f'/dev/{base}'],
-            capture_output=True, text=True, timeout=5)
-        parked = r.returncode == 2
+        result = probe_smartctl_json(
+            base,
+            ('-n', 'standby', '-i', '-j'),
+            timeout=5,
+            require_telemetry=False,
+        )
+        parked = bool(result.get('standby'))
     except Exception:
         parked = False
     _standby_cache[base] = (now, parked)
@@ -195,19 +195,8 @@ def _is_disk_removable(disk_name: str) -> bool:
 
 
 def _is_disk_usb(disk_name: str) -> bool:
-    """True if the disk sits behind a USB bus. Reads the resolved sysfs
-    device path — reliable for USB-NVMe bridges and USB-attached HDDs
-    that report `removable=0` even though they ARE USB (so the older
-    `_is_disk_removable` heuristic skipped snt* driver probes and left
-    NVMe-behind-a-bridge disks with the bridge's own chatter cached
-    forever)."""
-    try:
-        base = _disk_base_for_sysfs(disk_name)
-        real = os.path.realpath(f'/sys/block/{base}')
-        return any(seg.startswith('usb') and (len(seg) == 3 or seg[3:].isdigit())
-                   for seg in real.split('/'))
-    except Exception:
-        return False
+    """True when sysfs places the disk behind a USB bus."""
+    return resolver_is_usb_disk(disk_name)
 
 class HealthMonitor:
     """
@@ -2057,21 +2046,9 @@ class HealthMonitor:
                         is_usb = tran == 'USB'
                         is_nvme = disk_name.startswith('nvme')
                         
-                        # Get serial from smartctl
-                        serial = ''
-                        model = ''
-                        try:
-                            smart_result = subprocess.run(
-                                ['smartctl', '-i', '-j', f'/dev/{disk_name}'],
-                                capture_output=True, text=True, timeout=5
-                            )
-                            if smart_result.returncode in (0, 4):  # 4 = SMART not available but info OK
-                                import json
-                                smart_data = json.loads(smart_result.stdout)
-                                serial = smart_data.get('serial_number', '')
-                                model = smart_data.get('model_name', '') or smart_data.get('model_family', '')
-                        except Exception:
-                            pass
+                        identity = self._get_disk_identity(disk_name)
+                        serial = identity.get('serial', '')
+                        model = identity.get('model', '')
                         
                         physical_disks[disk_name] = {
                             'serial': serial,
@@ -2582,41 +2559,15 @@ class HealthMonitor:
         try:
             dev_path = f'/dev/{disk_name}' if not disk_name.startswith('/') else disk_name
 
-            # USB-attached disks may sit behind an NVMe bridge: try the
-            # snt* driver variants first so identity reflects the drive
-            # (Samsung 990 PRO) rather than the enclosure (ASMT 2462 NVME).
-            # If all snt* fail, fall through to the plain call — that's
-            # still correct for USB-SATA sticks and non-USB devices.
-            # USB detection is by sysfs path (`_is_disk_usb`) rather than
-            # the `removable` flag, since USB-NVMe and USB-HDD both report
-            # `removable=0` even though they ARE USB.
-            attempts = []
-            # SNT drivers are NVMe-Storage-Namespace-Transport — only
-            # meaningful when the underlying device is NVMe. Restricting
-            # to `nvme*` kernel nodes stops `sd*` USB-SATA (TerraMaster
-            # DAS, USB HDD/SSD enclosures) from paying 3×5 s of dead
-            # smartctl timeouts before the plain probe runs (GH #293).
-            is_nvme_class = disk_name.startswith('nvme')
-            if is_nvme_class and (_is_disk_usb(disk_name) or _is_disk_removable(disk_name)):
-                for drv in _USB_NVME_DRIVERS:
-                    attempts.append(['smartctl', '-i', '-j', '-d', drv, dev_path])
-            attempts.append(['smartctl', '-i', '-j', dev_path])
-
-            import json as _json
-            for cmd in attempts:
-                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
-                if proc.returncode not in (0, 4):
-                    continue
-                try:
-                    data = _json.loads(proc.stdout)
-                except Exception:
-                    continue
-                serial = data.get('serial_number', '')
-                model = data.get('model_name', '') or data.get('model_family', '')
-                if serial or model:
-                    result['serial'] = serial
-                    result['model'] = model
-                    break
+            probe = probe_smartctl_json(
+                dev_path,
+                ('-i', '-j'),
+                timeout=5,
+                require_telemetry=False,
+            )
+            data = probe.get('data', {})
+            result['serial'] = data.get('serial_number', '')
+            result['model'] = data.get('model_name', '') or data.get('model_family', '')
         except Exception:
             pass
 
@@ -2649,53 +2600,24 @@ class HealthMonitor:
         
         try:
             dev_path = f'/dev/{disk_name}' if not disk_name.startswith('/') else disk_name
-            # `-n standby` skips the command (exit code 2, no disk I/O)
-            # when the drive is parked, preventing the health poller
-            # from spinning up HDDs that hdparm / hd-idle just put to
-            # sleep — issue #232. The "UNKNOWN" branch below correctly
-            # keeps the previous cached result alive on exit code 2.
-            #
-            # USB-attached disks may sit behind an NVMe bridge: try snt*
-            # drivers first so health reflects the actual NVMe controller.
-            # A bridge that fakes "PASSED" while the drive behind it is
-            # failing is exactly the false-negative we want to avoid.
-            # USB detection uses the sysfs path so USB-NVMe bridges (which
-            # report removable=0) are caught too.
-            attempts = []
-            # Same NVMe-class guard as `_get_disk_identity` — see the
-            # comment there. Prevents USB-SATA drives from wasting
-            # timeouts on drivers that will never respond (GH #293).
-            is_nvme_class = disk_name.startswith('nvme')
-            if is_nvme_class and (_is_disk_usb(disk_name) or _is_disk_removable(disk_name)):
-                for drv in _USB_NVME_DRIVERS:
-                    attempts.append(['smartctl', '-n', 'standby', '--health', '-j', '-d', drv, dev_path])
-            attempts.append(['smartctl', '-n', 'standby', '--health', '-j', dev_path])
+            probe = probe_smartctl_json(
+                dev_path,
+                ('-n', 'standby', '-a', '-j'),
+                timeout=5,
+                require_telemetry=True,
+            )
+            if probe.get('standby'):
+                return cached['result'] if cached else 'UNKNOWN'
 
-            import json as _json
-            smart_result = None
-            for cmd in attempts:
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
-                if result.returncode == 2:
-                    # Drive in standby — reuse the previous health state
-                    # if we have one, otherwise report UNKNOWN. Either way,
-                    # don't refresh the cache TTL so we retry on the next
-                    # cycle (a drive can come out of standby at any time).
-                    if cached:
-                        return cached['result']
-                    return 'UNKNOWN'
-                try:
-                    data = _json.loads(result.stdout)
-                except Exception:
-                    continue
-                passed = data.get('smart_status', {}).get('passed', None)
-                if passed is True:
-                    smart_result = 'PASSED'
-                    break
-                if passed is False:
-                    smart_result = 'FAILED'
-                    break
-                # No opinion yet — next attempt (fallthrough to plain).
-            if smart_result is None:
+            data = probe.get('data', {})
+            passed = data.get('smart_status', {}).get('passed')
+            if _is_disk_usb(disk_name) and not smart_json_has_telemetry(data):
+                smart_result = 'UNKNOWN'
+            elif passed is True:
+                smart_result = 'PASSED'
+            elif passed is False:
+                smart_result = 'FAILED'
+            else:
                 smart_result = 'UNKNOWN'
 
             # Cache the result with the device fingerprint for hot-swap invalidation
@@ -4358,14 +4280,8 @@ class HealthMonitor:
                                 try:
                                     obs_serial = None
                                     try:
-                                        sm = subprocess.run(
-                                            ['smartctl', '-i', f'/dev/{base_device}'],
-                                            capture_output=True, text=True, timeout=3)
-                                        if sm.returncode in (0, 4):
-                                            for sline in sm.stdout.split('\n'):
-                                                if 'Serial Number' in sline or 'Serial number' in sline:
-                                                    obs_serial = sline.split(':')[-1].strip()
-                                                    break
+                                        identity = self._get_disk_identity(base_device)
+                                        obs_serial = identity.get('serial') or None
                                     except Exception:
                                         pass
                                     health_persistence.record_disk_observation(

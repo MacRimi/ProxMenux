@@ -58,6 +58,25 @@ _smart_is_nvme() {
   [[ "$1" == *nvme* ]]
 }
 
+SMARTCTL_TYPE_ARGS=()
+
+_smart_resolve_type() {
+  local disk="$1" base real dtype output
+  SMARTCTL_TYPE_ARGS=()
+  _smart_is_nvme "$disk" && return
+  base=$(basename "$disk")
+  real=$(readlink -f "/sys/block/$base" 2>/dev/null)
+  [[ "$real" != */usb* ]] && return
+
+  for dtype in sat sat,12 sat,16; do
+    output=$(smartctl -i -j -d "$dtype" "$disk" 2>/dev/null)
+    if printf '%s' "$output" | grep -qE '"(model_name|model_family|serial_number)"'; then
+      SMARTCTL_TYPE_ARGS=(-d "$dtype")
+      return
+    fi
+  done
+}
+
 _smart_disk_label() {
   local disk="$1"
   local model size
@@ -159,6 +178,7 @@ SELECTED_DISK=$(dialog --backtitle "$BACKTITLE" \
 
 # ── Steps 3+: Action loop for the selected disk ───────────
 DISK_LABEL=$(_smart_disk_label "$SELECTED_DISK")
+_smart_resolve_type "$SELECTED_DISK"
 mkdir -p "$SMART_DIR"
 
 while true; do
@@ -221,8 +241,8 @@ while true; do
         fi
       else
         msg_info "$(translate 'Reading SMART data...')"
-        HEALTH=$(smartctl -H "$SELECTED_DISK" 2>/dev/null | grep -i "overall-health")
-        ATTRS=$(smartctl -A "$SELECTED_DISK" 2>/dev/null)
+        HEALTH=$(smartctl -H "${SMARTCTL_TYPE_ARGS[@]}" "$SELECTED_DISK" 2>/dev/null | grep -i "overall-health")
+        ATTRS=$(smartctl -A "${SMARTCTL_TYPE_ARGS[@]}" "$SELECTED_DISK" 2>/dev/null)
         stop_spinner
         if [[ -z "$HEALTH" ]]; then
           msg_error "$(translate 'Could not read SMART data from') $SELECTED_DISK"
@@ -246,7 +266,7 @@ while true; do
         nvme smart-log "$SELECTED_DISK" > "$TMPFILE" 2>/dev/null
         nvme id-ctrl  "$SELECTED_DISK" >> "$TMPFILE" 2>/dev/null
       else
-        smartctl -x "$SELECTED_DISK" > "$TMPFILE" 2>/dev/null
+        smartctl -x "${SMARTCTL_TYPE_ARGS[@]}" "$SELECTED_DISK" > "$TMPFILE" 2>/dev/null
       fi
       stop_spinner
       if [[ -s "$TMPFILE" ]]; then
@@ -274,7 +294,7 @@ while true; do
         fi
       else
         msg_info "$(translate 'Starting SMART short self-test...')"
-        OUTPUT=$(smartctl -t short "$SELECTED_DISK" 2>/dev/null)
+        OUTPUT=$(smartctl -t short "${SMARTCTL_TYPE_ARGS[@]}" "$SELECTED_DISK" 2>/dev/null)
         stop_spinner
         if echo "$OUTPUT" | grep -qi "Test will complete"; then
           msg_ok "$(translate 'Short self-test started on') $SELECTED_DISK"
@@ -294,6 +314,10 @@ while true; do
     _smart_cleanup_old_jsons "$SELECTED_DISK"
       DISK_SAFE=$(printf '%q' "$SELECTED_DISK")
       JSON_SAFE=$(printf '%q' "$JSON_PATH")
+      SMARTCTL_TYPE_SAFE=""
+      if [[ ${#SMARTCTL_TYPE_ARGS[@]} -gt 0 ]]; then
+        printf -v SMARTCTL_TYPE_SAFE '%q ' "${SMARTCTL_TYPE_ARGS[@]}"
+      fi
 
       if _smart_is_nvme "$SELECTED_DISK"; then
         msg_info "$(translate 'Starting NVMe long self-test...')"
@@ -330,7 +354,7 @@ while true; do
         fi
       else
         msg_info "$(translate 'Starting SMART long self-test...')"
-        OUTPUT=$(smartctl -t long "$SELECTED_DISK" 2>/dev/null)
+        OUTPUT=$(smartctl -t long "${SMARTCTL_TYPE_ARGS[@]}" "$SELECTED_DISK" 2>/dev/null)
         stop_spinner
         if echo "$OUTPUT" | grep -qi "Test will complete"; then
           msg_ok "$(translate 'Long self-test started on') $SELECTED_DISK"
@@ -342,15 +366,15 @@ while true; do
           DISK_LABEL_SAFE=$(printf '%q' "$DISK_LABEL")
           NOTIFY_SCRIPT="/usr/bin/notification_manager.py"
           nohup bash -c "
-            while smartctl -c ${DISK_SAFE} 2>/dev/null | grep -qiE 'Self-test routine in progress|[1-9][0-9]?% of test remaining'; do
+            while smartctl ${SMARTCTL_TYPE_SAFE} -c ${DISK_SAFE} 2>/dev/null | grep -qiE 'Self-test routine in progress|[1-9][0-9]?% of test remaining'; do
               sleep 60
             done
-            smartctl -a --json=c ${DISK_SAFE} > ${JSON_SAFE} 2>/dev/null
+            smartctl ${SMARTCTL_TYPE_SAFE} -a --json=c ${DISK_SAFE} > ${JSON_SAFE} 2>/dev/null
             
             # Send notification when test completes
             if [[ -f \"${NOTIFY_SCRIPT}\" ]]; then
               HOSTNAME=\$(hostname -s)
-              TEST_RESULT=\$(smartctl -l selftest ${DISK_SAFE} 2>/dev/null | grep -E '^# ?1')
+              TEST_RESULT=\$(smartctl ${SMARTCTL_TYPE_SAFE} -l selftest ${DISK_SAFE} 2>/dev/null | grep -E '^# ?1')
               if echo \"\$TEST_RESULT\" | grep -qi 'Completed without error'; then
                 python3 \"${NOTIFY_SCRIPT}\" --action send-raw --severity INFO \
                   --title \"\${HOSTNAME}: SMART Long Test Completed\" \
@@ -388,9 +412,9 @@ while true; do
       else
         msg_info "$(translate 'Reading SMART self-test log...')"
         # Active test: only "X% of test remaining" appears when a test is actually running
-        ACTIVE=$(smartctl -c "$SELECTED_DISK" 2>/dev/null | grep -iE "[1-9][0-9]?% of test remaining|Self-test routine in progress")
+        ACTIVE=$(smartctl -c "${SMARTCTL_TYPE_ARGS[@]}" "$SELECTED_DISK" 2>/dev/null | grep -iE "[1-9][0-9]?% of test remaining|Self-test routine in progress")
         # Log: grab only result rows (^# N ...) and the column header (^Num)
-        LOG_OUT=$(smartctl -l selftest "$SELECTED_DISK" 2>/dev/null)
+        LOG_OUT=$(smartctl -l selftest "${SMARTCTL_TYPE_ARGS[@]}" "$SELECTED_DISK" 2>/dev/null)
         LOG_HEADER=$(echo "$LOG_OUT" | grep -E "^Num")
         LOG_ENTRIES=$(echo "$LOG_OUT" | grep -E "^# ?[0-9]")
         stop_spinner
@@ -428,7 +452,7 @@ while true; do
     if _smart_is_nvme "$SELECTED_DISK"; then
       nvme smart-log -o json "$SELECTED_DISK" > "$JSON_PATH" 2>/dev/null
     else
-      smartctl -a --json=c "$SELECTED_DISK" > "$JSON_PATH" 2>/dev/null
+      smartctl -a --json=c "${SMARTCTL_TYPE_ARGS[@]}" "$SELECTED_DISK" > "$JSON_PATH" 2>/dev/null
     fi
     [[ -s "$JSON_PATH" ]] || rm -f "$JSON_PATH"
   fi

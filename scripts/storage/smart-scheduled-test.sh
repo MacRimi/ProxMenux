@@ -64,6 +64,25 @@ _is_nvme() {
     [[ "$1" == *nvme* ]]
 }
 
+SMARTCTL_TYPE_ARGS=()
+
+_resolve_smart_type() {
+    local disk="$1" base real dtype output
+    SMARTCTL_TYPE_ARGS=()
+    _is_nvme "$disk" && return
+    base=$(basename "$disk")
+    real=$(readlink -f "/sys/block/$base" 2>/dev/null)
+    [[ "$real" != */usb* ]] && return
+
+    for dtype in sat sat,12 sat,16; do
+        output=$(smartctl -i -j -d "$dtype" "$disk" 2>/dev/null)
+        if printf '%s' "$output" | grep -qE '"(model_name|model_family|serial_number)"'; then
+            SMARTCTL_TYPE_ARGS=(-d "$dtype")
+            return
+        fi
+    done
+}
+
 _get_json_path() {
     local disk="$1"
     local test_type="$2"
@@ -125,9 +144,11 @@ _run_test() {
         # SATA/SAS test
         local test_flag="-t short"
         [[ "$test_type" == "long" ]] && test_flag="-t long"
+        _resolve_smart_type "$disk"
         
-        smartctl $test_flag "$disk" 2>/dev/null
-        if [[ $? -ne 0 && $? -ne 4 ]]; then
+        smartctl $test_flag "${SMARTCTL_TYPE_ARGS[@]}" "$disk" 2>/dev/null
+        local test_rc=$?
+        if [[ $test_rc -ne 0 && $test_rc -ne 4 ]]; then
             log "ERROR: Failed to start SMART test on $disk"
             return 1
         fi
@@ -137,12 +158,12 @@ _run_test() {
         [[ "$test_type" == "long" ]] && sleep_interval=60
         
         sleep 5
-        while smartctl -c "$disk" 2>/dev/null | grep -qiE 'Self-test routine in progress|[1-9][0-9]?% of test remaining'; do
+        while smartctl -c "${SMARTCTL_TYPE_ARGS[@]}" "$disk" 2>/dev/null | grep -qiE 'Self-test routine in progress|[1-9][0-9]?% of test remaining'; do
             sleep $sleep_interval
         done
         
         # Save results
-        smartctl -a --json=c "$disk" > "$json_path" 2>/dev/null
+        smartctl -a --json=c "${SMARTCTL_TYPE_ARGS[@]}" "$disk" > "$json_path" 2>/dev/null
     fi
     
     log "Test completed on $disk, results saved to $json_path"
