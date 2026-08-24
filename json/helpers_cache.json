@@ -7062,40 +7062,6 @@
     "os": "alpine"
   },
   {
-    "name": "garmin-grafana",
-    "slug": "garmin-grafana",
-    "desc": "A self-hosted solution to fetch data from Garmin servers and store it in a local InfluxDB database for visualization with Grafana.",
-    "script": "ct/garmin-grafana.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/garmin-grafana.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/garmin-grafana.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00009"
-    ],
-    "category_names": [
-      "Monitoring & Analytics"
-    ],
-    "notes": [
-      "Grafana and InfluxDB credentials are stored in `/opt/garmin-grafana/.env`.",
-      "`garmin-grafana` only imports the past 7 days by default. To import historical data, use `/usr/local/bin/garmin-bulk-import` after installation."
-    ],
-    "warnings": [],
-    "port": 3000,
-    "website": "https://github.com/arpanghosh8453/garmin-grafana",
-    "documentation": "https://github.com/arpanghosh8453/garmin-grafana",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/garmin-grafana.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
-    "execute_in": [
-      "lxc"
-    ],
-    "config_path": "",
-    "os": "debian"
-  },
-  {
     "name": "gatus",
     "slug": "gatus",
     "desc": "Gatus is a developer-oriented health dashboard that gives you the ability to monitor your services using HTTP, ICMP, TCP, and even DNS queries as well as evaluate the result of said queries by using a list of conditions on values like the status code, the response time, the certificate expiration, the body and many others. The icing on top is that each of these health checks can be paired with alerting via Slack, Teams, PagerDuty, Discord, Twilio and many more.",
