@@ -2483,7 +2483,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -5644,7 +5644,7 @@
       "Gaming & Leisure"
     ],
     "notes": [
-      "When using a reverse proxy, edit `/opt/endurain/frontend/app/dist/env.js`."
+      "When using a reverse proxy, edit `/opt/endurain/frontend/dist/env.js`."
     ],
     "warnings": [],
     "port": 8080,
@@ -11838,7 +11838,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -18094,7 +18094,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
