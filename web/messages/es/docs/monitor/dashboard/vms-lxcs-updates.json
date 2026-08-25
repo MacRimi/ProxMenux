@@ -1,231 +1,194 @@
 {
   "meta": {
-    "title": "Updates — actualizar el sistema y las aplicaciones de un LXC | ProxMenux",
-    "description": "Qué mecanismos puede utilizar ProxMenux para actualizar el sistema operativo y las aplicaciones registradas en un contenedor LXC."
+    "title": "Actualizaciones LXC: SO, apps y Docker | ProxMenux",
+    "description": "Configura y ejecuta actualizaciones del sistema operativo, aplicaciones, Docker Engine e imágenes Docker desde un contenedor LXC."
   },
   "header": {
-    "title": "Updates — actualizar el sistema y las aplicaciones de un LXC",
-    "description": "Dónde ProxMenux decide cómo actualizar un contenedor: paquetes del sistema operativo, ayudante de Community Scripts o un comando personalizado."
+    "title": "Actualizaciones LXC: SO, apps y Docker",
+    "description": "Revisa cada objetivo de actualización, ejecútalo por separado o combina una selección exacta en una actualización en bloque."
   },
   "intro": {
-    "p1": "La pestaña <strong>Updates</strong> reúne los métodos que ProxMenux puede ejecutar para actualizar el sistema operativo y las aplicaciones registradas en un contenedor LXC.",
-    "p2": "La <link>pestaña App</link> indica qué aplicaciones existen y, opcionalmente, compara sus versiones. <strong>Updates</strong> se ocupa de la acción: determina qué mecanismo está disponible, muestra el botón correspondiente y ejecuta la actualización dentro del contenedor.",
-    "callout": "<strong>Idea principal:</strong> detectar una versión nueva y saber cómo instalarla son tareas diferentes. Una aplicación puede mostrar <strong>Update available</strong> en la pestaña App y no tener todavía un botón de actualización hasta que se defina un método válido."
+    "p1": "La pestaña <strong>Actualizaciones</strong> separa la detección de versiones de la acción que instala una actualización. El registro y el seguimiento opcional viven en la <link>pestaña App</link>; los métodos ejecutables se gestionan aquí.",
+    "p2": "Una aplicación guardada aparece en Actualizaciones aunque solo contenga un enlace web. El seguimiento de versiones es opcional y el actualizador se puede configurar de forma independiente.",
+    "callout": "No se deduce una acción únicamente por el nombre de una aplicación. ProxMenux solo ejecuta un método integrado después de verificarlo o un comando personalizado guardado expresamente."
+  },
+  "overview": {
+    "heading": "Contenido de la pestaña",
+    "lead": "Cada objetivo disponible tiene su propia sección y acción:",
+    "items": [
+      "<strong>Paquetes del SO</strong> para contenedores Debian, Ubuntu y Alpine.",
+      "Una sección por cada <strong>aplicación registrada</strong>, incluidos los registros que solo contienen enlaces.",
+      "Una sección <strong>Docker</strong> cuando Docker está registrado, con Docker Engine y las imágenes etiquetadas dentro del mismo bloque.",
+      "Una <strong>Actualización en bloque</strong> configurable, seguida de las opciones de copia, reinicio y programación."
+    ]
   },
   "mechanisms": {
-    "heading": "Métodos de actualización disponibles",
-    "intro": "En función de cómo se instaló la aplicación y de dónde vengan sus actualizaciones, ProxMenux elige entre tres mecanismos.",
-    "osHeading": "Paquetes del sistema operativo",
-    "osP1": "En contenedores Debian o Ubuntu, ProxMenux consulta y actualiza los paquetes mediante APT. En Alpine utiliza APK.",
-    "osP2": "Las aplicaciones registradas cuyo método de instalación sea <code>dpkg</code> o <code>apk</code> forman parte de esta actualización. No necesitan un segundo comando en la sección de la aplicación: se actualizan al aplicar <strong>Apply OS update</strong>.",
-    "osP3": "La sección muestra el número de paquetes pendientes, cuántos son de seguridad, la familia del sistema y la hora de la última comprobación.",
-    "helperHeading": "Ayudante Proxmox VE Helper-Scripts",
-    "helperP1": "Cuando el LXC se creó con un helper del proyecto <linkHelperHome>Proxmox VE Helper-Scripts</linkHelperHome>, ProxMenux reconoce su actualizador. La aplicación correspondiente debe estar registrada en la pestaña App para que el monitor pueda relacionar el helper con el servicio que se muestra al usuario.",
-    "helperP2": "<strong>La lógica de actualización la mantiene el proyecto Proxmox VE Helper-Scripts</strong>, no ProxMenux. Cada helper incluye su propia función <code>update_script</code>; ProxMenux la descarga y la ejecuta dentro del contenedor en modo silencioso (<code>PHS_SILENT=1</code>), sin prompts. No es necesario copiar el helper ni escribir un comando personalizado en ProxMenux.",
-    "helperP3": "La documentación completa del mecanismo de actualización vive en la web del proyecto — <linkHelperDocs>community-scripts.org / update-apps</linkHelperDocs>. Cada helper tiene además su propia entrada en la <linkHelperHome>web del proyecto</linkHelperHome> con la descripción de lo que hace el script, su configuración por defecto y la fuente de la lógica de actualización — utilice esa página como referencia de lo que el actualizador cambiará dentro del LXC.",
-    "helperP4": "No todos los helpers admiten actualización in situ. Si el catálogo marca una aplicación como no actualizable, la pestaña lo indicará y no presentará ese método como disponible.",
-    "customHeading": "Comando personalizado",
-    "customP1": "Una aplicación registrada puede guardar su propio comando de actualización. ProxMenux lo ejecuta dentro del LXC cuando el usuario pulsa <strong>Apply update</strong> o cuando una tarea programada incluye esa aplicación.",
-    "customP2": "Este método está pensado para aplicaciones cuyo instalador no proporciona un helper reconocido y que tampoco se actualizan como parte de APT o APK."
+    "heading": "Cómo se selecciona el método",
+    "lead": "La vía integrada de Proxmox VE Helper-Scripts sigue el mecanismo oficial <helper>update-apps</helper>. El resto de instalaciones usa el método de paquetes, Docker o el comando personalizado correspondiente.",
+    "colSource": "Origen",
+    "colAction": "Acción mostrada",
+    "colNotes": "Qué se ejecuta",
+    "rows": [
+      {
+        "source": "Paquetes APT o APK",
+        "action": "Aplicar actualizaciones de SO",
+        "notes": "Actualiza los paquetes del contenedor. Las apps registradas como paquetes dpkg o apk quedan cubiertas en la misma ejecución."
+      },
+      {
+        "source": "Proxmox VE Helper-Scripts",
+        "action": "Aplicar actualización",
+        "notes": "Usa el wrapper /usr/bin/update verificado. Un marcador antiguo sin wrapper válido se identifica, pero nunca se ejecuta automáticamente."
+      },
+      {
+        "source": "Comando personalizado",
+        "action": "Ejecutar actualizador",
+        "notes": "Ejecuta el comando guardado dentro del LXC y reemplaza cualquier actualizador integrado de esa aplicación."
+      },
+      {
+        "source": "Docker Engine",
+        "action": "Actualizar Docker Engine",
+        "notes": "Actualiza únicamente los paquetes Docker instalados y sus dependencias necesarias. No modifica otros paquetes ni los contenedores."
+      },
+      {
+        "source": "Imagen Docker",
+        "action": "Actualizar imagen",
+        "notes": "Descarga la imagen seleccionada y recrea su grupo de servicios Compose o su contenedor independiente protegido."
+      }
+    ],
+    "callout": "Un comando personalizado siempre <strong>reemplaza</strong> al actualizador integrado de Proxmox VE Helper-Scripts para esa aplicación. Los dos métodos no se ejecutan uno detrás de otro."
   },
-  "decision": {
-    "heading": "Cómo decide ProxMenux qué acción mostrar",
-    "table": {
-      "colSituation": "Situación",
-      "colAction": "Acción adecuada",
-      "rows": [
-        { "situation": "Hay paquetes APT o APK pendientes", "action": "Apply OS update" },
-        { "situation": "La aplicación usa un paquete dpkg o apk", "action": "Apply OS update — no necesita un comando propio" },
-        { "situation": "Hay un helper compatible y la aplicación está registrada", "action": "Apply update mediante Community Scripts" },
-        { "situation": "La aplicación registrada tiene un comando personalizado", "action": "Apply update mediante ese comando" },
-        { "situation": "Hay una versión nueva, pero no existe helper ni comando", "action": "Muestra No updater configured y ofrece añadir un comando" },
-        { "situation": "Hay actualizaciones del sistema y métodos de aplicaciones disponibles", "action": "Puede aparecer una acción combinada Apply OS + Apps updates" }
-      ]
-    },
-    "trailing": "Una aplicación registrada únicamente como enlace no aparece como actualizable, porque ProxMenux no dispone de información suficiente para asociarle un método."
+  "docker": {
+    "heading": "Docker Engine e imágenes Docker",
+    "lead": "Después de registrar Docker en la pestaña App, el motor y el inventario de imágenes aparecen dentro de la misma sección <strong>Docker</strong>.",
+    "items": [
+      "El seguimiento de Docker Engine es independiente del contador de paquetes del SO y dispone de su propio botón de actualización.",
+      "Las imágenes locales con etiqueta se comparan con el registro mediante un digest inmutable. <strong>Comprobar ahora</strong> actualiza el inventario sin descargar imágenes ni reiniciar contenedores.",
+      "Los servicios Compose se actualizan desde el proyecto declarado. Las imágenes de un mismo grupo se procesan juntas para no recrear repetidamente el proyecto.",
+      "Un contenedor independiente se recrea con su configuración actual. El flujo protegido conserva datos de reversión y restaura el contenedor anterior si falla la recreación.",
+      "Cada imagen se puede seleccionar por separado en actualizaciones manuales, en bloque y programadas, salvo las dependencias Compose declaradas que deben acompañar a su servicio principal."
+    ],
+    "callout": "Los contenedores que se ejecutan dentro de Docker no aparecen como aplicaciones LXC independientes. Sus puertos web publicados se pueden guardar como enlaces de Docker; las actualizaciones de imágenes permanecen en la sección Docker."
   },
-  "figures": {
-    "f01": {
-      "alt": "Sección OS packages mostrando el conteo de paquetes pendientes, el conteo de security y el botón Apply OS update",
-      "caption": "Paquetes del sistema pendientes: total, actualizaciones de seguridad y botón Apply OS update"
-    },
-    "f02": {
-      "alt": "La misma sección OS packages tras aplicar — sin paquetes pendientes, badge OS up to date",
-      "caption": "Tras aplicar: 'No OS updates pending' y el badge OS up to date"
-    },
-    "f03": {
-      "alt": "Aplicación registrada mostrando 'No update method available' y un botón Add custom update command",
-      "caption": "'No update method available' — ProxMenux hace seguimiento pero no tiene aún ningún método para actualizarla"
-    },
-    "f04": {
-      "alt": "Editor del comando personalizado con el placeholder de ejemplo visible dentro del textarea",
-      "caption": "El editor del comando personalizado con su placeholder de ejemplo y los botones Cancel y Save"
-    },
-    "f05": {
-      "alt": "Panel de terminal titulado 'Apply updates — CT 103' mostrando la salida de apt en vivo mientras se desempaquetan paquetes",
-      "caption": "Panel de terminal transmitiendo la salida de la actualización en vivo mientras apt desempaqueta paquetes dentro del CT"
-    },
-    "f06": {
-      "alt": "Tarjeta Options con Snapshot before applying activo, Backup storage a pbs y Restart after applying activo",
-      "caption": "Tarjeta Options con snapshot vzdump, almacenamiento de backup y reinicio-tras-aplicar activados a la vez"
-    },
-    "f07": {
-      "alt": "Sección Scheduled updates habilitada — Frequency en Daily at 3:00, expresión cron 0 3 * * * y What to update en OS + application",
-      "caption": "Scheduled updates activadas — preset de frecuencia, expresión cron correspondiente y ámbito seleccionado"
-    }
+  "actions": {
+    "heading": "Acciones individuales y colores de estado",
+    "lead": "Cada sección conserva su propia acción aunque exista una actualización en bloque configurada.",
+    "items": [
+      "El botón <strong>Editar</strong> está siempre disponible. Los métodos integrados muestran su comando actual para poder revisarlo, reemplazarlo o borrarlo.",
+      "Si el seguimiento de versiones está desactivado pero existe un actualizador, aparece la acción neutra <strong>Ejecutar actualizador</strong>. ProxMenux no afirma que exista una actualización pendiente.",
+      "Si no existe ningún método, <strong>Configurar</strong> abre el editor del comando personalizado.",
+      "La acción <strong>Actualizar imagen</strong> solo afecta a la unidad Docker seleccionada; no actualiza Docker Engine ni imágenes no relacionadas."
+    ],
+    "statusColState": "Estado conocido",
+    "statusColAppearance": "Aspecto",
+    "statusColMeaning": "Significado",
+    "statusRows": [
+      {
+        "state": "Actualización verificada",
+        "appearance": "Texto morado, icono de flecha ascendente y acción morada",
+        "meaning": "La versión instalada y la disponible, o los digests de imagen, son diferentes."
+      },
+      {
+        "state": "Actualizado y verificado",
+        "appearance": "Comprobación verde y acción Actualizado en verde",
+        "meaning": "La última comprobación terminada confirma que el objetivo está actualizado."
+      },
+      {
+        "state": "Versión desconocida",
+        "appearance": "Texto y acción neutros",
+        "meaning": "El actualizador puede ejecutarse, pero no existen datos de versión para marcarlo como pendiente o actualizado."
+      }
+    ]
   },
   "custom": {
-    "heading": "Añadir un comando de actualización",
-    "p1": "Cuando una aplicación tiene seguimiento de versiones pero no dispone de un método de actualización, la pestaña muestra <strong>No updater configured</strong>. Pulse <strong>Add custom update command</strong> para abrir el editor.",
-    "p2": "El comando debe representar el procedimiento real y completo que actualiza esa aplicación. No debe ser simplemente el comando que muestra su versión."
-  },
-  "figureOut": {
-    "heading": "Cómo averiguar el comando correcto",
-    "intro": "No existe un comando universal para actualizar todas las aplicaciones. Antes de guardar uno, identifique cómo se instaló el software y cuál es el procedimiento recomendado por su proyecto.",
-    "step1Heading": "1. Comprobar si ya lo gestiona el sistema",
-    "step1P1": "Si la aplicación se instaló desde los repositorios de Debian, Ubuntu o Alpine, normalmente se actualizará con los paquetes del sistema. En ese caso no añada un comando personalizado: utilice <strong>Apply OS update</strong>.",
-    "step1P2": "Puede comprobar el origen del paquete desde la consola del LXC con las herramientas de su distribución. Por ejemplo:",
-    "step1Cmd1": "dpkg -l | grep -i nombre",
-    "step1P3": "o:",
-    "step1Cmd2": "apk info | grep -i nombre",
-    "step1P4": "Sustituya <code>nombre</code> por el paquete que está investigando. Que el texto aparezca en la búsqueda no confirma por sí solo que sea el paquete principal; verifique su nombre en la documentación de la aplicación.",
-    "step2Heading": "2. Consultar la documentación oficial",
-    "step2P1": "Busque en la documentación o el repositorio oficial apartados como <strong>Upgrade</strong>, <strong>Update</strong>, <strong>Maintenance</strong> o <strong>Manual installation</strong>. El procedimiento debe corresponder con el método que se utilizó para instalar la aplicación en ese LXC.",
-    "step2P2": "No use instrucciones destinadas a otra distribución, otro tipo de instalación o una versión diferente del programa.",
-    "step3Heading": "3. Revisar la instalación existente",
-    "step3Lead": "Si no recuerda cómo se instaló la aplicación, revise:",
-    "step3Items": [
-      "El historial o las notas del instalador original.",
-      "La ruta donde se encuentran sus archivos.",
-      "La definición del servicio que la inicia.",
-      "Los scripts de mantenimiento incluidos por la propia aplicación.",
-      "La documentación guardada dentro de su directorio de instalación."
-    ],
-    "step3P1": "Para un servicio systemd, este comando puede ayudar a localizar el ejecutable y su directorio de trabajo:",
-    "step3Cmd": "systemctl show nombre-del-servicio -p ExecStart -p WorkingDirectory",
-    "step3P2": "Esto ayuda a identificar la instalación, pero no convierte automáticamente la línea <code>ExecStart</code> en un comando de actualización.",
-    "step4Heading": "4. Probar el procedimiento en la consola del LXC",
-    "step4Lead": "Abra la consola del contenedor y ejecute el procedimiento manualmente antes de guardarlo en ProxMenux. Compruebe que:",
-    "step4Items": [
-      "Finaliza sin preguntas ni menús interactivos.",
-      "Devuelve un código de salida correcto.",
-      "Reinicia o recarga únicamente los servicios necesarios.",
-      "La aplicación vuelve a estar disponible.",
-      "La versión instalada cambia como se esperaba."
-    ],
-    "step4Note": "Cuando sea posible, haga antes una copia de seguridad del contenedor.",
-    "step5Heading": "5. Guardar solo el comando interno",
-    "step5P1": "Escriba únicamente lo que se ejecutaría dentro del LXC. No incluya:",
-    "step5Cmd1": "pct exec <vmid> --",
-    "step5P2": "ProxMenux ya se encarga de entrar en el contenedor. El comando se ejecuta como <code>root</code> mediante <code>sh -c</code>, por lo que admite operaciones encadenadas y cambios de directorio.",
-    "step5P3": "Si el actualizador debe ejecutarse desde una ruta concreta, inclúyala de forma explícita:",
-    "step5Cmd2": "cd /opt/mi-aplicacion && ./update.sh",
-    "step5P4": "Si el proyecto proporciona un actualizador en otra ruta, use siempre la ruta y los argumentos indicados por su documentación oficial."
-  },
-  "requirements": {
-    "heading": "Requisitos de un comando fiable",
-    "lead": "Antes de utilizarlo desde el monitor, compruebe que el comando:",
+    "heading": "Comandos de actualización personalizados",
+    "lead": "El comando personalizado cubre instalaciones sin un actualizador integrado verificado y permite reemplazar el procedimiento normal cuando sea necesario.",
     "items": [
-      "Puede ejecutarse sin intervención del usuario.",
-      "Utiliza rutas absolutas o cambia primero al directorio correcto.",
-      "Detiene, migra y reinicia los servicios según las instrucciones oficiales.",
-      "Devuelve un error cuando la actualización falla.",
-      "No contiene contraseñas, tokens ni otros secretos visibles.",
-      "No descarga ni ejecuta scripts procedentes de fuentes que no sean de confianza."
+      "Abre <strong>Configurar</strong> cuando el campo está vacío o <strong>Editar</strong> cuando ya existe un método.",
+      "En una app integrada o en Docker Engine, el editor muestra el comando utilizado actualmente. Al guardar otro contenido pasa a ser la sustitución explícita de ese registro.",
+      "El procedimiento completo debe probarse antes en el terminal del LXC. Debe ser no interactivo, usar el directorio correcto y devolver un código distinto de cero cuando falle.",
+      "No incluyas <code>pct exec</code>; ProxMenux ya entra en el contenedor y ejecuta el comando como root."
     ],
-    "trailing": "El contenido se guarda en la configuración asociada a ese LXC y se ejecuta con privilegios de administrador. Trátelo con el mismo cuidado que cualquier comando ejecutado como <code>root</code>."
+    "exampleLead": "Ejemplo de procedimiento completo dentro del contenedor:",
+    "example": "cd /opt/mi-app && ./update.sh",
+    "callout": "Un comando de versión como <code>miapp --version</code> solo lee una versión; no instala nada. Los comandos se ejecutan con privilegios administrativos y deben revisarse con el mismo cuidado que un comando de shell como root."
   },
-  "difference": {
-    "heading": "Diferencia entre el comando de detección y el de actualización",
-    "lead": "Los dos campos tienen objetivos distintos:",
-    "table": {
-      "colField": "Campo",
-      "colLocation": "Ubicación",
-      "colRole": "Función",
-      "rows": [
-        {
-          "field": "Command para la versión instalada",
-          "location": "App → seguimiento avanzado",
-          "role": "Consulta y devuelve la versión actual; se ejecuta como una lista de argumentos, sin shell."
-        },
-        {
-          "field": "Custom update command",
-          "location": "Updates",
-          "role": "Ejecuta el procedimiento de actualización; se interpreta mediante sh -c."
-        }
-      ]
-    },
-    "trailing": "No copie automáticamente el comando de un campo al otro. Un comando como <code>myapp --version</code> puede detectar correctamente la versión, pero no instala una nueva versión."
-  },
-  "apply": {
-    "heading": "Aplicar una actualización",
-    "lead": "Antes de pulsar un botón de aplicación:",
-    "steps": [
-      "Revise qué sección se va a actualizar: sistema, una aplicación o ambas.",
-      "Compruebe las opciones de copia de seguridad y reinicio.",
-      "Pulse el botón correspondiente.",
-      "Siga la salida del proceso en la ventana de terminal.",
-      "Compruebe el resultado final y que el servicio vuelva a responder."
+  "bulk": {
+    "heading": "Actualización en bloque",
+    "lead": "La actualización en bloque crea una acción reutilizable para un conjunto exacto de objetivos del LXC. Aparece después de las secciones de apps y Docker y antes de <strong>Opciones</strong>.",
+    "items": [
+      "Los paquetes del SO son obligatorios. Debe seleccionarse al menos una app, Docker Engine o unidad de imagen Docker adicional.",
+      "Las aplicaciones y unidades Docker se seleccionan individualmente. Un servicio principal de Compose muestra las dependencias que se actualizarán con él.",
+      "Los objetivos eliminados o no disponibles se marcan como obsoletos y deben retirarse antes de guardar la configuración.",
+      "El botón <strong>Aplicar actualizaciones</strong> es morado si algún objetivo seleccionado tiene una actualización verificada, verde si todos están verificados como actualizados y neutro cuando el resultado es desconocido.",
+      "Eliminar la configuración en bloque no borra los métodos individuales ni la programación."
     ],
-    "trailing1": "Si el LXC está detenido, ProxMenux lo inicia para ejecutar el proceso. Si la actualización finaliza correctamente y está activada la opción de reinicio, el contenedor se reinicia al terminar.",
-    "systemLead": "En una actualización del sistema:",
-    "systemItems": [
-      "Debian y Ubuntu ejecutan la actualización mediante APT.",
-      "Alpine ejecuta la actualización mediante APK."
-    ],
-    "appLead": "En una actualización de aplicación:",
-    "appItems": [
-      "Se ejecuta el helper compatible, si existe.",
-      "Se ejecuta el comando personalizado guardado para la aplicación, si está configurado.",
-      "Si se han seleccionado varias aplicaciones, se ejecutan sus métodos en secuencia."
-    ],
-    "trailing2": "La ventana de terminal muestra el progreso y termina con un resultado correcto o con el código de error devuelto por el proceso."
+    "callout": "La actualización en bloque no reemplaza los botones individuales. Es un acceso opcional para una selección que debe ejecutarse junta."
   },
-  "backup": {
-    "heading": "Copia de seguridad antes de actualizar",
-    "p1": "Active <strong>Snapshot the container before applying</strong> para crear una copia de seguridad con <code>vzdump</code> antes de modificar el LXC. También puede elegir el almacenamiento de destino.",
-    "p2": "Si se solicita la copia de seguridad y esta falla, ProxMenux no continúa con la actualización. De este modo se evita iniciar los cambios sin disponer del punto de recuperación solicitado.",
-    "p3": "Esta opción se aplica tanto a las ejecuciones manuales como a las programadas."
-  },
-  "restart": {
-    "heading": "Reinicio después de actualizar",
-    "p1": "<strong>Restart the container after applying</strong> es una preferencia, no un aviso de que el reinicio sea obligatorio. Active la opción cuando el procedimiento de la aplicación o los paquetes instalados lo requieran.",
-    "p2": "El reinicio solo se realiza después de una ejecución correcta. Si la actualización falla, el contenedor permanece iniciado para facilitar la revisión del error.",
-    "p3": "Las opciones de copia de seguridad y reinicio se guardan para ese LXC y se utilizan también en sus tareas programadas."
+  "options": {
+    "heading": "Opciones de copia y reinicio",
+    "lead": "Las mismas opciones se aplican a ejecuciones manuales, en bloque y programadas:",
+    "items": [
+      "<strong>Instantánea antes de aplicar</strong> crea una copia vzdump en el almacenamiento seleccionado. Si la copia solicitada falla, la actualización no comienza.",
+      "<strong>Reiniciar después de aplicar</strong> reinicia el LXC únicamente tras una ejecución correcta.",
+      "Las selecciones se guardan por LXC y son independientes de la lista de objetivos."
+    ]
   },
   "scheduled": {
     "heading": "Actualizaciones programadas",
-    "p1": "La sección <strong>Scheduled updates</strong> permite ejecutar automáticamente el mismo flujo utilizado por los botones manuales.",
-    "createLead": "Para crear una programación:",
-    "createSteps": [
-      "Abra <strong>Options</strong> y pulse <strong>Edit</strong>.",
-      "Active <strong>Scheduled updates</strong>.",
-      "Elija una frecuencia predefinida o introduzca una expresión cron.",
-      "Seleccione qué se actualizará: solo paquetes del sistema, solo aplicaciones o sistema y aplicaciones.",
-      "Revise las opciones de copia de seguridad y reinicio.",
-      "Guarde la configuración."
+    "lead": "La programación usa los mismos objetivos ejecutables y opciones de seguridad que las acciones manuales.",
+    "items": [
+      "Selecciona una frecuencia o expresión cron y después objetivos exactos: paquetes del SO, apps individuales, Docker Engine, unidades Docker independientes o grupos de servicios Compose.",
+      "La espera tras una versión solo se aplica a las apps seleccionadas con seguimiento. Las apps sin seguimiento ejecutan su actualizador cuando vence la programación.",
+      "El estado de la última ejecución diferencia entre éxito, finalización parcial, error, retención de seguridad y ausencia de elementos pendientes.",
+      "Las programaciones externas detectadas de Proxmox VE Helper-Scripts se muestran aparte para hacer visible cualquier automatización coincidente."
     ],
-    "p2": "La tarjeta muestra si la programación está activa, qué elementos incluye y el resultado de la última ejecución. También puede conservar una programación desactivada para volver a habilitarla más adelante o eliminarla por completo.",
-    "p3": "Si ProxMenux detecta una programación externa creada por Community Scripts en el host, la muestra para que el usuario sepa que ya existe otra automatización.",
-    "callout": "Antes de programar actualizaciones de aplicaciones, pruebe manualmente cada helper o comando. Una tarea programada no puede responder a confirmaciones ni corregir un procedimiento incompleto."
+    "callout": "Cada método seleccionado debe probarse manualmente antes de programarlo. Una tarea programada no puede responder a preguntas interactivas."
   },
-  "verify": {
-    "heading": "Comprobar el resultado",
-    "p1": "Después de aplicar paquetes del sistema, ProxMenux fuerza una nueva comprobación para actualizar el contador de paquetes pendientes sin esperar al siguiente ciclo periódico.",
-    "p2": "Para una aplicación, vuelva a la <link>pestaña App</link> y pulse <strong>Check</strong> si el número de versión no se actualiza inmediatamente. Esta comprobación ejecuta de nuevo el método configurado para la versión instalada y consulta la última versión publicada.",
-    "p3": "Compruebe además que los enlaces web de la aplicación responden correctamente. Que el comando termine sin errores no sustituye una verificación funcional del servicio."
+  "completion": {
+    "heading": "Qué ocurre al terminar",
+    "lead": "La actualización no se considera terminada únicamente porque el comando del terminal haya finalizado.",
+    "items": [
+      "La misma ejecución guarda el resultado final y actualiza, según corresponda, los paquetes del SO, las versiones de las apps y el inventario Docker.",
+      "La caché del LXC se reemplaza con el estado verificado tras la actualización para que insignias y botones no conserven el resultado anterior.",
+      "Si arranca un LXC parado o restaurado, el evento de ciclo de vida existente vuelve a actualizar ese LXC. El inventario Docker espera a que el daemon esté disponible en lugar de guardar como definitivo un resultado vacío del arranque.",
+      "Las notificaciones activadas se emiten desde la ejecución finalizada e incluyen fallos parciales y resultados agrupados de imágenes Docker."
+    ]
   },
-  "troubleshoot": {
-    "heading": "Problemas habituales",
-    "noButtonHeading": "Aparece Update available, pero no hay botón Apply update",
-    "noButtonBody": "La detección de versiones funciona, pero no se ha encontrado un método para instalar la actualización. Compruebe si la aplicación se actualiza mediante los paquetes del sistema, un helper compatible o un comando personalizado.",
-    "aptHeading": "La aplicación se actualiza mediante APT o APK",
-    "aptBody": "Use <strong>Apply OS update</strong>. No añada un segundo comando para la misma operación, porque la aplicación ya forma parte de la actualización del sistema.",
-    "noUpdaterHeading": "Se muestra No updater configured",
-    "noUpdaterBody": "ProxMenux conoce y supervisa la aplicación, pero no sabe cómo actualizarla. Consulte su documentación oficial, pruebe el procedimiento en la consola y, si corresponde, guárdelo mediante <strong>Add custom update command</strong>.",
-    "helperDetectedHeading": "El helper está detectado, pero no se puede utilizar",
-    "helperDetectedBody": "El helper puede estar marcado como no actualizable o no formar parte de los métodos reconocidos. Siga las instrucciones oficiales de la aplicación y no asuma que todos los LXC creados mediante Community Scripts admiten una actualización automática.",
-    "customFailsHeading": "El comando personalizado falla",
-    "customFailsBody": "Vuelva a ejecutarlo en la consola del LXC. Revise la ruta de trabajo, los permisos, las dependencias, los argumentos no interactivos y el código de salida. No sustituya el comando por una variante distinta hasta comprobar el procedimiento recomendado por el proyecto."
+  "troubleshooting": {
+    "heading": "Situaciones habituales",
+    "colProblem": "Situación",
+    "colResolution": "Resolución",
+    "rows": [
+      {
+        "problem": "No se ha identificado un método de actualización",
+        "resolution": "Abre Configurar, añade el procedimiento oficial no interactivo y pruébalo manualmente antes de programarlo."
+      },
+      {
+        "problem": "Aparece la identidad de Proxmox VE Helper-Scripts, pero no existe una acción",
+        "resolution": "El LXC conserva datos de identificación antiguos, pero no tiene un wrapper /usr/bin/update verificado. Añade un método solo después de confirmar el procedimiento correcto."
+      },
+      {
+        "problem": "Las imágenes Docker aparecen vacías temporalmente después de arrancar o restaurar",
+        "resolution": "Espera a que Docker esté disponible o pulsa Comprobar ahora. El inventario reintenta el arranque y no considera definitivo un resultado vacío transitorio."
+      },
+      {
+        "problem": "Un objetivo guardado en bloque ya no está disponible",
+        "resolution": "Edita la configuración, elimina el objetivo obsoleto y selecciona su sustituto actual si existe."
+      },
+      {
+        "problem": "Falla un comando personalizado",
+        "resolution": "Ejecútalo en el terminal del LXC y revisa la ruta, las dependencias, los parámetros no interactivos y el código de salida."
+      }
+    ]
+  },
+  "figures": {
+    "osPending": {
+      "alt": "Sección de paquetes del sistema operativo con contadores de actualizaciones y de seguridad",
+      "caption": "La sección del sistema operativo mantiene los paquetes separados de las acciones de aplicaciones y Docker."
+    },
+    "options": {
+      "alt": "Opciones de actualización LXC con copia previa y reinicio posterior",
+      "caption": "Las preferencias de copia y reinicio se aplican a ejecuciones manuales, en bloque y programadas."
+    }
   }
 }

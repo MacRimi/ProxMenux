@@ -30,10 +30,73 @@ from urllib.request import Request, urlopen
 
 DEFAULT_LANGUAGES = ("es", "fr", "de", "it", "pt", "sk", "sv")
 DEFAULT_CONTEXT = "Context: Technical message for Proxmox and IT. Translate:"
+# googletrans and the public Google endpoint used by this workflow do not
+# support Cloud Translation glossaries. Protect product names, package names
+# and command identifiers with opaque tokens before sending text to any
+# provider, then restore the exact source spelling afterwards. Keep longer
+# terms first so ``gasket`` cannot consume part of ``gasket-dkms``.
+PROTECTED_TECHNICAL_TERMS = (
+    "google/gasket-driver",
+    "feranick/gasket-driver",
+    "libedgetpu1-std",
+    "Proxmox VE Helper-Scripts",
+    "Docker Compose",
+    "gasket-driver",
+    "gasket-dkms",
+    "libedgetpu1",
+    "libedgetpu",
+    "Google Coral",
+    "Edge TPU",
+    "ProxMenux",
+    "Proxmox",
+    "AppImage",
+    "smartctl",
+    "systemctl",
+    "pveproxy",
+    "apt-get",
+    "Frigate",
+    "Docker",
+    "Coral",
+    "gasket",
+    "apex",
+    "lspci",
+    "dpkg",
+    "DKMS",
+    "QEMU",
+    "LXC",
+    "ZFS",
+    "SSH",
+    "fork",
+)
+TECHNICAL_TERM_RE = re.compile(
+    "|".join(
+        rf"(?<![A-Za-z0-9_]){re.escape(term)}(?![A-Za-z0-9_])"
+        for term in sorted(PROTECTED_TECHNICAL_TERMS, key=len, reverse=True)
+    ),
+    re.IGNORECASE,
+)
 TRANSLATE_CALL_RE = re.compile(
     r"""translate\s+(?P<quote>["'])(?P<text>(?:\\.|(?! (?P=quote) ).)*?)(?P=quote)""",
     re.VERBOSE | re.DOTALL,
 )
+
+
+def protect_technical_terms(text: str) -> tuple[str, list[str]]:
+    """Replace glossary terms with stable tokens before translation."""
+    protected: list[str] = []
+
+    def _swap(match: re.Match[str]) -> str:
+        protected.append(match.group(0))
+        return f"__PMX_TERM_{len(protected) - 1}__"
+
+    return TECHNICAL_TERM_RE.sub(_swap, text), protected
+
+
+def restore_technical_terms(text: str, protected: list[str]) -> str:
+    """Restore glossary terms exactly as they appeared in the source."""
+    for index, original in enumerate(protected):
+        text = text.replace(f"__PMX_TERM_{index}__", original)
+    return text
 
 
 def iter_script_files(
@@ -209,15 +272,19 @@ def translate_text(
     timeout: int,
     appimage_path: Path,
 ) -> str:
+    protected_text, protected_terms = protect_technical_terms(text)
     if provider == "googletrans":
-        translated = translate_googletrans(text, dest_lang, context)
+        translated = translate_googletrans(protected_text, dest_lang, context)
     elif provider == "google-web":
-        translated = translate_google_web(text, dest_lang, context, timeout)
+        translated = translate_google_web(protected_text, dest_lang, context, timeout)
     elif provider == "appimage":
-        translated = translate_appimage(text, dest_lang, context, timeout, appimage_path)
+        translated = translate_appimage(
+            protected_text, dest_lang, context, timeout, appimage_path
+        )
     else:
         raise ValueError(f"Unknown provider: {provider}")
-    return clean_translation(translated) or text
+    translated = restore_technical_terms(clean_translation(translated), protected_terms)
+    return translated or text
 
 
 def load_language_cache(path: Path) -> dict[str, str]:

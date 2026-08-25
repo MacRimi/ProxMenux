@@ -441,8 +441,8 @@ EOF
 
 # ==========================================================
 optimize_memory_settings() {
-    local FUNC_VERSION="1.1"
-    # description: Tune swappiness, dirty page ratios, overcommit and compaction proactiveness for VM hosts.
+    local FUNC_VERSION="1.2"
+    # description: Tune swappiness, dirty page ratios and compaction proactiveness for VM hosts without overriding the kernel's memory-overcommit policy.
     msg_info "$(translate "Optimizing memory settings...")"
     NECESSARY_REBOOT=1
     
@@ -451,7 +451,6 @@ optimize_memory_settings() {
 vm.swappiness = 10
 vm.dirty_ratio = 15
 vm.dirty_background_ratio = 5
-vm.overcommit_memory = 1
 vm.max_map_count = 262144
 EOF
     
@@ -626,13 +625,29 @@ EOF
 
 # ==========================================================
 customize_bashrc() {
-    local FUNC_VERSION="1.0"
-    # description: Inject the ProxMenux core bashrc block (aliases, prompt, history) into root's .bashrc, idempotent via begin/end markers.
+    local FUNC_VERSION="1.1"
+    # description: Install the managed ProxMenux Bash prompt and aliases while preserving or selecting the short/full working-directory style.
     msg_info "$(translate "Customizing bashrc for root user...")"
     local bashrc="/root/.bashrc"
     local bash_profile="/root/.bash_profile"
     local marker_begin="# BEGIN PMX_CORE_BASHRC"
     local marker_end="# END PMX_CORE_BASHRC"
+    local prompt_path_escape='\W'
+
+    # Automated installs remain non-interactive. Preserve a previous
+    # ProxMenux choice on re-run and use the compact \W style on first use.
+    if sed -n "/^${marker_begin}$/,/^${marker_end}$/p" "$bashrc" 2>/dev/null | grep -Fq '\w'; then
+        prompt_path_escape='\w'
+    fi
+    case "${PMX_BASHRC_PATH_STYLE:-}" in
+        short) prompt_path_escape='\W' ;;
+        "") ;;
+        full) prompt_path_escape='\w' ;;
+        *)
+            msg_error "PMX_BASHRC_PATH_STYLE must be 'short' or 'full'."
+            return 1
+            ;;
+    esac
     
  
     [ -f "${bashrc}.bak" ] || cp "$bashrc" "${bashrc}.bak" > /dev/null 2>&1
@@ -647,7 +662,7 @@ customize_bashrc() {
 ${marker_begin}
 # ProxMenux core customizations
 export HISTTIMEFORMAT="%d/%m/%y %T "
-export PS1="\[\e[31m\][\[\e[m\]\[\e[38;5;172m\]\u\[\e[m\]@\[\e[38;5;153m\]\h\[\e[m\] \[\e[38;5;214m\]\W\[\e[m\]\[\e[31m\]]\[\e[m\]\\$ "
+export PS1="\[\e[31m\][\[\e[m\]\[\e[38;5;172m\]\u\[\e[m\]@\[\e[38;5;153m\]\h\[\e[m\] \[\e[38;5;214m\]${prompt_path_escape}\[\e[m\]\[\e[31m\]]\[\e[m\]\\$ "
 alias l='ls -CF'
 alias la='ls -A'
 alias ll='ls -alF'
@@ -665,6 +680,8 @@ EOF
     fi
     
     msg_ok "$(translate "Bashrc customization completed")"
+    msg_info "$(translate "The new prompt will be used in new terminal sessions.")"
+    msg_info "$(translate "To apply it to the current shell now, run:") source /root/.bashrc"
     register_tool "bashrc_custom" true "$FUNC_VERSION"
 }
 

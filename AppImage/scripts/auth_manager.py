@@ -1054,6 +1054,12 @@ PROXMOX_KEY_PATH = "/etc/pve/local/pve-ssl.key"
 PROXMOX_CUSTOM_CERT_PATH = "/etc/pve/local/pveproxy-ssl.pem"
 PROXMOX_CUSTOM_KEY_PATH = "/etc/pve/local/pveproxy-ssl.key"
 
+_SSL_RUNTIME_LOCK = threading.RLock()
+_SSL_RUNTIME_CONTEXT = None
+_SSL_RUNTIME_FINGERPRINT = ""
+_SSL_RUNTIME_CERT_PATH = ""
+_SSL_RUNTIME_KEY_PATH = ""
+
 
 def load_ssl_config():
     """Load SSL configuration from file"""
@@ -1175,24 +1181,82 @@ def validate_certificate_files(cert_path, key_path):
     except Exception as e:
         return False, f"Error reading certificate files: {str(e)}"
     
-    # Verify cert and key match
+    # Parse the complete chain and verify that the private key matches it.
     try:
-        import subprocess
-        cert_mod = subprocess.run(
-            ["openssl", "x509", "-noout", "-modulus", "-in", cert_path],
-            capture_output=True, text=True, timeout=5
-        )
-        key_mod = subprocess.run(
-            ["openssl", "rsa", "-noout", "-modulus", "-in", key_path],
-            capture_output=True, text=True, timeout=5
-        )
-        if cert_mod.returncode == 0 and key_mod.returncode == 0:
-            if cert_mod.stdout.strip() != key_mod.stdout.strip():
-                return False, "Certificate and key do not match"
-    except Exception:
-        pass  # Non-critical, proceed anyway
+        import ssl
+        test_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        test_context.load_cert_chain(cert_path, key_path)
+    except Exception as e:
+        return False, f"Certificate or private key is invalid: {str(e)}"
     
     return True, "Certificate files are valid"
+
+
+def _certificate_pair_fingerprint(cert_path, key_path):
+    digest = hashlib.sha256()
+    for path in (cert_path, key_path):
+        with open(path, "rb") as source:
+            for chunk in iter(lambda: source.read(65536), b""):
+                digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _build_server_ssl_context(cert_path, key_path):
+    import ssl
+
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(cert_path, key_path)
+    return context
+
+
+def create_reloadable_ssl_context(cert_path, key_path):
+    """Create the server context and register it for manual hot reloads."""
+    global _SSL_RUNTIME_CONTEXT
+    global _SSL_RUNTIME_FINGERPRINT
+    global _SSL_RUNTIME_CERT_PATH
+    global _SSL_RUNTIME_KEY_PATH
+
+    context = _build_server_ssl_context(cert_path, key_path)
+    fingerprint = _certificate_pair_fingerprint(cert_path, key_path)
+
+    def _select_active_context(ssl_socket, _server_name, _initial_context):
+        with _SSL_RUNTIME_LOCK:
+            active_context = _SSL_RUNTIME_CONTEXT
+        if active_context is not None and ssl_socket.context is not active_context:
+            ssl_socket.context = active_context
+
+    context.sni_callback = _select_active_context
+    with _SSL_RUNTIME_LOCK:
+        _SSL_RUNTIME_CONTEXT = context
+        _SSL_RUNTIME_FINGERPRINT = fingerprint
+        _SSL_RUNTIME_CERT_PATH = cert_path
+        _SSL_RUNTIME_KEY_PATH = key_path
+    return context
+
+
+def reload_server_ssl_context(cert_path, key_path):
+    """Validate and activate a new certificate for subsequent TLS handshakes."""
+    global _SSL_RUNTIME_CONTEXT
+    global _SSL_RUNTIME_FINGERPRINT
+    global _SSL_RUNTIME_CERT_PATH
+    global _SSL_RUNTIME_KEY_PATH
+
+    before_fingerprint = _certificate_pair_fingerprint(cert_path, key_path)
+    replacement = _build_server_ssl_context(cert_path, key_path)
+    after_fingerprint = _certificate_pair_fingerprint(cert_path, key_path)
+    if before_fingerprint != after_fingerprint:
+        raise RuntimeError("Certificate files changed while they were being loaded")
+
+    with _SSL_RUNTIME_LOCK:
+        if _SSL_RUNTIME_CONTEXT is None:
+            raise RuntimeError("The HTTPS runtime is not initialized")
+        changed = after_fingerprint != _SSL_RUNTIME_FINGERPRINT
+        if changed:
+            _SSL_RUNTIME_CONTEXT = replacement
+            _SSL_RUNTIME_FINGERPRINT = after_fingerprint
+        _SSL_RUNTIME_CERT_PATH = cert_path
+        _SSL_RUNTIME_KEY_PATH = key_path
+    return changed
 
 
 def configure_ssl(cert_path, key_path, source="custom"):

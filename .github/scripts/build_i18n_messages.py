@@ -34,6 +34,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from build_translation_cache import (  # noqa: E402
     clean_translation,
+    protect_technical_terms,
+    restore_technical_terms,
     translate_appimage,
     translate_google_web,
     translate_googletrans,
@@ -282,6 +284,7 @@ def main() -> int:
         for index, key in enumerate(missing, start=1):
             en_value = en_flat[key]
             protected, placeholders = protect_placeholders(en_value)
+            protected, technical_terms = protect_technical_terms(protected)
 
             try:
                 translated = translate_one(
@@ -292,6 +295,7 @@ def main() -> int:
                     args.timeout,
                     args.appimage_path,
                 )
+                translated = restore_technical_terms(translated, technical_terms)
                 target_flat[key] = restore_placeholders(translated, placeholders)
                 print(
                     f"  [{lang} {index}/{len(missing)}] {key}: "

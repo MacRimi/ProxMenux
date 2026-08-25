@@ -148,6 +148,7 @@ interface ProxmoxStorage {
   used: number
   available: number
   percent: number
+  capacity_known?: boolean
   node: string // Added node property for detailed debug logging
 }
 
@@ -1346,6 +1347,7 @@ export function StorageOverview() {
                   // Check if storage is excluded from monitoring
                   const isExcluded = storage.excluded === true
                   const hasError = storage.status === "error" && !isExcluded
+                  const capacityKnown = storage.capacity_known ?? storage.total > 0
                   
                   return (
                   <div
@@ -1425,46 +1427,50 @@ export function StorageOverview() {
                             ? t("storage.notMonitored")
                             : storageStatusLabel(storage.status)}
                         </Badge>
-                        <span className="text-sm font-medium">{storage.percent}%</span>
+                        {capacityKnown && <span className="text-sm font-medium">{storage.percent}%</span>}
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Progress
-                        value={storage.percent}
-                        className={`h-2 ${
-                          storage.percent > 90
-                            ? "[&>div]:bg-red-500"
-                            : storage.percent > 75
-                              ? "[&>div]:bg-yellow-500"
-                              : "[&>div]:bg-blue-500"
-                        }`}
-                      />
-                      <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">{t("storage.total")}</p>
-                          <p className="font-medium">{formatStorage(storage.total)}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">{t("storage.used")}</p>
-                          <p
-                            className={`font-medium ${
-                              storage.percent > 90
-                                ? "text-red-400"
-                                : storage.percent > 75
-                                  ? "text-yellow-400"
-                                  : "text-blue-400"
-                            }`}
-                          >
-                            {formatStorage(storage.used)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">{t("storage.available")}</p>
-                          <p className="font-medium text-green-400">{formatStorage(storage.available)}</p>
+                    {capacityKnown ? (
+                      <div className="space-y-2">
+                        <Progress
+                          value={storage.percent}
+                          className={`h-2 ${
+                            storage.percent > 90
+                              ? "[&>div]:bg-red-500"
+                              : storage.percent > 75
+                                ? "[&>div]:bg-yellow-500"
+                                : "[&>div]:bg-blue-500"
+                          }`}
+                        />
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">{t("storage.total")}</p>
+                            <p className="font-medium">{formatStorage(storage.total)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">{t("storage.used")}</p>
+                            <p
+                              className={`font-medium ${
+                                storage.percent > 90
+                                  ? "text-red-400"
+                                  : storage.percent > 75
+                                    ? "text-yellow-400"
+                                    : "text-blue-400"
+                              }`}
+                            >
+                              {formatStorage(storage.used)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">{t("storage.available")}</p>
+                            <p className="font-medium text-green-400">{formatStorage(storage.available)}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{t("storage.capacityNotReported")}</p>
+                    )}
                   </div>
                   )
                 })}

@@ -1,231 +1,194 @@
 {
   "meta": {
-    "title": "Aktualizácie — aktualizácia systému a aplikácií v LXC | ProxMenux",
-    "description": "Mechanizmy, ktoré vie ProxMenux použiť na aktualizáciu operačného systému a aplikácií registrovaných v LXC kontajneri."
+    "title": "Aktualizácie LXC: OS, aplikácie a Docker | ProxMenux",
+    "description": "Nastavenie a spúšťanie aktualizácií operačného systému, aplikácií, Docker Engine a Docker obrazov v LXC kontajneri."
   },
   "header": {
-    "title": "Aktualizácie — aktualizácia systému a aplikácií v LXC",
-    "description": "Miesto, kde ProxMenux rozhoduje, ako aktualizovať kontajner: systémové balíky, pomocník Community Scripts alebo vlastný príkaz."
+    "title": "Aktualizácie LXC: OS, aplikácie a Docker",
+    "description": "Skontrolujte každý cieľ samostatne alebo spojte presný výber do riadenej hromadnej aktualizácie."
   },
   "intro": {
-    "p1": "Záložka <strong>Aktualizácie</strong> zhromažďuje mechanizmy, ktoré vie ProxMenux spustiť na aktualizáciu operačného systému a aplikácií registrovaných vo vnútri LXC kontajnera.",
-    "p2": "<link>Záložka App</link> určuje, ktoré aplikácie existujú, a voliteľne porovnáva ich verzie. <strong>Aktualizácie</strong> riešia samotnú akciu: rozhodnú, ktorý mechanizmus je dostupný, zobrazia príslušné tlačidlo a spustia aktualizáciu v kontajneri.",
-    "callout": "<strong>Základná myšlienka:</strong> zistenie novej verzie a znalosť spôsobu jej inštalácie sú dve rozdielne veci. Aplikácia môže v záložke App ukazovať <strong>Dostupná aktualizácia</strong>, ale stále nemusí mať funkčné tlačidlo na aktualizáciu, kým nie je nastavená platná metóda."
+    "p1": "Karta <strong>Aktualizácie</strong> oddeľuje zisťovanie verzie od akcie, ktorá aktualizáciu nainštaluje. Registrácia a voliteľné sledovanie verzie sú na <link>karte Aplikácia</link>; spustiteľné metódy aktualizácie sa spravujú tu.",
+    "p2": "Uložená aplikácia sa zobrazí v Aktualizáciách aj vtedy, keď obsahuje iba webový odkaz. Sledovanie verzie je voliteľné a aktualizátor možno nastaviť nezávisle.",
+    "callout": "Akcia sa neurčuje iba podľa názvu aplikácie. ProxMenux spustí integrovanú metódu až po jej overení alebo výslovne uložený vlastný príkaz."
+  },
+  "overview": {
+    "heading": "Obsah karty",
+    "lead": "Každý dostupný cieľ má vlastnú sekciu a akciu:",
+    "items": [
+      "<strong>Balíky OS</strong> pre kontajnery Debian, Ubuntu a Alpine.",
+      "Samostatnú sekciu pre každú <strong>registrovanú aplikáciu</strong> vrátane záznamov iba s odkazom.",
+      "Sekciu <strong>Docker</strong> po registrácii Dockeru, v ktorej sú spolu Docker Engine a označené obrazy.",
+      "Nastaviteľnú <strong>Hromadnú aktualizáciu</strong>, za ktorou nasledujú možnosti zálohy, reštartu a plánovania."
+    ]
   },
   "mechanisms": {
-    "heading": "Dostupné mechanizmy aktualizácie",
-    "intro": "Podľa toho, ako bola aplikácia nainštalovaná a odkiaľ pochádzajú jej aktualizácie, vyberá ProxMenux z troch mechanizmov.",
-    "osHeading": "Balíky operačného systému",
-    "osP1": "V Debian alebo Ubuntu kontajneroch ProxMenux kontroluje a aktualizuje balíky cez APT. V Alpine používa APK.",
-    "osP2": "Registrované aplikácie, ktorých metóda inštalácie je <code>dpkg</code> alebo <code>apk</code>, sú súčasťou tejto kontroly. V sekcii aplikácie nepotrebujú druhý príkaz — aktualizujú sa spolu s akciou <strong>Použiť aktualizáciu OS</strong>.",
-    "osP3": "Sekcia zobrazuje počet čakajúcich balíkov, počet bezpečnostných aktualizácií, rodinu OS a čas poslednej kontroly.",
-    "helperHeading": "Aktualizátor Proxmox VE Helper-Scripts",
-    "helperP1": "Ak bol LXC vytvorený pomocou helpera z projektu <linkHelperHome>Proxmox VE Helper-Scripts</linkHelperHome>, ProxMenux rozpozná jeho aktualizátor. Príslušná aplikácia musí byť zaregistrovaná v záložke App, aby ju Monitor vedel prepojiť so službou zobrazenou používateľovi.",
-    "helperP2": "<strong>Samotnú logiku aktualizácie spravuje projekt Proxmox VE Helper-Scripts</strong>, nie ProxMenux. Každý helper má vlastnú funkciu <code>update_script</code>; ProxMenux ju stiahne a spustí vo vnútri kontajnera v tichom režime (<code>PHS_SILENT=1</code>), bez otázok. Na strane ProxMenuxu netreba helper kopírovať ani písať vlastný príkaz.",
-    "helperP3": "Úplná dokumentácia k mechanizmu aktualizácie je na stránke projektu — <linkHelperDocs>community-scripts.org / update-apps</linkHelperDocs>. Každý helper má zároveň vlastnú položku na <linkHelperHome>stránke projektu</linkHelperHome> s opisom toho, čo skript robí, aké má predvolené nastavenia a odkiaľ pochádza aktualizačná logika — túto stránku používajte ako referenciu pre to, čo aktualizátor zmení vo vnútri LXC.",
-    "helperP4": "Nie každý helper podporuje aktualizáciu na mieste. Ak katalóg označí aplikáciu ako neaktualizovateľnú, záložka tento stav zobrazí a túto metódu neponúkne ako dostupnú.",
-    "customHeading": "Vlastný príkaz",
-    "customP1": "Registrovaná aplikácia môže mať uložený vlastný aktualizačný príkaz. ProxMenux ho spustí vo vnútri LXC, keď používateľ klikne na <strong>Použiť aktualizáciu</strong> alebo keď ho zahrnie plánovaná úloha.",
-    "customP2": "Táto metóda je určená pre aplikácie, ktorých inštalátor neposkytuje rozpoznaného helpera a ktoré sa neaktualizujú cez APT alebo APK."
+    "heading": "Výber metódy aktualizácie",
+    "lead": "Integrovaná cesta Proxmox VE Helper-Scripts používa oficiálny mechanizmus <helper>update-apps</helper>. Ostatné inštalácie používajú príslušnú metódu balíkov, Dockeru alebo vlastného príkazu.",
+    "colSource": "Zdroj",
+    "colAction": "Zobrazená akcia",
+    "colNotes": "Čo sa spustí",
+    "rows": [
+      {
+        "source": "Balíky APT alebo APK",
+        "action": "Použiť aktualizácie OS",
+        "notes": "Aktualizuje balíky kontajnera. Registrované aplikácie nainštalované ako dpkg alebo apk sú zahrnuté v rovnakom behu."
+      },
+      {
+        "source": "Proxmox VE Helper-Scripts",
+        "action": "Použiť aktualizáciu",
+        "notes": "Používa overený wrapper /usr/bin/update. Starý marker bez platného wrappera sa identifikuje, ale automaticky sa nespustí."
+      },
+      {
+        "source": "Vlastný príkaz",
+        "action": "Spustiť aktualizátor",
+        "notes": "Spustí uložený príkaz v LXC a nahradí integrovaný aktualizátor danej aplikácie."
+      },
+      {
+        "source": "Docker Engine",
+        "action": "Aktualizovať Docker Engine",
+        "notes": "Aktualizuje iba nainštalované balíky Dockeru a potrebné závislosti. Ostatné balíky ani kontajnery nemení."
+      },
+      {
+        "source": "Docker obraz",
+        "action": "Aktualizovať obraz",
+        "notes": "Stiahne vybraný obraz a znova vytvorí jeho skupinu služieb Compose alebo chránený samostatný kontajner."
+      }
+    ],
+    "callout": "Vlastný príkaz vždy <strong>nahrádza</strong> integrovaný aktualizátor Proxmox VE Helper-Scripts pre danú aplikáciu. Obe metódy sa nespúšťajú za sebou."
   },
-  "decision": {
-    "heading": "Ako ProxMenux vyberá zobrazenú akciu",
-    "table": {
-      "colSituation": "Situácia",
-      "colAction": "Akcia",
-      "rows": [
-        { "situation": "Čakajú balíky APT alebo APK", "action": "Použiť aktualizáciu OS" },
-        { "situation": "Aplikácia používa dpkg alebo apk balík", "action": "Použiť aktualizáciu OS — samostatný príkaz aplikácie nie je potrebný" },
-        { "situation": "Existuje kompatibilný helper a aplikácia je registrovaná", "action": "Použiť aktualizáciu cez Community Scripts" },
-        { "situation": "Registrovaná aplikácia má vlastný príkaz", "action": "Použiť aktualizáciu týmto príkazom" },
-        { "situation": "Existuje nová verzia, ale nie je nastavený helper ani príkaz", "action": "Zobrazí Nie je nastavený aktualizátor a ponúkne pridanie príkazu" },
-        { "situation": "Dostupné sú systémové aj aplikačné aktualizácie", "action": "Môže sa zobraziť spoločná akcia Použiť aktualizácie OS + aplikácií" }
-      ]
-    },
-    "trailing": "Aplikácia registrovaná iba ako odkaz sa nikdy nezobrazí ako aktualizovateľná — ProxMenux nemá dosť informácií na prepojenie s metódou aktualizácie."
+  "docker": {
+    "heading": "Docker Engine a Docker obrazy",
+    "lead": "Po registrácii Dockeru na karte Aplikácia sa engine a inventár obrazov zobrazia v rovnakej sekcii <strong>Docker</strong>.",
+    "items": [
+      "Sledovanie verzie Docker Engine je oddelené od počítadla balíkov OS a má vlastné tlačidlo aktualizácie.",
+      "Označené lokálne obrazy sa porovnávajú s registrom pomocou nemenného digestu. <strong>Skontrolovať teraz</strong> obnoví inventár bez sťahovania obrazov alebo reštartu kontajnerov.",
+      "Služby Compose sa aktualizujú z deklarovaného projektu. Obrazy rovnakej skupiny sa spracujú spolu, aby sa projekt nevytváral opakovane.",
+      "Samostatný kontajner sa znova vytvorí z aktuálnej konfigurácie. Chránený postup uchová údaje na návrat a pri chybe obnoví pôvodný kontajner.",
+      "Každý obraz možno vybrať samostatne pre manuálne, hromadné aj plánované aktualizácie, okrem deklarovaných závislostí Compose, ktoré musia nasledovať hlavnú službu."
+    ],
+    "callout": "Kontajnery spustené v Dockeri sa nezobrazujú ako samostatné aplikácie LXC. Ich publikované webové porty možno uložiť ako odkazy Dockeru; aktualizácie obrazov zostávajú v sekcii Docker."
   },
-  "figures": {
-    "f01": {
-      "alt": "Karta systémových balíkov s počtom čakajúcich aktualizácií, počtom bezpečnostných aktualizácií a tlačidlom Použiť aktualizáciu OS",
-      "caption": "Čakajúce systémové balíky: celkový počet, počet bezpečnostných aktualizácií a tlačidlo Použiť aktualizáciu OS"
-    },
-    "f02": {
-      "alt": "Rovnaká karta systémových balíkov po aktualizácii — žiadne čakajúce balíky a štítok OS je aktuálny",
-      "caption": "Po použití: „Žiadne čakajúce aktualizácie OS“ a štítok OS je aktuálny"
-    },
-    "f03": {
-      "alt": "Karta registrovanej aplikácie so stavom Nie je dostupná metóda aktualizácie a tlačidlom Pridať vlastný aktualizačný príkaz",
-      "caption": "„Nie je dostupná metóda aktualizácie“ — ProxMenux aplikáciu sleduje, ale ešte nemá nastavené nič, čo by ju aktualizovalo"
-    },
-    "f04": {
-      "alt": "Editor vlastného aktualizačného príkazu s ukážkovým placeholderom v textovom poli",
-      "caption": "Editor vlastného príkazu s ukážkovým placeholderom, tlačidlami Zrušiť a Uložiť"
-    },
-    "f05": {
-      "alt": "Terminálový panel s názvom Použiť aktualizácie — CT 103, ktorý zobrazuje živý apt výstup pri rozbaľovaní balíkov",
-      "caption": "Terminálový panel zobrazuje živý výstup aktualizácie, kým apt rozbaľuje balíky vo vnútri CT"
-    },
-    "f06": {
-      "alt": "Karta možností so zapnutým snapshotom pred použitím, záložným úložiskom nastaveným na pbs a zapnutým reštartom po použití",
-      "caption": "Karta možností so súčasne zapnutým vzdump snapshotom, záložným úložiskom a reštartom po použití"
-    },
-    "f07": {
-      "alt": "Sekcia plánovaných aktualizácií je zapnutá — frekvencia denne o 3:00, cron výraz 0 3 * * * a cieľ nastavený na OS + aplikácia",
-      "caption": "Plánované aktualizácie sú zapnuté — predvoľba frekvencie, zodpovedajúci cron výraz a vybraný rozsah aktualizácie"
-    }
+  "actions": {
+    "heading": "Samostatné akcie a farby stavu",
+    "lead": "Každá sekcia zostáva samostatne ovládateľná aj po nastavení hromadnej aktualizácie.",
+    "items": [
+      "Tlačidlo <strong>Upraviť</strong> je vždy dostupné. Integrované metódy zobrazia aktuálny príkaz, ktorý možno skontrolovať, nahradiť alebo vymazať.",
+      "Ak je sledovanie verzie vypnuté, ale aktualizátor existuje, zobrazí sa neutrálna akcia <strong>Spustiť aktualizátor</strong>. ProxMenux netvrdí, že je dostupná aktualizácia.",
+      "Ak metóda neexistuje, <strong>Nastaviť</strong> otvorí editor vlastného príkazu.",
+      "Akcia <strong>Aktualizovať obraz</strong> ovplyvní iba vybranú jednotku Dockeru, nie Docker Engine ani nesúvisiace obrazy."
+    ],
+    "statusColState": "Známy stav",
+    "statusColAppearance": "Vzhľad",
+    "statusColMeaning": "Význam",
+    "statusRows": [
+      {
+        "state": "Overená dostupná aktualizácia",
+        "appearance": "Fialový text, ikona šípky nahor a fialová akcia",
+        "meaning": "Nainštalovaná a dostupná verzia alebo digesty obrazov sa líšia."
+      },
+      {
+        "state": "Overene aktuálne",
+        "appearance": "Zelená kontrola a zelená akcia Aktualizované",
+        "meaning": "Posledná dokončená kontrola potvrdila, že cieľ je aktuálny."
+      },
+      {
+        "state": "Neznáma verzia",
+        "appearance": "Neutrálny text a neutrálna akcia",
+        "meaning": "Aktualizátor sa dá spustiť, ale bez údajov o verzii nemožno určiť stav."
+      }
+    ]
   },
   "custom": {
-    "heading": "Pridanie vlastného aktualizačného príkazu",
-    "p1": "Keď má aplikácia sledovanie verzie, ale nemá metódu aktualizácie, záložka zobrazí <strong>Nie je nastavený aktualizátor</strong>. Kliknutím na <strong>Pridať vlastný aktualizačný príkaz</strong> otvoríte editor.",
-    "p2": "Príkaz musí predstavovať reálny a úplný postup, ktorý danú aplikáciu aktualizuje. Nevkladajte sem iba príkaz, ktorý číta jej verziu."
-  },
-  "figureOut": {
-    "heading": "Ako zistiť správny príkaz",
-    "intro": "Neexistuje univerzálny aktualizačný príkaz. Pred uložením najprv zistite, ako bol softvér nainštalovaný a aký postup aktualizácie odporúča jeho projekt.",
-    "step1Heading": "1. Skontrolujte, či to už nerieši systém",
-    "step1P1": "Ak bola aplikácia nainštalovaná z repozitárov Debianu, Ubuntu alebo Alpine, zvyčajne sa aktualizuje spolu so systémovými balíkmi. Vtedy nepridávajte vlastný príkaz — použite <strong>Použiť aktualizáciu OS</strong>.",
-    "step1P2": "Pôvod balíka môžete overiť z konzoly LXC nástrojmi danej distribúcie. Napríklad:",
-    "step1Cmd1": "dpkg -l | grep -i name",
-    "step1P3": "alebo:",
-    "step1Cmd2": "apk info | grep -i name",
-    "step1P4": "Nahraďte <code>name</code> balíkom, ktorý skúmate. Zhoda ešte automaticky nepotvrdzuje, že ide o hlavný balík — porovnajte názov s dokumentáciou aplikácie.",
-    "step2Heading": "2. Pozrite oficiálnu dokumentáciu",
-    "step2P1": "V oficiálnych dokumentoch alebo repozitári hľadajte sekcie ako <strong>Upgrade</strong>, <strong>Update</strong>, <strong>Maintenance</strong> alebo <strong>Manual installation</strong>. Postup musí zodpovedať spôsobu, akým je aplikácia nainštalovaná v danom LXC.",
-    "step2P2": "Nepoužívajte návody určené pre inú distribúciu, iný typ inštalácie alebo inú verziu.",
-    "step3Heading": "3. Skontrolujte existujúcu inštaláciu",
-    "step3Lead": "Ak si nepamätáte, ako bola aplikácia nainštalovaná, pozrite:",
-    "step3Items": [
-      "Históriu alebo poznámky pôvodného inštalátora.",
-      "Cestu, kde sú uložené jej súbory.",
-      "Definíciu služby, ktorá ju spúšťa.",
-      "Údržbové skripty dodané aplikáciou.",
-      "Dokumentáciu uloženú v jej inštalačnom priečinku."
-    ],
-    "step3P1": "Pri systemd službe môže toto pomôcť nájsť binárku a pracovný priečinok:",
-    "step3Cmd": "systemctl show service-name -p ExecStart -p WorkingDirectory",
-    "step3P2": "Pomôže to identifikovať inštaláciu, ale automaticky to neznamená, že riadok <code>ExecStart</code> je aktualizačný príkaz.",
-    "step4Heading": "4. Otestujte postup v konzole LXC",
-    "step4Lead": "Otvorte konzolu kontajnera a spustite postup ručne ešte pred uložením do ProxMenuxu. Overte, že:",
-    "step4Items": [
-      "Skončí bez otázok alebo interaktívnych menu.",
-      "Vráti správny exit code.",
-      "Reštartuje alebo znovu načíta iba služby, ktoré to potrebujú.",
-      "Aplikácia je po ňom znovu dostupná.",
-      "Nainštalovaná verzia sa zmení podľa očakávania."
-    ],
-    "step4Note": "Ak je to možné, pred testom vytvorte zálohu kontajnera.",
-    "step5Heading": "5. Uložte iba príkaz spúšťaný vo vnútri kontajnera",
-    "step5P1": "Zadajte iba to, čo sa má vykonať vo vnútri LXC. Nevkladajte:",
-    "step5Cmd1": "pct exec <vmid> --",
-    "step5P2": "ProxMenux už vstup do kontajnera rieši sám. Príkaz sa spúšťa ako <code>root</code> cez <code>sh -c</code>, takže podporuje reťazenie operácií aj zmenu priečinka.",
-    "step5P3": "Ak musí aktualizátor bežať z konkrétnej cesty, uveďte ju priamo:",
-    "step5Cmd2": "cd /opt/my-app && ./update.sh",
-    "step5P4": "Ak projekt dodáva aktualizátor na inej ceste, použite cestu a argumenty uvedené v oficiálnej dokumentácii."
-  },
-  "requirements": {
-    "heading": "Požiadavky na spoľahlivý príkaz",
-    "lead": "Pred spustením z Monitoru overte, že príkaz:",
+    "heading": "Vlastné aktualizačné príkazy",
+    "lead": "Vlastný príkaz pokrýva inštalácie bez overeného integrovaného aktualizátora a môže nahradiť bežný postup.",
     "items": [
-      "Beží bez zásahu používateľa.",
-      "Používa absolútne cesty alebo sa najprv prepne do správneho priečinka.",
-      "Zastaví, migruje a reštartuje služby tak, ako vyžadujú oficiálne pokyny.",
-      "Skončí chybou, ak aktualizácia zlyhá.",
-      "Neobsahuje viditeľné heslá, tokeny ani iné tajné údaje.",
-      "Nesťahuje ani nespúšťa skripty z nedôveryhodných zdrojov."
+      "Ak je pole prázdne, otvorte <strong>Nastaviť</strong>; ak metóda existuje, otvorte <strong>Upraviť</strong>.",
+      "Pri integrovanej aplikácii alebo Docker Engine editor zobrazí používaný príkaz. Uložením iného obsahu sa vytvorí výslovná náhrada pre daný záznam.",
+      "Úplný postup najprv otestujte v termináli LXC. Musí byť neinteraktívny, používať správny adresár a pri chybe vrátiť nenulový kód.",
+      "Nepridávajte <code>pct exec</code>; ProxMenux už vstupuje do kontajnera a príkaz spúšťa ako root."
     ],
-    "trailing": "Obsah sa ukladá do konfigurácie LXC a spúšťa sa s administrátorskými právami. Pristupujte k nemu rovnako opatrne ako ku každému príkazu spustenému ako <code>root</code>."
+    "exampleLead": "Príklad úplného postupu v kontajneri:",
+    "example": "cd /opt/moja-aplikacia && ./update.sh",
+    "callout": "Príkaz ako <code>myapp --version</code> iba číta verziu a nič neaktualizuje. Príkazy sa spúšťajú s oprávneniami správcu a musia sa kontrolovať ako príkazy shellu root."
   },
-  "difference": {
-    "heading": "Rozdiel medzi detekčným a aktualizačným príkazom",
-    "lead": "Obe polia majú rozdielny účel:",
-    "table": {
-      "colField": "Pole",
-      "colLocation": "Umiestnenie",
-      "colRole": "Úloha",
-      "rows": [
-        {
-          "field": "Príkaz pre nainštalovanú verziu",
-          "location": "App → pokročilé sledovanie",
-          "role": "Prečíta a vráti aktuálnu verziu; spúšťa sa ako zoznam argumentov bez shellu."
-        },
-        {
-          "field": "Vlastný aktualizačný príkaz",
-          "location": "Aktualizácie",
-          "role": "Spúšťa aktualizačný postup; interpretuje sa cez sh -c."
-        }
-      ]
-    },
-    "trailing": "Nekopírujte slepo hodnotu z jedného poľa do druhého. Príkaz ako <code>myapp --version</code> môže správne zistiť verziu, ale nenainštaluje novú."
-  },
-  "apply": {
-    "heading": "Použitie aktualizácie",
-    "lead": "Pred kliknutím na tlačidlo použitia:",
-    "steps": [
-      "Overte, čo sa bude aktualizovať: systém, jedna aplikácia alebo oboje.",
-      "Skontrolujte možnosti zálohy a reštartu.",
-      "Kliknite na príslušné tlačidlo.",
-      "Sledujte výstup procesu v terminálovom paneli.",
-      "Overte výsledok a to, že služba znovu odpovedá."
+  "bulk": {
+    "heading": "Hromadná aktualizácia",
+    "lead": "Hromadná aktualizácia vytvorí jednu opakovane použiteľnú akciu pre presný súbor cieľov v LXC. Nachádza sa za sekciami aplikácií a Dockeru a pred <strong>Možnosťami</strong>.",
+    "items": [
+      "Balíky OS sú povinné. Musí byť vybraná aspoň jedna ďalšia aplikácia, Docker Engine alebo jednotka Docker obrazu.",
+      "Aplikácie a jednotky Dockeru sa vyberajú samostatne. Hlavná služba Compose zobrazuje závislosti, ktoré sa aktualizujú spolu s ňou.",
+      "Odstránené alebo nedostupné ciele sa označia ako neaktuálne a pred uložením ich treba odstrániť.",
+      "Tlačidlo <strong>Použiť aktualizácie</strong> je fialové, ak má niektorý vybraný cieľ overenú aktualizáciu, zelené, ak sú všetky overene aktuálne, a neutrálne pri neznámom výsledku.",
+      "Odstránenie hromadnej konfigurácie neodstráni samostatné metódy ani plánovanie."
     ],
-    "trailing1": "Ak je LXC zastavený, ProxMenux ho spustí, aby mohol proces prebehnúť. Ak aktualizácia skončí správne a je zapnutý reštart, kontajner sa na konci reštartuje.",
-    "systemLead": "Pri systémovej aktualizácii:",
-    "systemItems": [
-      "Debian a Ubuntu spúšťajú upgrade cez APT.",
-      "Alpine ho spúšťa cez APK."
-    ],
-    "appLead": "Pri aktualizácii aplikácie:",
-    "appItems": [
-      "Použije sa kompatibilný helper, ak existuje.",
-      "Spustí sa vlastný príkaz uložený pre aplikáciu, ak je nastavený.",
-      "Ak je vybraných viac aplikácií, ich metódy sa spustia postupne."
-    ],
-    "trailing2": "Terminálový panel zobrazuje priebeh a skončí úspešným výsledkom alebo chybovým kódom procesu."
+    "callout": "Hromadná aktualizácia nenahrádza samostatné tlačidlá. Je to voliteľná skratka pre výber, ktorý sa má spustiť spolu."
   },
-  "backup": {
-    "heading": "Záloha pred aktualizáciou",
-    "p1": "Zapnite <strong>Snapshot kontajnera pred použitím</strong>, aby sa pred zásahom do LXC vytvorila záloha <code>vzdump</code>. Môžete vybrať aj cieľové úložisko.",
-    "p2": "Ak je záloha vyžadovaná a zlyhá, ProxMenux nebude v aktualizácii pokračovať. Zmeny sa tak nezačnú bez požadovaného bodu obnovy.",
-    "p3": "Táto voľba platí pre ručné spustenia aj plánované úlohy."
-  },
-  "restart": {
-    "heading": "Reštart po aktualizácii",
-    "p1": "<strong>Reštartovať kontajner po použití</strong> je preferencia, nie dôkaz, že reštart je povinný. Zapnite ju, keď to vyžaduje postup aplikácie alebo nainštalované balíky.",
-    "p2": "Reštart nastane iba po úspešnom behu. Ak aktualizácia zlyhá, kontajner ostane spustený, aby sa dala chyba skontrolovať.",
-    "p3": "Možnosti zálohy a reštartu sa ukladajú pre dané LXC a platia aj pre jeho plánované úlohy."
+  "options": {
+    "heading": "Možnosti zálohy a reštartu",
+    "lead": "Rovnaké možnosti platia pre manuálne, hromadné aj plánované behy:",
+    "items": [
+      "<strong>Snímka pred použitím</strong> vytvorí zálohu vzdump vo vybranom úložisku. Ak požadovaná záloha zlyhá, aktualizácia sa nespustí.",
+      "<strong>Reštartovať po použití</strong> reštartuje LXC iba po úspešnom behu.",
+      "Voľby sa ukladajú pre každý LXC a sú nezávislé od zoznamu cieľov."
+    ]
   },
   "scheduled": {
     "heading": "Plánované aktualizácie",
-    "p1": "Sekcia <strong>Plánované aktualizácie</strong> automaticky spúšťa rovnaký tok, aký používajú ručné tlačidlá.",
-    "createLead": "Plán vytvoríte takto:",
-    "createSteps": [
-      "Otvorte <strong>Možnosti</strong> a kliknite na <strong>Upraviť</strong>.",
-      "Zapnite <strong>Plánované aktualizácie</strong>.",
-      "Vyberte predvolenú frekvenciu alebo zadajte cron výraz.",
-      "Vyberte, čo sa bude aktualizovať: iba systémové balíky, iba aplikácie alebo systém aj aplikácie.",
-      "Skontrolujte možnosti zálohy a reštartu.",
-      "Uložte nastavenie."
+    "lead": "Plán používa rovnaké spustiteľné ciele a bezpečnostné možnosti ako manuálne akcie.",
+    "items": [
+      "Vyberte predvoľbu alebo cron výraz a potom presné ciele: balíky OS, jednotlivé aplikácie, Docker Engine, samostatné jednotky Dockeru alebo skupiny služieb Compose.",
+      "Oneskorenie po vydaní platí iba pre vybrané aplikácie so sledovaním verzie. Aplikácie bez sledovania spustia aktualizátor pri každom termíne.",
+      "Stav posledného behu rozlišuje úspech, čiastočné dokončenie, zlyhanie, bezpečnostné pozdržanie a stav bez čakajúcich aktualizácií.",
+      "Zistené externé plány Proxmox VE Helper-Scripts sa zobrazia samostatne, aby bola viditeľná prekrývajúca sa automatizácia."
     ],
-    "p2": "Karta zobrazuje, či je plán aktívny, čo zahŕňa a ako dopadol posledný beh. Vypnutý plán môžete ponechať na neskoršie zapnutie alebo ho úplne odstrániť.",
-    "p3": "Ak ProxMenux na hostiteľovi nájde externý plán vytvorený cez Community Scripts, zobrazí ho, aby používateľ vedel, že už existuje iná automatizácia.",
-    "callout": "Pred plánovaním aktualizácií aplikácií ručne otestujte každý helper alebo príkaz. Plánovaná úloha nevie odpovedať na otázky ani opraviť neúplný postup."
+    "callout": "Pred zapnutím plánu otestujte každú vybranú metódu manuálne. Plánovaný príkaz nemôže odpovedať na interaktívne otázky."
   },
-  "verify": {
-    "heading": "Kontrola výsledku",
-    "p1": "Po použití systémových balíkov ProxMenux vynúti čerstvú kontrolu, aby sa počítadlo čakajúcich balíkov aktualizovalo bez čakania na ďalší pravidelný cyklus.",
-    "p2": "Pri aplikácii sa vráťte do <link>záložky App</link> a kliknite na <strong>Skontrolovať</strong>, ak sa číslo verzie neobnoví hneď. Znovu sa spustí nastavená metóda nainštalovanej verzie a dotaz na upstream zdroj.",
-    "p3": "Navyše overte, že webové odkazy aplikácie správne odpovedajú. Príkaz, ktorý skončí bez chýb, ešte nenahrádza funkčnú kontrolu služby."
+  "completion": {
+    "heading": "Čo sa stane po dokončení",
+    "lead": "Aktualizácia sa nepovažuje za dokončenú iba preto, že príkaz v termináli skončil.",
+    "items": [
+      "Rovnaký beh uloží konečný výsledok a podľa potreby obnoví stav balíkov OS, verzie aplikácií a inventár Dockeru.",
+      "Vyrovnávacia pamäť LXC sa nahradí overeným stavom po aktualizácii, takže odznaky a tlačidlá nezostanú v starom stave.",
+      "Po spustení zastaveného alebo obnoveného LXC existujúca udalosť životného cyklu znova obnoví tento LXC. Inventár Dockeru čaká na pripravenosť démona a dočasne prázdny výsledok nepovažuje za konečný.",
+      "Povolené upozornenia sa odošlú z dokončeného behu vrátane čiastočných zlyhaní a zoskupených výsledkov Docker obrazov."
+    ]
   },
-  "troubleshoot": {
-    "heading": "Časté problémy",
-    "noButtonHeading": "Zobrazuje sa Dostupná aktualizácia, ale chýba tlačidlo Použiť aktualizáciu",
-    "noButtonBody": "Detekcia verzie funguje, ale nenašla sa metóda na inštaláciu aktualizácie. Skontrolujte, či sa aplikácia aktualizuje cez systémové balíky, kompatibilného helpera alebo vlastný príkaz.",
-    "aptHeading": "Aplikácia sa aktualizuje cez APT alebo APK",
-    "aptBody": "Použite <strong>Použiť aktualizáciu OS</strong>. Nepridávajte druhý príkaz pre rovnakú operáciu — aplikácia už je súčasťou systémovej aktualizácie.",
-    "noUpdaterHeading": "Zobrazuje sa Nie je nastavený aktualizátor",
-    "noUpdaterBody": "ProxMenux aplikáciu sleduje, ale nevie, ako ju aktualizovať. Skontrolujte jej oficiálnu dokumentáciu, otestujte postup v konzole a ak je vhodný, uložte ho cez <strong>Pridať vlastný aktualizačný príkaz</strong>.",
-    "helperDetectedHeading": "Helper je nájdený, ale nedá sa použiť",
-    "helperDetectedBody": "Helper môže byť označený ako neaktualizovateľný alebo nespadá medzi rozpoznané metódy. Riaďte sa oficiálnymi pokynmi aplikácie a nepredpokladajte, že každý LXC vytvorený cez Community Scripts podporuje automatické aktualizácie.",
-    "customFailsHeading": "Vlastný príkaz zlyhá",
-    "customFailsBody": "Spustite ho znovu v konzole LXC. Skontrolujte pracovnú cestu, oprávnenia, závislosti, neinteraktívne argumenty a exit code. Nemeňte príkaz za inú verziu, kým neoveríte odporúčaný postup podľa projektu."
+  "troubleshooting": {
+    "heading": "Bežné situácie",
+    "colProblem": "Situácia",
+    "colResolution": "Riešenie",
+    "rows": [
+      {
+        "problem": "Nebola zistená metóda aktualizácie",
+        "resolution": "Otvorte Nastaviť, pridajte oficiálny neinteraktívny postup a pred plánovaním ho otestujte manuálne."
+      },
+      {
+        "problem": "Zobrazí sa identita Proxmox VE Helper-Scripts, ale nie akcia",
+        "resolution": "LXC obsahuje staré identifikačné údaje bez overeného wrappera /usr/bin/update. Vlastnú metódu pridajte až po potvrdení správneho postupu."
+      },
+      {
+        "problem": "Docker obrazy sú po štarte alebo obnovení dočasne prázdne",
+        "resolution": "Počkajte na pripravenosť Dockeru alebo stlačte Skontrolovať teraz. Inventár štart opakuje a dočasne prázdny výsledok nepovažuje za konečný."
+      },
+      {
+        "problem": "Uložený hromadný cieľ už nie je dostupný",
+        "resolution": "Upravte konfiguráciu, odstráňte neaktuálny cieľ a vyberte jeho aktuálnu náhradu, ak existuje."
+      },
+      {
+        "problem": "Vlastný príkaz zlyhá",
+        "resolution": "Spustite ho v termináli LXC a skontrolujte cestu, závislosti, neinteraktívne parametre a návratový kód."
+      }
+    ]
+  },
+  "figures": {
+    "osPending": {
+      "alt": "Sekcia balíkov operačného systému s počtom čakajúcich a bezpečnostných aktualizácií",
+      "caption": "Sekcia operačného systému udržiava balíky oddelené od akcií aplikácií a Dockeru."
+    },
+    "options": {
+      "alt": "Možnosti aktualizácie LXC so zálohou pred a reštartom po použití",
+      "caption": "Nastavenia zálohy a reštartu platia pre manuálne, hromadné aj plánované behy."
+    }
   }
 }

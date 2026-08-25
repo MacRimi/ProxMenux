@@ -270,6 +270,7 @@ export function Security() {
   const [proxmoxCertInfo, setProxmoxCertInfo] = useState<{subject?: string; expires?: string; issuer?: string; is_self_signed?: boolean} | null>(null)
   const [loadingSsl, setLoadingSsl] = useState(true)
   const [configuringSsl, setConfiguringSsl] = useState(false)
+  const [reloadingSsl, setReloadingSsl] = useState(false)
   const [sslRestarting, setSslRestarting] = useState(false)
   const [showCustomCertForm, setShowCustomCertForm] = useState(false)
   const [customCertPath, setCustomCertPath] = useState("")
@@ -1779,6 +1780,35 @@ ${(report.sections && report.sections.length > 0) ? `
     }
   }
 
+  const handleReloadSsl = async () => {
+    setReloadingSsl(true)
+    setError("")
+    setSuccess("")
+
+    try {
+      const data = await fetchApi("/api/ssl/reload", {
+        method: "POST",
+      })
+
+      if (data.success) {
+        setSslCertPath(data.cert_path || sslCertPath)
+        setSslKeyPath(data.key_path || sslKeyPath)
+        if (data.cert_info) {
+          setProxmoxCertInfo(data.cert_info)
+        }
+        setSuccess(data.changed
+          ? st("messages.sslCertificateReloaded")
+          : st("messages.sslCertificateUnchanged"))
+      } else {
+        setError(data.message || st("errors.reloadSslFailed"))
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : st("errors.reloadSslFailed"))
+    } finally {
+      setReloadingSsl(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -2154,15 +2184,26 @@ ${(report.sections && report.sections.length > 0) ? `
                     <p><span className="font-medium text-foreground">{st("ssl.cert")}:</span> <code className="text-xs">{sslCertPath}</code></p>
                     <p><span className="font-medium text-foreground">{st("ssl.key")}:</span> <code className="text-xs">{sslKeyPath}</code></p>
                   </div>
-                  <Button
-                    onClick={handleDisableSsl}
-                    variant="outline"
-                    size="sm"
-                    disabled={configuringSsl || sslRestarting}
-                    className="mt-2 text-red-500 border-red-500/30 hover:bg-red-500/10 bg-transparent"
-                  >
-                    {configuringSsl ? st("ssl.disabling") : sslRestarting ? st("ssl.restarting") : st("ssl.disableHttps")}
-                  </Button>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <Button
+                      onClick={handleReloadSsl}
+                      variant="outline"
+                      size="sm"
+                      disabled={configuringSsl || reloadingSsl || sslRestarting}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${reloadingSsl ? "animate-spin" : ""}`} />
+                      {reloadingSsl ? st("ssl.updatingCertificate") : st("ssl.updateCertificate")}
+                    </Button>
+                    <Button
+                      onClick={handleDisableSsl}
+                      variant="outline"
+                      size="sm"
+                      disabled={configuringSsl || reloadingSsl || sslRestarting}
+                      className="text-red-500 border-red-500/30 hover:bg-red-500/10 bg-transparent"
+                    >
+                      {configuringSsl ? st("ssl.disabling") : sslRestarting ? st("ssl.restarting") : st("ssl.disableHttps")}
+                    </Button>
+                  </div>
                 </div>
               )}
 

@@ -79,7 +79,7 @@ from smartctl_resolver import (  # noqa: E402
 )
 from flask_script_runner import script_runner
 import threading
-from proxmox_storage_monitor import proxmox_storage_monitor
+from proxmox_storage_monitor import classify_storage_state, proxmox_storage_monitor
 from flask_terminal_routes import (  # noqa: E402
     terminal_bp,
     init_terminal_routes,
@@ -5328,25 +5328,14 @@ def _get_proxmox_storage_uncached():
             used_gb = round(used / (1024**3), 2)
             available_gb = round(available / (1024**3), 2)
             
-            # Determine storage status. Sprint 11.6: a remote PBS where the
-            # user only has DatastoreAdmin on their own namespace reports
-            # `status=available` + `total=0` — the storage IS reachable, the
-            # ACL just hides the datastore size. Surface as
-            # 'namespace_restricted' so the UI can render INFO instead of
-            # CRITICAL. Real outages still flag (status != available).
-            if total == 0 and status.lower() == "available" and storage_type == 'pbs':
-                storage_status = 'namespace_restricted'
-            elif total == 0:
-                storage_status = 'error'
-            elif status.lower() != "available":
-                storage_status = 'error'
-            else:
-                storage_status = 'active'
+            storage_state = classify_storage_state(storage_type, status, total)
             
             storage_info = {
                 'name': name,
                 'type': storage_type,
-                'status': storage_status,  # Usar el status determinado (active o error)
+                'status': storage_state['status'],
+                'status_detail': storage_state['status_detail'],
+                'capacity_known': storage_state['capacity_known'],
                 'total': total_gb,
                 'used': used_gb,
                 'available': available_gb,
@@ -22172,8 +22161,7 @@ if __name__ == '__main__':
                 from gevent import pywsgi
                 import ssl
 
-                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-                ssl_context.load_cert_chain(ssl_cert, ssl_key)
+                ssl_context = auth_manager.create_reloadable_ssl_context(ssl_cert, ssl_key)
 
                 # Defensive: silence the ~30-line traceback that gevent
                 # prints whenever a client sends plain HTTP against this
@@ -22242,9 +22230,7 @@ if __name__ == '__main__':
             except ImportError as e:
                 print(f"[ProxMenux] gevent not available ({e})")
                 # Fallback: Flask dev server with SSL - flask-sock handles WebSockets
-                import ssl
-                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-                ssl_context.load_cert_chain(ssl_cert, ssl_key)
+                ssl_context = auth_manager.create_reloadable_ssl_context(ssl_cert, ssl_key)
                 print("[ProxMenux] Starting Flask server with SSL (using flask-sock for WebSockets)...")
                 app.run(host='::', port=8008, debug=False, ssl_context=ssl_context, threaded=True)
         else:

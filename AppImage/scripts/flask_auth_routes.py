@@ -249,6 +249,78 @@ def ssl_disable():
         return jsonify({"success": False, "message": str(e)}), 500
 
 
+@auth_bp.route('/api/ssl/reload', methods=['POST'])
+@require_auth
+def ssl_reload():
+    """Reload the configured certificate without restarting the Monitor."""
+    config = auth_manager.load_ssl_config()
+    if not config.get("enabled"):
+        return jsonify({
+            "success": False,
+            "code": "ssl_not_enabled",
+            "message": "HTTPS is not enabled",
+        }), 400
+
+    source = config.get("source", "custom")
+    cert_info = None
+    if source == "proxmox":
+        detection = auth_manager.detect_proxmox_certificates()
+        if not detection.get("proxmox_available"):
+            return jsonify({
+                "success": False,
+                "code": "certificate_unavailable",
+                "message": "No Proxmox certificate was detected",
+            }), 404
+        cert_path = detection.get("proxmox_cert", "")
+        key_path = detection.get("proxmox_key", "")
+        cert_info = detection.get("cert_info")
+    else:
+        cert_path = config.get("cert_path", "")
+        key_path = config.get("key_path", "")
+
+    valid, validation_message = auth_manager.validate_certificate_files(cert_path, key_path)
+    if not valid:
+        return jsonify({
+            "success": False,
+            "code": "certificate_invalid",
+            "message": validation_message,
+        }), 400
+
+    paths_changed = (
+        cert_path != config.get("cert_path", "") or
+        key_path != config.get("key_path", "")
+    )
+    if paths_changed:
+        updated_config = dict(config)
+        updated_config["cert_path"] = cert_path
+        updated_config["key_path"] = key_path
+        if not auth_manager.save_ssl_config(updated_config):
+            return jsonify({
+                "success": False,
+                "code": "config_save_failed",
+                "message": "Failed to save the renewed certificate paths",
+            }), 500
+
+    try:
+        changed = auth_manager.reload_server_ssl_context(cert_path, key_path)
+    except Exception as e:
+        if paths_changed:
+            auth_manager.save_ssl_config(config)
+        return jsonify({
+            "success": False,
+            "code": "runtime_reload_failed",
+            "message": str(e),
+        }), 409
+
+    return jsonify({
+        "success": True,
+        "changed": changed,
+        "cert_path": cert_path,
+        "key_path": key_path,
+        "cert_info": cert_info,
+    })
+
+
 def _refresh_pve_webhook_for_ssl_change():
     """Helper used by both `ssl_configure` and `ssl_disable`.
 

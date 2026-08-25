@@ -188,6 +188,7 @@
     "notMonitored": "no monitoreado",
     "namespaceRestricted": "espacio de nombres restringido",
     "namespaceRestrictedTitle": "Almacenamiento accesible; Tamaño del almacén de datos oculto por ACL (por ejemplo, PBS DatastoreAdmin en un único espacio de nombres)",
+    "capacityNotReported": "Capacidad no informada",
     "managedByProxmox": "gestionado por Proxmox",
     "readOnlyShort": "ro",
     "stale": "duro",
@@ -1284,7 +1285,6 @@
       "dockerImagesTitle": "Imágenes Docker",
       "dockerAppTitle": "Docker",
       "dockerImagesSubheading": "Imágenes",
-      "dockerImagesReadOnly": "Las etiquetas se comparan mediante el digest del registro. Los servicios Compose pueden descargar la imagen y recrearse desde su proyecto declarado.",
       "dockerEngineManagedByOs": "Docker Engine {version} está gestionado por paquetes y se actualiza mediante la acción de paquetes del SO anterior.",
       "dockerEngineSubheading": "Motor",
       "dockerEngineDetected": "Docker Engine {version} detectado",
@@ -1688,7 +1688,7 @@
           "label": "Seguridad"
         },
         "cluster": {
-          "label": "Grupo"
+          "label": "Clúster"
         },
         "services": {
           "label": "Servicios"
@@ -1758,13 +1758,13 @@
         "burst_auth_fail": "Ráfaga de fallos de autenticación",
         "burst_ip_block": "Ráfaga de bloqueos de IP",
         "burst_disk_io": "Ráfaga de errores de E/S de disco",
-        "burst_cluster": "Conexión de clúster aleteando",
+        "burst_cluster": "Conexión del clúster inestable",
         "burst_service_fail": "Múltiples fallas de servicio",
         "burst_system": "Múltiples problemas del sistema",
         "burst_generic": "Múltiples eventos relacionados",
-        "split_brain": "Cerebro dividido detectado",
-        "node_disconnect": "Nodo desconectado",
-        "node_reconnect": "Nodo reconectado",
+        "split_brain": "Partición del clúster detectada",
+        "node_disconnect": "Nodo del clúster desconectado",
+        "node_reconnect": "Nodo del clúster reconectado",
         "system_startup": "Informe de inicio del sistema",
         "system_shutdown": "Sistema apagándose",
         "system_reboot": "Reinicio del sistema",
@@ -2176,6 +2176,7 @@
       "noTokenReceived": "El servidor no devolvió ningún token.",
       "generateTokenRetry": "No se pudo generar el token. Por favor inténtalo de nuevo.",
       "configureSslFailed": "No se pudo configurar SSL",
+      "reloadSslFailed": "No se pudo actualizar el certificado activo",
       "disableSslFailed": "No se pudo deshabilitar SSL",
       "deleteReportFailed": "No se pudo eliminar el informe"
     },
@@ -2203,6 +2204,8 @@
       "apiTokenGenerated": "Se generó el token API.",
       "sslEnabledRestarting": "HTTPS está habilitado. Reiniciando servicio...",
       "sslDisabledRestarting": "HTTPS está deshabilitado. Reiniciando servicio...",
+      "sslCertificateReloaded": "El certificado renovado ya está activo. No se ha interrumpido ninguna conexión.",
+      "sslCertificateUnchanged": "El certificado activo ya coincide con los archivos actuales.",
       "reportDeleted": "Se eliminó el informe de auditoría.",
       "twoFactorEnabled": "La autenticación de dos factores está habilitada."
     },
@@ -2267,6 +2270,8 @@
       "activeCertificate": "Certificado activo",
       "cert": "Certificado",
       "key": "clave privada",
+      "updateCertificate": "Actualizar certificado",
+      "updatingCertificate": "Actualizando...",
       "disabling": "Desactivando...",
       "restarting": "Reiniciando...",
       "disableHttps": "Deshabilitar HTTPS",

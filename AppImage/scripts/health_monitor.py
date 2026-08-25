@@ -19,6 +19,7 @@ from collections import defaultdict
 import re
 
 from health_persistence import health_persistence, disk_base_name
+from proxmox_known_errors import analyze_oom_event, format_oom_diagnosis
 from smartctl_resolver import (
     is_usb_disk as resolver_is_usb_disk,
     probe_smartctl_json,
@@ -4027,10 +4028,21 @@ class HealthMonitor:
             return reason
         
         # Out of memory
-        if 'out of memory' in line_lower or 'oom_kill' in line_lower:
-            m = re.search(r'Killed process\s+\d+\s+\(([^)]+)\)', line)
-            process = m.group(1) if m else 'unknown'
-            return f'Out of memory - system killed process "{process}" to free RAM'
+        if any(token in line_lower for token in (
+            'out of memory', 'oom_kill', 'oom-kill', 'invoked oom-killer', 'oom_reaper'
+        )):
+            victim = re.search(r'Killed process\s+\d+\s+\(([^)]+)\)', line, re.IGNORECASE)
+            if victim:
+                return f'Memory pressure - kernel killed process "{victim.group(1)}"'
+
+            invoker = re.search(r'(?:kernel:\s*)?([^\s:]+)\s+invoked oom-killer', line, re.IGNORECASE)
+            if invoker:
+                return (
+                    f'Memory pressure triggered the OOM killer while "{invoker.group(1)}" '
+                    'requested memory; this process is not necessarily the main consumer'
+                )
+
+            return 'Memory pressure triggered the OOM killer; inspect the complete kernel OOM block'
         
         # Kernel panic
         if 'kernel panic' in line_lower:
@@ -4152,6 +4164,9 @@ class HealthMonitor:
             if result_recent.returncode == 0:
                 recent_lines = result_recent.stdout.strip().split('\n')
                 previous_lines = result_previous.stdout.strip().split('\n') if result_previous.returncode == 0 else []
+                recent_oom_analysis = analyze_oom_event(result_recent.stdout)
+                recent_oom_reason = format_oom_diagnosis(recent_oom_analysis)
+                processed_oom_patterns = set()
                 
                 recent_patterns = defaultdict(int)
                 previous_patterns = defaultdict(int)
@@ -4172,7 +4187,22 @@ class HealthMonitor:
                         continue
                     
                     # Normalize to a pattern for grouping
-                    pattern = self._normalize_log_pattern(line)
+                    is_oom_line = any(token in line.lower() for token in (
+                        'out of memory', 'oom_kill', 'oom-kill',
+                        'invoked oom-killer', 'oom_reaper'
+                    ))
+                    if is_oom_line and recent_oom_analysis:
+                        scope = recent_oom_analysis.get('scope') or 'unknown'
+                        scope_id = recent_oom_analysis.get('ctid') \
+                            or recent_oom_analysis.get('cgroup_path') \
+                            or 'unknown'
+                        victim = recent_oom_analysis.get('victim_process') or 'unknown'
+                        pattern = f'oom_event_{scope}_{scope_id}_{victim}'
+                        if pattern in processed_oom_patterns:
+                            continue
+                        processed_oom_patterns.add(pattern)
+                    else:
+                        pattern = self._normalize_log_pattern(line)
                     
                     if severity == 'CRITICAL':
                         pattern_hash = hashlib.md5(pattern.encode()).hexdigest()[:8]
@@ -4213,7 +4243,10 @@ class HealthMonitor:
                             if severity == 'CRITICAL':
                                 critical_errors_found[pattern] = line
                             # Build a human-readable reason from the raw log line
-                            enriched_reason = self._enrich_critical_log_reason(line)
+                            if is_oom_line and recent_oom_reason:
+                                enriched_reason = recent_oom_reason
+                            else:
+                                enriched_reason = self._enrich_critical_log_reason(line)
                             
                             # Append SMART context to the reason if we checked it
                             if smart_status_for_log == 'PASSED':
@@ -4230,9 +4263,13 @@ class HealthMonitor:
                                     category='logs',
                                     severity=severity,
                                     reason=enriched_reason,
-                                    details={'pattern': pattern, 'raw_line': line[:200],
-                                             'smart_status': smart_status_for_log,
-                                             'dismissable': True}
+                                    details={
+                                        'pattern': pattern,
+                                        'raw_line': line[:200],
+                                        'smart_status': smart_status_for_log,
+                                        'oom_analysis': recent_oom_analysis if is_oom_line else None,
+                                        'dismissable': True,
+                                    }
                                 )
                             
                             # Cross-reference: filesystem errors also belong in the disks category

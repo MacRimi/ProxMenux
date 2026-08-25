@@ -105,6 +105,18 @@
       "imageAlt": "Final summary + reboot prompt after a PCIe install"
     }
   },
+  "legacyCleanup": {
+    "heading": "Cleaning up legacy gasket-dkms on USB-only hosts",
+    "intro": "If the host has <strong>no detected PCIe / M.2 Coral</strong> but still contains a previous <code>gasket-dkms</code> installation, ProxMenux identifies that state separately and offers an optional cleanup. Nothing is removed without confirmation.",
+    "items": [
+      "If a PCIe / M.2 Coral is present, this cleanup is never offered; the normal DKMS rebuild path is used instead.",
+      "The cleanup purges <code>gasket-dkms</code>, removes stale gasket DKMS registrations and source trees, and repairs pending <code>dpkg</code> / APT state.",
+      "The USB runtime packages <code>libedgetpu1-std</code> and <code>libedgetpu1-max</code> are left untouched, so a USB Coral keeps its runtime.",
+      "The script verifies that the legacy package is gone and that package management is healthy before reporting success."
+    ],
+    "warningTitle": "Confirm the hardware first",
+    "warningBody": "If a PCIe / M.2 Coral may be installed but is not being detected, cancel the cleanup and check the card, slot and firmware settings before continuing."
+  },
   "reinstallUninstall": {
     "heading": "Reinstall or uninstall",
     "intro": "Running the installer on a host where Coral is already installed (PCIe via <code>gasket-dkms</code>, USB via <code>libedgetpu1-std</code>/<code>libedgetpu1-max</code>, or both) no longer drops straight into another fresh install. Instead, ProxMenux detects the existing setup and shows an action menu so you can decide what to do.",

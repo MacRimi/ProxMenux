@@ -41,6 +41,7 @@ export default async function InstallCoralTPUHostPage({
         pcie: { items: StringItem[]; kernelPatches: StringItem[]; afterItems: StringItem[] }
         usb: { items: StringItem[] }
       }
+      legacyCleanup: { items: StringItem[] }
       reinstallUninstall: { uninstallItems: StringItem[] }
       related: { items: RelatedItem[] }
     } } }
@@ -50,6 +51,7 @@ export default async function InstallCoralTPUHostPage({
   const kernelPatches = messages.docs.hardware.installCoralTpuHost.walkthrough.pcie.kernelPatches
   const pcieAfterItems = messages.docs.hardware.installCoralTpuHost.walkthrough.pcie.afterItems
   const usbItems = messages.docs.hardware.installCoralTpuHost.walkthrough.usb.items
+  const legacyCleanupItems = messages.docs.hardware.installCoralTpuHost.legacyCleanup.items
   const uninstallItems = messages.docs.hardware.installCoralTpuHost.reinstallUninstall.uninstallItems
   const relatedItems = messages.docs.hardware.installCoralTpuHost.related.items
 
@@ -165,54 +167,18 @@ export default async function InstallCoralTPUHostPage({
       <p className="mb-4 text-gray-800 leading-relaxed">{t("howRuns.body")}</p>
 
       <pre className="bg-gray-100 text-gray-800 p-4 rounded-md overflow-x-auto text-sm my-4 border border-gray-200 leading-snug">
-{`┌────────────────────────────────────────────────┐
-│ 1. detect_coral_hardware()                     │
-│    → count PCIe (vendor 1ac1) + USB (IDs)      │
-└────────────────┬───────────────────────────────┘
-                 ▼
-     ┌───────────┴───────────┐
-     │                       │
-     ▼                       ▼
-  None                 At least one
-     │                       │
-     ▼                       ▼
- Dialog            pre_install_prompt()
- "No Coral" →      shows what was detected
-  exit 0           and what will be installed
-                           │
-                           ▼
-          ┌────────────────┴────────────────┐
-          │                                 │
-          ▼                                 ▼
-   PCIe detected?                    USB detected?
-          │                                 │
-        Yes                               Yes
-          ▼                                 ▼
- install_gasket_apex_dkms        install_libedgetpu_runtime
- ├─ cleanup_broken_gasket_dkms   ├─ add Google GPG keyring
- ├─ apt install deps             │    /etc/apt/keyrings/...
- │  (git, dkms, build-essential, ├─ add APT repo (signed-by)
- │   proxmox-headers-$(uname-r)) │    /etc/apt/sources.list.d/
- ├─ clone feranick/gasket-driver │     coral-edgetpu.list
- │   (google fallback + patches) ├─ apt install libedgetpu1-std
- ├─ copy src/ → /usr/src/        └─ udev reload + trigger
- │   gasket-1.0/
- ├─ generate dkms.conf
- ├─ dkms add / build / install
- └─ modprobe gasket + apex
- + ensure_apex_group_and_udev
-          │                                 │
-          └────────────────┬────────────────┘
-                           ▼
-          ┌────────────────┴────────────────┐
-          │                                 │
-       PCIe ran?                       USB only
-          │                                 │
-          ▼                                 ▼
-  restart_prompt()          "No reboot required"
-  (reboot required to       (runtime + udev rules
-   load fresh kernel         are already active)
-   module cleanly)`}
+{`Detect Coral hardware
+        │
+        ├─ PCIe / M.2 detected ──► build gasket + apex with DKMS
+        │                          └─ reboot recommended
+        │
+        ├─ USB detected ─────────► install libedgetpu runtime
+        │                          └─ no reboot required
+        │
+        └─ no PCIe / M.2 detected
+             ├─ no legacy gasket-dkms state ─► no PCIe changes
+             └─ legacy gasket-dkms state ────► offer optional cleanup
+                                                └─ USB runtime untouched`}
       </pre>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("walkthrough.heading")}</h2>
@@ -289,6 +255,19 @@ export default async function InstallCoralTPUHostPage({
           />
         </Steps.Step>
       </Steps>
+
+      <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("legacyCleanup.heading")}</h2>
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("legacyCleanup.intro", { code, strong })}
+      </p>
+      <ul className="list-disc pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
+        {legacyCleanupItems.map((_, idx) => (
+          <li key={idx}>{t.rich(`legacyCleanup.items.${idx}`, { code, strong })}</li>
+        ))}
+      </ul>
+      <Callout variant="warning" title={t("legacyCleanup.warningTitle")}>
+        {t("legacyCleanup.warningBody")}
+      </Callout>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("reinstallUninstall.heading")}</h2>
 

@@ -908,6 +908,11 @@ uninstall_pigz() {
 }
 
 uninstall_zfs_arc() {
+    local backup_dir="$BASE_DIR/backups/zfs_arc"
+    local manifest="$backup_dir/manifest.tsv"
+    local remaining_manifest=""
+    local original backup post_hash current_hash
+
     msg_info2 "$(translate 'Reverting ZFS ARC tuning...')"
     if [[ -f /etc/modprobe.d/99-zfsarc.conf.bak ]]; then
         mv -f /etc/modprobe.d/99-zfsarc.conf.bak /etc/modprobe.d/99-zfsarc.conf
@@ -916,6 +921,43 @@ uninstall_zfs_arc() {
         rm -f /etc/modprobe.d/99-zfsarc.conf
         msg_ok "$(translate 'ZFS ARC config removed (kernel defaults will apply on reboot)')"
     fi
+
+    if [[ -s "$manifest" ]]; then
+        remaining_manifest=$(mktemp "${manifest}.XXXXXX") || remaining_manifest=""
+        while IFS=$'\t' read -r original backup post_hash; do
+            [[ -n "$original" && -n "$backup" ]] || continue
+
+            current_hash=""
+            if [[ -f "$original" ]]; then
+                current_hash=$(sha256sum "$original" 2>/dev/null | awk '{print $1}')
+            fi
+
+            if [[ ! -e "$original" || "$current_hash" == "$post_hash" ]]; then
+                if [[ -f "$backup" ]] && cp -p "$backup" "$original"; then
+                    rm -f "$backup"
+                    msg_ok "$(translate 'External ZFS ARC settings restored:') $original"
+                elif [[ -n "$remaining_manifest" ]]; then
+                    printf '%s\t%s\t%s\n' "$original" "$backup" "$post_hash" >> "$remaining_manifest"
+                fi
+            else
+                msg_warn "$(translate 'External ZFS configuration changed after the ProxMenux migration; current file and backup preserved:') $original"
+                if [[ -n "$remaining_manifest" ]]; then
+                    printf '%s\t%s\t%s\n' "$original" "$backup" "$post_hash" >> "$remaining_manifest"
+                fi
+            fi
+        done < "$manifest"
+
+        if [[ -n "$remaining_manifest" ]]; then
+            if [[ -s "$remaining_manifest" ]]; then
+                mv -f "$remaining_manifest" "$manifest"
+            else
+                rm -f "$remaining_manifest" "$manifest"
+            fi
+        fi
+        rmdir "$backup_dir" 2>/dev/null || true
+        rmdir "$BASE_DIR/backups" 2>/dev/null || true
+    fi
+
     update-initramfs -u -k all >/dev/null 2>&1 || true
     if command -v proxmox-boot-tool >/dev/null 2>&1; then
         proxmox-boot-tool refresh >/dev/null 2>&1 || true

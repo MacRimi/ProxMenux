@@ -225,38 +225,34 @@ export default async function VmsLxcsTabPage({
       <h4 className="text-base font-semibold mt-6 mb-2 text-gray-900">{t("drillIn.ipsTitle")}</h4>
       <p className="mb-6 text-gray-800 leading-relaxed">{t("drillIn.ipsBody")}</p>
 
-      <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">App</h3>
+      <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.appTitle")}</h3>
       <p className="mb-4 text-gray-800 leading-relaxed">
-        The <strong>App</strong> section lets you register the applications running inside an LXC, wire quick web
-        links, and optionally track installed vs. upstream versions. Registrations feed the App-level notifications
-        and the update flows on the next section.
+        {t.rich("drillIn.appIntro", { strong, em, code })}
       </p>
       <p className="mb-6 text-gray-800 leading-relaxed">
-        See the{" "}
+        {t("drillIn.appLinkLead")}{" "}
         <Link
           href="/docs/monitor/dashboard/vms-lxcs/app"
           className="text-blue-600 hover:underline"
         >
-          dedicated App page
+          {t("drillIn.appLinkLabel")}
         </Link>{" "}
-        for the catalog, manual registration, version-tracking methods and regex patterns.
+        {t("drillIn.appLinkTail")}
       </p>
 
-      <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">Updates</h3>
+      <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.updatesTitle")}</h3>
       <p className="mb-4 text-gray-800 leading-relaxed">
-        The <strong>Updates</strong> section covers OS package updates (APT / APK) and application updates via
-        Community Scripts helpers or custom commands. Detection runs unconditionally on running LXCs; whether pending
-        updates also trigger a notification is controlled from <strong>Settings → Notifications</strong>.
+        {t.rich("drillIn.updatesIntro", { strong, em, code })}
       </p>
       <p className="mb-6 text-gray-800 leading-relaxed">
-        See the{" "}
+        {t("drillIn.updatesLinkLead")}{" "}
         <Link
           href="/docs/monitor/dashboard/vms-lxcs/updates"
           className="text-blue-600 hover:underline"
         >
-          dedicated Updates page
+          {t("drillIn.updatesLinkLabel")}
         </Link>{" "}
-        for the decision matrix, custom-command guidance, backup / restart preferences and scheduled updates.
+        {t("drillIn.updatesLinkTail")}
       </p>
 
       <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.mountsTitle")}</h3>

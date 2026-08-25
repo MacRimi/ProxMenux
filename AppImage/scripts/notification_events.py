@@ -25,6 +25,8 @@ from queue import Queue
 from typing import Optional, Dict, Any, Tuple, Callable
 from pathlib import Path
 
+from proxmox_known_errors import analyze_oom_event, format_oom_diagnosis
+
 
 # ─── Shared State for Cross-Watcher Coordination ──────────────────
 
@@ -489,6 +491,12 @@ class JournalWatcher:
         self._recent_events: Dict[str, float] = {}
         self._dedup_window = 30  # seconds
 
+        # Linux emits an OOM diagnosis as a multi-line kernel block. Buffer it
+        # until the authoritative `Killed process` line arrives so the alert
+        # can distinguish a host OOM from a memory-cgroup/LXC limit.
+        self._oom_lines = []
+        self._oom_started_at = 0.0
+
         # 24h anti-cascade for disk I/O + filesystem errors. The dict
         # key includes a tier suffix (`sdh:warning`, `sdh:critical`)
         # so a disk in WARNING cooldown can still escalate to CRITICAL
@@ -830,6 +838,57 @@ class JournalWatcher:
         # Only process messages from kernel or systemd (not app-level logs)
         if syslog_id and syslog_id not in ('kernel', 'systemd', 'systemd-coredump', ''):
             return
+
+        now = time.time()
+        if self._oom_lines and now - self._oom_started_at > 15:
+            self._oom_lines = []
+            self._oom_started_at = 0.0
+
+        starts_oom_block = bool(re.search(
+            r'invoked oom-killer|oom-kill:constraint=', msg, re.IGNORECASE
+        ))
+        ends_oom_block = bool(re.search(
+            r'(?:Memory cgroup )?Out of memory:\s+Killed process', msg, re.IGNORECASE
+        ))
+
+        if starts_oom_block and not self._oom_lines:
+            self._oom_lines = [msg]
+            self._oom_started_at = now
+            return
+
+        if self._oom_lines:
+            self._oom_lines.append(msg)
+            if len(self._oom_lines) > 500:
+                self._oom_lines = self._oom_lines[-500:]
+
+            if ends_oom_block:
+                analysis = analyze_oom_event('\n'.join(self._oom_lines))
+                reason = format_oom_diagnosis(analysis)
+                if not reason:
+                    reason = f'Out of memory killer activated\n{msg[:300]}'
+
+                ctid = analysis.get('ctid') if analysis else ''
+                victim = analysis.get('victim_process') if analysis else ''
+                entity_id = f'lxc_{ctid}' if ctid else f'oom_{victim or "unknown"}'
+                self._emit(
+                    'system_problem',
+                    'CRITICAL',
+                    {
+                        'reason': reason,
+                        'hostname': self._hostname,
+                        'oom_analysis': analysis or {},
+                    },
+                    entity='node',
+                    entity_id=entity_id,
+                )
+                self._oom_lines = []
+                self._oom_started_at = 0.0
+                return
+
+            # `Call Trace:` is part of the buffered OOM evidence, not a second
+            # independent kernel fault requiring another notification.
+            if re.search(r'^Call Trace:', msg, re.IGNORECASE):
+                return
         
         # Filter out normal kernel messages that are NOT problems
         _KERNEL_NOISE = [

@@ -1,343 +1,183 @@
 {
   "meta": {
-    "title": "App — registrácia a sledovanie aplikácií v LXC | ProxMenux",
-    "description": "Zapíšte aplikácie bežiace v LXC kontajneri cez ProxMenux Monitor a voliteľne sledujte ich verzie."
+    "title": "Karta LXC App: zisťovanie, odkazy a verzie | ProxMenux",
+    "description": "Vyhľadávanie a registrácia aplikácií LXC, vytvorenie webových odkazov a voliteľné sledovanie nainštalovanej a dostupnej verzie."
   },
   "header": {
-    "title": "App — registrácia a sledovanie aplikácií v LXC",
-    "description": "Zapíšte aplikácie bežiace v kontajneri, pridajte rýchle webové odkazy a voliteľne sledujte nainštalovanú a najnovšiu verziu."
+    "title": "Karta LXC App: zisťovanie, odkazy a verzie",
+    "description": "Priraďte aplikácii v LXC trvalú identitu, webový prístup a voliteľné údaje o verzii bez prepojenia registrácie s aktualizáciou."
   },
   "intro": {
-    "p1": "Záložka <strong>App</strong> ukladá informácie o aplikáciách, ktoré bežia v LXC kontajneri. Každá registrovaná aplikácia môže mať zobrazený názov, ikonu, jeden alebo viac webových odkazov a voliteľne aj stav verzie.",
-    "p2": "Jeden LXC môže obsahovať viac registrovaných aplikácií. Hlavná služba môže zdieľať kontajner s administračným rozhraním, API alebo inou aplikáciou dostupnou na inom porte.",
-    "p3": "Registrácia aplikáciu nemení ani neaktualizuje. Táto záložka slúži na pomenovanie, zobrazenie a sledovanie. Mechanizmy, ktoré aktualizáciu skutočne <em>spúšťajú</em>, sa nastavujú a používajú v <link>záložke Aktualizácie</link>."
+    "p1": "Karta <strong>App</strong> zaznamenáva, ktoré aplikácie patria do LXC. Záznam môže obsahovať iba názov a webový odkaz alebo aj detektor nainštalovanej verzie a zdroj dostupnej verzie.",
+    "p2": "Postup, ktorý mení softvér, sa nastavuje samostatne na <link>karte Aktualizácie</link>. Uloženie aplikácie nikdy nespúšťa inštalátor ani aktualizátor.",
+    "callout": "Registrácia, sledovanie verzie a aktualizácia sú tri nezávislé možnosti. Každú možno používať bez ostatných dvoch."
   },
-  "whatYouGet": {
-    "heading": "Čo získate registráciou aplikácie",
-    "lead": "Podľa nastavených údajov vie ProxMenux zobraziť:",
+  "overview": {
+    "heading": "Čo môže obsahovať záznam aplikácie",
+    "lead": "Jeden uložený záznam môže obsahovať:",
     "items": [
-      "Skratku jedným kliknutím do webového rozhrania aplikácie.",
-      "Viac odkazov, ak LXC poskytuje viac služieb alebo portov.",
-      "Aktuálne nainštalovanú verziu.",
-      "Najnovšiu verziu vydanú projektom.",
-      "Upozornenie, keď je dostupná novšia verzia.",
-      "Notifikácie o nových vydaniach, ak sú povolené v nastaveniach Monitoru."
+      "Zobrazovaný názov a logo prispôsobené téme.",
+      "Jeden alebo viac webových odkazov vytvorených z adresy LXC, schémy a uloženého portu.",
+      "Voliteľný detektor verzie nainštalovanej v LXC.",
+      "Voliteľný zdroj GitHub, HTTP JSON alebo Docker Hub pre najnovšiu dostupnú verziu.",
+      "Nastavenia upozornení a zahrnutia do počítadla aktualizácií pre každú aplikáciu.",
+      "Príslušnú sekciu na karte Aktualizácie aj pri vypnutom sledovaní verzie."
+    ]
+  },
+  "discovery": {
+    "heading": "Zisťovanie vo vyrovnávacej pamäti a Hľadať aplikácie",
+    "lead": "Návrhy aplikácií sú súčasťou vyrovnávacej pamäte modálneho okna každého LXC. Úvodné skenovanie ich pripraví na pozadí, takže karta App môže okamžite zobraziť uložené výsledky.",
+    "items": [
+      "Otvorenie karty App <strong>nespustí</strong> nové skenovanie katalógu ani opakované dotazy do LXC.",
+      "<strong>Hľadať aplikácie</strong> výslovne spustí nové zisťovanie iba pre daný LXC. Používa sa po inštalácii softvéru počas behu ProxMenux.",
+      "Predchádzajúci zoznam zostáva počas hľadania viditeľný. Nové zhody sa pridajú po dokončení.",
+      "Ak sa nenájde nová zhoda, výsledok sa zobrazí pri akciách a <strong>Registrovať aplikáciu</strong> zostáva dostupné pre manuálne zadanie.",
+      "Uloženie, odstránenie alebo obnovenie aplikácie okamžite aktualizuje rovnakú pamäť. Štart alebo obnova LXC aktualizuje iba daný systém cez existujúcu udalosť životného cyklu."
     ],
-    "trailing": "Sledovanie verzie je voliteľné. Aplikáciu môžete zaregistrovať aj len preto, aby ste mali poruke jej názov, ikonu a webové odkazy.",
-    "callout": "Štítok <strong>Dostupná aktualizácia</strong> znamená, že ProxMenux našiel rozdiel medzi nainštalovanou a vydanou verziou. Neznamená to automaticky, že vie aplikáciu aj aktualizovať — to je samostatné nastavenie v záložke Aktualizácie."
+    "callout": "Návrh nie je registrácia. Zostáva iba na čítanie, kým sa nestlačí <strong>Registrovať</strong> a formulár sa neuloží."
   },
-  "firstOpening": {
-    "heading": "Prvé otvorenie záložky App",
-    "p1": "Pri prvom otvorení sa ProxMenux pokúsi rozpoznať aplikácie v kontajneri podľa dostupných informácií: inštalátora použitého pri vytvorení LXC, nájdených služieb a otvorených portov.",
-    "p2": "Ak nájde zhodu, zobrazí ju ako návrh. Pred uložením návrh vždy skontrolujte — automatická detekcia registráciu zrýchli, ale nevie zaručiť, že každá nájdená služba presne zodpovedá aplikácii, ktorú chcete zapísať."
-  },
-  "figures": {
-    "f01": {
-      "alt": "Prázdna záložka App so zobrazenými návrhmi nájdených aplikácií",
-      "caption": "Prázdny stav s jedným alebo viacerými nájdenými návrhmi"
-    },
-    "f02": {
-      "alt": "Vyhľadávanie v katalógu so zhodami podľa zadaného názvu",
-      "caption": "Vyhľadávanie v katalógu a výber zhody"
-    },
-    "f03": {
-      "alt": "Formulár registrácie aplikácie s názvom, ikonou a dvoma webovými odkazmi",
-      "caption": "Základný formulár s názvom, ikonou a dvoma webovými odkazmi"
-    },
-    "f04": {
-      "alt": "LXC s aplikáciami Docmost a Redis zaregistrovanými samostatne, každá s vlastným stavom verzie",
-      "caption": "Dve aplikácie v rovnakom LXC — jedna sleduje verziu zo súboru, druhá cez dpkg, každá má vlastný stav verzie"
-    },
-    "f05": {
-      "alt": "Pokročilé možnosti sledovania s metódou nainštalovanej verzie a zdrojom najnovšej verzie",
-      "caption": "Pokročilé možnosti s metódou nainštalovanej verzie a zdrojom najnovšej verzie"
-    },
-    "f06": {
-      "alt": "Karta registrovanej aplikácie s nainštalovanou verziou, najnovšou upstream verziou a indikátorom dostupnej aktualizácie",
-      "caption": "Nastavená karta zobrazuje Nainštalované, Najnovšia upstream, šípku dostupnej aktualizácie pri rozdiele verzií a webový odkaz"
-    },
-    "f07": {
-      "alt": "Minimálna registrovaná aplikácia iba s názvom a jedným webovým odkazom, bez sledovania verzie",
-      "caption": "Záznam iba s odkazom — len názov a webový odkaz, bez sledovania verzie"
-    }
-  },
-  "registerSuggested": {
-    "heading": "Registrácia navrhnutej aplikácie",
+  "registration": {
+    "heading": "Registrácia aplikácie",
+    "lead": "Zistený návrh aj manuálny záznam používajú rovnaký editor:",
     "steps": [
-      "Otvorte LXC z karty <strong>VM a LXC</strong>.",
-      "Vyberte záložku <strong>App</strong>.",
-      "Nájdite navrhnutú aplikáciu.",
-      "Kliknite na <strong>Registrovať</strong>.",
-      "Skontrolujte názov, odkazy a automaticky doplnené údaje.",
-      "Uložte aplikáciu."
-    ],
-    "trailing": "Ak návrh nezodpovedá ničomu, čo chcete registrovať, môžete ho skryť. Skryté návrhy sa dajú znovu zobraziť cez <strong>Registrovať inú aplikáciu</strong>."
+      "Stlačte <strong>Registrovať</strong> pri návrhu alebo <strong>Registrovať aplikáciu</strong> a vyberte položku katalógu alebo zadajte vlastný názov.",
+      "Skontrolujte názov a logo navrhnuté katalógom.",
+      "Pridajte potrebné webové odkazy. Zistené otvorené porty sa ponúknu ako skratky, ale neuložia sa automaticky.",
+      "Pre záznam iba s odkazom nechajte <strong>Sledovať dostupnú verziu</strong> vypnuté alebo ho zapnite a skontrolujte detektor a zdroj verzie.",
+      "Pri zapnutom sledovaní použite <strong>Otestovať detektor</strong> a potom záznam uložte.",
+      "Po úpravách stlačte <strong>Hotovo</strong>. Karty App a Aktualizácie použijú aktualizovaný záznam z pamäte."
+    ]
   },
   "catalog": {
-    "heading": "Používanie katalógu",
-    "p1": "Katalóg pomáha nájsť známe aplikácie a predvyplniť časť údajov. Pri písaní do poľa názvu zobrazí najbližšie zhody — výber zhody môže doplniť názov, ikonu, typické porty a pri overenom profile aj možnosti sledovania verzie.",
-    "p2": "Katalóg je pomocník, nie úplný zoznam každého softvéru, ktorý môže LXC obsahovať. Niektoré položky majú iba základné informácie, iné obsahujú aj pripravený spôsob čítania nainštalovanej verzie.",
-    "p3": "Ak aplikácia v katalógu nie je, zaregistrujte ju ručne."
+    "heading": "Registrácia s pomocou katalógu",
+    "lead": "Katalóg poskytuje počiatočné hodnoty, uložený záznam však zostáva upraviteľný.",
+    "items": [
+      "Výsledky môžu predvyplniť kanonický názov, logo a bežné webové porty.",
+      "Známe detektory používajú skutočné balíky, binárne súbory, súbory, Python distribúcie, OCI značky alebo príkazy, nie univerzálny predpoklad <code>/root/.app</code>.",
+      "Overené opravy z reálnych inštalácií majú prednosť, keď sa cesta líši od údajov inštalátora.",
+      "Markery Proxmox VE Helper-Scripts, napríklad <code>/root/.slug</code>, zostávajú jedným signálom kompatibility pre nové inštalácie, nie jediným detektorom.",
+      "Každú navrhnutú hodnotu možno pred uložením upraviť pre oficiálne aj manuálne inštalácie."
+    ]
   },
-  "manual": {
-    "heading": "Ručná registrácia aplikácie",
-    "p1": "Použite <strong>Registrovať inú aplikáciu</strong>, ak LXC ešte nemá žiadne aplikácie. Ak už aspoň jednu má, použite <strong>Pridať ďalšiu aplikáciu</strong>.",
-    "p2": "Základné nastavenie potrebuje iba názov. Všetko ostatné doplníte podľa toho, čo chcete zobrazovať.",
-    "nameHeading": "Názov a ikona",
-    "nameBody": "Zadajte aplikácii názov, podľa ktorého ju ľahko rozpoznáte. Ikona je voliteľná a môže byť zadaná ako URL.",
-    "linksHeading": "Webové odkazy a porty",
-    "linksLead": "Každý odkaz môže obsahovať:",
-    "linksItems": [
-      "Protokol <code>http</code> alebo <code>https</code>.",
-      "Port.",
-      "Popis, napríklad <em>Web UI</em>, <em>Administrácia</em> alebo <em>API</em>.",
-      "Voliteľnú ikonu pre konkrétny odkaz."
+  "docker": {
+    "heading": "Zobrazenie LXC s Dockerom",
+    "lead": "V LXC, ktorého hlavnou platformou je Docker, sa na úrovni LXC registruje aplikácia <strong>Docker</strong>.",
+    "items": [
+      "Kontajnerová služba ako Portainer, Frigate alebo Vaultwarden sa nenavrhuje ako samostatná natívna aplikácia LXC.",
+      "Bežiace služby Dockeru s publikovanými TCP portmi sa ponúknu v editore Dockeru ako voliteľné webové odkazy.",
+      "Každý návrh zobrazuje službu, port hostiteľa a port kontajnera. Ukladať treba iba odkazy poskytujúce webové rozhranie.",
+      "Ak odkaz nemá vlastné logo, použije sa všeobecné logo Dockeru. Logo odkazu má po nastavení prednosť.",
+      "Po registrácii Dockeru sa Docker Engine a aktualizácie obrazov zobrazia spolu v jeho sekcii Aktualizácie."
     ],
-    "linksTrailing": "ProxMenux spojí protokol a port s IP adresou LXC a vytvorí URL. Ak jeden kontajner poskytuje viac súvisiacich služieb, pridajte toľko odkazov, koľko aplikácia potrebuje.",
-    "linksConfirm": "Pred uložením overte, že port naozaj patrí danej službe a že sa naň viete dostať z prehliadača."
+    "callout": "Takéto usporiadanie zabraňuje tomu, aby kontajnerová služba vyzerala ako softvér nainštalovaný priamo v LXC, a pritom zachováva rýchle odkazy na jej rozhrania."
   },
-  "multiple": {
-    "heading": "Registrácia viacerých aplikácií v rovnakom LXC",
-    "intro": "Po uložení prvej aplikácie kliknite na <strong>Pridať ďalšiu aplikáciu</strong> a postup zopakujte. Každý záznam si nezávisle drží vlastné odkazy, metódu detekcie aj stav verzie.",
-    "usefulLead": "Hodí sa to, keď:",
-    "usefulItems": [
-      "Jeden LXC hostí viac samostatných služieb.",
-      "Inštalácia obsahuje hlavnú aplikáciu aj doplnkové nástroje.",
-      "Každá služba má vlastné webové rozhranie alebo vlastný cyklus vydávania."
-    ],
-    "dontGroup": "Nespájajte do jedného záznamu programy, ktoré sa vydávajú a aktualizujú samostatne. Oddelená registrácia jasne ukáže, ktorá aplikácia má novú verziu, a každej umožní mať vlastnú metódu aktualizácie v záložke Aktualizácie."
+  "webLinks": {
+    "heading": "Webové odkazy a logá",
+    "lead": "Webové odkazy fungujú so sledovaním verzie aj bez neho.",
+    "items": [
+      "Každý odkaz ukladá schému, port, voliteľný popis a voliteľnú URL loga.",
+      "Zobrazená URL používa aktuálnu adresu už zistenú pre LXC; adresa sa neduplikuje v každom zázname.",
+      "Odkaz bez vlastného loga použije logo aplikácie.",
+      "Viac odkazov môže reprezentovať administračné rozhranie, API, sekundárne rozhranie alebo iný koncový bod rovnakej aplikácie.",
+      "Aplikácia uložená iba s odkazmi sa zobrazí aj v Aktualizáciách, kde možno neskôr nastaviť vlastný aktualizátor."
+    ]
   },
   "tracking": {
-    "heading": "Sledovanie verzie",
-    "intro": "Sledovanie verzie nastavíte otvorením pokročilých možností vo formulári. Potrebné sú dve rôzne informácie:",
-    "ingredients": [
-      "<strong>Nainštalovaná verzia</strong> — ako prečítať verziu, ktorá práve beží v LXC.",
-      "<strong>Najnovšia dostupná verzia</strong> — odkiaľ prečítať verziu vydanú projektom."
+    "heading": "Voliteľné sledovanie verzie",
+    "lead": "Sledovanie spája detektor nainštalovanej verzie s voliteľným zdrojom dostupnej verzie. Obe strany sa kontrolujú nezávisle.",
+    "colMethod": "Metóda nainštalovanej verzie",
+    "colUse": "Použitie",
+    "detectorRows": [
+      { "method": "dpkg / apk", "use": "Číta verziu nainštalovaného balíka z metadát Debianu, Ubuntu alebo Alpine." },
+      { "method": "binary", "use": "Spustí absolútnu cestu binárneho súboru alebo názov príkazu s parametrami verzie." },
+      { "method": "file + regex", "use": "Číta skutočný súbor a extrahuje verziu pomocou jednej zachytávacej skupiny." },
+      { "method": "docker label / docker exec", "use": "Číta OCI značku verzie alebo spustí príkaz verzie v Docker kontajneri." },
+      { "method": "python distribution", "use": "Používa importlib.metadata cez vybraný interpreter Pythonu." },
+      { "method": "command", "use": "Spustí pokročilý príkaz vo formáte argv bez shellu a extrahuje verziu z výstupu." },
+      { "method": "manual", "use": "Uloží manuálne zadanú verziu; po aktualizácii aplikácie ju treba zmeniť." }
     ],
-    "trailing": "Ak je nastavená iba nainštalovaná verzia, ProxMenux ju vie zobraziť, ale nevie povedať, či existuje aktualizácia. Aby sa zobrazil štítok <strong>Dostupná aktualizácia</strong>, obe hodnoty musia byť čitateľné a porovnateľné.",
-    "methodsHeading": "Metódy čítania nainštalovanej verzie",
-    "methodsLead": "Vyberte metódu podľa toho, ako bola aplikácia nainštalovaná:",
-    "methodsTable": {
-      "colMethod": "Metóda",
-      "colWhen": "Kedy ju použiť",
-      "rows": [
-        {
-          "method": "Žiadna (iba odkaz)",
-          "when": "Potrebujete len názov a webové odkazy."
-        },
-        {
-          "method": "dpkg balík",
-          "when": "Aplikácia je nainštalovaná ako Debian alebo Ubuntu balík."
-        },
-        {
-          "method": "apk balík",
-          "when": "Aplikácia je nainštalovaná ako Alpine balík."
-        },
-        {
-          "method": "Binárka",
-          "when": "Spustiteľný súbor vracia verziu cez argument ako --version."
-        },
-        {
-          "method": "Súbor + regex",
-          "when": "Reťazec verzie je zapísaný v súbore."
-        },
-        {
-          "method": "Python distribúcia",
-          "when": "Aplikácia je nainštalovaná ako Python balík."
-        },
-        {
-          "method": "Príkaz",
-          "when": "Na získanie verzie treba spustiť konkrétny príkaz."
-        },
-        {
-          "method": "Ručne",
-          "when": "Používateľ zadá nainštalovanú verziu ručne."
-        }
-      ]
-    },
-    "methodsTrailing": "Použite čo najpriamejšiu a najstabilnejšiu metódu. Ak aplikácia pochádza zo systémového balíka, uprednostnite dotaz na balík pred parsovaním výstupu všeobecného príkazu.",
-    "commandHeading": "Metóda Príkaz aplikáciu neaktualizuje",
-    "commandP1": "V tomto formulári slúži <strong>Príkaz</strong> výhradne na prečítanie nainštalovanej verzie. Argumenty sa zadávajú oddelené čiarkou a ProxMenux ich spúšťa priamo, bez shell interpretera.",
-    "commandP2": "Ak je váš bežný dotaz:",
-    "commandExample1": "myapp version --short",
-    "commandP3": "Argumenty vo formulári budú:",
-    "commandExample2": "myapp, version, --short",
-    "commandP4": "Nepoužívajte tu operátory ako <code>&&</code>, presmerovania ani pipes. Ak potrebujete celý postup na aktualizáciu aplikácie, nastavuje sa neskôr v záložke Aktualizácie.",
-    "sourceHeading": "Zdroj najnovšej dostupnej verzie",
-    "sourceLead": "ProxMenux vie čítať verejný zdroj projektu, napríklad:",
-    "sourceItems": [
-      "Releases alebo tagy GitHub repozitára.",
-      "HTTP endpoint, ktorý vracia verziu v JSON odpovedi."
+    "sourcesHeading": "Zdroje dostupnej verzie",
+    "sources": [
+      "<strong>GitHub repozitár</strong>: najnovšie vydanie alebo značka verejného repozitára <code>vlastník/názov</code>.",
+      "<strong>HTTP JSON</strong>: verejný koncový bod a cesta ako <code>data.version</code> alebo <code>releases[0].tag_name</code>.",
+      "<strong>Docker Hub</strong>: verzované značky filtrované regulárnym výrazom. Živý náhľad pred uložením ukáže skutočné zodpovedajúce značky.",
+      "Pohyblivé značky ako <code>latest</code>, <code>stable</code> alebo <code>lts</code> neobsahujú verziu. Tieto obrazy sledujte podľa digestu v aktualizáciách Docker obrazov."
     ],
-    "sourceTrailing": "Vždy používajte oficiálny zdroj aplikácie. Fork alebo endpoint tretej strany môže oznamovať verzie, ktoré nezodpovedajú inštalácii v LXC.",
-    "regexHeading": "Regulárne výrazy pre verziu",
-    "regexIntro": "Regulárny výraz, teda <strong>regex</strong>, vytiahne číslo verzie z dlhšieho textu. Väčšina projektov neposkytuje hotový regex — používateľ si ho vytvorí podľa reálneho výstupu alebo skutočného názvu vydania.",
-    "regexOptional": "Nie vždy je potrebný. Najprv ho nechajte prázdny, ak zdroj vracia čistú hodnotu ako <code>2.14.3</code>. Pridajte ho až vtedy, keď ProxMenux potrebuje oddeliť verziu od ďalších slov, symbolov alebo čísel.",
-    "regexTwoHeading": "Existujú dve rôzne regex polia",
-    "regexTwoItems": [
-      "<strong>Regex nainštalovanej verzie</strong> sa použije na výstup prečítaný vo vnútri LXC.",
-      "<strong>Regex verzie</strong> alebo <strong>regex tagu</strong> sa použije na názov release / tagu z externého zdroja."
+    "regexHeading": "Zachytávací výraz",
+    "regexLead": "Regulárny výraz detektora musí vrátiť verziu vo svojej <strong>prvej zachytávacej skupine</strong>.",
+    "regexRules": [
+      "Výraz musí zodpovedať textu vybraného binárneho súboru, súboru, príkazu alebo zdroja značiek; nepoužívajte odhadovanú všeobecnú cestu.",
+      "Doslovné bodky escapujte ako <code>\\.</code>, aby nezodpovedali ľubovoľnému znaku.",
+      "Počiatočné <code>v</code> povoľte iba vtedy, keď ho zdroj môže obsahovať.",
+      "Prípony predbežného vydania alebo revízie distribúcie zahrňte iba vtedy, keď sú dôležité pre porovnanie.",
+      "Pred uložením použite <strong>Otestovať detektor</strong> a overte, že zobrazená verzia zodpovedá LXC."
     ],
-    "regexTwoTrailing": "Obe hodnoty musia byť porovnateľné. Napríklad ak lokálna aplikácia vráti <code>MyApp v2.14.3</code> a GitHub publikuje <code>release-2.14.3</code>, oba výrazy by mali vytiahnuť <code>2.14.3</code>.",
-    "step1Heading": "1. Zachyťte reálnu ukážku",
-    "step1P1": "Pred písaním vzoru zachyťte presný text, ktorý bude musieť ProxMenux spracovať.",
-    "step1P2": "Pri nainštalovanej verzii spustite rovnakú binárku a argumenty, aké sú nastavené vo formulári, priamo z konzoly LXC. Podľa metódy môžete dotazovať aj príslušný balík alebo súbor.",
-    "step1P3": "Napríklad:",
-    "step1Cmd": "myapp --version",
-    "step1P4": "Predpokladajme, že reálny výstup je:",
-    "step1Output": "MyApp version v2.14.3 (stable)",
-    "step1P5": "Pri publikovanej verzii skontrolujte presný názov release alebo tagu v oficiálnom repozitári. Ak používate JSON endpoint, pozrite hodnotu, ktorú vracia nastavená cesta.",
-    "step1P6": "Nevytvárajte vzor podľa vymysleného príkladu — jediná medzera, prefix alebo číslo navyše môže zmeniť výsledok.",
-    "step2Heading": "2. Určite časť, ktorú chcete ponechať",
-    "step2Lead": "V príklade vyššie chceme ponechať <code>2.14.3</code> a zahodiť:",
-    "step2Items": [
-      "Text <code>MyApp version</code>.",
-      "Písmeno <code>v</code>.",
-      "Text <code>(stable)</code>."
-    ],
-    "step2Recommended": "Odporúčaný výraz:",
-    "step2Regex": "version[ :=]+v?([0-9]+\\.[0-9]+\\.[0-9]+)",
-    "step2ReadLead": "Čítané po častiach:",
-    "step2Breakdown": {
-      "colPart": "Časť",
-      "colMeaning": "Význam",
-      "rows": [
-        {
-          "part": "version",
-          "meaning": "Ukotví hľadanie na tomto slove, aby sa nezhodovalo nesúvisiace číslo."
-        },
-        {
-          "part": "[ :=]+",
-          "meaning": "Povolí jednu alebo viac medzier, dvojbodiek alebo znamienok rovnosti."
-        },
-        {
-          "part": "v?",
-          "meaning": "Písmeno v sa môže objaviť raz alebo vôbec."
-        },
-        {
-          "part": "( and )",
-          "meaning": "Označuje časť, ktorú má ProxMenux ponechať."
-        },
-        {
-          "part": "[0-9]+",
-          "meaning": "Zodpovedá jednej alebo viacerým čísliciam."
-        },
-        {
-          "part": "\\.",
-          "meaning": "Zodpovedá skutočnej bodke medzi číslami."
-        }
-      ]
-    },
-    "step2DotNote": "Bodka sa píše ako <code>\\.</code>, pretože samotná bodka v regexe znamená „ľubovoľný znak“.",
-    "step3Heading": "3. Vyberte vzor podľa formátu",
-    "step3Lead": "Tieto vzory pokrývajú najčastejšie prípady:",
-    "step3Examples": {
-      "colText": "Ukážkový text",
-      "colRegex": "Odporúčaný regex",
-      "colResult": "Výsledok",
-      "rows": [
-        {
-          "text": "v2.14.3",
-          "regex": "v?([0-9]+\\.[0-9]+\\.[0-9]+)",
-          "result": "2.14.3"
-        },
-        {
-          "text": "Version: 2.14",
-          "regex": "Version[ :=]+v?([0-9]+(?:\\.[0-9]+){1,3})",
-          "result": "2.14"
-        },
-        {
-          "text": "release-2.14.3.1",
-          "regex": "release-v?([0-9]+(?:\\.[0-9]+){1,3})",
-          "result": "2.14.3.1"
-        },
-        {
-          "text": "build 2026.08.10",
-          "regex": "build[ :=]+([0-9]{4}\\.[0-9]{1,2}\\.[0-9]{1,2})",
-          "result": "2026.08.10"
-        },
-        {
-          "text": "{\"version\":\"2.14.3\"}",
-          "regex": "\"version\"\\s*:\\s*\"v?([0-9]+(?:\\.[0-9]+){1,3})\"",
-          "result": "2.14.3"
-        }
-      ]
-    },
-    "step3Note1": "<code>(?: ... )</code> zoskupí časť vzoru bez vytvorenia ďalšej výstupnej hodnoty. Hodí sa na prijatie verzií s dvoma, tromi alebo štyrmi blokmi bez komplikovania výsledku.",
-    "step3Note2": "Regex zadajte presne ako v tabuľke: bez úvodzoviek okolo a bez oddeľovačov <code>/.../</code>, ktoré používajú niektoré online nástroje.",
-    "step4Heading": "4. Uprednostnite jednu zachytávaciu skupinu",
-    "step4Intro": "ProxMenux používa zachytávacie skupiny na rozhodnutie, ktorú hodnotu vráti:",
-    "step4Items": [
-      "Bez zachytávacích skupín ponechá celú zhodu.",
-      "S jednou skupinou ponechá obsah tejto skupiny.",
-      "S viacerými skupinami ich spojí bodkami."
-    ],
-    "step4Trailing": "Pre predvídateľný výsledok obaľte celú verziu do jednej skupiny a pomocné skupiny zapisujte ako <code>(?: ... )</code>.",
-    "step4RecLabel": "Odporúčané:",
-    "step4RecRegex": "v?([0-9]+(?:\\.[0-9]+){1,3})",
-    "step4LessLabel": "Menej jasné pre začiatočníkov:",
-    "step4LessRegex": "v?([0-9]+)\\.([0-9]+)\\.([0-9]+)",
-    "step4Note": "Oba výrazy môžu vytvoriť <code>2.14.3</code>, ale prvý sa ľahšie udržiava, ak sa formát zmení.",
-    "step5Heading": "5. Vyhnite sa príliš širokým zhodám",
-    "step5Lead": "Takýto vzor býva zvyčajne príliš voľný:",
-    "step5Regex": "([0-9.]+)",
-    "step5P1": "Môže zachytiť rok, port, verziu závislosti alebo prvé číslo, ktoré sa vo výstupe objaví. Ak text obsahuje viac čísel, ukotvite ho blízkym slovom ako <code>version</code>, <code>release</code> alebo <code>build</code>.",
-    "step5P2": "Overte aj to, že upstream zdroj nemieša stabilné vydania s beta, nightly alebo vývojovými buildmi. Regex musí vybrať rovnaký kanál, aký je nainštalovaný v LXC.",
-    "step6Heading": "6. Uložte a overte výsledok",
-    "step6Lead": "Po uložení aplikácie kliknite na <strong>Skontrolovať</strong> a pozrite si dve hodnoty, ktoré ProxMenux zobrazí:",
-    "step6Output": "Nainštalované: 2.14.3\nNajnovšia:     2.15.0",
-    "step6CorrectLead": "Regex je správny, keď:",
-    "step6CorrectItems": [
-      "Obe polia obsahujú iba očakávanú verziu.",
-      "Názov aplikácie ani ďalší text nie sú zachytené.",
-      "Verzia nie je zamenená s iným číslom.",
-      "Lokálna aj publikovaná hodnota používajú rovnaký formát."
-    ],
-    "step6ErrorNote": "Ak zhoda skončí chybou, znovu zachyťte reálny výstup a porovnajte ho znak po znaku. Pozor najmä na veľké písmená, medzery, pomlčky, písmeno <code>v</code> a počet blokov verzie.",
-    "step6Callout": "Ak neviete vytvoriť spoľahlivý vzor, radšej dočasne vypnite upstream sledovanie a nechajte aplikáciu ako záznam iba s odkazom. Nesprávny regex môže vytvárať falošné upozornenia alebo skryť reálnu aktualizáciu."
+    "regexExampleLead": "Bežné zachytenie sémantickej verzie:",
+    "regexExample": "v?(\\d+\\.\\d+\\.\\d+)",
+    "regexCallout": "Úspešná zhoda regulárneho výrazu nedokazuje správnosť cesty. Balík, binárny súbor alebo súbor musí existovať aj v skutočnej registrovanej inštalácii."
   },
-  "state": {
-    "heading": "Čítanie stavu aplikácie",
-    "lead": "Registrovaná aplikácia môže zobraziť niektorý z týchto stavov:",
+  "updater": {
+    "heading": "Sledovanie verzie a aktualizácia sú nezávislé",
+    "lead": "<link>Karta Aktualizácie</link> vytvorí sekciu aplikácie ihneď po uložení ľubovoľného záznamu.",
     "items": [
-      "<strong>Aktuálne</strong> — verzie sa zhodujú.",
-      "<strong>Dostupná aktualizácia</strong> — zdroj publikuje novšiu verziu.",
-      "<strong>Kontroluje sa</strong> — kontrola práve prebieha.",
-      "<strong>Sledovanie verzie čaká</strong> — ešte neprebehla žiadna kontrola.",
-      "<strong>Chyba</strong> — jednu z verzií sa nepodarilo prečítať alebo spracovať."
-    ],
-    "trailing": "Po úprave nastavení použite <strong>Skontrolovať</strong> na opakovanie dotazu. Ak sa zobrazí chyba, najprv skontrolujte metódu nainštalovanej verzie, upstream zdroj a regex vzory."
+      "Záznam iba s odkazom uvádza, že sledovanie verzie nie je nastavené, ale stále môže dostať vlastný aktualizačný príkaz.",
+      "Aplikácia so sledovaním bez spustiteľnej metódy zobrazí neutrálnu požiadavku na vlastný príkaz.",
+      "Aplikácia s overeným wrapperom Proxmox VE Helper-Scripts môže použiť integrovaný aktualizátor aj vtedy, keď registrácia začala iba webovým odkazom.",
+      "Pridanie alebo úprava aktualizátora nemení detektor ani zdroj dostupnej verzie na karte App."
+    ]
   },
-  "manage": {
-    "heading": "Správa existujúcich záznamov",
-    "lead": "V režime správy môžete:",
+  "states": {
+    "heading": "Stavy verzie na karte aplikácie",
+    "colState": "Stav",
+    "colDisplay": "Zobrazenie",
+    "colMeaning": "Význam",
+    "rows": [
+      { "state": "Dostupná aktualizácia", "display": "Dostupná verzia fialovo s ikonou šípky nahor", "meaning": "Nainštalovaná a dostupná verzia sa líšia." },
+      { "state": "Aktuálne", "display": "Nainštalovaná a dostupná verzia bez fialového upozornenia", "meaning": "Posledná kontrola nenašla novšiu verziu." },
+      { "state": "Sledovanie čaká", "display": "Stav kontroly alebo čakania", "meaning": "Záznam je nastavený, ale ešte nedokončil obe kontroly." },
+      { "state": "Sledovanie vypnuté", "display": "Iba webové odkazy bez porovnania verzií", "meaning": "Záznam zostáva platný a môže mať aktualizátor." },
+      { "state": "Chyba kontroly", "display": "Jantárové vysvetlenie na karte", "meaning": "Predchádzajúci uložený stav zostane viditeľný a zobrazí sa chyba detektora alebo zdroja." }
+    ]
+  },
+  "management": {
+    "heading": "Správa uložených a navrhnutých aplikácií",
+    "lead": "Akcie v spodnej časti karty majú odlišné úlohy:",
     "items": [
-      "Znovu skontrolovať aplikáciu.",
-      "Upraviť jej názov, odkazy alebo sledovanie verzie.",
-      "Odstrániť záznam, ktorý už nepotrebujete.",
-      "Pridať ďalšiu aplikáciu do rovnakého LXC."
-    ],
-    "trailing": "Odstránenie záznamu aplikáciu neodinštaluje ani nezastaví. Odstráni iba informácie, ktoré ProxMenux používa na jej zobrazenie a sledovanie verzie."
+      "<strong>Hľadať aplikácie</strong> obnoví zisťovanie iba pre tento LXC.",
+      "<strong>Registrovať ďalšiu aplikáciu</strong> otvorí katalóg a manuálny editor bez nového skenovania LXC.",
+      "<strong>Upraviť</strong> zobrazí na kartách akcie Odstrániť, Skontrolovať, upozornenia a Upraviť polia.",
+      "<strong>Skryť</strong> odstráni nechcený návrh. Skryté detekcie možno obnoviť v prehliadači registrácie.",
+      "<strong>Skontrolovať</strong> obnoví údaje verzie uloženej aplikácie; nehľadá nové aplikácie."
+    ]
   },
-  "options": {
-    "heading": "",
-    "lead": "",
-    "items": [
-      "",
-      ""
-    ],
-    "trailing": ""
+  "troubleshooting": {
+    "heading": "Bežné situácie",
+    "colProblem": "Situácia",
+    "colResolution": "Riešenie",
+    "rows": [
+      { "problem": "Softvér bol nainštalovaný po štarte ProxMenux", "resolution": "Stlačte Hľadať aplikácie. Výslovné skenovanie aktualizuje návrhy v pamäti daného LXC." },
+      { "problem": "Aplikácia nebola zistená", "resolution": "Zaregistrujte ju manuálne. Stačí názov a jeden webový odkaz; sledovanie možno pridať neskôr." },
+      { "problem": "Navrhnutý detektor vracia nesprávnu verziu", "resolution": "Otvorte Upraviť polia, vyberte skutočný balík, binárny súbor alebo súbor a pred uložením otestujte detektor." },
+      { "problem": "Služba Dockeru sa neponúka ako aplikácia LXC", "resolution": "Zaregistrujte Docker a pridajte publikované rozhranie služby ako webový odkaz Dockeru. Aktualizácie obrazov zostanú v sekcii Docker." },
+      { "problem": "Uložená aplikácia nemá tlačidlo aktualizácie", "resolution": "Otvorte Aktualizácie a nastavte jej metódu. Samotné sledovanie verzie neurčuje, ako sa aktualizácia nainštaluje." }
+    ]
   },
-  "notDetected": {
-    "heading": "Ak aplikácia nebola nájdená",
-    "intro": "Automatická detekcia nie je nutná na používanie tejto funkcie. Ak sa nezobrazí žiadny návrh:",
-    "steps": [
-      "Zaregistrujte aplikáciu ručne.",
-      "Pridajte jej známe odkazy a porty.",
-      "Nechajte ju ako <strong>Žiadna (iba odkaz)</strong>, ak potrebujete iba skratku.",
-      "Sledovanie verzie nastavte až vtedy, keď máte pre obe hodnoty spoľahlivý zdroj.",
-      "Metódu aktualizácie nastavte neskôr cez <link>Aktualizácie</link>, ak chcete, aby ju ProxMenux spúšťal."
-    ],
-    "trailing": "Nevymýšľajte názov balíka, cestu ani regex len preto, aby bol formulár vyplnený. Jednoduchý a správny záznam je lepší než automatické sledovanie postavené na neoverených údajoch."
+  "figures": {
+    "catalog": {
+      "alt": "Katalóg registrácie s výsledkami, logami, portmi a poľami detektora",
+      "caption": "Metadáta katalógu urýchľujú registráciu, pričom všetky navrhnuté hodnoty zostávajú upraviteľné."
+    },
+    "webLinks": {
+      "alt": "Uložená karta aplikácie LXC s webovým odkazom",
+      "caption": "Záznam iba s odkazom je platný: sledovanie môže zostať vypnuté a aktualizátor sa pridáva nezávisle."
+    },
+    "tracking": {
+      "alt": "Voliteľné polia detektora nainštalovanej verzie a zdroja dostupnej verzie",
+      "caption": "Detekcia nainštalovanej verzie a zdroj dostupnej verzie sa nastavujú a testujú samostatne."
+    },
+    "card": {
+      "alt": "Uložená karta s nainštalovanou a dostupnou verziou a webovým odkazom",
+      "caption": "Karta spája identitu, údaje o verzii a webový prístup bez spúšťania aktualizácií z tejto karty."
+    }
   }
 }

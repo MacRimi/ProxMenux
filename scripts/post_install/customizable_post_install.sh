@@ -1208,11 +1208,77 @@ EOF
 
 
 
+_reconcile_external_zfs_arc_settings() {
+    local managed_conf="$1"
+    local backup_dir="$BASE_DIR/backups/zfs_arc"
+    local manifest="$backup_dir/manifest.tsv"
+    local conf_file backup_file tmp_file tmp_manifest post_hash
+
+    while IFS= read -r -d '' conf_file; do
+        [[ "$conf_file" == "$managed_conf" ]] && continue
+
+        if ! grep -Eq \
+            '^[[:space:]]*options[[:space:]]+zfs([[:space:]]|$).*zfs_arc_(min|max)=' \
+            "$conf_file" 2>/dev/null; then
+            continue
+        fi
+
+        msg_warn "$(translate "Conflicting ZFS ARC settings detected in:") $conf_file"
+        mkdir -p "$backup_dir" || return 1
+        touch "$manifest" || return 1
+        backup_file="$backup_dir/$(basename "$conf_file").before-proxmenux"
+        if [[ ! -f "$backup_file" ]]; then
+            cp -p "$conf_file" "$backup_file" || return 1
+        fi
+
+        tmp_file=$(mktemp "${conf_file}.proxmenux.XXXXXX") || return 1
+        cp -p "$conf_file" "$tmp_file" || {
+            rm -f "$tmp_file"
+            return 1
+        }
+
+        # Remove only zfs_arc_min/max tokens from active `options zfs`
+        # directives. Other ZFS module options and comments stay untouched.
+        awk '
+            /^[[:space:]]*options[[:space:]]+zfs([[:space:]]|$)/ {
+                line = $0
+                gsub(/[[:space:]]+zfs_arc_(min|max)=[^[:space:]#]+/, "", line)
+                if (line ~ /^[[:space:]]*options[[:space:]]+zfs[[:space:]]*$/) {
+                    next
+                }
+                if (line ~ /^[[:space:]]*options[[:space:]]+zfs[[:space:]]*#/) {
+                    sub(/^[[:space:]]*options[[:space:]]+zfs[[:space:]]*/, "", line)
+                }
+                print line
+                next
+            }
+            { print }
+        ' "$conf_file" > "$tmp_file" || {
+            rm -f "$tmp_file"
+            return 1
+        }
+
+        mv -f "$tmp_file" "$conf_file" || return 1
+        post_hash=$(sha256sum "$conf_file" | awk '{print $1}')
+
+        tmp_manifest=$(mktemp "${manifest}.XXXXXX") || return 1
+        awk -F '\t' -v path="$conf_file" '$1 != path' "$manifest" > "$tmp_manifest"
+        printf '%s\t%s\t%s\n' "$conf_file" "$backup_file" "$post_hash" >> "$tmp_manifest"
+        mv -f "$tmp_manifest" "$manifest" || return 1
+
+        msg_ok "$(translate "Conflicting ZFS ARC settings backed up and reconciled:") $conf_file"
+    done < <(find /etc/modprobe.d -maxdepth 1 -type f -name '*.conf' -print0 2>/dev/null)
+}
+
+
 optimize_zfs_arc() {
-    local FUNC_VERSION="1.1"
-    # description: Cap ZFS ARC max to a sensible fraction of host RAM so VMs don't fight the kernel for memory. Only sets zfs_arc_max; other OpenZFS tunables stay at their defaults.
+    local FUNC_VERSION="1.3"
+    # description: Cap ZFS ARC max using Proxmox VE's 10%-of-RAM policy (16 GiB ceiling), safely reconcile conflicting module settings and report the pool-size guideline before applying it.
     local zfs_conf="/etc/modprobe.d/99-zfsarc.conf"
-    local ram_bytes arc_max
+    local gib=$((1024 * 1024 * 1024))
+    local tib=$((1024 * 1024 * 1024 * 1024))
+    local ram_kib ram_bytes arc_max current_arc_max pool_bytes=0 pool_size
+    local pool_tib pool_guideline arc_max_human current_arc_max_human pool_guideline_human
 
     msg_info2 "$(translate "Optimizing ZFS ARC maximum size...")"
 
@@ -1225,20 +1291,51 @@ optimize_zfs_arc() {
         return 0
     fi
 
-    ram_bytes=$(awk '/MemTotal:/ { print $2 * 1024 }' /proc/meminfo)
-    if [[ -z "$ram_bytes" || "$ram_bytes" -le 0 ]]; then
+    ram_kib=$(awk '/MemTotal:/ { print $2; exit }' /proc/meminfo)
+    if [[ ! "$ram_kib" =~ ^[0-9]+$ || "$ram_kib" -le 0 ]]; then
         msg_error "$(translate "Unable to determine the installed memory.")"
         return 1
     fi
+    ram_bytes=$((ram_kib * 1024))
 
-    if (( ram_bytes <= 16 * 1024 * 1024 * 1024 )); then
-        arc_max=$((512 * 1024 * 1024))
-    elif (( ram_bytes <= 32 * 1024 * 1024 * 1024 )); then
-        arc_max=$((1024 * 1024 * 1024))
-    else
-        arc_max=$((ram_bytes / 8))
+    arc_max=$((ram_bytes / 10))
+    (( arc_max > 16 * gib )) && arc_max=$((16 * gib))
+    (( arc_max < 64 * 1024 * 1024 )) && arc_max=$((64 * 1024 * 1024))
+
+    while read -r pool_size; do
+        [[ "$pool_size" =~ ^[0-9]+$ ]] || continue
+        pool_bytes=$((pool_bytes + pool_size))
+    done < <(zpool list -H -p -o size 2>/dev/null)
+
+    pool_tib=$(((pool_bytes + tib - 1) / tib))
+    pool_guideline=$((2 * gib + pool_tib * gib))
+    current_arc_max=$(awk '$1 == "c_max" { print $3; exit }' /proc/spl/kstat/zfs/arcstats 2>/dev/null || true)
+    if [[ ! "$current_arc_max" =~ ^[0-9]+$ ]]; then
+        current_arc_max=$(cat /sys/module/zfs/parameters/zfs_arc_max 2>/dev/null || true)
     fi
-    (( arc_max < 512 * 1024 * 1024 )) && arc_max=$((512 * 1024 * 1024))
+
+    if command -v numfmt >/dev/null 2>&1; then
+        arc_max_human=$(numfmt --to=iec-i --suffix=B "$arc_max")
+        pool_guideline_human=$(numfmt --to=iec-i --suffix=B "$pool_guideline")
+        if [[ "$current_arc_max" =~ ^[0-9]+$ ]]; then
+            current_arc_max_human=$(numfmt --to=iec-i --suffix=B "$current_arc_max")
+        fi
+    fi
+    arc_max_human=${arc_max_human:-"$arc_max bytes"}
+    pool_guideline_human=${pool_guideline_human:-"$pool_guideline bytes"}
+    current_arc_max_human=${current_arc_max_human:-${current_arc_max:-unknown}}
+
+    msg_info "$(translate "Current effective ZFS ARC maximum:") $current_arc_max_human"
+    msg_info "$(translate "Proposed ZFS ARC maximum:") $arc_max_human"
+    if (( arc_max < pool_guideline )); then
+        msg_warn "$(translate "The proposed ARC maximum is below Proxmox VE's pool-size guideline:") $pool_guideline_human"
+        msg_info2 "$(translate "Consider adding RAM or reducing the host workload if ZFS performance is insufficient.")"
+    fi
+
+    if ! _reconcile_external_zfs_arc_settings "$zfs_conf"; then
+        msg_error "$(translate "Failed to reconcile conflicting ZFS ARC settings.")"
+        return 1
+    fi
 
     if [[ -f "$zfs_conf" && ! -f "${zfs_conf}.bak" ]]; then
         cp -p "$zfs_conf" "${zfs_conf}.bak"
@@ -1260,7 +1357,7 @@ EOF
     fi
 
     NECESSARY_REBOOT=1
-    msg_ok "$(translate "ZFS ARC maximum configured:") $arc_max $(translate "bytes")"
+    msg_ok "$(translate "ZFS ARC maximum configured:") $arc_max_human"
     msg_success "$(translate "ZFS ARC optimization completed")"
     register_tool "zfs_arc" true "$FUNC_VERSION"
 }
@@ -1813,8 +1910,8 @@ enable_vfio_iommu() {
 
 
 customize_bashrc() {
-    local FUNC_VERSION="1.0"
-    # description: Inject the ProxMenux core bashrc block (aliases, prompt, history) into root's .bashrc, idempotent via begin/end markers.
+    local FUNC_VERSION="1.1"
+    # description: Install the managed ProxMenux Bash prompt and aliases while preserving or selecting the short/full working-directory style.
     msg_info2 "$(translate "Customizing bashrc for root user...")"
     
     msg_info "$(translate "Customizing bashrc for root user...")"
@@ -1822,6 +1919,47 @@ customize_bashrc() {
     local bash_profile="/root/.bash_profile"
     local marker_begin="# BEGIN PMX_CORE_BASHRC"
     local marker_end="# END PMX_CORE_BASHRC"
+    local prompt_path_escape='\W'
+    local prompt_path_style="${PMX_BASHRC_PATH_STYLE:-}"
+    local short_state="on"
+    local full_state="off"
+    local choice=""
+
+    # Preserve an existing ProxMenux-managed choice when the function is
+    # re-run. \W shows only the current directory; \w shows the full path.
+    if sed -n "/^${marker_begin}$/,/^${marker_end}$/p" "$bashrc" 2>/dev/null | grep -Fq '\w'; then
+        prompt_path_escape='\w'
+        short_state="off"
+        full_state="on"
+    fi
+
+    case "$prompt_path_style" in
+        short)
+            prompt_path_escape='\W'
+            ;;
+        full)
+            prompt_path_escape='\w'
+            ;;
+        "")
+            if [[ -t 0 && -t 1 ]] && command -v whiptail >/dev/null 2>&1; then
+                if ! choice=$(whiptail \
+                    --title "$(translate "Bash prompt path")" \
+                    --radiolist "$(translate "Choose how the current directory is shown in the Bash prompt:")" \
+                    14 76 2 \
+                    "short" "$(translate "Current directory only") (\\W)" "$short_state" \
+                    "full" "$(translate "Full path") (\\w)" "$full_state" \
+                    3>&1 1>&2 2>&3); then
+                    msg_warn "$(translate "Cancelled by user.")"
+                    return 1
+                fi
+                [[ "$choice" == "full" ]] && prompt_path_escape='\w' || prompt_path_escape='\W'
+            fi
+            ;;
+        *)
+            msg_error "PMX_BASHRC_PATH_STYLE must be 'short' or 'full'."
+            return 1
+            ;;
+    esac
     
  
     [ -f "${bashrc}.bak" ] || cp "$bashrc" "${bashrc}.bak" > /dev/null 2>&1
@@ -1836,7 +1974,7 @@ customize_bashrc() {
 ${marker_begin}
 # ProxMenux core customizations
 export HISTTIMEFORMAT="%d/%m/%y %T "
-export PS1="\[\e[31m\][\[\e[m\]\[\e[38;5;172m\]\u\[\e[m\]@\[\e[38;5;153m\]\h\[\e[m\] \[\e[38;5;214m\]\W\[\e[m\]\[\e[31m\]]\[\e[m\]\\$ "
+export PS1="\[\e[31m\][\[\e[m\]\[\e[38;5;172m\]\u\[\e[m\]@\[\e[38;5;153m\]\h\[\e[m\] \[\e[38;5;214m\]${prompt_path_escape}\[\e[m\]\[\e[31m\]]\[\e[m\]\\$ "
 alias l='ls -CF'
 alias la='ls -A'
 alias ll='ls -alF'
@@ -1854,6 +1992,8 @@ EOF
     fi
     
     msg_ok "$(translate "Bashrc customization completed")"
+    msg_info "$(translate "The new prompt will be used in new terminal sessions.")"
+    msg_info "$(translate "To apply it to the current shell now, run:") source /root/.bashrc"
     register_tool "bashrc_custom" true "$FUNC_VERSION"
 }
 
@@ -1985,8 +2125,8 @@ remove_subscription_banner() {
 
 
 optimize_memory_settings() {
-    local FUNC_VERSION="1.1"
-    # description: Tune swappiness, dirty page ratios, overcommit and compaction proactiveness for VM hosts.
+    local FUNC_VERSION="1.2"
+    # description: Tune swappiness, dirty page ratios and compaction proactiveness for VM hosts without overriding the kernel's memory-overcommit policy.
     msg_info2 "$(translate "Optimizing memory settings...")"
     NECESSARY_REBOOT=1
 
@@ -2009,9 +2149,6 @@ vm.swappiness = 10
 # Lower dirty memory thresholds to free memory faster
 vm.dirty_ratio = 15
 vm.dirty_background_ratio = 5
-
-# Allow memory overcommit to reduce allocation issues
-vm.overcommit_memory = 1
 
 # Avoid excessive virtual memory areas (safe for most applications)
 vm.max_map_count = 262144

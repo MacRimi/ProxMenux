@@ -5296,10 +5296,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       </button>
                                     </div>
                                     <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
-                                      {t("vmLxc.updates.dockerImagesReadOnly")}
-                                      {selectedVM.docker_inventory.checked_at
-                                        ? ` · ${t("vmLxc.updates.lastCheckedPrefix")} ${new Date(selectedVM.docker_inventory.checked_at).toLocaleString()}`
-                                        : ""}
+                                      {t("vmLxc.updates.lastCheckedPrefix")} {selectedVM.docker_inventory.checked_at
+                                        ? new Date(selectedVM.docker_inventory.checked_at).toLocaleString()
+                                        : "—"}
                                     </div>
                                     {dockerInventoryRefreshing ? (
                                       <div className="text-sm text-muted-foreground flex items-center gap-2">

@@ -289,6 +289,7 @@ interface RemoteStorage {
   used: number
   available: number
   percent: number
+  capacity_known?: boolean
   exclude_health: boolean
   exclude_notifications: boolean
   excluded_at?: string
@@ -1509,7 +1510,8 @@ export function Settings() {
                   const isExcluded = storage.exclude_health || storage.exclude_notifications
                   const isSaving = savingStorage === storage.name
                   const isNamespaceRestricted = storage.status === 'namespace_restricted'
-                  const isOffline = !isNamespaceRestricted && (storage.status === 'error' || storage.total === 0)
+                  const isOffline = !isNamespaceRestricted && storage.status !== 'active'
+                  const capacityKnown = storage.capacity_known ?? storage.total > 0
 
                   return (
                     <div key={storage.name} className="grid grid-cols-[1fr_auto_auto] gap-4 py-3 items-center">
@@ -1529,6 +1531,9 @@ export function Settings() {
                           )}
                           {isNamespaceRestricted && (
                             <p className="text-[11px] text-blue-400 mt-0.5">{t("settings.remoteStorage.namespaceRestricted")}</p>
+                          )}
+                          {!isOffline && !isNamespaceRestricted && !capacityKnown && (
+                            <p className="text-[11px] text-muted-foreground mt-0.5">{t("storage.capacityNotReported")}</p>
                           )}
                         </div>
                       </div>
