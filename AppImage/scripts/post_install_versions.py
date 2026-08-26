@@ -92,6 +92,73 @@ def _read_text(path: Path) -> str:
         return ""
 
 
+def _load_notified_versions_from_disk() -> dict[str, set[str]]:
+    """Read the versions already announced for each optimization.
+
+    Notification history lives beside the existing update snapshot so no
+    additional runtime file is introduced. Older snapshots simply have no
+    ``notified_versions`` member and therefore start with an empty history.
+    """
+    try:
+        payload = json.loads(_read_text(_UPDATES_JSON) or "{}")
+    except json.JSONDecodeError:
+        return {}
+    raw = payload.get("notified_versions", {})
+    if not isinstance(raw, dict):
+        return {}
+    normalized: dict[str, set[str]] = {}
+    for key, versions in raw.items():
+        if isinstance(versions, str):
+            versions = [versions]
+        if not isinstance(versions, list):
+            continue
+        clean = {str(version).strip() for version in versions if str(version).strip()}
+        if clean:
+            normalized[str(key)] = clean
+    return normalized
+
+
+def _write_persisted_snapshot(
+    scanned_at: float,
+    updates: list[dict[str, Any]],
+    notified_versions: dict[str, set[str]],
+) -> None:
+    """Atomically persist the update snapshot and notification history."""
+    payload = {
+        "scanned_at": scanned_at,
+        "updates": updates,
+        "notified_versions": {
+            key: sorted(versions)
+            for key, versions in sorted(notified_versions.items())
+            if versions
+        },
+    }
+    _UPDATES_JSON.parent.mkdir(parents=True, exist_ok=True)
+    temporary = _UPDATES_JSON.with_suffix(_UPDATES_JSON.suffix + ".tmp")
+    temporary.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    temporary.replace(_UPDATES_JSON)
+
+
+def load_notified_versions() -> dict[str, set[str]]:
+    """Return a defensive copy of optimization versions already announced."""
+    return {
+        key: set(versions)
+        for key, versions in _load_notified_versions_from_disk().items()
+    }
+
+
+def save_notified_versions(history: dict[str, set[str]]) -> None:
+    """Persist notification history without changing the current scan."""
+    with _cache_lock:
+        scanned_at = float(_cache.get("scanned_at", 0.0) or 0.0)
+        updates = list(_cache.get("updates", []))
+    try:
+        _write_persisted_snapshot(scanned_at, updates, history)
+    except OSError:
+        # Notification de-duplication remains best-effort on read-only hosts.
+        pass
+
+
 # ---------------------------------------------------------------------------
 # Bash script parser
 # ---------------------------------------------------------------------------
@@ -353,13 +420,10 @@ def scan(persist: bool = True) -> dict[str, Any]:
 
     if persist:
         try:
-            _UPDATES_JSON.parent.mkdir(parents=True, exist_ok=True)
-            _UPDATES_JSON.write_text(
-                json.dumps(
-                    {"scanned_at": snapshot["scanned_at"], "updates": updates},
-                    indent=2,
-                ),
-                encoding="utf-8",
+            _write_persisted_snapshot(
+                snapshot["scanned_at"],
+                updates,
+                _load_notified_versions_from_disk(),
             )
         except OSError:
             # Writing the on-disk cache is best-effort. If /usr/local

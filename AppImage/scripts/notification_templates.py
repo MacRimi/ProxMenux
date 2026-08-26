@@ -1033,6 +1033,17 @@ TEMPLATES = {
         # /etc/aliases or removing MAILTO from the cron job. Audit Tier 6
         # — `system_mail` toggle no visible en UI / reportado por usuario.
     },
+    'apt_listchanges': {
+        'title': '{hostname}: {pve_title}',
+        'body': (
+            'Upstream package information forwarded by Proxmox VE through '
+            'apt-listchanges. The following text comes from the package '
+            'maintainer and is not a ProxMenux recommendation.\n\n{reason}'
+        ),
+        'label': 'apt-listchanges package notices',
+        'group': 'updates',
+        'default_enabled': True,
+    },
     'webhook_test': {
         'title': '{hostname}: Webhook test received',
         'body': 'PVE webhook connectivity test successful.\n{reason}',
@@ -1272,9 +1283,9 @@ TEMPLATES = {
     'post_install_update': {
         'title': '{hostname}: {count} ProxMenux optimization update(s) available',
         'body': (
-            '{count} optimization update(s) detected on this host.\n\n'
-            '🛠️ Tools:\n{tool_list}\n\n'
-            '💡 How to apply:\n'
+            '{count} ProxMenux optimization update(s) available on this host.\n\n'
+            '🛠️ Available versions:\n{tool_list}\n\n'
+            '💡 Apply from:\n'
             '  • ProxMenux Monitor → Settings → ProxMenux Optimizations\n'
             '  • Or run the post-install menu (option 2) → "Apply available updates"'
         ),
@@ -1733,6 +1744,7 @@ CATEGORY_EMOJI = {
 EVENT_EMOJI = {
     # VM / CT
     'lxc_updates_available': '\U0001F4E6',     # \uD83D\uDCE6 package \u2014 pending CT updates
+    'apt_listchanges': '\U0001F4E6',           # package-maintainer NEWS via PVE mail
     'lxc_update_applied':   '\u2705',           # \u2705 check \u2014 update applied
     'app_update_available': '\U0001F195',  # \ud83c\udd95 NEW \u2014 upstream app release
     'docker_stack_update_available': '\U0001F433',

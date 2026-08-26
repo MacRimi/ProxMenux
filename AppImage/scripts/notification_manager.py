@@ -1350,6 +1350,20 @@ class NotificationManager:
                 # If AI is enabled AND rich_format is on, AI will include emojis directly
                 # Pass channel_type so AI knows whether to append original (email only)
                 channel_ai_config = {**ai_config, 'channel_type': ch_name}
+                # Availability notices are factual inventories, not advice.
+                # Even when the user enables experimental AI suggestions for
+                # diagnostic alerts, update announcements must only translate
+                # and format the versions/actions already supplied by the
+                # deterministic template.
+                if event_type in {
+                    'update_available', 'update_summary', 'pve_update',
+                    'proxmenux_update', 'post_install_update', 'apt_listchanges',
+                    'lxc_updates_available', 'secure_gateway_update_available',
+                    'nvidia_driver_update_available',
+                    'coral_driver_update_available', 'app_update_available',
+                    'docker_stack_update_available',
+                }:
+                    channel_ai_config['ai_allow_suggestions'] = False
 
                 # Isolate the AI/enrich block in its own try so a failure
                 # here (raised from enrich_context_for_ai or any other
@@ -1979,7 +1993,6 @@ class NotificationManager:
         # cooldown resumes after that first post-restart send.
         'update_summary',
         'proxmenux_update',
-        'post_install_update',
         'pve_update',
         'update_available',
         'nvidia_driver_update_available',

@@ -1775,6 +1775,7 @@
         "service_fail_batch": "Plusieurs échecs de service",
         "cron_output": "Sortie de la tâche Cron",
         "system_mail": "Smartd / messagerie système",
+        "apt_listchanges": "Avis de paquets apt-listchanges",
         "webhook_test": "Test de webhook",
         "update_available": "Mises à jour disponibles (héritées)",
         "unknown_persistent": "Chèque indisponible",

@@ -1774,6 +1774,7 @@
         "service_fail_batch": "Zlyhanie viacerých služieb",
         "cron_output": "Výstup úlohy cron",
         "system_mail": "Správy Smartd a systému",
+        "apt_listchanges": "Oznámenia o balíkoch apt-listchanges",
         "webhook_test": "Test webhooku",
         "update_available": "Dostupné aktualizácie (starší typ)",
         "unknown_persistent": "Kontrola nie je dostupná",

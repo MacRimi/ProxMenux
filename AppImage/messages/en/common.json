@@ -1774,6 +1774,7 @@
         "service_fail_batch": "Multiple service failures",
         "cron_output": "Cron job output",
         "system_mail": "Smartd / system mail",
+        "apt_listchanges": "apt-listchanges package notices",
         "webhook_test": "Webhook test",
         "update_available": "Updates available (legacy)",
         "unknown_persistent": "Check unavailable",

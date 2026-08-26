@@ -196,6 +196,20 @@ def _hostname() -> str:
     return resolved
 
 
+def _new_post_install_update_versions(
+    updates: list[dict[str, Any]],
+    notified_versions: dict[str, set[str]],
+) -> dict[str, str]:
+    """Return only optimization versions that have never been announced."""
+    available: dict[str, str] = {}
+    for update in updates:
+        key = str(update.get('key', '') or '').strip()
+        version = str(update.get('available_version', '') or '').strip()
+        if key and version and version not in notified_versions.get(key, set()):
+            available[key] = version
+    return available
+
+
 def capture_journal_context(keywords: list, lines: int = 30,
                             since: str = "5 minutes ago") -> str:
     """Capture relevant journal lines for AI context enrichment.
@@ -2567,11 +2581,9 @@ class PollingCollector:
         self._last_ai_model_check = 0
         # Sprint 12D: post-install function updates check, on the same
         # 24h cooldown as the Proxmox/ProxMenux update checks. Notify
-        # once per *changed set* of update keys — repeating the same
-        # notification every 24h forever would be noisy, so we de-dupe
-        # against the previously-notified set.
+        # once for each genuinely new available version. The persistent
+        # history is stored in updates_available.json beside the scan.
         self._last_post_install_check = 0
-        self._notified_post_install_keys: set[str] = set()
         # Sprint 14.7: fingerprint (item_id → latest_version) of the
         # last managed-installs update notification, across all types
         # in the registry. A new notification fires when the
@@ -3503,11 +3515,9 @@ class PollingCollector:
         Sprint 12A's detector runs at AppImage startup and writes
         ``updates_available.json``. This check refreshes the snapshot
         every 24h (matching the other update channels), and emits a
-        single ``post_install_update`` event the first time the *set* of
-        available updates changes. Repeating the same notification every
-        24h forever would be noisy, so we de-dupe against the previously
-        notified set of tool keys: only when a new tool joins the list
-        (or an existing one disappears) does a fresh notification fire.
+        single ``post_install_update`` event when a tool exposes an available
+        version that has never been announced. Applying one item merely
+        shrinks the pending set and must not produce a second notification.
         """
         now = time.time()
         if now - self._last_post_install_check < self.UPDATE_CHECK_INTERVAL:
@@ -3523,16 +3533,12 @@ class PollingCollector:
             return
 
         if not updates:
-            # All caught up. Reset so a future bump triggers a fresh
-            # notification instead of being suppressed by stale state.
-            self._notified_post_install_keys = set()
             return
 
-        new_keys = {u.get('key', '') for u in updates if u.get('key')}
-        if new_keys == self._notified_post_install_keys:
-            return  # already notified about this exact set
-
-        self._notified_post_install_keys = new_keys
+        notified_versions = post_install_versions.load_notified_versions()
+        new_versions = _new_post_install_update_versions(updates, notified_versions)
+        if not new_versions:
+            return
 
         # Pre-format the bullet list here so the template can drop it
         # straight in with `{tool_list}` (the renderer is plain
@@ -3567,6 +3573,9 @@ class PollingCollector:
             'post_install_update', 'INFO', data,
             source='polling', entity='node', entity_id='',
         ))
+        for key, version in new_versions.items():
+            notified_versions.setdefault(key, set()).add(version)
+        post_install_versions.save_notified_versions(notified_versions)
 
     # ── Managed-installs update check (Sprint 14.7) ─────────────────
 
@@ -4178,26 +4187,33 @@ class ProxmoxHookWatcher:
         # smartd and other system mail contains verbose boilerplate.
         # Extract just the actionable warning/error lines.
         if pve_type == 'system-mail' and message:
-            clean_lines = []
-            for line in message.split('\n'):
-                stripped = line.strip()
-                # Skip boilerplate lines
-                if not stripped:
-                    continue
-                if stripped.startswith('This message was generated'):
-                    continue
-                if stripped.startswith('For details see'):
-                    continue
-                if stripped.startswith('You can also use'):
-                    continue
-                if stripped.startswith('The original message'):
-                    continue
-                if stripped.startswith('Another message will'):
-                    continue
-                if stripped.startswith('host name:') or stripped.startswith('DNS domain:'):
-                    continue
-                clean_lines.append(stripped)
-            data['reason'] = '\n'.join(clean_lines).strip() if clean_lines else message.strip()[:500]
+            # apt-listchanges is package-maintainer NEWS, not diagnostic
+            # boilerplate. Preserve it verbatim (including paragraphs and
+            # signatures) so ProxMenux only attributes the source and never
+            # silently edits or truncates the upstream notice.
+            if event_type == 'apt_listchanges':
+                data['reason'] = message.strip()
+            else:
+                clean_lines = []
+                for line in message.split('\n'):
+                    stripped = line.strip()
+                    # Skip boilerplate lines
+                    if not stripped:
+                        continue
+                    if stripped.startswith('This message was generated'):
+                        continue
+                    if stripped.startswith('For details see'):
+                        continue
+                    if stripped.startswith('You can also use'):
+                        continue
+                    if stripped.startswith('The original message'):
+                        continue
+                    if stripped.startswith('Another message will'):
+                        continue
+                    if stripped.startswith('host name:') or stripped.startswith('DNS domain:'):
+                        continue
+                    clean_lines.append(stripped)
+                data['reason'] = '\n'.join(clean_lines).strip() if clean_lines else message.strip()[:500]
         
         # Extract VMID and VM name from message for vzdump events
         if pve_type == 'vzdump' and message:
@@ -4318,6 +4334,14 @@ class ProxmoxHookWatcher:
             # Settings → Notifications.
             msg_lower = (message or '').lower()
             title_lower_sm = (title or '').lower()
+
+            # apt-listchanges forwards legitimate upstream package NEWS through
+            # PVE's generic system-mail bucket. Keep it, but classify it as an
+            # update notice of its own so the template can identify the source
+            # clearly instead of making package-maintainer prose look like a
+            # recommendation written by ProxMenux.
+            if 'apt-listchanges' in title_lower_sm or 'apt-listchanges' in msg_lower[:500]:
+                return 'apt_listchanges', 'node', ''
 
             # ── Record disk observation regardless of noise filter ──
             # Even "noise" events are recorded as observations so the user

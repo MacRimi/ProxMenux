@@ -1775,6 +1775,7 @@
         "service_fail_batch": "Várias falhas de serviço",
         "cron_output": "Saída do cron job",
         "system_mail": "Smartd / correio do sistema",
+        "apt_listchanges": "Avisos de pacotes do apt-listchanges",
         "webhook_test": "Teste de webhook",
         "update_available": "Atualizações disponíveis (legado)",
         "unknown_persistent": "Verifique indisponível",
