@@ -3817,21 +3817,13 @@ class PollingCollector:
             return 'secure_gateway_update_available', data
 
         if item_type == 'nvidia_xfree86':
-            kind = update.get('_upgrade_kind')
-            if kind == 'branch_upgrade':
-                upgrade_reason = (
-                    "Your current driver branch is no longer compatible with "
-                    f"kernel {update.get('_kernel') or 'this kernel'}. "
-                    "Switch to the recommended branch — the installer will "
-                    "rebuild against the running kernel."
-                )
-            else:
-                upgrade_reason = (
-                    "Same-branch maintenance update with bug/security fixes."
-                )
+            upgrade_reason = (
+                "Same-branch maintenance update with bug/security fixes. "
+                "The installer validates the selected release by rebuilding "
+                "its DKMS module against the running kernel."
+            )
             data = {
                 **common,
-                'kernel': update.get('_kernel') or '',
                 'upgrade_reason': upgrade_reason,
             }
             return 'nvidia_driver_update_available', data

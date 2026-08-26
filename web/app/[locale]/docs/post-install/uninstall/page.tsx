@@ -60,6 +60,7 @@ export default async function UninstallOptimizationsPage({
         title={t("header.title")}
         description={t("header.description")}
         section={t("header.section")}
+        estimatedMinutes={8}
       />
 
       <Callout variant="info" title={t("intro.title")}>

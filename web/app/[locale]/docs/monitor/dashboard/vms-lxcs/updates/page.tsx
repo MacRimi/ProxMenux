@@ -122,6 +122,9 @@ export default async function UpdatesTabPage({
           </tbody>
         </table>
       </div>
+      <Callout variant="tip">
+        {t.rich("mechanisms.officialReference", { helper: linkHelper })}
+      </Callout>
       <Callout variant="warning">{t.rich("mechanisms.callout", { strong, em, code })}</Callout>
 
       <h2 className="mt-10 mb-4 text-2xl font-semibold text-gray-900">{t("docker.heading")}</h2>

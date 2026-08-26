@@ -50,6 +50,7 @@ export default async function PostInstallNetworkPage({
       <DocHeader
         title={t("header.title")}
         section={t("header.section")}
+        estimatedMinutes={8}
       />
 
       <Callout variant="info" title={t("intro.title")}>
@@ -116,7 +117,7 @@ export default async function PostInstallNetworkPage({
       </Callout>
 
       <Callout variant="warning" title={t("ovs.revertTitle")}>
-        {t("ovs.revertBody")}
+        {t.rich("ovs.revertBody", { code, em, link: uninstallLink })}
       </Callout>
 
       <CopyableCode
@@ -158,8 +159,8 @@ sysctl net.ipv4.tcp_fastopen`}
         {t("bbr.impactBody")}
       </Callout>
 
-      <Callout variant="warning" title={t("bbr.revertTitle")}>
-        {t("bbr.revertBody")}
+      <Callout variant="tip" title={t("bbr.revertTitle")}>
+        {t.rich("bbr.revertBody", { code, link: uninstallLink })}
       </Callout>
 
       <CopyableCode

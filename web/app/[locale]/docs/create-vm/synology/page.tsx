@@ -51,13 +51,13 @@ function ImageWithCaption({ src, alt, caption }: { src: string; alt: string; cap
   )
 }
 
-function StepNumber({ number }: { number: number }) {
+function StepHeading({ number, label, title, id }: { number: number; label: string; title: string; id?: string }) {
   return (
-    <div
-      className="inline-flex items-center justify-center w-8 h-8 mr-3 text-white bg-blue-500 rounded-full"
-      aria-hidden="true"
-    >
-      <span className="text-sm font-bold">{number}</span>
+    <div className="flex items-center gap-3 mb-4" id={id}>
+      <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-800">
+        {label} {number}
+      </span>
+      <h2 className="text-xl font-semibold m-0">{title}</h2>
     </div>
   )
 }
@@ -271,10 +271,7 @@ export default function Page() {
         const media = step.loaders[activeLoader] || []
         return (
           <section key={step.id} className="mb-12 border-b pb-8">
-            <h2 className="text-xl font-semibold mb-4 flex items-center" id={step.id}>
-              <StepNumber number={stepIdx + 1} />
-              {step.title}
-            </h2>
+            <StepHeading number={stepIdx + 1} label={t("stepLabel")} title={step.title} id={step.id} />
             <p className="mb-4">{step.intro}</p>
 
             <div className="mt-6">

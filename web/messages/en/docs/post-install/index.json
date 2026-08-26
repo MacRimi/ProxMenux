@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Proxmox VE Post-Install Script — Automated and Customizable | ProxMenux",
-    "description": "Overview of the ProxMenux Post-Install scripts for Proxmox VE. Run the Automated script for sane defaults with zero prompts, the Customizable script to pick exactly what you want across 10 categories (system, virtualization, network, storage, security, performance, optional), or fully reverse any change with the Uninstall Optimizations option.",
+    "description": "Overview of the ProxMenux Post-Install scripts for Proxmox VE. Run the Automated script for sane defaults with zero prompts, the Customizable script to pick exactly what you want across 10 categories, or restore supported reversible changes with Uninstall Optimizations.",
     "ogTitle": "Proxmox VE Post-Install Script — Automated and Customizable",
     "ogDescription": "Apply common Proxmox VE post-install optimizations across 10 categories — automated or à la carte, with reversible options.",
     "twitterTitle": "Proxmox VE Post-Install Script | ProxMenux",
@@ -9,26 +9,26 @@
   },
   "header": {
     "title": "Post-Install Scripts",
-    "description": "Configure a fresh Proxmox VE host with ProxMenux's post-install optimizations. Three paths: run everything automatically, cherry-pick what you want, or reverse any change. All changes are tracked.",
+    "description": "Configure a fresh Proxmox VE host with ProxMenux's post-install optimizations. Apply the baseline automatically, choose individual options, update installed functions or restore supported reversible changes. Package upgrades are not presented as reversible.",
     "section": "Settings post-install Proxmox"
   },
   "intro": {
     "title": "What this menu is for",
-    "body": "Right after installing Proxmox VE, there are dozens of small changes that make the host faster and easier to maintain — free repositories, sane journald limits, sensible TCP buffers, SSD-friendly log storage, bashrc niceties, and more. ProxMenux automates all of them, tracks what it changed, and lets you revert."
+    "body": "Right after installing Proxmox VE, there are dozens of small changes that make the host faster and easier to maintain — free repositories, sane journald limits, sensible TCP buffers, SSD-friendly log storage, bashrc niceties, and more. ProxMenux automates them and tracks the supported reversible configuration changes."
   },
   "openingMenu": {
     "heading": "Opening the menu",
     "body": "From ProxMenux's main menu, select <strong>Settings post-install Proxmox</strong>. You will see this:",
-    "imageAlt": "Post-Installation Scripts menu with 3 ProxMenux options (Automated / Customizable / Uninstall) followed by the Community Scripts section"
+    "imageAlt": "Post-Installation Scripts menu — Automated, Customizable, the conditional Apply Available Updates (only when updates are pending), and Uninstall, followed by the Community Scripts section"
   },
   "threeWays": {
-    "heading": "Three ways to apply optimizations",
-    "body": "The three ProxMenux entries share the same underlying code and the same registry of installed tools — they just give you different levels of control. Pick the one that matches how much you want to decide."
+    "heading": "Four ways to apply optimizations",
+    "body": "The four ProxMenux entries share the same underlying code and the same registry of installed tools — they just give you different levels of control. The <em>Apply Available Updates</em> entry only shows when at least one installed optimization has a newer version on disk than what is registered; on a freshly applied host it stays hidden."
   },
   "routes": [
     {
       "title": "Automated",
-      "description": "A curated set of 13 safe, always-useful optimizations applied in sequence with zero prompts. Good default for most users.",
+      "description": "A curated set of 14 safe, always-useful optimizations applied in sequence with zero prompts. Good default for most users.",
       "bullets": [
         "Free repos + system upgrade",
         "Memory, kernel, network tuning",
@@ -39,7 +39,7 @@
     },
     {
       "title": "Customizable",
-      "description": "~30 individual optimizations across 10 categories. You pick exactly which ones to apply. Same engine as Automated, but with full control.",
+      "description": "~35 individual optimizations across 10 categories. You pick exactly which ones to apply. Same engine as Automated, but with full control.",
       "bullets": [
         "Checklist UI per category",
         "Includes everything Automated does, plus opt-in items (IOMMU, Fastfetch, Figurine, Ceph, HA, AMD fixes…)",
@@ -57,10 +57,10 @@
     },
     {
       "title": "Uninstall Optimizations",
-      "description": "Every change made by either path is tracked in a JSON registry, and every optimization has a reverse function. Pick what to revert, and the host goes back.",
+      "description": "Supported reversible changes are tracked in a JSON registry and paired with a restoration function. Actions without a safe rollback, such as a full package upgrade, are intentionally excluded.",
       "bullets": [
         "Detects previously applied optimizations automatically",
-        "Reversal restores original configs from backup files",
+        "Reversal picks the right path for each item — restores from a .bak backup where one was made, deletes the sysctl.d snippet where nothing needed backing up, or reinstalls the vanilla package with --force-confnew (e.g. subscription banner)",
         "Reboot prompt if needed (VFIO, persistent names, etc.)"
       ]
     }

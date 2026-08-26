@@ -9,7 +9,7 @@
   },
   "intro": {
     "title": "Qué cubre esta categoría",
-    "body": "Cuatro opciones fundamentales que normalmente quieres en cualquier host Proxmox recién instalado: cambiar a los repositorios comunitarios sin suscripción y ejecutar un upgrade completo del sistema, autoconfigurar la zona horaria y la sincronización NTP, eliminar las descargas de idiomas de APT para ahorrar ancho de banda y disco, y elegir de una lista de 25 utilidades de sistema comunes."
+    "body": "Cinco opciones fundamentales que normalmente quieres en cualquier host Proxmox recién instalado: cambiar a los repositorios comunitarios sin suscripción, ejecutar un upgrade completo del sistema, autoconfigurar la zona horaria y la sincronización NTP, eliminar las descargas de idiomas de APT para ahorrar ancho de banda y disco, y elegir de una lista de 25 utilidades de sistema comunes."
   },
   "upgrade": {
     "heading": "Actualizar y hacer upgrade del sistema",
@@ -45,7 +45,7 @@
     "shortTitle": "En resumen",
     "shortBody": "La opción ejecuta el exacto <code>apt update && apt full-upgrade -y</code> que Proxmox recomienda, lo envuelve con la limpieza de repos y la limpieza post-upgrade que la guía oficial también te dice que hagas, y pregunta por el reinicio al final. Mira <link>Proxmox System Update</link> — el mismo updater también está disponible como utilidad independiente en el menú principal, con el diagrama completo del proceso.",
     "subTitle": "No apliques esto a un host con suscripción",
-    "subBody": "Si realmente tienes una suscripción de Proxmox y quieres seguir usando los repositorios enterprise, sáltate esta opción. Volver a ejecutarla desactivaría el repo enterprise y te llevaría al canal comunitario. Puedes restaurar los repos enterprise desde el menú Uninstall si cambias de opinión más tarde.",
+    "subBody": "Si tienes una suscripción de Proxmox y quieres seguir usando los repositorios enterprise, omite esta opción. Al ejecutarla se desactiva el repositorio enterprise y el host pasa al canal comunitario. La actualización de paquetes y la reescritura de repositorios no se presentan como reversibles en Uninstall Optimizations; restaura deliberadamente la configuración de repositorios si más adelante necesitas cambiar de canal.",
     "safetyTitle": "Comprobación de seguridad post-update",
     "safetyBody": "Tras el upgrade, el script comprueba si hay discos con metadatos PV (Physical Volume) obsoletos — un caso límite que puede pasar cuando una VM con passthrough de disco garabatea cabeceras LVM sobre un disco en bruto. Si encuentra algo sospechoso verás un aviso sugiriendo <code>pvs</code> para inspeccionarlo. No se toma ninguna acción automáticamente."
   },
@@ -209,8 +209,8 @@
       }
     ],
     "actionTitle": "Algunas de ellas en acción",
-    "noBulkTitle": "No hay uninstall masivo para utilidades",
-    "noBulkBody": "El menú Uninstall Optimizations <strong>no</strong> registra qué utilidades has instalado — solo si se aplicaron las opciones \"apt languages\", \"time sync\" y \"apt upgrade\". Para eliminar una utilidad concreta más tarde, desinstálala a mano:"
+    "noBulkTitle": "Solo se eliminan las utilidades instaladas por ProxMenux",
+    "noBulkBody": "ProxMenux registra únicamente los paquetes seleccionados que no estaban instalados antes de esta acción. Uninstall Optimizations puede purgar después esos paquetes, mientras que las utilidades que ya existían en el host permanecen intactas. La actualización general mediante APT no se registra como reversible porque los paquetes actualizados no disponen de una restauración atómica segura."
   },
   "related": {
     "heading": "Relacionado",

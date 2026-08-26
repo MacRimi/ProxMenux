@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import argparse
 import ast
+import asyncio
+import inspect
 import json
 import os
 import subprocess
@@ -160,7 +162,10 @@ def translate_googletrans(text: str, dest_lang: str, context: str) -> str:
 
     translator = Translator()
     full_text = f"{context} {text}".strip()
-    return translator.translate(full_text, dest=dest_lang).text
+    result = translator.translate(full_text, dest=dest_lang)
+    if inspect.isawaitable(result):
+        result = asyncio.run(result)
+    return result.text
 
 
 def translate_google_web(text: str, dest_lang: str, context: str, timeout: int) -> str:

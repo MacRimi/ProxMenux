@@ -1318,7 +1318,7 @@ TEMPLATES = {
     'nvidia_driver_update_available': {
         'title': '{hostname}: NVIDIA driver update available — v{latest_version}',
         'body': (
-            'A newer NVIDIA driver compatible with kernel {kernel} is available.\n'
+            'A newer maintenance release is available for the installed NVIDIA driver branch.\n'
             '🔹 Currently installed: v{current_version}\n'
             '🟢 Latest available:    v{latest_version}\n\n'
             '{upgrade_reason}\n\n'

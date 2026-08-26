@@ -25,6 +25,7 @@
   "mechanisms": {
     "heading": "Cómo se selecciona el método",
     "lead": "La vía integrada de Proxmox VE Helper-Scripts sigue el mecanismo oficial <helper>update-apps</helper>. El resto de instalaciones usa el método de paquetes, Docker o el comando personalizado correspondiente.",
+    "officialReference": "Referencia oficial: la <helper>documentación de update-apps de Proxmox VE Helper-Scripts</helper> explica los modos interactivo y desatendido, las copias de seguridad, la simulación, los recursos temporales de compilación, los registros y los códigos de salida.",
     "colSource": "Origen",
     "colAction": "Acción mostrada",
     "colNotes": "Qué se ejecuta",

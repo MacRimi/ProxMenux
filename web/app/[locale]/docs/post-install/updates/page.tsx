@@ -151,6 +151,10 @@ export default async function PostInstallUpdatesPage({
         ))}
       </Steps>
 
+      <Callout variant="warning" title={t("applying.jqTitle")}>
+        {t.rich("applying.jqBody", { code })}
+      </Callout>
+
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("differs.heading")}</h2>
 
       <div className="overflow-x-auto mb-6">

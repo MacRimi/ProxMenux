@@ -47,6 +47,7 @@ export default async function PostInstallSecurityPage({
       <DocHeader
         title={t("header.title")}
         section={t("header.section")}
+        estimatedMinutes={5}
       />
 
       <Callout variant="info" title={t("intro.title")}>
@@ -72,9 +73,8 @@ export default async function PostInstallSecurityPage({
 
       <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("rpcbind.runsTitle")}</h3>
       <CopyableCode
-        code={`# Stop and disable the rpcbind service
-systemctl stop rpcbind
-systemctl disable rpcbind`}
+        code={`# Stop and disable both activation paths
+systemctl disable --now rpcbind.socket rpcbind.service`}
         className="my-4"
       />
       <p className="mb-4 text-gray-800 leading-relaxed">{t("rpcbind.runsOutro")}</p>
@@ -84,14 +84,14 @@ systemctl disable rpcbind`}
         {t.rich("rpcbind.verifyBody", { code })}
       </p>
       <CopyableCode
-        code={`systemctl is-active rpcbind       # should report: inactive
-systemctl is-enabled rpcbind      # should report: disabled
+        code={`systemctl is-active rpcbind.service rpcbind.socket
+systemctl is-enabled rpcbind.service rpcbind.socket
 ss -tulpn | grep ':111 '          # should return nothing`}
         className="my-4"
       />
 
-      <Callout variant="tip" title={t("rpcbind.reversibleTitle")}>
-        {t.rich("rpcbind.reversibleBody", { em, link: uninstallLink })}
+      <Callout variant="warning" title={t("rpcbind.reversibleTitle")}>
+        {t.rich("rpcbind.reversibleBody", { em, strong, code, link: uninstallLink })}
       </Callout>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("related.heading")}</h2>

@@ -38,10 +38,13 @@ export async function generateMetadata({
 
 type Logo = { name: string; alt: string; src: string }
 
-function StepNumber({ number }: { number: number }) {
+function StepHeading({ number, label, title }: { number: number; label: string; title: string }) {
   return (
-    <div className="inline-flex items-center justify-center w-8 h-8 mr-3 text-white bg-blue-500 rounded-full">
-      <span className="text-sm font-bold">{number}</span>
+    <div className="flex items-center gap-3 mt-16 mb-4">
+      <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-800">
+        {label} {number}
+      </span>
+      <h3 className="text-xl font-semibold m-0">{title}</h3>
     </div>
   )
 }
@@ -60,7 +63,7 @@ export default async function OptionalSettingsPage({
       ceph: { doesItems: string[] }
       amd: { doesItems: string[] }
       ha: { doesItems: string[] }
-      testing: { doesItems: string[] }
+      pveam: { doesItems: string[] }
       fastfetch: { doesItems: string[]; customItems: string[]; logos: Logo[] }
       figurine: { doesItems: string[] }
       log2ram: { doesItems: string[] }
@@ -69,7 +72,7 @@ export default async function OptionalSettingsPage({
   const cephItems = messages.docs.postInstall.optional.ceph.doesItems
   const amdItems = messages.docs.postInstall.optional.amd.doesItems
   const haItems = messages.docs.postInstall.optional.ha.doesItems
-  const testingItems = messages.docs.postInstall.optional.testing.doesItems
+  const pveamItems = messages.docs.postInstall.optional.pveam.doesItems
   const fastfetchItems = messages.docs.postInstall.optional.fastfetch.doesItems
   const fastfetchCustomItems = messages.docs.postInstall.optional.fastfetch.customItems
   const fastfetchLogos = messages.docs.postInstall.optional.fastfetch.logos
@@ -91,10 +94,7 @@ export default async function OptionalSettingsPage({
       </p>
       <h2 className="text-2xl font-semibold mt-8 mb-4">{t("available")}</h2>
 
-      <h3 className="text-xl font-semibold mt-16 mb-4 flex items-center">
-        <StepNumber number={1} />
-        {t("ceph.title")}
-      </h3>
+      <StepHeading number={1} label={t("stepLabel")} title={t("ceph.title")} />
       <p className="mb-4">{t("ceph.intro")}</p>
       <p className="mb-4">{t("ceph.doesIntro")}</p>
       <ul className="list-disc pl-5 mb-4">
@@ -106,8 +106,18 @@ export default async function OptionalSettingsPage({
       <p className="text-lg mb-2">{t("ceph.automates")}</p>
       <CopyableCode
         code={`
-# Add Ceph repository
-echo "deb https://download.proxmox.com/debian/ceph-squid $(lsb_release -cs) no-subscription" > /etc/apt/sources.list.d/ceph-squid.list
+# On Proxmox VE 9 (Debian trixie) — deb822 format
+cat > /etc/apt/sources.list.d/ceph.sources <<'EOF'
+Types: deb
+URIs: http://download.proxmox.com/debian/ceph-squid
+Suites: trixie
+Components: no-subscription
+Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+EOF
+
+# On Proxmox VE 8 (Debian bookworm) — legacy one-liner
+# echo "deb https://download.proxmox.com/debian/ceph-squid $(lsb_release -cs) no-subscription" \\
+#   > /etc/apt/sources.list.d/ceph-squid.list
 
 # Update package lists
 apt-get update
@@ -120,10 +130,7 @@ pveceph status
       `}
       />
 
-      <h3 className="text-xl font-semibold mt-16 mb-4 flex items-center">
-        <StepNumber number={2} />
-        {t("amd.title")}
-      </h3>
+      <StepHeading number={2} label={t("stepLabel")} title={t("amd.title")} />
       <p className="mb-4">{t("amd.intro")}</p>
       <p className="mb-4">{t("amd.doesIntro")}</p>
       <ul className="list-disc pl-5 mb-4">
@@ -135,23 +142,21 @@ pveceph status
       <p className="text-lg mb-2">{t("amd.automates")}</p>
       <CopyableCode
         code={`
-# Set kernel parameter
+# Set kernel parameter — GRUB path
 sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="/GRUB_CMDLINE_LINUX_DEFAULT="idle=nomwait /g' /etc/default/grub
 update-grub
+
+# Set kernel parameter — systemd-boot path (ZFS-on-root)
+# Adds 'idle=nomwait' to /etc/kernel/cmdline and runs:
+# proxmox-boot-tool refresh
 
 # Configure KVM
 echo "options kvm ignore_msrs=Y" >> /etc/modprobe.d/kvm.conf
 echo "options kvm report_ignored_msrs=N" >> /etc/modprobe.d/kvm.conf
-
-# Install latest Proxmox VE kernel
-apt-get install pve-kernel-$(uname -r | cut -d'-' -f1-2)
       `}
       />
 
-      <h3 className="text-xl font-semibold mt-16 mb-4 flex items-center">
-        <StepNumber number={3} />
-        {t("ha.title")}
-      </h3>
+      <StepHeading number={3} label={t("stepLabel")} title={t("ha.title")} />
       <p className="mb-4">{t("ha.intro")}</p>
       <p className="mb-4">{t("ha.doesIntro")}</p>
       <ul className="list-disc pl-5 mb-4">
@@ -167,39 +172,23 @@ systemctl enable --now pve-ha-lrm pve-ha-crm corosync
       `}
       />
 
-      <h3 className="text-xl font-semibold mt-16 mb-4 flex items-center">
-        <StepNumber number={4} />
-        {t("testing.title")}
-      </h3>
-      <p className="mb-4">{t("testing.intro")}</p>
-      <p className="mb-4">{t("testing.doesIntro")}</p>
+      <StepHeading number={4} label={t("stepLabel")} title={t("pveam.title")} />
+      <p className="mb-4">{t.rich("pveam.intro", { code })}</p>
+      <p className="mb-4">{t("pveam.doesIntro")}</p>
       <ul className="list-disc pl-5 mb-4">
-        {testingItems.map((_, idx) => (
-          <li key={idx}>{t(`testing.doesItems.${idx}`)}</li>
+        {pveamItems.map((_, idx) => (
+          <li key={idx}>{t.rich(`pveam.doesItems.${idx}`, { code })}</li>
         ))}
       </ul>
-      <p className="mb-4">{t("testing.howUse")}</p>
-      <p className="text-lg mb-2">{t("testing.manualIntro")}</p>
+      <p className="mb-4">{t("pveam.howUse")}</p>
+      <p className="text-lg mb-2">{t("pveam.automates")}</p>
       <CopyableCode
         code={`
-    # Add Proxmox testing repository
-    echo "deb http://download.proxmox.com/debian/pve $(lsb_release -cs) pvetest" | sudo tee /etc/apt/sources.list.d/pve-testing-repo.list
-
-    # Update package lists
-    sudo apt update
+pveam update
       `}
       />
-      <p className="mt-4 text-sm text-gray-600">
-        <strong>{t("testing.noteLabel")}</strong> {t("testing.noteBody")}
-      </p>
-      <p className="mt-4 text-yellow-600">
-        <strong>{t("testing.warnLabel")}</strong> {t("testing.warnBody")}
-      </p>
 
-      <h3 className="text-xl font-semibold mt-16 mb-4 flex items-center">
-        <StepNumber number={5} />
-        {t("fastfetch.title")}
-      </h3>
+      <StepHeading number={5} label={t("stepLabel")} title={t("fastfetch.title")} />
 
       <p className="mb-4">{t("fastfetch.intro")}</p>
 
@@ -255,24 +244,39 @@ systemctl enable --now pve-ha-lrm pve-ha-crm corosync
       <p className="text-lg mb-2">{t("fastfetch.automates")}</p>
       <CopyableCode
         code={`
-# Download and install the latest version of Fastfetch
-FASTFETCH_URL=$(curl -s https://api.github.com/repos/fastfetch-cli/fastfetch/releases/latest | grep "browser_download_url.*fastfetch-linux-amd64.deb" | cut -d '"' -f 4)
+# Remove any previous install so the newest .deb lands clean
+apt-get remove --purge -y fastfetch 2>/dev/null
+rm -f /usr/bin/fastfetch /usr/local/bin/fastfetch
+
+# Download and install the latest .deb via the GitHub Releases API
+FASTFETCH_URL=$(curl -sSf --connect-timeout 5 --max-time 15 \\
+  https://api.github.com/repos/fastfetch-cli/fastfetch/releases/latest \\
+  | jq -r '.assets[] | select(.name | test("fastfetch-linux-amd64.deb")) | .browser_download_url')
 wget -q -O /tmp/fastfetch.deb "$FASTFETCH_URL"
 dpkg -i /tmp/fastfetch.deb
 apt-get install -f -y
 
 # Configure Fastfetch (logo selection remains interactive)
-# The configuration is done through a series of jq commands
+# The configuration is done through a series of jq commands.
+# A custom "System optimised by ProxMenux" line is prepended
+# to the modules array so it shows above the standard sections.
 
-# Set Fastfetch to run at login
-echo "clear && fastfetch" >> ~/.bashrc
+# Wire Fastfetch into ~/.bashrc — inside a marker block so the
+# same block can be replaced on re-run without polluting the file.
+# The block is guarded so it only runs on interactive shells that
+# actually have the fastfetch binary available.
+cat >> ~/.bashrc <<'EOF'
+# BEGIN FASTFETCH
+if [[ $- == *i* ]] && command -v fastfetch >/dev/null 2>&1; then
+    clear
+    fastfetch
+fi
+# END FASTFETCH
+EOF
       `}
       />
 
-      <h3 className="text-xl font-semibold mt-16 mb-4 flex items-center">
-        <StepNumber number={6} />
-        {t("figurine.title")}
-      </h3>
+      <StepHeading number={6} label={t("stepLabel")} title={t("figurine.title")} />
 
       <p className="mb-4">{t("figurine.intro")}</p>
 
@@ -330,10 +334,7 @@ chmod +x "/etc/profile.d/figurine.sh"
 
       <p className="mt-4">{t("figurine.outro")}</p>
 
-      <h3 className="text-xl font-semibold mt-16 mb-4 flex items-center">
-        <StepNumber number={7} />
-        {t("log2ram.title")}
-      </h3>
+      <StepHeading number={7} label={t("stepLabel")} title={t("log2ram.title")} />
 
       <p className="mb-4">
         {t.rich("log2ram.intro", { code, em })}

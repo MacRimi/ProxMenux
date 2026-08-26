@@ -55,6 +55,7 @@ export default async function PostInstallSystemPage({
       <DocHeader
         title={t("header.title")}
         section={t("header.section")}
+        estimatedMinutes={10}
       />
 
       <Callout variant="info" title={t("intro.title")}>
@@ -89,7 +90,9 @@ export default async function PostInstallSystemPage({
 daily
 su root adm
 rotate 7
-create
+create 0640 root adm
+missingok
+notifempty
 compress
 size 10M
 delaycompress
@@ -141,9 +144,10 @@ include /etc/logrotate.d`}
 vm.swappiness = 10               # Avoid swapping unless truly necessary
 vm.dirty_ratio = 15              # Start writeback sooner (default 20)
 vm.dirty_background_ratio = 5    # Start async writeback earlier (default 10)
-vm.overcommit_memory = 1         # Allow overcommit (needed by many applications)
 vm.max_map_count = 262144        # Enough for modern apps (ES, Docker, some games)
-vm.compaction_proactiveness = 20 # Only on kernels that support it`}
+vm.compaction_proactiveness = 20 # Only on kernels that support it
+# Note: the kernel's memory-overcommit policy (vm.overcommit_memory) is
+# NOT modified — Proxmox's default is left in place.`}
         className="my-4"
       />
 

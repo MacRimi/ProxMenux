@@ -5,18 +5,18 @@
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
 # License     : GPL-3.0
-# Version     : 1.2
-# Last Updated: 26/03/2026
+# Version     : 1.3
+# Last Updated: 26/08/2026
 # ==========================================================
 # Description:
 # Installs and manages the NVIDIA proprietary driver on a
-# Proxmox VE host. Detects hardware, picks a kernel-compatible
-# driver version and handles the full lifecycle
+# Proxmox VE host. Detects hardware, filters NVIDIA branches by
+# the installed GPU PCI IDs and handles the full lifecycle
 # (install / update / remove).
 #
 # Features:
 #  - GPU detection + VFIO passthrough safety check
-#  - Kernel-aware driver version filter (5.15 → 6.17+)
+#  - GPU PCI-ID-aware branch filtering from NVIDIA supportedchips
 #  - Nouveau blacklist + module unload
 #  - DKMS-backed install (survives kernel upgrades)
 #  - udev rules + nvidia-persistenced service
@@ -36,6 +36,10 @@ screen_capture="/tmp/proxmenux_nvidia_screen_capture_$$.txt"
 
 NVIDIA_BASE_URL="https://download.nvidia.com/XFree86/Linux-x86_64"
 NVIDIA_WORKDIR="/opt/nvidia"
+NVIDIA_NOUVEAU_BLACKLIST="/etc/modprobe.d/proxmenux-nouveau-blacklist.conf"
+NVIDIA_NOUVEAU_STATE="${BASE_DIR}/nvidia-nouveau-blacklist.state"
+NVIDIA_NOUVEAU_LEGACY_BLACKLIST="/etc/modprobe.d/nouveau-blacklist.conf"
+NVIDIA_GLOBAL_BLACKLIST="/etc/modprobe.d/blacklist.conf"
 
 # LXC post-install update constants (used only when NVIDIA LXC passthrough
 # containers are detected and the user confirms updating them after the host
@@ -541,16 +545,65 @@ ensure_repos_and_headers() {
   msg_ok "$(translate 'Kernel headers and build tools verified.')" | tee -a "$screen_capture"
 }
 
+_nouveau_legacy_file_is_proxmenux_shape() {
+  [[ -f "$NVIDIA_NOUVEAU_LEGACY_BLACKLIST" ]] || return 1
+  local content
+  content=$(sed '/^[[:space:]]*$/d' "$NVIDIA_NOUVEAU_LEGACY_BLACKLIST" 2>/dev/null)
+  [[ "$content" == $'blacklist nouveau\noptions nouveau modeset=0' ]]
+}
+
+_nouveau_state_set() {
+  local key="$1"
+  mkdir -p "$(dirname "$NVIDIA_NOUVEAU_STATE")"
+  touch "$NVIDIA_NOUVEAU_STATE"
+  grep -qFx "${key}=1" "$NVIDIA_NOUVEAU_STATE" 2>/dev/null \
+    || echo "${key}=1" >> "$NVIDIA_NOUVEAU_STATE"
+}
+
+restore_nouveau_after_uninstall() {
+  local remove_global_line=false
+
+  if [[ -f "$NVIDIA_NOUVEAU_STATE" ]] \
+     && grep -qFx 'blacklist_conf_line_added=1' "$NVIDIA_NOUVEAU_STATE" 2>/dev/null; then
+    remove_global_line=true
+  fi
+
+  # Migration for installations made by older ProxMenux versions. That
+  # version overwrote this exact two-line file and added the matching line
+  # to blacklist.conf, but had no ownership state yet.
+  if _nouveau_legacy_file_is_proxmenux_shape; then
+    rm -f "$NVIDIA_NOUVEAU_LEGACY_BLACKLIST"
+    remove_global_line=true
+  fi
+
+  rm -f "$NVIDIA_NOUVEAU_BLACKLIST"
+  if $remove_global_line && [[ -f "$NVIDIA_GLOBAL_BLACKLIST" ]]; then
+    sed -i '/^blacklist nouveau$/d' "$NVIDIA_GLOBAL_BLACKLIST"
+  fi
+  rm -f "$NVIDIA_NOUVEAU_STATE"
+}
+
 blacklist_nouveau() {
   msg_info "$(translate 'Blacklisting nouveau driver...')"
 
-  # Write blacklist config files
-  if ! grep -q '^blacklist nouveau' /etc/modprobe.d/blacklist.conf 2>/dev/null; then
-    echo "blacklist nouveau" >> /etc/modprobe.d/blacklist.conf
+  local legacy_owned=false
+  if _nouveau_legacy_file_is_proxmenux_shape; then
+    rm -f "$NVIDIA_NOUVEAU_LEGACY_BLACKLIST"
+    legacy_owned=true
+    _nouveau_state_set "legacy_migrated"
   fi
 
-  # Also write explicit options file to ensure it's fully disabled
-  cat > /etc/modprobe.d/nouveau-blacklist.conf <<'EOF'
+  if ! grep -q '^blacklist nouveau$' "$NVIDIA_GLOBAL_BLACKLIST" 2>/dev/null; then
+    echo "blacklist nouveau" >> "$NVIDIA_GLOBAL_BLACKLIST"
+    _nouveau_state_set "blacklist_conf_line_added"
+  elif $legacy_owned; then
+    # The legacy ProxMenux file proves ownership of the companion line.
+    _nouveau_state_set "blacklist_conf_line_added"
+  fi
+
+  # ProxMenux-owned file: uninstall can now remove only what we created.
+  cat > "$NVIDIA_NOUVEAU_BLACKLIST" <<'EOF'
+# Managed by ProxMenux NVIDIA installer.
 blacklist nouveau
 options nouveau modeset=0
 EOF
@@ -678,6 +731,7 @@ complete_nvidia_uninstall() {
   rm -f /etc/udev/rules.d/70-nvidia.rules
   rm -rf /usr/lib/modprobe.d/nvidia*.conf
   rm -rf /etc/modprobe.d/nvidia*.conf
+  restore_nouveau_after_uninstall
   
   if [[ -d "$NVIDIA_WORKDIR" ]]; then
     find "$NVIDIA_WORKDIR" -type d -name "nvidia-persistenced" -exec rm -rf {} + 2>/dev/null || true
@@ -709,28 +763,14 @@ ensure_workdir() {
 }
 
 # ==========================================================
-# Kernel + system detection
+# System detection
 # ==========================================================
-get_kernel_compatibility_info() {
-  local kernel_version
-  kernel_version=$(uname -r)
-
+get_system_info() {
   if [[ -f /etc/pve/.version ]]; then
     PVE_VERSION=$(cat /etc/pve/.version)
   else
     PVE_VERSION="unknown"
   fi
-
-  KERNEL_MAJOR=$(echo "$kernel_version" | cut -d. -f1)
-  KERNEL_MINOR=$(echo "$kernel_version" | cut -d. -f2)
-
-  MIN_DRIVER_VERSION=""
-  RECOMMENDED_BRANCH=""
-  COMPATIBILITY_NOTE=""
-}
-
-is_version_compatible() {
-  return 0
 }
 
 
@@ -1546,7 +1586,7 @@ show_version_menu() {
 
   show_proxmenux_logo
   msg_title "$(translate 'NVIDIA GPU Driver Installation')"
-  msg_info "$(translate 'Fetching compatible driver versions for your kernel and GPU...')"
+  msg_info "$(translate 'Fetching NVIDIA driver versions supported by your GPU...')"
 
   latest=$(download_latest_version 2>/dev/null)
   versions_list=$(list_available_versions 2>/dev/null)
@@ -1573,18 +1613,6 @@ show_version_menu() {
   latest=$(echo "$latest" | tr -d '[:space:]')
   
   local current_list="$versions_list"
-  
-  # Apply kernel compatibility filter if needed
-  if [[ -n "$MIN_DRIVER_VERSION" ]]; then
-    local filtered_list=""
-    while IFS= read -r ver; do
-      [[ -z "$ver" ]] && continue
-      if is_version_compatible "$ver"; then
-        filtered_list+="$ver"$'\n'
-      fi
-    done <<< "$current_list"
-    current_list="$filtered_list"
-  fi
 
   if [[ -n "$current_list" ]]; then
     current_list=$(filter_option_c_branch "$current_list" "$CURRENT_DRIVER_VERSION" "")
@@ -1636,7 +1664,7 @@ show_version_menu() {
   #   2. Fresh install (no current driver) → Production Branch head
   #      from NVIDIA's Unix drivers page, when present in the list.
   #   3. Fallback → highest numeric in the list (Production may have
-  #      been filtered out by kernel-compat / GPU-compat / patch
+  #      been filtered out by maintained-branch / GPU PCI-ID / patch
   #      awareness).
   latest=""
   if [[ -n "$CURRENT_DRIVER_VERSION" && -n "$current_list" ]]; then
@@ -1665,7 +1693,7 @@ show_version_menu() {
   fi
 
   local menu_text="$(translate 'Select the NVIDIA driver version to install:')\n\n"
-  menu_text+="$(translate 'Versions shown are compatible with your kernel and your GPU. The recommended version keeps you on your current driver branch, or defaults to the NVIDIA Production Branch head on a fresh install.')"
+  menu_text+="$(translate 'Versions shown belong to maintained NVIDIA branches that list your GPU PCI ID. DKMS compilation is the final validation against the running kernel. The recommended version keeps the current branch, or uses the NVIDIA Production Branch on a fresh install.')"
   if $patch_filtered; then
     menu_text+="\n\n$(translate 'NVENC patch detected — list narrowed to versions supported by keylase/nvidia-patch.')"
   elif [[ -n "$patch_filter_note" ]]; then
@@ -1689,7 +1717,7 @@ show_version_menu() {
       choices+=("$ver" "$ver")
     done <<< "$current_list"
   else
-    choices+=("" "$(translate 'No compatible versions found for your kernel')")
+    choices+=("" "$(translate 'No supported NVIDIA versions found for this GPU')")
   fi
 
   stop_spinner
@@ -1741,7 +1769,7 @@ main() {
         exit 0
       fi
 
-      get_kernel_compatibility_info
+      get_system_info
 
       show_version_menu
       if [[ "$DRIVER_VERSION" == "cancel" || -z "$DRIVER_VERSION" ]]; then

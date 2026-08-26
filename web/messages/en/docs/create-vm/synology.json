@@ -1,5 +1,6 @@
 {
   "title": "Synology VM Creator Script",
+  "stepLabel": "Step",
   "intro": {
     "heading": "Introduction",
     "intro": "ProxMenux provides an automated script that creates and configures a virtual machine (VM) to install Synology DSM (DiskStation Manager) on Proxmox VE. This script simplifies the process by downloading and adding one of the available loaders to the VM boot, giving you the option between four different choices:",

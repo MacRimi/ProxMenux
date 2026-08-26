@@ -170,7 +170,8 @@ export default async function SwitchGpuModePage({
   Validations
   ├─ SR-IOV VF / active PF?       → block
   ├─ Target = VM and blocked ID?  → block
-  └─ IOMMU parameter present?     → warn if missing
+  └─ IOMMU parameter present?     → auto-add to boot
+                                    cmdline if missing
                    │
                    ▼
   Find affected workloads

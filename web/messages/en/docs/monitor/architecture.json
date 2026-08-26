@@ -254,8 +254,8 @@
     "items": [
       "<strong>Watchers</strong> push events: <code>JournalWatcher</code> tails the system journal, <code>TaskWatcher</code> polls the Proxmox task list, <code>ProxmoxHookWatcher</code> reacts to backup / replication / snapshot hooks, and <code>PollingCollector</code> handles slow data sources.",
       "<strong>Templates</strong> turn an event into a (title, body) pair. The same template can run through the configured AI provider (OpenAI / Anthropic / Gemini / Groq / Ollama / OpenRouter) to produce a plain-language rewrite; both versions are stored in <code>notification_history</code>.",
-      "<strong>Channels</strong> deliver messages: Telegram, Discord, Email, Gotify and Apprise (multi-channel). Each is implemented in <code>notification_channels.py</code> behind the same <code>create_channel()</code> / <code>send()</code> interface, so adding a new channel is a single class.",
-      "<strong>Encryption.</strong> Sensitive settings (<code>telegram.token</code>, <code>discord.webhook_url</code>, <code>ai_api_key_*</code>, <code>email.password</code>) are XOR-encrypted with the key in <code>.notification_key</code> before being written to the DB. Plaintext never touches disk."
+      "<strong>Channels</strong> deliver messages: Telegram, Discord, Email, Gotify, Pushover and Apprise (multi-channel). Each is implemented in <code>notification_channels.py</code> behind the same <code>create_channel()</code> / <code>send()</code> interface, so adding a new channel is a single class.",
+      "<strong>Encryption.</strong> Sensitive settings (<code>telegram.bot_token</code>, <code>discord.webhook_url</code>, <code>pushover.user_key</code>, <code>pushover.api_token</code>, <code>ai_api_key_*</code>, <code>email.password</code>) are encrypted with the key in <code>.notification_key</code> before being written to the DB and are masked in the interface."
     ],
     "linksFooter": "Per-event toggles, channel overrides and AI configuration are surfaced in <notifLink>Settings → Notifications</notifLink> and <aiLink>Settings → AI Assistant</aiLink>."
   },

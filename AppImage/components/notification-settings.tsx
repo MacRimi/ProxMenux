@@ -30,6 +30,12 @@ interface ChannelConfig {
   url?: string
   token?: string
   webhook_url?: string
+  // Pushover channel fields
+  user_key?: string
+  api_token?: string
+  device?: string
+  sound?: string
+  critical_priority?: boolean
   // Email channel fields
   host?: string
   port?: string
@@ -146,7 +152,7 @@ function validateGotifyUrl(url: string): { error?: string; warning?: string } {
 
 const EVENT_CATEGORIES = ["vm_ct", "backup", "resources", "storage", "network", "security", "cluster", "services", "health", "updates", "other"].map(key => ({ key }))
 
-const CHANNEL_TYPES = ["telegram", "gotify", "discord", "email", "apprise"] as const
+const CHANNEL_TYPES = ["telegram", "gotify", "discord", "email", "pushover", "apprise"] as const
 
 const AI_PROVIDERS = [
   { 
@@ -242,6 +248,7 @@ const DEFAULT_CONFIG: NotificationConfig = {
     gotify: { enabled: false },
     discord: { enabled: false },
     email: { enabled: false },
+    pushover: { enabled: false, critical_priority: true },
     apprise: { enabled: false },
   },
   event_categories: {
@@ -256,6 +263,7 @@ const DEFAULT_CONFIG: NotificationConfig = {
     gotify: { categories: {}, events: {} },
     discord: { categories: {}, events: {} },
     email: { categories: {}, events: {} },
+    pushover: { categories: {}, events: {} },
     apprise: { categories: {}, events: {} },
   },
   ai_enabled: false,
@@ -287,6 +295,7 @@ const DEFAULT_CONFIG: NotificationConfig = {
     gotify: "brief",
     discord: "brief",
     email: "detailed",
+    pushover: "brief",
     apprise: "brief",
   },
   hostname: "",
@@ -1070,6 +1079,8 @@ export function NotificationSettings() {
     gt_token:    { channel: "gotify",   field: "token" },
     dc_hook:     { channel: "discord",  field: "webhook_url" },
     em_pass:     { channel: "email",    field: "password" },
+    po_user:     { channel: "pushover", field: "user_key" },
+    po_token:    { channel: "pushover", field: "api_token" },
     apprise_url: { channel: "apprise",  field: "url" },
   }
 
@@ -1429,7 +1440,7 @@ export function NotificationSettings() {
 
               <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
               <Tabs defaultValue="telegram" className="w-full">
-                <TabsList className="w-full grid grid-cols-5 h-8">
+                <TabsList className="w-full grid grid-cols-3 sm:grid-cols-6 h-auto">
                   <TabsTrigger value="telegram" className="text-xs data-[state=active]:text-blue-500">
                     Telegram
                   </TabsTrigger>
@@ -1441,6 +1452,9 @@ export function NotificationSettings() {
                   </TabsTrigger>
                   <TabsTrigger value="email" className="text-xs data-[state=active]:text-amber-500">
                     Email
+                  </TabsTrigger>
+                  <TabsTrigger value="pushover" className="text-xs data-[state=active]:text-rose-500">
+                    Pushover
                   </TabsTrigger>
                   <TabsTrigger value="apprise" className="text-xs data-[state=active]:text-cyan-500">
                     Apprise
@@ -1876,10 +1890,145 @@ export function NotificationSettings() {
                   )}
                 </TabsContent>
 
+                {/* Pushover */}
+                <TabsContent value="pushover" className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs font-medium">{t("settings.notifications.ui.enablePushover")}</Label>
+                      <a
+                        href="https://pushover.net/apps/build"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[10px] text-rose-500 hover:text-rose-400 hover:underline"
+                      >
+                        {t("settings.notifications.ui.setupGuide")}
+                        <ExternalLink className="h-2.5 w-2.5" />
+                      </a>
+                    </div>
+                    <button
+                      className={`relative w-9 h-[18px] rounded-full transition-colors ${
+                        config.channels.pushover?.enabled ? "bg-blue-600" : "bg-muted-foreground/20 border border-muted-foreground/40"
+                      } ${!editMode ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                      onClick={() => { if (editMode) updateChannel("pushover", "enabled", !config.channels.pushover?.enabled) }}
+                      disabled={!editMode}
+                      role="switch"
+                      aria-checked={config.channels.pushover?.enabled || false}
+                    >
+                      <span className={`absolute top-[1px] left-[1px] h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                        config.channels.pushover?.enabled ? "translate-x-[18px]" : "translate-x-0"
+                      }`} />
+                    </button>
+                  </div>
+                  {config.channels.pushover?.enabled && (
+                    <>
+                      <p className="text-[10px] text-muted-foreground leading-relaxed">
+                        {t("settings.notifications.ui.pushoverCredentialsHint")}
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="space-y-1.5 min-w-0">
+                          <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.pushoverUserKey")}</Label>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Input
+                              type={showSecrets["po_user"] ? "text" : "password"}
+                              className={`h-7 text-xs font-mono min-w-0 flex-1 ${!editMode ? "opacity-50" : ""}`}
+                              placeholder="uQiRzpo4DXghDmr9QzzfQu27cmVRsG"
+                              value={secretValue("po_user", config.channels.pushover?.user_key || "")}
+                              onChange={e => updateChannel("pushover", "user_key", e.target.value)}
+                              disabled={!editMode}
+                            />
+                            <button
+                              type="button"
+                              className="h-7 w-7 shrink-0 flex items-center justify-center rounded-md border border-border hover:bg-muted text-muted-foreground"
+                              onClick={() => toggleSecret("po_user")}
+                            >
+                              {showSecrets["po_user"] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5 min-w-0">
+                          <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.pushoverApiToken")}</Label>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Input
+                              type={showSecrets["po_token"] ? "text" : "password"}
+                              className={`h-7 text-xs font-mono min-w-0 flex-1 ${!editMode ? "opacity-50" : ""}`}
+                              placeholder="azGDORePK8gMaC0QOYAMyEEuzJnyUi"
+                              value={secretValue("po_token", config.channels.pushover?.api_token || "")}
+                              onChange={e => updateChannel("pushover", "api_token", e.target.value)}
+                              disabled={!editMode}
+                            />
+                            <button
+                              type="button"
+                              className="h-7 w-7 shrink-0 flex items-center justify-center rounded-md border border-border hover:bg-muted text-muted-foreground"
+                              onClick={() => toggleSecret("po_token")}
+                            >
+                              {showSecrets["po_token"] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="space-y-1.5">
+                          <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.pushoverDevice")} ({t("settings.notifications.ui.optional")})</Label>
+                          <Input
+                            className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
+                            placeholder="iphone"
+                            value={config.channels.pushover?.device || ""}
+                            onChange={e => updateChannel("pushover", "device", e.target.value)}
+                            disabled={!editMode}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.pushoverSound")} ({t("settings.notifications.ui.optional")})</Label>
+                          <Input
+                            className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
+                            placeholder="pushover"
+                            value={config.channels.pushover?.sound || ""}
+                            onChange={e => updateChannel("pushover", "sound", e.target.value)}
+                            disabled={!editMode}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 py-1">
+                        <div>
+                          <Label className="text-xs font-medium">{t("settings.notifications.ui.pushoverCriticalPriority")}</Label>
+                          <p className="text-[10px] text-muted-foreground">{t("settings.notifications.ui.pushoverCriticalPriorityDescription")}</p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={config.channels.pushover?.critical_priority !== false}
+                          disabled={!editMode}
+                          className={`relative w-9 h-[18px] shrink-0 rounded-full transition-colors ${
+                            !editMode ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                          } ${config.channels.pushover?.critical_priority !== false ? "bg-blue-600" : "bg-muted-foreground/20 border border-muted-foreground/40"}`}
+                          onClick={() => { if (editMode) updateChannel("pushover", "critical_priority", config.channels.pushover?.critical_priority === false) }}
+                        >
+                          <span className={`absolute top-[1px] left-[1px] h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                            config.channels.pushover?.critical_priority !== false ? "translate-x-[18px]" : "translate-x-0"
+                          }`} />
+                        </button>
+                      </div>
+                      {renderChannelCategories("pushover")}
+                      {renderQuietHours("pushover")}
+                      {renderDailyDigest("pushover")}
+                      <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+                        <button
+                          className="h-7 px-3 text-xs rounded-md bg-rose-600 hover:bg-rose-700 text-white transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                          onClick={() => handleTest("pushover")}
+                          disabled={testing === "pushover" || !config.channels.pushover?.user_key || !config.channels.pushover?.api_token}
+                        >
+                          {testing === "pushover" ? <Loader2 className="h-3 w-3 animate-spin" /> : <TestTube2 className="h-3 w-3" />}
+                          {t("settings.notifications.ui.sendTest")}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </TabsContent>
+
                 {/* Apprise — issue #207. Single URL talks to ~80
                     notification services. The operator pastes one
                     `tgram://`, `discord://`, `ntfy://`, `matrix://`,
-                    `pushover://` etc. URL and the AppriseChannel
+                    `pover://` etc. URL and the AppriseChannel
                     backend handles the transport. Mirrors the same
                     Enable toggle + Test button pattern as the other
                     channels. */}
@@ -1888,7 +2037,7 @@ export function NotificationSettings() {
                     <div className="flex items-center gap-2">
                       <Label className="text-xs font-medium">{t("settings.notifications.ui.enableApprise")}</Label>
                       <a
-                        href="https://github.com/caronc/apprise/wiki"
+                        href="https://appriseit.com/services/"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[10px] text-cyan-500 hover:text-cyan-400 hover:underline"
@@ -1946,11 +2095,11 @@ export function NotificationSettings() {
                           <code className="text-foreground/80 mx-0.5">slack://</code>,
                           <code className="text-foreground/80 mx-0.5">ntfy://</code>,
                           <code className="text-foreground/80 mx-0.5">matrix://</code>,
-                          <code className="text-foreground/80 mx-0.5">pushover://</code>,
+                          <code className="text-foreground/80 mx-0.5">pover://</code>,
                           <code className="text-foreground/80 mx-0.5">mailto://</code>… {t("settings.notifications.ui.seeThe")}
                           {" "}
                           <a
-                            href="https://github.com/caronc/apprise/wiki"
+                            href="https://appriseit.com/services/"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-cyan-500 hover:underline"

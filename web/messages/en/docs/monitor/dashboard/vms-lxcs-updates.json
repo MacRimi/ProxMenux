@@ -25,6 +25,7 @@
   "mechanisms": {
     "heading": "How an update method is selected",
     "lead": "The integrated Proxmox VE Helper-Scripts path follows the official <helper>update-apps mechanism</helper>. Other install types use the matching package, Docker or custom path.",
+    "officialReference": "Official reference: the <helper>Proxmox VE Helper-Scripts update-apps documentation</helper> covers interactive and unattended modes, backups, dry runs, temporary build resources, logs and exit codes.",
     "colSource": "Source",
     "colAction": "Displayed action",
     "colNotes": "What runs",

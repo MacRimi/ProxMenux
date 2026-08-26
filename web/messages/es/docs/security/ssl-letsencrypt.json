@@ -117,7 +117,7 @@
   },
   "switchToHttps": {
     "heading": "Cambiar el Monitor a HTTPS",
-    "bodyRich": "Una vez que <code>/etc/pve/local/pveproxy-ssl.pem</code> está firmado por Let's Encrypt, el lado del Monitor es un clic: abre <strong>Settings → Security → HTTPS / SSL</strong>, confirma que el issuer mostrado en el panel del certificado detectado pone <em>Let's Encrypt</em> (y no la CA local de Proxmox) y pulsa <strong>Use Proxmox Certificate</strong>. El servicio del Monitor reinicia y la siguiente carga del navegador es HTTPS en el puerto 8008 — sin warning de certificado, ya que la cadena está confiada públicamente."
+    "bodyRich": "Una vez que <code>/etc/pve/local/pveproxy-ssl.pem</code> está firmado por Let's Encrypt, en el Monitor solo hace falta un clic: abre <strong>Ajustes → Seguridad → HTTPS / SSL</strong>, confirma que el emisor mostrado en el panel del certificado detectado sea <em>Let's Encrypt</em> (y no la CA local de Proxmox) y pulsa <strong>Usar certificado de Proxmox</strong>. El servicio del Monitor se reinicia y la siguiente carga del navegador usa HTTPS en el puerto 8008, sin advertencias porque la cadena es de confianza pública. Las renovaciones posteriores de Proxmox ACME se validan y seleccionan durante la siguiente conexión TLS nueva; no existe un comprobador periódico del certificado ni se reinicia el servicio durante la renovación. <strong>Actualizar certificado</strong> permanece disponible en Seguridad como acción explícita de diagnóstico y recuperación."
   },
   "custom": {
     "heading": "Certificado personalizado — cuándo usarlo",

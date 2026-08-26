@@ -25,6 +25,7 @@
   "mechanisms": {
     "heading": "Výber metódy aktualizácie",
     "lead": "Integrovaná cesta Proxmox VE Helper-Scripts používa oficiálny mechanizmus <helper>update-apps</helper>. Ostatné inštalácie používajú príslušnú metódu balíkov, Dockeru alebo vlastného príkazu.",
+    "officialReference": "Oficiálna referencia: <helper>dokumentácia update-apps od Proxmox VE Helper-Scripts</helper> opisuje interaktívny aj bezobslužný režim, zálohy, simuláciu, dočasné prostriedky na zostavenie, protokoly a návratové kódy.",
     "colSource": "Zdroj",
     "colAction": "Zobrazená akcia",
     "colNotes": "Čo sa spustí",

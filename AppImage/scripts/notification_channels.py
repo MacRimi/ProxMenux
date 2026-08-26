@@ -1,6 +1,7 @@
 """
 ProxMenux Notification Channels
-Provides transport adapters for Telegram, Gotify, and Discord.
+Provides transport adapters for Telegram, Gotify, Discord, Email, Pushover,
+and Apprise.
 
 Each channel implements send() and test() with:
 - Retry with exponential backoff (3 attempts)
@@ -12,6 +13,7 @@ Author: MacRimi
 
 import json
 import logging
+import re
 import time
 import urllib.request
 import urllib.error
@@ -390,6 +392,119 @@ class GotifyChannel(NotificationChannel):
         }).encode('utf-8')
         
         return self._http_request(url, payload, {'Content-Type': 'application/json'})
+
+
+# ─── Pushover ────────────────────────────────────────────────────
+
+class PushoverChannel(NotificationChannel):
+    """Pushover Messages API channel."""
+
+    API_URL = 'https://api.pushover.net/1/messages.json'
+    MAX_TITLE_LENGTH = 250
+    MAX_MESSAGE_LENGTH = 1024
+    _CREDENTIAL_RE = re.compile(r'^[A-Za-z0-9]{30}$')
+    _OPTION_RE = re.compile(r'^[A-Za-z0-9_-]{1,25}$')
+
+    def __init__(self, user_key: str, api_token: str, device: str = '',
+                 sound: str = '', critical_priority: str = 'true'):
+        super().__init__()
+        self.user_key = (user_key or '').strip()
+        self.api_token = (api_token or '').strip()
+        self.device = (device or '').strip()
+        self.sound = (sound or '').strip()
+        self.critical_priority = str(critical_priority).lower() == 'true'
+
+    def validate_config(self) -> Tuple[bool, str]:
+        if not self.user_key:
+            return False, 'Pushover user or group key is required'
+        if not self.api_token:
+            return False, 'Pushover application API token is required'
+        if not self._CREDENTIAL_RE.fullmatch(self.user_key):
+            return False, 'Invalid Pushover user or group key format'
+        if not self._CREDENTIAL_RE.fullmatch(self.api_token):
+            return False, 'Invalid Pushover application API token format'
+        if self.device and not self._OPTION_RE.fullmatch(self.device):
+            return False, 'Invalid Pushover device name format'
+        if self.sound and not self._OPTION_RE.fullmatch(self.sound):
+            return False, 'Invalid Pushover sound name format'
+        return True, ''
+
+    @staticmethod
+    def _truncate(value: str, limit: int) -> str:
+        value = value or ''
+        if len(value) <= limit:
+            return value
+        return value[:limit - 1].rstrip() + '…'
+
+    @staticmethod
+    def _response_error(body: str) -> str:
+        try:
+            payload = json.loads(body or '{}')
+            errors = payload.get('errors')
+            if isinstance(errors, list):
+                clean = [str(item)[:160] for item in errors if item]
+                if clean:
+                    return '; '.join(clean)
+            if isinstance(errors, str) and errors:
+                return errors[:200]
+        except (TypeError, ValueError):
+            pass
+        return 'Pushover API rejected the request'
+
+    def _post_message(self, title: str, message: str,
+                      priority: int) -> Tuple[int, str]:
+        payload = {
+            'token': self.api_token,
+            'user': self.user_key,
+            'title': self._truncate(title, self.MAX_TITLE_LENGTH),
+            'message': self._truncate(message, self.MAX_MESSAGE_LENGTH),
+            'priority': str(priority),
+        }
+        if self.device:
+            payload['device'] = self.device
+        if self.sound:
+            payload['sound'] = self.sound
+
+        body = urllib.parse.urlencode(payload).encode('utf-8')
+        status, response_body = self._http_request(
+            self.API_URL,
+            body,
+            {'Content-Type': 'application/x-www-form-urlencoded'},
+        )
+        if 200 <= status < 300:
+            try:
+                response = json.loads(response_body or '{}')
+                if response.get('status') == 1:
+                    return status, ''
+            except (TypeError, ValueError):
+                pass
+            return 400, self._response_error(response_body)
+        return status, self._response_error(response_body)
+
+    def send(self, title: str, message: str, severity: str = 'INFO',
+             data: Optional[Dict] = None) -> Dict[str, Any]:
+        valid, error = self.validate_config()
+        if not valid:
+            return {'success': False, 'error': error, 'channel': 'pushover'}
+
+        priority = (
+            1
+            if self.critical_priority and str(severity or '').upper() == 'CRITICAL'
+            else 0
+        )
+        result = self._send_with_retry(
+            lambda: self._post_message(title, message, priority)
+        )
+        result['channel'] = 'pushover'
+        return result
+
+    def test(self) -> Tuple[bool, str]:
+        result = self.send(
+            'ProxMenux Test',
+            'Pushover is configured correctly. This is a test message from ProxMenux Monitor.',
+            'INFO',
+        )
+        return result['success'], result.get('error', '')
 
 
 # ─── Discord ─────────────────────────────────────────────────────
@@ -1189,7 +1304,7 @@ class AppriseChannel(NotificationChannel):
     Apprise (https://github.com/caronc/apprise) is a Python library that
     normalises a wide catalogue of notification destinations behind a
     single URL scheme: `tgram://`, `discord://`, `slack://`, `gotify://`,
-    `ntfy://`, `matrix://`, `mailto://`, `pushover://`, `signal://`, etc.
+    `ntfy://`, `matrix://`, `mailto://`, `pover://`, `signal://`, etc.
     The operator pastes one URL and ProxMenux delegates the transport.
 
     Requested in issue #207 by @0berkampf. Implemented as a *separate
@@ -1347,6 +1462,13 @@ CHANNEL_TYPES = {
                         'from_address', 'to_addresses', 'subject_prefix'],
         'class': EmailChannel,
     },
+    'pushover': {
+        'name': 'Pushover',
+        'config_keys': ['user_key', 'api_token', 'device', 'sound',
+                        'critical_priority'],
+        'required_keys': ['user_key', 'api_token'],
+        'class': PushoverChannel,
+    },
     'apprise': {
         'name': 'Apprise',
         'config_keys': ['url'],
@@ -1359,7 +1481,8 @@ def create_channel(channel_type: str, config: Dict[str, str]) -> Optional[Notifi
     """Create a channel instance from type name and config dict.
 
     Args:
-        channel_type: 'telegram', 'gotify', 'discord', 'email', or 'apprise'
+        channel_type: 'telegram', 'gotify', 'discord', 'email', 'pushover',
+                      or 'apprise'
         config: Dict with channel-specific keys (see CHANNEL_TYPES)
 
     Returns:
@@ -1383,6 +1506,14 @@ def create_channel(channel_type: str, config: Dict[str, str]) -> Optional[Notifi
             )
         elif channel_type == 'email':
             return EmailChannel(config)
+        elif channel_type == 'pushover':
+            return PushoverChannel(
+                user_key=config.get('user_key', ''),
+                api_token=config.get('api_token', ''),
+                device=config.get('device', ''),
+                sound=config.get('sound', ''),
+                critical_priority=config.get('critical_priority', 'true'),
+            )
         elif channel_type == 'apprise':
             return AppriseChannel(url=config.get('url', ''))
     except Exception as e:

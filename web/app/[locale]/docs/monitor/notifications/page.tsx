@@ -24,6 +24,7 @@ export async function generateMetadata({
       "proxmox discord",
       "proxmox email alerts",
       "proxmox gotify",
+      "proxmox pushover",
       "proxmox apprise",
       "proxmox ntfy",
       "proxmox matrix notifications",
@@ -72,6 +73,7 @@ export default async function NotificationsPage({
       discord: { items: string[] }
       gotify: { items: string[] }
       email: { gmailItems: string[]; outlookItems: string[] }
+      pushover: { steps: string[] }
       apprise: { listItems: string[]; steps: string[] }
       rich: { togglesItems: string[] }
       quiet: { purposeItems: string[]; howItems: string[] }
@@ -101,6 +103,7 @@ export default async function NotificationsPage({
   const gotifyItems = n.gotify.items
   const gmailItems = n.email.gmailItems
   const outlookItems = n.email.outlookItems
+  const pushoverSteps = n.pushover.steps
   const appriseListItems = n.apprise.listItems
   const appriseSteps = n.apprise.steps
   const togglesItems = n.rich.togglesItems
@@ -152,7 +155,7 @@ export default async function NotificationsPage({
         title={t("header.title")}
         description={t("header.description")}
         section={t("header.section")}
-        estimatedMinutes={18}
+        estimatedMinutes={20}
       />
 
       <Callout variant="info" title={t("intro.title")}>
@@ -392,6 +395,34 @@ export default async function NotificationsPage({
         {t("email.relayBody")}
       </Callout>
 
+      <h3 id="pushover" className="text-xl font-semibold mt-8 mb-3 text-gray-900">{t("pushover.heading")}</h3>
+
+      <p className="mb-4 text-gray-800 leading-relaxed">
+        {t.rich("pushover.intro", { a: ext("https://pushover.net/api") })}
+      </p>
+
+      <h4 className="text-base font-semibold mt-6 mb-2 text-gray-900">{t("pushover.stepsTitle")}</h4>
+
+      <ol className="list-decimal pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
+        {pushoverSteps.map((_, idx) => (
+          <li key={idx}>
+            {t.rich(`pushover.steps.${idx}`, {
+              em,
+              code,
+              a: ext(idx === 2 ? "https://pushover.net/apps/build" : "https://pushover.net/"),
+            })}
+          </li>
+        ))}
+      </ol>
+
+      <Callout variant="info" title={t("pushover.priorityTitle")}>
+        {t.rich("pushover.priorityBody", { strong })}
+      </Callout>
+
+      <Callout variant="warning" title={t("pushover.secretTitle")}>
+        {t("pushover.secretBody")}
+      </Callout>
+
       <h3 id="apprise" className="text-xl font-semibold mt-8 mb-3 text-gray-900">{t("apprise.heading")}</h3>
 
       <p className="mb-4 text-gray-800 leading-relaxed">{t("apprise.intro")}</p>
@@ -402,7 +433,7 @@ export default async function NotificationsPage({
         {appriseListItems.map((_, idx) => (
           <li key={idx}>
             {t.rich(`apprise.listItems.${idx}`, {
-              a: idx === 0 ? ext("https://github.com/caronc/apprise/wiki") : ext("https://github.com/caronc/apprise/wiki/URLBasics"),
+              a: idx === 0 ? ext("https://appriseit.com/services/") : ext("https://github.com/caronc/apprise/wiki/URLBasics"),
             })}
           </li>
         ))}
@@ -412,7 +443,7 @@ export default async function NotificationsPage({
 
       <ol className="list-decimal pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
         {appriseSteps.map((_, idx) => (
-          <li key={idx}>{t.rich(`apprise.steps.${idx}`, { em, code, a: ext("https://github.com/caronc/apprise/wiki") })}</li>
+          <li key={idx}>{t.rich(`apprise.steps.${idx}`, { em, code, a: ext("https://appriseit.com/services/") })}</li>
         ))}
       </ol>
 

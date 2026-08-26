@@ -2402,12 +2402,13 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
           detections, so the user gets one-click Restore before hand-
           typing a custom app. */}
       {apps.length > 0 && (
-        <div className="flex flex-wrap justify-end items-center gap-2">
+        <div className="flex flex-col items-stretch gap-2 max-w-xs mx-auto sm:flex-row sm:flex-wrap sm:justify-end sm:items-center sm:max-w-none sm:mx-0">
           <Button
             variant="outline"
             size="sm"
             onClick={searchInstalledApplications}
             disabled={searchingApplications || editMode}
+            className="w-full sm:w-auto order-2 sm:order-1"
           >
             {searchingApplications
               ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
@@ -2421,6 +2422,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
             size="sm"
             onClick={openBrowseOrEditor}
             disabled={editMode}
+            className="w-full sm:w-auto order-3 sm:order-2"
           >
             <PlusCircle className="h-4 w-4 mr-1.5" />
             {t("vmLxc.appEditor.addAnotherApplication")}
@@ -2433,7 +2435,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData }: Prop
           <button
             type="button"
             onClick={() => setEditMode((v) => !v)}
-            className="h-9 px-3 text-sm rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5"
+            className="h-9 px-3 text-sm rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center justify-center gap-1.5 w-full sm:w-auto order-1 sm:order-3"
           >
             {editMode ? (
               <>

@@ -9,6 +9,7 @@
   "title": "Optional Settings",
   "intro": "The <strong>Optional Settings</strong> category provides additional features and optimizations that you can choose to apply to your Proxmox VE installation. These settings are not essential but can enhance your system's capabilities in specific scenarios.",
   "available": "Available Optional Features",
+  "stepLabel": "Step",
   "ceph": {
     "title": "Add Latest Ceph Support",
     "intro": "This option installs the latest Ceph storage system support for Proxmox VE. Ceph is a distributed storage system that provides high performance, reliability, and scalability.",
@@ -28,9 +29,8 @@
     "doesIntro": "What it does:",
     "doesItems": [
       "Detects if an AMD EPYC or Ryzen CPU is present",
-      "Applies kernel parameter 'idle=nomwait' to prevent random crashes",
-      "Configures KVM to ignore certain MSRs (Model Specific Registers) for better Windows guest compatibility",
-      "Installs the latest Proxmox VE kernel"
+      "Applies kernel parameter 'idle=nomwait' to prevent random crashes (via /etc/kernel/cmdline on systemd-boot hosts, or /etc/default/grub on GRUB hosts — with a .bak of the original)",
+      "Configures KVM to ignore certain MSRs (Model Specific Registers) for better Windows guest compatibility"
     ],
     "howUse": "How to use: These fixes are applied automatically and require a system reboot to take effect.",
     "automates": "This adjustment automates the following commands:"
@@ -47,21 +47,16 @@
     "howUse": "How to use: After enabling these services, you can configure HA groups and resources in the Proxmox VE web interface.",
     "automates": "This adjustment automates the following commands:"
   },
-  "testing": {
-    "title": "Enable Proxmox Testing Repository",
-    "intro": "This option enables the Proxmox testing repository, allowing access to the latest, potentially unstable versions of Proxmox VE packages.",
+  "pveam": {
+    "title": "Update Proxmox VE Appliance Manager",
+    "intro": "Refreshes the local index of container templates that <code>pveam</code> exposes in the Proxmox UI, so the list of available appliances is up to date the next time you create an LXC.",
     "doesIntro": "What it does:",
     "doesItems": [
-      "Adds the Proxmox testing repository to the system's package sources",
-      "Creates a new file in /etc/apt/sources.list.d/ for the testing repository",
-      "Updates the package lists to include packages from the new repository"
+      "Runs <code>pveam update</code> against the Proxmox mirrors to fetch the current appliance catalogue",
+      "Populates the appliance list shown by the web UI when creating a container"
     ],
-    "howUse": "How to use: After enabling this repository, you can update and upgrade your system to get the latest testing versions of Proxmox VE packages. Use with caution as these versions may be unstable.",
-    "manualIntro": "To manually add the Proxmox testing repository, you can use these commands:",
-    "noteLabel": "Note:",
-    "noteBody": "$(lsb_release -cs) automatically detects your Proxmox VE version codename (e.g., bullseye).",
-    "warnLabel": "Warning:",
-    "warnBody": "Enabling the testing repository may lead to system instability. It's recommended for testing environments only."
+    "howUse": "How to use: run it once when the appliance list in the UI feels stale, or after switching mirrors. It does not download the templates themselves — only the catalogue index.",
+    "automates": "This adjustment automates the following command:"
   },
   "fastfetch": {
     "title": "Install and Configure Fastfetch",

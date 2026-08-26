@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Script Automatizado post-instalación | ProxMenux Documentation",
-    "description": "El script Automatizado post-instalación de ProxMenux aplica un conjunto curado de 13 optimizaciones seguras y conscientes del hardware a un host de Proxmox VE recién instalado, sin preguntas. Cada cambio queda registrado para revertirlo después vía Uninstall Optimizations.",
+    "description": "El script Automatizado post-instalación de ProxMenux aplica un conjunto seleccionado de 14 optimizaciones seguras y adaptadas al hardware a un host Proxmox VE recién instalado, sin preguntas. Los cambios de configuración reversibles quedan registrados para restaurarlos después.",
     "ogTitle": "Script Automatizado post-instalación | ProxMenux Documentation",
-    "ogDescription": "13 optimizaciones curadas aplicadas a un host de Proxmox VE recién instalado sin preguntas. Consciente del hardware (autodetección SSD/NVMe) y totalmente reversible."
+    "ogDescription": "14 optimizaciones aplicadas a un host Proxmox VE recién instalado sin preguntas. Adaptadas al hardware y con los cambios reversibles registrados."
   },
   "header": {
     "title": "Script Automatizado post-instalación",
-    "description": "Un clic, sin preguntas — ProxMenux aplica un conjunto curado de 13 optimizaciones seguras de las que se beneficia casi cualquier host Proxmox. Cada cambio queda registrado en el JSON de herramientas para que puedas deshacer cualquiera de ellos más tarde desde Uninstall Optimizations.",
+    "description": "Un clic, sin preguntas: ProxMenux aplica 14 optimizaciones seguras de las que se beneficia casi cualquier host Proxmox. Los cambios de configuración reversibles quedan registrados para Uninstall Optimizations; las actualizaciones de paquetes no se describen como reversibles.",
     "section": "Post-Install · Automated"
   },
   "intro": {
@@ -55,7 +55,7 @@
     },
     {
       "tool": "Tuning de memoria",
-      "what": "Establece vm.swappiness=10, dirty ratios balanceados, vm.overcommit_memory=1, vm.max_map_count=262144 y compaction proactiveness cuando es soportado.",
+      "what": "Establece vm.swappiness=10, dirty ratios balanceados, vm.max_map_count=262144 y compaction proactiveness cuando es soportado. La política de memory-overcommit del kernel se deja en el valor por defecto de Proxmox.",
       "category": "System",
       "categorySlug": "system"
     },
@@ -103,7 +103,7 @@
     },
     {
       "tool": "Nombres de interfaz persistentes",
-      "what": "Escribe un /etc/systemd/network/10-proxmenux-<iface>.link por NIC física (cada uno comenzando con la cabecera 'Managed by ProxMenux') que fija el MAC al nombre actual, de forma que los nombres eth0 / enp… se mantengan estables tras reinicios y al añadir nuevas NICs.",
+      "what": "Escribe un <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code> por NIC física (cada uno comenzando con la cabecera 'Managed by ProxMenux') que fija el MAC al nombre actual, de forma que los nombres <code>eth0</code> / <code>enp…</code> se mantengan estables tras reinicios y al añadir nuevas NICs.",
       "category": "Network",
       "categorySlug": "network"
     }

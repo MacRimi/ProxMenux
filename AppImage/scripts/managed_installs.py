@@ -1123,8 +1123,8 @@ def _check_oci_app(entry: dict) -> dict:
 #       returns the single newest version, e.g. "580.105.08"
 #   `https://download.nvidia.com/XFree86/Linux-x86_64/`
 #       HTML directory listing — we scrape it for per-branch latest
-#       (so a user on 570.x gets 570.x's latest, not pushed to 580.x
-#       unless their kernel forces a branch upgrade).
+#       (so a user on 570.x gets 570.x's latest, without an automatic
+#       cross-branch upgrade).
 #
 # Cache TTL is 7 days because NVIDIA's release cadence on each branch
 # is roughly monthly. The cache is in-memory only; AppImage restarts
@@ -1133,15 +1133,6 @@ def _check_oci_app(entry: dict) -> dict:
 _NVIDIA_BASE = "https://download.nvidia.com/XFree86/Linux-x86_64"
 _NVIDIA_CACHE_TTL = 7 * 86400
 _nvidia_cache: dict[str, Any] = {"versions": [], "fetched_at": 0}
-
-
-def _kernel_string() -> str:
-    try:
-        return subprocess.run(
-            ["uname", "-r"], capture_output=True, text=True, timeout=2,
-        ).stdout.strip()
-    except (OSError, subprocess.TimeoutExpired):
-        return ""
 
 
 def _version_tuple(v: str) -> tuple:
@@ -1216,7 +1207,6 @@ def _check_nvidia_xfree86(entry: dict) -> dict:
         "last_check": _now_iso(),
         "error": None,
         "_upgrade_kind": "patch" if available else None,
-        "_kernel": _kernel_string(),
     }
 
 

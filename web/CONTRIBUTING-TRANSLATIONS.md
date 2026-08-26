@@ -1,10 +1,11 @@
 # Contributing translations
 
 The ProxMenux documentation site is built with Next.js (App Router) and
-serves every page under two URLs:
+serves every published page under locale-prefixed URLs:
 
 - `/en/<path>` — English, the source of truth
-- `/es/<path>` — Spanish, in progress
+- `/es/<path>` — Spanish
+- `/sk/<path>` — Slovak, with English fallback where needed
 
 We use [`next-intl`](https://next-intl.dev) for the i18n plumbing. Anyone
 can translate the docs without writing TypeScript: most of the work is
@@ -20,8 +21,8 @@ filling in a JSON file. This guide explains the workflow end to end.
 
 Out of the box you get:
 
-- Routing under `app/[locale]/...` — every page already renders at both
-  `/en/...` and `/es/...`.
+- Routing under `app/[locale]/...` — every page renders for every locale
+  enabled in `i18n/routing.ts`.
 - Locale-aware navigation via `@/i18n/navigation` (`<Link>`, `useRouter`,
   `usePathname`). Use these instead of `next/link` for internal hrefs so
   the active `[locale]` prefix is preserved.
@@ -50,11 +51,13 @@ web/
 │   │   └── docs/
 │   │       └── monitor/
 │   │           └── index.json   # page-specific strings for /docs/monitor
-│   └── es/
+│   ├── es/
 │       ├── common.json
 │       └── docs/
 │           └── monitor/
 │               └── index.json
+│   └── sk/
+│       └── ...
 └── app/[locale]/
     └── docs/
         └── monitor/
@@ -81,7 +84,7 @@ web/
 
 Browse `app/[locale]/docs/` and find a page that:
 
-- Has no entry yet under `messages/es/<same-path>/` (Spanish), **and**
+- Has no entry yet under `messages/<locale>/<same-path>/`, **and**
 - Is not already mid-translation by someone else (check open PRs).
 
 If you're translating to a new locale, start with the smallest pages so
@@ -172,6 +175,45 @@ Examples:
 
 In the description, mention which page you translated and whether you
 also had to refactor the `.tsx` (case B) or only added JSON (case A).
+
+---
+
+## Automated baseline and incremental updates
+
+The `Build web documentation translations` GitHub Action can create a
+machine-translated baseline and fill newly added English keys later. It uses
+`.github/scripts/build_web_docs_i18n.py` and supports a locale list, a file or
+directory scope, a per-locale file limit and a dry run.
+
+The builder is resumable and writes each completed JSON file atomically. By
+default it preserves every non-empty translated value, including wording
+reviewed by native speakers. It also protects rich-text tags, placeholders,
+URLs, paths, commands, variables and official product names before sending a
+string to the translation provider. `--refresh` deliberately overwrites the
+selected scope and should only be used when those translations are going to be
+reviewed again.
+
+Run a coverage report without contacting a translation service:
+
+```bash
+python .github/scripts/build_web_docs_i18n.py \
+  --languages de,fr,it,pt,sk,sv \
+  --section docs \
+  --check
+```
+
+Translate a small resumable batch locally:
+
+```bash
+python .github/scripts/build_web_docs_i18n.py \
+  --languages de \
+  --section docs/monitor \
+  --max-files 5
+```
+
+Machine translation is a starting point, not the final authority. Native
+contributors can edit the generated JSON normally; later incremental runs
+will keep their non-empty wording unchanged.
 
 ---
 
@@ -268,7 +310,12 @@ registers a renderer for them.
 
 If you want to add a language that isn't in the project yet:
 
-1. Add the locale code to `routing.ts`:
+1. Create `messages/<locale>/common.json` and the page catalogs. The automated
+   builder can provide the initial baseline.
+2. Review the shared navigation and a representative set of documentation
+   pages with a native speaker.
+3. Add the locale code to `routing.ts` only when the locale is ready to be
+   exposed publicly:
    ```ts
    export const routing = defineRouting({
      locales: ["en", "es", "fr"],  // add your code here
@@ -276,12 +323,9 @@ If you want to add a language that isn't in the project yet:
      localePrefix: "always",
    })
    ```
-2. Create the `messages/<locale>/` folder.
-3. Copy `messages/en/common.json` over and translate it. **This is
-   mandatory** — without it the navbar and footer fall back to English
-   on every page.
-4. Start translating individual pages one PR at a time.
-5. Mention in your first PR that you're seeding the locale so reviewers
+4. Add its human-readable label to the language switcher.
+5. Continue reviewing individual pages one PR at a time.
+6. Mention in your first PR that you're seeding the locale so reviewers
    know to expect a follow-up batch.
 
 ---
@@ -305,9 +349,8 @@ Three common causes:
 ### What about translations of the Monitor (the AppImage), not just the docs?
 
 This guide only covers the **public documentation site** in `web/`.
-The Monitor's dashboard UI in `AppImage/` is a separate project and
-not currently i18n-enabled. Translating the Monitor would require a
-parallel effort.
+The Monitor dashboard uses the separate catalogs under
+`AppImage/messages/` and its own translation workflow.
 
 ### Where can I see what's missing?
 

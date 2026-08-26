@@ -5,7 +5,7 @@
   },
   "header": {
     "title": "Post-Install: Customization",
-    "description": "Cosmetic and quality-of-life tweaks for the Proxmox host. None of them change functional behaviour — they just make the shell nicer to use and hide the subscription nag in the web UI. All three are tracked and reversible from the Uninstall menu.",
+    "description": "Cosmetic and quality-of-life tweaks for the Proxmox host. They make the shell nicer to use and hide the subscription nag in the web UI. Bashrc, MOTD and the subscription banner are tracked and reversible from the Uninstall menu.",
     "section": "Settings post-install Proxmox"
   },
   "intro": {
@@ -24,7 +24,7 @@
     "heading": "Set up custom MOTD banner",
     "intro": "Prepends <em>\"This system is optimised by: ProxMenux\"</em> to <code>/etc/motd</code>, the message shown after a successful SSH login (above the shell prompt, before any <code>update-motd</code> scripts run). Harmless and purely informational — useful as a quick visual confirmation that ProxMenux has been applied on this host.",
     "writesTitle": "What ProxMenux writes",
-    "writesOutro": "Original <code>/etc/motd</code> is backed up to <code>/etc/motd.bak</code> on first apply. The operation is idempotent: if the marker line is already present, nothing is added."
+    "writesOutro": "On first apply, ProxMenux records whether <code>/etc/motd</code> existed and stores its original contents under <code>/usr/local/share/proxmenux</code>. The operation is idempotent: if the marker line is already present, nothing is added. Older installations with an existing <code>/etc/motd.bak</code> are migrated to the same reversible state."
   },
   "banner": {
     "heading": "Remove subscription banner",
@@ -43,8 +43,8 @@
   "verify": {
     "heading": "Verification",
     "intro": "After applying all three:",
-    "reversibleTitle": "All three are reversible",
-    "reversibleBody": "<link>Uninstall Optimizations</link> restores <code>/root/.bashrc</code> and <code>/etc/motd</code> from their <code>.bak</code> backups, and either restores the patched UI files from the backup directory or reinstalls <code>pve-manager</code>, <code>proxmox-widget-toolkit</code>, <code>libjs-extjs</code> and <code>libpve-http-server-perl</code> with <code>--force-confnew</code> to bring the web UI back to vanilla."
+    "reversibleTitle": "All three customization changes are tracked",
+    "reversibleBody": "<link>Uninstall Optimizations</link> restores <code>/root/.bashrc</code>, returns MOTD to its exact pre-ProxMenux contents (or removes the file if it did not previously exist), and restores the patched UI files from backup or reinstalls the affected Proxmox packages when necessary."
   },
   "related": {
     "heading": "Related",

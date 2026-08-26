@@ -7,7 +7,7 @@
 # Copyright   : (c) 2024 MacRimi
 # License     : GPL-3.0
 #               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
-# Version     : 1.3
+# Version     : 1.4
 # ==========================================================
 # Description:
 # Interactive post-installation configurator for Proxmox VE.
@@ -15,8 +15,9 @@
 # System, Virtualization, Network, Storage, Security,
 # Customization, Monitoring, Performance, Optional) and presents
 # a checklist per category so the user picks exactly what to
-# apply. Every change is registered in installed_tools.json for
-# later reversal from Uninstall Optimizations.
+# apply. Reversible changes are registered in installed_tools.json
+# for later restoration from Uninstall Optimizations; package upgrades
+# are intentionally excluded because they cannot be rolled back safely.
 #
 # Features:
 # - Checklist UI per category (10 categories, ~30 tools total).
@@ -24,8 +25,8 @@
 #   optimizations plus opt-in items (IOMMU/VFIO, Fastfetch,
 #   Figurine, Ceph repo, HA, AMD fixes, pigz, ZFS ARC, …).
 # - Idempotent: safe to run repeatedly.
-# - Registration + rollback: every tool has a reverse function
-#   in uninstall-tools.sh.
+# - Registration + rollback: every registered tool has a reverse
+#   function in uninstall-tools.sh.
 #
 # Credits:
 # Incorporates ideas and snippets originally published under BSD
@@ -155,7 +156,7 @@ $(translate "Do you want to continue anyway?")" 13 70
 
 
 enable_kexec() {
-    local FUNC_VERSION="1.0"
+    local FUNC_VERSION="1.1"
     # description: Install kexec-tools and add a Ctrl+Alt+K hotkey + systemd unit for fast reboots that skip BIOS/POST.
     msg_info2 "$(translate "Configuring kexec for quick reboots...")"
     NECESSARY_REBOOT=1
@@ -169,7 +170,7 @@ enable_kexec() {
         /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install kexec-tools > /dev/null 2>&1
         msg_ok "$(translate "kexec-tools installed successfully")"
     else
-        msg_ok "$(translate "kexec-tools installed successfully")"
+        msg_ok "$(translate "kexec-tools is already installed")"
     fi
 
     # Create systemd service file
@@ -194,7 +195,7 @@ WantedBy=default.target
 EOF
         msg_ok "$(translate "kexec-pve service file created")"
     else
-        msg_ok "$(translate "kexec-pve service file created")"
+        msg_ok "$(translate "kexec-pve service file is already configured")"
     fi
 
     # Enable the service
@@ -202,7 +203,7 @@ EOF
         systemctl enable kexec-pve.service > /dev/null 2>&1
         msg_ok "$(translate "kexec-pve service enabled")"
     else
-        msg_ok "$(translate "kexec-pve service enabled")"
+        msg_ok "$(translate "kexec-pve service is already enabled")"
     fi
     
     if [ ! -f /root/.bash_profile ]; then
@@ -213,7 +214,7 @@ EOF
         echo "alias reboot-quick='systemctl kexec'" >> /root/.bash_profile
         msg_ok "$(translate "reboot-quick alias added")"
     else
-        msg_ok "$(translate "reboot-quick alias added")"
+        msg_ok "$(translate "reboot-quick alias is already configured")"
     fi
 
     msg_success "$(translate "kexec configured successfully. Use the command: reboot-quick")"
@@ -1026,7 +1027,7 @@ EOF
 
 
 install_ceph() {
-    local FUNC_VERSION="1.0"
+    local FUNC_VERSION="1.1"
     # description: Install Ceph (client + server packages) for distributed RBD/CephFS storage; PVE 8/9 aware repo selection.
     msg_info2 "$(translate "Installing Ceph support...")"
     
@@ -1055,6 +1056,11 @@ install_ceph() {
         return 0
     fi
     
+    if [[ ! -r /usr/share/keyrings/proxmox-archive-keyring.gpg ]]; then
+        msg_error "$(translate "The Proxmox archive keyring is missing; Ceph installation cannot continue safely")"
+        return 1
+    fi
+
     # Configure Ceph repository based on version
     msg_info "$(translate "Configuring Ceph repository for PVE") $pve_version..."
     
@@ -1086,10 +1092,10 @@ EOF
         
         # Use legacy format for PVE 8
         msg_info "$(translate "Creating Ceph repository for PVE 8 (legacy format)...")"
-        echo "deb https://download.proxmox.com/debian/ceph-${ceph_version} ${target_codename} no-subscription" > /etc/apt/sources.list.d/ceph-${ceph_version}.list
+        echo "deb [signed-by=/usr/share/keyrings/proxmox-archive-keyring.gpg] https://download.proxmox.com/debian/ceph-${ceph_version} ${target_codename} no-subscription" > /etc/apt/sources.list.d/ceph-${ceph_version}.list
         msg_ok "$(translate "Ceph repository configured for PVE 8")"
     fi
-    
+
  
     msg_info "$(translate "Updating package lists...")"
     
@@ -1102,16 +1108,9 @@ EOF
         msg_warn "$(translate "Package update had issues, checking details...")"
         
 
-        if echo "$update_output" | grep -q "NO_PUBKEY\|GPG error"; then
-            msg_info "$(translate "Fixing GPG key issues...")"
-
-            apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $(echo "$update_output" | grep "NO_PUBKEY" | sed 's/.*NO_PUBKEY //' | head -1) 2>/dev/null
-
-            if apt-get update > /dev/null 2>&1; then
-                msg_ok "$(translate "Package lists updated after GPG fix")"
-            else
-                msg_warn "$(translate "Package update still has issues, continuing anyway...")"
-            fi
+        if echo "$update_output" | grep -Eqi 'NO_PUBKEY|GPG error|EXPKEYSIG|BADSIG|not signed|signatures? (could not|couldn.t) be verified'; then
+            msg_error "$(translate "Ceph repository signature verification failed; installation has been stopped")"
+            return 1
         elif echo "$update_output" | grep -q "404\|Failed to fetch"; then
             msg_warn "$(translate "Some repositories are not available, continuing with available ones...")"
         else
@@ -1544,17 +1543,55 @@ update_snapshot_schedule() {
 
 
 disable_rpc() {
+    local FUNC_VERSION="1.1"
+    # description: Disable rpcbind service/socket while preserving their exact previous systemd state for rollback.
+    local state_file="$BASE_DIR/rpcbind.state"
+    local state_tmp="${state_file}.tmp.$$"
+    local unit load_state enabled_state active_state
+
     msg_info2 "$(translate "Disabling portmapper/rpcbind for security...")"
 
-    msg_info "$(translate "Disabling and stopping rpcbind service...")"
+    mkdir -p "$BASE_DIR"
+    if [[ ! -s "$state_file" ]]; then
+        : > "$state_tmp"
+        for unit in rpcbind.socket rpcbind.service; do
+            load_state="$(systemctl show -p LoadState --value "$unit" 2>/dev/null || true)"
+            [[ -z "$load_state" || "$load_state" == "not-found" ]] && continue
+            enabled_state="$(systemctl is-enabled "$unit" 2>/dev/null || true)"
+            active_state="$(systemctl is-active "$unit" 2>/dev/null || true)"
+            printf '%s|%s|%s\n' "$unit" "${enabled_state:-unknown}" "${active_state:-unknown}" >> "$state_tmp"
+        done
 
-    # Disable and stop rpcbind
-    systemctl disable rpcbind > /dev/null 2>&1
-    systemctl stop rpcbind > /dev/null 2>&1
+        if [[ ! -s "$state_tmp" ]]; then
+            rm -f "$state_tmp"
+            msg_warn "$(translate "rpcbind units were not found; no changes were made")"
+            return 0
+        fi
+        mv "$state_tmp" "$state_file"
+    fi
 
-    msg_ok "$(translate "rpcbind service has been disabled and stopped")"
+    # Register as soon as the original state is safely persisted. If a
+    # later systemd operation fails, Uninstall Optimizations must still
+    # expose the recovery path instead of leaving a hidden partial change.
+    register_tool "rpc" true "$FUNC_VERSION"
 
-    msg_success "$(translate "portmapper/rpcbind has been disabled and removed")"
+    msg_info "$(translate "Disabling and stopping rpcbind service and socket...")"
+
+    systemctl disable --now rpcbind.socket rpcbind.service > /dev/null 2>&1 || true
+
+    for unit in rpcbind.socket rpcbind.service; do
+        active_state="$(systemctl is-active "$unit" 2>/dev/null || true)"
+        enabled_state="$(systemctl is-enabled "$unit" 2>/dev/null || true)"
+        if [[ "$active_state" == "active" || "$active_state" == "activating" ||
+              "$enabled_state" == "enabled" || "$enabled_state" == "enabled-runtime" ]]; then
+            msg_error "$(translate "rpcbind could not be disabled completely")"
+            return 1
+        fi
+    done
+
+    msg_ok "$(translate "rpcbind service and socket have been disabled and stopped")"
+
+    msg_success "$(translate "portmapper/rpcbind has been disabled")"
 }
 
 
@@ -2008,26 +2045,49 @@ EOF
 
 
 setup_motd() {
+    local FUNC_VERSION="1.1"
+    # description: Add the ProxMenux MOTD banner while preserving the original file contents or absence for rollback.
     msg_info2 "$(translate "Configuring MOTD (Message of the Day) banner...")"
 
-    local motd_file="/etc/motd"
+    local motd_file="${PROXMENUX_MOTD_FILE:-/etc/motd}"
     local custom_message="    This system is optimised by: ProxMenux"
+    local state_file="$BASE_DIR/motd.state"
+    local original_file="$BASE_DIR/motd.original"
     local changes_made=false
 
     msg_info "$(translate "Checking MOTD configuration...")"
 
-    # Check if the custom message already exists
-    if grep -q "$custom_message" "$motd_file"; then
-        msg_ok "$(translate "Custom message added to MOTD")"
-    else
-        # Create a backup of the original MOTD file
-        if [ ! -f "${motd_file}.bak" ]; then
-            cp "$motd_file" "${motd_file}.bak"
-            msg_ok "$(translate "Backup of original MOTD created")"
+    mkdir -p "$BASE_DIR"
+    if [[ ! -f "$state_file" ]]; then
+        if grep -Fqx "$custom_message" "$motd_file" 2>/dev/null; then
+            if [[ -f "${motd_file}.bak" ]]; then
+                cp -a "${motd_file}.bak" "$original_file"
+                printf 'present\n' > "$state_file"
+            else
+                printf 'legacy-marker\n' > "$state_file"
+            fi
+        elif [[ -e "$motd_file" ]]; then
+            cp -a "$motd_file" "$original_file"
+            printf 'present\n' > "$state_file"
+        else
+            printf 'absent\n' > "$state_file"
         fi
+    fi
 
+    # Check if the custom message already exists
+    if grep -Fqx "$custom_message" "$motd_file" 2>/dev/null; then
+        msg_ok "$(translate "Custom MOTD message is already configured")"
+    else
         # Add the custom message at the beginning of the file
-        echo -e "$custom_message\n\n$(cat $motd_file)" > "$motd_file"
+        touch "$motd_file"
+        local motd_tmp
+        motd_tmp="$(mktemp)"
+        {
+            printf '%s\n\n' "$custom_message"
+            cat "$motd_file"
+        } > "$motd_tmp"
+        cat "$motd_tmp" > "$motd_file"
+        rm -f "$motd_tmp"
         changes_made=true
         msg_ok "$(translate "Custom message added to MOTD")"
     fi
@@ -2037,8 +2097,9 @@ setup_motd() {
     if $changes_made; then
         msg_success "$(translate "MOTD configuration updated successfully")"
     else
-        msg_success "$(translate "MOTD configuration updated successfully")"
+        msg_success "$(translate "MOTD configuration was already up to date")"
     fi
+    register_tool "motd" true "$FUNC_VERSION"
 }
 
 
@@ -2094,7 +2155,7 @@ EOF
 
 
 remove_subscription_banner() {
-    local FUNC_VERSION="1.0"
+    local FUNC_VERSION="1.1"
     # description: Patch the Proxmox web UI to suppress the "no valid subscription" dialog (PVE 8 + 9 variants supported).
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
@@ -2105,11 +2166,15 @@ remove_subscription_banner() {
     fi
 
     if [[ "$pve_version" -ge 9 ]]; then
-
-        bash "$LOCAL_SCRIPTS/global/remove-banner-pve-v3.sh"
+        if ! bash "$LOCAL_SCRIPTS/global/remove-banner-pve-v3.sh"; then
+            msg_error "$(translate "Subscription banner removal failed")"
+            return 1
+        fi
     else
-
-        bash "$LOCAL_SCRIPTS/global/remove-banner-pve8.sh"
+        if ! bash "$LOCAL_SCRIPTS/global/remove-banner-pve8.sh"; then
+            msg_error "$(translate "Subscription banner removal failed")"
+            return 1
+        fi
     fi
     register_tool "subscription_banner" true "$FUNC_VERSION"
 }
@@ -3056,6 +3121,10 @@ setup_persistent_network() {
 
 
 install_system_utils() {
+    local FUNC_VERSION="1.1"
+    # description: Install selected system utilities and track only packages that were newly added by ProxMenux.
+    local state_file="$BASE_DIR/system_utils.packages"
+    local new_packages_tmp=""
     msg_info2 "$(translate "Installing system utilities...")"
 
     # Build checklist from global PROXMENUX_UTILS array
@@ -3087,6 +3156,8 @@ install_system_utils() {
         return 1
     fi
 
+    new_packages_tmp="$(mktemp)"
+
     local success=0 failed=0 warning=0
     local selected_array
     IFS=' ' read -ra selected_array <<< "$selected"
@@ -3094,6 +3165,10 @@ install_system_utils() {
     for util in "${selected_array[@]}"; do
         util=$(echo "$util" | tr -d '"')
         local pkg_cmd="$util" pkg_desc="$util"
+        local was_installed=false
+        if dpkg-query -W -f='${Status}' "$util" 2>/dev/null | grep -q '^install ok installed$'; then
+            was_installed=true
+        fi
         for util_entry in "${PROXMENUX_UTILS[@]}"; do
             IFS=':' read -r epkg ecmd edesc <<< "$util_entry"
             if [[ "$epkg" == "$util" ]]; then
@@ -3103,12 +3178,28 @@ install_system_utils() {
             fi
         done
         install_single_package "$util" "$pkg_cmd" "$pkg_desc"
-        case $? in
+        local install_result=$?
+        case $install_result in
             0) success=$((success + 1)) ;;
             1) failed=$((failed + 1)) ;;
             2) warning=$((warning + 1)) ;;
         esac
+
+        if [[ "$was_installed" == false ]] &&
+           dpkg-query -W -f='${Status}' "$util" 2>/dev/null | grep -q '^install ok installed$'; then
+            printf '%s\n' "$util" >> "$new_packages_tmp"
+        fi
     done
+
+    if [[ -s "$new_packages_tmp" ]]; then
+        mkdir -p "$BASE_DIR"
+        {
+            [[ -f "$state_file" ]] && cat "$state_file"
+            cat "$new_packages_tmp"
+        } | sort -u > "${state_file}.tmp"
+        mv "${state_file}.tmp" "$state_file"
+    fi
+    rm -f "$new_packages_tmp"
 
     hash -r 2>/dev/null
     echo
@@ -3116,6 +3207,9 @@ install_system_utils() {
     [[ $success -gt 0 ]] && msg_ok "$(translate "Successful"): $success"
     [[ $warning -gt 0 ]] && msg_warn "$(translate "With warnings"): $warning"
     [[ $failed -gt 0 ]] && msg_error "$(translate "Failed"): $failed"
+    if [[ -s "$state_file" ]]; then
+        register_tool "system_utils" true "$FUNC_VERSION"
+    fi
     msg_success "$(translate "Utilities installation completed")"
 }
 
@@ -3126,7 +3220,6 @@ custom_post_category_label() {
   case "$1" in
     "Basic Settings") translate "Basic Settings" ;;
     "System") translate "System" ;;
-    "Hardware") translate "Hardware" ;;
     "Virtualization") translate "Virtualization" ;;
     "Network") translate "Network" ;;
     "Storage") translate "Storage" ;;
@@ -3255,9 +3348,9 @@ main_menu() {
   HEADER="$(translate "Choose options to configure:")\n\n${header_line}"
 
   declare -A category_order=(
-    ["Basic Settings"]=1 ["System"]=2 ["Hardware"]=3 ["Virtualization"]=4
-    ["Network"]=5 ["Storage"]=6 ["Security"]=7 ["Customization"]=8
-    ["Monitoring"]=9 ["Performance"]=10 ["Optional"]=11
+    ["Basic Settings"]=1 ["System"]=2 ["Virtualization"]=3
+    ["Network"]=4 ["Storage"]=5 ["Security"]=6 ["Customization"]=7
+    ["Monitoring"]=8 ["Performance"]=9 ["Optional"]=10
   )
 
   local options=(

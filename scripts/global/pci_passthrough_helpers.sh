@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if [[ -n "${__PROXMENUX_PCI_PASSTHROUGH_HELPERS__}" ]]; then
+if [[ -n "${__PROXMENUX_PCI_PASSTHROUGH_HELPERS__:-}" ]]; then
   return 0
 fi
 __PROXMENUX_PCI_PASSTHROUGH_HELPERS__=1
@@ -378,14 +378,23 @@ function _pci_sriov_role() {
 # PCI subsystem ADD event, which is exactly when we need them.
 # ──────────────────────────────────────────────────────────────────────
 
-PROXMENUX_VFIO_BIND_STATE="/etc/proxmenux/vfio-bind.bdfs"
-PROXMENUX_VFIO_BIND_UDEV_RULE="/etc/udev/rules.d/10-proxmenux-vfio-bind.rules"
+PROXMENUX_SYSFS_ROOT="${PROXMENUX_SYSFS_ROOT:-/sys}"
+PROXMENUX_ETC_ROOT="${PROXMENUX_ETC_ROOT:-/etc}"
+PROXMENUX_STATE_ROOT="${PROXMENUX_STATE_ROOT:-${BASE_DIR:-/usr/local/share/proxmenux}}"
+PROXMENUX_VFIO_BIND_STATE="${PROXMENUX_VFIO_BIND_STATE:-${PROXMENUX_ETC_ROOT}/proxmenux/vfio-bind.bdfs}"
+PROXMENUX_VFIO_BIND_UDEV_RULE="${PROXMENUX_VFIO_BIND_UDEV_RULE:-${PROXMENUX_ETC_ROOT}/udev/rules.d/10-proxmenux-vfio-bind.rules}"
+PROXMENUX_VFIO_CONF="${PROXMENUX_VFIO_CONF:-${PROXMENUX_ETC_ROOT}/modprobe.d/vfio.conf}"
 # Auto-managed blacklist applied only when *every* NVIDIA GPU on the host
 # is in passthrough. Removed when any NVIDIA GPU goes back to the host.
-PROXMENUX_NVIDIA_VFIO_BLACKLIST="/etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf"
+PROXMENUX_NVIDIA_VFIO_BLACKLIST="${PROXMENUX_NVIDIA_VFIO_BLACKLIST:-${PROXMENUX_ETC_ROOT}/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf}"
+PROXMENUX_NVIDIA_SERVICE_STATE="${PROXMENUX_NVIDIA_SERVICE_STATE:-${PROXMENUX_STATE_ROOT}/nvidia-host-services.state}"
+# A short-lived implementation stored this state under /var/lib. Keep a
+# one-way migration so upgraded hosts restore the exact service state that was
+# captured there, then remove the provisional file.
+PROXMENUX_NVIDIA_SERVICE_LEGACY_STATE="${PROXMENUX_NVIDIA_SERVICE_LEGACY_STATE:-/var/lib/proxmenux/nvidia-host-services.state}"
 # Legacy artifact paths from a previous attempt — kept here so we can
 # remove them when migrating a host that ran the older init-top hook.
-PROXMENUX_VFIO_BIND_LEGACY_HOOK="/etc/initramfs-tools/scripts/init-top/proxmenux-vfio-bind"
+PROXMENUX_VFIO_BIND_LEGACY_HOOK="${PROXMENUX_VFIO_BIND_LEGACY_HOOK:-${PROXMENUX_ETC_ROOT}/initramfs-tools/scripts/init-top/proxmenux-vfio-bind}"
 
 _proxmenux_vfio_bind_write_udev_rule() {
     # Always nuke the obsolete init-top hook from earlier attempts (if it
@@ -428,6 +437,38 @@ _proxmenux_vfio_bind_cleanup_legacy() {
     fi
 }
 
+_proxmenux_mark_host_config_changed() {
+    [[ -n "${HOST_CONFIG_CHANGED+x}" ]] && HOST_CONFIG_CHANGED=true
+}
+
+_proxmenux_vfio_bind_has_bdf() {
+    local bdf="$1"
+    [[ -n "$bdf" && -f "$PROXMENUX_VFIO_BIND_STATE" ]] || return 1
+    [[ "$bdf" == 0000:* ]] || bdf="0000:${bdf}"
+    grep -qxF "$bdf" "$PROXMENUX_VFIO_BIND_STATE" 2>/dev/null
+}
+
+_proxmenux_vfio_bind_has_entries() {
+    [[ -s "$PROXMENUX_VFIO_BIND_STATE" ]] \
+        && grep -qEv '^[[:space:]]*(#|$)' "$PROXMENUX_VFIO_BIND_STATE" 2>/dev/null
+}
+
+_proxmenux_vfio_bind_state_has_vendor() {
+    local target_vendor="${1,,}"
+    [[ -n "$target_vendor" && -f "$PROXMENUX_VFIO_BIND_STATE" ]] || return 1
+
+    local bdf full vendor_hex
+    while IFS= read -r bdf; do
+        [[ -z "$bdf" || "$bdf" == \#* ]] && continue
+        full="$bdf"
+        [[ "$full" == 0000:* ]] || full="0000:${full}"
+        vendor_hex=$(cat "${PROXMENUX_SYSFS_ROOT}/bus/pci/devices/${full}/vendor" 2>/dev/null \
+            | sed 's/^0x//' | tr '[:upper:]' '[:lower:]')
+        [[ "$vendor_hex" == "$target_vendor" ]] && return 0
+    done < "$PROXMENUX_VFIO_BIND_STATE"
+    return 1
+}
+
 _proxmenux_vfio_bind_add_bdfs() {
     # Args: any number of BDFs ("01:00.0" or "0000:01:00.0")
     mkdir -p "$(dirname "$PROXMENUX_VFIO_BIND_STATE")"
@@ -450,8 +491,8 @@ _proxmenux_vfio_bind_add_bdfs() {
     done
     if $changed; then
         _proxmenux_vfio_bind_write_udev_rule
-        _proxmenux_nvidia_vfio_blacklist_sync || true
-        [[ -n "${HOST_CONFIG_CHANGED+x}" ]] && HOST_CONFIG_CHANGED=true
+        _proxmenux_nvidia_vfio_policy_sync || true
+        _proxmenux_mark_host_config_changed
     fi
 }
 
@@ -475,10 +516,10 @@ _proxmenux_vfio_bind_remove_bdfs() {
     if ! cmp -s "$tmp" "$PROXMENUX_VFIO_BIND_STATE"; then
         mv "$tmp" "$PROXMENUX_VFIO_BIND_STATE"
         _proxmenux_vfio_bind_write_udev_rule
-        _proxmenux_nvidia_vfio_blacklist_sync || true
-        [[ -n "${HOST_CONFIG_CHANGED+x}" ]] && HOST_CONFIG_CHANGED=true
         # If empty, remove state file too (keeps host clean)
         [[ ! -s "$PROXMENUX_VFIO_BIND_STATE" ]] && rm -f "$PROXMENUX_VFIO_BIND_STATE"
+        _proxmenux_nvidia_vfio_policy_sync || true
+        _proxmenux_mark_host_config_changed
     else
         rm -f "$tmp"
     fi
@@ -490,9 +531,10 @@ _proxmenux_vfio_bind_remove_bdfs() {
 # or whether the host still needs the nvidia driver loaded for at
 # least one GPU (multi-GPU mixed case).
 _proxmenux_all_nvidia_in_vfio() {
-    local -a host_nvidia=() vfio_nvidia=()
-    local d cls vendor
-    for d in /sys/bus/pci/devices/*; do
+    local -a host_nvidia=()
+    local d cls vendor bdf
+    for d in "${PROXMENUX_SYSFS_ROOT}/bus/pci/devices/"*; do
+        [[ -d "$d" ]] || continue
         vendor=$(cat "$d/vendor" 2>/dev/null)
         [[ "$vendor" != "0x10de" ]] && continue
         cls=$(cat "$d/class" 2>/dev/null)
@@ -502,23 +544,10 @@ _proxmenux_all_nvidia_in_vfio() {
     done
     (( ${#host_nvidia[@]} == 0 )) && return 1
 
-    if [[ -f "$PROXMENUX_VFIO_BIND_STATE" ]]; then
-        local bdf full
-        while IFS= read -r bdf; do
-            [[ -z "$bdf" ]] && continue
-            case "$bdf" in \#*) continue ;; esac
-            full="$bdf"
-            [[ "$full" != 0000:* ]] && full="0000:${full}"
-            vendor=$(cat "/sys/bus/pci/devices/${full}/vendor" 2>/dev/null)
-            [[ "$vendor" != "0x10de" ]] && continue
-            cls=$(cat "/sys/bus/pci/devices/${full}/class" 2>/dev/null)
-            case "$cls" in
-                0x0300*|0x0302*) vfio_nvidia+=("$full") ;;
-            esac
-        done < "$PROXMENUX_VFIO_BIND_STATE"
-    fi
-
-    (( ${#vfio_nvidia[@]} >= ${#host_nvidia[@]} ))
+    for bdf in "${host_nvidia[@]}"; do
+        _proxmenux_vfio_bind_has_bdf "$bdf" || return 1
+    done
+    return 0
 }
 
 # Apply or remove the auto-managed nvidia blacklist + the nvidia-smi
@@ -526,11 +555,12 @@ _proxmenux_all_nvidia_in_vfio() {
 # passthrough. Returns 0 if anything changed (caller may want to
 # rebuild initramfs).
 _proxmenux_nvidia_vfio_blacklist_sync() {
-    local nvidia_udev_rule="/etc/udev/rules.d/70-nvidia.rules"
+    local nvidia_udev_rule="${PROXMENUX_ETC_ROOT}/udev/rules.d/70-nvidia.rules"
     local changed=1
 
     if _proxmenux_all_nvidia_in_vfio; then
         if [[ ! -f "$PROXMENUX_NVIDIA_VFIO_BLACKLIST" ]]; then
+            mkdir -p "$(dirname "$PROXMENUX_NVIDIA_VFIO_BLACKLIST")"
             cat > "$PROXMENUX_NVIDIA_VFIO_BLACKLIST" <<'EOF'
 # ProxMenux: every NVIDIA GPU on this host is in VFIO passthrough.
 # Block the nvidia module so it doesn't loop trying to claim devices
@@ -567,55 +597,179 @@ EOF
     return $changed
 }
 
-# Returns the BDF of a PCI bridge sharing the IOMMU group of $1, if any.
-# The kernel refuses to bind vfio-pci to root ports, so when a GPU shares
-# its IOMMU group with the upstream root port the VFIO setup silently
-# does nothing — the GPU keeps its native driver and the host can also
-# end up with a stuck boot if other devices behind the bridge were
-# expected to come up under the original driver. Detecting this lets
-# callers warn the operator and bail out before writing host config.
-_proxmenux_vfio_bind_group_bridge() {
-    local target="$1"
-    [[ "$target" != 0000:* ]] && target="0000:${target}"
-    local group_link
-    group_link=$(readlink "/sys/bus/pci/devices/${target}/iommu_group" 2>/dev/null) || return 1
-    local group_num
-    group_num=$(basename "$group_link")
-    local member bdf cls
-    for member in "/sys/kernel/iommu_groups/${group_num}/devices/"*; do
-        bdf=$(basename "$member")
-        [[ "$bdf" == "$target" ]] && continue
-        cls=$(cat "$member/class" 2>/dev/null)
-        # PCI bridge class is 0x0604xx (Normal bridge 0x060400, Subtractive 0x060401).
-        if [[ "$cls" == 0x0604* ]]; then
-            echo "$bdf"
-            return 0
-        fi
-    done
-    return 1
+_proxmenux_nvidia_vfio_softdeps_sync() {
+    local changed=1
+    mkdir -p "$(dirname "$PROXMENUX_VFIO_CONF")"
+    touch "$PROXMENUX_VFIO_CONF"
+
+    local -a softdeps=(
+        "softdep nvidia pre: vfio-pci"
+        "softdep nvidia_drm pre: vfio-pci"
+        "softdep nvidia_modeset pre: vfio-pci"
+        "softdep nvidia_uvm pre: vfio-pci"
+    )
+    local line
+    if _proxmenux_vfio_bind_state_has_vendor "10de"; then
+        for line in "${softdeps[@]}"; do
+            if ! grep -qFx "$line" "$PROXMENUX_VFIO_CONF" 2>/dev/null; then
+                echo "$line" >> "$PROXMENUX_VFIO_CONF"
+                changed=0
+            fi
+        done
+    else
+        for line in "${softdeps[@]}"; do
+            if grep -qFx "$line" "$PROXMENUX_VFIO_CONF" 2>/dev/null; then
+                sed -i "\|^${line}$|d" "$PROXMENUX_VFIO_CONF"
+                changed=0
+            fi
+        done
+    fi
+    return $changed
 }
 
-_proxmenux_vfio_bind_purge_vendor() {
-    # Removes every BDF from the binder state whose PCI vendor matches $1
-    # (hex, e.g. "10de" for NVIDIA, "1002" for AMD, "8086" for Intel).
-    # Used by switch_gpu_mode to drop all NVIDIA bindings when reverting
-    # NVIDIA passthrough — the nvidia module reclaims the GPUs after the
-    # next reboot.
-    local target_vendor="${1,,}"
-    [[ -z "$target_vendor" || ! -f "$PROXMENUX_VFIO_BIND_STATE" ]] && return 0
+# NVIDIA services are host-wide. They must only be stopped when every
+# NVIDIA display controller is assigned to VFIO; on a mixed host they stay
+# available for the GPU(s) that remain native. The first transition stores
+# the previous service state and later transitions do not overwrite it.
+_proxmenux_nvidia_host_services_sync() {
+    command -v systemctl >/dev/null 2>&1 || return 1
 
-    local -a to_remove=()
-    local bdf vendor_hex
-    while IFS= read -r bdf; do
-        [[ -z "$bdf" ]] && continue
-        case "$bdf" in \#*) continue ;; esac
-        local full="$bdf"
-        [[ "$full" != 0000:* ]] && full="0000:${full}"
-        vendor_hex=$(cat "/sys/bus/pci/devices/${full}/vendor" 2>/dev/null | sed 's/^0x//' | tr '[:upper:]' '[:lower:]')
-        [[ "$vendor_hex" == "$target_vendor" ]] && to_remove+=("$full")
-    done < "$PROXMENUX_VFIO_BIND_STATE"
+    local changed=1 svc was_enabled was_active enabled active
+    local -a services=(
+        "nvidia-persistenced.service"
+        "nvidia-powerd.service"
+        "nvidia-fabricmanager.service"
+    )
 
-    [[ ${#to_remove[@]} -gt 0 ]] && _proxmenux_vfio_bind_remove_bdfs "${to_remove[@]}"
+    if [[ "$PROXMENUX_NVIDIA_SERVICE_LEGACY_STATE" != "$PROXMENUX_NVIDIA_SERVICE_STATE" \
+        && -f "$PROXMENUX_NVIDIA_SERVICE_LEGACY_STATE" ]]; then
+        mkdir -p "$(dirname "$PROXMENUX_NVIDIA_SERVICE_STATE")"
+        if [[ ! -f "$PROXMENUX_NVIDIA_SERVICE_STATE" ]]; then
+            mv "$PROXMENUX_NVIDIA_SERVICE_LEGACY_STATE" \
+                "$PROXMENUX_NVIDIA_SERVICE_STATE" 2>/dev/null || true
+        else
+            rm -f "$PROXMENUX_NVIDIA_SERVICE_LEGACY_STATE"
+        fi
+        rmdir "$(dirname "$PROXMENUX_NVIDIA_SERVICE_LEGACY_STATE")" \
+            >/dev/null 2>&1 || true
+    fi
+
+    if _proxmenux_all_nvidia_in_vfio; then
+        mkdir -p "$(dirname "$PROXMENUX_NVIDIA_SERVICE_STATE")"
+        if [[ ! -f "$PROXMENUX_NVIDIA_SERVICE_STATE" ]]; then
+            local tmp
+            tmp=$(mktemp)
+            for svc in "${services[@]}"; do
+                was_enabled=0
+                was_active=0
+                systemctl is-enabled --quiet "$svc" 2>/dev/null && was_enabled=1
+                systemctl is-active --quiet "$svc" 2>/dev/null && was_active=1
+                if (( was_enabled == 1 || was_active == 1 )); then
+                    echo "${svc} enabled=${was_enabled} active=${was_active}" >> "$tmp"
+                fi
+            done
+            if [[ -s "$tmp" ]]; then
+                mv "$tmp" "$PROXMENUX_NVIDIA_SERVICE_STATE"
+            else
+                rm -f "$tmp"
+            fi
+        fi
+
+        for svc in "${services[@]}"; do
+            if systemctl is-active --quiet "$svc" 2>/dev/null; then
+                systemctl stop "$svc" >/dev/null 2>&1 || true
+                changed=0
+            fi
+            if systemctl is-enabled --quiet "$svc" 2>/dev/null; then
+                systemctl disable "$svc" >/dev/null 2>&1 || true
+                changed=0
+            fi
+        done
+    elif [[ -f "$PROXMENUX_NVIDIA_SERVICE_STATE" ]]; then
+        while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            svc=${line%% *}
+            enabled=$(printf '%s\n' "$line" | sed -nE 's/.*enabled=([01]).*/\1/p')
+            active=$(printf '%s\n' "$line" | sed -nE 's/.*active=([01]).*/\1/p')
+            [[ "$enabled" == "1" ]] && systemctl enable "$svc" >/dev/null 2>&1 || true
+            [[ "$active" == "1" ]] && systemctl start "$svc" >/dev/null 2>&1 || true
+        done < "$PROXMENUX_NVIDIA_SERVICE_STATE"
+        rm -f "$PROXMENUX_NVIDIA_SERVICE_STATE"
+        changed=0
+    fi
+    return $changed
+}
+
+_proxmenux_nvidia_component_status_sync() {
+    declare -F update_component_status >/dev/null 2>&1 || return 1
+
+    local status_file="${BASE_DIR:-/usr/local/share/proxmenux}/components_status.json"
+    local version="" status="installed" patched=false metadata='{"patched":false}'
+    if command -v nvidia-smi >/dev/null 2>&1; then
+        version=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null \
+            | head -1 | tr -d '[:space:]')
+    fi
+    if [[ -z "$version" && -f "$status_file" ]] && command -v jq >/dev/null 2>&1; then
+        version=$(jq -r '.nvidia_driver.version // ""' "$status_file" 2>/dev/null)
+    fi
+    if [[ -f "$status_file" ]] && command -v jq >/dev/null 2>&1; then
+        patched=$(jq -r '.nvidia_driver.patched // false' "$status_file" 2>/dev/null)
+        [[ "$patched" == "true" ]] && metadata='{"patched":true}'
+    fi
+    _proxmenux_all_nvidia_in_vfio && status="vfio_passthrough"
+    update_component_status "nvidia_driver" "$status" "$version" "gpu" \
+        "$metadata" >/dev/null 2>&1 || true
+}
+
+_proxmenux_nvidia_vfio_policy_sync() {
+    local changed=1
+    _proxmenux_nvidia_vfio_blacklist_sync && changed=0
+    _proxmenux_nvidia_vfio_softdeps_sync && changed=0
+    _proxmenux_nvidia_host_services_sync && changed=0
+    _proxmenux_nvidia_component_status_sync || true
+    (( changed == 0 )) && _proxmenux_mark_host_config_changed
+    return $changed
+}
+
+# Convert legacy vendor:device NVIDIA entries into exact BDF entries before
+# removing the old IDs. This preserves the previous host state even when two
+# GPUs share the same model/PCI ID, while allowing subsequent selective
+# restore of one GPU without releasing the others.
+_proxmenux_vfio_bind_migrate_legacy_nvidia_ids() {
+    [[ -f "$PROXMENUX_VFIO_CONF" ]] || return 1
+    local ids_part
+    ids_part=$(grep '^options vfio-pci ids=' "$PROXMENUX_VFIO_CONF" 2>/dev/null \
+        | head -1 | grep -oE 'ids=[^[:space:]]+' | sed 's/^ids=//' | tr '[:upper:]' '[:lower:]')
+    [[ -n "$ids_part" ]] || return 1
+
+    local -a ids=() matched_ids=() bdfs=()
+    IFS=',' read -ra ids <<< "$ids_part"
+    local path vendor device class token existing
+    for path in "${PROXMENUX_SYSFS_ROOT}/bus/pci/devices/"*; do
+        [[ -d "$path" ]] || continue
+        vendor=$(cat "$path/vendor" 2>/dev/null | sed 's/^0x//' | tr '[:upper:]' '[:lower:]')
+        [[ "$vendor" == "10de" ]] || continue
+        class=$(cat "$path/class" 2>/dev/null)
+        [[ "$class" == 0x0600* || "$class" == 0x0604* ]] && continue
+        device=$(cat "$path/device" 2>/dev/null | sed 's/^0x//' | tr '[:upper:]' '[:lower:]')
+        token="${vendor}:${device}"
+        for existing in "${ids[@]}"; do
+            [[ "$existing" == "$token" ]] || continue
+            bdfs+=("$(basename "$path")")
+            if [[ " ${matched_ids[*]} " != *" ${token} "* ]]; then
+                matched_ids+=("$token")
+            fi
+            break
+        done
+    done
+    (( ${#matched_ids[@]} > 0 )) || return 1
+
+    (( ${#bdfs[@]} > 0 )) && _proxmenux_vfio_bind_add_bdfs "${bdfs[@]}"
+    if _clean_vfio_conf_ids "${matched_ids[@]}"; then
+        _proxmenux_mark_host_config_changed
+    fi
+    _proxmenux_nvidia_vfio_policy_sync || true
+    return 0
 }
 
 # ──────────────────────────────────────────────────────────────────────
@@ -626,12 +780,12 @@ _proxmenux_vfio_bind_purge_vendor() {
 # ──────────────────────────────────────────────────────────────────────
 _proxmenux_nvidia_migrate_legacy_blacklist() {
     local changed=false
-    local blacklist_file="/etc/modprobe.d/blacklist.conf"
-    local nvidia_blacklist="/etc/modprobe.d/nvidia-blacklist.conf"
-    local udev_disabled="/etc/udev/rules.d/70-nvidia.rules.proxmenux-disabled"
-    local udev_rules="/etc/udev/rules.d/70-nvidia.rules"
-    local modules_load_disabled="/etc/modules-load.d/nvidia-vfio.conf.proxmenux-disabled-vfio"
-    local modules_load_active="/etc/modules-load.d/nvidia-vfio.conf"
+    local blacklist_file="${PROXMENUX_ETC_ROOT}/modprobe.d/blacklist.conf"
+    local nvidia_blacklist="${PROXMENUX_ETC_ROOT}/modprobe.d/nvidia-blacklist.conf"
+    local udev_disabled="${PROXMENUX_ETC_ROOT}/udev/rules.d/70-nvidia.rules.proxmenux-disabled"
+    local udev_rules="${PROXMENUX_ETC_ROOT}/udev/rules.d/70-nvidia.rules"
+    local modules_load_disabled="${PROXMENUX_ETC_ROOT}/modules-load.d/nvidia-vfio.conf.proxmenux-disabled-vfio"
+    local modules_load_active="${PROXMENUX_ETC_ROOT}/modules-load.d/nvidia-vfio.conf"
 
     if [[ -f "$blacklist_file" ]] && grep -qE '^blacklist (nvidia|nvidia_drm|nvidia_modeset|nvidia_uvm|nvidiafb)$' "$blacklist_file"; then
         sed -i \
@@ -660,8 +814,14 @@ _proxmenux_nvidia_migrate_legacy_blacklist() {
         changed=true
     fi
 
+    if _proxmenux_vfio_bind_migrate_legacy_nvidia_ids; then
+        changed=true
+    fi
+
+    _proxmenux_nvidia_vfio_policy_sync || true
+
     if $changed; then
-        [[ -n "${HOST_CONFIG_CHANGED+x}" ]] && HOST_CONFIG_CHANGED=true
+        _proxmenux_mark_host_config_changed
         if declare -F msg_ok >/dev/null 2>&1; then
             msg_ok "$(declare -F translate >/dev/null 2>&1 && translate 'Migrated legacy ProxMenux NVIDIA blacklist state — module will reload after reboot' || echo 'Migrated legacy ProxMenux NVIDIA blacklist state — module will reload after reboot')"
         else
@@ -676,7 +836,7 @@ _pci_driver_of() {
   [[ -z "$pci" ]] && return
   local pci_full="$pci"
   [[ "$pci_full" != 0000:* ]] && pci_full="0000:${pci_full}"
-  local link="/sys/bus/pci/devices/${pci_full}/driver"
+  local link="${PROXMENUX_SYSFS_ROOT}/bus/pci/devices/${pci_full}/driver"
   [[ -L "$link" ]] && basename "$(readlink "$link")"
 }
 
@@ -684,7 +844,7 @@ _pci_driver_of() {
 # /etc/modprobe.d/vfio.conf. Preserves any remaining tokens and any
 # trailing options on the line. Returns 0 when the file changes.
 _clean_vfio_conf_ids() {
-  local vfio_conf="/etc/modprobe.d/vfio.conf"
+  local vfio_conf="$PROXMENUX_VFIO_CONF"
   [[ ! -f "$vfio_conf" ]] && return 1
   local -a targets=("$@")
   [[ ${#targets[@]} -eq 0 ]] && return 1
@@ -694,7 +854,7 @@ _clean_vfio_conf_ids() {
   awk -v targets="${targets[*]}" '
     BEGIN {
       n = split(targets, a, " ")
-      for (i = 1; i <= n; i++) drop[a[i]] = 1
+      for (i = 1; i <= n; i++) drop[tolower(a[i])] = 1
     }
     /^options vfio-pci ids=/ {
       pre = ""; ids = ""; post = ""
@@ -707,7 +867,7 @@ _clean_vfio_conf_ids() {
       out = ""
       for (i = 1; i <= m; i++) {
         t = tok[i]
-        if (!(t in drop)) {
+        if (!(tolower(t) in drop)) {
           out = (out == "" ? t : out "," t)
         }
       }

@@ -5764,14 +5764,22 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         {t("vmLxc.bulkUpdate.description")}
                                       </p>
                                     </div>
-                                    {!bulkEditMode && bulkConfigured && (
+                                    {!bulkEditMode && (
                                       <button
                                         type="button"
-                                        onClick={() => setBulkEditMode(true)}
+                                        onClick={() => {
+                                          if (!bulkConfigured) {
+                                            setBulkTargets(["os"])
+                                            setBulkError(null)
+                                          }
+                                          setBulkEditMode(true)
+                                        }}
                                         className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 flex-shrink-0"
                                       >
                                         <Settings2 className="h-3.5 w-3.5" />
-                                        {t("vmLxc.bulkUpdate.edit")}
+                                        {bulkConfigured
+                                          ? t("vmLxc.bulkUpdate.edit")
+                                          : t("vmLxc.bulkUpdate.configure")}
                                       </button>
                                     )}
                                   </div>
@@ -5932,22 +5940,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       </div>
                                     </div>
                                   ) : (
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                      <div className="text-sm text-muted-foreground">
-                                        {t("vmLxc.bulkUpdate.notConfigured")}
-                                      </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setBulkTargets(["os"])
-                                          setBulkEditMode(true)
-                                          setBulkError(null)
-                                        }}
-                                        className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center justify-center gap-1.5 flex-shrink-0"
-                                      >
-                                        <Settings2 className="h-3.5 w-3.5" />
-                                        {t("vmLxc.bulkUpdate.configure")}
-                                      </button>
+                                    <div className="text-sm text-muted-foreground">
+                                      {t("vmLxc.bulkUpdate.notConfigured")}
                                     </div>
                                   )}
 

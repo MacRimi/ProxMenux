@@ -58,6 +58,7 @@ export default async function PostInstallMonitoringPage({
         title={t("header.title")}
         description={t("header.description")}
         section={t("header.section")}
+        estimatedMinutes={6}
       />
 
       <Callout variant="info" title={t("intro.title")}>
@@ -109,10 +110,6 @@ journalctl -u ovh-rtm --since "10 min ago"`}
       />
 
       <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("ovh.troubleTitle")}</h3>
-
-      <Callout variant="tip" title={t("ovh.spuriousTitle")}>
-        {t.rich("ovh.spuriousBody", { em, code })}
-      </Callout>
 
       <Callout variant="tip" title={t("ovh.revertTitle")}>
         {t.rich("ovh.revertBody", { code })}

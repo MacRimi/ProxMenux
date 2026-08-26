@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Script post-instalación de Proxmox VE — Automatizado y personalizable | ProxMenux",
-    "description": "Resumen de los scripts post-instalación de ProxMenux para Proxmox VE. Ejecuta el script Automatizado para valores por defecto sensatos sin preguntas, el script Personalizable para elegir exactamente qué quieres entre 10 categorías (sistema, virtualización, red, almacenamiento, seguridad, rendimiento, opcional), o revierte cualquier cambio por completo con la opción Uninstall Optimizations.",
+    "description": "Resumen de los scripts post-instalación de ProxMenux para Proxmox VE. Ejecuta el script Automatizado para aplicar valores recomendados sin preguntas, usa Personalizable para elegir entre 10 categorías o restaura los cambios reversibles compatibles mediante Uninstall Optimizations.",
     "ogTitle": "Script post-instalación de Proxmox VE — Automatizado y personalizable",
     "ogDescription": "Aplica optimizaciones comunes post-instalación de Proxmox VE en 10 categorías — automatizadas o a la carta, con opciones reversibles.",
     "twitterTitle": "Script post-instalación de Proxmox VE | ProxMenux",
@@ -9,26 +9,26 @@
   },
   "header": {
     "title": "Scripts post-instalación",
-    "description": "Configura un host de Proxmox VE recién instalado con las optimizaciones post-instalación de ProxMenux. Tres rutas: ejecutar todo automáticamente, elegir lo que quieres, o revertir cualquier cambio. Todos los cambios quedan registrados.",
+    "description": "Configura un host de Proxmox VE recién instalado con las optimizaciones post-instalación de ProxMenux. Aplica la configuración base automáticamente, elige opciones individuales, actualiza funciones instaladas o restaura cambios reversibles compatibles. Las actualizaciones de paquetes no se presentan como reversibles.",
     "section": "Settings post-install Proxmox"
   },
   "intro": {
     "title": "Para qué sirve este menú",
-    "body": "Justo después de instalar Proxmox VE, hay decenas de pequeños cambios que hacen el host más rápido y más fácil de mantener — repositorios sin suscripción, límites sensatos para journald, buffers TCP razonables, almacenamiento de logs amigable con SSD, mejoras en bashrc y más. ProxMenux los automatiza todos, registra lo que cambió y te permite revertirlo."
+    "body": "Justo después de instalar Proxmox VE, hay decenas de pequeños cambios que hacen el host más rápido y más fácil de mantener — repositorios sin suscripción, límites sensatos para journald, buffers TCP razonables, almacenamiento de logs compatible con SSD, mejoras en bashrc y más. ProxMenux los automatiza y registra los cambios de configuración reversibles compatibles."
   },
   "openingMenu": {
     "heading": "Abrir el menú",
     "body": "Desde el menú principal de ProxMenux, selecciona <strong>Settings post-install Proxmox</strong>. Verás esto:",
-    "imageAlt": "Menú de scripts post-instalación con 3 opciones de ProxMenux (Automatizado / Personalizable / Uninstall) seguidas de la sección Community Scripts"
+    "imageAlt": "Menú de scripts post-instalación — Automatizado, Personalizable, la entrada condicional Aplicar Actualizaciones Disponibles (solo cuando hay updates pendientes) y Uninstall, seguidos de la sección Community Scripts"
   },
   "threeWays": {
-    "heading": "Tres formas de aplicar optimizaciones",
-    "body": "Las tres entradas de ProxMenux comparten el mismo código subyacente y el mismo registro de herramientas instaladas — solo te dan distintos niveles de control. Elige la que se ajusta a cuánto quieres decidir."
+    "heading": "Cuatro formas de aplicar optimizaciones",
+    "body": "Las cuatro entradas de ProxMenux comparten el mismo código subyacente y el mismo registro de herramientas instaladas — solo te dan distintos niveles de control. La entrada <em>Aplicar Actualizaciones Disponibles</em> solo se muestra cuando al menos una optimización instalada tiene una versión más nueva en disco que la registrada; en un host recién configurado permanece oculta."
   },
   "routes": [
     {
       "title": "Automatizado",
-      "description": "Un conjunto curado de 13 optimizaciones seguras y siempre útiles aplicadas en secuencia sin preguntas. Buen valor por defecto para la mayoría de usuarios.",
+      "description": "Un conjunto curado de 14 optimizaciones seguras y siempre útiles aplicadas en secuencia sin preguntas. Buen valor por defecto para la mayoría de usuarios.",
       "bullets": [
         "Repos sin suscripción + upgrade del sistema",
         "Tuning de memoria, kernel y red",
@@ -39,7 +39,7 @@
     },
     {
       "title": "Personalizable",
-      "description": "~30 optimizaciones individuales en 10 categorías. Eliges exactamente cuáles aplicar. Mismo motor que el Automatizado, pero con control total.",
+      "description": "~35 optimizaciones individuales en 10 categorías. Eliges exactamente cuáles aplicar. Mismo motor que el Automatizado, pero con control total.",
       "bullets": [
         "UI de checklist por categoría",
         "Incluye todo lo que hace el Automatizado, más opciones opt-in (IOMMU, Fastfetch, Figurine, Ceph, HA, fixes de AMD…)",
@@ -57,10 +57,10 @@
     },
     {
       "title": "Uninstall Optimizations",
-      "description": "Cada cambio hecho por cualquiera de las rutas queda registrado en un JSON, y cada optimización tiene una función inversa. Elige qué revertir y el host vuelve atrás.",
+      "description": "Los cambios reversibles compatibles quedan registrados en un JSON y asociados a una función de restauración. Las acciones sin reversión segura, como una actualización completa de paquetes, se excluyen deliberadamente.",
       "bullets": [
         "Detecta automáticamente las optimizaciones aplicadas previamente",
-        "La reversión restaura las configuraciones originales desde archivos de backup",
+        "La reversión elige el camino adecuado para cada elemento — restaura desde un backup .bak donde se hizo uno, elimina el snippet en sysctl.d donde no había nada que respaldar, o reinstala el paquete vanilla con --force-confnew (p. ej. banner de suscripción)",
         "Pregunta antes de reiniciar si hace falta (VFIO, nombres persistentes, etc.)"
       ]
     }

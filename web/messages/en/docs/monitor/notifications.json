@@ -1,15 +1,15 @@
 {
   "meta": {
-    "title": "Proxmox Notifications — Telegram, Discord, Email, Gotify, Apprise | ProxMenux Monitor",
-    "description": "Send Proxmox VE notifications to Telegram, Discord, Email, Gotify and ~80 extra services via Apprise. ProxMenux Monitor turns events from the Health Monitor, the journal watcher and the Proxmox VE webhook into rich messages with deduplication, cooldown, burst aggregation, an optional AI rewrite and a complete history.",
-    "ogTitle": "Proxmox Notifications — Telegram, Discord, Email, Gotify, Apprise",
-    "ogDescription": "Send Proxmox VE alerts to Telegram, Discord, Email, Gotify and ~80 extra services via Apprise — with deduplication, cooldown, burst aggregation and an optional AI rewrite.",
+    "title": "Proxmox Notifications — Telegram, Discord, Email, Gotify, Pushover, Apprise | ProxMenux Monitor",
+    "description": "Send Proxmox VE notifications to Telegram, Discord, Email, Gotify, Pushover and ~80 extra services via Apprise. ProxMenux Monitor turns events from the Health Monitor, the journal watcher and the Proxmox VE webhook into rich messages with deduplication, cooldown, burst aggregation, an optional AI rewrite and a complete history.",
+    "ogTitle": "Proxmox Notifications — Telegram, Discord, Email, Gotify, Pushover, Apprise",
+    "ogDescription": "Send Proxmox VE alerts to Telegram, Discord, Email, Gotify, Pushover and ~80 extra services via Apprise — with deduplication, cooldown, burst aggregation and an optional AI rewrite.",
     "twitterTitle": "Proxmox Notifications | ProxMenux Monitor",
-    "twitterDescription": "Send Proxmox VE alerts to Telegram, Discord, Email, Gotify and ~80 extra services via Apprise."
+    "twitterDescription": "Send Proxmox VE alerts to Telegram, Discord, Email, Gotify, Pushover and ~80 extra services via Apprise."
   },
   "header": {
     "title": "Notifications",
-    "description": "The fan-out engine that takes events from every collector inside the Monitor and delivers them to Telegram, Discord, Email, Gotify and ~80 extra services via Apprise — with deduplication, cooldown, burst aggregation, per-event and per-channel toggles, an optional AI rewriter, and a queryable history.",
+    "description": "The fan-out engine that takes events from every collector inside the Monitor and delivers them to Telegram, Discord, Email, Gotify, Pushover and ~80 extra services via Apprise — with deduplication, cooldown, burst aggregation, per-event and per-channel toggles, an optional AI rewriter, and a queryable history.",
     "section": "ProxMenux Monitor"
   },
   "intro": {
@@ -29,7 +29,7 @@
       "aiLabel": "AI rewrite (opt.)",
       "aiDetail": "OpenAI / Anthropic\nGemini / Groq\nOpenRouter / Ollama\n(off by default)",
       "channelsLabel": "Channels",
-      "channelsDetail": "Telegram\nDiscord\nEmail (SMTP)\nGotify\nApprise (~80 services)"
+      "channelsDetail": "Telegram\nDiscord\nEmail (SMTP)\nGotify\nPushover\nApprise (~80 services)"
     }
   },
   "enabling": {
@@ -43,8 +43,8 @@
       "Registers a Proxmox VE webhook target in <code>/etc/pve/notifications.cfg</code> pointing at <code>POST http://127.0.0.1:8008/api/notifications/webhook</code>. From this moment on, anything Proxmox VE emits on its own (HA, replication, vzdump from the GUI) flows into the same pipeline as the Monitor's own events. See <pvelink>PVE webhook integration</pvelink> below for the full mechanics.",
       "Starts the dispatch background thread. The thread polls the event queue and walks every event through the pipeline diagrammed above."
     ],
-    "activeAlt": "Notifications card after enabling — Active badge, channel tabs (Telegram, Gotify, Discord, Email), Display Name field and Advanced AI Enhancement collapsible section",
-    "activeCaption": "Active state — channel tabs at the top (Telegram / Gotify / Discord / Email), the Display Name field, the per-channel category list, and the collapsible <em>Advanced: AI Enhancement</em> section."
+    "activeAlt": "Notifications card after enabling — Active badge, channel tabs, Display Name field and Advanced AI Enhancement collapsible section",
+    "activeCaption": "Active state — channel tabs at the top (Telegram / Gotify / Discord / Email / Pushover / Apprise), the Display Name field, the per-channel category list, and the collapsible <em>Advanced: AI Enhancement</em> section."
   },
   "sources": {
     "heading": "Event sources",
@@ -89,9 +89,9 @@
   },
   "channels": {
     "heading": "Channel walkthroughs",
-    "intro": "Five channels are currently supported: Telegram, Discord, Gotify, Email (SMTP) and Apprise. The first four are native — each one has its own tab inside the Notifications panel with a <em>+ setup guide</em> link opening an in-app modal. Apprise is a generic hub that adds ~80 additional services (ntfy, Matrix, Pushover, Slack, Teams, Pushbullet, AWS SNS, Mattermost…) through a single URL field. They are all documented step by step below.",
+    "intro": "Six channels are currently supported: Telegram, Discord, Gotify, Email (SMTP), Pushover and Apprise. The first five are native integrations with their own configuration fields. Apprise is a generic hub that adds around 80 additional services (ntfy, Matrix, Slack, Teams, Pushbullet, AWS SNS, Mattermost…) through a single URL field. They are all documented step by step below.",
     "credsTitle": "Where credentials live",
-    "credsBody": "Tokens, webhook URLs and SMTP passwords are stored locally in the Monitor's SQLite database under <code>/usr/local/share/proxmenux/</code>. They never leave the host except to reach their respective services. A backup of that directory is enough to recover the configured channels."
+    "credsBody": "Tokens, keys, webhook URLs and SMTP passwords are stored locally in the Monitor's SQLite database under <code>/usr/local/share/proxmenux/</code>. Sensitive values are protected and masked in the interface. They never leave the host except to reach their respective services. A backup of that directory is enough to recover the configured channels."
   },
   "telegram": {
     "heading": "Telegram",
@@ -176,12 +176,28 @@
     "relayTitle": "Self-hosted SMTP relay",
     "relayBody": "If you run your own SMTP relay (Postfix, msmtp, etc.) on the LAN, point the Monitor at it and skip the app-password dance entirely. The relay handles auth upstream and the Monitor sends in cleartext on a trusted network."
   },
+  "pushover": {
+    "heading": "Pushover",
+    "intro": "Pushover is a mobile push service with official apps for iOS, Android and desktop browsers. The dedicated ProxMenux channel talks directly to the <a>Pushover API</a>, so no Apprise URL is required.",
+    "stepsTitle": "Setup",
+    "steps": [
+      "Create a <a>Pushover account</a>, install the official app on the devices that should receive alerts and sign in.",
+      "Copy the <em>User Key</em> shown on your Pushover dashboard. A group key can be used instead when several people or devices must receive the same alert.",
+      "Open <a>Create an Application/API Token</a>, create an application named <em>ProxMenux</em> and copy its 30-character API token.",
+      "In <em>Settings → Notifications → Pushover</em>, paste the user or group key and the application API token. The device and sound fields are optional.",
+      "Save the settings and press <em>Send test</em>. The Pushover app should receive the message immediately."
+    ],
+    "priorityTitle": "Priority mapping",
+    "priorityBody": "Normal ProxMenux messages use Pushover priority 0. When <strong>High priority for critical alerts</strong> is enabled, CRITICAL events use priority 1 so they stand out and bypass the user's Pushover quiet hours. ProxMenux does not use emergency priority 2, which would require repeated notifications and an acknowledgement callback.",
+    "secretTitle": "Protect both values",
+    "secretBody": "The user or group key and the application API token both authorize message delivery. ProxMenux stores them as protected notification secrets and masks them in the interface; do not publish either value in screenshots or support logs."
+  },
   "apprise": {
     "heading": "Apprise (generic hub for ~80 services)",
-    "intro": "Apprise is an open-source notification library that speaks the protocol of around 80 different services through a single URL format. Adding it as one more channel inside the Monitor means you can deliver alerts to services that don't have a dedicated tab — ntfy, Matrix, Pushover, Slack, Microsoft Teams, Mattermost, Pushbullet, AWS SNS, Pushsafer, Rocket.Chat, Signal API and many others — without ProxMenux having to implement each integration separately.",
-    "listIntro": "The full list of supported services and the exact URL format for each one lives in the official Apprise wiki:",
+    "intro": "Apprise is an open-source notification library that speaks the protocol of around 80 different services through a single URL format. Adding it as one more channel inside the Monitor means you can deliver alerts to services that don't have a dedicated tab — ntfy, Matrix, Slack, Microsoft Teams, Mattermost, Pushbullet, AWS SNS, Pushsafer, Rocket.Chat, Signal API and many others — without ProxMenux having to implement each integration separately. Pushover can also be reached through Apprise, although its dedicated tab is simpler for a single Pushover destination.",
+    "listIntro": "The full list of supported services and the exact URL format for each one is available in the official Apprise documentation:",
     "listItems": [
-      "<a>github.com/caronc/apprise/wiki</a> — full index of supported services.",
+      "<a>Apprise service documentation</a> — full index of supported services.",
       "<a>URL basics</a> — how Apprise URLs are structured."
     ],
     "stepsTitle": "Steps",

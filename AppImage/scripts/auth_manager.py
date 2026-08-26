@@ -1055,10 +1055,13 @@ PROXMOX_CUSTOM_CERT_PATH = "/etc/pve/local/pveproxy-ssl.pem"
 PROXMOX_CUSTOM_KEY_PATH = "/etc/pve/local/pveproxy-ssl.key"
 
 _SSL_RUNTIME_LOCK = threading.RLock()
+_SSL_RUNTIME_REFRESH_LOCK = threading.Lock()
 _SSL_RUNTIME_CONTEXT = None
 _SSL_RUNTIME_FINGERPRINT = ""
 _SSL_RUNTIME_CERT_PATH = ""
 _SSL_RUNTIME_KEY_PATH = ""
+_SSL_RUNTIME_SOURCE = "none"
+_SSL_RUNTIME_LAST_REFRESH_ERROR = ""
 
 
 def load_ssl_config():
@@ -1100,6 +1103,15 @@ def save_ssl_config(config):
         return False
 
 
+def _detect_proxmox_certificate_paths():
+    """Return the certificate pair currently preferred by Proxmox."""
+    if os.path.isfile(PROXMOX_CUSTOM_CERT_PATH) and os.path.isfile(PROXMOX_CUSTOM_KEY_PATH):
+        return PROXMOX_CUSTOM_CERT_PATH, PROXMOX_CUSTOM_KEY_PATH
+    if os.path.isfile(PROXMOX_CERT_PATH) and os.path.isfile(PROXMOX_KEY_PATH):
+        return PROXMOX_CERT_PATH, PROXMOX_KEY_PATH
+    return "", ""
+
+
 def detect_proxmox_certificates():
     """
     Detect available Proxmox certificates.
@@ -1117,11 +1129,10 @@ def detect_proxmox_certificates():
         "cert_info": None
     }
 
-    if os.path.isfile(PROXMOX_CUSTOM_CERT_PATH) and os.path.isfile(PROXMOX_CUSTOM_KEY_PATH):
-        result["proxmox_cert"] = PROXMOX_CUSTOM_CERT_PATH
-        result["proxmox_key"] = PROXMOX_CUSTOM_KEY_PATH
-        result["proxmox_available"] = True
-    elif os.path.isfile(PROXMOX_CERT_PATH) and os.path.isfile(PROXMOX_KEY_PATH):
+    cert_path, key_path = _detect_proxmox_certificate_paths()
+    if cert_path and key_path:
+        result["proxmox_cert"] = cert_path
+        result["proxmox_key"] = key_path
         result["proxmox_available"] = True
 
     if result["proxmox_available"]:
@@ -1209,17 +1220,112 @@ def _build_server_ssl_context(cert_path, key_path):
     return context
 
 
+def _record_ssl_refresh_error(error):
+    """Log one warning per distinct automatic-refresh failure."""
+    global _SSL_RUNTIME_LAST_REFRESH_ERROR
+
+    message = str(error)
+    with _SSL_RUNTIME_LOCK:
+        if message == _SSL_RUNTIME_LAST_REFRESH_ERROR:
+            return
+        _SSL_RUNTIME_LAST_REFRESH_ERROR = message
+    print(
+        "[ProxMenux] Proxmox TLS certificate refresh skipped; "
+        f"the active certificate remains unchanged: {message}",
+        flush=True,
+    )
+
+
+def _persist_active_proxmox_certificate_paths(cert_path, key_path):
+    """Keep the selected Proxmox pair in sync for the next service start."""
+    config = load_ssl_config()
+    if not config.get("enabled") or config.get("source") != "proxmox":
+        return
+    if config.get("cert_path") == cert_path and config.get("key_path") == key_path:
+        return
+
+    updated_config = dict(config)
+    updated_config["cert_path"] = cert_path
+    updated_config["key_path"] = key_path
+    if not save_ssl_config(updated_config):
+        print(
+            "[ProxMenux] Warning: the renewed Proxmox certificate is active, "
+            "but its paths could not be saved for the next service start",
+            flush=True,
+        )
+
+
+def _refresh_proxmox_ssl_context_for_handshake():
+    """Activate a renewed Proxmox pair just before a TLS handshake.
+
+    This deliberately has no timer and does not depend on inotify (pmxcfs can
+    update /etc/pve without emitting a local event).  The small PEM pair is
+    inspected only when a client starts a new TLS connection.  Any missing,
+    partial or mismatched pair leaves the already-active context untouched.
+    """
+    global _SSL_RUNTIME_LAST_REFRESH_ERROR
+
+    with _SSL_RUNTIME_LOCK:
+        if _SSL_RUNTIME_SOURCE != "proxmox" or _SSL_RUNTIME_CONTEXT is None:
+            return False
+
+    # Several browser connections can arrive together. Only one of them may
+    # validate/swap a newly written pair; the others reuse its result.
+    with _SSL_RUNTIME_REFRESH_LOCK:
+        with _SSL_RUNTIME_LOCK:
+            if _SSL_RUNTIME_SOURCE != "proxmox" or _SSL_RUNTIME_CONTEXT is None:
+                return False
+            active_fingerprint = _SSL_RUNTIME_FINGERPRINT
+            active_cert_path = _SSL_RUNTIME_CERT_PATH
+            active_key_path = _SSL_RUNTIME_KEY_PATH
+
+        cert_path, key_path = _detect_proxmox_certificate_paths()
+        if not cert_path or not key_path:
+            raise RuntimeError("No complete Proxmox certificate/key pair was detected")
+
+        candidate_fingerprint = _certificate_pair_fingerprint(cert_path, key_path)
+        paths_changed = cert_path != active_cert_path or key_path != active_key_path
+        if candidate_fingerprint == active_fingerprint and not paths_changed:
+            return False
+
+        # reload_server_ssl_context builds and validates the replacement first
+        # and checks that neither PEM changed while it was being loaded. The
+        # global context is swapped only after all of those checks succeed.
+        changed = reload_server_ssl_context(cert_path, key_path)
+        _persist_active_proxmox_certificate_paths(cert_path, key_path)
+        with _SSL_RUNTIME_LOCK:
+            _SSL_RUNTIME_LAST_REFRESH_ERROR = ""
+
+        if changed:
+            print(
+                f"[ProxMenux] Renewed Proxmox TLS certificate activated from {cert_path}",
+                flush=True,
+            )
+        return changed
+
+
 def create_reloadable_ssl_context(cert_path, key_path):
-    """Create the server context and register it for manual hot reloads."""
+    """Create the stable server context used by automatic and manual reloads."""
     global _SSL_RUNTIME_CONTEXT
     global _SSL_RUNTIME_FINGERPRINT
     global _SSL_RUNTIME_CERT_PATH
     global _SSL_RUNTIME_KEY_PATH
+    global _SSL_RUNTIME_SOURCE
+    global _SSL_RUNTIME_LAST_REFRESH_ERROR
 
     context = _build_server_ssl_context(cert_path, key_path)
     fingerprint = _certificate_pair_fingerprint(cert_path, key_path)
+    config = load_ssl_config()
+    source = config.get("source", "none") if config.get("enabled") else "none"
 
     def _select_active_context(ssl_socket, _server_name, _initial_context):
+        try:
+            _refresh_proxmox_ssl_context_for_handshake()
+        except Exception as error:
+            # Never fail a client handshake because Proxmox is between the
+            # certificate and key writes. The previously validated context
+            # remains authoritative until a later connection can load both.
+            _record_ssl_refresh_error(error)
         with _SSL_RUNTIME_LOCK:
             active_context = _SSL_RUNTIME_CONTEXT
         if active_context is not None and ssl_socket.context is not active_context:
@@ -1231,6 +1337,8 @@ def create_reloadable_ssl_context(cert_path, key_path):
         _SSL_RUNTIME_FINGERPRINT = fingerprint
         _SSL_RUNTIME_CERT_PATH = cert_path
         _SSL_RUNTIME_KEY_PATH = key_path
+        _SSL_RUNTIME_SOURCE = source
+        _SSL_RUNTIME_LAST_REFRESH_ERROR = ""
     return context
 
 

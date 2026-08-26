@@ -9,7 +9,7 @@
   },
   "intro": {
     "title": "What this category covers",
-    "body": "Four foundational options you typically want on any fresh Proxmox host: switch to the free community repositories and run a full system upgrade, auto-configure the timezone and NTP sync, strip APT language downloads to save bandwidth and disk, and pick from a list of 25 common system utilities."
+    "body": "Five foundational options you typically want on any fresh Proxmox host: switch to the free community repositories, run a full system upgrade, auto-configure the timezone and NTP sync, strip APT language downloads to save bandwidth and disk, and pick from a list of 25 common system utilities."
   },
   "upgrade": {
     "heading": "Update and upgrade system",
@@ -45,7 +45,7 @@
     "shortTitle": "In short",
     "shortBody": "The option runs the exact <code>apt update && apt full-upgrade -y</code> Proxmox recommends, wraps it with the repo hygiene and post-upgrade cleanup that the official guide also tells you to do, and prompts for the reboot at the end. See <link>Proxmox System Update</link> — the same updater is also available as a standalone utility in the main menu, with the full process diagram.",
     "subTitle": "Don't apply to a subscribed host",
-    "subBody": "If you actually have a Proxmox subscription and want to keep using the enterprise repositories, skip this option. Re-running it would disable the enterprise repo and route you to the community channel. You can restore enterprise repos from the Uninstall menu if you change your mind later.",
+    "subBody": "If you actually have a Proxmox subscription and want to keep using the enterprise repositories, skip this option. Running it disables the enterprise repository and routes the host to the community channel. The package upgrade and repository rewrite are not presented as reversible in Uninstall Optimizations; restore your repository configuration deliberately if you need to change channels later.",
     "safetyTitle": "Post-update safety check",
     "safetyBody": "After the upgrade, the script checks for disks with stale PV (Physical Volume) metadata — an edge case that can happen when a VM with disk passthrough scribbles LVM headers onto a raw disk. If anything suspicious is found you'll see a warning suggesting <code>pvs</code> to inspect. No action is taken automatically."
   },
@@ -209,8 +209,8 @@
       }
     ],
     "actionTitle": "A few of them in action",
-    "noBulkTitle": "No bulk uninstall for utilities",
-    "noBulkBody": "The Uninstall Optimizations menu does <strong>not</strong> track which utilities you installed — only whether the \"apt languages\", \"time sync\" and \"apt upgrade\" options were applied. To remove a specific utility later, uninstall it by hand:"
+    "noBulkTitle": "Only ProxMenux-installed utilities are removed",
+    "noBulkBody": "ProxMenux records only the selected utility packages that were not already installed before this action. Uninstall Optimizations can purge those packages later, while utilities that were already present on the host are left untouched. The general APT system upgrade is intentionally not tracked as reversible because upgraded packages have no safe atomic rollback."
   },
   "related": {
     "heading": "Related",

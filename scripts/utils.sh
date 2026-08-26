@@ -51,6 +51,7 @@ DARK_GRAY="\033[38;5;244m"
 ORANGE="\033[38;5;208m"
 YW="\033[33m"
 YWB="\033[1;33m"
+MG="\033[35m"
 GN="\033[1;92m"
 RD="\033[01;31m"
 CL="\033[m"
@@ -74,8 +75,8 @@ spinner() {
     local interval=0.1
     printf "\e[?25l"
     
-    local color="${YW}"
-    
+    local color="${MG}"
+
     while true; do
         printf "\r ${color}%s${CL}" "${frames[spin_i]}"
         spin_i=$(( (spin_i + 1) % ${#frames[@]} ))
@@ -118,19 +119,10 @@ stop_spinner() {
     SPINNER_PID=""
 }
 
-# Display trnaslate message with spinner
-msg_lang() {
-    local msg="$1"
-    echo -ne "${TAB}${YW}${HOLD}${msg}"
-    spinner &
-    SPINNER_PID=$!
-}
-
-
 # Display info message with spinner
 msg_info() {
     local msg="$1"
-    echo -ne "${TAB}${YW}${HOLD}${msg}"
+    echo -ne "${TAB}${MG}${HOLD}${msg}"
     spinner &
     SPINNER_PID=$!
 }

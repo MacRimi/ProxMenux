@@ -3,7 +3,8 @@ ProxMenux Notification Manager
 Central orchestrator for the notification service.
 
 Connects:
-- notification_channels.py  (transport: Telegram, Gotify, Discord)
+- notification_channels.py  (transport: Telegram, Gotify, Discord, Email,
+                              Pushover, Apprise)
 - notification_templates.py (message formatting + optional AI)
 - notification_events.py    (event detection: Journal, Task, Polling watchers)
 - health_persistence.py     (DB: config storage, notification_history)
@@ -79,6 +80,8 @@ SENSITIVE_KEYS = {
     'gotify.token',
     'discord.webhook_url',
     'email.password',
+    'pushover.user_key',
+    'pushover.api_token',
     'apprise.url',
     'webhook_secret',
 }
@@ -2520,9 +2523,10 @@ class NotificationManager:
         channels_info = {}
         for ch_type, info in CHANNEL_TYPES.items():
             enabled = self._config.get(f'{ch_type}.enabled', 'false') == 'true'
+            required_keys = info.get('required_keys', info['config_keys'])
             configured = all(
                 bool(self._config.get(f'{ch_type}.{k}', ''))
-                for k in info['config_keys']
+                for k in required_keys
             )
             channels_info[ch_type] = {
                 'name': info['name'],

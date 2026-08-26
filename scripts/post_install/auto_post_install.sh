@@ -6,13 +6,14 @@
 # Copyright   : (c) 2024 MacRimi
 # License     : GPL-3.0
 #               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
-# Version     : 1.0
+# Version     : 1.1
 # ==========================================================
 # Description:
 # Applies a curated set of 14 safe optimizations to a fresh
-# Proxmox VE host without prompts. Every change is registered
-# in installed_tools.json so it can be reversed later from the
-# Uninstall Optimizations menu.
+# Proxmox VE host without prompts. Reversible changes are registered
+# in installed_tools.json so they can be restored later from the
+# Uninstall Optimizations menu; package upgrades are intentionally
+# excluded because they cannot be rolled back safely.
 #
 # Features:
 # - Zero-interaction baseline: repos, upgrade, banner, APT
@@ -158,6 +159,8 @@ apt_upgrade() {
 
 
 remove_subscription_banner() {
+    local FUNC_VERSION="1.1"
+    # description: Patch the Proxmox web UI to suppress the subscription dialog and register a successful patch.
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
 
@@ -176,15 +179,22 @@ remove_subscription_banner() {
             msg_warn "Banner removal cancelled by user."
             return 1
         fi
-        bash "$LOCAL_SCRIPTS/global/remove-banner-pve-v3.sh"
+        if ! bash "$LOCAL_SCRIPTS/global/remove-banner-pve-v3.sh"; then
+            msg_error "$(translate "Subscription banner removal failed")"
+            return 1
+        fi
     else
         if ! whiptail --title "Proxmox VE 8.x Subscription Banner Removal" \
         --yesno "Do you want to remove the Proxmox subscription banner from the web interface for PVE $pve_version?" 10 70; then
             msg_warn "Banner removal cancelled by user."
             return 1
         fi
-        bash "$LOCAL_SCRIPTS/global/remove-banner-pve8.sh"
+        if ! bash "$LOCAL_SCRIPTS/global/remove-banner-pve8.sh"; then
+            msg_error "$(translate "Subscription banner removal failed")"
+            return 1
+        fi
     fi
+    register_tool "subscription_banner" true "$FUNC_VERSION"
 }
 
 

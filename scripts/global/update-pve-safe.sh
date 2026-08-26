@@ -265,6 +265,7 @@ update_pve_safe() {
     fi
 
     # ── 10. Final cleanup ──
+    msg_info "$(translate "Running cleanup")"
     apt-get -y autoremove >/dev/null 2>&1 || true
     apt-get -y autoclean >/dev/null 2>&1 || true
     msg_ok "$(translate "Cleanup finished")"

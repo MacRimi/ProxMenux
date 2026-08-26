@@ -66,8 +66,14 @@
       {
         "title": "No reboot unless the function says so",
         "body": "Most updates take effect immediately. Updates that touch kernel modules, persistent interface names, or VFIO show the same reboot prompt as a fresh install would."
+      },
+      {
+        "title": "Registry refresh sent to the Monitor",
+        "body": "Once the batch finishes, the menu POSTs to <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> to rebuild <code>/usr/local/share/proxmenux/updates_available.json</code>. That is what makes the Monitor's Optimizations card and the shell menu entry disappear immediately after the update, without waiting for the next scheduled scan."
       }
-    ]
+    ],
+    "jqTitle": "jq is required",
+    "jqBody": "The Path A checklist relies on <code>jq</code> to parse the pending-updates JSON. If <code>jq</code> is missing, the flow exits silently — you would see the menu entry with a count but nothing would happen after picking rows. On any modern Proxmox install <code>jq</code> is present; if in doubt run <code>apt install -y jq</code>."
   },
   "differs": {
     "heading": "How it differs from the other paths",
