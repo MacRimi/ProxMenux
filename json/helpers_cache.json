@@ -31,7 +31,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "cat /opt/2fauth/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -64,7 +64,7 @@
     "has_arm": false,
     "is_dev": false,
     "execute_in": [],
-    "config_path": "/opt/actual-budget-prometheus-exporter.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -95,7 +95,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/actualbudget-data/config.json",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -132,7 +132,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/iptag/iptag.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -235,7 +235,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/AdGuardHome/AdGuardHome.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -268,7 +268,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/AdGuardHome/AdGuardHome.yaml",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -304,7 +304,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/opt/adguardhome-sync/adguardhome-sync.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -340,7 +340,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/opt/adguardhome-sync/adguardhome-sync.yaml",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -375,7 +375,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/adventurelog/backend/server/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -442,7 +442,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/agentdvr/agent/Media/XML/config.json",
+    "config_path": "",
     "os": "ubuntu"
   },
   {
@@ -777,7 +777,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/redlib/redlib.conf",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -808,7 +808,7 @@
     "has_arm": true,
     "is_dev": false,
     "execute_in": [],
-    "config_path": "/opt/wakapi/config.yml",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -843,7 +843,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/ampache/config/ampache.cfg.php",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -877,7 +877,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/anchor/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -990,7 +990,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/anytype/.env",
+    "config_path": "",
     "os": "ubuntu"
   },
   {
@@ -1093,7 +1093,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "etc/default.ini",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -1124,7 +1124,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/guacamole/guacd.conf",
+    "config_path": "",
     "default_credentials": {
       "username": "guacadmin",
       "password": "guacadmin"
@@ -1161,7 +1161,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/apache-tika/tika-config.xml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -1228,7 +1228,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/config",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -1259,7 +1259,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/apt-cacher-ng/acng.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -1293,7 +1293,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/opt/arcane/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "arcane",
       "password": "arcane-admin"
@@ -1328,7 +1328,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/archivebox/data/ArchiveBox.conf",
+    "config_path": "",
     "default_credentials": {
       "username": "archivebox",
       "password": "community-scripts.org"
@@ -1462,7 +1462,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/root/aria2.daemon",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -1526,7 +1526,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/asterisk",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -1557,7 +1557,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/usr/share/audiobookshelf/config",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -1667,7 +1667,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/authelia/configuration.yml",
+    "config_path": "",
     "default_credentials": {
       "username": "authelia",
       "password": "authelia"
@@ -1705,7 +1705,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/etc/authentik/config.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -1736,7 +1736,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/root/.config/autobrr/config.toml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -1767,7 +1767,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/autocaliweb",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin123"
@@ -1804,7 +1804,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/babybuddy/babybuddy/settings/production.py",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
@@ -1841,7 +1841,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/backrest/config/config.json | /opt/backrest/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -1872,7 +1872,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/baikal/config/baikal.yaml",
+    "config_path": "",
     "default_credentials": {
       "username": "Admin",
       "password": ""
@@ -1909,7 +1909,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/bambuddy/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -1940,7 +1940,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/bar-assistant",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -1976,7 +1976,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/baserow/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -2007,7 +2007,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/bazarr/data/config/config.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -2139,7 +2139,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/bichon/bichon.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin@bichon"
@@ -2179,7 +2179,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/birdnet/data",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -2246,7 +2246,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "`/opt/bitmagnet/config.yml` or `/opt/bitmagnet/.env`",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -2279,7 +2279,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "`/opt/bitmagnet/config.yml` or `/opt/bitmagnet/.env`",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -2310,7 +2310,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/blocky/config.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -2343,7 +2343,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/booklore_storage/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -2412,7 +2412,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/bookstack/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin@admin.com",
       "password": "password"
@@ -2520,7 +2520,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/bunkerweb/variables.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -2551,7 +2551,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/systemd/system/byparr.service",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -2619,7 +2619,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/caddy/Caddyfile",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -2656,7 +2656,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/caddy/Caddyfile",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -2689,7 +2689,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/calibre-web/app.db",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin123"
@@ -2792,7 +2792,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -2868,7 +2868,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/changedetection/url-watches.json",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -3010,7 +3010,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/checkmate/server/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -3175,7 +3175,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/cleanuparr/config",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -3249,7 +3249,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/cliproxyapi/config.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -3284,7 +3284,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/systemd/system/cloudflare-ddns.service",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -3318,7 +3318,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/usr/local/etc/cloudflared/config.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -3349,7 +3349,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/cloudreve/data/conf.ini",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -3384,7 +3384,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/cockpit/cockpit.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -3495,7 +3495,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -3563,7 +3563,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/configarr/config.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -3596,7 +3596,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/convertx/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -3668,7 +3668,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/data/coolify",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -3703,7 +3703,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/etc/copyparty.conf",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "community-scripts.org"
@@ -3740,7 +3740,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/etc/coredns/Corefile",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -3773,7 +3773,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/etc/coredns/Corefile",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -3810,7 +3810,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/sysconfig/CosmosCloud",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -3843,7 +3843,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/crafty-controller/crafty/crafty-4/app/config/config.json",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": ""
@@ -3916,7 +3916,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/cronicle/conf/config.json",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
@@ -3955,7 +3955,7 @@
       "pbs",
       "pmg"
     ],
-    "config_path": "/opt/cronmaster/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -3988,7 +3988,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "~/.cross-seed/config.js",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -4054,7 +4054,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/cryptpad/config/config.js",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -4151,7 +4151,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/dashy/user-data/conf.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -4185,7 +4185,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/databasus/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin@localhost",
       "password": "See /root/databasus.creds"
@@ -4222,7 +4222,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/dawarich/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "demo@dawarich.app",
       "password": "safepassword"
@@ -4260,7 +4260,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/etc/ddclient.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -4543,7 +4543,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/degoog/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -4574,7 +4574,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "~/.config/deluge",
+    "config_path": "",
     "default_credentials": {
       "username": "",
       "password": "deluge"
@@ -4614,7 +4614,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/default/pve-auto-hook",
+    "config_path": "",
     "os": ""
   },
   {
@@ -4643,7 +4643,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -4684,7 +4684,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -4723,7 +4723,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": " /opt/discopanel/config.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -4759,7 +4759,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/discourse/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": ""
@@ -4827,7 +4827,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/dispatcharr/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -4972,7 +4972,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/opt/dockge/compose.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -5005,7 +5005,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/docmost/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -5114,7 +5114,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/etc/dokploy",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -5147,7 +5147,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/usr/share/dolibarr/htdocs/conf/conf.php.example",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -5181,7 +5181,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/domain-locker.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -5212,7 +5212,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/domain-monitor/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -5243,7 +5243,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/donetick/config/selfhosted.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -5475,7 +5475,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/default/ebusd",
+    "config_path": "",
     "default_credentials": {
       "username": "root",
       "password": ""
@@ -5555,7 +5555,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/matrix-synapse/homeserver.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -5588,7 +5588,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/var/lib/emby/config/system.xml",
+    "config_path": "",
     "os": "ubuntu"
   },
   {
@@ -5621,7 +5621,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/emqx",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "public"
@@ -5658,7 +5658,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/endurain/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
@@ -5697,7 +5697,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -5732,7 +5732,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/frappe-bench/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "Administrator",
       "password": ""
@@ -5835,7 +5835,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/root/config/",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -6059,7 +6059,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -6249,7 +6249,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/usr/local/community-scripts/fq-config.yaml",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "community-scripts.org"
@@ -6287,7 +6287,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/usr/local/community-scripts/fq-config.yaml",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "community-scripts.org"
@@ -6326,7 +6326,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/fileflows/Data/server.config",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -6396,7 +6396,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/firefly/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -6432,7 +6432,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/fireshare/fireshare.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -6463,7 +6463,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/fladder/assets/config/config.json",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -6558,7 +6558,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/flatnotes/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -6626,7 +6626,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/flowiseai/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -6661,7 +6661,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/fluid-calendar/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -6723,7 +6723,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/foldergram/foldergram.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -6754,7 +6754,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/forgejo/app.ini",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -6785,7 +6785,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/forgejo/app.ini",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -6820,7 +6820,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/root/.runner",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -6887,7 +6887,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/freshrss/data/config.php",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -6920,7 +6920,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/config/config.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7022,7 +7022,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/garage.toml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7058,7 +7058,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/garage.toml",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -7089,7 +7089,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/gatus/config/config.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7120,7 +7120,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/gatus/config/config.yaml",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -7149,7 +7149,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -7190,7 +7190,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/etc/geopulse/geopulse.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7260,7 +7260,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/ghostfolio/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7293,7 +7293,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/gitea/app.ini",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7326,7 +7326,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/gitea/app.ini",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -7357,7 +7357,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/systemd/system/gitea-mirror.service",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7392,7 +7392,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/actions-runner",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7465,7 +7465,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/glance/glance.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7499,7 +7499,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/usr/local/share/doc/glances/glances.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7561,7 +7561,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/glpi",
+    "config_path": "",
     "default_credentials": {
       "username": "glpi",
       "password": "glpi"
@@ -7594,7 +7594,7 @@
     "has_arm": true,
     "is_dev": false,
     "execute_in": [],
-    "config_path": "/opt/gluetun-data/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7625,7 +7625,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/go2rtc/go2rtc.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7695,7 +7695,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/gogs/custom/conf/app.ini",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7726,7 +7726,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/gokapi/config",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7757,7 +7757,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/gotify/config.yml",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
@@ -7792,7 +7792,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "Debian: /etc/grafana/grafana.ini | Alpine: /etc/grafana.ini",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
@@ -7827,7 +7827,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "Debian: /etc/grafana/grafana.ini | Alpine: /etc/grafana.ini",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
@@ -7866,7 +7866,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/gramps-web/config/config.cfg",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7938,7 +7938,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/graylog/server/server.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -7969,7 +7969,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/grist/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -8000,7 +8000,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/var/www/html/data/config.php",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
@@ -8035,7 +8035,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/guardian/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -8068,7 +8068,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/gwn/conf/gwn.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -8173,7 +8173,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -8215,7 +8215,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/headscale/config.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -8249,7 +8249,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/healthchecks/hc/local_settings.py",
+    "config_path": "",
     "default_credentials": {
       "username": "admin@community-scripts.org",
       "password": ""
@@ -8284,7 +8284,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/Heimdall/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -8355,7 +8355,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/hivemq/conf/config.xml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -8453,7 +8453,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/homarr.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -8491,7 +8491,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/var/lib/docker/volumes/hass_config/_data",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -8522,7 +8522,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/homebox/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -8589,7 +8589,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/var/lib/homebridge/config.json",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
@@ -8628,7 +8628,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/homelable/backend/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
@@ -8666,7 +8666,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/homepage/config/",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -8699,7 +8699,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/homer/assets/config.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -8732,7 +8732,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/hortusfox/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -8898,7 +8898,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/igotify/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -8937,7 +8937,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/immich/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -8972,7 +8972,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/opt/immich-proxy/app/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -9007,7 +9007,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/immichframe/Config/Settings.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -9038,7 +9038,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/infisical/infisical.rb",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -9136,7 +9136,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/inventree/",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "`cat /etc/inventree/admin_password.txt`"
@@ -9173,7 +9173,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/investbrain/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -9242,7 +9242,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/invoiceninja/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -9342,7 +9342,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/root/.ironclaw/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -9376,7 +9376,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/root/.ironclaw/.env",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -9410,7 +9410,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/var/lib/isponsorblocktv/config.json",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -9441,7 +9441,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/itsm-ng",
+    "config_path": "",
     "default_credentials": {
       "username": "itsm",
       "password": "itsm"
@@ -9509,7 +9509,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -9621,7 +9621,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/jellyfin/",
+    "config_path": "",
     "os": "ubuntu"
   },
   {
@@ -9657,7 +9657,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/opt/jellystat/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -9724,7 +9724,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/etc/jitsi",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -9758,7 +9758,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/joplin-server/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin@localhost",
       "password": "admin"
@@ -9793,7 +9793,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/jotty/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -9898,7 +9898,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/kan/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -10033,7 +10033,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/karakeep/karakeep.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -10203,7 +10203,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/keycloak/conf/keycloak.conf",
+    "config_path": "",
     "default_credentials": {
       "username": "tmpadm",
       "password": "admin123"
@@ -10243,7 +10243,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/kima-hub/backend/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -10274,7 +10274,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/kimai/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin@community-scripts.org",
       "password": "community-scripts.org"
@@ -10309,7 +10309,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/kitchenowl/kitchenowl.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -10379,7 +10379,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/koel/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin@koel.dev",
       "password": "KoelIsCool"
@@ -10447,7 +10447,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "ct/koillection.sh",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -10481,7 +10481,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/kometa/config/config.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -10514,7 +10514,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "~/.komga/application.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -10551,7 +10551,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/opt/komodo/compose.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -10615,7 +10615,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/kutt/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -10648,7 +10648,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/LanguageTool/server.properties",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -10679,7 +10679,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/LazyLibrarian/config.ini",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -10748,7 +10748,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/Leantime/config/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -10819,7 +10819,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/librechat/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -10852,7 +10852,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/librenms/config.php and /opt/librenms/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -10883,7 +10883,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/var/lib/librespeed-rs/configs.toml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -10917,7 +10917,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/libretranslate/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -10948,7 +10948,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/var/lib/lidarr/config.xml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -11051,7 +11051,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/linkding/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": ""
@@ -11089,7 +11089,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/var/www/html/linkstack/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -11120,7 +11120,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/linkwarden/.env",
+    "config_path": "",
     "os": "ubuntu"
   },
   {
@@ -11151,7 +11151,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/listmonk/config.toml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -11184,7 +11184,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/litellm/litellm.yaml",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "sk-1234"
@@ -11329,7 +11329,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/lobehub/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -11365,7 +11365,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/localagi/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -11470,7 +11470,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "Debian: /etc/loki/config.yml | Alpine: /etc/loki/loki-local-config.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -11503,7 +11503,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "Debian: /etc/loki/config.yml | Alpine: /etc/loki/loki-local-config.yaml",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -11573,7 +11573,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/lubelogger/appsettings.json",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -11640,7 +11640,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/lychee/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -11671,7 +11671,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/default/lyrionmusicserver",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -11704,7 +11704,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/mafl/data/config.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -11737,7 +11737,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/magicmirror/config/config.js",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -11768,7 +11768,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/mail-archiver/.env, /opt/mail-archiver/appsettings.json",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "secure123!"
@@ -11873,7 +11873,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/mmdl/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -11906,7 +11906,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/manyfold/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -12223,7 +12223,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/mattermost/config/config.json",
+    "config_path": "",
     "os": "ubuntu"
   },
   {
@@ -12254,7 +12254,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/mealie/mealie.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -12290,7 +12290,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/mm/config/config.toml",
+    "config_path": "",
     "default_credentials": {
       "username": "<email address>",
       "password": "admin"
@@ -12325,7 +12325,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/mediamtx/mediamtx.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -12389,7 +12389,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/meilisearch.toml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -12451,7 +12451,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/meshcentral/meshcentral-data/config.json",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -12482,7 +12482,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/metabase/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -12513,7 +12513,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/metube/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -12615,7 +12615,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/minarca/minarca-server.conf",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin123"
@@ -12683,7 +12683,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/miniflux.conf",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "randomly generated during installation process"
@@ -12720,7 +12720,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/default/minio",
+    "config_path": "",
     "default_credentials": {
       "username": "minioadmin",
       "password": ""
@@ -12757,7 +12757,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/var/www/MintHCM",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "minthcm"
@@ -12823,7 +12823,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/monica/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin@community-scripts.org",
       "password": "community-scripts.org"
@@ -12899,7 +12899,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/motioneye/motioneye.conf",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "none"
@@ -12936,7 +12936,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/mosquitto/conf.d/default.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -13007,7 +13007,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/myip/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -13102,7 +13102,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/n8n.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -13174,7 +13174,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/nametag/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -13207,7 +13207,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/navidrome/navidrome.toml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -13279,7 +13279,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/etc/neko/neko.yaml",
+    "config_path": "",
     "default_credentials": {
       "username": "",
       "password": "admin"
@@ -13354,7 +13354,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/netbird/config.json",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -13390,7 +13390,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/var/www/html/boot.cfg",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -13423,7 +13423,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/netbox/netbox/netbox/configuration.py",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -13456,7 +13456,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/netdata/netdata.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -13562,7 +13562,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/etc/nextcloud-exporter.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -13698,7 +13698,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/nextExplorer/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -13729,7 +13729,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/var/opt/nextpvr/config.xml",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "password"
@@ -13809,7 +13809,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/usr/local/etc/nginx-ui/app.ini",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -13913,7 +13913,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/nightscout/my.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -13977,7 +13977,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "~/.node-red/settings.js",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -14010,7 +14010,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "~/.node-red/settings.js",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -14152,7 +14152,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/notifiarr/notifiarr.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -14186,7 +14186,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/compose.yaml",
+    "config_path": "",
     "default_credentials": {
       "username": "admin@local.com",
       "password": "community-scripts.org"
@@ -14221,7 +14221,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/ntfy/server.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -14252,7 +14252,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/ntfy/server.yml",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -14355,7 +14355,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/usr/share/nzbget/nzbget.conf",
+    "config_path": "",
     "default_credentials": {
       "username": "nzbget",
       "password": "tegbzn6789"
@@ -14395,7 +14395,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/oauth2-proxy/config.toml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -14499,7 +14499,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/odoo/odoo.conf",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
@@ -14537,7 +14537,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/etc/OliveTin/config.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -14568,7 +14568,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/usr/local/lib/ollama",
+    "config_path": "",
     "os": "ubuntu"
   },
   {
@@ -14772,7 +14772,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/onedev/conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -14841,7 +14841,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/onlyoffice/documentserver/local.json",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
@@ -14878,7 +14878,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/openarchiver/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -14988,7 +14988,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/opencloud/opencloud.env, /etc/opencloud/opencloud.yaml, /etc/opencloud/csp.yaml",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "randomly generated during the installation process"
@@ -15019,7 +15019,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -15058,7 +15058,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/opengist/config.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -15122,7 +15122,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/openobserve/data/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -15155,7 +15155,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/openproject/conf.d/env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
@@ -15186,7 +15186,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -15231,7 +15231,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/etc/default/otbr-agent",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -15266,7 +15266,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/root/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -15334,7 +15334,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/openziti/etc/controller/bootstrap.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -15476,7 +15476,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/ots/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -15510,7 +15510,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/outline/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -15617,7 +15617,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/ownfoil/app/config/settings.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -15687,7 +15687,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/etc/oxicloud/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -15755,7 +15755,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/pangolin/config/config.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -15823,7 +15823,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/paperless-ai/data/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -15856,7 +15856,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/paperless-gpt-data/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -15891,7 +15891,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/paperless/paperless.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -15929,7 +15929,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/papra/apps/papra-server/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -15962,7 +15962,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/partdb/.env.local",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -15996,7 +15996,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/passbolt/passbolt.php",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -16064,7 +16064,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/patchmon/backend/.env, /opt/patchmon/frontend/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -16097,7 +16097,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/paymenter/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin@paymenter.org",
       "password": "paymenter"
@@ -16203,7 +16203,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/peanut/settings.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -16381,7 +16381,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/photoprism/config/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "changeme"
@@ -16421,7 +16421,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "Debian/Ubuntu: /var/www/html/phpMyAdmin | Alpine: /usr/share/phpmyadmin",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -16452,7 +16452,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/pialert/config/pialert.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -16489,7 +16489,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/pihole/pihole.toml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -16521,7 +16521,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/opt/pihole-exporter.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -16553,7 +16553,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/opt/pihole-exporter.env",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -16659,7 +16659,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/pixelfed/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -16696,7 +16696,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/plane/apps/api/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -16729,7 +16729,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/planka/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -16763,7 +16763,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/plant-it/backend/server.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -16796,7 +16796,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Preferences.xml",
+    "config_path": "",
     "os": "ubuntu"
   },
   {
@@ -16862,7 +16862,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/pocket-id/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -16931,7 +16931,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/var/lib/containers/storage/volumes/hass_config/_data",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -17006,7 +17006,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/opt/portainer/compose.yaml",
+    "config_path": "",
     "os": ""
   },
   {
@@ -17251,7 +17251,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/postiz/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -17284,7 +17284,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/poweradmin/config/settings.php",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -17353,7 +17353,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/privatebin/cfg/conf.php",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -17384,7 +17384,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/config",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -17417,7 +17417,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/projectsend/includes/sys.config.php",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -17448,7 +17448,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/prometheus/prometheus.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -17479,7 +17479,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/prometheus/prometheus.yml",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -17510,7 +17510,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/alertmanager/alertmanager.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -17545,7 +17545,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/blackbox-exporter/blackbox.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -17577,7 +17577,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/etc/prometheus-paperless-ngx-exporter/config.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -17612,7 +17612,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/prometheus-pve-exporter/pve.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -17678,7 +17678,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/var/lib/prowlarr/",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -17819,7 +17819,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/.config/ps5-mqtt/config.json",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -17852,7 +17852,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/pterodactyl-panel/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -17885,7 +17885,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/pterodactyl/config.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -17919,7 +17919,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/pulse",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -18022,7 +18022,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/PVEScripts-Local/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -18169,7 +18169,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "$HOME/.config/qBittorrent/qBittorrent.conf",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "changeme"
@@ -18205,7 +18205,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/opt/qbittorrent-exporter.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -18237,7 +18237,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/opt/qbittorrent-exporter.env",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -18268,7 +18268,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/qdrant/config.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -18299,7 +18299,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/root/.config/qui/config.toml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -18330,7 +18330,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/rabbitmq/rabbitmq.conf",
+    "config_path": "",
     "default_credentials": {
       "username": "proxmox",
       "password": "proxmox"
@@ -18432,7 +18432,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/radicale/config",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -18466,7 +18466,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "~/.config/rclone/rclone.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -18500,7 +18500,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "~/.config/rclone/rclone.conf",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -18531,7 +18531,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/rdtc/appsettings.json",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -18564,7 +18564,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/reactive-resume/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -18595,7 +18595,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/readeck/config.toml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -18700,7 +18700,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "Debian /etc/redis/redis.conf | Alpine: /etc/redis.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -18733,7 +18733,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "Debian /etc/redis/redis.conf | Alpine: /etc/redis.conf",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -18764,7 +18764,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/reitti/application.properties",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
@@ -18801,7 +18801,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/resilio-sync/config.json",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -18834,7 +18834,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/revealjs/gulpfile.js",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -18865,7 +18865,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/romm/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -18934,7 +18934,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/opt/runtipi/state/settings.json",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -19076,7 +19076,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/rustypaste/config.toml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -19109,7 +19109,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/rustypaste/config.toml",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -19140,7 +19140,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/.sabnzbd/sabnzbd.ini",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -19211,7 +19211,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/salt/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -19314,7 +19314,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/scanopy/.env, OIDC: /opt/scanopy/oidc.toml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -19347,7 +19347,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/scraparr/config/config.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -19420,7 +19420,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/searxng/settings.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -19555,7 +19555,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/seerr/seerr.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -19589,7 +19589,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/semaphore/config.json",
+    "config_path": "",
     "default_credentials": {
       "username": "admin@community-scripts.org",
       "password": ""
@@ -19624,7 +19624,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/sftpgo/sftpgo.json",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -19658,7 +19658,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/shelfmark",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -19689,7 +19689,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/Shinobi/conf.json",
+    "config_path": "",
     "default_credentials": {
       "username": "admin@shinobi.video",
       "password": "admin"
@@ -19838,7 +19838,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/signoz/conf/systemd.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -19974,7 +19974,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/slskd/config/slskd.yml",
+    "config_path": "",
     "default_credentials": {
       "username": "slskd",
       "password": "slskd"
@@ -20009,7 +20009,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/smokeping/config.d/Targets",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -20081,7 +20081,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/snipe-it/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -20112,7 +20112,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/snowshare.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -20212,7 +20212,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/sonarqube/conf/sonar.properties",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
@@ -20247,7 +20247,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/var/lib/sonarr/config.xml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -20280,7 +20280,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/sonobarr/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -20315,7 +20315,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/soulsync/config",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -20346,7 +20346,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/sparkyfitness/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -20378,7 +20378,7 @@
       "lxc",
       "vm"
     ],
-    "config_path": "/etc/sparkyfitness-garmin/.env",
+    "config_path": "",
     "os": ""
   },
   {
@@ -20409,7 +20409,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/speedtest-tracker/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin@example.com",
       "password": "password"
@@ -20481,7 +20481,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/split-pro/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -20548,7 +20548,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/spoolman/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -20581,7 +20581,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/sportarr/.env, /opt/sportarr-data/config/config.xml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -20798,7 +20798,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/etc/step-ca",
+    "config_path": "",
     "default_credentials": {
       "username": "root",
       "password": ""
@@ -20833,7 +20833,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/Stirling-PDF/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "stirling"
@@ -20977,7 +20977,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/storyteller/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -21013,7 +21013,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/strapi/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -21046,7 +21046,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/streamlink-webui.env",
+    "config_path": "",
     "default_credentials": {
       "username": "null",
       "password": "null"
@@ -21081,7 +21081,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/stylus/config.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -21182,7 +21182,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/sure/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -21216,7 +21216,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/surrealdb/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "root",
       "password": ""
@@ -21257,7 +21257,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/swizzin/",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -21328,7 +21328,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/root/.local/state/syncthing/config.xml - Alpine: /var/lib/syncthing/.local/state/syncthing/config.xml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -21359,7 +21359,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/root/.local/state/syncthing/config.xml - Alpine: /var/lib/syncthing/.local/state/syncthing/config.xml",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -21392,7 +21392,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/tandoor/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -21485,7 +21485,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/Tautulli/config.ini",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -21553,7 +21553,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/teable/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -21716,7 +21716,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/telegraf/telegraf.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -21749,7 +21749,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/etc/teleport.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -21857,7 +21857,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/thelounge/config.js",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -21893,7 +21893,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/thingsboard/conf/thingsboard.conf",
+    "config_path": "",
     "default_credentials": {
       "username": "sysadmin@thingsboard.org",
       "password": "sysadmin"
@@ -21959,7 +21959,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/tianji/src/server/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
@@ -21996,7 +21996,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/tinyauth/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -22029,7 +22029,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/tinyauth/.env",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -22126,7 +22126,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/traccar/conf/traccar.xml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -22190,7 +22190,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/tracktor.env",
+    "config_path": "",
     "default_credentials": {
       "username": "",
       "password": "123456"
@@ -22225,7 +22225,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/traefik/traefik.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -22256,7 +22256,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/traefik/traefik.yaml",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -22290,7 +22290,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "Debian `/etc/transmission-daemon/settings.json` | Alpine `/var/lib/transmission/config/settings.json`",
+    "config_path": "",
     "default_credentials": {
       "username": "transmission",
       "password": "transmission"
@@ -22328,7 +22328,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "Debian `/etc/transmission-daemon/settings.json` | Alpine `/var/lib/transmission/config/settings.json`",
+    "config_path": "",
     "default_credentials": {
       "username": "transmission",
       "password": "transmission"
@@ -22365,7 +22365,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/transmute/backend/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -22398,7 +22398,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/trek/server/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin@trek.local",
       "password": "see /opt/trek/server/.env"
@@ -22433,7 +22433,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/root/trilium-data/config.ini",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -22464,7 +22464,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/trip.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -22535,7 +22535,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/tubearchivist/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": ""
@@ -22610,7 +22610,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/tududi/backend/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -22641,7 +22641,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/tunarr/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -22711,7 +22711,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/twenty/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -22745,7 +22745,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/twingate/connector.conf",
+    "config_path": "",
     "os": "ubuntu"
   },
   {
@@ -22912,7 +22912,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/uhf-server/",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -22945,7 +22945,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/umami/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "umami"
@@ -23051,7 +23051,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/UmlautAdaptarr/appsettings.json",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -23084,7 +23084,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/unbound/unbound.conf.d/unbound.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -23561,7 +23561,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/vaultwarden/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -23596,7 +23596,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/vaultwarden/.env",
+    "config_path": "",
     "os": "alpine"
   },
   {
@@ -23631,7 +23631,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/etc/versitygw.d/gateway.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -23695,7 +23695,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/vikunja/config.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -23765,7 +23765,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/wallabag/app/config/parameters.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -23829,7 +23829,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/wanderer/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -23862,7 +23862,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -23893,7 +23893,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/wastebin-data/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -23955,7 +23955,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/data/config.yaml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -23988,7 +23988,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/wavelog/application/config/config.php",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -24060,7 +24060,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/wealthfolio/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "",
       "password": "See ~/wealthfolio.creds"
@@ -24095,7 +24095,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/web-check/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -24204,7 +24204,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/wikijs/config.yml",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "adminadmin"
@@ -24339,7 +24339,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/wikijs/config.yml",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -24373,7 +24373,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/wireguard/wg0.conf",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
@@ -24411,7 +24411,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/wireguard/wg0.conf",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
@@ -24448,7 +24448,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/wishlist/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -24481,7 +24481,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/wizarr/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -24512,7 +24512,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/var/www/html/wordpress/wp-config.php",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -24545,7 +24545,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/writefreely/config.ini",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -24619,7 +24619,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/yamtrack/src/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -24765,7 +24765,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/yt-dlp-webui/config.conf",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": ""
@@ -24800,7 +24800,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/yubal.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -24904,7 +24904,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/zabbix/zabbix_server.conf",
+    "config_path": "",
     "default_credentials": {
       "username": "Admin",
       "password": "zabbix"
@@ -24939,7 +24939,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/nginx/sites-available/zammad.conf",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -24972,7 +24972,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/zerobyte/.env",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -25003,7 +25003,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/key-networks/ztncui/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "admin",
       "password": "password"
@@ -25104,7 +25104,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/zipline/.env",
+    "config_path": "",
     "default_credentials": {
       "username": "administrator",
       "password": "password"
@@ -25142,7 +25142,7 @@
     "execute_in": [
       "lxc"
     ],
-    "config_path": "/opt/zitadel/config.yaml",
+    "config_path": "",
     "default_credentials": {
       "username": "zitadel-admin@zitadel.localhost",
       "password": "Password1!"
@@ -25208,7 +25208,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/etc/zot/config.json",
+    "config_path": "",
     "os": "debian"
   },
   {
@@ -25239,7 +25239,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/.env",
+    "config_path": "",
     "os": "debian"
   }
 ]
