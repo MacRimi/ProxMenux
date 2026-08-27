@@ -4433,7 +4433,12 @@
       "rootfsUsed": "Uso de rootfs: {percent}% ({size})",
       "runningCtsSafe": "{count} los CT en ejecución tienen un uso seguro de rootfs",
       "pveStorageSafe": "{count} Los objetivos de almacenamiento en bloque PVE tienen un uso seguro",
-      "remoteMountsHealthy": "{count} los montajes remotos están en buen estado"
+      "remoteMountsHealthy": "{count} los montajes remotos están en buen estado",
+      "startupStoragesChecking": "Comprobando el almacenamiento Proxmox después del inicio: {storages}",
+      "startupStorageChecking": "Comprobando el almacenamiento Proxmox después del inicio: {storage}",
+      "startupStorageNotFound": "Comprobando el almacenamiento Proxmox después del inicio: {storage} aún no está visible en el servidor",
+      "startupStorageUnavailable": "Comprobando el almacenamiento Proxmox después del inicio: {storage} aún no está listo",
+      "startupStorageStatus": "Comprobando el almacenamiento Proxmox después del inicio: {storage} (estado actual: {status})"
     },
     "time": {
       "justNow": "En este momento",

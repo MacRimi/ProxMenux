@@ -4434,7 +4434,12 @@
       "rootfsUsed": "rootfs-användning: {percent}% ({size})",
       "runningCtsSafe": "{count} som kör CT:er har säker rootfs-användning",
       "pveStorageSafe": "{count} PVE-blocklagringsmål har säker användning",
-      "remoteMountsHealthy": "{count} fjärrmonteringn är sunda"
+      "remoteMountsHealthy": "{count} fjärrmonteringn är sunda",
+      "startupStoragesChecking": "Kontrollerar Proxmox lagring efter start: {storages}",
+      "startupStorageChecking": "Kontrollerar Proxmox lagring efter start: {storage}",
+      "startupStorageNotFound": "Kontrollerar Proxmox lagring efter start: {storage} är ännu inte synlig på servern",
+      "startupStorageUnavailable": "Kontrollerar Proxmox lagring efter start: {storage} är inte redo ännu",
+      "startupStorageStatus": "Kontrollerar Proxmox lagring efter start: {storage} (nuvarande status: {status})"
     },
     "time": {
       "justNow": "just nu",
