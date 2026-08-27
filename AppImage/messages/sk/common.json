@@ -144,9 +144,9 @@
       "year": "1 rok"
     },
     "stats": {
-      "avg": "avg",
-      "max": "max",
-      "min": "min"
+      "avg": "priem.",
+      "max": "max.",
+      "min": "min."
     },
     "errors": {
       "serverUnavailableTitle": "Monitor server nie je dostupný",
@@ -3117,10 +3117,10 @@
     "gotIt": "Rozumiem",
     "dontShowAgain": "Túto verziu už nezobrazovať",
     "currentFeatures": {
-      "appDetection": "Smarter app detection in the App tab: Docker is correctly promoted as the parent workload during cold start (Portainer/SearXNG no longer briefly show up as native apps), unregistered suggestions live in the startup cache, and 'Find applications' runs a fresh catalog-backed scan on demand.",
-      "dockerUpdates": "The Updates tab now covers Docker end-to-end: Docker Engine and per-image update tracking follow the same 24-hour rolling cycle as OS packages, with a 'Check now' action for on-demand digest comparison — no more waiting for the daily collector.",
-      "appCatalog": "New application detection catalog with over 380 tracked workloads, built from the live community-scripts source with independent script evidence. Primary and fallback detectors (file, binary, dpkg, apk, Python, Docker exec, Docker label) cover both new and historical LXC layouts.",
-      "pushover": "Pushover joins Telegram, Gotify, Discord, Email and Apprise as a native notification channel — user/API key, device and sound selectors, priority 0 for regular messages, optional priority 1 for CRITICAL events. Suggested by @benginx (#308)."
+      "appDetection": "Inteligentnejšie rozpoznávanie aplikácií na karte Aplikácie: pri štarte sa Docker správne rozpozná ako nadradené prostredie (Portainer/SearXNG sa už na chvíľu nezobrazia ako samostatné aplikácie), neregistrované návrhy ostávajú vo vyrovnávacej pamäti po štarte a tlačidlo „Nájsť aplikácie“ spustí nový sken podľa katalógu.",
+      "dockerUpdates": "Karta Aktualizácie teraz naplno podporuje Docker: Docker Engine aj jednotlivé obrazy sa kontrolujú v rovnakom 24-hodinovom cykle ako balíky systému. Tlačidlo „Skontrolovať teraz“ overí aktuálne digesty hneď, bez čakania na dennú kontrolu.",
+      "appCatalog": "Nový katalóg na rozpoznávanie aplikácií sleduje viac ako 380 služieb a vychádza priamo z community-scripts, overených nezávislými údajmi zo skriptov. Hlavné aj záložné metódy rozpoznania (súbor, binárka, dpkg, apk, Python, Docker exec, Docker label) pokrývajú nové aj staršie rozloženia LXC.",
+      "pushover": "Pushover je teraz natívny kanál upozornení spolu s Telegramom, Gotify, Discordom, e-mailom a Apprise — nastavíte kľúč používateľa/API, zariadenie a zvuk; bežné správy majú prioritu 0, pri CRITICAL udalostiach môžete zapnúť prioritu 1. Navrhol @benginx (#308)."
     }
   },
   "network": {
@@ -3992,7 +3992,7 @@
       "runAttachedTitle": "Spustiť jednorazovú zálohu teraz (časovač PVE má vlastný plán)",
       "runNowTitle": "Spustiť túto úlohu teraz",
       "running": "Beží...",
-      "scheduledTitle": "Plánované",
+      "scheduledTitle": "Naplánované zálohy",
       "standaloneScheduledJob": "Samostatná plánovaná úloha",
       "starting": "štartuje...",
       "stepOf": "Krok {step} z {total}",
