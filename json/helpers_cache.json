@@ -44,10 +44,12 @@
     "type": "addon",
     "type_id": "88xtxy57q80v38v",
     "categories": [
-      "scriptcat00009"
+      "scriptcat00009",
+      "scriptcat00023"
     ],
     "category_names": [
-      "Monitoring & Analytics"
+      "Monitoring & Analytics",
+      "Finance & Budgeting"
     ],
     "notes": [
       "This is an addon, not a standalone container. Run it inside an existing LXC via the tools/addon script; it does not create its own container.",
@@ -111,7 +113,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox shell",
@@ -145,10 +147,10 @@
     "type": "addon",
     "type_id": "88xtxy57q80v38v",
     "categories": [
-      "scriptcat00001"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Remote Access & VPN"
     ],
     "notes": [
       "After the script finishes, reboot the LXC then run `netbird up` in the LXC console",
@@ -181,10 +183,10 @@
     "type": "addon",
     "type_id": "88xtxy57q80v38v",
     "categories": [
-      "scriptcat00001"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Remote Access & VPN"
     ],
     "notes": [
       "After the script finishes, reboot the LXC then run `tailscale up` in the LXC console",
@@ -388,10 +390,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00012",
+      "scriptcat000026"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Documents & Notes",
+      "Productivity & Workflows"
     ],
     "notes": [
       "Admin Login under http://$IP:3010/admin/, credentials can be found with cat /root/affine.creds",
@@ -492,7 +496,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Resource and network settings are adjustable post LXC creation."
@@ -558,7 +562,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [
       "Cloud-Init is enabled by default. Configure your SSH key and credentials in the Proxmox Cloud-Init tab before starting the VM.",
@@ -592,7 +596,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [],
     "warnings": [],
@@ -658,10 +662,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00018"
+      "scriptcat00022"
     ],
     "category_names": [
-      "MQTT & Messaging"
+      "Communication & Community"
     ],
     "notes": [
       "To see config: `cat /opt/cinny/config.json`"
@@ -722,10 +726,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00002"
+      "scriptcat00011"
     ],
     "category_names": [
-      "Operating Systems"
+      "Files & Downloads"
     ],
     "notes": [],
     "warnings": [
@@ -759,10 +763,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00010"
+      "scriptcat00000"
     ],
     "category_names": [
-      "Dashboards & Frontends"
+      "Miscellaneous"
     ],
     "notes": [],
     "warnings": [],
@@ -790,10 +794,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00009"
+      "scriptcat00020"
     ],
     "category_names": [
-      "Monitoring & Analytics"
+      "AI / Coding & Dev-Tools"
     ],
     "notes": [],
     "warnings": [
@@ -856,10 +860,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00013"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Media & Streaming"
     ],
     "notes": [
       "The first user to register becomes the admin.",
@@ -967,10 +971,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00012",
+      "scriptcat000026"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Documents & Notes",
+      "Productivity & Workflows"
     ],
     "notes": [
       "After installation, import /opt/anytype/data/client-config.yml into your Anytype apps.",
@@ -1106,10 +1112,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Remote Access & VPN"
     ],
     "notes": [],
     "warnings": [],
@@ -1174,10 +1180,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00010"
+      "scriptcat00021"
     ],
     "category_names": [
-      "Dashboards & Frontends"
+      "Webservers & Proxies"
     ],
     "notes": [
       "User can select which Adoptium JDK should be used for the selected Tomcat version (9, 10.1 or 11)."
@@ -1207,9 +1213,11 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
+      "scriptcat00018",
       "scriptcat00019"
     ],
     "category_names": [
+      "Messaging & Queues",
       "Automation & Scheduling"
     ],
     "notes": [
@@ -1348,7 +1356,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [
       "Arch Linux is a rolling-release distribution. Run 'pacman -Syu' regularly to keep the system up to date."
@@ -1381,7 +1389,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [],
     "warnings": [
@@ -1475,10 +1483,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00014"
     ],
     "category_names": [
-      "Documents & Notes"
+      "*Arr Suite"
     ],
     "notes": [
       "This script will prompt you to select the applications you want to install and configure the network settings."
@@ -1508,10 +1516,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00022"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Communication & Community"
     ],
     "notes": [],
     "warnings": [],
@@ -1784,10 +1792,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00023"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Finance & Budgeting"
+      "Productivity & Workflows"
     ],
     "notes": [
       "for private SSL setup visit: `https://github.com/babybuddy/babybuddy/blob/master/docs/setup/ssl.md`"
@@ -1854,10 +1862,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Productivity & Workflows"
     ],
     "notes": [],
     "warnings": [],
@@ -2020,10 +2028,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Productivity & Workflows"
     ],
     "notes": [
       "Register your User in Frontend: `http://LXC_IP:8080/register`",
@@ -2356,10 +2364,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00013"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Media & Streaming"
     ],
     "notes": [
       "Open http://YOUR_IP:3000 and finish the initial setup using SETUP_BOOTSTRAP_TOKEN. The token is shown at the end of /root/bookorbit.creds",
@@ -2429,10 +2437,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00002"
+      "scriptcat00007"
     ],
     "category_names": [
-      "Operating Systems"
+      "Backup & Recovery"
     ],
     "notes": [
       "Create your account through the web UI at http://<IP>:8081 on first visit.",
@@ -2500,10 +2508,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00006"
+      "scriptcat00006",
+      "scriptcat00021"
     ],
     "category_names": [
-      "Authentication & Security"
+      "Authentication & Security",
+      "Webservers & Proxies"
     ],
     "notes": [],
     "warnings": [
@@ -2709,7 +2719,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [],
     "warnings": [
@@ -2779,7 +2789,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [
       "CentOS Stream is the upstream development platform for RHEL."
@@ -2850,10 +2860,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00024"
+      "scriptcat00009"
     ],
     "category_names": [
-      "Gaming & Leisure"
+      "Monitoring & Analytics"
     ],
     "notes": [],
     "warnings": [],
@@ -2917,7 +2927,7 @@
       "scriptcat00022"
     ],
     "category_names": [
-      "Bots & ChatOps"
+      "Communication & Community"
     ],
     "notes": [
       "Create the first account with `cd /opt/chatto && ./chatto operator user create --login admin` (the operator API is enabled by default), or register via the web UI at http://IP:4000.",
@@ -2954,7 +2964,7 @@
       "scriptcat00022"
     ],
     "category_names": [
-      "Bots & ChatOps"
+      "Communication & Community"
     ],
     "notes": [
       "Create the first account at http://IP:3000 after the services have started.",
@@ -3056,10 +3066,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00011"
+      "scriptcat00013"
     ],
     "category_names": [
-      "Files & Downloads"
+      "Media & Streaming"
     ],
     "notes": [
       "Open http://<IP> in your browser and complete the web installer to create the admin account and initialize the database.",
@@ -3094,7 +3104,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox shell"
@@ -3127,7 +3137,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox shell"
@@ -3297,10 +3307,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00004"
+      "scriptcat00021",
+      "scriptcat000027"
     ],
     "category_names": [
-      "Network & Firewall"
+      "Webservers & Proxies",
+      "Remote Access & VPN"
     ],
     "notes": [
       "After install, run: cloudflared tunnel login && cloudflared tunnel create <NAME>",
@@ -3331,10 +3343,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00011"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Files & Downloads"
     ],
     "notes": [],
     "warnings": [],
@@ -3362,10 +3374,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00010"
+      "scriptcat00001"
     ],
     "category_names": [
-      "Dashboards & Frontends"
+      "Host Management"
     ],
     "notes": [
       "Set a root password if using autologin. This will be the Cockpit password. To set root password run `sudo passwd root`"
@@ -3397,12 +3409,10 @@
     "type": "addon",
     "type_id": "88xtxy57q80v38v",
     "categories": [
-      "scriptcat00001",
       "scriptcat00020",
       "scriptcat00011"
     ],
     "category_names": [
-      "Proxmox & Virtualization",
       "AI / Coding & Dev-Tools",
       "Files & Downloads"
     ],
@@ -3436,10 +3446,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00012",
+      "scriptcat000026"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Documents & Notes",
+      "Productivity & Workflows"
     ],
     "notes": [
       "Access the web interface at https://YOUR_IP:4000. When adding a server in the desktop or mobile app, enter https://YOUR_IP:4000 as the server URL.",
@@ -3508,10 +3520,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00013"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Media & Streaming"
     ],
     "notes": [],
     "warnings": [],
@@ -3576,10 +3588,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00009"
+      "scriptcat00012"
     ],
     "category_names": [
-      "Monitoring & Analytics"
+      "Documents & Notes"
     ],
     "notes": [
       "Complete setup via the web interface at http://<container-ip>:3000. Create and secure the admin account immediately."
@@ -3786,11 +3798,9 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00002",
       "scriptcat00003"
     ],
     "category_names": [
-      "Operating Systems",
       "Containers & Docker"
     ],
     "notes": [
@@ -3863,7 +3873,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Downloads and installs the update script locally to `/usr/local/bin/update-lxcs.sh`. Cron runs the local copy — no remote code execution at runtime.",
@@ -3936,7 +3946,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [],
     "warnings": [],
@@ -4034,10 +4044,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00012",
+      "scriptcat000026"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Documents & Notes",
+      "Productivity & Workflows"
     ],
     "notes": [
       "After installation finishes, `systemctl status cryptpad.service` to get token URL which you can use to create admin account"
@@ -4202,10 +4214,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00009"
+      "scriptcat00000"
     ],
     "category_names": [
-      "Monitoring & Analytics"
+      "Miscellaneous"
     ],
     "notes": [],
     "warnings": [
@@ -4309,7 +4321,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [],
     "warnings": [],
@@ -4344,7 +4356,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [
       "VM has no root password set. To login type in user `root` and just press enter",
@@ -4379,7 +4391,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [
       "VM has no root password set. To login type in user `root` and just press enter",
@@ -4477,10 +4489,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00006"
+      "scriptcat00006",
+      "scriptcat000027"
     ],
     "category_names": [
-      "Authentication & Security"
+      "Authentication & Security",
+      "Remote Access & VPN"
     ],
     "notes": [
       "VPN traffic is handled by a third component, the Defguard Gateway, installed on the machine that terminates the tunnels. It connects back to the gRPC port 50055 on this container - see the upstream documentation.",
@@ -4594,7 +4608,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox shell",
@@ -4630,7 +4644,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [
       "Devuan uses SysVinit by default instead of systemd."
@@ -4736,10 +4750,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00022"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Communication & Community"
     ],
     "notes": [
       "Admin credentials are saved in `/root/discourse.creds` inside the container.",
@@ -4779,7 +4793,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox shell"
@@ -4906,11 +4920,9 @@
     "type": "vm",
     "type_id": "lte524abgx960bd",
     "categories": [
-      "scriptcat00002",
       "scriptcat00003"
     ],
     "category_names": [
-      "Operating Systems",
       "Containers & Docker"
     ],
     "notes": [
@@ -5054,10 +5066,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00012",
+      "scriptcat00025"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Documents & Notes",
+      "Business & ERP"
     ],
     "notes": [
       "On first access, create the initial admin account via the web UI."
@@ -5225,10 +5239,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00019"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Automation & Scheduling"
+      "Productivity & Workflows"
     ],
     "notes": [],
     "warnings": [],
@@ -5289,9 +5303,11 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
+      "scriptcat00008",
       "scriptcat00020"
     ],
     "category_names": [
+      "Databases",
       "AI / Coding & Dev-Tools"
     ],
     "notes": [],
@@ -5320,10 +5336,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00012",
+      "scriptcat000026"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Documents & Notes",
+      "Productivity & Workflows"
     ],
     "notes": [],
     "warnings": [],
@@ -5536,7 +5554,7 @@
       "scriptcat00022"
     ],
     "category_names": [
-      "Bots & ChatOps"
+      "Communication & Community"
     ],
     "notes": [
       "Type `cat ~/matrix.creds` to see admin username/password.",
@@ -5604,7 +5622,7 @@
       "scriptcat00018"
     ],
     "category_names": [
-      "MQTT & Messaging"
+      "Messaging & Queues"
     ],
     "notes": [
       "Setup-Steps: Access Control ➡ Authentication ➡ Create ➡ Next ➡ Next ➡ Create ➡ Users ➡ Add ➡ Username / Password (to authenicate with MQTT) ➡ Save. You're now ready to enjoy a high-performance MQTT Broker."
@@ -5675,10 +5693,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00011"
+      "scriptcat00013"
     ],
     "category_names": [
-      "Files & Downloads"
+      "Media & Streaming"
     ],
     "notes": [
       "First-Start: Run `ente-setup` — it guides you through account creation, verification, and admin configuration.",
@@ -5780,12 +5798,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00016",
-      "scriptcat00020"
+      "scriptcat00016"
     ],
     "category_names": [
-      "IoT & Smart Home",
-      "AI / Coding & Dev-Tools"
+      "IoT & Smart Home"
     ],
     "notes": [
       "This installs and serves the static ESPConnect web build from the latest GitHub release."
@@ -5848,10 +5864,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00012",
+      "scriptcat000026"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Documents & Notes",
+      "Productivity & Workflows"
     ],
     "notes": [
       "The default install uses an embedded sqlite database at /var/lib/etherpad/etherpad.db — ACID, zero-config, suitable for single-instance homelab use. To use postgres or mysql instead, edit /opt/etherpad-lite/settings.json and switch 'dbType' + 'dbSettings' (Etherpad's ueberdb abstraction supports both).",
@@ -5952,10 +5970,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00012",
+      "scriptcat000026"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Documents & Notes",
+      "Productivity & Workflows"
     ],
     "notes": [],
     "warnings": [],
@@ -5986,7 +6006,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [],
     "warnings": [],
@@ -6048,7 +6068,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [],
     "warnings": [],
@@ -6148,11 +6168,9 @@
     "type": "addon",
     "type_id": "88xtxy57q80v38v",
     "categories": [
-      "scriptcat00001",
       "scriptcat00011"
     ],
     "category_names": [
-      "Proxmox & Virtualization",
       "Files & Downloads"
     ],
     "notes": [],
@@ -6188,11 +6206,9 @@
     "type": "addon",
     "type_id": "88xtxy57q80v38v",
     "categories": [
-      "scriptcat00001",
       "scriptcat00011"
     ],
     "category_names": [
-      "Proxmox & Virtualization",
       "Files & Downloads"
     ],
     "notes": [],
@@ -6228,11 +6244,9 @@
     "type": "addon",
     "type_id": "88xtxy57q80v38v",
     "categories": [
-      "scriptcat00001",
       "scriptcat00011"
     ],
     "category_names": [
-      "Proxmox & Virtualization",
       "Files & Downloads"
     ],
     "notes": [],
@@ -6266,11 +6280,9 @@
     "type": "addon",
     "type_id": "88xtxy57q80v38v",
     "categories": [
-      "scriptcat00001",
       "scriptcat00011"
     ],
     "category_names": [
-      "Proxmox & Virtualization",
       "Files & Downloads"
     ],
     "notes": [],
@@ -6639,12 +6651,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00019",
-      "scriptcat00000"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Automation & Scheduling",
-      "Miscellaneous"
+      "Productivity & Workflows"
     ],
     "notes": [
       "Creds: cat ~/fluid-calendar.creds"
@@ -6833,10 +6843,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00022"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Communication & Community"
     ],
     "notes": [
       "This script uses the official FreePBX install script. Check it here: https://github.com/FreePBX/sng_freepbx_debian_install"
@@ -6866,10 +6876,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00013"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Media & Streaming"
     ],
     "notes": [
       "Database credentials: `cat ~/freshrss.creds`",
@@ -6936,7 +6946,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox shell"
@@ -6968,10 +6978,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00010"
+      "scriptcat00012"
     ],
     "category_names": [
-      "Dashboards & Frontends"
+      "Documents & Notes"
     ],
     "notes": [],
     "warnings": [],
@@ -6999,10 +7009,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00008"
+      "scriptcat00011"
     ],
     "category_names": [
-      "Databases"
+      "Files & Downloads"
     ],
     "notes": [
       "The Garage configuration file is located at `/etc/garage.toml`. You can edit RPC and API bindings, tokens, and data directories there.",
@@ -7035,10 +7045,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00008"
+      "scriptcat00011"
     ],
     "category_names": [
-      "Databases"
+      "Files & Downloads"
     ],
     "notes": [
       "The Garage configuration file is located at `/etc/garage.toml`. You can edit RPC and API bindings, tokens, and data directories there.",
@@ -7136,7 +7146,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [],
     "warnings": [
@@ -7203,10 +7213,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00025"
+      "scriptcat00021",
+      "scriptcat00022"
     ],
     "category_names": [
-      "Business & ERP"
+      "Webservers & Proxies",
+      "Communication & Community"
     ],
     "notes": [
       "To run Ghost-CLI commands, first set a password for the ghost-user by running `sudo passwd ghost-user`. Then, switch to the ghost-user with `sudo -su ghost-user`."
@@ -7512,10 +7524,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00006"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Authentication & Security"
     ],
     "notes": [],
     "warnings": [],
@@ -7739,10 +7751,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00019"
+      "scriptcat00018"
     ],
     "category_names": [
-      "Automation & Scheduling"
+      "Messaging & Queues"
     ],
     "notes": [],
     "warnings": [],
@@ -7844,10 +7856,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00024"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Gaming & Leisure"
     ],
     "notes": [
       "On first access, create the owner account via the built-in onboarding wizard."
@@ -7879,9 +7891,11 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
+      "scriptcat00012",
       "scriptcat00021"
     ],
     "category_names": [
+      "Documents & Notes",
       "Webservers & Proxies"
     ],
     "notes": [
@@ -7951,10 +7965,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Productivity & Workflows"
     ],
     "notes": [],
     "warnings": [],
@@ -8048,10 +8062,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00009"
+      "scriptcat00004"
     ],
     "category_names": [
-      "Monitoring & Analytics"
+      "Network & Firewall"
     ],
     "notes": [
       "Installation package is pulled from GrandStream website. Installation may take a while."
@@ -8194,10 +8208,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00004"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Network & Firewall"
+      "Remote Access & VPN"
     ],
     "notes": [
       "Configuration settings: `/etc/headscale/config.yaml`",
@@ -8405,7 +8419,7 @@
       "scriptcat00018"
     ],
     "category_names": [
-      "MQTT & Messaging"
+      "Messaging & Queues"
     ],
     "notes": [
       "To check if HiveMQ is listening to the default port for MQTT `lsof -i :1883`"
@@ -8504,10 +8518,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00024"
+      "scriptcat00025"
     ],
     "category_names": [
-      "Gaming & Leisure"
+      "Business & ERP"
     ],
     "notes": [],
     "warnings": [],
@@ -8535,9 +8549,11 @@
     "type": "addon",
     "type_id": "88xtxy57q80v38v",
     "categories": [
+      "scriptcat00001",
       "scriptcat00020"
     ],
     "category_names": [
+      "Host Management",
       "AI / Coding & Dev-Tools"
     ],
     "notes": [
@@ -8748,7 +8764,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox shell",
@@ -8878,10 +8894,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00019"
+      "scriptcat00018"
     ],
     "category_names": [
-      "Automation & Scheduling"
+      "Messaging & Queues"
     ],
     "notes": [
       "Requires a running Gotify instance. Configure the Gotify server URL and client token in the iGotify web interface after setup."
@@ -9085,10 +9101,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00024"
+      "scriptcat00022"
     ],
     "category_names": [
-      "Gaming & Leisure"
+      "Communication & Community"
     ],
     "notes": [],
     "warnings": [],
@@ -9219,9 +9235,11 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
+      "scriptcat00023",
       "scriptcat00025"
     ],
     "category_names": [
+      "Finance & Budgeting",
       "Business & ERP"
     ],
     "notes": [
@@ -9255,10 +9273,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00023"
+      "scriptcat00023",
+      "scriptcat00025"
     ],
     "category_names": [
-      "Finance & Budgeting"
+      "Finance & Budgeting",
+      "Business & ERP"
     ],
     "notes": [
       "Complete the initial setup wizard via the web interface on first access."
@@ -9461,7 +9481,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [],
     "warnings": [
@@ -9491,10 +9511,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00011"
+      "scriptcat00014"
     ],
     "category_names": [
-      "Files & Downloads"
+      "*Arr Suite"
     ],
     "notes": [],
     "warnings": [],
@@ -9701,10 +9721,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00022"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Communication & Community"
     ],
     "notes": [
       "Uses a self-signed certificate by default. Your browser will show a security warning.",
@@ -9876,10 +9896,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00025"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Business & ERP"
+      "Productivity & Workflows"
     ],
     "notes": [
       "Update NEXT_PUBLIC_BASE_URL in /opt/kan/.env if accessing from a different hostname."
@@ -9911,10 +9931,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00025"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Business & ERP"
+      "Productivity & Workflows"
     ],
     "notes": [
       "The first registered account becomes the instance admin.",
@@ -10046,10 +10066,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00009"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Monitoring & Analytics"
+      "Remote Access & VPN"
     ],
     "notes": [
       "Show credentials: `cat ~/kasm.creds`"
@@ -10118,7 +10138,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox shell"
@@ -10151,7 +10171,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox shell"
@@ -10256,10 +10276,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00025"
+      "scriptcat00025",
+      "scriptcat000026"
     ],
     "category_names": [
-      "Business & ERP"
+      "Business & ERP",
+      "Productivity & Workflows"
     ],
     "notes": [],
     "warnings": [],
@@ -10291,10 +10313,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00013"
+      "scriptcat00024"
     ],
     "category_names": [
-      "Media & Streaming"
+      "Gaming & Leisure"
     ],
     "notes": [],
     "warnings": [],
@@ -10322,10 +10344,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00012"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Documents & Notes"
     ],
     "notes": [
       "Place your .zim files in /data inside the container (local files work out of the box). Optional: you can bind-mount a host directory to /data if you want external storage."
@@ -10628,10 +10650,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00012"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Documents & Notes"
     ],
     "notes": [
       "API is available at `http://<LXC_IP>:8081/v2`."
@@ -10730,10 +10752,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Productivity & Workflows"
     ],
     "notes": [],
     "warnings": [],
@@ -10896,10 +10918,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00020"
     ],
     "category_names": [
-      "Miscellaneous"
+      "AI / Coding & Dev-Tools"
     ],
     "notes": [
       "During the installation, application will download language models used for translation. Depending on how fast your internet/host is, this can take 5-10 minutes.",
@@ -11068,10 +11090,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00009"
+      "scriptcat00010"
     ],
     "category_names": [
-      "Monitoring & Analytics"
+      "Dashboards & Frontends"
     ],
     "notes": [
       "LinkStack can be updated via the user interface.",
@@ -11133,10 +11155,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00022"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Communication & Community"
     ],
     "notes": [],
     "warnings": [],
@@ -11589,7 +11611,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox shell"
@@ -11717,10 +11739,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00024"
+      "scriptcat00016"
     ],
     "category_names": [
-      "Gaming & Leisure"
+      "IoT & Smart Home"
     ],
     "notes": [
       "Configuration Path: `/opt/magicmirror/config/config.js`"
@@ -11750,10 +11772,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00007"
+      "scriptcat00007",
+      "scriptcat00022"
     ],
     "category_names": [
-      "Backup & Recovery"
+      "Backup & Recovery",
+      "Communication & Community"
     ],
     "notes": [],
     "warnings": [],
@@ -11855,10 +11879,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Productivity & Workflows"
     ],
     "notes": [],
     "warnings": [],
@@ -11985,10 +12009,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00022"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Communication & Community"
     ],
     "notes": [
       "Installation compiles Ruby 4.0.5 and ffmpeg from source — this takes 15–30 minutes.",
@@ -12203,10 +12227,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00025"
+      "scriptcat00022"
     ],
     "category_names": [
-      "Business & ERP"
+      "Communication & Community"
     ],
     "notes": [],
     "warnings": [
@@ -12236,10 +12260,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00024"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Gaming & Leisure"
     ],
     "notes": [],
     "warnings": [],
@@ -12433,10 +12457,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00004"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Network & Firewall"
+      "Remote Access & VPN"
     ],
     "notes": [],
     "warnings": [],
@@ -12495,10 +12519,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00011"
+      "scriptcat00013"
     ],
     "category_names": [
-      "Files & Downloads"
+      "Media & Streaming"
     ],
     "notes": [],
     "warnings": [],
@@ -12529,7 +12553,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox shell",
@@ -12564,7 +12588,7 @@
       "scriptcat00004"
     ],
     "category_names": [
-      "Operating Systems",
+      "Operating Systems & Appliances",
       "Network & Firewall"
     ],
     "notes": [],
@@ -12700,10 +12724,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00008"
+      "scriptcat00011"
     ],
     "category_names": [
-      "Databases"
+      "Files & Downloads"
     ],
     "notes": [
       "Application credentials: `cat ~/minio.creds`"
@@ -12805,10 +12829,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00024"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Gaming & Leisure"
+      "Productivity & Workflows"
     ],
     "notes": [],
     "warnings": [],
@@ -12843,7 +12867,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox shell",
@@ -12919,7 +12943,7 @@
       "scriptcat00018"
     ],
     "category_names": [
-      "MQTT & Messaging"
+      "Messaging & Queues"
     ],
     "notes": [
       "You can find post-install info here: `https://github.com/community-scripts/ProxmoxVE/discussions/782`"
@@ -12952,7 +12976,7 @@
       "scriptcat00022"
     ],
     "category_names": [
-      "Bots & ChatOps"
+      "Communication & Community"
     ],
     "notes": [
       "Allow both TCP and UDP traffic on port 64738 through any firewall or router.",
@@ -13051,10 +13075,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00004"
+      "scriptcat00009"
     ],
     "category_names": [
-      "Network & Firewall"
+      "Monitoring & Analytics"
     ],
     "notes": [],
     "warnings": [],
@@ -13082,10 +13106,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00016"
+      "scriptcat00019"
     ],
     "category_names": [
-      "IoT & Smart Home"
+      "Automation & Scheduling"
     ],
     "notes": [
       "You may need to configure the `WEBHOOK_URL` in the config file when using a domain."
@@ -13331,10 +13355,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00004"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Network & Firewall"
+      "Remote Access & VPN"
     ],
     "notes": [
       "The NetBird client (agent) allows a peer to join a pre-existing NetBird deployment. If a NetBird deployment is not yet available, there are both managed and self-hosted options available.",
@@ -13436,10 +13460,12 @@
     "type": "addon",
     "type_id": "88xtxy57q80v38v",
     "categories": [
-      "scriptcat00001"
+      "scriptcat00001",
+      "scriptcat00009"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management",
+      "Monitoring & Analytics"
     ],
     "notes": [
       "Execute within the Proxmox shell"
@@ -13509,10 +13535,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00004"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Network & Firewall"
+      "Remote Access & VPN"
     ],
     "notes": [
       "Requires a running Pangolin server to connect to.",
@@ -13575,10 +13601,10 @@
     "type": "vm",
     "type_id": "lte524abgx960bd",
     "categories": [
-      "scriptcat00002"
+      "scriptcat00011"
     ],
     "category_names": [
-      "Operating Systems"
+      "Files & Downloads"
     ],
     "notes": [],
     "warnings": [
@@ -13612,10 +13638,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00002"
+      "scriptcat00011"
     ],
     "category_names": [
-      "Operating Systems"
+      "Files & Downloads"
     ],
     "notes": [],
     "warnings": [
@@ -13645,10 +13671,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00010"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Dashboards & Frontends"
+      "Remote Access & VPN"
     ],
     "notes": [],
     "warnings": [],
@@ -13859,7 +13885,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox shell"
@@ -13889,10 +13915,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00009",
+      "scriptcat00016"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Monitoring & Analytics",
+      "IoT & Smart Home"
     ],
     "notes": [
       "Nightscout requires configuring `my.env` with your Mongo connection string. API_SECRET has been generated and saved to `~/nightscout.creds`.",
@@ -13926,9 +13954,11 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
+      "scriptcat00008",
       "scriptcat00025"
     ],
     "category_names": [
+      "Databases",
       "Business & ERP"
     ],
     "notes": [],
@@ -13957,10 +13987,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00016"
+      "scriptcat00016",
+      "scriptcat00019"
     ],
     "category_names": [
-      "IoT & Smart Home"
+      "IoT & Smart Home",
+      "Automation & Scheduling"
     ],
     "notes": [
       "To install themes, type `update` in the LXC console. (debian/ubuntu only)"
@@ -13990,10 +14022,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00016"
+      "scriptcat00016",
+      "scriptcat00019"
     ],
     "category_names": [
-      "IoT & Smart Home"
+      "IoT & Smart Home",
+      "Automation & Scheduling"
     ],
     "notes": [
       "To install themes, type `update` in the LXC console. (debian/ubuntu only)"
@@ -14448,10 +14482,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00024"
+      "scriptcat00016"
     ],
     "category_names": [
-      "Gaming & Leisure"
+      "IoT & Smart Home"
     ],
     "notes": [],
     "warnings": [],
@@ -14516,10 +14550,12 @@
     "type": "addon",
     "type_id": "88xtxy57q80v38v",
     "categories": [
-      "scriptcat00010"
+      "scriptcat00001",
+      "scriptcat00019"
     ],
     "category_names": [
-      "Dashboards & Frontends"
+      "Host Management",
+      "Automation & Scheduling"
     ],
     "notes": [
       "Configuration Path: `/etc/OliveTin/config.yaml`"
@@ -14616,10 +14652,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00013"
+      "scriptcat00013",
+      "scriptcat00014"
     ],
     "category_names": [
-      "Media & Streaming"
+      "Media & Streaming",
+      "*Arr Suite"
     ],
     "notes": [],
     "warnings": [],
@@ -14683,10 +14721,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00020"
     ],
     "category_names": [
-      "Miscellaneous"
+      "AI / Coding & Dev-Tools"
     ],
     "notes": [
       "Files are processed locally in the user's browser and are not uploaded to the OmniTools LXC.",
@@ -14720,7 +14758,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [],
     "warnings": [
@@ -15008,7 +15046,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [],
     "warnings": [],
@@ -15040,9 +15078,11 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
+      "scriptcat00012",
       "scriptcat00020"
     ],
     "category_names": [
+      "Documents & Notes",
       "AI / Coding & Dev-Tools"
     ],
     "notes": [],
@@ -15135,10 +15175,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00025"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Business & ERP"
+      "Productivity & Workflows"
     ],
     "notes": [],
     "warnings": [
@@ -15175,7 +15215,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [],
     "warnings": [],
@@ -15284,7 +15324,7 @@
     ],
     "category_names": [
       "Network & Firewall",
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [
       "If you use VLANs (default LAN is set to VLAN 999), make sure the Proxmox Linux Bridge is configured as VLAN-aware, otherwise the VM may fail to start."
@@ -15314,10 +15354,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00004"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Network & Firewall"
+      "Remote Access & VPN"
     ],
     "notes": [
       "The Openziti Controller installation will prompt for configuration settings during installation."
@@ -15347,10 +15387,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00004"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Network & Firewall"
+      "Remote Access & VPN"
     ],
     "notes": [
       "The Openziti tunnel is installed in host mode; please see documentation for more information",
@@ -15386,7 +15426,7 @@
     ],
     "category_names": [
       "Network & Firewall",
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [],
     "warnings": [
@@ -15558,10 +15598,10 @@
     "type": "vm",
     "type_id": "lte524abgx960bd",
     "categories": [
-      "scriptcat00002"
+      "scriptcat00011"
     ],
     "category_names": [
-      "Operating Systems"
+      "Files & Downloads"
     ],
     "notes": [],
     "warnings": [
@@ -15731,10 +15771,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00021"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Webservers & Proxies"
+      "Remote Access & VPN"
     ],
     "notes": [
       "Type `journalctl -u pangolin | grep -oP 'Token:\\s*\\K\\w+'` into LXC console to get admin token which you will use to create admin account.",
@@ -15768,10 +15808,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00020"
+      "scriptcat000026"
     ],
     "category_names": [
-      "AI / Coding & Dev-Tools"
+      "Productivity & Workflows"
     ],
     "notes": [
       "Credentials and the initial CEO bootstrap invite are stored in `~/paperclip.creds`. Open the invite link to complete admin setup; generate a new one with `pnpm paperclipai auth bootstrap-ceo` from `/opt/paperclip` after sourcing `.env`.",
@@ -15803,9 +15843,11 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
+      "scriptcat00012",
       "scriptcat00020"
     ],
     "category_names": [
+      "Documents & Notes",
       "AI / Coding & Dev-Tools"
     ],
     "notes": [],
@@ -15836,9 +15878,11 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
+      "scriptcat00012",
       "scriptcat00020"
     ],
     "category_names": [
+      "Documents & Notes",
       "AI / Coding & Dev-Tools"
     ],
     "notes": [
@@ -16077,10 +16121,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00021"
+      "scriptcat00025"
     ],
     "category_names": [
-      "Webservers & Proxies"
+      "Business & ERP"
     ],
     "notes": [
       "After installation, navigate to the directory with `cd /opt/paymenter` and run `php artisan app:init`. An interactive setup will prompt you to enter your company name and application URL."
@@ -16117,7 +16161,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox Backup Server shell on a bare metal system. The script will exit if it detects that it is running in a virtualized environment.",
@@ -16151,7 +16195,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute this script directly on the PBS 3.x host as root.",
@@ -16185,10 +16229,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00004"
+      "scriptcat00009"
     ],
     "category_names": [
-      "Network & Firewall"
+      "Monitoring & Analytics"
     ],
     "notes": [],
     "warnings": [],
@@ -16260,7 +16304,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "The web UI is served over HTTPS on port 5000 with a self-signed certificate on first boot - accept the browser certificate warning. The first login creates the admin account.",
@@ -16434,10 +16478,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00004"
+      "scriptcat00009"
     ],
     "category_names": [
-      "Network & Firewall"
+      "Monitoring & Analytics"
     ],
     "notes": [],
     "warnings": [],
@@ -16635,10 +16679,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00022"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Communication & Community"
     ],
     "notes": [
       "Credentials are stored in /opt/pixelfed/.env",
@@ -16672,10 +16716,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00025"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Business & ERP"
+      "Productivity & Workflows"
     ],
     "notes": [
       "First user to sign up becomes the instance admin. Initial build takes 10-15 minutes.",
@@ -16709,10 +16753,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Productivity & Workflows"
     ],
     "notes": [
       "Type `cat ~/planka.creds` inside LXC to see admin user and database credentials."
@@ -17022,7 +17066,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Proxmox Backup Server ONLY",
@@ -17057,7 +17101,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox Datacenter Manager shell. The script aborts if the proxmox-datacenter-manager package is not installed.",
@@ -17094,7 +17138,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox Mail Gateway Shell",
@@ -17130,7 +17174,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox shell",
@@ -17229,10 +17273,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00019"
+      "scriptcat00019",
+      "scriptcat00022"
     ],
     "category_names": [
-      "Automation & Scheduling"
+      "Automation & Scheduling",
+      "Communication & Community"
     ],
     "notes": [
       "NEXT_PUBLIC_* variables are baked at build time. If you change the IP/URL or add social provider keys, rebuild with: postiz-rebuild"
@@ -17523,11 +17569,9 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00001",
       "scriptcat00009"
     ],
     "category_names": [
-      "Proxmox & Virtualization",
       "Monitoring & Analytics"
     ],
     "notes": [
@@ -17594,7 +17638,7 @@
       "scriptcat00009"
     ],
     "category_names": [
-      "Proxmox & Virtualization",
+      "Host Management",
       "Monitoring & Analytics"
     ],
     "notes": [
@@ -17625,10 +17669,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00018"
+      "scriptcat00022"
     ],
     "category_names": [
-      "MQTT & Messaging"
+      "Communication & Community"
     ],
     "notes": [
       "After install, run protonmailbridge-configure inside the container for first-time setup.",
@@ -17694,7 +17738,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [],
     "warnings": [
@@ -17732,7 +17776,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Set a root password if using autologin. This will be the Proxmox-Datacenter-Manager password. `sudo passwd root`"
@@ -17765,7 +17809,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [],
     "warnings": [
@@ -17802,7 +17846,7 @@
       "scriptcat00018"
     ],
     "category_names": [
-      "MQTT & Messaging"
+      "Messaging & Queues"
     ],
     "notes": [
       "After installation, the MQTT endpoint must be configured. The configuration file is located within the LXC container at: `/opt/.config/ps5-mqtt/config.json`"
@@ -17932,10 +17976,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Productivity & Workflows"
     ],
     "notes": [
       "Access via http://&lt;IP&gt;.nip.io:4100 (not the raw IP). nip.io is required for Puter's subdomain routing.",
@@ -17971,7 +18015,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute this script inside the Proxmox shell as root.",
@@ -18007,7 +18051,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [],
     "warnings": [],
@@ -18039,7 +18083,7 @@
       "scriptcat00009"
     ],
     "category_names": [
-      "Proxmox & Virtualization",
+      "Host Management",
       "Monitoring & Analytics"
     ],
     "notes": [
@@ -18315,7 +18359,7 @@
       "scriptcat00018"
     ],
     "category_names": [
-      "MQTT & Messaging"
+      "Messaging & Queues"
     ],
     "notes": [],
     "warnings": [],
@@ -18411,10 +18455,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Productivity & Workflows"
     ],
     "notes": [
       "To view the user credentials : `cat radicale.creds`",
@@ -18544,10 +18588,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Productivity & Workflows"
     ],
     "notes": [
       "Currently the Service create an 500 HTTP issue, you should check this Solution until its fixed in Upstream. https://github.com/community-scripts/ProxmoxVE/pull/12705#issuecomment-4022106365."
@@ -18878,10 +18922,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00013"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Media & Streaming"
     ],
     "notes": [],
     "warnings": [],
@@ -18912,7 +18956,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [
       "This is an addon script intended to be used on top of an existing Docker container.",
@@ -18947,10 +18991,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00021"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Webservers & Proxies"
+      "Remote Access & VPN"
     ],
     "notes": [
       "Check our configuration guide for help: `https://github.com/community-scripts/ProxmoxVE/discussions/2388`",
@@ -18983,10 +19027,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00021"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Webservers & Proxies"
+      "Remote Access & VPN"
     ],
     "notes": [
       "Check our configuration guide for help: `https://github.com/community-scripts/ProxmoxVE/discussions/2388`",
@@ -19263,7 +19307,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox shell"
@@ -19293,9 +19337,11 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
+      "scriptcat00006",
       "scriptcat00009"
     ],
     "category_names": [
+      "Authentication & Security",
       "Monitoring & Analytics"
     ],
     "notes": [
@@ -19402,10 +19448,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00004"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Network & Firewall"
     ],
     "notes": [],
     "warnings": [],
@@ -19537,10 +19583,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00013"
+      "scriptcat00013",
+      "scriptcat00014"
     ],
     "category_names": [
-      "Media & Streaming"
+      "Media & Streaming",
+      "*Arr Suite"
     ],
     "notes": [],
     "warnings": [],
@@ -19745,10 +19793,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00021"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Webservers & Proxies"
     ],
     "notes": [
       "Configure your short domain by editing DEFAULT_DOMAIN in /opt/shlink/.env and restarting the service.",
@@ -19882,10 +19930,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00006"
+      "scriptcat00006",
+      "scriptcat00022"
     ],
     "category_names": [
-      "Authentication & Security"
+      "Authentication & Security",
+      "Communication & Community"
     ],
     "notes": [
       "DKIM keys are generated in /opt/simplelogin/dkim/. The ready-to-use DNS TXT record is saved to /opt/simplelogin/dkim/dkim.dns.txt (public key also at dkim.public.key). Add it as a TXT record at dkim._domainkey.yourdomain.com, replacing EMAIL_DOMAIN with your domain.",
@@ -20125,10 +20175,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00023"
+      "scriptcat00023",
+      "scriptcat00025"
     ],
     "category_names": [
-      "Finance & Budgeting"
+      "Finance & Budgeting",
+      "Business & ERP"
     ],
     "notes": [
       "App startup could be slow. Once the app has started, complete the setup wizard via the web interface on first access.",
@@ -20159,10 +20211,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00025"
+      "scriptcat00025",
+      "scriptcat000026"
     ],
     "category_names": [
-      "Business & ERP"
+      "Business & ERP",
+      "Productivity & Workflows"
     ],
     "notes": [
       "Create your first account by registering via the web interface."
@@ -20192,12 +20246,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00020",
-      "scriptcat00019"
+      "scriptcat00020"
     ],
     "category_names": [
-      "AI / Coding & Dev-Tools",
-      "Automation & Scheduling"
+      "AI / Coding & Dev-Tools"
     ],
     "notes": [],
     "warnings": [],
@@ -20530,10 +20582,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00024"
+      "scriptcat00016"
     ],
     "category_names": [
-      "Gaming & Leisure"
+      "IoT & Smart Home"
     ],
     "notes": [],
     "warnings": [],
@@ -20668,10 +20720,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00004"
+      "scriptcat00021"
     ],
     "category_names": [
-      "Network & Firewall"
+      "Webservers & Proxies"
     ],
     "notes": [
       "Create a proxy user after installation with `htpasswd /etc/squid/passwords <username>`."
@@ -20701,10 +20753,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00022"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Communication & Community"
     ],
     "notes": [
       "Configuration and mail data live in /opt/stalwart_data (etc, data, logs), outside the app directory, so they survive updates. Include this directory in your backups.",
@@ -20853,7 +20905,7 @@
       "scriptcat00022"
     ],
     "category_names": [
-      "Bots & ChatOps"
+      "Communication & Community"
     ],
     "notes": [
       "The first account registered becomes the instance administrator. Registration is open by default; set invite_only = true in /Revolt.toml to restrict it.",
@@ -20890,7 +20942,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Visit for full guide with all vars our docs: `https://community-scripts.org/docs/tools/pve/storage-share-helper`"
@@ -20990,10 +21042,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00021"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Webservers & Proxies"
     ],
     "notes": [
       "First-time setup requires creating an admin account at http://IP:1337/admin",
@@ -21026,10 +21078,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00011"
+      "scriptcat00013"
     ],
     "category_names": [
-      "Files & Downloads"
+      "Media & Streaming"
     ],
     "notes": [
       "This app requires a Twitch cliend_ID and client_secret, set it in the config file. Look in the application documentation on how to obtain it."
@@ -21130,10 +21182,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Productivity & Workflows"
     ],
     "notes": [
       "Task data is stored locally in your browser (IndexedDB). Use the app's built-in export/backup or configure sync to avoid data loss when clearing browser data.",
@@ -21310,10 +21362,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00011"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Files & Downloads"
     ],
     "notes": [],
     "warnings": [],
@@ -21341,10 +21393,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00011"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Files & Downloads"
     ],
     "notes": [],
     "warnings": [],
@@ -21566,10 +21618,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00024"
+      "scriptcat00022"
     ],
     "category_names": [
-      "Gaming & Leisure"
+      "Communication & Community"
     ],
     "notes": [
       "Use `journalctl -u teamspeak-server.service` inside Debian LXC console to check for admin credentials!",
@@ -21600,10 +21652,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00024"
+      "scriptcat00022"
     ],
     "category_names": [
-      "Gaming & Leisure"
+      "Communication & Community"
     ],
     "notes": [
       "Use `journalctl -u teamspeak-server.service` inside Debian LXC console to check for admin credentials!",
@@ -21665,10 +21717,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00013"
+      "scriptcat00016"
     ],
     "category_names": [
-      "Media & Streaming"
+      "IoT & Smart Home"
     ],
     "notes": [],
     "warnings": [],
@@ -21729,10 +21781,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00006"
+      "scriptcat00006",
+      "scriptcat000027"
     ],
     "category_names": [
-      "Authentication & Security"
+      "Authentication & Security",
+      "Remote Access & VPN"
     ],
     "notes": [
       "After installation finishes, do `cat ~/teleportadmin.txt` inside LXC to get admin creation URL."
@@ -21762,10 +21816,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00006"
+      "scriptcat00006",
+      "scriptcat000027"
     ],
     "category_names": [
-      "Authentication & Security"
+      "Authentication & Security",
+      "Remote Access & VPN"
     ],
     "notes": [
       "Guacamole (guacd) is running at 127.0.0.1:4822. If RDP/VNC connections fail, verify the Guacamole URL in Termix Admin Settings is set to 127.0.0.1:4822."
@@ -21795,10 +21851,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00009"
+      "scriptcat00009",
+      "scriptcat00016"
     ],
     "category_names": [
-      "Monitoring & Analytics"
+      "Monitoring & Analytics",
+      "IoT & Smart Home"
     ],
     "notes": [
       "A local Mosquitto broker is installed and TeslaMate publishes to it on 127.0.0.1. Point your home automation at port 1883, or set DISABLE_MQTT=true in /opt/teslamate.env if you do not need it.",
@@ -21840,7 +21898,7 @@
       "scriptcat00022"
     ],
     "category_names": [
-      "Bots & ChatOps"
+      "Communication & Community"
     ],
     "notes": [
       "The Lounge is running in private mode. Use `runuser -u thelounge -- thelounge add usernamehere` to create users."
@@ -22108,10 +22166,12 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00009",
+      "scriptcat00016"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Monitoring & Analytics",
+      "IoT & Smart Home"
     ],
     "notes": [],
     "warnings": [],
@@ -22345,10 +22405,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00011"
+      "scriptcat00013"
     ],
     "category_names": [
-      "Files & Downloads"
+      "Media & Streaming"
     ],
     "notes": [
       "Create your first account via the web UI — it becomes the admin account."
@@ -22480,7 +22540,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [
       "Once the script finishes, proceed with the OS installation via the console. For more details, please refer to this discussion: `https://github.com/community-scripts/ProxmoxVE/discussions/11344`"
@@ -22589,10 +22649,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat000026"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Productivity & Workflows"
     ],
     "notes": [
       "Create users like this: `cd /opt/tududi` => `npm run user:create <email> <password>`",
@@ -22657,7 +22717,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [
       "The script creates a `*.creds` file in the Proxmox root directory with the password of the newly created TurnKey LXC Appliance.",
@@ -22724,10 +22784,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00004"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Network & Firewall"
+      "Remote Access & VPN"
     ],
     "notes": [
       "You can get your Twingate access or refresh tokens from the Twingate Admin Console. `https://auth.twingate.com/signup-v2`",
@@ -22761,7 +22821,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [],
     "warnings": [],
@@ -22796,7 +22856,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [
       "This VM uses Cloud-init, for more information see cloud-init discussion: `https://github.com/community-scripts/ProxmoxVE/discussions/272`"
@@ -22829,7 +22889,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [
       "This VM uses Cloud-init, for more information see cloud-init discussion: `https://github.com/community-scripts/ProxmoxVE/discussions/272`"
@@ -22862,7 +22922,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [
       "This VM uses Cloud-init, for more information see cloud-init discussion: `https://github.com/community-scripts/ProxmoxVE/discussions/272`"
@@ -22962,10 +23022,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00025"
+      "scriptcat00021"
     ],
     "category_names": [
-      "Business & ERP"
+      "Webservers & Proxies"
     ],
     "notes": [
       "Cridentials are saved in /root",
@@ -22999,7 +23059,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [
       "This VM use as base a Debian 12 OS with a custom kernel and some additional packages to run Umbrel OS. It is not a standard Debian VM, but it is optimized for Umbrel OS."
@@ -23128,10 +23188,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00013"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Media & Streaming"
     ],
     "notes": [],
     "warnings": [],
@@ -23159,10 +23219,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00011"
+      "scriptcat00014"
     ],
     "category_names": [
-      "Files & Downloads"
+      "*Arr Suite"
     ],
     "notes": [
       "Configure at least one Sonarr, Radarr, Lidarr, Readarr or folder watch section in /etc/unpackerr/unpackerr.conf before Unpackerr can process archives."
@@ -23236,7 +23296,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Only containers with `community-script` or `proxmox-helper-scripts` tags are listed for update.",
@@ -23272,7 +23332,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox shell"
@@ -23307,7 +23367,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within the Proxmox shell"
@@ -24001,9 +24061,11 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
+      "scriptcat00006",
       "scriptcat00009"
     ],
     "category_names": [
+      "Authentication & Security",
       "Monitoring & Analytics"
     ],
     "notes": [
@@ -24111,7 +24173,7 @@
       "scriptcat00001"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Host Management"
     ],
     "notes": [
       "Execute within an existing LXC Console"
@@ -24147,10 +24209,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00012"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Documents & Notes"
     ],
     "notes": [
       "Setup is fully automated. Login credentials are stored in '/root/webtrees.creds' inside the container."
@@ -24352,10 +24414,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00004"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Network & Firewall"
+      "Remote Access & VPN"
     ],
     "notes": [
       "Wireguard and WGDashboard are not the same. More info: `https://wgdashboard.dev/`",
@@ -24390,10 +24452,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00004"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Network & Firewall"
+      "Remote Access & VPN"
     ],
     "notes": [
       "Wireguard and WGDashboard are not the same. More info: `https://wgdashboard.dev/`",
@@ -24525,10 +24587,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00012"
+      "scriptcat00022"
     ],
     "category_names": [
-      "Documents & Notes"
+      "Communication & Community"
     ],
     "notes": [
       "After installation execute `cd /opt/writefreely && writefreely user create --admin <username>:<password>` to create your user."
@@ -24705,10 +24767,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00000"
+      "scriptcat00021"
     ],
     "category_names": [
-      "Miscellaneous"
+      "Webservers & Proxies"
     ],
     "notes": [
       "After installation, visit /admin/install.php once to initialize the database and complete setup.",
@@ -24743,10 +24805,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00011"
+      "scriptcat00013"
     ],
     "category_names": [
-      "Files & Downloads"
+      "Media & Streaming"
     ],
     "notes": [
       "Show password: `cat ~/yt-dlp-webui.creds`",
@@ -24816,7 +24878,7 @@
       "scriptcat00002"
     ],
     "category_names": [
-      "Operating Systems"
+      "Operating Systems & Appliances"
     ],
     "notes": [],
     "warnings": [
@@ -24985,10 +25047,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00004"
+      "scriptcat000027"
     ],
     "category_names": [
-      "Network & Firewall"
+      "Remote Access & VPN"
     ],
     "notes": [],
     "warnings": [],
