@@ -3118,15 +3118,10 @@
     "gotIt": "Habe es!",
     "dontShowAgain": "Für diese Version nicht mehr anzeigen",
     "currentFeatures": {
-      "hostUpdate": "Host-Update mit einem Klick über den Health Monitor. Die neue Schaltfläche „Jetzt aktualisieren“ in System Updates führt den Proxmox-Update-Flow in einem Dashboard-Terminal aus, ohne den Browser zu verlassen.",
-      "mobileInstall": "In-App-Installationsaufforderung für Mobilgeräte. Erstbesucher von Android und iOS Safari sehen jetzt einfache Schritte zum Hinzufügen des Monitors als PWA zu ihrem Startbildschirm.",
-      "i18n": "Der Monitor spricht jetzt 8 Sprachen: Englisch, Spanisch, Deutsch, Französisch, Italienisch, Portugiesisch, Schwedisch und Slowakisch.Vielen Dank an @vaso73 für den Bau des i18n-Gerüsts, das dies ermöglicht hat.",
-      "pageSpeed": "Schnellere Seitenladevorgänge und reibungslosere Navigation im Dashboard.Die Übersicht wird sofort geöffnet und auf der Seite „VMs und LXCs“ blinkt nie wieder „Laden…“ zwischen den Gastmodalitäten.",
-      "appTab": "Neuer App-Tab im VM- und LXC-Modal – insbesondere für LXCs.Registrieren Sie die in einem Container installierten Apps, erfassen Sie ihre Weblinks und erhalten Sie Benachrichtigungen, wenn eine neue Upstream-Version ausgeliefert wird.",
-      "updatesTab": "Überarbeitete Registerkarte „Updates“ für LXCs: Wenden Sie Betriebssystempakete und Updates für registrierte Apps über eine einzige Schaltfläche an und planen Sie einen wiederkehrenden automatischen Update-Job, der das Betriebssystem des Containers und seine verfolgte App bei jeder Ausführung überprüft.",
-      "backupNoTimeout": "Bei langen Backup-Jobs tritt keine Zeitüberschreitung mehr auf.Vom Monitor gestartete VM- und LXC-Backups werden jetzt im Hintergrund ausgeführt, bis sie auf natürliche Weise abgeschlossen werden. Daher wird ein 30-minütiges PBS-Backup genauso durchgeführt wie ein 10-sekündiges lokales Backup.",
-      "vmDiskUsage": "VMs, auf denen der QEMU-Gastagent (qemu-guest-agent) ausgeführt wird, melden jetzt tatsächlich genutzte Daten/Gesamtdatenträgerzahlen auf dem Dashboard, anstelle der „0 GB“, die PVE für vom Gast verwaltete Dateisysteme zurückgibt.",
-      "pwaInstall": "Erstbesucher von Android und iOS Safari sehen jetzt eine In-App-Installationsaufforderung mit klaren Schritten zum Hinzufügen des Monitors als PWA zu ihrem Startbildschirm."
+      "appDetection": "Smarter app detection in the App tab: Docker is correctly promoted as the parent workload during cold start (Portainer/SearXNG no longer briefly show up as native apps), unregistered suggestions live in the startup cache, and 'Find applications' runs a fresh catalog-backed scan on demand.",
+      "dockerUpdates": "The Updates tab now covers Docker end-to-end: Docker Engine and per-image update tracking follow the same 24-hour rolling cycle as OS packages, with a 'Check now' action for on-demand digest comparison — no more waiting for the daily collector.",
+      "appCatalog": "New application detection catalog with over 380 tracked workloads, built from the live community-scripts source with independent script evidence. Primary and fallback detectors (file, binary, dpkg, apk, Python, Docker exec, Docker label) cover both new and historical LXC layouts.",
+      "pushover": "Pushover joins Telegram, Gotify, Discord, Email and Apprise as a native notification channel — user/API key, device and sound selectors, priority 0 for regular messages, optional priority 1 for CRITICAL events. Suggested by @benginx (#308)."
     }
   },
   "network": {

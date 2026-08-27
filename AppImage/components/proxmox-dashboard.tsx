@@ -52,6 +52,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu"
 import { useT } from "../lib/i18n/provider"
+import { APP_VERSION } from "../lib/version"
 
 interface SystemStatus {
   status: "healthy" | "warning" | "critical"
@@ -854,7 +855,7 @@ export function ProxmoxDashboard() {
         </Tabs>
 
         <footer className="mt-8 md:mt-12 pt-4 md:pt-6 border-t border-border text-center text-xs md:text-sm text-muted-foreground">
-          <p className="font-medium mb-2">ProxMenux Monitor v1.2.4.1-beta</p>
+          <p className="font-medium mb-2">ProxMenux Monitor v{APP_VERSION}</p>
           <p>
             <a
               href="https://ko-fi.com/macrimi"

@@ -3118,15 +3118,10 @@
     "gotIt": "Jag förstår!",
     "dontShowAgain": "Visa inte igen för den här versionen",
     "currentFeatures": {
-      "hostUpdate": "Värduppdatering med ett klick från Health Monitor. Den nya knappen Uppdatera nu i Systemuppdateringar kör Proxmox-uppdateringsflödet i en instrumentpanelsterminal utan att lämna webbläsaren.",
-      "mobileInstall": "Uppmaning om installation i appen för mobil. Förstagångsbesökare på Android och iOS Safari ser nu enkla steg för att lägga till monitorn på sin startskärm som en PWA.",
-      "i18n": "Monitorn talar nu 8 språk: engelska, spanska, tyska, franska, italienska, portugisiska, svenska och slovakiska.Stort tack till @vaso73 för att bygga i18n-ställningen som gjorde detta möjligt.",
-      "pageSpeed": "Snabbare sidladdningar och smidigare navigering över instrumentpanelen.Översikten öppnas omedelbart och sidan för virtuella datorer och LXC:er blinkar aldrig \"Laddar...\" mellan gästmodalerna igen.",
-      "appTab": "Ny appflik i VM- och LXC-modalerna — speciellt för LXC.Registrera apparna installerade i en behållare, fånga deras webblänkar och få meddelanden när en ny uppströmsversion skickas.",
-      "updatesTab": "Fliken Omarbetade uppdateringar för LXC:er: applicera OS-paket och uppdateringar av registrerade appar från en enda knapp och schemalägg ett återkommande automatiskt uppdateringsjobb som kontrollerar containerns OS och dess spårade app vid varje körning.",
-      "backupNoTimeout": "Långa backupjobb tar inte längre timeout.VM- och LXC-säkerhetskopior som startas från Monitor körs nu i bakgrunden tills de naturligt slutar, så en 30-minuters PBS-säkerhetskopiering slutför samma sak som en 10-sekunders lokal.",
-      "vmDiskUsage": "virtuella datorer som kör QEMU Guest Agent (qemu-guest-agent) rapporterar nu verkligt använda / totala disksiffror på instrumentpanelen, istället för \"0 GB\" som PVE returnerar för gästhanterade filsystem.",
-      "pwaInstall": "Förstagångsbesökare på Android och iOS Safari ser nu en installationsuppmaning i appen med tydliga steg för att lägga till monitorn på sin startskärm som en PWA."
+      "appDetection": "Smarter app detection in the App tab: Docker is correctly promoted as the parent workload during cold start (Portainer/SearXNG no longer briefly show up as native apps), unregistered suggestions live in the startup cache, and 'Find applications' runs a fresh catalog-backed scan on demand.",
+      "dockerUpdates": "The Updates tab now covers Docker end-to-end: Docker Engine and per-image update tracking follow the same 24-hour rolling cycle as OS packages, with a 'Check now' action for on-demand digest comparison — no more waiting for the daily collector.",
+      "appCatalog": "New application detection catalog with over 380 tracked workloads, built from the live community-scripts source with independent script evidence. Primary and fallback detectors (file, binary, dpkg, apk, Python, Docker exec, Docker label) cover both new and historical LXC layouts.",
+      "pushover": "Pushover joins Telegram, Gotify, Discord, Email and Apprise as a native notification channel — user/API key, device and sound selectors, priority 0 for regular messages, optional priority 1 for CRITICAL events. Suggested by @benginx (#308)."
     }
   },
   "network": {

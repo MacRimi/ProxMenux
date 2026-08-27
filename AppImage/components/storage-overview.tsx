@@ -12,6 +12,7 @@ import { formatStorage as sharedFormatStorage } from "../lib/utils"
 import { DiskTemperatureDetailModal } from "./disk-temperature-detail-modal"
 import { DiskTemperatureCard } from "./disk-temperature-card"
 import { getDiskType as resolveDiskType } from "../lib/disk-type"
+import { APP_VERSION } from "../lib/version"
 import { useT } from "@/lib/i18n/provider"
 import {
   useDiskTempThresholds,
@@ -3764,7 +3765,7 @@ ${observationsHtml}
   <!-- Footer -->
 <div class="rpt-footer">
   <div>${tSmart("footer.generatedBy")}</div>
-  <div>ProxMenux Monitor v1.2.4.1-beta</div>
+  <div>ProxMenux Monitor v${APP_VERSION}</div>
 </div>
 
 </body>

@@ -3118,15 +3118,10 @@
     "gotIt": "J'ai compris!",
     "dontShowAgain": "Ne plus afficher pour cette version",
     "currentFeatures": {
-      "hostUpdate": "Mise à jour de l'hôte en un clic depuis Health Monitor. Le nouveau bouton Mettre à jour maintenant dans les mises à jour système exécute le flux de mise à jour Proxmox dans un terminal de tableau de bord, sans quitter le navigateur.",
-      "mobileInstall": "Invite d'installation dans l'application pour mobile. Les nouveaux visiteurs sur Android et iOS Safari voient désormais des étapes simples pour ajouter le moniteur à leur écran d'accueil en tant que PWA.",
-      "i18n": "Le moniteur parle désormais 8 langues : anglais, espagnol, allemand, français, italien, portugais, suédois et slovaque.Un grand merci à @vaso73 pour la construction de l'échafaudage i18n qui a rendu cela possible.",
-      "pageSpeed": "chargements de pages plus rapides et navigation plus fluide dans le tableau de bord.La présentation s'ouvre instantanément et la page VM et LXC ne clignote plus jamais « Chargement… » entre les modaux invités.",
-      "appTab": "nouvel onglet Application dans le modal VM et LXC, en particulier pour les LXC.Enregistrez les applications installées dans un conteneur, capturez leurs liens Web et recevez des notifications lorsqu'une nouvelle version en amont est livrée.",
-      "updatesTab": "onglet Mises à jour retravaillées pour les LXC : appliquez les packages de système d'exploitation et les mises à jour des applications enregistrées à partir d'un seul bouton, et planifiez une tâche de mise à jour automatique récurrente qui vérifie le système d'exploitation du conteneur et son application suivie à chaque exécution.",
-      "backupNoTimeout": "Les tâches de sauvegarde longues n’expirent plus.Les sauvegardes VM et LXC lancées à partir du moniteur s'exécutent désormais en arrière-plan jusqu'à ce qu'elles se terminent naturellement, de sorte qu'une sauvegarde PBS de 30 minutes se termine de la même manière qu'une sauvegarde locale de 10 secondes.",
-      "vmDiskUsage": "Les machines virtuelles exécutant l'agent invité QEMU (qemu-guest-agent) signalent désormais les chiffres réels utilisés/total du disque sur le tableau de bord, au lieu du « 0 Go » renvoyé par PVE pour les systèmes de fichiers gérés par les invités.",
-      "pwaInstall": "les nouveaux visiteurs sur Android et iOS Safari voient désormais une invite d'installation dans l'application avec des étapes claires pour ajouter le moniteur à leur écran d'accueil en tant que PWA."
+      "appDetection": "Smarter app detection in the App tab: Docker is correctly promoted as the parent workload during cold start (Portainer/SearXNG no longer briefly show up as native apps), unregistered suggestions live in the startup cache, and 'Find applications' runs a fresh catalog-backed scan on demand.",
+      "dockerUpdates": "The Updates tab now covers Docker end-to-end: Docker Engine and per-image update tracking follow the same 24-hour rolling cycle as OS packages, with a 'Check now' action for on-demand digest comparison — no more waiting for the daily collector.",
+      "appCatalog": "New application detection catalog with over 380 tracked workloads, built from the live community-scripts source with independent script evidence. Primary and fallback detectors (file, binary, dpkg, apk, Python, Docker exec, Docker label) cover both new and historical LXC layouts.",
+      "pushover": "Pushover joins Telegram, Gotify, Discord, Email and Apprise as a native notification channel — user/API key, device and sound selectors, priority 0 for regular messages, optional priority 1 for CRITICAL events. Suggested by @benginx (#308)."
     }
   },
   "network": {

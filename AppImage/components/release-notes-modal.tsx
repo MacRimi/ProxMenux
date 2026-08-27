@@ -6,8 +6,7 @@ import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup, Smartphone, Languages } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 import { useT } from "../lib/i18n/provider"
-
-const APP_VERSION = "1.2.4.1-beta" // Sync with AppImage/package.json
+import { APP_VERSION } from "../lib/version"
 
 interface ReleaseNote {
   date: string
@@ -19,6 +18,22 @@ interface ReleaseNote {
 }
 
 export const CHANGELOG: Record<string, ReleaseNote> = {
+  "1.2.4.1-beta": {
+    date: "August 17, 2026",
+    changes: {
+      added: [
+        "The Monitor now speaks 8 languages: English, Spanish, German, French, Italian, Portuguese, Swedish and Slovak. Huge thanks to @vaso73 for building the i18n scaffolding that made this possible.",
+        "New App tab inside the VM & LXC modal — especially for LXCs. Register the apps installed in a container, capture their weblinks, and get notifications when a new upstream version ships.",
+        "Reworked Updates tab for LXCs: apply OS packages and registered-app updates from a single button, and schedule a recurring auto-update job that checks the container's OS and its tracked app on every run.",
+        "First-time visitors on Android and iOS Safari now see an in-app install prompt with clear steps for adding the Monitor to their home screen as a PWA.",
+      ],
+      changed: [
+        "Faster page loads and smoother navigation across the dashboard. Overview opens instantly and the VMs & LXCs page never flashes 'Loading…' between guest modals again.",
+        "Long backup jobs no longer time out. VM and LXC backups launched from the Monitor now run in the background until they naturally finish, so a 30-minute PBS backup completes the same as a 10-second local one.",
+        "VMs running the QEMU Guest Agent (qemu-guest-agent) now report real used / total disk figures on the dashboard, instead of the '0 GB' that PVE returns for guest-managed filesystems.",
+      ],
+    },
+  },
   "1.2.3": {
     date: "July 15, 2026",
     changes: {
@@ -238,39 +253,24 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 // that haven't been curated by hand.
 const CURRENT_VERSION_FEATURES = [
   {
-    icon: <Languages className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.i18n",
-    text: "The Monitor now speaks 8 languages: English, Spanish, German, French, Italian, Portuguese, Swedish and Slovak. Huge thanks to @vaso73 for building the i18n scaffolding that made this possible.",
-  },
-  {
-    icon: <Zap className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.pageSpeed",
-    text: "Faster page loads and smoother navigation across the dashboard. Overview opens instantly and the VMs & LXCs page never flashes 'Loading…' between guest modals again.",
-  },
-  {
     icon: <Sparkles className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.appTab",
-    text: "New App tab inside the VM & LXC modal — especially for LXCs. Register the apps installed in a container, capture their weblinks, and get notifications when a new upstream version ships.",
+    key: "releaseNotes.currentFeatures.appDetection",
+    text: "Smarter app detection in the App tab: Docker is correctly promoted as the parent workload during cold start (Portainer/SearXNG no longer briefly show up as native apps), unregistered suggestions live in the startup cache, and 'Find applications' runs a fresh catalog-backed scan on demand.",
   },
   {
     icon: <RefreshCw className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.updatesTab",
-    text: "Reworked Updates tab for LXCs: apply OS packages and registered-app updates from a single button, and schedule a recurring auto-update job that checks the container's OS and its tracked app on every run.",
+    key: "releaseNotes.currentFeatures.dockerUpdates",
+    text: "The Updates tab now covers Docker end-to-end: Docker Engine and per-image update tracking follow the same 24-hour rolling cycle as OS packages, with a 'Check now' action for on-demand digest comparison — no more waiting for the daily collector.",
   },
   {
-    icon: <DatabaseBackup className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.backupNoTimeout",
-    text: "Long backup jobs no longer time out. VM and LXC backups launched from the Monitor now run in the background until they naturally finish, so a 30-minute PBS backup completes the same as a 10-second local one.",
+    icon: <Zap className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.appCatalog",
+    text: "New application detection catalog with over 380 tracked workloads, built from the live community-scripts source with independent script evidence. Primary and fallback detectors (file, binary, dpkg, apk, Python, Docker exec, Docker label) cover both new and historical LXC layouts.",
   },
   {
-    icon: <HardDrive className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.vmDiskUsage",
-    text: "VMs running the QEMU Guest Agent (qemu-guest-agent) now report real used / total disk figures on the dashboard, instead of the '0 GB' that PVE returns for guest-managed filesystems.",
-  },
-  {
-    icon: <Smartphone className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.pwaInstall",
-    text: "First-time visitors on Android and iOS Safari now see an in-app install prompt with clear steps for adding the Monitor to their home screen as a PWA.",
+    icon: <Bell className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.pushover",
+    text: "Pushover joins Telegram, Gotify, Discord, Email and Apprise as a native notification channel — user/API key, device and sound selectors, priority 0 for regular messages, optional priority 1 for CRITICAL events. Suggested by @benginx (#308).",
   },
 ]
 
