@@ -77,6 +77,7 @@ from smartctl_resolver import (  # noqa: E402
     smartctl_probe_types,
     smartctl_type_args,
 )
+from temperature_sensor_resolver import get_storage_temperatures  # noqa: E402
 from flask_script_runner import script_runner
 import threading
 from proxmox_storage_monitor import classify_storage_state, proxmox_storage_monitor
@@ -6907,6 +6908,30 @@ def identify_temperature_sensor(sensor_name, adapter, chip_name=None):
     return sensor_name
 
 
+def classify_temperature_sensor(sensor_name, adapter, chip_name=None, identified_name=None):
+    sensor_lower = sensor_name.lower()
+    adapter_lower = adapter.lower() if adapter else ""
+    chip_lower = chip_name.lower() if chip_name else ""
+    identified_lower = identified_name.lower() if identified_name else ""
+    combined = f"{sensor_lower} {adapter_lower} {chip_lower} {identified_lower}"
+
+    if "nvme" in chip_lower or "nvme" in sensor_lower or "composite" in sensor_lower or "nvme" in identified_lower:
+        return "nvme"
+    if "drivetemp" in chip_lower or "sata" in sensor_lower or "ata" in sensor_lower or "sata" in identified_lower:
+        return "storage"
+    if identified_lower.startswith("cpu") or any(
+        cpu_label in sensor_lower for cpu_label in ["cpu", "package", "tctl", "tccd", "core"]
+    ):
+        return "cpu"
+    if identified_lower.startswith("gpu") or any(
+        gpu_driver in combined for gpu_driver in ["nouveau", "amdgpu", "radeon", "i915"]
+    ):
+        return "gpu"
+    if identified_lower.startswith("pci") or ("pci" in adapter_lower and "temp" in sensor_lower):
+        return "pci"
+    return "other"
+
+
 def identify_fan(sensor_name, adapter, chip_name=None):
     """Identify what a fan sensor corresponds to, using hardware_monitor for GPU detection"""
     sensor_lower = sensor_name.lower()
@@ -7071,6 +7096,13 @@ def get_temperature_info():
     """Get detailed temperature information from sensors command"""
     temperatures = []
     power_meter = None
+    covered_storage_kinds = set()
+
+    try:
+        storage_temperatures, covered_storage_kinds = get_storage_temperatures()
+        temperatures.extend(storage_temperatures)
+    except Exception:
+        covered_storage_kinds = set()
     
     try:
         sensors_output = get_cached_sensors_output()
@@ -7119,6 +7151,13 @@ def get_temperature_info():
                     # Parse temperature sensors
                     elif '°C' in value_part or 'C' in value_part:
                         try:
+                            chip_lower = current_chip.lower() if current_chip else ""
+                            if (
+                                ("nvme" in chip_lower and "nvme" in covered_storage_kinds)
+                                or ("drivetemp" in chip_lower and "drivetemp" in covered_storage_kinds)
+                            ):
+                                continue
+
                             # Extract temperature value
                             temp_match = re.search(r'([+-]?[\d.]+)\s*°?C', value_part)
                             if temp_match:
@@ -7138,6 +7177,12 @@ def get_temperature_info():
                                         continue                                
                                 
                                 identified_name = identify_temperature_sensor(sensor_name, current_adapter, current_chip)
+                                sensor_type = classify_temperature_sensor(
+                                    sensor_name,
+                                    current_adapter,
+                                    current_chip,
+                                    identified_name,
+                                )
                                 
                                 temperatures.append({
                                     'name': identified_name,
@@ -7145,7 +7190,8 @@ def get_temperature_info():
                                     'current': temp_value,
                                     'high': high_value,
                                     'critical': crit_value,
-                                    'adapter': current_adapter
+                                    'adapter': current_adapter,
+                                    'type': sensor_type
                                 })
                         except ValueError:
                             pass

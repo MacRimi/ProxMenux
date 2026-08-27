@@ -135,6 +135,7 @@ chmod +x "$APP_DIR/usr/bin/update_docker_engine.py" 2>/dev/null || true
 cp "$APPIMAGE_ROOT/../json/app_tracking_hints.json" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  app_tracking_hints.json not found"
 cp "$SCRIPT_DIR/flask_terminal_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_terminal_routes.py not found"
 cp "$SCRIPT_DIR/hardware_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  hardware_monitor.py not found"
+cp "$SCRIPT_DIR/temperature_sensor_resolver.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  temperature_sensor_resolver.py not found"
 cp "$SCRIPT_DIR/proxmox_storage_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  proxmox_storage_monitor.py not found"
 cp "$SCRIPT_DIR/flask_script_runner.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_script_runner.py not found"
 cp "$SCRIPT_DIR/security_manager.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  security_manager.py not found"

@@ -33,11 +33,13 @@
     "memoryTitle": "Memory Modules",
     "memoryBody": "Una fila por slot poblado desde <code>dmidecode</code>: etiqueta del slot, tamaño del módulo, tipo (DDR4 / DDR5 / variantes ECC), velocidad (configurada y nominal), fabricante, part number y serial. Los slots vacíos se listan atenuados para que veas de un vistazo el margen de ampliación.",
     "thermalTitle": "Thermal Monitoring",
-    "thermalIntro": "Cinco sub-bloques, cada uno alimentado por <code>lm-sensors</code> + scrapers específicos por herramienta. Un bloque se oculta cuando no hay sensores reportados en esa categoría.",
+    "thermalIntro": "Siete sub-bloques alimentados por <code>lm-sensors</code>, <code>sysfs</code> y scrapers específicos por herramienta. Los sensores hwmon de almacenamiento se correlacionan con el dispositivo de bloques físico, por lo que cada unidad detectada incluye su modelo y la ruta <code>/dev/...</code>. Un bloque permanece oculto cuando no hay sensores en esa categoría.",
     "thermalItems": [
       "<strong>CPU</strong> — temperaturas de package y por core.",
       "<strong>GPU</strong> — sensores de GPU discreta vía <code>nvidia-smi</code> / <code>amdgpu_top</code> / iGPU Intel. Incluye hot-spot y memory-junction cuando el driver los expone.",
-      "<strong>NVME</strong> — temperaturas composite + por sensor de <code>nvme</code>.",
+      "<strong>NVME</strong> — temperatura composite del controlador asociada a su namespace NVMe exacto.",
+      "<strong>HDD</strong> — lecturas de <code>drivetemp</code> para dispositivos de bloques rotacionales.",
+      "<strong>SSD</strong> — lecturas de <code>drivetemp</code> para dispositivos de bloques SATA/SAS no rotacionales.",
       "<strong>PCI</strong> — sensores que aparecen como dispositivos conectados a PCI (HBAs, tarjetas de red con sensores internos).",
       "<strong>OTHER</strong> — chipset, VRM, sensores ambiente que no encajan en otro sitio."
     ]
@@ -182,7 +184,7 @@
       {
         "section": "Valores de sensores en vivo",
         "endpoint": "/api/hardware/live",
-        "source": "<code>sensors</code> (lm-sensors), temperaturas de package, RPM de ventiladores. Refrescado en cada petición."
+        "source": "<code>sensors</code> (lm-sensors) junto con <code>/sys/class/hwmon</code> y <code>/sys/block</code> para identificar los dispositivos de almacenamiento. Las temperaturas permanecen en vivo; solo la topología hwmon-dispositivo se guarda en caché durante 60 segundos."
       },
       {
         "section": "Historial de temperatura de CPU",

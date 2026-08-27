@@ -15,6 +15,7 @@ import {
   type GPU,
   type PCIDevice,
   type StorageDevice,
+  type Temperature,
   type CoralTPU,
   type UsbDevice,
   fetcher as swrFetcher,
@@ -241,11 +242,13 @@ const translateDeviceType = (type: string | null | undefined, t: TFunction): str
   return text
 }
 
-const groupAndSortTemperatures = (temperatures: any[]) => {
+const groupAndSortTemperatures = (temperatures: Temperature[]) => {
   const groups = {
     CPU: [] as any[],
     GPU: [] as any[],
     NVME: [] as any[],
+    HDD: [] as any[],
+    SSD: [] as any[],
     PCI: [] as any[],
     OTHER: [] as any[],
   }
@@ -254,7 +257,21 @@ const groupAndSortTemperatures = (temperatures: any[]) => {
     const nameLower = temp.name.toLowerCase()
     const adapterLower = temp.adapter?.toLowerCase() || ""
 
-    if (nameLower.includes("cpu") || nameLower.includes("core") || nameLower.includes("package")) {
+    if (temp.type === "cpu") {
+      groups.CPU.push(temp)
+    } else if (temp.type === "gpu") {
+      groups.GPU.push(temp)
+    } else if (temp.type === "nvme") {
+      groups.NVME.push(temp)
+    } else if (temp.type === "hdd") {
+      groups.HDD.push(temp)
+    } else if (temp.type === "ssd") {
+      groups.SSD.push(temp)
+    } else if (temp.type === "pci") {
+      groups.PCI.push(temp)
+    } else if (temp.type) {
+      groups.OTHER.push(temp)
+    } else if (nameLower.includes("cpu") || nameLower.includes("core") || nameLower.includes("package")) {
       groups.CPU.push(temp)
     } else if (nameLower.includes("gpu") || adapterLower.includes("gpu")) {
       groups.GPU.push(temp)
@@ -268,6 +285,58 @@ const groupAndSortTemperatures = (temperatures: any[]) => {
   })
 
   return groups
+}
+
+const StorageTemperatureGroup = ({ title, temperatures }: { title: string; temperatures: Temperature[] }) => {
+  if (temperatures.length === 0) return null
+
+  return (
+    <div className={temperatures.length > 1 ? "md:col-span-2" : ""}>
+      <div className="mb-3 flex items-center gap-2">
+        <HardDrive className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <Badge variant="outline" className="text-xs">
+          {temperatures.length}
+        </Badge>
+      </div>
+      <div className={`grid gap-4 ${temperatures.length > 1 ? "md:grid-cols-2" : ""}`}>
+        {temperatures.map((temp, index) => {
+          const percentage = temp.critical && temp.critical > 0 ? (temp.current / temp.critical) * 100 : temp.current
+          const isHot = temp.current > (temp.high || 80)
+          const isCritical = temp.current > (temp.critical || 90)
+          const devices = temp.devices?.length ? temp.devices : temp.device ? [temp.device] : []
+
+          return (
+            <div key={`${temp.device || temp.name}-${index}`} className="space-y-2">
+              <div className="flex items-center justify-between gap-4">
+                <span className="truncate text-sm font-medium" title={temp.model || temp.name}>
+                  {temp.model || temp.name}
+                </span>
+                <span
+                  className={`shrink-0 text-sm font-semibold ${isCritical ? "text-red-500" : isHot ? "text-orange-500" : "text-green-500"}`}
+                >
+                  {temp.current.toFixed(1)}°C
+                </span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full bg-blue-500 transition-all"
+                  style={{ width: `${Math.min(percentage, 100)}%` }}
+                />
+              </div>
+              {devices.length > 0 ? (
+                <span className="block font-mono text-xs text-muted-foreground">
+                  {devices.map((device) => `/dev/${device}`).join(" · ")}
+                </span>
+              ) : (
+                temp.adapter && <span className="text-xs text-muted-foreground">{temp.adapter}</span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 export default function Hardware() {
@@ -834,52 +903,18 @@ export default function Hardware() {
               </div>
             )}
 
-            {/* NVME Sensors */}
-            {groupAndSortTemperatures(hardwareData.temperatures).NVME.length > 0 && (
-              <div
-                className={
-                  groupAndSortTemperatures(hardwareData.temperatures).NVME.length > 1 ? "md:col-span-2" : ""
-                }
-              >
-                <div className="mb-3 flex items-center gap-2">
-                  <HardDrive className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="text-sm font-semibold">NVME</h3>
-                  <Badge variant="outline" className="text-xs">
-                    {groupAndSortTemperatures(hardwareData.temperatures).NVME.length}
-                  </Badge>
-                </div>
-                <div
-                  className={`grid gap-4 ${groupAndSortTemperatures(hardwareData.temperatures).NVME.length > 1 ? "md:grid-cols-2" : ""}`}
-                >
-                  {groupAndSortTemperatures(hardwareData.temperatures).NVME.map((temp, index) => {
-                    const percentage =
-                      temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
-                    const isHot = temp.current > (temp.high || 80)
-                    const isCritical = temp.current > (temp.critical || 90)
-
-                    return (
-                      <div key={index} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{temp.name}</span>
-                          <span
-                            className={`text-sm font-semibold ${isCritical ? "text-red-500" : isHot ? "text-orange-500" : "text-green-500"}`}
-                          >
-                            {temp.current.toFixed(1)}°C
-                          </span>
-                        </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                          <div
-                            className="h-full bg-blue-500 transition-all"
-                            style={{ width: `${Math.min(percentage, 100)}%` }}
-                          />
-                        </div>
-                        {temp.adapter && <span className="text-xs text-muted-foreground">{temp.adapter}</span>}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+            <StorageTemperatureGroup
+              title="NVME"
+              temperatures={groupAndSortTemperatures(hardwareData.temperatures).NVME}
+            />
+            <StorageTemperatureGroup
+              title="HDD"
+              temperatures={groupAndSortTemperatures(hardwareData.temperatures).HDD}
+            />
+            <StorageTemperatureGroup
+              title="SSD"
+              temperatures={groupAndSortTemperatures(hardwareData.temperatures).SSD}
+            />
 
             {/* PCI Sensors */}
             {groupAndSortTemperatures(hardwareData.temperatures).PCI.length > 0 && (
