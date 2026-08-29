@@ -615,7 +615,20 @@ _helpers_cache_lock = threading.RLock()
 _helpers_cache: Optional[dict] = None
 _helpers_cache_ts: float = 0.0
 
-_UPDATE_SLUG_RE = re.compile(r"ct/([a-z0-9._-]+)\.sh")
+_HELPER_SLUG_VALUE = r"[a-z0-9][a-z0-9._-]*"
+_UPDATE_SLUG_RE = re.compile(rf"ct/({_HELPER_SLUG_VALUE})\.sh")
+_SCRIPT_SLUG_RE = re.compile(
+    rf"^\s*(?:export\s+)?SCRIPT_SLUG\s*=\s*"
+    rf'(?:"({_HELPER_SLUG_VALUE})"|\'({_HELPER_SLUG_VALUE})\'|({_HELPER_SLUG_VALUE}))'
+    rf"\s*(?:#.*)?$",
+    re.MULTILINE,
+)
+_UPDATE_SCRIPT_NAME_RE = re.compile(
+    rf"^\s*(?:export\s+)?UPDATE_SCRIPT_NAME\s*=\s*"
+    rf'(?:"({_HELPER_SLUG_VALUE})"|\'({_HELPER_SLUG_VALUE})\'|({_HELPER_SLUG_VALUE}))'
+    rf"\s*(?:#.*)?$",
+    re.MULTILINE,
+)
 _BASE_OS_HELPER_SLUGS = frozenset({
     "alpine", "archlinux", "archlinux-vm", "debian", "fedora",
     "gentoo", "opensuse", "ubuntu",
@@ -690,15 +703,29 @@ def _fetch_helpers_cache() -> dict:
                 return _helpers_cache
 
 
-def _probe_helper_scripts_slug(vmid: str) -> Optional[str]:
-    """Return the community-scripts app slug for a CT by extracting the
-    ``ct/<slug>.sh`` reference embedded in ``/usr/bin/update``.
+def _extract_helper_slug_from_update_wrapper(content: str) -> Optional[str]:
+    """Extract a static app slug from a Helper-Scripts update wrapper.
 
-    The community-scripts installers write ``/usr/bin/update`` as a
-    single line: ``bash -c "$(curl -fsSL …/ct/<slug>.sh)"``. Parsing
-    that URL gives us both the app identity AND a stable key into
-    :func:`_fetch_helpers_cache`. Returns None when the file is
-    missing, unreadable, or doesn't match the expected pattern.
+    Historical wrappers contain a literal ``ct/<slug>.sh`` URL. Current
+    wrappers are regenerated after successful updates and declare
+    ``SCRIPT_SLUG`` / ``UPDATE_SCRIPT_NAME`` before constructing that URL
+    with shell variables. Only a plain, tightly constrained assignment is
+    accepted; the wrapper is never evaluated or sourced.
+    """
+    for pattern in (_SCRIPT_SLUG_RE, _UPDATE_SCRIPT_NAME_RE):
+        match = pattern.search(content or "")
+        if match:
+            return next((value for value in match.groups() if value), None)
+    match = _UPDATE_SLUG_RE.search(content or "")
+    return match.group(1) if match else None
+
+
+def _probe_helper_scripts_slug(vmid: str) -> Optional[str]:
+    """Return the Helper-Scripts app slug declared by ``/usr/bin/update``.
+
+    Supports both the historical literal URL and the current generated
+    entrypoint format. Returns None when the file is missing, unreadable,
+    or contains no safe static application slug.
     """
     try:
         r = subprocess.run(
@@ -708,8 +735,7 @@ def _probe_helper_scripts_slug(vmid: str) -> Optional[str]:
         )
         if r.returncode != 0:
             return None
-        m = _UPDATE_SLUG_RE.search(r.stdout)
-        return m.group(1) if m else None
+        return _extract_helper_slug_from_update_wrapper(r.stdout)
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
         return None
 

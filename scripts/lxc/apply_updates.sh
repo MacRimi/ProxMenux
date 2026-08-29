@@ -11,7 +11,7 @@
 #   BACKUP_STORAGE    — PVE storage name for vzdump (required when BACKUP=1)
 #   RESTART           — "1" to `pct reboot` after update, "0" to skip
 #   RUN_HELPER        — "1" to run the verified community-scripts
-#                       updater referenced by /usr/bin/update, "0"
+#                       updater declared by /usr/bin/update, "0"
 #                       to leave it alone. Never inferred from names.
 #   UPDATE_COMMAND    — optional user-defined bash string. When set
 #                       and TARGET is "app" or "both", the script
@@ -81,6 +81,36 @@ if [[ "$UPDATE_DOCKER_ENGINE" != "0" && "$UPDATE_DOCKER_ENGINE" != "1" ]]; then
   echo "ERROR: UPDATE_DOCKER_ENGINE must be 0 or 1." >&2
   exit 5
 fi
+
+# Resolve only static, constrained metadata from a Proxmox VE
+# Helper-Scripts update entrypoint. Historical wrappers contain a literal
+# ct/<slug>.sh URL; current wrappers are regenerated after updates and
+# declare SCRIPT_SLUG / UPDATE_SCRIPT_NAME before composing the URL.
+# Never source or evaluate the wrapper: its contents belong to the CT.
+extract_helper_slug_from_wrapper() {
+  local wrapper="$1"
+  local key slug
+
+  for key in SCRIPT_SLUG UPDATE_SCRIPT_NAME; do
+    slug=$(printf '%s\n' "$wrapper" | sed -nE \
+      "s/^[[:space:]]*(export[[:space:]]+)?${key}[[:space:]]*=[[:space:]]*[\"']?([a-z0-9][a-z0-9._-]*)[\"']?[[:space:]]*(#.*)?$/\\2/p" \
+      | head -n 1)
+    if [[ "$slug" =~ ^[a-z0-9][a-z0-9._-]*$ ]]; then
+      printf '%s\n' "$slug"
+      return 0
+    fi
+  done
+
+  slug=$(printf '%s\n' "$wrapper" \
+    | grep -oE 'https?://[^"'"'"' ]+ct/[a-z0-9][a-z0-9._-]*\.sh' \
+    | head -n 1 \
+    | sed -nE 's|.*/ct/([a-z0-9][a-z0-9._-]*)\.sh$|\1|p')
+  if [[ "$slug" =~ ^[a-z0-9][a-z0-9._-]*$ ]]; then
+    printf '%s\n' "$slug"
+    return 0
+  fi
+  return 1
+}
 
 # One update per CT at a time, regardless of whether it came from the
 # UI or the scheduler. The descriptor remains open for this process.
@@ -197,8 +227,9 @@ fi
 
 # 6) Application update. Explicit methods only:
 #    a) RUN_HELPER=1 + a valid /usr/bin/update wrapper →
-#       parses the ct/<slug>.sh URL from the wrapper, canonicalises it
-#       to the official repository, then runs the current helper
+#       parses its static slug (legacy URL or current generated
+#       SCRIPT_SLUG format), canonicalises it to the official repository,
+#       then runs the current helper
 #       inside the CT with PHS_SILENT=1.
 #    b) UPDATE_COMMAND set → run it verbatim via `sh -c`
 #       inside the CT. The one intentional shell-exec-with-variable
@@ -222,11 +253,12 @@ if [[ "$TARGET" == "app" || "$TARGET" == "both" ]]; then
     echo
   fi
   if [[ "$RUN_HELPER" == "1" ]]; then
+    UPDATE_WRAPPER=""
     UPDATE_URL=""
     RESOLVED_SLUG=""
     if pct exec "$VMID" -- test -f /usr/bin/update 2>/dev/null; then
-      UPDATE_URL=$(pct exec "$VMID" -- cat /usr/bin/update 2>/dev/null | grep -oE 'https?://[^"'"'"' ]+ct/[a-zA-Z0-9._-]+\.sh' | head -1)
-      RESOLVED_SLUG=$(echo "$UPDATE_URL" | sed -nE 's|.*/ct/([a-zA-Z0-9._-]+)\.sh$|\1|p')
+      UPDATE_WRAPPER=$(pct exec "$VMID" -- cat /usr/bin/update 2>/dev/null)
+      RESOLVED_SLUG=$(extract_helper_slug_from_wrapper "$UPDATE_WRAPPER")
     fi
     case "$RESOLVED_SLUG" in
       alpine|archlinux|archlinux-vm|debian|fedora|gentoo|opensuse|ubuntu)
@@ -237,7 +269,7 @@ if [[ "$TARGET" == "app" || "$TARGET" == "both" ]]; then
     esac
     if [[ -z "$RESOLVED_SLUG" ]]; then
       if [[ "$APP_FAILED" -eq 0 ]]; then
-        echo "ERROR: RUN_HELPER=1 but /usr/bin/update contains no valid community-scripts app reference." >&2
+        echo "ERROR: RUN_HELPER=1 but /usr/bin/update contains no valid Proxmox VE Helper-Scripts app slug." >&2
         APP_FAILED=1
       fi
     else
