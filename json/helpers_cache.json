@@ -3845,7 +3845,9 @@
     "notes": [
       "Show password: `cat ~/crafty-controller.creds`"
     ],
-    "warnings": [],
+    "warnings": [
+      "Servers of type bedrock-server won't  work on arm64. Yoou can use Java server (paper) with Geyser plugin for bedrock."
+    ],
     "port": 8443,
     "website": "https://craftycontrol.com/",
     "documentation": "https://docs.craftycontrol.com/",
@@ -4517,7 +4519,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -8982,7 +8984,7 @@
     "warnings": [],
     "port": 3000,
     "website": "https://github.com/alangrainger/immich-public-proxy",
-    "documentation": "https://github.com/alangrainger/immich-public-proxy/tree/main/docs",
+    "documentation": "https://docs.ipp.nz/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/immich-public-proxy.webp",
     "updateable": true,
     "privileged": false,
@@ -9955,42 +9957,6 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
-    "execute_in": [
-      "lxc"
-    ],
-    "config_path": "",
-    "os": "debian"
-  },
-  {
-    "name": "Kanidm",
-    "slug": "kanidm",
-    "desc": "Kanidm is a modern, simple and secure identity management platform written in Rust. It provides OAuth2/OIDC, LDAP, RADIUS and Unix (PAM/nsswitch) authentication, WebAuthn/passkey support and a self-service web portal for managing people, groups and service accounts.",
-    "script": "ct/kanidm.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/kanidm.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/kanidm.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00006"
-    ],
-    "category_names": [
-      "Authentication & Security"
-    ],
-    "notes": [
-      "Kanidm cannot run on a bare IP (WebAuthn/passkeys require a real domain name, and its domain must start with a letter). The script defaults the domain/origin to kanidm.<container-IP>.nip.io, a public wildcard DNS that resolves to the container automatically — just open https://kanidm.<container-IP>.nip.io:8443, no hosts file or DNS setup needed, and accept the self-signed certificate warning.",
-      "Generate the break-glass admin passwords after install, inside the container: 'kanidmd recover-account idm_admin' (manages people and groups — use this account to sign in to the web portal) and 'kanidmd recover-account admin' (manages server configuration)."
-    ],
-    "warnings": [
-      "If your router/DNS has rebinding protection (blocks public names that resolve to private IPs), nip.io may not resolve. Fallback: add '<container-IP> kanidm.local' to your client's hosts file and set the matching domain/origin in /etc/kanidm/server.toml. To use your own real domain, change 'domain' and 'origin' in server.toml BEFORE creating accounts — changing it later requires a Kanidm domain rename."
-    ],
-    "port": 8443,
-    "website": "https://kanidm.com/",
-    "documentation": "https://kanidm.github.io/kanidm/stable/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/kanidm.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": true,
     "is_dev": true,
     "execute_in": [
       "lxc"
@@ -14939,7 +14905,7 @@
       "Authentication & Security"
     ],
     "notes": [
-      "The initial root token and unseal key are written to /etc/openbao/openbao.env (Debian) or /etc/conf.d/openbao (Alpine)."
+      "The initial root token (BAO_ROOT_TOKEN) and unseal key (BAO_UNSEAL_KEY) are written to /etc/openbao/openbao.env (Debian) or /etc/conf.d/openbao (Alpine)."
     ],
     "warnings": [
       "OpenBao is unsealed automatically on every boot, reading the unseal key from that same file. To unseal manually instead, remove the BAO_UNSEAL_KEY line and delete /etc/systemd/system/openbao.service.d/unseal.conf (Debian) or the start_post block in /etc/init.d/openbao (Alpine)."
@@ -14951,7 +14917,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -14974,7 +14940,7 @@
       "Authentication & Security"
     ],
     "notes": [
-      "The initial root token and unseal key are written to /etc/openbao/openbao.env (Debian) or /etc/conf.d/openbao (Alpine)."
+      "The initial root token (BAO_ROOT_TOKEN) and unseal key (BAO_UNSEAL_KEY) are written to /etc/openbao/openbao.env (Debian) or /etc/conf.d/openbao (Alpine)."
     ],
     "warnings": [
       "OpenBao is unsealed automatically on every boot, reading the unseal key from that same file. To unseal manually instead, remove the BAO_UNSEAL_KEY line and delete /etc/systemd/system/openbao.service.d/unseal.conf (Debian) or the start_post block in /etc/init.d/openbao (Alpine)."
@@ -14986,7 +14952,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -15961,7 +15927,7 @@
       "First visit will prompt you to create an account",
       "Tesseract OCR is pre-installed for all languages",
       "Documents are stored in /opt/papra/app-data/documents",
-      "Ingestion folder available at /opt/papra/ingestion for automatic document import"
+      "Ingestion folder available at /opt/papra_data/ingestion for automatic document import"
     ],
     "warnings": [
       "Email functionality runs in dry-run mode by default"
@@ -20198,7 +20164,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": true,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -21203,7 +21169,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
