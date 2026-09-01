@@ -1,3 +1,114 @@
+## 2026-09-01
+
+### Nueva versión ProxMenux v1.2.5
+
+Esta versión convierte la gestión de aplicaciones de los contenedores LXC en una función completa del Monitor. El nuevo panel **Apps** reúne los accesos web del nodo, mientras que **Easy Updates** permite comprobar y aplicar por separado actualizaciones del sistema operativo, aplicaciones, Docker Engine e imágenes Docker. ProxMenux incorpora además un catálogo de detección con más de 380 aplicaciones, ocho idiomas en el Monitor, orden de navegación personalizable y mejoras importantes en copias del host, automatización, salud del sistema, hardware y post-instalación.
+
+---
+
+## 🚀 Apps — un lanzador para los servicios del nodo
+
+- Nueva pestaña superior **Apps** con todos los enlaces web registrados en los LXC y los enlaces personalizados añadidos por el usuario.
+- Búsqueda, categorías, ordenación y acceso directo al LXC o VM relacionado.
+- Los enlaces personalizados permiten integrar servicios alojados en máquinas virtuales, endpoints externos, reverse proxies o cualquier URL habitual.
+- Las aplicaciones Docker se muestran como servicios del motor que las aloja, evitando presentarlas como aplicaciones nativas independientes del LXC.
+- Los iconos, categorías y estados se adaptan al tema y al idioma seleccionado.
+
+---
+
+## 🔄 Easy Updates para LXC
+
+- La pestaña **Updates** separa claramente las actualizaciones del sistema operativo, de cada aplicación registrada, de Docker Engine y de cada proyecto o imagen Docker.
+- Los métodos compatibles con **Proxmox VE Helper-Scripts**, incluidos contenedores antiguos y actuales, se detectan automáticamente cuando existe un actualizador válido.
+- Las aplicaciones instaladas manualmente pueden usar detectores de versión y comandos de actualización personalizados.
+- Nueva **Actualización en bloque**: el usuario decide qué aplicaciones, Docker Engine y proyectos Docker acompañan a la actualización obligatoria del sistema operativo.
+- Los servicios pertenecientes a un mismo proyecto Compose se actualizan en una sola operación para evitar recreaciones repetidas.
+- Las comprobaciones de imágenes Docker se basan en el digest del registro, siguen el ciclo de 24 horas y también pueden forzarse con **Comprobar ahora**.
+- Los resultados se mantienen en caché y se actualizan tras guardar una aplicación, completar una actualización o producirse un evento de arranque, parada, reinicio o restauración del guest.
+
+---
+
+## 🎯 Catálogo de detección de aplicaciones
+
+- Nuevo catálogo generado a partir de los scripts LXC reales de `community-scripts/ProxmoxVE`, fijando un commit concreto para que cada generación sea reproducible.
+- Más de **380 aplicaciones** cubiertas mediante detectores de paquete dpkg/apk, binario, archivo con expresión regular, distribución Python y métodos Docker.
+- Detectores alternativos y rutas verificadas permiten reconocer tanto instalaciones modernas como estructuras históricas.
+- Nombre, web oficial, puerto predeterminado, categoría y logotipo pueden rellenarse automáticamente y siguen siendo editables.
+- El botón **Buscar aplicaciones** permite lanzar una detección completa solo para el LXC seleccionado cuando se haya instalado algo nuevo.
+
+---
+
+## 🌍 Monitor multilingüe y navegación personalizable
+
+- El Monitor está disponible en **inglés, español, alemán, francés, italiano, portugués, eslovaco y sueco**.
+- Nueva opción **Orden de navegación** para reorganizar las pestañas principales y elegir de forma indirecta qué vista abre primero.
+- La selección se conserva por dispositivo y también se respeta en el menú móvil.
+- La documentación incorpora un flujo incremental y reanudable para mantener los idiomas sin sobrescribir traducciones revisadas por personas.
+
+---
+
+## ⚡ Monitor, automatización y experiencia de uso
+
+- Los modales de VM/LXC y sus pestañas reutilizan datos precargados por guest, reduciendo esperas y evitando recargas completas al cambiar de vista.
+- Nueva **Actions API** para reinicio/apagado del host, actualización segura de Proxmox, actualización de ProxMenux y operaciones de VM/LXC desde Home Assistant, Ansible u otras automatizaciones.
+- **Pushover** se incorpora como canal nativo de notificaciones, con credenciales cifradas, prioridad para alertas críticas y los mismos filtros que el resto de canales.
+- Fail2Ban permite gestionar desde Seguridad las redes e IP de confianza.
+- Network Flow reconoce interfaces bond y respeta la preferencia Bits/Bytes.
+
+---
+
+## 🩺 Salud, almacenamiento y hardware
+
+- Las alertas de memoria combinan uso alto de swap con RAM realmente disponible, reduciendo falsos positivos en hosts Proxmox con ZFS.
+- El Monitor correlaciona los sensores NVMe y `drivetemp` con el dispositivo, modelo y número de serie físicos.
+- Las VM con QEMU Guest Agent muestran el uso agregado real de sus sistemas de archivos y reciben alertas de espacio bajo.
+- El instalador NVIDIA selecciona la rama mediante kernel, GPU y PCI ID, y el passthrough multi-GPU trabaja por BDF exacto para permitir que una GPU permanezca en el host mientras otra pertenece a una VM.
+- La disponibilidad de storages Proxmox se decide por su estado real, aunque un backend como iSCSI no informe capacidad.
+
+---
+
+## 🗄 Copias y restauración del host
+
+- Las copias conservan la configuración completa de los jobs de ProxMenux y reconstruyen de forma validada sus timers o hooks tras restaurar.
+- Las rutas personalizadas se copian exactamente como las seleccionó el usuario, sin aplicar exclusiones genéricas pensadas para el perfil integrado.
+- El staging aborta ante fallos reales de copia para no presentar como válido un archivo incompleto.
+- La base `config.db` de pmxcfs se captura mediante una copia SQLite consistente y los pools ZFS de datos pueden importarse automáticamente durante la restauración.
+
+---
+
+## 🛡 Post-instalación y compatibilidad
+
+- Funciones de post-instalación con rollback más preciso y preparación para Debian 13.
+- Optimización ZFS ARC alineada con la política de Proxmox, reconciliación segura de límites duplicados y diagnósticos OOM basados en el bloque completo del kernel.
+- Personalización Bashrc con elección entre directorio actual y ruta completa.
+- Nombres persistentes de NIC, ajuste de bridges del firewall, Log2RAM en hosts con PBS y recompilación DKMS tras instalar un kernel nuevo reforzados para actualizaciones y re-ejecuciones seguras.
+
+---
+
+## 🩹 Correcciones destacadas
+
+- Las copias de VM/LXC de larga duración ya no quedan limitadas por una espera HTTP de 60 segundos.
+- Los webhooks PVE remotos conservan correctamente el secreto y los informes largos de `vzdump` llegan completos al analizador.
+- El Monitor respeta discos en standby y las pruebas SMART programadas aceptan correctamente rutas `/dev/...`.
+- Los jobs PBS programados conservan el fingerprint del servidor y el runner interpreta de forma segura los archivos `.env` heredados.
+- Las actualizaciones seguras comprueban conectividad HTTPS en lugar de depender de ICMP.
+- El certificado Proxmox/ACME utilizado por HTTPS se renueva en nuevas conexiones TLS; si el par todavía se está escribiendo o no coincide, el Monitor conserva el último contexto validado.
+- La configuración de autenticación puede abrirse de nuevo después de haberla rechazado inicialmente.
+- Se corrigieron instalaciones, desinstalaciones y actualizaciones de varias optimizaciones heredadas sin alterar configuraciones administradas por el usuario.
+
+---
+
+## 🙏 Agradecimientos
+
+Un agradecimiento especial a **@vaso73**, cuya colaboración sostenida ha dado forma a este release: la base de i18n que hizo posible el Monitor multilingüe, la traducción completa al eslovaco y una serie de PRs de refuerzo en autenticación, Fail2Ban, flujos LXC y webhooks `vzdump` durante todo el ciclo beta 1.2.4.
+
+Gracias también a **@agarmoli, @SystemIdleProcess, @TCBWZA, @DeXon18, @mrkaffeine92, @Turtletrumpet, @Skynet011, @mon5termatt, @gail7-github, @f3rs3n, @bofrot0603, @MrCaringi, @nikp79, @ThisWasNotTaken, @yeager, @mfmen, @Marceenek, @beyercenter, @peterurbanec, @tropicaljoe, @Dark-Witcher, @benginx, @Atredis76 y LeidenSpain** por las ideas, pruebas, traducciones, diagnósticos, parches e informes durante las betas 1.2.4.1 y 1.2.4.2.
+
+> 📖 **Para ver todos los cambios y su narrativa completa, consulta los releases:** [Releases de ProxMenux en GitHub](https://github.com/MacRimi/ProxMenux/releases)
+
+---
+
+
 
 ## 2026-07-22
 
