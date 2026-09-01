@@ -1,4 +1,114 @@
 
+## 2026-09-01
+
+### New version ProxMenux v1.2.5
+
+This release turns LXC application management into a first-class Monitor feature. The new **Apps** dashboard consolidates the node's web endpoints, while **Easy Updates** lets the user check and apply operating system, application, Docker Engine and Docker image updates independently. ProxMenux v1.2.5 also ships a detection catalog with more than 380 applications, the Monitor in eight languages, customisable navigation order and substantial improvements across host backup, automation, system health, hardware and post-install.
+
+---
+
+## 🚀 Apps — one launcher for the node's services
+
+- New top-level **Apps** tab with every web link registered inside LXCs and the user's own custom links.
+- Search, categories, sorting and shortcut back to the related LXC or VM modal.
+- Custom links cover services hosted inside virtual machines, external endpoints, reverse proxies or any URL the user relies on.
+- Docker applications appear as services of the engine that hosts them, rather than as separate native LXC apps.
+- Icons, categories and states adapt to the selected theme and language.
+
+---
+
+## 🔄 Easy Updates for LXC
+
+- The **Updates** tab clearly separates OS packages, each registered application, Docker Engine and each Docker project or image.
+- Methods compatible with **Proxmox VE Helper-Scripts**, including old and current containers, are recognised automatically when a valid updater exists.
+- Manually installed applications can carry custom version detectors and update commands.
+- New **Bulk update**: the user decides which applications, Docker Engine and Docker projects go alongside the mandatory OS update.
+- Services belonging to the same Compose project are updated in a single operation to avoid repeated recreations.
+- Docker image checks rely on the registry digest, follow the 24-hour cycle and can also be forced through **Check now**.
+- Results are kept in cache and refreshed after saving an application, completing an update or any guest start / stop / restart / restore event.
+
+---
+
+## 🎯 Application detection catalog
+
+- New catalog generated from the real LXC scripts of `community-scripts/ProxmoxVE`, pinning a specific commit so every generation is reproducible.
+- More than **380 applications** covered through dpkg / apk package, binary, file-with-regex, Python distribution and Docker detectors.
+- Alternative detectors and verified paths recognise both modern installs and historical layouts.
+- Name, official website, default port, category and logo can be filled automatically and remain editable.
+- The **Find applications** button runs a full detection only for the selected LXC when something new has been installed.
+
+---
+
+## 🌍 Multilingual Monitor and customisable navigation
+
+- The Monitor is available in **English, Spanish, German, French, Italian, Portuguese, Slovak and Swedish**.
+- New **Navigation order** option to reorganise the main tabs and indirectly choose which view opens first.
+- The selection is preserved per device and is also honoured in the mobile menu.
+- Documentation ships with an incremental, resumable flow that keeps languages in sync without overwriting human-reviewed translations.
+
+---
+
+## ⚡ Monitor, automation and user experience
+
+- VM/LXC modals and their tabs reuse per-guest preloaded data, cutting waits and avoiding full reloads when switching views.
+- New **Actions API** for host reboot / shutdown, Proxmox safe update, ProxMenux update and VM/LXC operations from Home Assistant, Ansible or other automations.
+- **Pushover** joins as a native notification channel with encrypted credentials, priority for critical alerts and the same filters as the rest of the channels.
+- Fail2Ban lets the user manage trusted networks and IPs from Security.
+- Network Flow recognises bond interfaces and honours the Bits/Bytes preference.
+
+---
+
+## 🩺 Health, storage and hardware
+
+- Memory alerts combine high swap usage with actually available RAM, cutting false positives on Proxmox hosts running ZFS.
+- The Monitor correlates NVMe and `drivetemp` sensors with the physical device, model and serial.
+- VMs running the QEMU Guest Agent report real aggregated filesystem usage and receive low-space alerts.
+- The NVIDIA installer picks the branch by kernel, GPU and PCI ID, and multi-GPU passthrough works by exact BDF so one GPU can stay on the host while another belongs to a VM.
+- Proxmox storage availability is decided by the real state, even when a backend like iSCSI does not report capacity.
+
+---
+
+## 🗄 Host backup and restore
+
+- Backups preserve the full ProxMenux job configuration and rebuild the timers or hooks in a validated way after restore.
+- Custom paths are copied exactly as the user selected them, without applying generic exclusions meant for the built-in profile.
+- Staging aborts on real copy failures so an incomplete file never counts as valid.
+- pmxcfs's `config.db` is captured through a consistent SQLite backup and ZFS data pools can be imported automatically during restore.
+
+---
+
+## 🛡 Post-install and compatibility
+
+- Post-install functions with more precise rollback and Debian 13 readiness.
+- ZFS ARC optimisation aligned with the Proxmox policy, safe reconciliation of duplicate limits and OOM diagnostics based on the full kernel block.
+- Bashrc customisation with the choice between current directory and full path.
+- Persistent NIC names, firewall bridge tuning, Log2RAM on hosts with PBS and DKMS rebuild after a new kernel are reinforced for safe updates and reruns.
+
+---
+
+## 🩹 Notable fixes
+
+- Long VM/LXC backups no longer bounded by a 60-second HTTP wait.
+- Remote PVE webhooks preserve the secret correctly and long `vzdump` reports reach the parser complete.
+- The Monitor respects disks in standby and scheduled SMART tests accept `/dev/...` paths correctly.
+- Scheduled PBS jobs preserve the server fingerprint and the runner parses legacy `.env` files safely.
+- Safe updates use HTTPS connectivity checks instead of relying on ICMP.
+- The Proxmox/ACME certificate used by HTTPS is renewed on new TLS connections; if the pair is still being written or mismatches, the Monitor keeps the last validated context.
+- The authentication setup can be reopened after having declined the initial configuration.
+- Fixes for installations, uninstalls and updates of several legacy optimisations without altering user-managed settings.
+
+---
+
+## 🙏 Acknowledgments
+
+A special thank you to **@vaso73**, whose sustained collaboration shaped this release: the i18n scaffolding that made the multilingual Monitor possible, the full Slovak translation and a series of hardening PRs across authentication, Fail2Ban, LXC flows and `vzdump` webhooks throughout the 1.2.4 beta cycle.
+
+Thanks also to **@agarmoli, @SystemIdleProcess, @TCBWZA, @DeXon18, @mrkaffeine92, @Turtletrumpet, @Skynet011, @mon5termatt, @gail7-github, @f3rs3n, @bofrot0603, @MrCaringi, @nikp79, @ThisWasNotTaken, @yeager, @mfmen, @Marceenek, @beyercenter, @peterurbanec, @tropicaljoe, @Dark-Witcher, @benginx, @Atredis76 and LeidenSpain** for ideas, testing, translations, diagnostics, patches and reports during the 1.2.4.1 and 1.2.4.2 betas.
+
+> 📖 **For every change and the full narrative, see the releases:** [ProxMenux Releases on GitHub](https://github.com/MacRimi/ProxMenux/releases)
+
+---
+
 ## 2026-07-22
 
 ### New version ProxMenux v1.2.4
